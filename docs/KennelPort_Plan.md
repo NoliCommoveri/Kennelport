@@ -96,19 +96,6 @@ with colour and font choices and sections that can be turned on and off:
 - **Optional pages:** FAQ, puppy care, testimonials
 - **Embeds:** videos and social feeds placed on any page (section 3.3)
 
-### 3.2 Prices
-
-Prices are entered in KennelPort only; **KennelOS never sends a price** (decided
-2026-10-09).
-- A litter can carry a price per sex (or one price) and a deposit; a puppy can override
-  its litter's price.
-- Each litter has a **Show prices** switch, off by default. When off, the site shows
-  "Contact us for pricing".
-- Puppies marked reserved or placed never show a price.
-
-Content is stored as structured records (a dog, a litter, a photo), not free HTML. That's
-what lets KennelOS fill it in and keeps every site safe and consistent.
-
 ### 3.1 Addresses (URLs)
 
 The subdomain picks the site; the path picks the page:
@@ -140,6 +127,19 @@ The subdomain picks the site; the path picks the page:
 - **Custom domains later** (section 8, phase 6) keep the same paths:
   `thornfieldkennels.com/about`, with the `kennelport.com` address redirecting there.
 - Every site also gets `/sitemap.xml` and `/robots.txt` for search engines.
+
+### 3.2 Prices
+
+Prices are entered in KennelPort only; **KennelOS never sends a price** (decided
+2026-10-09).
+- A litter can carry a price per sex (or one price) and a deposit; a puppy can override
+  its litter's price.
+- Each litter has a **Show prices** switch, off by default. When off, the site shows
+  "Contact us for pricing".
+- Puppies marked reserved or placed never show a price.
+
+Content is stored as structured records (a dog, a litter, a photo), not free HTML. That's
+what lets KennelOS fill it in and keeps every site safe and consistent.
 
 ### 3.3 Embeds (YouTube, Facebook and others)
 
