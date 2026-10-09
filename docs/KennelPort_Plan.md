@@ -2,7 +2,7 @@
 
 > Status: planning draft, 2026-10-09. Nothing is built. Section 9 lists the decisions still open.
 
-KennelPort hosts breeder websites. Each kennel gets a site at `theirkennel.<domain>`.
+KennelPort hosts breeder websites. Each kennel gets a site at `theirkennel.kennelport.app`.
 The operator (you) sets up and drafts every site by hand. Breeders then manage their own
 content through a simple login, and can link their KennelOS data so dogs, litters and
 photo albums fill in by themselves.
@@ -36,8 +36,8 @@ takes payment.
 
 You do the setup work, but it's a row in a database, not new infrastructure:
 
-- **Once, at the start:** a wildcard DNS record `*.<domain>`, a Worker route
-  `*.<domain>/*`, and Cloudflare's free certificate, which covers every first-level
+- **Once, at the start:** a wildcard DNS record `*.kennelport.app`, a Worker route
+  `*.kennelport.app/*`, and Cloudflare's free certificate, which covers every first-level
   subdomain.
 - **For each new kennel:** you add a site in your console. The Worker reads the hostname
   on each request, looks the site up, and renders it.
@@ -48,13 +48,13 @@ shared renderer means a template fix reaches every site at once.
 ### 2.2 Pieces
 
 ```
- visitor ──▶ smithkennels.<domain>  ─┐
-                                     │   ┌──────────── Worker: kennelport ────────────┐
- breeder ──▶ manage.<domain>        ─┼──▶│ renderer     public sites, OG previews     │──▶ D1  (sites, dogs, litters, pages, users)
- you     ──▶ manage.<domain>/ops    ─┤   │ manage API   breeder sign-in + editing     │──▶ R2  (photos: full + thumbnail)
- KennelOS ─▶ api.<domain>           ─┘   │ ops          requests, set up, drafts      │──▶ Resend (sign-in codes, invites, request alerts)
-                                         │ link API     KennelOS publishes here       │
-                                         └────────────────────────────────────────────┘
+ visitor ──▶ thornfieldkennels.kennelport.app ─┐
+                                               │   ┌──────────── Worker: kennelport ────────────┐
+ breeder ──▶ manage.kennelport.app            ─┼──▶│ renderer     public sites, OG previews     │──▶ D1  (sites, dogs, litters, pages, users)
+ you     ──▶ manage.kennelport.app/ops        ─┤   │ manage API   breeder sign-in + editing     │──▶ R2  (photos: full + thumbnail)
+ KennelOS ─▶ api.kennelport.app               ─┘   │ ops          requests, set up, drafts      │──▶ Resend (sign-in codes, invites, request alerts)
+                                                   │ link API     KennelOS publishes here       │
+                                                   └────────────────────────────────────────────┘
 ```
 
 | Part | Purpose |
@@ -93,6 +93,38 @@ with colour and font choices and sections that can be turned on and off:
 
 Content is stored as structured records (a dog, a litter, a photo), not free HTML. That's
 what lets KennelOS fill it in and keeps every site safe and consistent.
+
+### 3.1 Addresses (URLs)
+
+The subdomain picks the site; the path picks the page:
+
+| Page | Address |
+|---|---|
+| Home | `thornfieldkennels.kennelport.app/` |
+| About | `/about` |
+| Our dogs | `/dogs` |
+| One dog | `/dogs/willow` |
+| Litters | `/litters` |
+| One litter, with its puppies | `/litters/willow-x-ranger-2026` |
+| One puppy | `/litters/willow-x-ranger-2026/blue-collar` |
+| Albums | `/albums`, `/albums/willow-x-ranger-week-6` |
+| Contact, FAQ | `/contact`, `/faq` |
+| Breeder's own extra page | `/p/puppy-care` |
+
+- **No `www.`** A two-level name such as `www.thornfieldkennels.kennelport.app` isn't
+  covered by Cloudflare's free certificate, and `.app` only works over HTTPS. The site's
+  address is `thornfieldkennels.kennelport.app`.
+- **Section paths are fixed** (`/about`, `/dogs`, …), so every site works the same and
+  KennelOS always knows where a dog's page is. Breeders can rename what the menu *shows*
+  ("Our Story" instead of "About"), but not the path.
+- **Extra pages go under `/p/`**, so a breeder's page name can never clash with a section.
+- **Slugs** (`willow`, `willow-x-ranger-2026`) are made from the name and are unique within
+  the site. If a slug changes, the old address keeps redirecting, so shared links never
+  break. Linked records also keep their KennelOS id, so renaming in KennelOS doesn't
+  break links either.
+- **Custom domains later** (section 8, phase 6) keep the same paths:
+  `thornfieldkennels.com/about`, with the `kennelport.app` address redirecting there.
+- Every site also gets `/sitemap.xml` and `/robots.txt` for search engines.
 
 ---
 
@@ -176,8 +208,9 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `site_users` | site_id, email_hash, role (`owner` / `editor`) |
 | `sessions`, `login_codes` | as in KennelOS cloud |
 | `requests` | id, kennel_name, contact email, message, source (`kennelos` / `form`), status (`new` / `in_progress` / `done` / `declined`) |
-| `dogs`, `litters`, `puppies` | site_id, content fields, `source` (`kennelport` / `kennelos`), `kennelos_id` when linked, `draft_json`, `published_json` |
+| `dogs`, `litters`, `puppies` | site_id, slug, content fields, `source` (`kennelport` / `kennelos`), `kennelos_id` when linked, `draft_json`, `published_json` |
 | `pages` | site_id, slug, section type, draft and published content |
+| `redirects` | site_id, old path, new path (kept when a slug changes) |
 | `photos` | site_id, r2_key, thumb_key, width, height, bytes, alt text |
 | `albums`, `album_photos` | site_id, title, slug, cover; ordered photo list |
 | `links` | site_id, token_hash, linked_at, last_publish_at |
@@ -220,8 +253,9 @@ Each phase is useful by itself, so you can stop after any one.
 
 ## 9. Decisions to make
 
-1. **Domain.** For example `kennelport.com`. Should the manage app live on that domain
-   or a separate one? A separate one is safer if sites ever allow embedded code.
+1. **Domain:** `kennelport.app` (decided 2026-10-09). Still open: should the manage app
+   stay on `manage.kennelport.app` or move to a separate domain? A separate one is safer
+   only if sites ever allow embedded code.
 2. **Who can request a site:** Pro only, Lite too, or anyone (including non-KennelOS
    breeders through a public form)?
 3. **Pricing:** a monthly fee, a setup fee plus monthly, or included with Pro? Billing
