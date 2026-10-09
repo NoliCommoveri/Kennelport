@@ -94,6 +94,17 @@ with colour and font choices and sections that can be turned on and off:
 - **Waitlist / apply:** a link or button to the KennelOS waitlist application (`/apply/...`), when they use it
 - **Contact:** email, phone, social links
 - **Optional pages:** FAQ, puppy care, testimonials
+- **Embeds:** videos and social feeds placed on any page (section 3.3)
+
+### 3.2 Prices
+
+Prices are entered in KennelPort only; **KennelOS never sends a price** (decided
+2026-10-09).
+- A litter can carry a price per sex (or one price) and a deposit; a puppy can override
+  its litter's price.
+- Each litter has a **Show prices** switch, off by default. When off, the site shows
+  "Contact us for pricing".
+- Puppies marked reserved or placed never show a price.
 
 Content is stored as structured records (a dog, a litter, a photo), not free HTML. That's
 what lets KennelOS fill it in and keeps every site safe and consistent.
@@ -130,6 +141,38 @@ The subdomain picks the site; the path picks the page:
   `thornfieldkennels.com/about`, with the `kennelport.com` address redirecting there.
 - Every site also gets `/sitemap.xml` and `/robots.txt` for search engines.
 
+### 3.3 Embeds (YouTube, Facebook and others)
+
+Decided 2026-10-09: breeders can embed content from several providers. The safe way to do
+that is to **never store the HTML a breeder pastes**:
+
+1. The breeder pastes an ordinary link (a YouTube video, their Facebook page, …).
+2. The server checks it against a fixed list of providers and link patterns, and stores
+   only the **provider and the item's id** (for example `youtube` + `dQw4w9WgXcQ`).
+3. The renderer builds the embed itself from a template for that provider.
+
+| Provider | What can be embedded | Built as |
+|---|---|---|
+| YouTube | a video, a playlist | iframe from `youtube-nocookie.com` |
+| Facebook | a page's timeline, a post, a video | iframe from Facebook's plugin addresses (no Facebook script on the page) |
+| Instagram | a post or reel | iframe from the post's `/embed` address |
+| TikTok | a video | iframe player |
+| Vimeo | a video | iframe player |
+| Google Maps | the kennel's town or region (never a street address) | iframe |
+
+- The list is in one place in the code; adding a provider means adding one entry there.
+- Each site's pages send a **Content Security Policy** that only allows frames from these
+  providers and no outside scripts, so even a mistake in a template can't load anything
+  else.
+- **Click to load:** an embed shows a preview image with a play button until a visitor
+  clicks. Pages load faster, and Facebook or Google don't track visitors who never press
+  play.
+- If a provider removes an item or changes its embed, the site shows a plain link
+  instead of a blank box.
+
+Because embeds are built by KennelPort and breeders never add their own code, the manage
+app can stay on `manage.kennelport.com` (see section 9).
+
 ---
 
 ## 4. Breeder sign-in and editing
@@ -157,7 +200,7 @@ KennelOS works the same way for Companion (`shared/data/companionExport.js`) and
 waitlist (a published "projection"):
 
 - KennelOS builds a **site bundle** with an **allow-list**: every field copied by name,
-  with no buyer names, prices unless chosen, notes, contracts or contacts. A new field
+  with no buyer names, **no prices**, notes, contracts or contacts. A new field
   in KennelOS never reaches the site until someone adds it to the list.
 - Only records the breeder marks **Show on website** go into the bundle.
 - KennelOS pushes the bundle to KennelPort. KennelPort never reads anything from KennelOS.
@@ -167,14 +210,16 @@ waitlist (a published "projection"):
 1. In KennelPort's manage app: **Link KennelOS** shows a one-time link code.
 2. In KennelOS (Settings or Import/Export): **Connect website** takes that code. KennelPort
    returns a token, which KennelOS stores through `settings.js`.
-3. From then on, KennelOS has a **Update website** button, and an optional auto-publish
-   when a linked dog or litter changes.
+3. From then on, KennelOS has an **Update website** button. Nothing is sent until the
+   breeder presses it (decided 2026-10-09: no automatic publishing). What arrives lands in
+   the site's draft, so the breeder can still check it before pressing **Publish**.
 
 ### 5.3 Who owns which field
 
 - **From KennelOS (read-only in KennelPort):** name, registered name, sex, date of birth,
   colour, health tests, litter dates, parents, puppy status.
-- **KennelPort only:** website bio, photo choice and order, albums, page text, layout.
+- **KennelPort only:** website bio, **prices**, photo choice and order, albums, embeds,
+  page text, layout.
 - Unlinked sites edit everything in KennelPort. Unlinking keeps the last published copy as
   editable KennelPort data.
 
@@ -217,6 +262,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `dogs`, `litters`, `puppies` | site_id, slug, content fields, `source` (`kennelport` / `kennelos`), `kennelos_id` when linked, `draft_json`, `published_json` |
 | `pages` | site_id, slug, section type, draft and published content |
 | `redirects` | site_id, old path, new path (kept when a slug changes) |
+| `embeds` | site_id, page or record it sits on, provider, item id, title, order |
 | `photos` | site_id, r2_key, thumb_key, width, height, bytes, alt text |
 | `albums`, `album_photos` | site_id, title, slug, cover; ordered photo list |
 | `links` | site_id, token_hash, linked_at, last_publish_at |
@@ -251,7 +297,7 @@ Each phase is useful by itself, so you can stop after any one.
 | **1. Renderer + ops** | One template, the ops console, preview links, publish, reserved names, OG tags | Build and host sites for breeders yourself, with no breeder login yet |
 | **2. Requests** | Public request form on `kennelport.com` + email alert to you; ops inbox | Take requests from anyone, before KennelOS has its button |
 | **3. Breeder login** | Email-code sign-in, manage app, drafts and publish, photo upload with resizing and location removal, storage limits | Hand sites over to breeders |
-| **4. Albums & sharing** | Albums, share links, QR codes, nicer previews | Breeders share albums |
+| **4. Albums, embeds & sharing** | Albums, embeds (section 3.3), share links, QR codes, nicer previews | Breeders share albums and add videos and Facebook feeds |
 | **5. KennelOS link** | Link codes, the bundle API in KennelPort; then in KennelOS: Show on website, `siteExport.js`, Request a website, Update website, filling `dog.url` | Data flows from KennelOS; Companion shares carry album links |
 | **6. Later** | Custom domains (Cloudflare for SaaS), more templates, visitor stats, contact form | — |
 
@@ -259,23 +305,22 @@ Each phase is useful by itself, so you can stop after any one.
 
 ## 9. Decisions to make
 
-1. **Domain:** `kennelport.com` (decided 2026-10-09). Still open: should the manage app
-   stay on `manage.kennelport.com` or move to a separate domain? A separate one is safer
-   only if sites ever allow embedded code.
+1. **Domain:** `kennelport.com` (decided 2026-10-09). The manage app stays on
+   `manage.kennelport.com`: embeds are built by KennelPort from an approved list, so no
+   breeder code ever runs on a site (section 3.3).
 2. **Who can request a site:** decided 2026-10-09. The in-app **Request a website**
    button is KennelOS Pro only for now. A KennelPort site never requires KennelOS: anyone
    can ask through the public request form, and you approve every request either way.
 3. **Pricing:** a monthly fee, a setup fee plus monthly, or included with Pro? Billing
    stays manual either way.
-4. **Accounts:** a separate KennelPort sign-in (simplest, keeps the products independent)
-   or a shared KennelOS cloud account (one login, but ties KennelPort to the KennelOS
-   Worker)? The recommendation is separate accounts with the link code.
-5. **Auto-publish from KennelOS:** on every change, or only when the breeder presses
-   **Update website**? The recommendation is the button first.
-6. **Prices on puppy listings:** show, hide, or the breeder's choice per litter? This
-   matches a KennelOS Companion decision.
-7. **Embedded content** (YouTube, Facebook posts): allowed? It's a security choice.
-   Embeds from a short approved list are reasonable.
+4. **Accounts:** decided 2026-10-09: KennelPort has its **own sign-in**, separate from
+   KennelOS cloud. The two connect only through the link code (section 5.2).
+5. **Publishing from KennelOS:** decided 2026-10-09: only when the breeder presses
+   **Update website**; never automatic.
+6. **Prices:** decided 2026-10-09: KennelOS never sends prices. Breeders can enter them
+   in KennelPort and choose per litter whether they show (section 3.2).
+7. **Embeds:** decided 2026-10-09: yes, several providers, including YouTube and Facebook
+   pages, built from an approved list (section 3.3).
 8. **Content rules and suspension:** terms of service, what gets a site suspended, and
    what happens to the data when someone leaves (export, then delete after N days).
 
@@ -290,4 +335,5 @@ Each phase is useful by itself, so you can stop after any one.
 | Private KennelOS data leaks to a public site | Allow-list bundle with a positive key check, and per-record opt-in (section 5.1) |
 | Storage creep | Per-site limits; delete files when photos and sites are removed |
 | You become the bottleneck | Breeders handle routine edits themselves; you only do setup and design |
+| An embed provider tracks visitors or changes its embed | Click to load; plain-link fallback; providers listed in one place |
 | Tie-in to one host | Plain D1 and R2 data, with a full export for each site |
