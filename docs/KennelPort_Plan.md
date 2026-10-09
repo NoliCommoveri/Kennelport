@@ -2,7 +2,7 @@
 
 > Status: planning draft, 2026-10-09. Nothing is built. Section 9 lists the decisions still open.
 
-KennelPort hosts breeder websites. Each kennel gets a site at `theirkennel.kennelport.app`.
+KennelPort hosts breeder websites. Each kennel gets a site at `theirkennel.kennelport.com`.
 The operator (you) sets up and drafts every site by hand. Breeders then manage their own
 content through a simple login, and can link their KennelOS data so dogs, litters and
 photo albums fill in by themselves.
@@ -36,8 +36,8 @@ takes payment.
 
 You do the setup work, but it's a row in a database, not new infrastructure:
 
-- **Once, at the start:** a wildcard DNS record `*.kennelport.app`, a Worker route
-  `*.kennelport.app/*`, and Cloudflare's free certificate, which covers every first-level
+- **Once, at the start:** a wildcard DNS record `*.kennelport.com`, a Worker route
+  `*.kennelport.com/*`, and Cloudflare's free certificate, which covers every first-level
   subdomain.
 - **For each new kennel:** you add a site in your console. The Worker reads the hostname
   on each request, looks the site up, and renders it.
@@ -48,11 +48,11 @@ shared renderer means a template fix reaches every site at once.
 ### 2.2 Pieces
 
 ```
- visitor ──▶ thornfieldkennels.kennelport.app ─┐
+ visitor ──▶ thornfieldkennels.kennelport.com ─┐
                                                │   ┌──────────── Worker: kennelport ────────────┐
- breeder ──▶ manage.kennelport.app            ─┼──▶│ renderer     public sites, OG previews     │──▶ D1  (sites, dogs, litters, pages, users)
- you     ──▶ manage.kennelport.app/ops        ─┤   │ manage API   breeder sign-in + editing     │──▶ R2  (photos: full + thumbnail)
- KennelOS ─▶ api.kennelport.app               ─┘   │ ops          requests, set up, drafts      │──▶ Resend (sign-in codes, invites, request alerts)
+ breeder ──▶ manage.kennelport.com            ─┼──▶│ renderer     public sites, OG previews     │──▶ D1  (sites, dogs, litters, pages, users)
+ you     ──▶ manage.kennelport.com/ops        ─┤   │ manage API   breeder sign-in + editing     │──▶ R2  (photos: full + thumbnail)
+ KennelOS ─▶ api.kennelport.com               ─┘   │ ops          requests, set up, drafts      │──▶ Resend (sign-in codes, invites, request alerts)
                                                    │ link API     KennelOS publishes here       │
                                                    └────────────────────────────────────────────┘
 ```
@@ -100,7 +100,7 @@ The subdomain picks the site; the path picks the page:
 
 | Page | Address |
 |---|---|
-| Home | `thornfieldkennels.kennelport.app/` |
+| Home | `thornfieldkennels.kennelport.com/` |
 | About | `/about` |
 | Our dogs | `/dogs` |
 | One dog | `/dogs/willow` |
@@ -111,9 +111,9 @@ The subdomain picks the site; the path picks the page:
 | Contact, FAQ | `/contact`, `/faq` |
 | Breeder's own extra page | `/p/puppy-care` |
 
-- **No `www.`** A two-level name such as `www.thornfieldkennels.kennelport.app` isn't
-  covered by Cloudflare's free certificate, and `.app` only works over HTTPS. The site's
-  address is `thornfieldkennels.kennelport.app`.
+- **No `www.`** A two-level name such as `www.thornfieldkennels.kennelport.com` isn't
+  covered by Cloudflare's free certificate, so visitors would get a security warning. The
+  site's address is `thornfieldkennels.kennelport.com`.
 - **Section paths are fixed** (`/about`, `/dogs`, …), so every site works the same and
   KennelOS always knows where a dog's page is. Breeders can rename what the menu *shows*
   ("Our Story" instead of "About"), but not the path.
@@ -123,7 +123,7 @@ The subdomain picks the site; the path picks the page:
   break. Linked records also keep their KennelOS id, so renaming in KennelOS doesn't
   break links either.
 - **Custom domains later** (section 8, phase 6) keep the same paths:
-  `thornfieldkennels.com/about`, with the `kennelport.app` address redirecting there.
+  `thornfieldkennels.com/about`, with the `kennelport.com` address redirecting there.
 - Every site also gets `/sitemap.xml` and `/robots.txt` for search engines.
 
 ---
@@ -253,8 +253,8 @@ Each phase is useful by itself, so you can stop after any one.
 
 ## 9. Decisions to make
 
-1. **Domain:** `kennelport.app` (decided 2026-10-09). Still open: should the manage app
-   stay on `manage.kennelport.app` or move to a separate domain? A separate one is safer
+1. **Domain:** `kennelport.com` (decided 2026-10-09). Still open: should the manage app
+   stay on `manage.kennelport.com` or move to a separate domain? A separate one is safer
    only if sites ever allow embedded code.
 2. **Who can request a site:** Pro only, Lite too, or anyone (including non-KennelOS
    breeders through a public form)?
