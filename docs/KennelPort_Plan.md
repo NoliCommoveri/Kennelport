@@ -4,8 +4,12 @@
 
 KennelPort hosts breeder websites. Each kennel gets a site at `theirkennel.kennelport.com`.
 The operator (you) sets up and drafts every site by hand. Breeders then manage their own
-content through a simple login, and can link their KennelOS data so dogs, litters and
-photo albums fill in by themselves.
+content through a simple login. Breeders who use KennelOS can link it so dogs, litters
+and photo albums fill in by themselves.
+
+**KennelOS is optional.** A KennelPort site works fully on its own; a breeder who has never
+used KennelOS gets the same site, edited entirely in KennelPort. The KennelOS link is an
+extra, never a requirement.
 
 **What it is not:**
 - No self-serve checkout. Nobody buys a site with a click; you approve every one.
@@ -17,12 +21,12 @@ photo albums fill in by themselves.
 
 | # | Step | Who | What happens |
 |---|---|---|---|
-| 1 | **Request** | Breeder, in KennelOS | Presses **Request a website**. You receive an email and the request appears in your console. |
+| 1 | **Request** | Breeder: in KennelOS Pro, or anyone through the KennelPort request form | KennelOS Pro users press **Request a website** in the app. Anyone else (Lite users, non-KennelOS breeders) uses the public request form on `kennelport.com`. Either way, you receive an email and the request appears in your console. |
 | 2 | **Set up** | You | In your console: pick the subdomain, kennel name, owner's email and template. No DNS or Worker work for each site (see 2.1). |
 | 3 | **Draft** | You | You fill in the site (about, dogs, photos, contact) and preview it at its real address behind a private preview link. |
 | 4 | **Hand over** | You, then the breeder | You press **Publish** and **Send invite**. The breeder gets an email and signs in with a code sent to their email (no password). |
 | 5 | **Manage** | Breeder | Adds dogs, changes pictures, posts a litter, edits text, then presses **Publish**. |
-| 6 | **Link KennelOS** (optional) | Breeder | Links their KennelOS. Dogs and litters ticked **Show on website** flow to the site. |
+| 6 | **Link KennelOS** (optional, KennelOS users only) | Breeder | Links their KennelOS. Dogs and litters ticked **Show on website** flow to the site. |
 | 7 | **Share** | Breeder | Shares the site, dog pages and albums. Links show a photo preview on Facebook and in texts. KennelOS Companion shares carry the album links. |
 
 Billing stays manual (an invoice, or a Pro add-on you switch on). Nothing in the system
@@ -195,7 +199,9 @@ These follow KennelOS's own rules, and each one needs its own decision there:
   like `assertOnlyKeys()`.
 - A `siteConfig` injection point (KennelPort URL or `null`), so Demo and any build without
   it show nothing.
-- **Request a website**: decide which editions get it (section 9).
+- **Request a website**: a Pro-only button (decided 2026-10-09). Lite and Demo don't
+  show it; it goes through `editionConfig.js` like other Pro-only features, never a
+  hardcoded edition check.
 - Service-worker precache entries and a cache bump for any new files.
 
 ---
@@ -243,7 +249,7 @@ Each phase is useful by itself, so you can stop after any one.
 |---|---|---|
 | **0. Set up** | Domain on Cloudflare, wildcard DNS, empty Worker with D1 and R2, staging and production | — |
 | **1. Renderer + ops** | One template, the ops console, preview links, publish, reserved names, OG tags | Build and host sites for breeders yourself, with no breeder login yet |
-| **2. Requests** | Public request form + email alert to you; ops inbox | Take requests (from a link you send, before KennelOS has a button) |
+| **2. Requests** | Public request form on `kennelport.com` + email alert to you; ops inbox | Take requests from anyone, before KennelOS has its button |
 | **3. Breeder login** | Email-code sign-in, manage app, drafts and publish, photo upload with resizing and location removal, storage limits | Hand sites over to breeders |
 | **4. Albums & sharing** | Albums, share links, QR codes, nicer previews | Breeders share albums |
 | **5. KennelOS link** | Link codes, the bundle API in KennelPort; then in KennelOS: Show on website, `siteExport.js`, Request a website, Update website, filling `dog.url` | Data flows from KennelOS; Companion shares carry album links |
@@ -256,8 +262,9 @@ Each phase is useful by itself, so you can stop after any one.
 1. **Domain:** `kennelport.com` (decided 2026-10-09). Still open: should the manage app
    stay on `manage.kennelport.com` or move to a separate domain? A separate one is safer
    only if sites ever allow embedded code.
-2. **Who can request a site:** Pro only, Lite too, or anyone (including non-KennelOS
-   breeders through a public form)?
+2. **Who can request a site:** decided 2026-10-09. The in-app **Request a website**
+   button is KennelOS Pro only for now. A KennelPort site never requires KennelOS: anyone
+   can ask through the public request form, and you approve every request either way.
 3. **Pricing:** a monthly fee, a setup fee plus monthly, or included with Pro? Billing
    stays manual either way.
 4. **Accounts:** a separate KennelPort sign-in (simplest, keeps the products independent)
