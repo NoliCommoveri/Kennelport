@@ -29,8 +29,9 @@ extra, never a requirement.
 | 6 | **Link KennelOS** (optional, KennelOS users only) | Breeder | Links their KennelOS. Dogs and litters ticked **Show on website** flow to the site. |
 | 7 | **Share** | Breeder | Shares the site, dog pages and albums. Links show a photo preview on Facebook and in texts. KennelOS Companion shares carry the album links. |
 
-Billing stays manual (an invoice, or a Pro add-on you switch on). Nothing in the system
-takes payment.
+**Not for sale yet** (decided 2026-10-09). The first site is for a family member; whether
+KennelPort is ever sold is undecided. Nothing in the system takes payment, and nothing in
+this plan depends on a price.
 
 ---
 
@@ -190,6 +191,32 @@ app can stay on `manage.kennelport.com` (see section 9).
 - **Limits:** a storage cap per site, and limits on photo and album counts for each
   plan, enforced by the server.
 
+### 4.1 Closing a site
+
+Decided 2026-10-09: a site's content can be deleted **by the breeder** (a **Delete my
+site** button in the manage app, owner only) **or by you** (in the ops console). Either
+way:
+
+1. **Confirm.** The breeder types their subdomain to confirm. The screen offers **Download
+   a copy first** (a zip of their text and photos) but doesn't require it.
+2. **Delete everything, immediately.** Every dog, litter, puppy, page, album, embed and
+   redirect row; every photo in R2 (`sites/<site_id>/`); every sign-in, session and link
+   token; and the site's request record. No grace period and no hidden copy kept.
+3. **Leave a closed marker.** The `sites` row stays with only its subdomain, status
+   `closed` and the closing date. The kennel name, theme and owner are wiped.
+4. **The address shows a notice.** Every page on that subdomain, including old shared
+   links like `/dogs/willow`, shows: *"This breeder is no longer hosting with KennelPort."*
+   It answers HTTP 410 (Gone), so search engines drop the old pages.
+5. **The subdomain is never reissued automatically.** Otherwise someone else could take
+   over links that families, Facebook posts and KennelOS shares still point to. Only you
+   can release it, from the ops console.
+6. **KennelOS:** the link token stops working. KennelOS shows "This website was closed"
+   on its next **Update website** and offers to disconnect. Dog `url` fields already
+   pointing at the site land on the closed notice.
+
+Suspending (section 10) is different: it hides a site but keeps everything, so it can be
+turned back on.
+
 ---
 
 ## 5. The KennelOS link
@@ -255,7 +282,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 
 | Table | Key fields |
 |---|---|
-| `sites` | id, subdomain (unique), kennel_name, template, theme, status (`draft` / `live` / `suspended`), storage_limit, created_at |
+| `sites` | id, subdomain (unique), kennel_name, template, theme, status (`draft` / `live` / `suspended` / `closed`), closed_at, storage_limit, created_at |
 | `site_users` | site_id, email_hash, role (`owner` / `editor`) |
 | `sessions`, `login_codes` | as in KennelOS cloud |
 | `requests` | id, kennel_name, contact email, message, source (`kennelos` / `form`), status (`new` / `in_progress` / `done` / `declined`) |
@@ -268,7 +295,8 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `links` | site_id, token_hash, linked_at, last_publish_at |
 
 R2 keys look like `sites/<site_id>/photos/<photo_id>.webp`, so a whole site can be deleted
-or exported at once.
+or exported at once. A closed site keeps only its `sites` row (subdomain, `closed`,
+closed_at); every other table is emptied for it (section 4.1).
 
 ---
 
@@ -294,9 +322,9 @@ Each phase is useful by itself, so you can stop after any one.
 | Phase | Delivers | You can now… |
 |---|---|---|
 | **0. Set up** | Domain on Cloudflare, wildcard DNS, empty Worker with D1 and R2, staging and production | — |
-| **1. Renderer + ops** | One template, the ops console, preview links, publish, reserved names, OG tags | Build and host sites for breeders yourself, with no breeder login yet |
+| **1. Renderer + ops** | One template, the ops console, preview links, publish, reserved names, OG tags, close a site and the closed notice | Build and host sites for breeders yourself, with no breeder login yet |
 | **2. Requests** | Public request form on `kennelport.com` + email alert to you; ops inbox | Take requests from anyone, before KennelOS has its button |
-| **3. Breeder login** | Email-code sign-in, manage app, drafts and publish, photo upload with resizing and location removal, storage limits | Hand sites over to breeders |
+| **3. Breeder login** | Email-code sign-in, manage app, drafts and publish, photo upload with resizing and location removal, storage limits, **Delete my site** with download-a-copy | Hand sites over to breeders |
 | **4. Albums, embeds & sharing** | Albums, embeds (section 3.3), share links, QR codes, nicer previews | Breeders share albums and add videos and Facebook feeds |
 | **5. KennelOS link** | Link codes, the bundle API in KennelPort; then in KennelOS: Show on website, `siteExport.js`, Request a website, Update website, filling `dog.url` | Data flows from KennelOS; Companion shares carry album links |
 | **6. Later** | Custom domains (Cloudflare for SaaS), more templates, visitor stats, contact form | — |
@@ -311,8 +339,8 @@ Each phase is useful by itself, so you can stop after any one.
 2. **Who can request a site:** decided 2026-10-09. The in-app **Request a website**
    button is KennelOS Pro only for now. A KennelPort site never requires KennelOS: anyone
    can ask through the public request form, and you approve every request either way.
-3. **Pricing:** a monthly fee, a setup fee plus monthly, or included with Pro? Billing
-   stays manual either way.
+3. **Pricing:** decided 2026-10-09: not now. KennelPort isn't for sale yet; the first site
+   is for family. Revisit only if it's ever offered to others.
 4. **Accounts:** decided 2026-10-09: KennelPort has its **own sign-in**, separate from
    KennelOS cloud. The two connect only through the link code (section 5.2).
 5. **Publishing from KennelOS:** decided 2026-10-09: only when the breeder presses
@@ -321,8 +349,11 @@ Each phase is useful by itself, so you can stop after any one.
    in KennelPort and choose per litter whether they show (section 3.2).
 7. **Embeds:** decided 2026-10-09: yes, several providers, including YouTube and Facebook
    pages, built from an approved list (section 3.3).
-8. **Content rules and suspension:** terms of service, what gets a site suspended, and
-   what happens to the data when someone leaves (export, then delete after N days).
+8. **When someone leaves:** decided 2026-10-09: the breeder or you deletes all content
+   immediately, and the address shows a "no longer hosting with KennelPort" notice
+   (section 4.1).
+9. **Content rules and suspension:** still open, and only needed once sites go beyond
+   family: terms of service and what gets a site suspended.
 
 ---
 
@@ -334,6 +365,7 @@ Each phase is useful by itself, so you can stop after any one.
 | Photos reveal a breeder's home | Location data removed on upload; addresses shown only as town and region |
 | Private KennelOS data leaks to a public site | Allow-list bundle with a positive key check, and per-record opt-in (section 5.1) |
 | Storage creep | Per-site limits; delete files when photos and sites are removed |
+| A closed subdomain is taken over and old links point at a stranger's site | Closed subdomains are never reissued automatically (section 4.1) |
 | You become the bottleneck | Breeders handle routine edits themselves; you only do setup and design |
 | An embed provider tracks visitors or changes its embed | Click to load; plain-link fallback; providers listed in one place |
 | Tie-in to one host | Plain D1 and R2 data, with a full export for each site |
