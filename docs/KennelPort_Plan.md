@@ -96,6 +96,9 @@ with colour and font choices and sections that can be turned on and off:
 - **Optional pages:** FAQ, puppy care, testimonials
 - **Embeds:** videos and social feeds placed on any page (section 3.3)
 
+Content is stored as structured records (a dog, a litter, a photo), not free HTML. That's
+what lets KennelOS fill it in and keeps every site safe and consistent.
+
 ### 3.1 Addresses (URLs)
 
 The subdomain picks the site; the path picks the page:
@@ -137,9 +140,6 @@ Prices are entered in KennelPort only; **KennelOS never sends a price** (decided
 - Each litter has a **Show prices** switch, off by default. When off, the site shows
   "Contact us for pricing".
 - Puppies marked reserved or placed never show a price.
-
-Content is stored as structured records (a dog, a litter, a photo), not free HTML. That's
-what lets KennelOS fill it in and keeps every site safe and consistent.
 
 ### 3.3 Embeds (YouTube, Facebook and others)
 
