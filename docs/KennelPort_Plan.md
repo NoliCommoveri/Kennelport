@@ -87,6 +87,69 @@ KennelOS `cloud/` Worker. KennelOS treats it like any optional service: with no 
 URL configured, nothing about it shows or runs. That matches the KennelOS rule that
 `cloudUrl: null` must work.
 
+### 2.4 Custom domains (their own domain)
+
+A breeder can use a domain they own, such as `thornfieldkennels.com`, instead of the
+`kennelport.com` address. It works the same for every breeder, with or without KennelOS.
+
+**How it runs (once, by you):** turn on Cloudflare for SaaS on the `kennelport.com` zone,
+with a fallback host such as `sites.kennelport.com` pointing at the one Worker. Each
+breeder's domain is a **custom hostname** on that zone: Cloudflare issues and renews its
+certificate, and the Worker finds the site from the hostname, as it already does for
+subdomains (a `custom_domains` table maps one to the other). From memory, about 100
+custom hostnames are included free and each one after costs roughly $0.10 a month; check
+current pricing (section 7).
+
+**What the breeder does: guided steps that check themselves.** Most breeders have never
+edited DNS, so the manage app walks them through it and tells them when it worked:
+
+1. **Your own domain** (manage app, owner only): they type their domain. The server checks
+   it isn't another site's, creates the custom hostname in Cloudflare (status pending),
+   and shows the steps.
+2. **We find your registrar.** The server looks up the domain's nameservers (a DNS query
+   over HTTPS from the Worker) and matches them to a list of common providers:
+   GoDaddy, Namecheap, Squarespace Domains (where most former Google Domains went),
+   Porkbun, Cloudflare, IONOS, Hover, Wix, Bluehost. The steps are written for that
+   provider: where to click, which box gets which value, with a **Copy** button beside
+   each value. An unknown provider gets general steps that work anywhere.
+3. **Only the records the site needs:** a CNAME for `www` pointing to
+   `sites.kennelport.com`, and any TXT record Cloudflare asks for to prove ownership, each
+   shown with its exact name and value. The steps say plainly: don't change nameservers,
+   and don't delete other records (that's where email lives).
+4. **The bare domain** (`thornfieldkennels.com` without `www`): where the provider allows
+   a CNAME-like record at the root (Cloudflare, and ALIAS records at Porkbun, Namecheap and
+   others), the steps add it too. Elsewhere they set up the provider's own **forwarding**
+   from the bare domain to `www`. Either way `www.thornfieldkennels.com` is the address the
+   site uses (decision 15).
+5. **It checks for them.** While the page is open it checks every 30 seconds; after they
+   close it, the server keeps checking pending domains every 15 minutes for 3 days. Each
+   step gets a tick as it's done: **Record found**, **Certificate ready**, **Connected!**
+   Problems are explained in plain words: "Your `www` still points somewhere else: delete
+   the old `www` record, then add this one", or "Saved but not visible yet: changes
+   usually show within an hour, sometimes up to two days."
+6. **When it's live**, the breeder and you get an email. If it's still pending after 3
+   days, you both get one, and the ops console shows it as stuck so you can help.
+
+**Once connected:**
+- The custom domain becomes the site's main address: links, share previews, `sitemap.xml`
+  and the address KennelOS is given all use it.
+- The `kennelport.com` address redirects there with the same path, so old links keep
+  working.
+- **A daily check:** if the domain stops pointing at KennelPort (it expired, or the records
+  changed), the `kennelport.com` address stops redirecting and serves the site again, and
+  the breeder and you are emailed.
+- **Removing it** (manage app, or closing the site): the custom hostname is deleted and
+  the `kennelport.com` address is the main one again. The domain itself is theirs to keep.
+
+**If they'd rather not:** they can invite you to manage their DNS through their provider's
+delegate access (GoDaddy, Namecheap and Squarespace Domains offer it) and you add the
+records; the same checks then confirm it. New domains should be bought in the breeder's
+own name, never yours, so they keep it if they leave.
+
+**The registrar guides** live in one file, an entry per provider (how to find DNS
+settings, the field names, whether root CNAMEs or ALIAS records work, how forwarding is
+set up). You update an entry when a provider changes its screens.
+
 ---
 
 ## 3. What a site contains (the template's sections)
@@ -151,8 +214,9 @@ The subdomain picks the site; the path picks the page:
   the site. If a slug changes, the old address keeps redirecting, so shared links never
   break. Linked records also keep their KennelOS id, so renaming in KennelOS doesn't
   break links either.
-- **Custom domains later** (section 8, phase 6) keep the same paths:
-  `thornfieldkennels.com/about`, with the `kennelport.com` address redirecting there.
+- **Custom domains** (section 2.4) keep the same paths:
+  `www.thornfieldkennels.com/about`, with the `kennelport.com` address redirecting there.
+  The "no `www.`" rule above is only about `kennelport.com` addresses.
 - Every site also gets `/sitemap.xml` and `/robots.txt` for search engines.
 
 ### 3.2 Prices
@@ -517,6 +581,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `photos` | site_id, r2_key, thumb_key, width, height, bytes, alt text |
 | `albums`, `album_photos` | site_id, title, slug, cover; ordered photo list |
 | `links` | site_id, token_hash, linked_at, last_publish_at |
+| `custom_domains` | site_id, hostname, cloudflare_hostname_id, registrar (detected), status (`pending` / `active` / `stuck` / `broken`), checked_at, connected_at |
 | `health_results` | site_id, dog, test, result, date, verify_url, show (off by default), certificate photo or file (private unless ticked) |
 | `posts` | site_id, slug, title, date, body, cover photo (news, section 3.9) |
 | `stories` | site_id, quote, first name, town, photo, permission_confirmed_at |
@@ -540,6 +605,7 @@ closed_at); every other table is emptied for it (section 4.1).
 | D1 | $0 (under 50 MB against a 5 GB free tier) |
 | R2 photos | $0 for about 3 years (about 3 GB a year against 10 GB free; no bandwidth fees) |
 | Resend email | $0 on the free tier at this volume |
+| Custom domains (Cloudflare for SaaS) | $0 for the first ~100; about $0.10 a domain a month after. Each breeder pays for their own domain |
 | **Total** | **About $1 a month** |
 
 These are prices from memory; check Cloudflare's and Resend's current pricing.
@@ -559,7 +625,8 @@ Each phase is useful by itself, so you can stop after any one.
 | **4. Albums, embeds & sharing** | Albums, embeds (section 3.3), share links, QR codes, nicer previews | Breeders share albums and add videos and Facebook feeds |
 | **4b. A complete breeder site** | The inquiry form and inbox (3.10), policies and safe-payment notice, puppy statuses (3.6), health results and pedigree (3.7, 3.9), extras and pickup pages (3.4, 3.5), waitlist page with outside forms (3.8), announcement banner, news, testimonials, past litters, adults, stud dogs, going home, the breed, downloads, events, privacy page, search basics | A breeder with no KennelOS has everything a breeder website needs |
 | **5. KennelOS link** | Link codes, the bundle API in KennelPort; then in KennelOS: Show on website, `siteExport.js`, Request a website, Update website, filling `dog.url`, the kennel's website, `extras_info_url` and the embed's allowed sites; Extras, Pickup and Waitlist pages from the bundle | Data flows from KennelOS; Companion shares carry album links; status pages link to the site's extras |
-| **6. Later** | Custom domains (Cloudflare for SaaS), more templates, visitor stats | — |
+| **5b. Custom domains** | Cloudflare for SaaS, **Your own domain** with registrar detection, guided steps and automatic checks, the daily check, redirects (section 2.4) | Breeders use their own domain without editing DNS on their own |
+| **6. Later** | More templates, visitor stats | — |
 
 ---
 
@@ -600,6 +667,10 @@ Each phase is useful by itself, so you can stop after any one.
 14. **Which standard pages ship first:** section 3.9 is long. Proposed for the first family
     site: policies, safe-payment notice, inquiry form, past litters, news, privacy; the
     rest as she asks.
+15. **Main address for a custom domain:** proposed `www.` always, with the bare domain
+    pointing or forwarding to it, because a `www` CNAME works at every provider and a bare
+    domain doesn't. Cloudflare's own support for bare domains on custom hostnames is
+    Enterprise-only.
 
 ---
 
@@ -619,6 +690,8 @@ Each phase is useful by itself, so you can stop after any one.
 | Tie-in to one host | Plain D1 and R2 data, with a full export for each site |
 | A scammer copies a breeder's site or photos to sell puppies that don't exist | The safe-payment notice on by default; official contacts on every page; you can point to the real site when families ask |
 | The inquiry form attracts spam or collects more than it needs | Turnstile and rate limits; a fixed list of field types; inquiries deleted after 90 days (decision 12) |
+| A custom domain lapses or its records change | The daily check stops the redirect, so the `kennelport.com` address serves the site again; the breeder and you are emailed (section 2.4) |
+| A breeder breaks their email while editing DNS | The steps add only the site's records and say not to change nameservers or delete other records |
 | A non-KennelOS breeder gets a lesser site | The parity rule (top of the plan): every section is a KennelPort form first; KennelOS only fills fields |
 
 ---
@@ -641,6 +714,9 @@ KennelOS features built since this draft, and where the plan now covers them:
 | Several own kennels | 5.5 |
 | Live sync across devices | 5.5; decision 11 |
 | Kels guided tasks | 5.5 |
+
+Custom domains (section 2.4) moved from "Later" to phase 5b, with guided, self-checking
+steps so breeders don't edit DNS unaided.
 
 Also on 2026-11-01: the **parity rule** was written down (top of the plan), sections 3.4–3.8
 now describe each feature on its own first and with KennelOS second, and sections 3.9–3.10
