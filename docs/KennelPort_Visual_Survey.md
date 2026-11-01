@@ -1,6 +1,7 @@
 # KennelPort: what breeder websites look like (visual survey)
 
-> Status: observations, not a design. What real breeder websites look like on screen:
+> Status: observations, not a design. Home pages in sections 1–9, inner pages in
+> section 10. What real breeder websites look like on screen:
 > layout, photos, colour, type, borders, spacing, and which elements are there or
 > missing. The companion to [`KennelPort_Site_Directory.md`](KennelPort_Site_Directory.md),
 > which covers what the pages say.
@@ -310,7 +311,171 @@ These are facts the survey shows any template will meet, not style choices:
   puppy (Windy G Farm), a street address in the header (Sweetheart Goldens). KennelPort's
   rules (no buyers, town and region only) already prevent both.
 
-## 10. Sites
+## 10. Inner pages
+
+A second pass captured 39 inner pages from 18 of the sites, at both widths: dog listings,
+litter and available-puppy pages, reviews, about pages, how-it-works pages, an FAQ, a
+health guarantee and a contract page. The home page sets the look; these pages are where
+visitors spend their time, and where the differences between sites are largest.
+
+### What inner pages share
+
+- **A title band at the top of almost every inner page:** a full-width strip in a dark or
+  accent colour (charcoal, rust, navy, forest green), or a darkened photo, with the page
+  name large and centred ("Our Golden Retrievers", "Testimonials", "How to Adopt a
+  Puppy"), sometimes a one-line subtitle. About 15–30% of the first screen.
+- **The same header and footer as the home page**, so the footer's sign-up form, badges
+  and links repeat on every page.
+- **One long page per section.** Every dog, every litter, every review on one scrolling
+  page. Only the shop-like sites and one Wix site gave dogs their own pages; most sites
+  have no page for an individual dog or puppy.
+
+### Dog listings (11 pages)
+
+Five layouts:
+1. **One row per dog, photo beside facts** (Blackwood, Simply Goldendoodles): the
+   registered name as a heading, then a list with bold labels (Call name, Breed, AKC #,
+   Date of birth, Size in lbs, PennHIP, OFA elbows, DNA: genetically clear), then a
+   4–6 line bio; one large portrait photo on the other side, or a main photo with a strip
+   of thumbnails underneath. On a phone: photo, name, list, bio.
+2. **A grid of cards** (Gardner Lane, Fine and Dandy, Peterbuilt): square photo, name,
+   a short centred paragraph, a "Read More" or "About Me" button. Peterbuilt's cards add
+   "Hips: OFA Good" and coloured rating bars (Overall health 8.0, Conformation, Dog
+   friendly, Kid friendly, …, "+4 more attributes"); cards end up different heights.
+3. **A photo grid with names only** (Field Bred, Endless Mountain, Sunflower): square
+   photos with the name and "DAM" / "SIRE" under each, or names watermarked onto the
+   photos, or a white caption box with the title ("AKC Conformation Grand Champion").
+   Endless Mountain also has a second grid of "past mamas".
+4. **Canva poster per dog** (Hunter's Goldstrike): a collage of three or four photos of
+   the dog with its call name in big serif capitals and the kennel logo, and a pill
+   button with the registered name. No facts on the page.
+5. **Show-world data panels** (Vom Geliebten Haus studs): a black box per dog, side photo
+   in show stance, a cream panel with the registered name and titles underlined ("SG
+   NESTO vom Haus Tchorz, BH, IPO1 Kkl"), hip and elbow scores, DNA, sire and dam with
+   their titles, coat type, owners, and "Stud service: to approved females, live, fresh
+   or frozen" in red.
+
+Also seen: a dogs page with **no names at all**, just two slideshows ("find out more
+about each mother by clicking each photo", Pikes Peak); dogs split under "Studs" and
+"Mamas" or "Our Boys" and "Our Girls"; one page ending in about 1,000px of empty colour.
+
+### Litters and available puppies (8 pages)
+
+- **A litter as a block of centred facts** (Blackwood, Hunter's Goldstrike): a named
+  litter ('"Chronicles of Narnia" Litter') or a pair ("Bettee x Maverick") as the heading;
+  date of birth, mom, dad, "3 boys, 2 girls", adoption day or go-home date, "All puppies
+  are spoken for", "Priced at $3500 limited registration"; one photo of the dam nursing,
+  or a 3×2 grid of the week's puppy photos; an **Apply** button. Hunter's adds a weekly
+  update paragraph ("These photos show the puppies at five weeks old. The pink blanket
+  shows the three girls…").
+- **Planned litters as cards** (McClelland, Hunter's): dam and sire photos side by side in
+  one frame, "Kai & Champ's 'Rudolph' Litter", the cross in italics, a size class
+  ("Medium Goldendoodles"), then Status, Due date, Go home, and **Anticipating**: colours,
+  coat, adult size. Above them, small-print disclaimers (heat cycles are estimates; we
+  keep the first two picks).
+- **Puppies as shop products** (Bernedoodles & Co, 40+ items): breadcrumb, a category
+  sidebar, 3-up studio photos, "★ Pixie – Micro Munchkin Bernedoodle Girl", price in the
+  accent colour, "Sale!" badges, struck-through prices, "6 Month Old –" for older pups.
+  Future litters are sold as products too, each with a themed graphic ("Cavapoo Litter
+  for Valentines Day ♥").
+- **Puppies as posters** (Stormie's): each puppy's card is a Canva poster (the puppy in a
+  costume and crown in a castle scene, "Your Little Prince Awaits", a price badge, icons
+  for weight and dates) beside a paragraph and "PRICE: $1600 · 7% Florida sales tax ·
+  Total: $1712". The facts live inside the image.
+- **Parents first, then puppies** (Simply Goldendoodles): "Fall litter coming!", the two
+  parents' portraits labelled Dam and Sire with bios, then a "Puppies" section with **two
+  empty black placeholder boxes** left over from the template.
+- **Upcoming as dates and counts** (Crockett): "November 13–15 · 4 puppies may still be
+  available" in columns, with the details behind links; a widget area that didn't load.
+
+### Reviews and testimonials (7 pages)
+
+- **Plain quotes in columns** (Blackwood): three-column masonry of text-only quotes,
+  "— Olson family", no photos, stars or dates; some quotes are 200 words.
+- **Rounded review cards** (Peterbuilt): a navy band with "4.9 ★★★★★ 11 Google ratings", a
+  note saying the reviews come from the Google Business Profile, then two columns of
+  white cards: reviewer name, stars, quote.
+- **Gradient cards** (Stormie's): magenta cards with white text, stars and a first name;
+  buttons out to Facebook and Google reviews.
+- **Quote beside photo** (Shepherd Pals): alternating rows, a grey quote box (a bold
+  italic headline line, the quote, first name and initial, town and state) beside a
+  photo of the family with their grown dog, captioned with the dog's name and its litter
+  ("Classie Flossy – Lassie's 12/31/25 litter"). A visitor review form sits at the top;
+  "Reviews (42) ★★★★★".
+- **Reviews as blog posts** (Gardner Lane): a 4-up grid of puppy photos, each with a date
+  and a headline ("They Shared Pictures of our Puppy Regularly!") and "Read More".
+- **Curated and filterable** (Northwest Lagotto): a dark hero ("What Happens After the
+  Puppy Comes Home") with counts, "Curated by Mark Nelson · Published with family
+  permission · Updated 2026"; three question-led quote cards; a featured quote on a green
+  band; a "Verified on Google" grid; filter tabs (All families / The experience / Puppy
+  Culture / The dog); each quote signed with first names, town, dog and year.
+- **A widget that never loaded** (Crockett): the heading "Recent reviews" followed by
+  blank space.
+
+### About pages (5 pages)
+
+- **The family as a team, one row per person** (Blackwood: "The Blackwood Acres Crew";
+  Hunter's: "Meet the Family"): a portrait of each family member with a dog, including
+  the children, each with a job title ("Raleigh || puppy teacher, dog groomer", "Essex ||
+  puppy snuggle buddy", "Dog Chore Minions") and a paragraph.
+- **A row of tall portraits as the hero** (Lonestar): five professional photos of family
+  members with puppies side by side, then short centred sections divided by hairlines.
+- **Founder story with a fact panel** (Northwest Lagotto): a portrait card with a small
+  table (location, property, AKC status, program, club), a "by the numbers" panel, a
+  YouTube video, a trust strip of six badges, philosophy as four numbered cards.
+
+### How it works and policies (8 pages)
+
+- **Numbered steps as headings with text** (Blackwood, 7 steps in two columns; McClelland,
+  6 steps as a long document with bold sub-labels such as "Before joining a pick list",
+  "Virtual selection").
+- **Numbered cards** (Field Bred): six cards (01 Submit the request form … 06 Go-home
+  preparation), then a dark band with **"2027 Puppy Pricing: $3,600 females, $3,300
+  males"**, a checklist "What every puppy receives", and side boxes for payment methods
+  and pickup. At the top, a **status box: "Reservations currently paused · Our
+  reservation list is currently full"** with a button to the interest list.
+- **Small facts tables and diagrams** (Lonestar): "Two ways to adopt" as two bordered
+  boxes; Deposit › Details › Pickup with arrows; a four-cell table (Deposit $300 · Goes
+  toward total · Refundable: No · Good for an entire year); pick order drawn as "1st ›
+  2nd › 3rd › and so on"; accordions; a timeline bar (eyes open, photos, ready); an FAQ
+  accordion.
+- **A vertical timeline with icons** (Stormie's): ten steps alternating left and right of
+  a line (Litter announced, Application, $200 deposit, Breeding, Litter dates sent,
+  Puppies born, Weekly photos, Pick day at 6 weeks, Final balance at 7 weeks, Go home at
+  8 weeks), then "Sale terms" with emoji headings.
+- **The application pasted into the page** (Shepherd Pals): 20 numbered questions to copy
+  into an email, with warranty terms in bold capitals inside question 13, and "We hope to
+  have more pups in the fall of 2024" still at the top.
+- **FAQ as cards with search** (Peterbuilt): a search box, then one white card per
+  question with a link icon, "Answered by breeder Derek Peterson · Updated September
+  2026".
+- **Health guarantee as a long document** (Bernedoodles & Co): uppercase headings (what it
+  covers, what it doesn't, if a condition is diagnosed, lifetime take-back, microchip and
+  shelter policy), an effective date, one photo.
+
+### What the inner pages add to the picture
+
+- **Individual dog and puppy pages are rare.** Visitors mostly see dogs and litters as
+  rows on one page, with photos doing most of the work.
+- **The facts breeders show for a dog** are consistent across sites: registered and call
+  name, date of birth, weight or size, generation or breed mix, a short list of health
+  results, parents, and a bio. Show-focused kennels add titles and scores; doodle kennels
+  add generation and coat.
+- **Status is shown in words, colours and badges:** "All puppies are spoken for",
+  "Reservations currently paused", "Pregnancy confirmed", "4 puppies may still be
+  available", red RESERVED, green Available, orange corner badges.
+- **Dates go stale in public:** "Fall of 2024", "UPDATED 9/4/2026", "This site was last
+  updated 05/06/22". The sites that show an "updated" date look current; the ones that
+  don't often aren't.
+- **Facts trapped in images** are common on inner pages: puppy posters with prices and
+  dates, dog collages with names, payment-method posters, credential checklists.
+- **Blank areas and leftovers** recur: unloaded widgets, empty placeholder boxes, long
+  runs of empty colour at the end of a page.
+- **More privacy slips:** a guardian family's surname and town under each mother ("loved
+  by the Smith family in Peoria (Guardian Home)", Gardner Lane); reviewers' full names on
+  one site.
+
+## 11. Sites
 
 Home pages captured: Gardner Lane Puppies, Hunter's Goldstrike, Sunflower Dachshunds, Vom
 Geliebten Haus, Fine and Dandy Aussiedoodles, Bernedoodles & Co, Pikes Peak Doodles,
@@ -321,7 +486,19 @@ Kennel, Stormie's Doodles, Northwest Lagotto, Angels of Gold, Endless Mountain L
 Dantero Working Dogs, Kodalihart Labradors, Field Bred Golden Retrievers, Shepherd Pals,
 Sweetheart Goldens, Ryan's Goldens.
 
-Inner pages: Windy G Farm (Paisley's puppies), Peterbuilt Boerboel (planned litters,
+Inner pages, first pass: Windy G Farm (Paisley's puppies), Peterbuilt Boerboel (planned litters,
 available puppies), Northwest Lagotto (litters), McClelland Doodles (moms), Field Bred
 Golden Retrievers (meet our dogs), Lonestar Doodles (available puppies), Doodle Patch Farm
 (reviews: didn't load).
+
+Inner pages, second pass (section 10): Blackwood Acres (golden parents, available
+puppies, testimonials, how to adopt, about), Vom Geliebten Haus (males), Pikes Peak
+Doodles (parents), Simply Goldendoodles (our dogs, Coco's litter), Endless Mountain
+Labradors (our girls), Hunter's Goldstrike (our dogs, puppies, about), Fine and Dandy
+(parents, available puppies), Gardner Lane (moms and dads, testimonials), Sunflower
+Dachshunds (our dogs), Peterbuilt Boerboel (males, reviews, FAQ), Field Bred Golden
+Retrievers (our story, puppy process), Northwest Lagotto (about, reviews), McClelland
+Doodles (current and upcoming, purchasing process, contract and health guarantee),
+Stormie's Doodles (available puppies, reviews, our process), Bernedoodles & Co (available,
+health guarantee), Crockett Doodles (upcoming, reviews), Lonestar Doodles (about, how
+adoption works), Shepherd Pals (reviews, how to get started).

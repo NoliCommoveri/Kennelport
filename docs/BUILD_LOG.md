@@ -95,3 +95,11 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   showing puppies, planned-litter cards, trust badges, testimonials, footers), colour,
   type, borders, spacing, phones, photos, what's present and absent, and a comparison
   with the Cotton Paws example mock-up. Observations only, no styling decisions.
+
+## 2026-11-01: visual survey, inner pages
+
+- Captured 39 inner pages from 18 sites at desktop and phone widths and added section 10
+  to `KennelPort_Visual_Survey.md`: dog listings (five layouts), litters and available
+  puppies, reviews (seven forms), about pages, how-it-works, FAQ and policy pages, and
+  what they add (individual dog pages are rare, facts trapped in images, stale dates,
+  more privacy slips).
