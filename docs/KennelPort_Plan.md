@@ -1,6 +1,7 @@
 # KennelPort: high-level plan (DRAFT)
 
-> Status: planning draft, 2026-10-09. Nothing is built. Section 9 lists the decisions still open.
+> Status: planning draft, 2026-10-09; checked against KennelOS on 2026-11-01 (section 11 lists
+> what changed). Nothing is built. Section 9 lists the decisions still open.
 
 KennelPort hosts breeder websites. Each kennel gets a site at `theirkennel.kennelport.com`.
 The operator (you) sets up and drafts every site by hand. Breeders then manage their own
@@ -90,11 +91,14 @@ with colour and font choices and sections that can be turned on and off:
 - **Home:** kennel name, logo, hero photo, short intro
 - **About:** the kennel's story, breed(s), location (town and region only, never a street address)
 - **Our dogs:** a card per dog (name, registered name, sex, photos, health testing, short bio) linking to a dog page
-- **Litters and puppies:** current and planned litters, parents, puppies with status (available, reserved, placed) and photos
+- **Our dogs** also shows each dog's earned titles, and health tests only as section 3.7 allows
+- **Litters and puppies:** current and planned litters, parents, puppies with status (section 3.6) and photos
 - **Albums:** photo galleries, each with its own shareable link
-- **Waitlist / apply:** a link or button to the KennelOS waitlist application (`/apply/...`), when they use it
+- **Extras:** the paid extras she offers families (photo packages, training, …), grouped, with descriptions and prices (section 3.4)
+- **Pickup and delivery:** the pickup places she shows families and her transport policy (section 3.5)
+- **Waitlist / apply:** the KennelOS waitlist form and public list embedded on the page, when they use it (section 3.8); a plain link otherwise
 - **Contact:** email, phone, social links
-- **Optional pages:** FAQ, puppy care, testimonials
+- **Optional pages:** FAQ (can start from her KennelOS application FAQ), puppy care, testimonials
 - **Embeds:** videos and social feeds placed on any page (section 3.3)
 
 Content is stored as structured records (a dog, a litter, a photo), not free HTML. That's
@@ -114,6 +118,9 @@ The subdomain picks the site; the path picks the page:
 | One litter, with its puppies | `/litters/willow-x-ranger-2026` |
 | One puppy | `/litters/willow-x-ranger-2026/blue-collar` |
 | Albums | `/albums`, `/albums/willow-x-ranger-week-6` |
+| Extras | `/extras` |
+| Pickup and delivery | `/pickup` |
+| Waitlist | `/waitlist` |
 | Contact, FAQ | `/contact`, `/faq` |
 | Breeder's own extra page | `/p/puppy-care` |
 
@@ -134,13 +141,22 @@ The subdomain picks the site; the path picks the page:
 
 ### 3.2 Prices
 
-Prices are entered in KennelPort only; **KennelOS never sends a price** (decided
-2026-10-09).
-- A litter can carry a price per sex (or one price) and a deposit; a puppy can override
-  its litter's price.
+Decided 2026-10-09: prices are entered in KennelPort only; **KennelOS never sends a
+price**. **To revisit (decision 6):** since then KennelOS has gained litter prices
+(an expected price and deposit per sex, and a full-registration surcharge, already shown
+on families' turn cards), her extras price list (section 3.4) and a fee per mile for
+transport (section 3.5). Keeping the 2026-10-09 rule means typing each price twice and
+watching them drift apart. The proposal: the bundle may carry them, still shown only
+where she turns them on.
+- A litter can carry a price per sex (or one price) and a deposit per sex; a puppy can
+  override its litter's price.
+- **Registration:** a litter can add a surcharge for full registration (KennelOS's
+  `full_reg_surcharge_male` / `_female`), shown as "Full registration: +$X".
 - Each litter has a **Show prices** switch, off by default. When off, the site shows
   "Contact us for pricing".
 - Puppies marked reserved or placed never show a price.
+- A short notice under prices (her wording; KennelOS's turn cards say prices are
+  intended base prices and may change before contract signing).
 
 ### 3.3 Embeds (YouTube, Facebook and others)
 
@@ -173,6 +189,85 @@ that is to **never store the HTML a breeder pastes**:
 
 Because embeds are built by KennelPort and breeders never add their own code, the manage
 app can stay on `manage.kennelport.com` (see section 9).
+
+### 3.4 Extras page
+
+KennelOS now has a price list of paid extras (photo and video packages, training stays,
+boarding and so on): each with a name, amount, optional group and description, and
+whether families may request it. Families request extras on their KennelOS status page,
+which shows names only and a **See our extras and prices** link to her own page
+(KennelOS's `extras_info_url`; KennelOS keeps prices off its own server).
+
+- `/extras` is that page: her extras grouped under each group's name, with descriptions
+  and prices (prices follow decision 6).
+- Linked, it comes from her KennelOS price list; unlinked, she types it in KennelPort.
+- When linked, KennelOS can fill `extras_info_url` with the site's `/extras` address, so
+  the status page links straight to it.
+- Requesting an extra stays on the KennelOS status page. The site only describes them;
+  nothing on the site takes an order or a payment.
+
+### 3.5 Pickup and delivery page
+
+KennelOS now records her pickup places (a name, address and notes, each with **Show to
+families**; one is her standard location, where every mileage figure starts) and her
+transport settings: fee per mile, one way or round trip, free under a number of miles,
+how far away a family must live to suggest their own meetup place, and the distance past
+which she'll be in touch instead.
+
+- `/pickup` lists only the places she marked **Show to families**, with their notes.
+  The standard location's address appears only when it's one of those (it should be a
+  public place, never her home; section 10).
+- The transport policy in plain words: "Families at least 40 miles away can ask us to
+  meet nearer to them; beyond 150 miles, we'll be in touch about driving or a flight
+  nanny." The fee per mile shows only if prices are on (decision 6).
+- Pickup times and booking stay on the KennelOS status page.
+
+### 3.6 Puppy statuses
+
+KennelOS keeps a puppy's plan (`disposition`: undecided, keeping, available, placed,
+health hold), and a waitlist family's pick holds a pup while its deposit is pending. The
+site's labels:
+
+| KennelOS | Site |
+|---|---|
+| available, no open pick | Available |
+| available with a pick awaiting its deposit, or a sale before delivery | Reserved |
+| placed | Placed (or hidden, per litter) |
+| keeping | Staying with us |
+| undecided | Not shown as available ("Coming soon") |
+| health hold | Never shown as available; hidden by default |
+
+The bundle carries the label, worked out in KennelOS with the same availability check
+its waitlist uses (`isPupAvailable`), so the site and the waitlist never disagree.
+
+### 3.7 What's public follows her KennelOS choices
+
+KennelOS already decides what families see on its public list and status pages. The
+site bundle uses the same rules, so nothing she hid there appears on her website:
+
+- **Health tests:** shown only per her `parent_tests` setting (off by default; "Normal
+  results only" or "All results"), with each dog's own override, using the Normal /
+  Abnormal flag on each result. Health-test certificates are files in her private vault
+  and are never published automatically.
+- **Titles:** each dog's earned titles (from her logged show results), as family pages
+  show them beside a parent's name.
+- **Planned litters:** follow her **Coming up** public switches per stage: planned heats
+  (month and year only), planned pairings, confirmed pairings, whelped litters before
+  picks open.
+- **Dates and places:** whelp and ready dates as family pages show them; never a buyer,
+  a family, an address or a sale.
+
+### 3.8 The waitlist on the site
+
+KennelOS's waitlist form and public list can now be embedded on a breeder's own site
+(`embed.js`, with her **On your website** settings). The `/waitlist` page embeds both.
+
+- KennelPort's Content Security Policy must allow frames from the KennelOS family-page
+  host.
+- KennelOS must list the site's address among the sites allowed to embed her waitlist;
+  **Connect website** adds it for her.
+- The site's Litters section and the public list's **Available Puppies** draw on the
+  same KennelOS data, so they agree.
 
 ---
 
@@ -244,9 +339,13 @@ waitlist (a published "projection"):
 ### 5.3 Who owns which field
 
 - **From KennelOS (read-only in KennelPort):** name, registered name, sex, date of birth,
-  colour, health tests, litter dates, parents, puppy status.
-- **KennelPort only:** website bio, **prices**, photo choice and order, albums, embeds,
-  page text, layout.
+  colour, earned titles, health tests (section 3.7), litter dates, parents, puppy status
+  label (section 3.6), planned litters (per her Coming up switches), extras names, groups
+  and descriptions (section 3.4), shown pickup places and transport distances (section
+  3.5). If decision 6 changes: litter prices, deposits, the registration surcharge, extras
+  prices and the fee per mile.
+- **KennelPort only:** website bio, prices (unless decision 6 changes), photo choice and
+  order, albums, embeds, page text, layout.
 - Unlinked sites edit everything in KennelPort. Unlinking keeps the last published copy as
   editable KennelPort data.
 
@@ -274,6 +373,17 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 - **Request a website**: a Pro-only button (decided 2026-10-09). Lite and Demo don't
   show it; it goes through `editionConfig.js` like other Pro-only features, never a
   hardcoded edition check.
+- **The link token:** KennelOS now syncs across a breeder's devices. Keep the token in
+  the device-only `device_secrets` table (never in a backup file or the cloud), so each
+  device links once; or decide one device publishes (decision 11).
+- **One link per kennel:** KennelOS supports more than one own kennel. Each site is one
+  kennel; the bundle is scoped to that kennel's dogs and litters, and each kennel links
+  separately.
+- **Filled in when linked:** the kennel's `website` (invoices and contract forms already
+  use it), `extras_info_url` (section 3.4), the waitlist embed's allowed sites (section
+  3.8), and dog `url` (section 5.4).
+- **Kels:** Request a website and Update website as Kels tasks; **Show on website** asked
+  in Add dogs, Record a litter and when a pup is marked Keeping.
 - Service-worker precache entries and a cache bump for any new files.
 
 ---
@@ -326,7 +436,7 @@ Each phase is useful by itself, so you can stop after any one.
 | **2. Requests** | Public request form on `kennelport.com` + email alert to you; ops inbox | Take requests from anyone, before KennelOS has its button |
 | **3. Breeder login** | Email-code sign-in, manage app, drafts and publish, photo upload with resizing and location removal, storage limits, **Delete my site** with download-a-copy | Hand sites over to breeders |
 | **4. Albums, embeds & sharing** | Albums, embeds (section 3.3), share links, QR codes, nicer previews | Breeders share albums and add videos and Facebook feeds |
-| **5. KennelOS link** | Link codes, the bundle API in KennelPort; then in KennelOS: Show on website, `siteExport.js`, Request a website, Update website, filling `dog.url` | Data flows from KennelOS; Companion shares carry album links |
+| **5. KennelOS link** | Link codes, the bundle API in KennelPort; then in KennelOS: Show on website, `siteExport.js`, Request a website, Update website, filling `dog.url`, the kennel's website, `extras_info_url` and the embed's allowed sites; Extras, Pickup and Waitlist pages from the bundle | Data flows from KennelOS; Companion shares carry album links; status pages link to the site's extras |
 | **6. Later** | Custom domains (Cloudflare for SaaS), more templates, visitor stats, contact form | — |
 
 ---
@@ -346,7 +456,9 @@ Each phase is useful by itself, so you can stop after any one.
 5. **Publishing from KennelOS:** decided 2026-10-09: only when the breeder presses
    **Update website**; never automatic.
 6. **Prices:** decided 2026-10-09: KennelOS never sends prices. Breeders can enter them
-   in KennelPort and choose per litter whether they show (section 3.2).
+   in KennelPort and choose per litter whether they show (section 3.2). **Reopened
+   2026-11-01:** KennelOS now holds litter prices, extras prices and a fee per mile.
+   Proposed: the bundle may carry them, shown only where she switches prices on.
 7. **Embeds:** decided 2026-10-09: yes, several providers, including YouTube and Facebook
    pages, built from an approved list (section 3.3).
 8. **When someone leaves:** decided 2026-10-09: the breeder or you deletes all content
@@ -354,6 +466,10 @@ Each phase is useful by itself, so you can stop after any one.
    (section 4.1).
 9. **Content rules and suspension:** still open, and only needed once sites go beyond
    family: terms of service and what gets a site suspended.
+10. **Puppy labels:** confirm the table in section 3.6, especially whether placed pups
+    stay visible and how health hold shows.
+11. **Link token across devices:** each device links once (token in `device_secrets`), or
+    one device is the publisher (section 5.5).
 
 ---
 
@@ -363,9 +479,33 @@ Each phase is useful by itself, so you can stop after any one.
 |---|---|
 | One bad site gets the whole domain blocklisted | You approve every site; one-click suspend; terms of service; no customer code |
 | Photos reveal a breeder's home | Location data removed on upload; addresses shown only as town and region |
+| A pickup page reveals a breeder's home | Only places she marked **Show to families**; the standard location should be a public place (section 3.5) |
+| The site shows something she hid on KennelOS's public pages | The bundle applies KennelOS's own health-test, Coming up and availability rules (sections 3.6, 3.7) |
 | Private KennelOS data leaks to a public site | Allow-list bundle with a positive key check, and per-record opt-in (section 5.1) |
 | Storage creep | Per-site limits; delete files when photos and sites are removed |
 | A closed subdomain is taken over and old links point at a stranger's site | Closed subdomains are never reissued automatically (section 4.1) |
 | You become the bottleneck | Breeders handle routine edits themselves; you only do setup and design |
 | An embed provider tracks visitors or changes its embed | Click to load; plain-link fallback; providers listed in one place |
 | Tie-in to one host | Plain D1 and R2 data, with a full export for each site |
+
+---
+
+## 11. Checked against KennelOS (2026-11-01)
+
+KennelOS features built since this draft, and where the plan now covers them:
+
+| KennelOS feature | Plan |
+|---|---|
+| Litter prices (per sex, deposit, full-registration surcharge) shown on families' turns | 3.2; decision 6 reopened |
+| Extras price list; families request extras on their status page; `extras_info_url` | 3.4 |
+| Pickup places and transport settings (fee per mile, free miles, own-meetup distance, "be in touch" distance) | 3.5 |
+| Puppy plan (`disposition`) and waitlist picks holding a pup | 3.6 |
+| Parents' health tests on family pages (`parent_tests`, Normal / Abnormal), certificates in the vault | 3.7 |
+| Show titles from logged results | 3 (Our dogs), 3.7 |
+| Coming up switches (planned heats, pairings, early litters) | 3.7 |
+| Waitlist form and public list embeddable on her own site | 3.8 |
+| Application FAQ | 3 (Optional pages) |
+| Several own kennels | 5.5 |
+| Live sync across devices | 5.5; decision 11 |
+| Kels guided tasks | 5.5 |
+
