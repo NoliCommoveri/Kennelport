@@ -176,9 +176,11 @@ scam notice's wording; reviews links.
 
 ## 5. What this changes in the plan (to decide)
 
-1. **New pages:** How it works, Programs (guardian homes), How we raise puppies, Retired
-   dogs, Show results, Litter diary, Reviews, How to pay safely as its own page. Add them
-   to plan section 3, and the paths to 3.1?
+1. **New pages:** added to the plan (section 3.11, paths in 3.1, backlog in 8.2): How it
+   works, Programs, How we raise puppies, How to pay safely, Retired, In memory, Older
+   puppies, Show results, Litter diary, Reviews, planned-litter status and picks, and the
+   Family login link. Items 8 and 9 below are now plan decisions 18 and 20; item 4's
+   diary is decision 19.
 2. **Upcoming litters from pairings:** the plan's "planned litters" should name KennelOS
    pairings (`planned_date`, `expected_due_date`, `status`) as the source, per the Coming
    up switches, and show the pairing's status in plain words.

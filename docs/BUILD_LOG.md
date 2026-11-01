@@ -77,3 +77,12 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   puppies, Retired, In memory, Older puppies, Show results, Litter diary, Reviews and How to
   pay safely pages; planned litters from KennelOS pairings with their status; picks taken
   and open per sex as counts; a Family login link to KennelOS's status page.
+
+## 2026-11-01: survey pages added to the plan
+
+- New plan section 3.11 (how it works, programs, how we raise puppies, how to pay safely,
+  retired and in-memory dogs, older puppies, show results, litter diary, planned-litter
+  status and picks, family login link), each on its own and with KennelOS. Reviews and
+  families' stories split into `/reviews` and `/stories`. Paths in 3.1; `programs`,
+  `diary_entries` and `steps` tables and a `kind` on `stories`; KennelOS-owned fields in
+  5.3; a backlog row; decisions 18–20 (picks, diary from KennelOS, family login).

@@ -175,7 +175,9 @@ with colour and font choices and sections that can be turned on and off:
 - **Waitlist / apply:** an inquiry form on every site; or the breeder's own waitlist (KennelOS, or any other) embedded or linked (section 3.8)
 - **Contact:** email, phone, social links, and the inquiry form (section 3.10)
 - **Policies:** health guarantee, how reserving works, deposits and refunds, spay/neuter and returns (section 3.9)
-- **Optional pages:** FAQ, puppy care and going home, the breed, families' stories (testimonials), news, stud dogs, adults available, downloads (section 3.9)
+- **Optional pages:** FAQ, puppy care and going home, the breed, reviews and families' stories, news, stud dogs, adults available, downloads (section 3.9)
+- **Buying and raising:** how it works, programs such as guardian homes, how we raise puppies, how to pay safely (section 3.11)
+- **More dog and litter pages:** retired dogs, in memory, older puppies, show results, a litter diary, and planned-litter pages with their status and picks (section 3.11)
 - **Embeds:** videos and social feeds placed on any page (section 3.3)
 
 Content is stored as structured records (a dog, a litter, a photo), not free HTML. That's
@@ -204,7 +206,16 @@ The subdomain picks the site; the path picks the page:
 | Policies | `/policies` |
 | Going home | `/going-home` |
 | The breed | `/breed` |
-| Families' stories | `/stories` |
+| Reviews | `/reviews` |
+| Families' stories (puppies at home) | `/stories` |
+| Retired dogs, in memory | `/dogs/retired`, `/dogs/remembered` |
+| Older puppies | `/litters/older` |
+| A litter's diary | `/litters/willow-x-ranger-2026/diary` |
+| Show results | `/shows` |
+| How it works | `/how-it-works` |
+| Programs (guardian homes, …) | `/programs` |
+| How we raise puppies | `/raising` |
+| How to pay safely | `/pay-safely` |
 | News, one post | `/news`, `/news/spring-litter-born` |
 | Events | `/events` |
 | Downloads | `/downloads` |
@@ -415,9 +426,12 @@ breeder turns on. Version 1 ships only the ones in decision 14; the rest are bac
   programs (AKC Breeder of Merit, Bred with H.E.A.R.T., …), as names with optional links.
   No logo images unless the breeder has the right to use them.
 - **Visiting policy:** by appointment only, what to expect, health precautions.
-- **Families' stories (testimonials):** a quote, a first name and town, an optional photo
-  of the grown dog, added by the breeder with the family's permission (a checkbox they
-  tick to confirm). Never collected automatically from visitors.
+- **Reviews:** quotes from families (a quote, a first name and town), added by the breeder
+  with the family's permission (a checkbox they tick to confirm), plus a link to their
+  Google reviews. Never collected automatically from visitors, and no review widgets
+  (they need outside scripts, section 3.3).
+- **Families' stories:** photos of grown puppies in their homes, with a first name and
+  town, under the same permission rule. Never a full name, address or buyer record.
 
 **Dogs and litters, beyond the basics**
 - **Pedigree:** a three-generation pedigree on each dog page, typed in (or from KennelOS
@@ -472,6 +486,77 @@ about extras, pickup or stud service. It works with no KennelOS at all.
 - **With KennelOS linked:** the breeder can choose **Send to my KennelOS waitlist**
   instead, which embeds the KennelOS form (section 3.8). KennelPort never forwards
   inquiries into KennelOS by itself.
+
+
+### 3.11 Pages from the site survey
+
+What the survey of real breeder websites
+([`KennelPort_Site_Directory.md`](KennelPort_Site_Directory.md)) found that the list
+above lacked. Each is a section the breeder turns on, and works with no KennelOS.
+
+**How it works** (`/how-it-works`): the buying process step by step: apply, approval,
+deposit, pick order, when picks happen, how long a family has to answer, go-home week,
+paying the balance. 14 of the 28 sites read had a page like this.
+- *On its own:* ordered steps the breeder writes, each a heading and a short text.
+- *With KennelOS linked:* the steps KennelOS's waitlist actually runs are filled from their
+  waitlist settings (application fee, how picks are offered, days to answer), so the page
+  can't drift from what happens. The breeder can add steps and change the wording.
+
+**Programs** (`/programs`): guardian homes and any other program, each with its terms
+(where the family must live, what they pay for, how many litters, ownership after
+retirement), a short FAQ and an application through the inquiry form.
+- *On its own:* a program is a title, a description and its terms.
+- *With KennelOS linked:* program names and their public descriptions
+  (`waitlist_programs.public_description`). Guardian families are never named, and a
+  guardian dog's page never says who keeps it.
+
+**How we raise puppies** (`/raising`): the raising method (Puppy Culture, ENS) and a
+week-by-week plan: "Weeks 1–2", "Weeks 3–4", … each with what puppies learn and what the
+breeder does. Breeder only; KennelOS fills none of it.
+
+**How to pay safely** (`/pay-safely`): the page behind the safe-payment notice (section
+3.9): payment methods accepted and refused, "this is our only website", how to check
+they're talking to the real breeder. On by default.
+- *With KennelOS linked:* the accepted payment methods can come from KennelOS, if they
+  choose.
+
+**Retired dogs** (`/dogs/retired`) and **In memory** (`/dogs/remembered`): retired
+breeding dogs with their stories, and dogs who have died, with dates and a tribute.
+- *On its own:* a dog moves to these pages when the breeder sets it retired or deceased.
+- *With KennelOS linked:* status `retired_breeding` or `deceased` (with `date_of_death`)
+  moves it, only if ticked **Show on website**. In memory is off by default.
+
+**Older puppies** (`/litters/older`): puppies still available after their go-home date
+("12 weeks and older"), often at a changed price.
+- *On its own:* a puppy the breeder marks available past the litter's ready date shows
+  here as well as on its litter.
+- *With KennelOS linked:* worked out from the litter's `estimated_ready_date` and each
+  puppy's status.
+
+**Show results** (`/shows`): show wins and titles by dog and by date ("brags").
+- *On its own:* results the breeder types (show, date, award).
+- *With KennelOS linked:* logged show results and earned titles.
+
+**Litter diary** (`/litters/<slug>/diary`): dated updates on a litter: eyes open, first
+walk, weights, puppy parties, each with text and photos.
+- *On its own:* entries the breeder adds.
+- *With KennelOS linked (decision 19):* KennelOS's milestones, and weights if they choose,
+  arrive as draft entries for the breeder to add words and photos to. Nothing goes up
+  without their edit.
+
+**Planned litters, in more detail.** A planned litter's page (`/litters/<slug>` before
+birth) shows the sire and dam cards with health results, the expected month, when puppies
+should go home, a write-up of the pairing, **Apply for this litter**, and "Last updated".
+- **Status in plain words:** Planned, Bred (awaiting confirmation), Confirmed. *With
+  KennelOS linked:* from the pairing's status (`planned`, `bred`, `confirmed_pregnant`),
+  per the Coming up switches.
+- **Picks (decision 18):** picks taken and open per sex, as counts, with the price per
+  pick when prices show. *On its own:* the breeder sets the counts. *With KennelOS
+  linked:* worked out from waitlist offers and sales; counts only, never who holds a pick.
+
+**Family login** (a link, not a page): linked breeders can show a **Family login** link
+in the footer that opens KennelOS's family status page, which already gives each family
+their countdown, checklist and turn (decision 20). KennelPort builds no portal of its own.
 
 ---
 
@@ -602,12 +687,16 @@ Each bundle is applied by these rules (decision 16):
   date of birth, colour, earned titles, health tests (section 3.7), litter dates, parents,
   puppy status label (section 3.6), planned litters (per the Coming up switches), extras
   names, groups and descriptions (section 3.4), shown pickup places and transport
-  distances (section 3.5). If decision 6 allows prices: litter prices, deposits, the
+  distances (section 3.5); a planned litter's status (section 3.11), retired and deceased
+  status with the date of death, the waitlist steps behind How it works, and program
+  names and public descriptions. If decision 18 allows: pick counts. If decision 19
+  allows: milestones and weights, as draft diary entries. If decision 6 allows prices: litter prices, deposits, the
   registration surcharge, extras prices and the fee per mile.
 - **KennelPort only:** website bio, prices (unless decision 6 allows them), photo choice
   and order, albums, embeds, page text, layout, and everything in sections 3.9 and 3.10
-  (policies, testimonials, news, stud and adults pages, downloads, events, the inquiry
-  form and its inbox).
+  (policies, reviews and stories, news, stud and adults pages, downloads, events, the
+  inquiry form and its inbox), plus the raising page, program terms, the wording of How
+  it works and How to pay safely, diary text and photos, and tributes.
 - Unlinked sites edit everything in KennelPort. Unlinking turns every KennelOS-sourced
   record into ordinary, editable KennelPort data, as it stands in the draft.
 
@@ -668,7 +757,10 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `custom_domains` | site_id, hostname, cloudflare_hostname_id, registrar (detected, backlog), status (`pending` / `active` / `stuck` / `broken`), checked_at, connected_at |
 | `health_results` | site_id, dog, test, result, date, verify_url, show (off by default), certificate file (private unless ticked) |
 | `posts` | site_id, slug, title, date, body, cover photo (news, section 3.9) |
-| `stories` | site_id, quote, first name, town, photo, permission_confirmed_at |
+| `stories` | site_id, kind (`review` / `at_home`), quote, first name, town, photo, permission_confirmed_at |
+| `programs` | site_id, slug, title, description, terms, `kennelos_id` when linked |
+| `diary_entries` | site_id, litter, date, title, body, photos, `source` (`kennelport` / `kennelos`), draft until the breeder edits it |
+| `steps` | site_id, page (`how_it_works` / `raising`), order, heading, body, `source` |
 | `files` | site_id, r2_key, title, bytes, public, removed_at (downloads and certificates, PDFs only) |
 | `events` | site_id, title, date, town |
 | `inquiries` | site_id, form answers, received_at, deleted after 90 days (section 3.10, decision 12) |
@@ -719,7 +811,8 @@ Rough order of likely need; any item can go first.
 | Item | Delivers |
 |---|---|
 | **Albums, embeds & sharing** | Albums, embeds with stored previews (3.3), share links, QR codes |
-| **The rest of section 3.9** | Extras and pickup pages (3.4, 3.5), waitlist page with outside forms (3.8), announcement banner, testimonials, adults, stud dogs, going home, the breed, downloads, events |
+| **The rest of section 3.9** | Extras and pickup pages (3.4, 3.5), waitlist page with outside forms (3.8), announcement banner, reviews and families' stories, adults, stud dogs, going home, the breed, downloads, events |
+| **Survey pages (3.11)** | How it works, programs, how we raise puppies, how to pay safely as a page, retired and in-memory dogs, older puppies, show results, litter diary, planned-litter status and picks |
 | **KennelOS link** | Link codes, matching, the bundle API and its rules (5.3) in KennelPort; then in KennelOS: Show on website, `siteExport.js`, Update website, filling `dog.url`, the kennel's website, `extras_info_url` and the embed's allowed sites |
 | **Requests** | Public request form on `kennelport.com`, email alert, ops inbox; KennelOS's **Request a website** button |
 | **Guided custom domains** | **Your own domain** with registrar detection, guided steps and automatic checks (section 2.4) |
@@ -767,7 +860,9 @@ Rough order of likely need; any item can go first.
     agreed, with a date kept; visitors never post reviews themselves.
 14. **Which standard pages ship first:** proposed for the first family site: policies,
     safe-payment notice, inquiry form, past litters, news, privacy; the rest as the
-    breeder asks (section 8).
+    breeder asks (section 8). Of the survey pages (3.11), How it works and How to pay
+    safely are the strongest candidates to add, since most real sites explain their
+    process.
 15. **Main address for a custom domain:** proposed `www.` always, with the bare domain
     pointing or forwarding to it, because a `www` CNAME works at every provider and a bare
     domain doesn't. Cloudflare's own support for bare domains on custom hostnames without
@@ -778,6 +873,14 @@ Rough order of likely need; any item can go first.
 17. **Spam check on the inquiry form:** proposed to start with a honeypot, a minimum time
     on the page and rate limits, all without outside scripts; add Turnstile (one outside
     script, form pages only) only if spam gets through.
+18. **Picks on litter pages:** showing picks taken and open per sex tells visitors how
+    full a litter is, a business choice. Proposed: a switch per litter, off by default;
+    from KennelOS, counts only.
+19. **Litter diary from KennelOS:** milestones (and weights, if chosen) arriving as draft
+    diary entries means new kinds of data in the bundle. Proposed: opt-in per litter,
+    drafts only.
+20. **Family login link:** proposed for linked breeders: a footer link to KennelOS's
+    family status page, with no KennelPort portal.
 
 ---
 
