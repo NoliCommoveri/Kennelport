@@ -86,3 +86,12 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   families' stories split into `/reviews` and `/stories`. Paths in 3.1; `programs`,
   `diary_entries` and `steps` tables and a `kind` on `stories`; KennelOS-owned fields in
   5.3; a backlog row; decisions 18–20 (picks, diary from KennelOS, family login).
+
+## 2026-11-01: visual survey of breeder websites
+
+- Captured 28 home pages and 8 inner pages in Chromium at desktop and phone widths (26
+  rendered; two sit behind bot checks) and wrote `KennelPort_Visual_Survey.md`: five
+  recognisable looks, element by element (hero, navigation, dog grids, four ways of
+  showing puppies, planned-litter cards, trust badges, testimonials, footers), colour,
+  type, borders, spacing, phones, photos, what's present and absent, and a comparison
+  with the Cotton Paws example mock-up. Observations only, no styling decisions.

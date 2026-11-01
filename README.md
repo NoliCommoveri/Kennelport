@@ -6,4 +6,5 @@ and can link their KennelOS data.
 
 Status: planning; version 1 is the first family site. See
 [`docs/KennelPort_Plan.md`](docs/KennelPort_Plan.md). Page directory from a survey of real breeder sites:
-[`docs/KennelPort_Site_Directory.md`](docs/KennelPort_Site_Directory.md). History: [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md).
+[`docs/KennelPort_Site_Directory.md`](docs/KennelPort_Site_Directory.md); what they look like:
+[`docs/KennelPort_Visual_Survey.md`](docs/KennelPort_Visual_Survey.md). History: [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md).
