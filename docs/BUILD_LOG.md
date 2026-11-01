@@ -66,3 +66,14 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - **Decision 6** stays open; sections 3.2, 5.1 and 5.3 now say the same thing about it.
 - Decisions grouped as Decided / Open without dates; history moved here from the plan's
   old section 11. The breeder is "they" throughout instead of "she".
+
+## 2026-11-01: site directory from a survey of breeder websites
+
+- Read the menus of 28 breeder websites and six inner pages directly, plus about 25 more
+  sites through search results. Wrote `KennelPort_Site_Directory.md`: how common each page
+  type is, and a page-by-page directory of what real sites show, what KennelOS can fill
+  and what only the breeder can write.
+- Proposed, not yet in the plan: How it works, Programs (guardian homes), How we raise
+  puppies, Retired, In memory, Older puppies, Show results, Litter diary, Reviews and How to
+  pay safely pages; planned litters from KennelOS pairings with their status; picks taken
+  and open per sex as counts; a Family login link to KennelOS's status page.
