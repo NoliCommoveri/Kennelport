@@ -163,7 +163,9 @@ set up).
 ## 3. What a site contains (the template's sections)
 
 Breeders fill in fields; the template handles layout. Version 1 needs one good template,
-with colour and font choices and sections that can be turned on and off:
+with colour and font choices and sections that can be turned on and off. How it looks and
+behaves (flip cards, sliding sets, nested menus and expanders, ornaments, font pairings)
+is in [`KennelPort_Design_Direction.md`](KennelPort_Design_Direction.md). The sections:
 
 - **Home:** kennel name, logo, hero photo, short intro, an optional announcement banner (section 3.9)
 - **About:** the kennel's story, breed(s), location (town and region only, never a street address), visiting policy, memberships and breeder programs (section 3.9)

@@ -103,3 +103,12 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   puppies, reviews (seven forms), about pages, how-it-works, FAQ and policy pages, and
   what they add (individual dog pages are rare, facts trapped in images, stale dates,
   more privacy slips).
+
+## 2026-11-02: design direction
+
+- Recorded the owner's six design preferences (flip cards, professional square-cornered
+  layouts without pills or raw links, sliding sets, nested menus with selects and
+  expanders, background ornaments, complementary font pairings) in
+  `KennelPort_Design_Direction.md`, each worked through against the plan's rules (no
+  outside scripts, works without JavaScript, phones, accessibility, reduced motion), with
+  a proposed menu grouping and four open questions. Linked from plan section 3.
