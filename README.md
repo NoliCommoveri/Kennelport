@@ -5,7 +5,7 @@ The operator sets up and drafts each site; breeders manage content through a sim
 and can link their KennelOS data.
 
 Status: planning; version 1 is the first family site, built to match the approved AK sample
-([`docs/reference/`](docs/reference/)). Next: the KennelOS change for the waitlist (plan 5.5) and the remaining open decisions. See
+([`docs/reference/`](docs/reference/)). Next: the remaining open decisions. See
 [`docs/KennelPort_Plan.md`](docs/KennelPort_Plan.md). Page directory from a survey of real breeder sites:
 [`docs/KennelPort_Site_Directory.md`](docs/KennelPort_Site_Directory.md); what they look like:
 [`docs/KennelPort_Visual_Survey.md`](docs/KennelPort_Visual_Survey.md); design preferences:

@@ -198,3 +198,9 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   choosing or passing, asking for changes, messages and pickup times, leaving the list.
   Starts as a draft outline from what KennelOS's status page does. Added to the sample
   (`#applicant-help`) with draft text; the breeder will write the real wording.
+
+## 2026-11-02: KennelOS website feed built
+
+- KennelOS now serves the waitlist feed for decision 21: `website_feed` switch, off by
+  default, and `GET /f/site/<public_id>` (the public list plus page links, 404
+  `not_shared` when off). Plan 3.8 and 5.5 updated to the real endpoint.

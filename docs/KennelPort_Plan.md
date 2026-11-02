@@ -443,10 +443,14 @@ list in the site's style: the same rows KennelOS publishes (position, listed nam
 "Megan R." or "A****** K", Wants, the added date behind an ⓘ), the gap note when paused
 families are left out, a search box, Available Puppies and Coming up as expanders, and
 **Apply to join the waitlist**. To do that for real:
-- The Worker reads the kennel's public list from KennelOS
-  (`GET /f/list/<public_id>`, which is already public and returns only allow-listed
-  fields), caches it for a few minutes, and renders it with the site's theme. No
-  KennelOS data is stored in KennelPort.
+- The Worker reads the kennel's **website feed** from KennelOS
+  (`GET /f/site/<public_id>`: exactly the public list, plus paths for the list, sign-in
+  and form), caches it for five minutes, and renders it with the site's scheme. KennelOS
+  serves it only while the breeder has **Let my KennelPort website show my list in its
+  own style** on; otherwise it answers 404 `not_shared`, and the page shows a link to the
+  KennelOS list instead. No KennelOS data is stored in KennelPort. The breeder pastes the
+  feed address (shown on KennelOS's Online list card) into the manage app, which stores
+  the kennel's `public_id`.
 - **Current Applicants: See Your Details** and the application form open KennelOS's own
   pages (`/list/<public_id>#signin`, `/apply/<public_id>`) in a new tab, so sign-in codes
   and applications never pass through KennelPort.
@@ -870,11 +874,9 @@ These follow KennelOS's own rules, and each one needs its own decision there:
   breeder has listed any (section 3.8), and dog `url` (section 5.4).
 - **Kels:** Request a website and Update website as Kels tasks; **Show on website** asked
   in Add dogs, Record a litter and when a pup is marked Keeping.
-- **The waitlist on the breeder's site (decision 21):** KennelPort's Worker reads the
-  public list (`GET /f/list/<public_id>`) server to server. KennelOS needs: a switch for
-  the breeder to allow it (alongside **On your website**), off by default; the kennel's
-  `public_id` shown in the app so it can be given to KennelPort; and rate limits that
-  allow a few cached reads an hour from KennelPort without a browser. No new fields
+- **The waitlist on the breeder's site (decision 21): built in KennelOS.** The
+  `waitlist_config.website_feed` switch (off by default), `GET /f/site/<public_id>` with
+  its own read limit, and the feed address to copy on the Online list card. No new fields
   leave KennelOS: it's the list the public page already shows.
 - Service-worker precache entries and a cache bump for any new files.
 
