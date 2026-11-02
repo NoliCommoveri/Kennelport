@@ -65,7 +65,7 @@ export const AK_SAMPLE = {
     extras: { eyebrow: 'Extras', heading: 'Extended homegoing', lede: "Most puppies go home at 8 weeks. If you'd like yours to stay with us a little longer, choose one of these packages when you pick your puppy.", note: 'Prices shown are the full puppy price for each package. The range depends on the puppy.' },
     policies: { eyebrow: 'Our promises', heading: 'Policies' },
     faq: { eyebrow: 'Questions', heading: 'FAQ' },
-    waitlist: { eyebrow: 'Waitlist', heading: 'Our waitlist' },
+    waitlist: { eyebrow: 'Waitlist', heading: 'Our waitlist', form_heading: 'Apply to join the waitlist', form_intro: 'Your place on the list is set the day your application fee is received.' },
     waitlist_help: { eyebrow: 'Waitlist', heading: 'Using your status page', lede: "Already on our waitlist? Your private status page shows your place, your litters and your turn, and it's where you send us changes." },
   },
   dogs: [
@@ -137,5 +137,13 @@ export const AK_SAMPLE = {
     { kind: 'homegoing', weeks: 10, name: '10-Week Homegoing', price_from: 2500, price_to: 2800, description: 'Two additional weeks with us before your puppy moves to their forever home.', lead_in: 'During this additional time, we continue working on:', checklist: ['Individualized socialization', 'Household exposure', 'Confidence-building experiences', 'Crate-training foundations', 'Potty-training foundations', 'Handling & grooming introduction', 'Age-appropriate enrichment', 'Household manners and routine'], closing: 'The extra time lets your puppy keep maturing within the structure and routine of our home before making the move to your family.' },
     { kind: 'homegoing', weeks: 12, name: '12-Week Extended Homegoing', price_from: 3000, price_to: 3200, description: 'An additional month of development beyond the traditional 8-week homegoing age.', lead_in: 'Your puppy will continue receiving:', checklist: ['Individualized socialization', 'Household and environmental exposure', 'Confidence-building experiences', 'Crate-training foundations', 'Potty-training development', 'Grooming and handling practice', 'Age-appropriate enrichment and training', 'Continued structure and household routines'] },
     { kind: 'homegoing', weeks: 16, name: '16-Week Premier Development Package', price_from: 4200, price_to: 4400, featured: true, description: 'Our most comprehensive option, for families who want their puppy to stay with us through 16 weeks of age: eight more weeks for maturity, socialization, potty training, training foundations and veterinary care.', lead_in: 'During this time, your puppy continues receiving:', checklist: ['Individualized socialization', 'Household & environmental exposure', 'Confidence-building experiences', 'Crate-training foundations', 'Potty training', 'Training foundations', 'Veterinary care through 16 weeks'] },
+  ],
+  // The sample's application form (docs/reference/ak-sample.html, #apply).
+  questions: [
+    { type: 'choice', label: 'Preferred sex', options: ['Either', 'Female', 'Male'] },
+    { type: 'choice', label: 'Color', options: ['Any color', 'Black & white', 'Seal & white', 'Brindle & white'] },
+    { type: 'choice', label: 'Timing', options: ['As soon as possible', 'Spring 2027', 'Summer 2027 or later'] },
+    { type: 'choice', label: 'Looking for', options: ['A family companion', 'Show or breeding (full registration)'] },
+    { type: 'paragraph', label: 'Tell us about your home', hint: 'Who lives with you, other pets, your yard, your schedule…' },
   ],
 };

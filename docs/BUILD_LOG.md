@@ -503,3 +503,26 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 
 - Tried again on the real iPhone with the EXIF fix deployed: the photo uploaded. Phase 2
   is done. Plan status, 4.2, the risks table and README brought up to date.
+
+## 2026-11-02: phase 3, the application form
+
+- For breeders who run their list by hand (plan 3.8, 3.10; decision 26). `0007_application.sql`:
+  `form_fields` (the breeder's questions, in order) and `inquiries.answers`.
+  The questions are content (`QUESTION_FIELDS`, `questions` in the content document), so
+  they go through the draft and publish, and with Download a copy.
+- Site: `/waitlist` now has the application form in place of "will be shown here soon":
+  name and email always, then the questions (short answer, longer answer, a choice, yes
+  or no, which litter, phone, town), short ones two to a row as in the AK sample. With no
+  questions it asks for a few lines about the family. Answers are checked against the
+  published questions (a choice from its list, a litter from the planned and current
+  ones). Turnstile, the honeypot and the limits as on the contact form.
+- Waitlist page settings: **Waitlist closed** with its message (the form is replaced and
+  applications refused), the form's heading and the line under it.
+- Manage app: **Waitlist and application** tile on Home; **Application questions** list
+  (add, edit, reorder) linked from the waitlist page. An application arrives in the
+  Inbox as "Puppy application", with a push like any message; opened, it shows each
+  question and answer, and Reply's subject says it's about their application. The change
+  list names questions added or edited.
+- The AK sample's questions are the ones on its form (sex, color, timing, what for,
+  about your home).
+- 102 tests; the form checked in Chromium at phone and desktop widths.

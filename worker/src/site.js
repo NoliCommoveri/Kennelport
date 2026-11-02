@@ -15,7 +15,7 @@ import { renderPage, sitemap, robots } from './render/index.js';
 import { hmacHex, timingSafeEqual } from './lib/crypto.js';
 import { readCookie } from './lib/http.js';
 import { htmlPage, escapeHtml as esc } from './lib/html.js';
-import { receiveInquiry, receiveReview, turnstileOn } from './siteforms.js';
+import { receiveInquiry, receiveReview, receiveApplication, turnstileOn } from './siteforms.js';
 import { pageOn } from './render/parts.js';
 
 export const PREVIEW_COOKIE = 'kp_preview';
@@ -62,7 +62,7 @@ export async function previewTokenValid(env, siteId, token) {
 // Pages with a form load Cloudflare Turnstile when it's set up (decision 17), and
 // only those pages.
 const TURNSTILE = 'https://challenges.cloudflare.com';
-const FORM_PATHS = ['/contact', '/reviews'];
+const FORM_PATHS = ['/contact', '/reviews', '/waitlist'];
 const cspFor = (env, path) => (turnstileOn(env) && FORM_PATHS.includes(path)
   ? SITE_CSP.replace("script-src 'self'", `script-src 'self' ${TURNSTILE}`).replace("connect-src 'self'", `connect-src 'self' ${TURNSTILE}`).replace("default-src 'none';", `default-src 'none'; frame-src ${TURNSTILE};`)
   : SITE_CSP);
@@ -143,14 +143,16 @@ export async function serveSite(request, env, ctxWorker, subdomain) {
 
   const ctx = { path: url.pathname, origin, today: today(), preview, turnstileKey: turnstileOn(env) ? env.TURNSTILE_SITE_KEY : null };
 
-  // A visitor sending the contact form or a review: never cached, answered with the
+  // A visitor sending the contact form, a review or an application: never cached, answered with the
   // same page and a thank-you (or the problem, with what they typed).
   if (formPost) {
     const from = request.headers.get('origin');
     if (from && from !== origin) return new Response('Forbidden', { status: 403 });
-    const page = url.pathname === '/contact' ? 'contact' : 'reviews';
+    const page = url.pathname.slice(1);
     if (!pageOn(snap, page, ctx)) return new Response('Not found', { status: 404 });
-    const result = page === 'contact' ? await receiveInquiry(env, request, site.id, ctxWorker) : await receiveReview(env, request, site.id, ctxWorker);
+    const result = page === 'contact' ? await receiveInquiry(env, request, site.id, ctxWorker)
+      : page === 'waitlist' ? await receiveApplication(env, request, site.id, snap, ctxWorker)
+        : await receiveReview(env, request, site.id, ctxWorker);
     const { status, html: body } = renderPage(snap, { ...ctx, form: { page, ...result } });
     return html(body, result.ok ? status : 400, { 'cache-control': 'no-store' }, cspFor(env, url.pathname));
   }

@@ -60,7 +60,20 @@ const LABELS = {
   hero: { headline: ['Headline', null], script: ['Script line', 'The handwritten-style line, like "and tuxedos to match".'], intro: ['Intro', null], photos: ['Photos', 'Up to 3.'], primary_label: ['Waitlist button', null], secondary_label: ['Puppies button', null] },
   facts: { items: ['Facts', 'Up to 3 pairs, like "8 wks" / "Before going home".'] },
   story: { script: ['Script word', null], text: ['Text', null], features: ['Three features', null], link_label: ['Link to your story', null] },
-  waitlist: { line: ['Line', null], button_label: ['Button', null] },
+  waitlist: {
+    line: ['Line', null], button_label: ['Button', null],
+    closed: ['Waitlist closed', 'On: the application form is replaced by your message below, and no applications can be sent.'],
+    closed_message: ['Message while closed', 'For example "Our waitlist for 2027 is full. Check back in the spring." Leave empty for a general one.'],
+    form_heading: ['Application form heading', 'Leave empty for "Apply to join the waitlist".'],
+    form_intro: ['Line under the form heading', 'For example "Your place on the list is set the day your application fee is received."'],
+  },
+  questions: {
+    type: ['Kind of answer', null],
+    label: ['Question', 'For example "Preferred sex" or "Tell us about your home".'],
+    hint: ['Help text', 'Optional, shown small under the question, like "Who lives with you, other pets, your yard".'],
+    required: ['Families must answer this', 'Off: it shows as "(optional)".'],
+    options: ['Choices (for "A choice from a list")', 'One per line. The first is picked to begin with unless families must answer, so a first choice like "Either" or "Any color" works well.'],
+  },
   about: { text: ['Your story', 'Leave a blank line between paragraphs.'], facts: ['Facts', 'Pairs like "Litters a year" / "One or two".'] },
   contact: { location_note: ['Note about your location', 'For example "Exact address shared once your pickup is booked."'] },
   extras_page: { note: ['Note under the packages', null] },
@@ -88,6 +101,7 @@ const ENUM_WORDS = {
   stage: { planned: 'Planned', current: 'Born (current)', past: 'Past' },
   kind: { item: 'Extra', homegoing: 'Extended homegoing package' },
   dark_mode: { auto: 'Follow the visitor\'s setting', light_only: 'Light only' },
+  type_questions: { text: 'A short answer', paragraph: 'A longer answer (a few lines)', choice: 'A choice from a list', yes_no: 'Yes or no', litter: 'Which litter (your planned and current litters)', phone: 'A phone number', town: 'A town' },
 };
 
 export function labelFor(kind, name) {

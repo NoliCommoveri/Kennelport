@@ -83,6 +83,7 @@ legend { font-weight: 700; font-size: .9rem; padding: 0; margin-bottom: 6px; }
 .message { white-space: normal; overflow-wrap: anywhere; }
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: .92rem; }
 .kv dt { color: var(--muted); } .kv dd { margin: 0; overflow-wrap: anywhere; }
+.answers { margin: 0 0 14px; } .answers dt { color: var(--muted); font-size: .85rem; margin-top: 12px; } .answers dt:first-child { margin-top: 0; } .answers dd { margin: 2px 0 0; overflow-wrap: anywhere; }
 .stars { color: #9C7A34; letter-spacing: 2px; }
 .q-photo { max-width: 200px; border-radius: 8px; }
 .review-q .row form { flex: 1 1 140px; }

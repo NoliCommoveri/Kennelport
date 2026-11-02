@@ -1,5 +1,7 @@
 // The forms visitors send from a site (plan 3.9, 3.10; decisions 12, 13, 17):
 // - POST /contact: a message, saved to the manage app's Inbox only, never emailed;
+// - POST /waitlist: a puppy application on the manual route (plan 3.8, decision
+//   26), the breeder's own questions as published, saved to the Inbox the same way;
 // - POST /reviews: a family's review, held for the breeder to approve; its photo
 //   gets the same checks as any upload and stays private until a published review
 //   uses it.
@@ -8,6 +10,7 @@
 import { hmacHex } from './lib/crypto.js';
 import { savePhoto, PhotoError } from './photos.js';
 import { notify } from './push.js';
+import { litterChoices, ABOUT_LABEL } from './render/parts.js';
 
 export const FORM_LIMITS = { perVisitorHour: 5, perSiteDay: 100 };
 export const HONEYPOT = 'website';
@@ -119,6 +122,57 @@ export async function receiveReview(env, request, siteId, ctxWorker) {
     const job = notify(env, siteId, 'review', first_name, id);
     if (ctxWorker?.waitUntil) ctxWorker.waitUntil(job); else await job;
     return { ok: true, name: first_name };
+  } catch (err) {
+    if (err instanceof FormError) return { ok: false, error: err.message, values };
+    throw err;
+  }
+}
+
+// How long an answer may be, by question type.
+const ANSWER_MAX = { text: 200, paragraph: 3000, phone: 30, town: 80 };
+
+// Answers are checked against the questions in the published snapshot: what the
+// visitor was shown. Returns [[question, answer], ...] for the questions answered.
+function answers(form, snap) {
+  const out = [];
+  for (const q of snap.questions ?? []) {
+    const name = `q.${q.id}`;
+    const label = `"${q.label}"`;
+    let a;
+    if (q.type === 'choice' || q.type === 'yes_no' || q.type === 'litter') {
+      a = text(form, name, 200, { label });
+      const allowed = q.type === 'choice' ? q.options ?? [] : q.type === 'yes_no' ? ['Yes', 'No'] : litterChoices(snap);
+      if (a && !allowed.includes(a)) throw new FormError(`Please choose an answer from the list for ${label}.`);
+    } else {
+      a = text(form, name, ANSWER_MAX[q.type] ?? 200, { label, multiline: q.type === 'paragraph' });
+    }
+    if (q.required && !a) throw new FormError(`Please answer ${label}.`);
+    if (a) out.push([q.label, a]);
+  }
+  return out;
+}
+
+export async function receiveApplication(env, request, siteId, snap, ctxWorker) {
+  const form = await request.formData();
+  const values = Object.fromEntries([...form.keys()].map((k) => [k, String(form.get(k) ?? '')]));
+  try {
+    if (snap.pages.waitlist?.closed) throw new FormError("Our waitlist isn't taking applications right now.");
+    if (!(await screen(env, request, siteId, form))) return { ok: true };
+    const name = text(form, 'name', 80, { required: true, label: 'your name' });
+    const email = text(form, 'email', 254, { required: true, label: 'your email' });
+    if (!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) throw new FormError("That email address doesn't look right.");
+    const list = answers(form, snap);
+    // With no questions set up, the form asks for a few lines about them.
+    const about = (snap.questions ?? []).length ? null : text(form, 'message', 3000, { required: true, label: 'a little about your family', multiline: true });
+    if (about) list.push([ABOUT_LABEL, about]);
+    const phone = list.find(([label]) => (snap.questions ?? []).find((q) => q.label === label)?.type === 'phone')?.[1] ?? null;
+    const id = crypto.randomUUID();
+    await env.DB.prepare(`INSERT INTO inquiries (id, site_id, kind, name, email, phone, topic, message, answers, received_at)
+      VALUES (?, ?, 'application', ?, ?, ?, 'Puppy application', ?, ?, ?)`)
+      .bind(id, siteId, name, email, phone, list.map(([q, a]) => `${q}: ${a}`).join('\n').slice(0, 4000), JSON.stringify(list), new Date().toISOString()).run();
+    const job = notify(env, siteId, 'message', name, id);
+    if (ctxWorker?.waitUntil) ctxWorker.waitUntil(job); else await job;
+    return { ok: true, name };
   } catch (err) {
     if (err instanceof FormError) return { ok: false, error: err.message, values };
     throw err;

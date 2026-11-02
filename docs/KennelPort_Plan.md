@@ -991,10 +991,10 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `expanders` | site_id, page (`policies` / `faq` / `waitlist_help`), order, heading, body, start_open |
 | `extras` | site_id, kind (`item` / `homegoing`), group, name, description, photo, price_from, price_to, weeks, lead_in, checklist, closing, featured, order, `source` (section 3.4) |
 | `files` | site_id, r2_key, title, bytes, public, removed_at (downloads and certificates, PDFs only) |
-| `inquiries` | site_id, kind (`contact` / `application`), name, email, phone, topic, message, received_at, read_at; deleted after 90 days by the daily cleanup (section 3.10, decision 12). The breeder's own choice of fields (`form_fields`) comes with phase 3 |
+| `inquiries` | site_id, kind (`contact` / `application`), name, email, phone, topic, message, answers (an application's [question, answer] pairs as JSON, with the question's wording when sent), received_at, read_at; deleted after 90 days by the daily cleanup (section 3.10, decision 12) |
 | `notify_items` | what happened, for push notifications: the kind and the sender's first name only; kept 8 days (section 3.10) |
 | `payment_info` | site_id, kind (`application_fee` / `deposit` / `safe_notice`), show_on_site (off by default for the fee and deposit; the notice is on with no row), content (JSON: title, due_note, methods as [way, details] pairs, note, pay_url, pay_label; for the notice, its wording), `source` (section 3.9) |
-| `form_fields` | site_id, field type, label, required, order (the inquiry form's questions) |
+| `form_fields` | site_id, form (`application`), type (short answer, longer answer, choice, yes/no, which litter, phone, town), label, hint, required, options (JSON, for a choice), order: the application form's questions after name and email (section 3.8) |
 
 Tables for backlog items (requests, news, programs, the litter diary, events) are in
 [`KennelPort_Backlog.md`](KennelPort_Backlog.md) section 7.
@@ -1044,11 +1044,10 @@ Each phase is useful by itself, so you can stop after any one.
 About, Kennel residents with health results, Puppies with statuses, How it works, Extras
 and homegoing packages, Policies, FAQ, the status-page help, the contact form and Inbox,
 reviews, the privacy page and search basics all render and can be edited, and so do How
-to pay and the safe-payment notice (3.9). Left:
-- **The application form** for breeders who run their list by hand (3.8, decision 26):
-  the inquiry form set up with the breeder's own questions (`form_fields`), arriving in
-  the Inbox as an application.
-- **The waitlist page** (3.8), a placeholder now: the KennelOS list in the site's own
+to pay and the safe-payment notice (3.9), and the application form for breeders who run
+their list by hand (3.8, decision 26: the breeder's own questions on the waitlist page,
+a closed switch, answers in the Inbox). Left:
+- **The waitlist page** (3.8): the KennelOS list in the site's own
   style (decision 21), with a link to the KennelOS list when the feed isn't shared or
   can't be reached. This needs the website feed (`GET /f/site/<public_id>`) built in the
   KennelOS repo first (5.5); KennelPort's side can be built and tested against a sample

@@ -4,7 +4,7 @@
 import {
   esc, attr, fmtDate, priceText, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, parentName,
   litterCard, dogCard, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
-  paySection, safeNotice, payShown,
+  paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
 } from './parts.js';
 
 const sprigs = '<svg class="sprig l" aria-hidden="true"><use href="#sprig"/></svg><svg class="sprig r" aria-hidden="true"><use href="#sprig"/></svg>';
@@ -336,19 +336,75 @@ export function waitlistHelp(snap, ctx) {
 }
 
 // ---------- Waitlist ----------
-// Phase 3 adds the list from KennelOS and the application (plan 3.8). Until then
-// the page says how to ask.
+// The manual route (plan 3.8, decision 26): the breeder's application form, or
+// their "closed" message. The list from KennelOS comes with its website feed.
+
+// One question on the form. Name: q.<question id>, as siteforms.js reads it.
+function question(snap, ctx, q) {
+  const id = `a-${q.id.slice(0, 8)}`;
+  const name = `q.${q.id}`;
+  const typed = ctx.form?.page === 'waitlist' ? ctx.form.values?.[name] : undefined;
+  const req = q.required ? ' required' : '';
+  // "(optional)" only where it can be left empty: a choice or litter list that
+  // starts on an answer ("Either", "Any litter") has nothing to leave out.
+  const preset = q.type === 'choice' || q.type === 'litter';
+  const label = `${esc(q.label)}${q.required || preset ? '' : ' (optional)'}${q.hint ? `<span class="q-hint">${esc(q.hint)}</span>` : ''}`;
+  const select = (choices, fallback) => {
+    const chosen = typed ?? (q.required ? '' : fallback);
+    const blank = q.required ? '<option value="">Choose…</option>' : fallback === '' ? '<option value=""></option>' : '';
+    return `<label for="${id}">${label}<select id="${id}" name="${attr(name)}"${req}>${blank}${choices.map((c) => `<option${c === chosen ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>`;
+  };
+  switch (q.type) {
+    case 'choice': return select(q.options ?? [], q.options?.[0] ?? '');
+    case 'yes_no': return select(['Yes', 'No'], '');
+    case 'litter': return select(litterChoices(snap), ANY_LITTER);
+    case 'paragraph': return `<label for="${id}">${label}<textarea id="${id}" name="${attr(name)}" rows="4" maxlength="3000"${req}>${esc(typed ?? '')}</textarea></label>`;
+    case 'phone': return `<label for="${id}">${label}<input id="${id}" type="tel" name="${attr(name)}" autocomplete="tel" maxlength="30" value="${attr(typed ?? '')}"${req}></label>`;
+    case 'town': return `<label for="${id}">${label}<input id="${id}" name="${attr(name)}" autocomplete="address-level2" maxlength="80" value="${attr(typed ?? '')}"${req}></label>`;
+    default: return `<label for="${id}">${label}<input id="${id}" name="${attr(name)}" maxlength="200" value="${attr(typed ?? '')}"${req}></label>`;
+  }
+}
+
+// Short questions two to a row, as in the AK sample; paragraphs on their own.
+function questionRows(snap, ctx, questions) {
+  const out = [];
+  let row = [];
+  const flush = () => { if (row.length) out.push(row.length === 2 ? `<div class="row">${row.join('')}</div>` : row[0]); row = []; };
+  for (const q of questions) {
+    if (q.type === 'paragraph') { flush(); out.push(question(snap, ctx, q)); continue; }
+    row.push(question(snap, ctx, q));
+    if (row.length === 2) flush();
+  }
+  flush();
+  return out.join('\n');
+}
+
+function applicationForm(snap, ctx) {
+  const p = snap.pages.waitlist;
+  const sent = ctx.form?.page === 'waitlist' && ctx.form.ok;
+  const questions = snap.questions ?? [];
+  const about = `<label for="a-about">${esc(ABOUT_LABEL)}<span class="q-hint">Who lives with you, other pets, your home, what you hope for in a puppy.</span><textarea id="a-about" name="message" rows="5" maxlength="3000" required>${v(ctx, 'message')}</textarea></label>`;
+  return `<form class="apply-form" method="post" action="/waitlist#apply" id="apply">
+    <div><span class="eyebrow">Puppy application</span><h2 class="mt-6">${esc(p.form_heading || 'Apply to join the waitlist')}</h2>${p.form_intro ? `<p class="muted small mt-6">${esc(p.form_intro)}</p>` : ''}</div>
+    ${formResult(ctx, 'waitlist', (name) => `Thanks${name ? `, ${name.split(/\s+/)[0]}` : ''}. Your application is on its way to ${snap.site.kennel_name}, and they'll reply to the email address you gave.`)}
+    ${sent ? '' : `<div class="row"><label for="a-name">Your name<input id="a-name" name="name" autocomplete="name" maxlength="80" required value="${v(ctx, 'name')}"></label><label for="a-email">Email<input id="a-email" type="email" name="email" autocomplete="email" maxlength="254" required value="${v(ctx, 'email')}"></label></div>
+    ${questions.length ? questionRows(snap, ctx, questions) : about}
+    ${honeypot}${turnstileBox(ctx)}
+    <div><button class="btn solid" type="submit">Send application</button></div>`}
+  </form>`;
+}
 
 export function waitlist(snap, ctx) {
   const p = snap.pages.waitlist;
+  const help = pageOn(snap, 'waitlist_help', ctx) ? `<p class="center mt-20"><a class="more" href="/waitlist/help">${esc(label(snap, 'waitlist_help'))}</a></p>` : '';
+  const main = p.closed
+    ? `<div class="notice"><h2>Our waitlist is closed for now</h2><p class="muted">${esc(p.closed_message || "We aren't taking new applications at the moment. Please check back, or get in touch with any questions.")}</p><a class="btn line" href="/contact">Contact us</a></div>`
+    : applicationForm(snap, ctx);
+  const pay = paySection(snap);
   return {
     title: snap.pages.waitlist.heading || label(snap, 'waitlist'), section: '/waitlist', description: p.lede,
     body: `${pagehead(p, { eyebrow: 'Waitlist', heading: 'Our waitlist' })}
-      <section class="section tight"><div class="wrap notice">
-        <p class="muted">Our waitlist will be shown here soon. In the meantime, please get in touch and we'll tell you where it stands.</p>
-        <a class="btn solid" href="/contact">Contact us</a>
-        ${pageOn(snap, 'waitlist_help', ctx) ? `<a class="more" href="/waitlist/help">${esc(label(snap, 'waitlist_help'))}</a>` : ''}
-      </div>${paySection(snap) ? `<div class="wrap">${paySection(snap)}</div>` : ''}</section>`,
+      <section class="section tight"><div class="wrap">${main}${help}</div>${pay ? `<div class="wrap">${pay}</div>` : ''}</section>`,
   };
 }
 

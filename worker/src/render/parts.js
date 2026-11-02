@@ -280,3 +280,12 @@ export function safeNotice(snap, ctx) {
   const where = payShown(snap, ctx) ? ` <a href="/waitlist#how-to-pay">How to pay</a>` : '';
   return `<p class="pay-safe" role="note">${list ? `We take payment only by ${esc(list)}${where ? `, to the details under${where}` : ''}. ` : where ? `Our only payment details are under${where}. ` : ''}${esc(noticeText(snap))}</p>`;
 }
+
+// ---------- the application form (plan 3.8) ----------
+
+// The litter question offers these: litters still to come or with puppies now,
+// by name, then "Any litter". siteforms.js accepts only these.
+export const ANY_LITTER = 'Any litter';
+export const litterChoices = (snap) => [...snap.litters.filter((l) => l.stage === 'planned' || l.stage === 'current').map((l) => l.name), ANY_LITTER];
+// With no questions set up, the form asks this instead.
+export const ABOUT_LABEL = 'About your family and the puppy you hope for';
