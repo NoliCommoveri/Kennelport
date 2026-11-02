@@ -738,3 +738,11 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   emails against Resend's 3,000 a month and 100 a day, form messages, breeder
   accounts, push subscriptions. Emails are counted from this deploy on.
 - 134 tests. No template or manage app files changed, so no version bump.
+
+## 2026-11-02: plan checked against KennelOS before phase 4
+
+- Section 5 and the KennelOS parts of 3.2 to 3.11 checked against KennelOS's code. Fixed:
+  upcoming litters (planned heats, pairings) go in the bundle per the Coming up switches;
+  KennelOS fills litter `photos_url` as well as dog `url`, one way; invoices and receipts
+  already print the kennel's website. Decision 10 is now built in KennelOS (Undecided and
+  unset puppies aren't offered; Kels's Tidy up asks about pups with no plan).

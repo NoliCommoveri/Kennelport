@@ -384,10 +384,10 @@ waitlist never disagree:
 
 **Undecided puppies (decision 10):** an Undecided puppy is not for sale anywhere: not on
 the site, not on KennelOS's waitlist and not in Companion shares. The site shows it as
-Coming soon, with no price and no **Ask about this puppy**. KennelOS's waitlist today
-still treats Undecided as offerable (only Keeping, Placed and Health hold are held back),
-so `isPupAvailable` and Companion's export change to hold it back too (section 5.5); until
-they do, the site and the waitlist can disagree about an Undecided puppy.
+Coming soon, with no price and no **Ask about this puppy**. KennelOS offers only puppies
+marked Available (`isPupAvailable`; a puppy with no plan set counts as Undecided), and
+Kels's **Tidy up** asks about the breeder's puppies left with no plan. Companion shares
+already listed only Available puppies.
 
 ### 3.7 What's public
 
@@ -982,7 +982,9 @@ Each bundle is applied by these rules (decision 16):
 **Who owns which field:**
 - **From KennelOS (read-only in KennelPort while linked):** name, registered name, sex,
   date of birth, colour, earned titles, health tests (section 3.7), litter dates, parents,
-  puppy status label (section 3.6), planned litters (per the Coming up switches), extras
+  puppy status label (section 3.6), upcoming litters per the Coming up switches (planned
+  heats as month and year only, planned and confirmed pairings, whelped litters before
+  picks open: section 3.7), extras
   names, groups and descriptions (section 3.4), shown pickup places and transport
   distances (section 3.5); a planned litter's status (section 3.11), retired and deceased
   status with the date of death, the waitlist steps behind How it works, and program
@@ -1002,8 +1004,11 @@ Each bundle is applied by these rules (decision 16):
 - KennelOS doesn't store dog photos today; a dog has a `url` field that Companion shares
   as its "photos link." KennelPort fills that gap: each dog page and album has a
   permanent link, and when linked, KennelOS can **fill the dog's `url` with its
-  KennelPort page**. Companion packages, and anything else that shares `url`, then point
-  at the site with no other changes.
+  KennelPort page**, and a litter's `photos_url` with its litter page. Companion packages,
+  the waitlist's photos links, and anything else that shares them, then point at the site
+  with no other changes. This runs one way: KennelPort sends the addresses back when a
+  bundle is applied, and never reads `url` or `photos_url`; a dog's photos live on the
+  site, not in KennelOS.
 - Every dog, litter, puppy and album page carries **Open Graph** tags (title, cover photo,
   description), so a link pasted into Facebook, Messenger or a text shows a picture card.
   `cloud/`'s family pages already do this.
@@ -1020,6 +1025,10 @@ Each bundle is applied by these rules (decision 16):
 These follow KennelOS's own rules, and each one needs its own decision there:
 - A `show_on_website` flag on Dog and Litter: a new field in `db.js`, classified in
   `syncRegistry.js`, documented in the End-State guide.
+- **Upcoming litters go too:** planned heats (month and year only), planned and confirmed
+  pairings and whelped litters before picks open, per the **Coming up** switches
+  (`waitlist_config.show_upcoming`), the same items the waitlist projection already builds
+  for the public list (`upcoming` in `waitlistProjection.js`).
 - `shared/data/siteExport.js`, the allow-list bundle builder, with a positive key check
   like `assertOnlyKeys()`.
 - A `siteConfig` injection point (KennelPort URL or `null`), so Demo and any build without
@@ -1032,9 +1041,10 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 - **One link per kennel:** KennelOS supports more than one own kennel. Each site is one
   kennel; the bundle is scoped to that kennel's dogs and litters, and each kennel links
   separately.
-- **Filled in when linked:** the kennel's `website` (invoices and contract forms already
-  use it), `extras_info_url` (section 3.4), the waitlist embed's allowed sites when the
-  breeder has listed any (section 3.8), and dog `url` (section 5.4).
+- **Filled in when linked:** the kennel's `website` (invoices, receipts and contract forms
+  already print it), `extras_info_url` (section 3.4), the waitlist embed's allowed sites
+  (`embed_origins`) when the breeder has listed any (section 3.8), dog `url` and litter
+  `photos_url` (section 5.4).
 - **Kels:** Request a website and Update website as Kels tasks; **Show on website** asked
   in Add dogs, Record a litter and when a pup is marked Keeping.
 - **The waitlist on the breeder's site (decision 21): built in KennelOS.** The
@@ -1044,11 +1054,11 @@ These follow KennelOS's own rules, and each one needs its own decision there:
   in the site's style (3.8): the feed's `form` (what `/f/form` already serves), and
   `/f/apply`, `/f/verify` and `/f/code` answering cross-origin requests from KennelPort
   sites; `kennelport.com` added to KennelOS's Turnstile widget.
-- **Undecided puppies are not for sale (decision 10):** `isPupAvailable` treats
-  Undecided like Keeping, so the waitlist never offers one, its public list's
-  **Available Puppies** leaves it out, and the website feed and bundle agree; Companion
-  shares (`shared/data/companionExport.js`) don't show an Undecided puppy as available or
-  with a price. Needed before phase 4, and worth doing in KennelOS on its own.
+- **Undecided puppies are not for sale (decision 10): built in KennelOS.**
+  `isPupAvailable` offers only puppies marked Available (no plan set counts as Undecided),
+  so the waitlist, its public list's **Available Puppies** and the website feed agree, and
+  Kels's **Tidy up** asks about the breeder's puppies left with no plan. Companion shares
+  already listed only Available puppies.
 - Service-worker precache entries and a cache bump for any new files.
 
 ---
@@ -1175,7 +1185,7 @@ Everything after version 1, with its order and designs, is in
 8. **When someone leaves:** the breeder or you deletes all content immediately, and the
    address shows a "no longer hosting with KennelPort" notice (section 4.3).
 10. **Undecided puppies:** not for sale anywhere. KennelOS's waitlist doesn't offer them
-    and Companion shares don't show them for sale; the site shows them as Coming soon,
+    (nor a puppy with no plan set) and Companion shares don't show them for sale; the site shows them as Coming soon,
     with no price (sections 3.6, 5.5). Placed puppies show (with a hide switch per
     litter) and health hold is hidden.
 11. **Link across devices:** each device links once; the token stays in KennelOS's
