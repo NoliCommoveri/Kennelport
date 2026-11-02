@@ -13,6 +13,15 @@ and photo albums fill in by themselves.
 for sale. The design below allows for more breeders, but version 1 (section 8) builds only
 what that first site needs. Everything else is a backlog, built when someone asks for it.
 
+**The target is the AK sample.** A working sample of the first site, AK Boston Terriers,
+was built as one page and approved by the owner: every page in the five-item menu, flip
+cards, sliding sets, expanders, the extended-homegoing extras and the KennelOS waitlist
+shown in the site's own style. Version 1 is that sample made real: the same look,
+with its content in forms (section 3.12), a choice of colour schemes (section 3.13) and
+pages a breeder can switch off. The sample's source is
+[`reference/ak-sample.html`](reference/ak-sample.html); the reference folder's README
+says what's real and what's made up in it.
+
 **KennelOS is optional.** A KennelPort site works fully on its own; a breeder who has never
 used KennelOS gets the same site, edited entirely in KennelPort. The KennelOS link is an
 extra, never a requirement.
@@ -162,8 +171,10 @@ set up).
 
 ## 3. What a site contains (the template's sections)
 
-Breeders fill in fields; the template handles layout. Version 1 needs one good template,
-with colour and font choices and sections that can be turned on and off. How it looks and
+Breeders fill in fields; the template handles layout. Version 1 needs one good template
+(the AK sample's), with colour schemes (section 3.13) and the customisation in section
+3.12: pages and Home blocks turned on and off, steps, extras and expanders added and
+reworded. How it looks and
 behaves (flip cards, sliding sets, nested menus and expanders, ornaments, font pairings)
 is in [`KennelPort_Design_Direction.md`](KennelPort_Design_Direction.md). The sections:
 
@@ -250,6 +261,8 @@ The subdomain picks the site; the path picks the page:
 - Each litter has a **Show prices** switch, off by default. When off, the site shows
   "Contact us for pricing".
 - Puppies marked reserved or placed never show a price.
+- **Ranges:** any price can be one amount or a from–to range ("$2,500–$2,800"), as breeders
+  often price by puppy within a package.
 - A short notice under prices, in the breeder's wording (KennelOS's turn cards say prices
   are intended base prices and may change before contract signing).
 - The same **Show prices** rule covers every other price on the site: extras (3.4), the
@@ -312,6 +325,19 @@ video packages, training stays, boarding, a crate or puppy pack, …): each with
 optional group, description, photo and price (prices follow section 3.2's **Show prices**
 rule). They add and order them in the manage app. Visitors ask about an extra through
 the inquiry form (section 3.10); nothing on the site takes an order or a payment.
+
+**Extended homegoing packages** are a kind of extra with more structure, because breeders
+sell them as alternatives to the standard go-home age (the first site offers 10-, 12- and
+16-week packages). Each has:
+- the **age in weeks**, shown large on its card;
+- a **name** ("12-Week Extended Homegoing") and a **price or price range** (3.2);
+- a short **description**, a lead-in line ("Your puppy will continue receiving:") and a
+  **checklist** of what's included, any length, shown under a **What's included** expander;
+- an optional closing paragraph, and an optional **Most complete** mark on one package.
+Packages show side by side as cards on `/extras` (stacked on a phone), above any ordinary
+extras, each with **Ask about this package** opening the inquiry form with the package
+named. A note under them, in the breeder's words, says whether the price is the whole
+puppy price or an add-on.
 
 **With KennelOS linked:** KennelOS has its own extras price list (name, amount, group,
 description, whether families may request it), and families request extras on their
@@ -410,6 +436,23 @@ embedded on the breeder's own site (`embed.js`, the **On your website** settings
 - The site's Litters section and the public list's **Available Puppies** draw on the same
   KennelOS data, so they agree.
 
+**Shown in the site's own style (proposed, decision 21).** An embedded frame keeps
+KennelOS's own look, which clashes with the site's scheme. The AK sample instead draws the
+list in the site's style: the same rows KennelOS publishes (position, listed name such as
+"Megan R." or "A****** K", Wants, the added date behind an ⓘ), the gap note when paused
+families are left out, a search box, Available Puppies and Coming up as expanders, and
+**Apply to join the waitlist**. To do that for real:
+- The Worker reads the kennel's public list from KennelOS
+  (`GET /f/list/<public_id>`, which is already public and returns only allow-listed
+  fields), caches it for a few minutes, and renders it with the site's theme. No
+  KennelOS data is stored in KennelPort.
+- **Current Applicants: See Your Details** and the application form open KennelOS's own
+  pages (`/list/<public_id>#signin`, `/apply/<public_id>`) in a new tab, so sign-in codes
+  and applications never pass through KennelPort.
+- If KennelOS can't be reached, the page shows the last list it read with its "Updated"
+  date, or a link to the KennelOS list.
+- The frame embed stays available as a fallback.
+
 ### 3.9 Standard breeder-site features
 
 What visitors expect on a breeder's website, whether or not the breeder uses KennelOS.
@@ -497,7 +540,9 @@ above lacked. Each is a section the breeder turns on, and works with no KennelOS
 **How it works** (`/how-it-works`): the buying process step by step: apply, approval,
 deposit, pick order, when picks happen, how long a family has to answer, go-home week,
 paying the balance. 14 of the 28 sites read had a page like this.
-- *On its own:* ordered steps the breeder writes, each a heading and a short text.
+- *On its own:* as many steps as the breeder needs (one to ten), each a heading, a short
+  text and an optional **More detail** expander; numbered automatically, reordered by
+  dragging, shown as a sliding set (section 3.12).
 - *With KennelOS linked:* the steps KennelOS's waitlist actually runs are filled from their
   waitlist settings (application fee, how picks are offered, days to answer), so the page
   can't drift from what happens. The breeder can add steps and change the wording.
@@ -557,6 +602,66 @@ should go home, a write-up of the pairing, **Apply for this litter**, and "Last 
 **Family login** (a link, not a page): linked breeders can show a **Family login** link
 in the footer that opens KennelOS's family status page, which already gives each family
 their countdown, checklist and turn (decision 20). KennelPort builds no portal of its own.
+
+### 3.12 What a breeder can change
+
+The rule: **breeders change content and switch things on and off; the template keeps the
+layout.** That's what keeps every site looking like the AK sample (design direction
+preference 2) and keeps support small. Everything below is a form in the manage app, with
+a live preview.
+
+**Pages.** Every page has an **On** switch except Home, Contact and Privacy; How to pay
+safely is on by default.
+- A page that's off leaves the menu, footer and `sitemap.xml`, and its address shows a
+  plain "This page isn't available" (HTTP 404). Its content is kept, so switching it back
+  on restores it.
+- The menu's five groups (About us, Kennel residents, Puppies, How it works, Waitlist)
+  are fixed; a group whose pages are all off disappears. Menu labels can be renamed
+  (section 3.1), and pages can be reordered within their group.
+- Pages that depend on records hide themselves when empty (no Retired item with no
+  retired dogs, no Older puppies with none), whatever the switch says.
+
+**Home, block by block.** Home is a fixed sequence of blocks, each with an **On** switch:
+hero, facts row, story with three features, dogs row, litters, reviews, waitlist band.
+The order is fixed. Within each:
+- *Hero:* small label, headline, an optional script line ("and tuxedos to match"), intro,
+  one to three photos. The two buttons are fixed (waitlist, puppies) but their wording
+  can change.
+- *Facts row:* up to three number-and-label pairs ("8 wks / Before going home"), typed, or
+  counted from the site's own records (dogs, puppies born this season).
+- *Story:* a photo, heading with optional script word, text, and three features, each an
+  icon from the template's set, a title and a line.
+- *Dogs, litters, reviews:* which records show, in what order; heading and label wording.
+- *Waitlist band:* heading, line and button wording.
+
+**Lists of things breeders write, any length:**
+- *How it works steps:* one to ten (section 3.11).
+- *Policies and FAQ:* expanders, each a heading and text; the breeder picks which start
+  open.
+- *Extras and homegoing packages:* section 3.4.
+- *Review topics:* the choices in the reviews filter.
+
+**Wording everywhere.** The small letter-spaced labels above headings ("OUR PARENT DOGS"),
+section headings and lead lines all have defaults the breeder can reword.
+
+**Look:** a colour scheme (section 3.13) and the kennel's logo. No free colour, font or
+layout controls.
+
+**Fixed by the template:** page layouts, the order of blocks, card shapes and the flip,
+sliding sets, button and link styles, fonts within a scheme, and addresses (section 3.1).
+
+### 3.13 Colour schemes
+
+A **scheme** is a matched set: a palette with light and dark versions, a font pairing
+(display serif, body sans, optional script) and an ornament set. The breeder picks one
+in the manage app with a live preview of their own site; switching is instant and can be
+undone like any edit. Every scheme is checked for contrast (normal text at least 4.5:1)
+in both versions before it ships. The proposed set and its colours are in
+[`KennelPort_Design_Direction.md`](KennelPort_Design_Direction.md) section 7.
+- **Dark mode:** each site follows the visitor's device setting by default, as the AK
+  sample does; the breeder can lock it to light (decision 23).
+- **Custom colour:** none in version 1. Whether a breeder may later pick their own accent
+  colour within a scheme is decision 22.
 
 ---
 
@@ -742,7 +847,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 
 | Table | Key fields |
 |---|---|
-| `sites` | id, subdomain (unique), kennel_name, template, theme, status (`draft` / `live` / `suspended` / `closed`), published_snapshot_id, closed_at, storage_limit, photo_limit, album_limit, created_at |
+| `sites` | id, subdomain (unique), kennel_name, template, scheme (section 3.13), dark_mode (`auto` / `light_only`), kennelos_public_id (for the waitlist list, 3.8), status (`draft` / `live` / `suspended` / `closed`), published_snapshot_id, closed_at, storage_limit, photo_limit, album_limit, created_at |
 | `snapshots` | id, site_id, published_at, published_by, content (the whole published site as JSON, section 4.1); the last 10 per site kept |
 | `site_users` | site_id, email_hash, role (`owner` / `editor`) |
 | `sessions`, `login_codes` | as in KennelOS cloud |
@@ -760,7 +865,11 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `stories` | site_id, kind (`review` / `at_home`), quote, first name, town, photo, permission_confirmed_at |
 | `programs` | site_id, slug, title, description, terms, `kennelos_id` when linked |
 | `diary_entries` | site_id, litter, date, title, body, photos, `source` (`kennelport` / `kennelos`), draft until the breeder edits it |
-| `steps` | site_id, page (`how_it_works` / `raising`), order, heading, body, `source` |
+| `steps` | site_id, page (`how_it_works` / `raising`), order, heading, body, detail (the More detail expander), `source` |
+| `site_pages` | site_id, page key, enabled, menu_label, order within its menu group (section 3.12) |
+| `home_blocks` | site_id, block key (`hero` / `facts` / `story` / `dogs` / `litters` / `reviews` / `waitlist`), enabled, content (wording, photos, facts, features) |
+| `expanders` | site_id, page (`policies` / `faq`), order, heading, body, start_open |
+| `extras` | site_id, kind (`item` / `homegoing`), group, name, description, photo, price_from, price_to, weeks, lead_in, checklist, closing, featured, order, `source` (section 3.4) |
 | `files` | site_id, r2_key, title, bytes, public, removed_at (downloads and certificates, PDFs only) |
 | `events` | site_id, title, date, town |
 | `inquiries` | site_id, form answers, received_at, deleted after 90 days (section 3.10, decision 12) |
@@ -800,7 +909,8 @@ Each phase is useful by itself, so you can stop after any one.
 | **0. Set up** | Domain on Cloudflare, wildcard DNS, empty Worker with D1 and R2, staging and production | — |
 | **1. Renderer + ops** | One template, the ops console, preview links, snapshot publish and undo (4.1), reserved names, OG tags, close a site and the closed notice | Build and host the site yourself, with no breeder login yet |
 | **2. Breeder login** | Email-code sign-in, manage app, preview and publish, photo upload with resizing and the server checks (4.2), storage limits, **Delete my site** with download-a-copy | Hand the site over |
-| **3. The first site's pages** | Home, About, Our dogs, Litters and puppies with statuses (3.6), health results and pedigree as needed (3.7), and the pages in decision 14: policies, safe-payment notice, inquiry form and inbox (3.10), past litters, news, privacy page; search basics | The family site is complete and live |
+| **3. The first site's pages** | Everything in the AK sample (decision 14): Home with its blocks, About (story, reviews, contact), Kennel residents with flip cards and health results (3.7), Puppies (available, upcoming, older) with statuses (3.6), How it works steps (3.11), Extras with homegoing packages (3.4), Policies and FAQ, the waitlist page (3.8, decision 21), inquiry form and inbox (3.10); plus the safe-payment notice, privacy page and search basics | The family site is complete and live |
+| **4. Customisation and schemes** | Page and Home-block switches, menu labels, any-length steps, expanders and extras (3.12); the colour schemes with light and dark versions (3.13) | Other breeders' sites can differ from AK's without new code |
 
 If the first site wants its own domain, connect it by hand (section 2.4).
 
@@ -811,8 +921,8 @@ Rough order of likely need; any item can go first.
 | Item | Delivers |
 |---|---|
 | **Albums, embeds & sharing** | Albums, embeds with stored previews (3.3), share links, QR codes |
-| **The rest of section 3.9** | Extras and pickup pages (3.4, 3.5), waitlist page with outside forms (3.8), announcement banner, reviews and families' stories, adults, stud dogs, going home, the breed, downloads, events |
-| **Survey pages (3.11)** | How it works, programs, how we raise puppies, how to pay safely as a page, retired and in-memory dogs, older puppies, show results, litter diary, planned-litter status and picks |
+| **The rest of section 3.9** | Pickup page (3.5), waitlist page with outside forms (3.8), announcement banner, families' stories, past litters, news, adults, stud dogs, going home, the breed, downloads, events |
+| **Survey pages (3.11)** | Programs, how we raise puppies, how to pay safely as a page, retired and in-memory dogs, show results, litter diary, planned-litter status and picks |
 | **KennelOS link** | Link codes, matching, the bundle API and its rules (5.3) in KennelPort; then in KennelOS: Show on website, `siteExport.js`, Update website, filling `dog.url`, the kennel's website, `extras_info_url` and the embed's allowed sites |
 | **Requests** | Public request form on `kennelport.com`, email alert, ops inbox; KennelOS's **Request a website** button |
 | **Guided custom domains** | **Your own domain** with registrar detection, guided steps and automatic checks (section 2.4) |
@@ -840,6 +950,11 @@ Rough order of likely need; any item can go first.
    approved list (section 3.3).
 8. **When someone leaves:** the breeder or you deletes all content immediately, and the
    address shows a "no longer hosting with KennelPort" notice (section 4.3).
+14. **Which pages ship first:** the AK sample's pages (section 8.1, phase 3). Past
+    litters and news, proposed earlier, move to the backlog because the sample doesn't
+    have them.
+24. **Customisation model:** breeders change content, switch pages and Home blocks on and
+    off, and choose a scheme; layouts stay fixed (section 3.12).
 
 **Open**
 
@@ -858,11 +973,6 @@ Rough order of likely need; any item can go first.
     sit in KennelPort's database; the privacy page says so either way.
 13. **Testimonials and permission:** proposed that the breeder confirms each family
     agreed, with a date kept; visitors never post reviews themselves.
-14. **Which standard pages ship first:** proposed for the first family site: policies,
-    safe-payment notice, inquiry form, past litters, news, privacy; the rest as the
-    breeder asks (section 8). Of the survey pages (3.11), How it works and How to pay
-    safely are the strongest candidates to add, since most real sites explain their
-    process.
 15. **Main address for a custom domain:** proposed `www.` always, with the bare domain
     pointing or forwarding to it, because a `www` CNAME works at every provider and a bare
     domain doesn't. Cloudflare's own support for bare domains on custom hostnames without
@@ -880,6 +990,17 @@ Rough order of likely need; any item can go first.
     drafts only.
 20. **Family login link:** proposed for linked breeders: a footer link to KennelOS's
     family status page, with no KennelPort portal.
+21. **Waitlist in the site's style:** proposed that the Worker reads KennelOS's public list
+    and draws it with the site's scheme, as the AK sample shows it, with sign-in and
+    applications opening KennelOS's own pages (section 3.8). Needs a KennelOS check that
+    `/f/list/<public_id>` may be read server-to-server, and whether KennelOS should allow
+    it per kennel (like `embed_origins`).
+22. **Custom accent colour:** proposed none in version 1; later, perhaps one accent picked
+    from a short list per scheme, checked for contrast.
+23. **Dark mode:** proposed that sites follow the visitor's device setting, with a
+    **Light only** switch for the breeder.
+25. **Which schemes ship:** the proposed set in the design direction, section 7. How many
+    for version 1, and their names and colours.
 
 ---
 

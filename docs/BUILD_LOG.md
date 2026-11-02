@@ -136,3 +136,23 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - Buttons are rectangles, not pills.
 - Top menu: About us · Kennel residents · Puppies · How it works · Waitlist, with the
   plan's pages nested under them; labels are defaults over the fixed addresses.
+
+## 2026-11-02: the AK sample becomes the target
+
+- Built a working one-page sample of the first site, AK Boston Terriers, from the Cotton
+  Paws layout and the design decisions: all five menu groups, flip cards, sliding sets,
+  expanders, botanical ornaments, the kennel's extended-homegoing packages on Extras, and
+  a sample KennelOS public waitlist drawn in the site's style. The owner approved it as the
+  end goal. Source saved as `docs/reference/ak-sample.html` (photos left out of the public
+  repo).
+- Plan: the sample is version 1's target (top, 8.1 phase 3; decision 14 decided as the
+  sample's pages, with past litters and news moved to the backlog). New sections 3.12
+  (what a breeder can change: page and Home-block switches, menu labels, any-length steps,
+  expanders and extras, reworded labels; layouts fixed; decision 24) and 3.13 (colour
+  schemes with light and dark versions). Extended homegoing packages added to 3.4 and
+  price ranges to 3.2. Proposed drawing the KennelOS waitlist in the site's style from
+  KennelOS's public list (3.8). Data model: `site_pages`, `home_blocks`, `expanders`,
+  `extras`, `steps.detail`, `sites.scheme` and `dark_mode`. New phase 4 (customisation and
+  schemes). Open: decisions 21–23 and 25.
+- Design direction: section 7, six proposed schemes (Lawn, Harbor, Heather, Clay, Slate,
+  Midnight); the sample needed no JavaScript library.

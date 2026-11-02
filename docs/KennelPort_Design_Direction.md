@@ -1,8 +1,9 @@
 # KennelPort: design direction (DRAFT)
 
 > Status: the owner's stated preferences for how a KennelPort site looks and behaves,
-> worked out in more detail. The only rule is that it costs nothing. Not a finished design. Evidence for
-> what real breeder sites do is in [`KennelPort_Visual_Survey.md`](KennelPort_Visual_Survey.md).
+> worked out in more detail. The only rule is that it costs nothing. The AK sample
+> ([`reference/ak-sample.html`](reference/ak-sample.html)) shows all six working. Evidence
+> for what real breeder sites do is in [`KennelPort_Visual_Survey.md`](KennelPort_Visual_Survey.md).
 
 ## The six preferences
 
@@ -146,6 +147,30 @@ and the inquiry form's choices (which litter, preferred sex, timing).
 - **Readable body text** on a phone: the survey's worst pages used 10–12px light grey
   body text.
 
+## 7. Colour schemes (proposed)
+
+Each scheme is a palette in light and dark versions, a font pairing and an ornament set
+(plan section 3.13). Breeders pick a scheme, never single colours. The first is the AK
+sample's; the rest are proposals to build as samples and judge side by side. Every
+scheme is contrast-checked in both versions before it ships.
+
+| Scheme | Light | Dark | Fonts (display / body / script) | Ornaments |
+|---|---|---|---|---|
+| **Lawn** (the AK sample) | ivory ground, tuxedo-black ink, lawn-green buttons, brass labels | near-black ground, warm off-white ink, soft green buttons, gold labels | Fraunces / Mulish / Pinyon Script | botanical sprigs |
+| **Harbor** | pale sky-blue ground, navy ink, sea-blue buttons, sand labels | deep navy ground, pale blue-white ink, sky-blue buttons | Cormorant Garamond / Nunito Sans / Allura | rope and anchor line |
+| **Heather** | soft grey-lilac ground, charcoal ink, plum buttons, sage labels | aubergine-black ground, lilac-white ink, orchid buttons | Libre Caslon Display / Karla / Great Vibes | lavender sprigs |
+| **Clay** | warm sand ground, saddle-brown ink, rust buttons | dark leather ground, cream ink, copper buttons | Bitter / Source Sans 3 / none | fence line, wheat |
+| **Slate** | white ground, charcoal ink, steel-blue buttons | graphite ground, white ink, light steel buttons | DM Serif Display / Work Sans / none | none |
+| **Midnight** (dark first) | cream ground, ink-blue text, gold buttons | charcoal ground, cream ink, gold buttons and labels | Cormorant / Mulish / Pinyon Script | mountain line |
+
+Harbor matches the light blue the first site's owner already uses on their own pages.
+All fonts are free from Google Fonts.
+
+**What the AK sample showed about building it:** the flips, sliding sets, menus and
+expanders took a few hundred lines of the template's own JavaScript and CSS (scroll-snap
+for the sliding sets); no library was needed. GSAP, Swiper and the others stay allowed
+where they add something.
+
 ## Decided
 
 - Flip cards show more information, laid over a 10% faded copy of the photo (section 1).
@@ -153,3 +178,6 @@ and the inquiry form's choices (which litter, preferred sex, timing).
 - The top menu is About us · Kennel residents · Puppies · How it works · Waitlist
   (section 4).
 - JavaScript and any free library or service may be used (the one rule: no cost).
+- The AK sample ([`reference/ak-sample.html`](reference/ak-sample.html)) is the reference
+  for the first template: its layout, cards, sliding sets, expanders and Lawn scheme.
+- Breeders choose a colour scheme, not individual colours (section 7).
