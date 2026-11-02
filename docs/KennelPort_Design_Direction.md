@@ -25,7 +25,9 @@ are exactly the walls of buttons and text that preference 4 rules out (Angels of
 ## The one rule: it costs nothing
 
 Anything free is fair game: JavaScript, animation and slider libraries, web fonts from
-Google Fonts or anywhere else, icon sets, free outside services. Nothing that charges,
+Google Fonts or anywhere else, icon sets, free outside services. Fonts and libraries are
+served from the site itself rather than loaded from Google's or a CDN's servers, so
+visitors aren't tracked (plan section 3.3). Nothing that charges,
 now or at the scale of a few sites.
 
 **JavaScript is the main tool** for expanding what the design can do: flips, slides,
@@ -40,7 +42,8 @@ preferences (current licences to check when building):
 | Small animated illustrations and ornaments | Lottie (MIT licence) with free animation files |
 | Menus, drop-downs and expanders | a few lines of the template's own code |
 
-Libraries are loaded from a free CDN or served from the site; either costs nothing.
+Libraries are copied into the template and served from the site, never from a CDN (plan
+section 3.3).
 
 ## 1. Flip cards
 
@@ -167,7 +170,8 @@ colours haven't had that check yet.
 
 Clay and Slate have no script font: the script line shows in the display face's italic.
 Midnight's display face uses old-style numbers. Harbor matches the light blue the first site's owner already uses on their own pages.
-All fonts are free from Google Fonts.
+All fonts are free from Google Fonts (Open Font License), and the site serves its own
+copies (plan section 3.3).
 
 **What the AK sample showed about building it:** the flips, sliding sets, menus and
 expanders took a few hundred lines of the template's own JavaScript and CSS (scroll-snap

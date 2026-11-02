@@ -238,3 +238,64 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   the bundle, Use my KennelOS prices, Family login) and phase 5 (albums, embeds, sharing);
   customisation and schemes become phase 6. Both items left the backlog; decision 14 and
   the plan's opening updated.
+
+## 2026-11-02: plan review; backlog to its own doc; push notifications
+
+- The owner reviewed the plan and kept the multi-user setup in version 1 (they mean to
+  iterate quickly).
+- Backlog moved to `KennelPort_Backlog.md`: its order, requests, guided custom domains,
+  the pickup page, the rest of 3.9, the survey pages not in version 1, and their tables.
+  The plan keeps their addresses (3.1) and KennelOS fields (5.3) and points to the doc.
+- Decision 12 widened: new inquiries also send a push notification to each device that
+  turns them on, following KennelOS cloud's payload-free web push (`cloud/src/notify.js`);
+  the first name only, no message text through the push services. Phase 2 gains it;
+  `push_subscriptions` and `notices` added.
+- Contradictions fixed: 3.8 no longer says applications are emailed; breeders are never
+  emailed later (only the email hash is kept), so domain notices reach them in the manage
+  app and by push, and you by email; the waitlist feed's last copy is stored
+  (`feed_cache`); the safe-payment notice ships in version 1 and the How to pay safely page
+  is backlog; a litter's **Show prices** covers that litter, and a site-wide **Show other
+  prices** covers extras and other prices; preview builds a throwaway snapshot from the
+  draft so the renderer still reads only snapshots.
+
+## 2026-11-02: applications go to KennelOS when it takes them (decision 26)
+
+- The owner: when the breeder takes applications online in KennelOS, every Apply on the
+  site opens KennelOS's application page and the application goes through KennelOS's live
+  list flow; it arrives in KennelPort's Inbox only for breeders running their list by
+  hand. Worked out from the website feed's `apply` link, not a setting; the former
+  **Send to my KennelOS waitlist** choice is gone. Plan 3.8, 3.10 and decision 26.
+- Clarified (the previous change reverted): a connected KennelOS waitlist with its online
+  form off shows KennelPort's own application form, since the feed carries no `apply`
+  link; the **Waitlist open / closed** switch is how a breeder stops applications.
+
+## 2026-11-02: technical risks from the review
+
+- Photos (4.2): JPEG whenever the browser can't make WebP (iPhone Safari), the server
+  accepts both and rejects EXIF/XMP in either; phase 2 tested on real phones.
+- Snapshots (4.1) move to R2, with only their key in D1, since D1 caps a row at about
+  2 MB; rendered pages cached by snapshot id.
+- Download a copy (4.3) is a zip built in the browser, not the Worker.
+- New 4.4: the free plan's CPU limit, how the plan stays within it, and a phase 1
+  measurement with Workers Paid as the fallback.
+- Fonts and libraries (3.3, and the design direction) are served from the site, never from
+  Google Fonts or a CDN, so visitors aren't tracked; only Turnstile loads from outside.
+- Risks table: rows for each.
+
+## 2026-11-02: phase 0 coded
+
+- `worker/`: one Worker routing by hostname (`src/hosts.js`: home, manage, api, the
+  custom-domain fallback, reserved names, sites; two-level names and other domains get a
+  404 for now), D1 and R2 bindings, staging (workers.dev) and production
+  (`*.kennelport.com/*` and `kennelport.com/*` routes) in `wrangler.toml`.
+- `/ops` on the manage host: OPS_TOKEN sign-in, setup checks (D1 query, R2 write/read/
+  delete, root domain), migration status and Apply pending. Migration runner, gate, SQL
+  splitter and crypto helpers copied from KennelOS cloud; `0001` holds only `sites`.
+- Site hosts look up `sites`: unknown 404, closed 410 with the closed notice, otherwise a
+  placeholder until phase 1; everything reading D1 answers 503 until migrated.
+- Staging can't receive real hostnames, so `ALLOW_HOST_OVERRIDE` (staging only) lets a
+  `/__host` cookie stand in; plan 2.3 says so.
+- `docs/KennelPort_Setup.md`: the one-time dashboard steps (domain, proxied apex and
+  wildcard records, D1 and R2, two Workers Builds connections, OPS_TOKEN, checks).
+- 14 tests (`node --test`); both configs pass `wrangler deploy --dry-run`; checked live
+  under `wrangler dev`.

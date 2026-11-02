@@ -1,0 +1,13 @@
+{
+  "name": "kennelport-worker",
+  "private": true,
+  "type": "module",
+  "description": "The KennelPort Worker (docs/KennelPort_Plan.md section 2). Deployed by Workers Builds from this directory.",
+  "devDependencies": {
+    "wrangler": "^4.42.0"
+  },
+  "scripts": {
+    "test": "node --test \"tests/**/*.test.js\"",
+    "dev": "wrangler dev"
+  }
+}

@@ -1,7 +1,9 @@
 # KennelPort: high-level plan (DRAFT)
 
-> Status: planning draft, checked against KennelOS. Nothing is built. Section 8 says what
-> version 1 is; section 9 lists the decisions still open. History of this plan lives in
+> Status: planning draft, checked against KennelOS. Phase 0 is built (`worker/`); the
+> rest is not. Section 8 says what
+> version 1 is; section 9 lists the decisions still open. What comes after version 1 is
+> in [`KennelPort_Backlog.md`](KennelPort_Backlog.md). History of this plan lives in
 > [`BUILD_LOG.md`](BUILD_LOG.md).
 
 KennelPort hosts breeder websites. Each kennel gets a site at `theirkennel.kennelport.com`.
@@ -11,7 +13,8 @@ and photo albums fill in by themselves.
 
 **Version 1 is one site.** The first site is for a family member, and KennelPort is not
 for sale. The design below allows for more breeders, but version 1 (section 8) builds only
-what that first site needs. Everything else is a backlog, built when someone asks for it.
+what that first site needs. Everything else is a backlog, built when someone asks for it
+([`KennelPort_Backlog.md`](KennelPort_Backlog.md)).
 
 **The target is the AK sample.** A working sample of the first site, AK Boston Terriers,
 was built as one page and approved by the owner: every page in the five-item menu, flip
@@ -44,7 +47,7 @@ what changes when KennelOS is linked.
 
 | # | Step | Who | What happens |
 |---|---|---|---|
-| 1 | **Request** | Breeder | Version 1: they ask you directly. Later (backlog): KennelOS Pro users press **Request a website** in the app; anyone else uses a public request form on `kennelport.com`. Either way you get an email and the request appears in your console. |
+| 1 | **Request** | Breeder | Version 1: they ask you directly. Later, a **Request a website** button in KennelOS Pro and a public request form (backlog section 2). |
 | 2 | **Set up** | You | In your console: pick the subdomain, kennel name, owner's email and template. No DNS or Worker work for each site (see 2.1). |
 | 3 | **Draft** | You | You fill in the site (about, dogs, photos, contact) and preview it at its real address behind a private preview link. |
 | 4 | **Hand over** | You, then the breeder | You press **Publish** and **Send invite**. The breeder gets an email and signs in with a code sent to their email (no password). |
@@ -76,8 +79,8 @@ breeder. One shared renderer means a template fix reaches every site at once.
 ```
  visitor ──▶ thornfieldkennels.kennelport.com ─┐
                                                │   ┌──────────── Worker: kennelport ────────────┐
- breeder ──▶ manage.kennelport.com            ─┼──▶│ renderer     public sites, OG previews     │──▶ D1  (sites, dogs, litters, pages, users, snapshots)
- you     ──▶ manage.kennelport.com/ops        ─┤   │ manage API   breeder sign-in + editing     │──▶ R2  (photos: full + thumbnail; files)
+ breeder ──▶ manage.kennelport.com            ─┼──▶│ renderer     public sites, OG previews     │──▶ D1  (sites, dogs, litters, pages, users)
+ you     ──▶ manage.kennelport.com/ops        ─┤   │ manage API   breeder sign-in + editing     │──▶ R2  (photos: full + thumbnail; files; snapshots)
  KennelOS ─▶ api.kennelport.com               ─┘   │ ops          requests, set up, drafts      │──▶ Resend (sign-in codes, invites)
                                                    │ link API     KennelOS publishes here       │
                                                    └────────────────────────────────────────────┘
@@ -88,8 +91,8 @@ breeder. One shared renderer means a template fix reaches every site at once.
 | **Renderer** | Server-side HTML from a template plus the site's published snapshot (section 4.1). Fast, works on any phone, good for search engines. No customer JavaScript. |
 | **Manage app** | Static pages on the reserved `manage` host. Forms for each section, photo upload with in-browser resizing. |
 | **Ops console** | Your side: create site, edit any site, preview, publish, suspend, invite; later the request inbox. Same pattern as `cloud/`'s `/ops` in KennelOS. |
-| **D1** | All text content, accounts and published snapshots. Tens of MB at most. |
-| **R2** | Photos and downloads. About 200 MB a year per active breeder once photos are resized (section 7). |
+| **D1** | All draft content and accounts. Tens of MB at most. |
+| **R2** | Photos, downloads and published snapshots (section 4.1). About 200 MB a year per active breeder once photos are resized (section 7). |
 
 Reserved subdomains (`www`, `manage`, `api`, `ops`, `admin`, `mail`, `support`, `sites`,
 `kennelos`, `kennelport`, …) can never be given to a site.
@@ -100,6 +103,13 @@ KennelPort lives in this repo and deploys as its own Worker. It is not part of t
 KennelOS `cloud/` Worker. KennelOS treats it like any optional service: with no KennelPort
 URL configured, nothing about it shows or runs. That matches the KennelOS rule that
 `cloudUrl: null` must work.
+
+**Staging and production** are two Workers from the same code (`worker/wrangler.toml`),
+each with its own D1 and R2. Production answers on `kennelport.com` and
+`*.kennelport.com`. Staging lives on its `workers.dev` address, which can't receive those
+hostnames, so on staging only a cookie set by `/__host?h=<hostname>` stands in for the
+hostname and the same routing is tested there; without it, staging acts as the manage
+host. One-time dashboard steps: [`KennelPort_Setup.md`](KennelPort_Setup.md).
 
 ### 2.4 Custom domains (their own domain)
 
@@ -126,48 +136,20 @@ current pricing (section 7).
    console.
 
 New domains should be bought in the breeder's own name, never yours, so they keep it if
-they leave.
+they leave. Guided steps that check themselves are backlog (backlog section 3).
 
-**Once connected** (same by hand or automated):
+**Once connected:**
 - The custom domain becomes the site's main address: links, share previews, `sitemap.xml`
   and the address KennelOS is given all use it.
 - The `kennelport.com` address redirects there with the same path, so old links keep
   working.
 - **A daily check:** if the domain stops pointing at KennelPort (it expired, or the records
-  changed), the `kennelport.com` address stops redirecting and serves the site again, and
-  the breeder and you are emailed.
+  changed), the `kennelport.com` address stops redirecting and serves the site again; you are
+  emailed, and the breeder sees a notice in the manage app and gets a push notification
+  (section 3.10). KennelPort keeps no readable breeder email address to write to
+  (section 6).
 - **Removing it** (ops console, or closing the site): the custom hostname is deleted and
   the `kennelport.com` address is the main one again. The domain itself is theirs to keep.
-
-**Backlog: guided steps that check themselves.** Only worth building if several breeders
-want their own domains, since the registrar guides need upkeep whenever a provider changes
-its screens. The design:
-
-1. **Your own domain** (manage app, owner only): they type their domain. The server checks
-   it isn't another site's, creates the custom hostname in Cloudflare (status pending),
-   and shows the steps.
-2. **We find your registrar.** The server looks up the domain's nameservers (a DNS query
-   over HTTPS from the Worker) and matches them to a list of common providers (GoDaddy,
-   Namecheap, Squarespace Domains, Porkbun, Cloudflare, IONOS, Hover, Wix, Bluehost). The
-   steps are written for that provider, with a **Copy** button beside each value. An
-   unknown provider gets general steps that work anywhere.
-3. **Only the records the site needs**, as in the by-hand steps above, each shown with its
-   exact name and value, and the same warnings.
-4. **The bare domain:** where the provider allows a CNAME-like record at the root
-   (Cloudflare, and ALIAS records at Porkbun, Namecheap and others), the steps add it.
-   Elsewhere they set up the provider's own forwarding from the bare domain to `www`.
-5. **It checks for them.** While the page is open it checks every 30 seconds; after they
-   close it, the server keeps checking pending domains every 15 minutes for 3 days. Each
-   step gets a tick as it's done: **Record found**, **Certificate ready**, **Connected!**
-   Problems are explained in plain words: "Your `www` still points somewhere else: delete
-   the old `www` record, then add this one", or "Saved but not visible yet: changes
-   usually show within an hour, sometimes up to two days."
-6. **When it's live**, the breeder and you get an email. If it's still pending after 3
-   days, you both get one, and the ops console shows it as stuck so you can help.
-
-The registrar guides would live in one file, an entry per provider (how to find DNS
-settings, the field names, whether root CNAMEs or ALIAS records work, how forwarding is
-set up).
 
 ---
 
@@ -194,6 +176,10 @@ is in [`KennelPort_Design_Direction.md`](KennelPort_Design_Direction.md). The se
 - **Buying and raising:** how it works, programs such as guardian homes, how we raise puppies, how to pay safely (section 3.11)
 - **More dog and litter pages:** retired dogs, in memory, older puppies, show results, a litter diary, and planned-litter pages with their status and picks (section 3.11)
 - **Embeds:** videos and social feeds placed on any page (section 3.3)
+
+Version 1 builds the sections in decision 14; the others are designed in
+[`KennelPort_Backlog.md`](KennelPort_Backlog.md), and their addresses (3.1) and KennelOS
+fields (5.3) are kept here so the template and the link are designed once.
 
 Content is stored as structured records (a dog, a litter, a photo), not free HTML. That's
 what lets KennelOS fill it in and keeps every site safe and consistent.
@@ -262,14 +248,16 @@ The subdomain picks the site; the path picks the page:
 - **Registration:** a litter can add a surcharge for full registration (KennelOS's
   `full_reg_surcharge_male` / `_female`), shown as "Full registration: +$X".
 - Each litter has a **Show prices** switch, off by default. When off, the site shows
-  "Contact us for pricing".
+  "Contact us for pricing" for that litter and its puppies.
 - Puppies marked reserved or placed never show a price.
 - **Ranges:** any price can be one amount or a from–to range ("$2,500–$2,800"), as breeders
   often price by puppy within a package.
 - A short notice under prices, in the breeder's wording (KennelOS's turn cards say prices
   are intended base prices and may change before contract signing).
-- The same **Show prices** rule covers every other price on the site: extras (3.4), the
-  delivery fee (3.5), stud fees and adults (3.9). Off, each shows "Contact us".
+- Prices that don't belong to a litter (extras, 3.4; and in the backlog the delivery fee,
+  stud fees and adults) follow one site-wide **Show other prices** switch, also off by
+  default. Off, each shows "Contact us". "Prices show" elsewhere in this plan means the
+  switch that covers that price is on.
 
 **With KennelOS linked (decision 6):** the breeder chooses, with a **Use my KennelOS
 prices** switch in the manage app, off by default.
@@ -277,7 +265,7 @@ prices** switch in the manage app, off by default.
 - *On:* the bundle carries KennelOS's litter prices (price and deposit per sex, the
   full-registration surcharge), its extras price list (3.4) and the fee per mile (3.5),
   so each is typed once. They're read-only in KennelPort while the switch is on, and
-  still show only where the breeder turns **Show prices** on.
+  still show only where the breeder turns the matching switch on.
 
 ### 3.3 Embeds (YouTube, Facebook and others)
 
@@ -312,12 +300,17 @@ store the HTML a breeder pastes**:
 - If a provider removes an item or changes its embed, the site shows a plain link
   instead of a blank box.
 
-**Outside services and libraries.** The template may use any free outside service or
-library it needs: web fonts, animation and slider libraries, Cloudflare Turnstile,
-Cloudflare Web Analytics, a reviews widget. The only rule is that it costs nothing.
-Every page sends a Content Security Policy listing exactly the services the template
-uses plus the embed providers above, so a breeder's content still can't load anything
-else (breeders never add code).
+**Outside services and libraries.** The template may use any free font, library or
+outside service it needs; the only rule is that it costs nothing. **Fonts and libraries
+are served from the site itself**, never from Google Fonts' or a CDN's servers: the font
+files (all under the SIL Open Font License, which allows this) and libraries such as
+Swiper or PhotoSwipe are copied into the template and served by the Worker. Loading them
+from a third party would hand that party every visitor's IP address on every page, which
+is exactly what click-to-load embeds avoid. Only services that have to run elsewhere load
+from outside: Cloudflare Turnstile, on the form pages only, and in the backlog Cloudflare
+Web Analytics and a reviews widget. Every page sends a Content Security Policy listing
+exactly those services plus the embed providers above, so a breeder's content still
+can't load anything else (breeders never add code).
 
 Because embeds are built by KennelPort and breeders never add their own code, the manage
 app can stay on `manage.kennelport.com` (see section 9).
@@ -326,8 +319,8 @@ app can stay on `manage.kennelport.com` (see section 9).
 
 **On its own:** `/extras` lists the paid extras the breeder offers families (photo and
 video packages, training stays, boarding, a crate or puppy pack, …): each with a name,
-optional group, description, photo and price (prices follow section 3.2's **Show prices**
-rule). They add and order them in the manage app. Visitors ask about an extra through
+optional group, description, photo and price (prices follow section 3.2's **Show other
+prices** switch). They add and order them in the manage app. Visitors ask about an extra through
 the inquiry form (section 3.10); nothing on the site takes an order or a payment.
 
 **Extended homegoing packages** are a kind of extra with more structure, because breeders
@@ -354,21 +347,9 @@ the breeder's own page (`extras_info_url`).
 
 ### 3.5 Pickup and delivery page
 
-**On its own:** `/pickup` lists the breeder's pickup places (a name, the town or a public
-place, and notes such as "by the north entrance") and their delivery policy in plain
-words: how far they will drive or meet, a fee per mile or a flat fee (when prices show),
-and whether they use a flight nanny. Never a home address: the form asks for a public
-place, and a hint says why (section 10).
-
-**With KennelOS linked:** KennelOS records pickup places (each with **Show to families**;
-one is the standard location, where mileage starts) and transport settings (fee per mile,
-one way or round trip, free under some miles, how far a family must live to suggest their
-own meetup place, the "we'll be in touch" distance).
-- Only places marked **Show to families** come over.
-- The policy sentence is written from those settings: "Families at least 40 miles away can
-  ask us to meet nearer to them; beyond 150 miles, we'll be in touch about driving or a
-  flight nanny." The fee per mile only if prices show (decision 6).
-- Pickup times and booking stay on the KennelOS status page.
+Backlog ([`KennelPort_Backlog.md`](KennelPort_Backlog.md) section 4). Version 1 shows
+no pickup page; the address and the fields KennelOS fills are kept here so the link is
+designed once.
 
 ### 3.6 Puppy statuses
 
@@ -425,13 +406,35 @@ public list and status pages, so nothing hidden there appears on the website:
 
 ### 3.8 The waitlist on the site
 
+**Where an application goes (decision 26).** One rule, worked out by the site, not a
+setting the breeder can get wrong:
+- **The breeder takes applications online in KennelOS** (their waitlist is connected and
+  the website feed carries an `apply` link, which KennelOS sends only while it takes
+  applications online; with the frame embed instead, the embedded KennelOS form is the
+  application):
+  every **Apply** button on the site, including **Apply to join the waitlist** and a
+  litter's **Apply for this litter**, opens KennelOS's own application page
+  (`/apply/<public_id>`). The application goes through KennelOS's live list flow (the
+  emailed code, the breeder's KennelOS inbox, KennelOS's own alerts) and never touches
+  KennelPort. The site offers no KennelPort application form, and no application ever
+  lands in KennelPort's Inbox.
+- **Otherwise** (no KennelOS, or KennelOS without online applications, so the breeder runs
+  their list by hand): the site's own application form below, arriving in KennelPort's
+  Inbox as a message (section 3.10). This includes a connected KennelOS waitlist whose
+  online form is off: the feed has no `apply` link, so the site shows KennelPort's form.
+  A breeder who wants no applications at all uses the **Waitlist open / closed** switch.
+- Plain questions through the Contact form (section 3.10) come to KennelPort's Inbox either
+  way.
+
 **On its own:** `/waitlist` (shown as "Apply" or "Puppy application", the breeder's
 choice) is one of:
 - **The site's inquiry form** (section 3.10), set up as a puppy application with the
-  breeder's own questions; answers are emailed to them. KennelPort is not a waitlist: no
-  list, no places in line.
+  breeder's own questions; answers arrive in the manage app's Inbox, with a push
+  notification (section 3.10). KennelPort is not a waitlist: no list, no places in line.
+  This is the manual route; it's never shown while KennelOS takes applications online (above).
 - **A link or embed of the waitlist they already use** (a Google Form, Jotform, …),
-  through the approved embed list (section 3.3) or as a button.
+  through the approved embed list (section 3.3) or as a button. Backlog; version 1 has
+  the other two.
 - A **Waitlist open / closed** switch with their message ("Our waitlist for 2027 is full").
 
 **With KennelOS linked (Pro waitlist):** KennelOS's waitlist form and public list can be
@@ -456,7 +459,9 @@ families are left out, a search box, Available Puppies and Coming up as expander
   and form), caches it for five minutes, and renders it with the site's scheme. KennelOS
   serves it only while the breeder has **Let my KennelPort website show my list in its
   own style** on; otherwise it answers 404 `not_shared`, and the page shows a link to the
-  KennelOS list instead. No KennelOS data is stored in KennelPort. The breeder pastes the
+  KennelOS list instead. The only KennelOS data KennelPort keeps is the last copy of
+  this feed, the public list anyone can already see (`feed_cache`, section 6), replaced
+  on each read and deleted when the breeder removes the feed address. The breeder pastes the
   feed address (shown on KennelOS's Online list card) into the manage app, which stores
   the kennel's `public_id`.
 - **Current Applicants: See Your Details** and the application form open KennelOS's own
@@ -482,16 +487,19 @@ families are left out, a search box, Available Puppies and Coming up as expander
 
 What visitors expect on a breeder's website, whether or not the breeder uses KennelOS.
 All are KennelPort content only; KennelOS fills none of them. Each is a section the
-breeder turns on. Version 1 ships only the ones in decision 14; the rest are backlog.
+breeder turns on. These are the ones version 1 ships (decision 14); the rest (stories,
+past litters, adults, stud dogs, the breed, a banner, news, going home, downloads, events,
+visitor stats) are in the backlog doc, section 5.
 
 **Trust and buying a puppy**
 - **Policies:** health guarantee, how reserving works (application, deposit, pick order),
   deposit and refund terms, spay/neuter or breeding rights, and the lifetime take-back or
   rehoming policy. Plain text sections with headings, linked from every puppy page.
-- **How to pay safely:** the payment methods the breeder accepts and a standard warning
+- **Safe-payment notice:** the payment methods the breeder accepts and a standard warning
   about puppy scams ("We'll never ask for payment by gift card; we only use the contacts
-  on this site"). On by default, because impersonation scams copy breeders' photos and
-  names.
+  on this site"), shown on the waitlist and puppy pages. On by default, because
+  impersonation scams copy breeders' photos and names. A full **How to pay safely** page
+  (`/pay-safely`) is backlog.
 - **How to pay:** how a family pays the **application fee** and the **deposit**, shown
   openly on the site so nobody has to email to ask. For each of the two: the methods taken
   (Venmo, Zelle, PayPal, check, card…), the details for each (handle, email, who a check
@@ -501,8 +509,8 @@ breeder turns on. Version 1 ships only the ones in decision 14; the rest are bac
   has its own **Show on website** switch, off until the breeder turns it on. This is how
   to pay, not what it costs: amounts follow the prices rule (section 3.2) and appear only
   if the breeder types them into the wording. It shows on the waitlist page beside
-  **Apply**, under the matching How it works steps (3.11), and on How to pay safely, where
-  it doubles as the list of the only real payment details. Nothing on the site takes a
+  **Apply**, under the matching How it works steps (3.11), and with the safe-payment
+  notice, where it doubles as the list of the only real payment details. Nothing on the site takes a
   payment itself.
   - *With KennelOS linked:* filled from KennelOS's waitlist **payment instructions** and
     the fee account's pay link (`feePay`), the same text families already see on their
@@ -525,31 +533,10 @@ breeder turns on. Version 1 ships only the ones in decision 14; the rest are bac
     location data removed, size limits) and stay private until the review is approved.
   - The breeder can also add a review themselves, ticking that the family agreed.
   - Plus a link to their Google reviews (or a free Google reviews widget).
-- **Families' stories:** photos of grown puppies in their homes, with a first name and
-  town, submitted by families and approved like reviews, or added by the breeder with
-  the family's agreement. Never a full name, address or buyer record.
 
 **Dogs and litters, beyond the basics**
 - **Pedigree:** a three-generation pedigree on each dog page, typed in (or from KennelOS
   when linked: its pedigree-only ancestors), with titles.
-- **Past litters:** a litter archive ("Where are they now") with photos, no buyer names.
-- **Adults available:** retired or adult dogs looking for homes, with the same statuses.
-- **Stud dogs:** a stud page per male offered at stud: health testing, titles,
-  requirements for outside females, "Contact us" (fees follow the prices rule).
-- **The breed:** a page about the breed, temperament, care and grooming, with links to
-  the parent club.
-
-**Keeping families informed**
-- **Announcement banner:** one line across the top of every page ("Spring litter born
-  March 3!"), with an end date.
-- **News:** short dated posts with a photo (litter born, show results, puppy updates);
-  newest on Home. Each post has its own address and share preview.
-- **Going home:** what comes with a puppy, food, vaccines given, a first-week checklist,
-  and training tips.
-- **Downloads:** PDFs the breeder uploads (puppy application, sample contract, care
-  guide), within the site's storage limit; the server checks each is a PDF and serves it
-  as a download.
-- **Events:** shows and events the breeder will attend, with dates and towns.
 
 **Basics of a good website**
 - **Search and sharing:** a title and description per page, structured data
@@ -559,36 +546,50 @@ breeder turns on. Version 1 ships only the ones in decision 14; the rest are bac
 - **Accessibility:** alt text asked for on every photo upload, colour choices checked for
   contrast, every page usable by keyboard and screen reader.
 - **Privacy page:** generated for every site (what the inquiry form collects, how long
-  it's kept, which outside services the pages use), with the breeder's contact
-  details.
-- **Visitor stats** (backlog): page counts from Cloudflare Web Analytics or Workers
-  Analytics Engine, both free and cookie-free.
+  it's kept, which outside services the pages use, and that notifications pass through
+  the device's push service), with the breeder's contact details.
 
 ### 3.10 The inquiry form
 
-Every site has one form, used for Contact, puppy applications (section 3.8) and questions
-about extras, pickup or stud service. It works with no KennelOS at all.
+Every site has one form, used for Contact and questions about extras, pickup or stud
+service, and for puppy applications only when the breeder doesn't take them through
+KennelOS (section 3.8, decision 26). It works with no KennelOS at all.
 - **The breeder's questions:** name and email always; then the fields they choose (phone,
   town, which litter or dog, preferences, a free-text message), from a fixed list of field
   types.
-- **Delivery (decision 12):** to the manage app's **Inbox** only; KennelPort sends no
-  email about it, which keeps the breeder's mailbox and KennelPort's email allowance
-  clear. The inbox is a light page: newest first, unread marked, a count on the manage
-  app's home, and **Reply** opening the breeder's own email with the visitor's address
-  filled in (and **Copy email** beside it). Kept 90 days, then deleted.
+- **Delivery (decision 12):** to the manage app's **Inbox**, with a push notification;
+  KennelPort sends no email about it, which keeps the breeder's mailbox and KennelPort's
+  email allowance clear. The inbox is a light page: newest first, unread marked, a count
+  on the manage app's home, and **Reply** opening the breeder's own email with the
+  visitor's address filled in (and **Copy email** beside it). Kept 90 days, then deleted.
+- **Push notifications:** each signed-in device can turn on **Notify me of new messages**
+  in the manage app. On a phone that means the installed KennelPort Site Manager (iPhones
+  allow web push only for an app added to the Home Screen); on a computer, any modern
+  browser. A new inquiry, or an application on the manual route (3.8), sends one
+  notification: "New message from
+  Megan" (the first name typed on the form, nothing else they wrote), and tapping it opens
+  that message in the Inbox. Several arriving close together replace one another as "3
+  new messages". It follows KennelOS cloud's pattern (`cloud/src/notify.js`): a signed
+  (VAPID) push with no payload, after which the app's service worker asks the server what
+  to show, proving itself with its subscription's secret, so no message text passes
+  through Apple's, Google's or Mozilla's push services. Sent only while the device has a
+  live session; a subscription the push service reports gone is deleted. Free, and no
+  outside service beyond the browser's own push service. The same channel carries the
+  manage app's notices, such as a custom domain that stopped working (section 2.4).
 - **Spam:** Cloudflare Turnstile (free, usually invisible) on the form, plus a hidden
   honeypot field and per-site rate limits (decision 17). No CAPTCHA puzzles.
 - **No payments, no accounts** for visitors.
-- **With KennelOS linked:** the breeder can choose **Send to my KennelOS waitlist**
-  instead, which embeds the KennelOS form (section 3.8). KennelPort never forwards
-  inquiries into KennelOS by itself.
-
+- **With KennelOS applications:** applications skip this form and go to KennelOS
+  (section 3.8); KennelOS sends its own alerts for them. KennelPort never forwards an
+  inquiry into KennelOS, and never copies a KennelOS application into its Inbox.
 
 ### 3.11 Pages from the site survey
 
 What the survey of real breeder websites
 ([`KennelPort_Site_Directory.md`](KennelPort_Site_Directory.md)) found that the list
-above lacked. Each is a section the breeder turns on, and works with no KennelOS.
+above lacked. Each is a section the breeder turns on, and works with no KennelOS. Version 1
+has these; programs, raising, How to pay safely as a page, retired and in-memory dogs,
+show results, the litter diary and planned-litter pages are in the backlog doc, section 6.
 
 **How it works** (`/how-it-works`): the buying process step by step: apply, approval,
 deposit, pick order, when picks happen, how long a family has to answer, go-home week,
@@ -600,30 +601,6 @@ paying the balance. 14 of the 28 sites read had a page like this.
   waitlist settings (application fee, how picks are offered, days to answer), so the page
   can't drift from what happens. The breeder can add steps and change the wording.
 
-**Programs** (`/programs`): guardian homes and any other program, each with its terms
-(where the family must live, what they pay for, how many litters, ownership after
-retirement), a short FAQ and an application through the inquiry form.
-- *On its own:* a program is a title, a description and its terms.
-- *With KennelOS linked:* program names and their public descriptions
-  (`waitlist_programs.public_description`). Guardian families are never named, and a
-  guardian dog's page never says who keeps it.
-
-**How we raise puppies** (`/raising`): the raising method (Puppy Culture, ENS) and a
-week-by-week plan: "Weeks 1–2", "Weeks 3–4", … each with what puppies learn and what the
-breeder does. Breeder only; KennelOS fills none of it.
-
-**How to pay safely** (`/pay-safely`): the page behind the safe-payment notice (section
-3.9): payment methods accepted and refused, "this is our only website", how to check
-they're talking to the real breeder. On by default.
-- *With KennelOS linked:* the accepted payment methods can come from KennelOS, if they
-  choose.
-
-**Retired dogs** (`/dogs/retired`) and **In memory** (`/dogs/remembered`): retired
-breeding dogs with their stories, and dogs who have died, with dates and a tribute.
-- *On its own:* a dog moves to these pages when the breeder sets it retired or deceased.
-- *With KennelOS linked:* status `retired_breeding` or `deceased` (with `date_of_death`)
-  moves it, only if ticked **Show on website**. In memory is off by default.
-
 **Older puppies** (`/litters/older`): puppies still available after their go-home date
 ("12 weeks and older"), often at a changed price.
 - *On its own:* a puppy the breeder marks available past the litter's ready date shows
@@ -631,23 +608,8 @@ breeding dogs with their stories, and dogs who have died, with dates and a tribu
 - *With KennelOS linked:* worked out from the litter's `estimated_ready_date` and each
   puppy's status.
 
-**Show results** (`/shows`): show wins and titles by dog and by date ("brags").
-- *On its own:* results the breeder types (show, date, award).
-- *With KennelOS linked:* logged show results and earned titles.
-
-**Litter diary** (`/litters/<slug>/diary`): dated updates on a litter: eyes open, first
-walk, weights, puppy parties, each with text and photos.
-- *On its own:* entries the breeder adds.
-- *With KennelOS linked (decision 19):* KennelOS's milestones, and weights if they choose,
-  arrive as draft entries for the breeder to add words and photos to. Nothing goes up
-  without their edit.
-
-**Planned litters, in more detail.** A planned litter's page (`/litters/<slug>` before
-birth) shows the sire and dam cards with health results, the expected month, when puppies
-should go home, a write-up of the pairing, **Apply for this litter**, and "Last updated".
-- **Status in plain words:** Planned, Bred (awaiting confirmation), Confirmed. *With
-  KennelOS linked:* from the pairing's status (`planned`, `bred`, `confirmed_pregnant`),
-  per the Coming up switches.
+**Planned litters.** A planned litter shows on Puppies as an upcoming litter; its own
+page with a status in plain words is backlog (backlog section 6).
 - **Picks (decision 18):** never shown. Litter pages don't say how many picks are taken
   or open; each puppy's own status (section 3.6) is all a visitor sees.
 
@@ -662,8 +624,8 @@ layout.** That's what keeps every site looking like the AK sample (design direct
 preference 2) and keeps support small. Everything below is a form in the manage app, with
 a live preview.
 
-**Pages.** Every page has an **On** switch except Home, Contact and Privacy; How to pay
-safely is on by default.
+**Pages.** Every page has an **On** switch except Home, Contact and Privacy. The
+safe-payment notice (3.9) has its own switch, on by default.
 - A page that's off leaves the menu, footer and `sitemap.xml`, and its address shows a
   plain "This page isn't available" (HTTP 404). Its content is kept, so switching it back
   on restores it.
@@ -735,6 +697,8 @@ dark first: it shows dark unless the visitor's device asks for light explicitly.
   same screens, laid out for a phone: the quick jobs breeders do from a phone (mark a
   puppy reserved, add photos from the camera roll, approve a review, read the inbox, post
   a banner) are one or two taps from its home screen.
+- **Notifications:** new messages arrive as push notifications on each device that turns
+  them on (section 3.10).
 - **Online only for edits.** The app's screens load offline, but saving needs a
   connection; an edit made offline says so and isn't lost from the form. No offline sync,
   so nothing can conflict.
@@ -761,13 +725,24 @@ dark first: it shows dark unless the visitor's device asks for light explicitly.
     "Opal: Reserved", "Extras: 12-week package edited"), with **Preview** beside each,
     then publishes them all at once.
   A KennelOS update lands the same way: in the draft, listed under Publish.
+- **How preview renders:** a preview builds a snapshot from the draft tables exactly as
+  Publish would (below), keeps it only for that preview, and renders it with the same
+  renderer. The site never points at a preview snapshot, so the renderer still reads only
+  snapshots and preview can't drift from what Publish produces.
 - **Publish** reads the whole site from the tables and writes it as one **snapshot**: a
   single JSON document with every page, dog, litter, puppy, album and embed that is
   visible, plus the list of photos and files it uses. The site then points at the new
   snapshot in one step.
+- **Snapshots live in R2, not D1** (`sites/<site_id>/snapshots/<snapshot_id>.json`). D1
+  caps a single row at about 2 MB (from memory; check current limits), and a site with
+  years of litters, reviews and diary text could pass that. R2 has no such limit. The
+  JSON is written to R2 first; only then does the `sites` row in D1 point at it, so the
+  switch is still one step and a failed write leaves the old snapshot live.
 - **The renderer reads only the published snapshot**, never the draft tables. A publish
   is all or nothing (visitors never see half an edit), pages render from one read, and the
-  Worker can cache it by snapshot id.
+  Worker can cache it by snapshot id. Rendered pages are cached too (Cloudflare's cache,
+  keyed by snapshot id and path), so most visits cost no rendering at all (see the CPU
+  note in 4.4).
 - **Rollback:** the last 10 snapshots are kept; **Undo publish** in the manage app or ops
   console points the site back at the previous one.
 - **Redirects** are worked out at publish time: any path in the previous snapshot whose
@@ -777,13 +752,23 @@ dark first: it shows dark unless the visitor's device asks for light explicitly.
 
 ### 4.2 Photos and files
 
-- **In the browser:** photos are resized before upload (about 1600px WebP plus a 400px
-  thumbnail). Re-encoding also removes location data (EXIF GPS) from phone photos, which
-  would otherwise reveal where the breeder lives.
+- **In the browser:** photos are resized before upload (about 1600px plus a 400px
+  thumbnail), as WebP where the browser can make it and JPEG where it can't. Re-encoding
+  also removes location data (EXIF GPS) from phone photos, which would otherwise reveal
+  where the breeder lives.
+- **iPhones:** Safari has not reliably encoded WebP from a canvas: asked for
+  `image/webp`, it can quietly hand back a PNG. So the manage app checks the type it
+  actually got, and encodes JPEG (quality about 0.85) whenever it isn't WebP. iPhone
+  photos stored as HEIC reach the page as JPEG through the photo picker; anything the
+  browser can't decode gets a plain message ("This photo couldn't be read; try a
+  screenshot of it or a different photo"). Phase 2 is tested on a real iPhone and an
+  Android phone before it's done, since adding photos from the camera roll is the job
+  breeders do most from a phone.
 - **On the server, too:** the browser step can be skipped by anyone calling the upload
-  API directly, so the server checks every upload itself: only WebP accepted for photos,
-  within a maximum size and pixel dimensions, and any file carrying an `EXIF` or `XMP`
-  chunk is rejected. Downloads must be PDFs. Each upload counts against the storage cap.
+  API directly, so the server checks every upload itself: only WebP or JPEG accepted for
+  photos, within a maximum size and pixel dimensions; a WebP carrying an `EXIF` or `XMP`
+  chunk, or a JPEG carrying an `APP1` (EXIF or XMP) segment, is rejected. Downloads must
+  be PDFs. Each upload counts against the storage cap.
 - **Private files stay private:** the renderer serves a photo or file only if the
   published snapshot lists it as public. Health certificates and anything not ticked
   **Show on site** are only reachable through the manage API with a signed-in session,
@@ -795,10 +780,17 @@ A site's content can be deleted **by the breeder** (a **Delete my site** button 
 manage app, owner only) **or by you** (in the ops console). Either way:
 
 1. **Confirm.** The breeder types their subdomain to confirm. The screen offers **Download
-   a copy first** (a zip of their text and photos) but doesn't require it.
+   a copy first** (a zip of their text and photos) but doesn't require it. The zip is
+   **built in the browser**, not the Worker: the manage app fetches a list of the site's
+   text (as JSON) and files, downloads each photo and file in turn, and writes them into
+   an uncompressed zip (photos are already compressed) with a small zip writer copied
+   into the manage app. A Worker building a zip of a few hundred MB would run into its
+   memory and CPU limits; the breeder's browser has neither. It works best on a computer,
+   and the screen says so. The same export is each site's full export (section 10, tie-in).
 2. **Delete everything, immediately.** Every dog, litter, puppy, page, album, embed,
    snapshot and redirect row; every photo and file in R2 (`sites/<site_id>/`); every
-   sign-in, session and link token; every stored inquiry; and the site's request record.
+   sign-in, session, push subscription and link token; every stored inquiry; the cached
+   waitlist feed; and the site's request record.
    No grace period, and KennelPort keeps no copy.
 3. **What's left elsewhere, said plainly.** R2 deletion is immediate. D1 keeps its own
    point-in-time recovery (Time Travel) for up to 30 days, which KennelPort can't turn
@@ -819,6 +811,23 @@ manage app, owner only) **or by you** (in the ops console). Either way:
 
 Suspending (section 10) is different: it hides a site but keeps everything, so it can be
 turned back on.
+
+### 4.4 Worker limits
+
+Cloudflare's free Workers plan gives each request about 10 ms of CPU time (from memory;
+check current limits). Waiting on D1, R2 or a fetch doesn't count, but parsing a large
+snapshot, rendering a page or checking a big upload does. The plan keeps within it:
+- **Pages:** rendered pages are cached by snapshot id and path (4.1), so a page renders
+  once per publish, not once per visit; the snapshot is parsed once and kept in the
+  Worker's memory while it stays warm.
+- **Heavy work happens in the browser:** photo resizing (4.2) and the download-a-copy zip
+  (4.3). The server only checks headers and chunks, which is quick.
+- **Publish** does most of its work waiting on D1 and R2; building the JSON is the only
+  CPU-heavy step.
+- **Measured in phase 1:** publish and render the AK site's full content (every page, a
+  few years of litters and reviews) on the free plan and log CPU time. If publish or a
+  cold render passes the limit, move to Workers Paid (about $5 a month, section 7), which
+  allows far more CPU per request, rather than splitting the work up.
 
 ---
 
@@ -936,10 +945,12 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | Table | Key fields |
 |---|---|
 | `sites` | id, subdomain (unique), kennel_name, template, scheme (section 3.13), dark_mode (`auto` / `light_only`), kennelos_public_id (for the waitlist list, 3.8), status (`draft` / `live` / `suspended` / `closed`), published_snapshot_id, closed_at, storage_limit, photo_limit, album_limit, created_at |
-| `snapshots` | id, site_id, published_at, published_by, content (the whole published site as JSON, section 4.1); the last 10 per site kept |
-| `site_users` | site_id, email_hash, role (`owner` / `editor`) |
+| `snapshots` | id, site_id, published_at, published_by, r2_key (the whole published site as JSON in R2, section 4.1), bytes; the last 10 per site kept |
+| `site_users` | site_id, email_hash, role (`owner` / `editor`). Only the keyed hash, as in KennelOS cloud: codes and invites go to the address typed at that moment, and nothing is emailed to a breeder later (notices reach them in the manage app and by push) |
 | `sessions`, `login_codes` | as in KennelOS cloud |
-| `requests` | id, kennel_name, contact email, message, source (`kennelos` / `form`), status (`new` / `in_progress` / `done` / `declined`) (backlog) |
+| `push_subscriptions` | endpoint_hash, site_id, user, session, endpoint, auth_secret, created_at, last_sent_at (section 3.10); as in KennelOS cloud |
+| `notices` | site_id, kind (`domain_live` / `domain_broken` / …), message, created_at, read_at: what the manage app shows the breeder |
+| `feed_cache` | site_id, body (the KennelOS website feed's last copy), fetched_at (section 3.8) |
 | `dogs`, `litters`, `puppies` | site_id, slug, content fields, `source` (`kennelport` / `kennelos`), `kennelos_id` when linked, `hidden_by_kennelos` (section 5.3) |
 | `pages` | site_id, slug, section type, content |
 | `redirects` | site_id, old path, new path (written at publish time) |
@@ -949,22 +960,22 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `links` | site_id, token_hash, linked_at, last_bundle_at, last_bundle_summary |
 | `custom_domains` | site_id, hostname, cloudflare_hostname_id, registrar (detected, backlog), status (`pending` / `active` / `stuck` / `broken`), checked_at, connected_at |
 | `health_results` | site_id, dog, test, result, date, verify_url, show (off by default), certificate file (private unless ticked) |
-| `posts` | site_id, slug, title, date, body, cover photo (news, section 3.9) |
 | `stories` | site_id, kind (`review` / `at_home`), quote, rating, first name, town, puppy_name, home_month (YYYY-MM), photo, submitted_by (`family` / `breeder`), status (`pending` / `approved` / `hidden`), permission_confirmed_at, submitted_at |
-| `programs` | site_id, slug, title, description, terms, `kennelos_id` when linked |
-| `diary_entries` | site_id, litter, date, title, body, photos, `source` (`kennelport` / `kennelos`), draft until the breeder edits it |
 | `steps` | site_id, page (`how_it_works` / `raising`), order, heading, body, detail (the More detail expander), `source` |
 | `site_pages` | site_id, page key, enabled, menu_label, order within its menu group (section 3.12) |
 | `home_blocks` | site_id, block key (`hero` / `facts` / `story` / `dogs` / `litters` / `reviews` / `waitlist`), enabled, content (wording, photos, facts, features) |
 | `expanders` | site_id, page (`policies` / `faq` / `waitlist_help`), order, heading, body, start_open |
 | `extras` | site_id, kind (`item` / `homegoing`), group, name, description, photo, price_from, price_to, weeks, lead_in, checklist, closing, featured, order, `source` (section 3.4) |
 | `files` | site_id, r2_key, title, bytes, public, removed_at (downloads and certificates, PDFs only) |
-| `events` | site_id, title, date, town |
-| `inquiries` | site_id, form answers, received_at, deleted after 90 days (section 3.10, decision 12) |
+| `inquiries` | site_id, form answers, received_at, read_at, deleted after 90 days (section 3.10, decision 12) |
 | `payment_info` | site_id, kind (`application_fee` / `deposit`), methods, instructions, due_note, pay_url, show_on_site (off by default), `source` (section 3.9) |
 | `form_fields` | site_id, field type, label, required, order (the inquiry form's questions) |
 
-R2 keys look like `sites/<site_id>/photos/<photo_id>.webp`, so a whole site can be deleted
+Tables for backlog items (requests, news, programs, the litter diary, events) are in
+[`KennelPort_Backlog.md`](KennelPort_Backlog.md) section 7.
+
+R2 keys look like `sites/<site_id>/photos/<photo_id>.webp` (or `.jpg`, section 4.2) and
+`sites/<site_id>/snapshots/<snapshot_id>.json`, so a whole site can be deleted
 or exported at once. Whether a file is public is decided by the published snapshot, never
 by its key (section 4.2). A closed site keeps only its `sites` row (subdomain, `closed`,
 closed_at); every other table is emptied for it (section 4.3).
@@ -976,10 +987,11 @@ closed_at); every other table is emptied for it (section 4.3).
 | Item | First site | 15 breeders |
 |---|---|---|
 | Domain (`kennelport.com`) | about $10–15 a year | same |
-| Workers | $0 (free tier) | $0; $5 a month if traffic grows |
+| Workers | $0 (free tier), or $5 a month if phase 1's CPU check says so (section 4.4) | $0–5 a month |
 | D1 | $0 | $0 (under 50 MB against a 5 GB free tier) |
 | R2 photos | $0 | $0 for about 3 years (about 3 GB a year against 10 GB free; no bandwidth fees) |
 | Resend email | $0 | $0 on the free tier at this volume |
+| Push notifications | $0 | $0 (the browsers' own push services) |
 | Custom domains (Cloudflare for SaaS) | $0 | $0 for the first ~100; about $0.10 a domain a month after. Each breeder pays for their own domain |
 | **Total** | **About $1 a month** | **About $1 a month** |
 
@@ -996,8 +1008,8 @@ Each phase is useful by itself, so you can stop after any one.
 | Phase | Delivers | You can now… |
 |---|---|---|
 | **0. Set up** | Domain on Cloudflare, wildcard DNS, empty Worker with D1 and R2, staging and production | — |
-| **1. Renderer + ops** | One template, the ops console, preview links, snapshot publish and undo (4.1), reserved names, OG tags, close a site and the closed notice | Build and host the site yourself, with no breeder login yet |
-| **2. Breeder login** | Email-code sign-in, manage app (installable as KennelPort Site Manager), the inbox and review queue, preview and publish with the list of changes, photo upload with resizing and the server checks (4.2), storage limits, **Delete my site** with download-a-copy | Hand the site over |
+| **1. Renderer + ops** | One template with its fonts and libraries served from the site (3.3), the ops console, preview links, snapshot publish to R2 and undo (4.1), page caching and the CPU check (4.4), reserved names, OG tags, close a site and the closed notice | Build and host the site yourself, with no breeder login yet |
+| **2. Breeder login** | Email-code sign-in, manage app (installable as KennelPort Site Manager), the inbox with push notifications for new messages, the review queue, preview and publish with the list of changes, photo upload with resizing, the JPEG fallback and the server checks, tested on a real iPhone and Android phone (4.2), storage limits, **Delete my site** with the download-a-copy zip built in the browser (4.3) | Hand the site over |
 | **3. The first site's pages** | Everything in the AK sample (decision 14): Home with its blocks, About (story, reviews, contact), Kennel residents with flip cards and health results (3.7), Puppies (available, upcoming, older) with statuses (3.6), How it works steps (3.11), Extras with homegoing packages (3.4), Policies and FAQ, the waitlist page and its status-page help (3.8, decision 21) with how to pay the application fee and deposit (3.9), inquiry form and inbox (3.10); plus the safe-payment notice, privacy page and search basics | The family site is complete and live |
 | **4. The KennelOS link** | In KennelPort: link codes, matching existing website records to KennelOS ones (5.2), the bundle API and its rules (5.3), **Use my KennelOS prices** (3.2), the Family login footer link. In KennelOS (5.5): **Show on website** on dogs and litters, `siteExport.js`, **Connect website** and **Update website**, filling `dog.url`, the kennel's website and `extras_info_url`, and the Kels steps | Her dogs, litters, puppy statuses and health results come from KennelOS when she presses **Update website**; she types them only once |
 | **5. Albums, embeds and sharing** | Albums with their own links, embeds from the approved list with stored previews (3.3), share links and QR codes, KennelOS shares carrying album links (5.4) | Litter albums and her YouTube and Facebook posts live on the site |
@@ -1005,17 +1017,10 @@ Each phase is useful by itself, so you can stop after any one.
 
 If the first site wants its own domain, connect it by hand (section 2.4).
 
-### 8.2 Backlog (built when someone asks)
+### 8.2 Backlog
 
-Rough order of likely need; any item can go first.
-
-| Item | Delivers |
-|---|---|
-| **The rest of section 3.9** | Pickup page (3.5), waitlist page with outside forms (3.8), announcement banner, families' stories, past litters, news, adults, stud dogs, going home, the breed, downloads, events |
-| **Survey pages (3.11)** | Programs, how we raise puppies, how to pay safely as a page, retired and in-memory dogs, show results, litter diary, planned-litter status (no pick counts, decision 18) |
-| **Requests** | Public request form on `kennelport.com`, email alert, ops inbox; KennelOS's **Request a website** button |
-| **Guided custom domains** | **Your own domain** with registrar detection, guided steps and automatic checks (section 2.4) |
-| **Later** | More templates, visitor stats |
+Everything after version 1, with its order and designs, is in
+[`KennelPort_Backlog.md`](KennelPort_Backlog.md).
 
 ---
 
@@ -1043,13 +1048,14 @@ Rough order of likely need; any item can go first.
    address shows a "no longer hosting with KennelPort" notice (section 4.3).
 11. **Link across devices:** each device links once; the token stays in KennelOS's
     device-only `device_secrets` table (section 5.5).
-12. **Inquiries:** stored in the manage app's inbox only, never emailed; kept 90 days; the
-    breeder replies from their own email (section 3.10).
+12. **Inquiries:** stored in the manage app's inbox, never emailed, with a push
+    notification to each device that turns them on; kept 90 days; the breeder replies
+    from their own email (section 3.10).
 13. **Reviews:** families submit them on the site; the breeder approves each before it
     shows (section 3.9).
 14. **What ships first:** the AK sample's pages (section 8.1, phase 3), the KennelOS link
     (phase 4) and albums, embeds and sharing (phase 5). Past litters, news and the other
-    standard pages wait in the backlog.
+    standard pages wait in the backlog ([`KennelPort_Backlog.md`](KennelPort_Backlog.md)).
 15. **Main address for a custom domain:** `www.`, with the bare domain forwarding to it.
 16. **How a KennelOS bundle changes the site:** as in section 5.3, with matching offered
     whenever a new KennelOS record matches an unlinked one (section 5.2).
@@ -1070,6 +1076,9 @@ Rough order of likely need; any item can go first.
 25. **Colour schemes:** all six ship in version 1: Lawn, Harbor, Heather, Clay, Slate and
     Midnight (design direction section 7), each with light and dark versions. Compared
     side by side in [`reference/scheme-lab.html`](reference/scheme-lab.html).
+26. **Where an application goes:** to KennelOS's live list flow whenever the breeder takes
+    applications online in KennelOS; to KennelPort's Inbox only when they don't and run
+    their list by hand. Worked out by the site, not a choice (section 3.8).
 
 **Open**
 
@@ -1098,10 +1107,15 @@ Rough order of likely need; any item can go first.
 | You become the bottleneck | Breeders handle routine edits themselves; you only do setup and design |
 | Building far more than the first site needs | Version 1 is section 8.1 only; everything else waits for someone to ask |
 | An embed provider tracks visitors or changes its embed | Click to load; previews stored on the site; plain-link fallback; providers listed in one place |
-| Tie-in to one host | Plain D1 and R2 data, with a full export for each site |
+| Tie-in to one host | Plain D1 and R2 data, with a full export for each site (built in the browser, section 4.3) |
+| Photo upload fails on iPhones, which can't always make WebP | JPEG whenever the browser hands back anything but WebP; the server accepts both and checks both for location data; tested on real phones in phase 2 (section 4.2) |
+| A large site outgrows D1's row size | Snapshots are stored in R2, with only their key in D1 (section 4.1) |
+| A page, publish or export runs past the free plan's CPU limit | Pages cached per snapshot; resizing and the export zip run in the browser; CPU measured in phase 1, with Workers Paid as the fallback (section 4.4) |
+| Fonts or libraries from Google or a CDN let them track visitors | Fonts and libraries are served from the site itself; only Turnstile loads from outside, on form pages (section 3.3) |
 | A scammer copies a breeder's site or photos to sell puppies that don't exist | The safe-payment notice on by default; official contacts on every page; you can point to the real site when families ask |
 | The review form is abused (fake or hostile reviews, unwanted photos) | Nothing shows until the breeder approves it; photos stay private until then and get the upload checks; Turnstile, a honeypot and rate limits |
+| A breeder misses an inquiry because it isn't emailed | A push notification on each device that turns them on, and an unread count on the manage app's home (section 3.10) |
 | The inquiry form attracts spam or collects more than it needs | Turnstile, a honeypot and rate limits; a fixed list of field types; inquiries deleted after 90 days (decision 12) |
-| A custom domain lapses or its records change | The daily check stops the redirect, so the `kennelport.com` address serves the site again; the breeder and you are emailed (section 2.4) |
+| A custom domain lapses or its records change | The daily check stops the redirect, so the `kennelport.com` address serves the site again; you are emailed and the breeder gets a notice and a push notification (section 2.4) |
 | A breeder breaks their email while editing DNS | The steps add only the site's records and say not to change nameservers or delete other records |
 | A non-KennelOS breeder gets a lesser site | The parity rule (top of the plan): every section is a KennelPort form first; KennelOS only fills fields |
