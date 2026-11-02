@@ -563,3 +563,9 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   from a KennelPort site, confirms the application and returns only `confirmed`; the last
   step's **See my details** opens KennelOS's own sign-in. Plan 3.8 updated. Tests and the
   Chromium run updated.
+
+## 2026-11-02: version bumps
+
+- Manage app version 8 (the Inbox's application answers, `app.css`) and template assets
+  version 6 (the application form's hints, KennelOS's form and its script: `site.css`,
+  `site.js`), with their fingerprints. 109 tests.
