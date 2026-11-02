@@ -1068,8 +1068,9 @@ These follow KennelOS's own rules, and each one needs its own decision there:
   for the public list (`upcoming` in `waitlistProjection.js`).
 - `shared/data/siteExport.js`, the allow-list bundle builder, with a positive key check
   like `assertOnlyKeys()`.
-- A `siteConfig` injection point (KennelPort URL or `null`), so Demo and any build without
-  it show nothing.
+- The KennelPort address in `editionConfig.js` (`kennelportUrl`, beside `cloudUrl`):
+  Pro's carries it; Lite's, Demo's and the shared default are `null`, so they show
+  nothing and make no request.
 - **Pro only, all of it:** Request a website, Connect website, Update website and the
   Show on website ticks are Pro features. Lite and Demo show none of them and can't link
   (a Lite breeder can still have a KennelPort site, edited in KennelPort, with no link).
