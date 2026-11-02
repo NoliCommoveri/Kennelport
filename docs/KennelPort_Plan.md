@@ -995,6 +995,17 @@ Each bundle is applied by these rules (decision 16):
   KennelOS): the record is **hidden**, not deleted, and its KennelPort photos, bio and
   albums are kept. If it comes back in a later bundle, it reappears as it was. The breeder
   can delete a hidden record in KennelPort.
+- **A litter's stage follows KennelOS:** Expected → **Planned**; Whelped, Weaning or Ready
+  → **Current**; Sold or Closed → **Past** (off Home and the Puppies page; its own page
+  and its albums still answer, for links already shared). Marking a litter Sold or Closed
+  in KennelOS (Today already reminds her once every puppy has gone home) is what retires
+  it, without her doing anything on the website.
+- **Removing old things completely** is always the breeder's choice, in two steps:
+  unticking **Show on website** in KennelOS (or switching it off in KennelPort, unlinked)
+  takes the litter, its puppies and its albums off the site entirely: their pages answer
+  "not found" and nothing links to them. Deleting it in KennelPort then removes the
+  record; photos only it used can be removed in Photos, and the daily cleanup deletes
+  their files. A dog works the same way.
 - **A bundle never deletes a photo, file, album or page.**
 - **A summary** after each bundle: "3 updated, 1 new, 1 hidden. Preview, then Publish."
 
@@ -1025,7 +1036,9 @@ Each bundle is applied by these rules (decision 16):
   permanent link, and when linked, KennelOS can **fill the dog's `url` with its
   KennelPort page**, and a litter's `photos_url` with its litter page. Companion packages,
   the waitlist's photos links, and anything else that shares them, then point at the site
-  with no other changes. Only blank ones are filled: a dog or litter that already has
+  with no other changes. When a page leaves the site (hidden or deleted), the next bundle's
+  answer tells KennelOS, which blanks any `url` or `photos_url` still holding that address,
+  so no link points at a missing page. Only blank ones are filled: a dog or litter that already has
   another photos link (a Google Photos album, say) keeps it. This runs one way:
   KennelPort sends the addresses back when a bundle is applied, and never reads `url` or
   `photos_url`; a dog's photos live on the site, not in KennelOS.
