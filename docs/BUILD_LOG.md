@@ -197,4 +197,4 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   the Current Applicants box: breeder-written expanders on getting a code, signing in,
   choosing or passing, asking for changes, messages and pickup times, leaving the list.
   Starts as a draft outline from what KennelOS's status page does. Added to the sample
-  (`#applicant-help`) with draft text; the owner's breeder will write the real wording.
+  (`#applicant-help`) with draft text; the breeder will write the real wording.
