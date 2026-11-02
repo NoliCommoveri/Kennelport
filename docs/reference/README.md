@@ -1,5 +1,12 @@
 # Reference builds
 
+Published copies (claude.ai artifacts, with the photos):
+- The AK sample, shared with the first breeder: https://claude.ai/artifact/CP9T5ouidYfr1KfLvTY18D
+- The scheme lab (private): https://claude.ai/artifact/XzWppS7x8epbNHA1uicRDh
+
+To change either, update the file here and republish it to the same link (pass the link
+as the artifact's `url`) so the shared address keeps working.
+
 **`ak-sample.html`** is the working sample of the first site, AK Boston Terriers: the
 target for version 1 (plan, top and section 8.1). It's one page with hash routing
 (`#home`, `#residents`, `#puppies`, `#how`, `#extras`, `#waitlist`, …), built to be
