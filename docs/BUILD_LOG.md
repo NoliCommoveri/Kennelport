@@ -646,3 +646,12 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 
 - Manage app version 9 (Your waitlist's layout, `waitlist.json` in Download a copy, the
   greyed tile), with its fingerprint. Template unchanged at 7. 119 tests.
+
+## 2026-11-02: scheme lab rebuilt to match the site
+
+- `reference/scheme-lab.html` (the AK Colour Schemes artifact, republished to its link)
+  now shows the waitlist page as built: only the families' list, then the application
+  form (with the names line and Keep my name private), then How to pay; no Current
+  Applicants box, Available Puppies or Coming up; Family login in the menu and footer,
+  leading to the sign-in button on the status-page help page. Schemes unchanged.
+  `ak-sample.html` (the page shared with the breeder) is left as it was.
