@@ -163,6 +163,27 @@ export const PAYMENT_FIELDS = {
 // the default (render/parts.js SAFE_NOTICE_TEXT).
 export const SAFE_NOTICE_FIELDS = { enabled: BOOL, text: ML(400) };
 
+// The application form (plan 3.8, 3.10; decision 26), for breeders who run their
+// list by hand: name and email are always asked; then these questions, in order.
+// Each type has a fixed shape on the site and a fixed check on the server
+// (siteforms.js): a choice is one of its options; a litter is one of the site's
+// planned or current litters, or "Any litter"; yes/no is Yes or No.
+export const QUESTION_TYPES = ['text', 'paragraph', 'choice', 'yes_no', 'litter', 'phone', 'town'];
+export const QUESTION_FIELDS = {
+  type: { ...ENUM(...QUESTION_TYPES), required: true },
+  label: S(120, { required: true }),
+  hint: S(200),
+  required: BOOL,
+  options: { type: 'list', max: 12, itemMax: 60 },
+};
+// What cleanRecord can't check alone: a choice needs something to choose from,
+// and only a choice has options.
+export function checkQuestion(q, path) {
+  if (q.type === 'choice' && (q.options?.length ?? 0) < 2) throw new ContentError(`${path}.options`, 'a choice needs at least two options, one per line');
+  if (q.type !== 'choice') q.options = null;
+  return q;
+}
+
 // Icons a story feature may use: the template's own set.
 export const FEATURE_ICONS = ['shield', 'home', 'heart', 'star', 'paw', 'leaf'];
 
@@ -180,7 +201,7 @@ export const PAGES = {
   extras:         { path: '/extras', group: 'how', label: 'Extras', canHide: true, fields: { ...HEAD, note: ML(300) } },
   policies:       { path: '/policies', group: 'how', label: 'Policies', canHide: true, fields: { ...HEAD } },
   faq:            { path: '/faq', group: 'how', label: 'FAQ', canHide: true, fields: { ...HEAD } },
-  waitlist:       { path: '/waitlist', group: 'waitlist', label: 'Waitlist', canHide: true, fields: { ...HEAD } },
+  waitlist:       { path: '/waitlist', group: 'waitlist', label: 'Waitlist', canHide: true, fields: { ...HEAD, closed: BOOL, closed_message: ML(400), form_heading: S(80), form_intro: ML(300) } },
   waitlist_help:  { path: '/waitlist/help', group: 'waitlist', label: 'Using your status page', canHide: true, fields: { ...HEAD } },
   privacy:        { path: '/privacy', group: null, label: 'Privacy', canHide: false, fields: {} },
 };

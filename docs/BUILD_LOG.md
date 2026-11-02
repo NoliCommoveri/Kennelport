@@ -498,3 +498,74 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - `CLAUDE.md` (new, repo root): ask the owner before every bump; a failing versions
   test is the cue to ask, not to bump.
 - 93 tests.
+
+## 2026-11-02: iPhone upload works
+
+- Tried again on the real iPhone with the EXIF fix deployed: the photo uploaded. Phase 2
+  is done. Plan status, 4.2, the risks table and README brought up to date.
+
+## 2026-11-02: phase 3, the application form
+
+- For breeders who run their list by hand (plan 3.8, 3.10; decision 26). `0007_application.sql`:
+  `form_fields` (the breeder's questions, in order) and `inquiries.answers`.
+  The questions are content (`QUESTION_FIELDS`, `questions` in the content document), so
+  they go through the draft and publish, and with Download a copy.
+- Site: `/waitlist` now has the application form in place of "will be shown here soon":
+  name and email always, then the questions (short answer, longer answer, a choice, yes
+  or no, which litter, phone, town), short ones two to a row as in the AK sample. With no
+  questions it asks for a few lines about the family. Answers are checked against the
+  published questions (a choice from its list, a litter from the planned and current
+  ones). Turnstile, the honeypot and the limits as on the contact form.
+- Waitlist page settings: **Waitlist closed** with its message (the form is replaced and
+  applications refused), the form's heading and the line under it.
+- Manage app: **Waitlist and application** tile on Home; **Application questions** list
+  (add, edit, reorder) linked from the waitlist page. An application arrives in the
+  Inbox as "Puppy application", with a push like any message; opened, it shows each
+  question and answer, and Reply's subject says it's about their application. The change
+  list names questions added or edited.
+- The AK sample's questions are the ones on its form (sex, color, timing, what for,
+  about your home).
+- 102 tests; the form checked in Chromium at phone and desktop widths.
+
+## 2026-11-02: the KennelOS website feed, and KennelOS's application form in the site's style
+
+- Plan 3.8: a new part, **The KennelOS application form in the site's own style**, with
+  what KennelOS provides (5.5). Plan 8.1 no longer says the feed is still to be built in
+  KennelOS: it was (`GET /f/site/<public_id>`).
+- `0008_feed.sql`: `feed_cache`. `src/feed.js` reads the feed from `KENNELOS_ORIGIN`
+  (wrangler.toml, staging and production), keeps it five minutes, shows the last copy
+  when KennelOS can't be reached and asks again after a minute; `not_shared` and unknown
+  kennels are remembered as such.
+- Manage app: **Your KennelOS waitlist** on the waitlist page's screen: paste the feed
+  address (or the list or apply address), see whether it's connected and where
+  applications go, or remove it (which forgets the copy).
+- Site: `/waitlist` with a feed isn't cached with the snapshot. While KennelOS takes
+  applications online it draws KennelOS's form (her questions of every kind, the FAQ, the
+  matching notice, the public-list notice) instead of the site's own; `site.js` seals the
+  answers to her form key in the browser (`sealToKennelos`, as KennelOS's `seal.js`) and
+  sends them straight to KennelOS, then the emailed code; "Open my status page" opens
+  KennelOS's page in a new tab. Nothing reaches KennelPort: a post to `/waitlist` is
+  refused. Without scripts the form stays hidden and the KennelOS application page is
+  linked. Its Content Security Policy allows the KennelOS host (and Turnstile) on that
+  page only. Feed off or unreachable: links to the KennelOS apply and list pages; feed on
+  with online applications off: the site's own form (decision 26).
+- KennelOS (its own repo, same branch name): the feed carries `form`; `/f/apply`,
+  `/f/verify` and `/f/code` answer KennelPort sites cross-origin. Setup there: add
+  `kennelport.com` to KennelOS's Turnstile widget.
+- 109 tests (sealing checked by opening it as KennelOS does); the whole flow driven in
+  Chromium at phone width against a stand-in KennelOS: answers sealed, opened with her
+  key, the code step, a wrong code, a new code, the status link.
+
+## 2026-11-02: no status link for the website
+
+- Privacy: confirming a KennelOS application from the site's form no longer hands the
+  site the family's status-page link or a KennelOS session. KennelOS's `/f/verify`, asked
+  from a KennelPort site, confirms the application and returns only `confirmed`; the last
+  step's **See my details** opens KennelOS's own sign-in. Plan 3.8 updated. Tests and the
+  Chromium run updated.
+
+## 2026-11-02: version bumps
+
+- Manage app version 8 (the Inbox's application answers, `app.css`) and template assets
+  version 6 (the application form's hints, KennelOS's form and its script: `site.css`,
+  `site.js`), with their fingerprints. 109 tests.

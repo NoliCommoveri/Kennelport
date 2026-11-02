@@ -1,6 +1,7 @@
 // KennelPort template "ak": what the pages do, ported from the AK sample. Every
 // page works without it (links, expanders and lists are plain HTML); this adds
-// the flips, sliding sets, menu, filters and the packages opening on wide screens.
+// the flips, sliding sets, menu, filters, the packages opening on wide screens,
+// and KennelOS's application form on the waitlist page.
 (() => {
   const $ = (sel, el = document) => el.querySelector(sel);
   // strip-jpeg-meta:start (the same in public/_kp/m/photos.js and public/_kp/t/ak/site.js;
@@ -138,4 +139,159 @@
 
   // Homegoing packages: "What's included" starts open on wide screens.
   if (window.matchMedia('(min-width: 901px)').matches) for (const d of $$('.pkg details')) d.open = true;
+
+  // kennelos-seal:start (the same as KennelOS's cloud/public/family/seal.js, which
+  // shared/data/waitlistCrypto.js opens; tests/kennelosform.test.js opens what this
+  // seals). The answers are sealed to her form key here, in the visitor's browser:
+  // ECDH P-256 with a fresh key pair, HKDF-SHA-256, AES-GCM-256 with the key id as
+  // additional data. Neither this website nor KennelOS's server can read them.
+  async function sealToKennelos(publicKey, keyId, value) {
+    const enc = new TextEncoder();
+    const toB64 = (bytes) => {
+      const u8 = new Uint8Array(bytes);
+      let out = '';
+      for (let i = 0; i < u8.length; i += 0x8000) out += String.fromCharCode(...u8.subarray(i, i + 0x8000));
+      return btoa(out);
+    };
+    const subtle = crypto.subtle;
+    const theirs = await subtle.importKey('raw', Uint8Array.from(atob(publicKey), (c) => c.charCodeAt(0)), { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+    const mine = await subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+    const epk = new Uint8Array(await subtle.exportKey('raw', mine.publicKey));
+    const shared = await subtle.deriveBits({ name: 'ECDH', public: theirs }, mine.privateKey, 256);
+    const hkdf = await subtle.importKey('raw', shared, 'HKDF', false, ['deriveKey']);
+    const key = await subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: epk, info: enc.encode('kennelos-waitlist/seal/v1') }, hkdf,
+      { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await subtle.encrypt({ name: 'AES-GCM', iv, additionalData: enc.encode(`kennelos-waitlist/v1/${keyId}`) }, key, enc.encode(JSON.stringify(value)));
+    return btoa(JSON.stringify({ v: 1, kid: keyId, epk: toB64(epk), iv: toB64(iv), ct: toB64(ct) }));
+  }
+  // kennelos-seal:end
+
+  // KennelOS's application form, drawn by the waitlist page (plan 3.8). What the
+  // visitor types is read as KennelOS's own form page reads it, sealed above, and
+  // sent from this browser straight to KennelOS; then the emailed code, sent there
+  // too. KennelOS never hands this page the family's status link. Without this script (or WebCrypto) the page shows the link to KennelOS's
+  // own application page instead.
+  const kos = $('[data-kos-form]');
+  if (kos && window.crypto?.subtle && window.fetch) {
+    const d = kos.dataset;
+    const step = (name) => {
+      for (const el of $$('[data-kos-step]', kos)) el.hidden = el.dataset.kosStep !== name;
+      const faq = $('.kos-faq', kos);
+      if (faq) faq.hidden = name !== 'form';
+    };
+    const form = $('[data-kos-step="form"]', kos);
+    const problems = $('[data-kos-problems]', kos);
+    const send = async (path, body) => {
+      try {
+        const res = await fetch(`${d.origin}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+        return { ok: res.ok, status: res.status, body: await res.json().catch(() => ({})) };
+      } catch { return { ok: false, status: 0, body: {} }; }
+    };
+    const fallback = ` You can also apply on our KennelOS page: ${d.applyUrl}`;
+    const trouble = (r) => (r.status === 0 ? "Couldn't reach our waitlist. Check your connection and try again."
+      : r.status === 429 ? 'Too many tries just now. Please wait a little and try again.'
+        : `Something went wrong. Please try again.${fallback}`);
+    $('[data-kos-fallback]', kos).hidden = true;
+    step('form');
+
+    const checked = (q) => [...q.querySelectorAll('input:checked')].map((el) => el.value);
+    function read() {
+      const answers = {};
+      const missing = [];
+      let privateRequest = false;
+      for (const q of $$('[data-q]', form)) {
+        const type = q.dataset.type;
+        if (type === 'notice') {
+          if (!$('[data-notice]', q).checked) missing.push(q.dataset.label);
+          privateRequest = Boolean($('[data-private]', q)?.checked);
+          continue;
+        }
+        let value;
+        if (type === 'yes_no' || type === 'single_choice') value = checked(q)[0] ?? '';
+        else if (type === 'checkboxes') value = checked(q);
+        else { const el = $('input, textarea', q); value = type === 'long_text' ? el.value : el.value.trim(); }
+        answers[q.dataset.q] = value;
+        const blank = Array.isArray(value) ? !value.length : !String(value).trim();
+        if ('required' in q.dataset && blank) missing.push(q.dataset.label);
+      }
+      const pref = (key) => $(`[data-pref="${key}"]`, form);
+      const prefs = {
+        pref_sex: (pref('pref_sex') && checked(pref('pref_sex'))[0]) || 'any',
+        pref_breed: pref('pref_breed')?.value || '',
+        pref_purposes: pref('pref_purposes') ? checked(pref('pref_purposes')) : [],
+        pref_colors: (pref('pref_colors')?.value || '').split(',').map((x) => x.trim()).filter(Boolean),
+        ready_timing: (pref('ready_timing') && checked(pref('ready_timing'))[0]) || null,
+      };
+      if (pref('ready_timing') && !prefs.ready_timing) missing.push($('legend > span', pref('ready_timing')).firstChild.textContent.trim());
+      const byKey = (key) => $(`[data-key="${key}"]`, form)?.dataset.q ?? key;
+      const name = String(answers[byKey('name')] ?? '').trim();
+      const email = String(answers[byKey('email')] ?? '').trim();
+      return { answers, prefs, privateRequest, missing, name, email };
+    }
+
+    let email = '';
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const a = read();
+      const turnstile = $('input[name="cf-turnstile-response"]', form)?.value || null;
+      const list = [];
+      if (a.missing.length) list.push(`Please answer: ${a.missing.map((x) => x.replace(/[?.!:]+$/, '')).join('; ')}.`);
+      if (a.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email)) list.push("Your email address doesn't look right.");
+      if ($('.cf-turnstile', form) && !turnstile) list.push('Please wait for the check above the button to finish.');
+      problems.textContent = list.join(' ');
+      problems.hidden = !list.length;
+      if (list.length) return;
+      const button = $('button[type=submit]', form);
+      button.disabled = true; button.textContent = 'Sending…';
+      try {
+        const sealed = await sealToKennelos(d.publicKey, d.keyId, { answers: a.answers, prefs: a.prefs, ...(a.privateRequest ? { private_request: true } : {}), sent_at: new Date().toISOString() });
+        const r = await send(`/f/apply/${encodeURIComponent(d.publicId)}`, { key_id: d.keyId, sealed, name: a.name, email: a.email, turnstile });
+        if (r.ok) {
+          email = a.email;
+          $('[data-kos-email]', kos).textContent = email;
+          step('confirm');
+          $('#k-code', kos).focus();
+          kos.scrollIntoView({ block: 'start' });
+          return;
+        }
+        const code = r.body.error;
+        problems.textContent = code === 'form_changed' ? `${d.kennel} just updated this form. Please reload the page and send it again (copy any long answers first).`
+          : code === 'form_closed' || code === 'not_found' ? `${d.kennel} has stopped taking applications online.`
+            : code === 'not_verified' ? 'The spam check failed. Please try it again.'
+              : code === 'bad_email' ? "Your email address doesn't look right."
+                : trouble(r);
+        problems.hidden = false;
+        if (window.turnstile && $('.cf-turnstile', form)) window.turnstile.reset($('.cf-turnstile', form));
+      } catch {
+        problems.textContent = `Your application couldn't be prepared in this browser.${fallback}`;
+        problems.hidden = false;
+      } finally {
+        button.disabled = false; button.textContent = 'Send application';
+      }
+    });
+
+    const confirm = $('[data-kos-step="confirm"]', kos);
+    const result = $('[data-kos-result]', kos);
+    confirm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const button = $('button[type=submit]', confirm);
+      button.disabled = true;
+      const r = await send('/f/verify', { public_id: d.publicId, code: $('#k-code', kos).value });
+      button.disabled = false;
+      if (r.ok && r.body.confirmed) {
+        // KennelOS gives this page no status link and no session: the family signs
+        // in on KennelOS's own page to see their private status page.
+        step('done');
+        kos.scrollIntoView({ block: 'start' });
+        return;
+      }
+      const code = r.body.error;
+      result.textContent = code === 'invalid_code' || code === 'bad_code' ? "That code didn't work. Check it, or send a new one below." : trouble(r);
+    });
+    $('[data-kos-resend]', kos).addEventListener('click', async () => {
+      const r = await send('/f/code', { public_id: d.publicId, email });
+      result.textContent = r.ok ? `A new code is on its way to ${email}.` : trouble(r);
+    });
+  }
 })();

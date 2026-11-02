@@ -4,7 +4,7 @@
 // changed; nothing is live until Publish.
 import {
   DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, EXTRA_FIELDS,
-  EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, cleanRecord, cleanValue, slugify,
+  EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, QUESTION_FIELDS, checkQuestion, ContentError, cleanRecord, cleanValue, slugify,
 } from './model.js';
 import { untagStatements } from '../photoTags.js';
 
@@ -22,6 +22,7 @@ export const KINDS = {
   reviews: { table: 'stories', fields: omit(REVIEW_FIELDS, []), label: 'first_name', where: "kind = 'review'", fixed: { kind: 'review', submitted_by: 'breeder' }, defaults: { status: 'approved' } },
   steps: { table: 'steps', fields: STEP_FIELDS, label: 'heading', where: "page = 'how_it_works'", fixed: { page: 'how_it_works' }, defaults: { pay_link: 0 } },
   extras: { table: 'extras', fields: EXTRA_FIELDS, label: 'name', defaults: { featured: 0 }, json: ['checklist'] },
+  questions: { table: 'form_fields', fields: QUESTION_FIELDS, label: 'label', where: "form = 'application'", fixed: { form: 'application' }, defaults: { required: 0 }, json: ['options'] },
 };
 for (const page of EXPANDER_PAGES) {
   KINDS[page] = { table: 'expanders', fields: EXPANDER_FIELDS, label: 'heading', where: `page = '${page}'`, fixed: { page }, defaults: { start_open: 0 } };
@@ -112,6 +113,7 @@ export async function saveRecord(env, siteId, kind, id, input, scopeId = null) {
   }
   const clean = cleanFields(k.fields, input, kind);
   if (kind === 'extras' && clean.price_to !== null && clean.price_from !== null && clean.price_to < clean.price_from) throw new ContentError('price_to', 'lower than the starting price');
+  if (kind === 'questions') checkQuestion(clean, 'question');
   await checkRefs(env, siteId, k, clean);
   for (const [c, v] of Object.entries(k.defaults ?? {})) if (clean[c] === null) clean[c] = v;
   for (const c of k.json ?? []) clean[c] = clean[c]?.length ? JSON.stringify(clean[c]) : null;

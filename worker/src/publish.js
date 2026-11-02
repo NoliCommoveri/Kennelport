@@ -90,6 +90,11 @@ export async function buildSnapshot(env, siteId) {
     ...keep(x, ['site_id', 'sort', 'source']), featured: Boolean(x.featured), checklist: json(x.checklist, []),
   }));
 
+  // The application form's questions (plan 3.8), in order.
+  const questions = (await all("SELECT * FROM form_fields WHERE site_id = ? AND form = 'application' ORDER BY sort")).map((q) => ({
+    id: q.id, type: q.type, label: q.label, hint: q.hint, required: Boolean(q.required), options: json(q.options, null),
+  }));
+
   // How to pay: only cards switched on; the notice is on unless switched off.
   const payRows = Object.fromEntries((await all('SELECT * FROM payment_info WHERE site_id = ?')).map((p) => [p.kind, p]));
   const payment = {};
@@ -126,7 +131,7 @@ export async function buildSnapshot(env, siteId) {
       instagram_url: site.instagram_url, template: site.template, scheme: site.scheme, dark_mode: site.dark_mode,
       show_other_prices: Boolean(site.show_other_prices),
     },
-    pages, home, dogs, litters, reviews, steps, expanders, extras, payment, photos,
+    pages, home, dogs, litters, reviews, steps, expanders, extras, payment, questions, photos,
   };
 }
 

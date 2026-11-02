@@ -1,7 +1,6 @@
 # KennelPort: high-level plan (DRAFT)
 
-> Status: phases 0 to 2 are built (`worker/`), apart from photo upload tried on a real
-> iPhone (4.2); most of phase 3 came with them, and section 8.1 says what's left of it.
+> Status: phases 0 to 2 are built (`worker/`); most of phase 3 came with them, and section 8.1 says what's left of it.
 > Section 8 says what version 1 is; section 9 lists the one decision still open. What comes after version 1 is
 > in [`KennelPort_Backlog.md`](KennelPort_Backlog.md). History of this plan lives in
 > [`BUILD_LOG.md`](BUILD_LOG.md).
@@ -466,9 +465,10 @@ families are left out, a search box, Available Puppies and Coming up as expander
   on each read and deleted when the breeder removes the feed address. The breeder pastes the
   feed address (shown on KennelOS's Online list card) into the manage app, which stores
   the kennel's `public_id`.
-- **Current Applicants: See Your Details** and the application form open KennelOS's own
-  pages (`/list/<public_id>#signin`, `/apply/<public_id>`) in a new tab, so sign-in codes
-  and applications never pass through KennelPort.
+- **Current Applicants: See Your Details** opens KennelOS's own page
+  (`/list/<public_id>#signin`) in a new tab, so sign-in codes never pass through
+  KennelPort. The application form is drawn on the site (below), and KennelOS's own
+  `/apply/<public_id>` page is its fallback.
 - If KennelOS can't be reached, the page shows the last list it read with its "Updated"
   date, or a link to the KennelOS list.
 - **Using your status page** (`/waitlist/help`): a **How to use your status page** button
@@ -484,6 +484,44 @@ families are left out, a search box, Available Puppies and Coming up as expander
   then the ⓘ, so it never runs off the screen or scrolls sideways. Every part of the
   page fits a 320px-wide screen.
 - The frame embed stays available as a fallback.
+
+**The KennelOS application form in the site's own style.** While the breeder takes
+applications online in KennelOS, the form on `/waitlist` is KennelOS's form (her
+questions, her FAQ, the matching notice and the public-list notice), drawn by the site
+like the list, so a family never meets a page in another look before they've applied.
+The application still goes only to KennelOS:
+- **The feed carries the form.** `GET /f/site/<public_id>` adds `form` while KennelOS
+  takes applications online: exactly what KennelOS's own form page reads from
+  `/f/form/<public_id>` (questions, FAQ, breeds, matching keys and notice, the
+  wording of each preference's choices, the public half of the form key and its id,
+  and KennelOS's Turnstile site key). All of it is already public on the `/apply` page.
+- **Sealed in the visitor's browser, sent straight to KennelOS.** The site's script
+  seals the answers to the form key exactly as KennelOS's `seal.js` does (ECDH P-256,
+  HKDF-SHA-256, AES-GCM), then sends them from the visitor's browser to KennelOS's
+  `POST /f/apply/<public_id>`. KennelPort's server never sees the request, the answers
+  or the name and email; nothing lands in KennelPort's Inbox (decision 26).
+- **Confirming, on the same page.** KennelOS emails its 6-digit code; the visitor types
+  it into the site's page, which sends it to KennelOS's `POST /f/verify` (and **send a
+  new code** to `POST /f/code`). Then "Your application is in", with **See my details**
+  opening KennelOS's sign-in on its list page in a new tab. Asked from a website,
+  KennelOS's `/f/verify` confirms the application but returns no status link and no
+  session, so no KennelPort page ever holds the key to a family's private status page;
+  the family signs in on KennelOS to see it.
+- **In KennelOS:** those three family endpoints answer cross-origin requests from
+  KennelPort sites (`https://*.kennelport.com`, no credentials; custom domains once
+  **Connect website** sends them, phase 4). They hold no cookie and no session, so CORS
+  lets a site do only what any program could already do; Turnstile and the existing
+  per-address and per-email limits stay the real guard. KennelOS's Turnstile widget
+  lists `kennelport.com` among its hostnames (a setup step), since the check runs on the
+  breeder's site.
+- **In KennelPort:** the waitlist page's Content Security Policy allows Turnstile and
+  connections to the KennelOS family host (`KENNELOS_ORIGIN`) on `/waitlist` only, and
+  only while the feed carries a form. The page isn't cached with the snapshot while a
+  feed is set: it's drawn from the snapshot and the feed's five-minute copy.
+- **When it can't work:** with scripts off, the feed unreachable, or a form KennelOS
+  changed since the feed was read (`409 form_changed`), the page links to KennelOS's own
+  `/apply/<public_id>` instead, as before. A feed with no `form` (online applications
+  off) shows KennelPort's own application form (decision 26, above).
 
 ### 3.9 Standard breeder-site features
 
@@ -770,7 +808,7 @@ dark first: it shows dark unless the visitor's device asks for light explicitly.
   server refuses, so the browser drops it before uploading. Adding photos from the
   camera roll is the job breeders do most from a phone, so it's tried on real phones: an
   Android phone worked (2026-11-02); the first real iPhone try found the EXIF block, and
-  phase 2 is done once an iPhone upload works with that fix.
+  with that fix an iPhone upload worked too (2026-11-02).
 - **On the server, too:** the browser step can be skipped by anyone calling the upload
   API directly, so the server checks every upload itself: only WebP or JPEG accepted for
   photos, within a maximum size and pixel dimensions; a WebP carrying an `EXIF` or `XMP`
@@ -954,7 +992,10 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 - **The waitlist on the breeder's site (decision 21): built in KennelOS.** The
   `waitlist_config.website_feed` switch (off by default), `GET /f/site/<public_id>` with
   its own read limit, and the feed address to copy on the Online list card. No new fields
-  leave KennelOS: it's the list the public page already shows.
+  leave KennelOS: it's the list the public page already shows. For the application form
+  in the site's style (3.8): the feed's `form` (what `/f/form` already serves), and
+  `/f/apply`, `/f/verify` and `/f/code` answering cross-origin requests from KennelPort
+  sites; `kennelport.com` added to KennelOS's Turnstile widget.
 - **Undecided puppies are not for sale (decision 10):** `isPupAvailable` treats
   Undecided like Keeping, so the waitlist never offers one, its public list's
   **Available Puppies** leaves it out, and the website feed and bundle agree; Companion
@@ -975,7 +1016,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `dev_outbox` | staging only: codes and invites shown on `/ops` until email is connected |
 | `push_subscriptions` | endpoint_hash, email_hash, session_hash, endpoint, auth_secret, created_at, last_sent_at, last_shown_seq (section 3.10); as in KennelOS cloud, tied to the session it was made in |
 | `notices` | site_id, kind (`domain_live` / `domain_broken` / …), message, created_at, read_at: what the manage app shows the breeder |
-| `feed_cache` | site_id, body (the KennelOS website feed's last copy), fetched_at (section 3.8) |
+| `feed_cache` | site_id, state (`ok` / `not_shared` / `not_found`), body (the KennelOS website feed's last copy), fetched_at, checked_at (the last time KennelOS was asked; retried after a minute when it couldn't be reached) (section 3.8) |
 | `dogs`, `litters`, `puppies` | site_id, slug, content fields, `source` (`kennelport` / `kennelos`), `kennelos_id` when linked, `hidden_by_kennelos` (section 5.3). A dog has a status (`active` / `retired` / `remembered`) and health_display (`normal_only` / `all` / `none`, 3.7); a litter a stage (`planned` / `current` / `past`) and either parent as a site dog or a typed name; a puppy one of 3.6's statuses. The full field list is `worker/src/migrations/0002_content.sql` |
 | `site_pages` | site_id, page key, enabled, menu_label, content (each page's wording, JSON with the keys the content model names, 3.12); order within its menu group comes with phase 6 |
 | `redirects` | site_id, old path, new path (written at publish time) |
@@ -992,10 +1033,10 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `expanders` | site_id, page (`policies` / `faq` / `waitlist_help`), order, heading, body, start_open |
 | `extras` | site_id, kind (`item` / `homegoing`), group, name, description, photo, price_from, price_to, weeks, lead_in, checklist, closing, featured, order, `source` (section 3.4) |
 | `files` | site_id, r2_key, title, bytes, public, removed_at (downloads and certificates, PDFs only) |
-| `inquiries` | site_id, kind (`contact` / `application`), name, email, phone, topic, message, received_at, read_at; deleted after 90 days by the daily cleanup (section 3.10, decision 12). The breeder's own choice of fields (`form_fields`) comes with phase 3 |
+| `inquiries` | site_id, kind (`contact` / `application`), name, email, phone, topic, message, answers (an application's [question, answer] pairs as JSON, with the question's wording when sent), received_at, read_at; deleted after 90 days by the daily cleanup (section 3.10, decision 12) |
 | `notify_items` | what happened, for push notifications: the kind and the sender's first name only; kept 8 days (section 3.10) |
 | `payment_info` | site_id, kind (`application_fee` / `deposit` / `safe_notice`), show_on_site (off by default for the fee and deposit; the notice is on with no row), content (JSON: title, due_note, methods as [way, details] pairs, note, pay_url, pay_label; for the notice, its wording), `source` (section 3.9) |
-| `form_fields` | site_id, field type, label, required, order (the inquiry form's questions) |
+| `form_fields` | site_id, form (`application`), type (short answer, longer answer, choice, yes/no, which litter, phone, town), label, hint, required, options (JSON, for a choice), order: the application form's questions after name and email (section 3.8) |
 
 Tables for backlog items (requests, news, programs, the litter diary, events) are in
 [`KennelPort_Backlog.md`](KennelPort_Backlog.md) section 7.
@@ -1045,15 +1086,15 @@ Each phase is useful by itself, so you can stop after any one.
 About, Kennel residents with health results, Puppies with statuses, How it works, Extras
 and homegoing packages, Policies, FAQ, the status-page help, the contact form and Inbox,
 reviews, the privacy page and search basics all render and can be edited, and so do How
-to pay and the safe-payment notice (3.9). Left:
-- **The application form** for breeders who run their list by hand (3.8, decision 26):
-  the inquiry form set up with the breeder's own questions (`form_fields`), arriving in
-  the Inbox as an application.
-- **The waitlist page** (3.8), a placeholder now: the KennelOS list in the site's own
-  style (decision 21), with a link to the KennelOS list when the feed isn't shared or
-  can't be reached. This needs the website feed (`GET /f/site/<public_id>`) built in the
-  KennelOS repo first (5.5); KennelPort's side can be built and tested against a sample
-  feed meanwhile.
+to pay and the safe-payment notice (3.9), and the application form for breeders who run
+their list by hand (3.8, decision 26: the breeder's own questions on the waitlist page,
+a closed switch, answers in the Inbox), and, for breeders who take applications online in
+KennelOS, the website feed read on the waitlist page with KennelOS's application form
+drawn in the site's style (3.8). Left:
+- **The list from KennelOS in the site's own style** (3.8, decision 21): the feed is
+  read and kept (`feed_cache`), and KennelOS's application form is drawn in the site's
+  style; the list's rows, the gap note, search, Available Puppies and Coming up are
+  next. Until then the waitlist page links to the KennelOS list and its sign-in.
 
 If the first site wants its own domain, connect it by hand (section 2.4).
 
@@ -1149,7 +1190,7 @@ Everything after version 1, with its order and designs, is in
 | Building far more than the first site needs | Version 1 is section 8.1 only; everything else waits for someone to ask |
 | An embed provider tracks visitors or changes its embed | Click to load; previews stored on the site; plain-link fallback; providers listed in one place |
 | Tie-in to one host | Plain D1 and R2 data, with a full export for each site (built in the browser, section 4.3) |
-| Photo upload fails on iPhones, which can't always make WebP | JPEG whenever the browser hands back anything but WebP; the server accepts both and checks both for location data; tried on a real Android phone, a real iPhone still to do (section 4.2) |
+| Photo upload fails on iPhones, which can't always make WebP | JPEG whenever the browser hands back anything but WebP; the server accepts both and checks both for location data; tried on a real Android phone and a real iPhone (section 4.2) |
 | A large site outgrows D1's row size | Snapshots are stored in R2, with only their key in D1 (section 4.1) |
 | A page, publish or export runs past the free plan's CPU limit | Pages cached per snapshot; resizing and the export zip run in the browser; CPU measured in phase 1, with Workers Paid as the fallback (section 4.4) |
 | Fonts or libraries from Google or a CDN let them track visitors | Fonts and libraries are served from the site itself; only Turnstile loads from outside, on form pages (section 3.3) |

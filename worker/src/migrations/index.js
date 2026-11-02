@@ -14,6 +14,8 @@ import accounts from './0003_accounts.sql';
 import messages from './0004_messages.sql';
 import photoTags from './0005_photo_tags.sql';
 import payment from './0006_payment.sql';
+import application from './0007_application.sql';
+import feed from './0008_feed.sql';
 
 export const MIGRATIONS = [
   { id: '0001', name: 'schema', sql: schema },
@@ -22,4 +24,6 @@ export const MIGRATIONS = [
   { id: '0004', name: 'messages', sql: messages },
   { id: '0005', name: 'photo_tags', sql: photoTags },
   { id: '0006', name: 'payment', sql: payment },
+  { id: '0007', name: 'application', sql: application },
+  { id: '0008', name: 'feed', sql: feed },
 ];

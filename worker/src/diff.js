@@ -70,6 +70,7 @@ export function changes(live, draft) {
     ['Reviews', 'reviews', '/reviews', (r) => r.first_name],
     ['How it works', 'steps', '/how-it-works', (s) => s.heading],
     ['Extras', 'extras', '/extras', (x) => x.name],
+    ['Application form', 'questions', '/waitlist', (q) => q.label],
   ]) {
     const a = live[key] ?? []; const b = draft[key] ?? [];
     if (same(a, b)) continue;
