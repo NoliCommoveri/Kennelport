@@ -590,3 +590,15 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   Applicants (the sign-in box), Available Puppies or Coming up. The site has its own
   puppy pages, and the status-page sign-in belongs elsewhere. The list keeps its header,
   search, rows and gap note, above the application form. Plan 3.8 updated.
+
+## 2026-11-02: Family login, and template version 7
+
+- At the owner's word, the status-page sign-in moved off the waitlist list to
+  **Family login**: in the top menu beside the Waitlist button, in the footer's Buying a
+  puppy column, and as **Sign in to see your details** on the status-page help page. Each
+  opens KennelOS's sign-in in a new tab. The snapshot carries it (`site.family_login`,
+  from `KENNELOS_ORIGIN` and the kennel id); saving or removing the feed address marks
+  the draft changed, and the change list says "Family login link: added" or "removed".
+  The plan's phase 4 Family login footer link is done here.
+- Template assets version 7 (the list, Family login, the help page's buttons), with its
+  fingerprint.

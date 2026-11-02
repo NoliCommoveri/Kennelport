@@ -39,6 +39,10 @@ export function changes(live, draft) {
   const siteChanged = Object.keys(SITE_NAMES).filter((k) => !same(live.site[k], draft.site[k]));
   if (siteChanged.length) lines.push({ text: `Kennel details: ${[...new Set(siteChanged.map((k) => SITE_NAMES[k]))].join(', ')} edited`, path: '/contact' });
 
+  if ((live.site.family_login ?? null) !== (draft.site.family_login ?? null)) {
+    lines.push({ text: `Family login link: ${!live.site.family_login ? 'added' : !draft.site.family_login ? 'removed' : 'changed'}`, path: draft.site.family_login ? '/waitlist/help' : null });
+  }
+
   for (const key of HOME_BLOCK_ORDER) {
     const a = live.home[key]; const b = draft.home[key];
     if (same(a, b)) continue;

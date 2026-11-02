@@ -456,7 +456,11 @@ list in the site's style: the same rows KennelOS publishes (position, listed nam
 families are left out, a search box, and **Apply to join the waitlist**, above the
 application form. Only the families: the site has its own puppy pages, so KennelOS's
 Available Puppies and Coming up aren't drawn there, and the list carries no Current
-Applicants sign-in box. To do that for real:
+Applicants sign-in box. Families on the list sign in from **Family login**: in the top
+menu beside the Waitlist button, in the footer, and as a button on the status-page help
+page, each opening KennelOS's sign-in (`/list/<public_id>#signin`) in a new tab. It's
+part of the published site, so it appears (or goes) with the publish after the feed
+address is saved (or removed). To do that for real:
 - The Worker reads the kennel's **website feed** from KennelOS
   (`GET /f/site/<public_id>`: exactly the public list, plus paths for the list, sign-in
   and form), caches it for five minutes, and renders it with the site's scheme. KennelOS
@@ -1080,7 +1084,7 @@ Each phase is useful by itself, so you can stop after any one.
 | **1. Renderer + ops** | One template with its fonts and libraries served from the site (3.3), the ops console, preview links, snapshot publish to R2 and undo (4.1), page caching and the CPU check (4.4), reserved names, OG tags, close a site and the closed notice | Build and host the site yourself, with no breeder login yet |
 | **2. Breeder login** | Email-code sign-in, manage app (installable as KennelPort Site Manager), the inbox with push notifications for new messages, the review queue, preview and publish with the list of changes, photo upload with resizing, the JPEG fallback and the server checks, tried on a real Android phone and iPhone (4.2), storage limits, **Delete my site** with the download-a-copy zip built in the browser (4.3) | Hand the site over |
 | **3. The first site's pages** | Everything in the AK sample (decision 14): Home with its blocks, About (story, reviews, contact), Kennel residents with flip cards and health results (3.7), Puppies (available, upcoming, older) with statuses (3.6), How it works steps (3.11), Extras with homegoing packages (3.4), Policies and FAQ, the waitlist page and its status-page help (3.8, decision 21) with how to pay the application fee and deposit (3.9), inquiry form and inbox (3.10); plus the safe-payment notice, privacy page and search basics | The family site is complete and live |
-| **4. The KennelOS link** | In KennelPort: link codes, matching existing website records to KennelOS ones (5.2), the bundle API and its rules (5.3), **Use my KennelOS prices** (3.2), the Family login footer link. In KennelOS (5.5): **Show on website** on dogs and litters, `siteExport.js`, **Connect website** and **Update website**, filling `dog.url`, the kennel's website and `extras_info_url`, and the Kels steps | Her dogs, litters, puppy statuses and health results come from KennelOS when she presses **Update website**; she types them only once |
+| **4. The KennelOS link** | In KennelPort: link codes, matching existing website records to KennelOS ones (5.2), the bundle API and its rules (5.3), **Use my KennelOS prices** (3.2). In KennelOS (5.5): **Show on website** on dogs and litters, `siteExport.js`, **Connect website** and **Update website**, filling `dog.url`, the kennel's website and `extras_info_url`, and the Kels steps | Her dogs, litters, puppy statuses and health results come from KennelOS when she presses **Update website**; she types them only once |
 | **5. Albums, embeds and sharing** | Albums with their own links, embeds from the approved list with stored previews (3.3), share links and QR codes, KennelOS shares carrying album links (5.4) | Litter albums and her YouTube and Facebook posts live on the site |
 | **6. Customisation and schemes** | Page and Home-block switches, menu labels, any-length steps, expanders and extras (3.12); the colour schemes with light and dark versions (3.13) | Other breeders' sites can differ from AK's without new code |
 

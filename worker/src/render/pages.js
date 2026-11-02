@@ -331,7 +331,8 @@ export const policies = (snap) => expanderPage(snap, 'policies', { eyebrow: 'Our
 export const faq = (snap) => expanderPage(snap, 'faq', { eyebrow: 'Questions', heading: 'FAQ' });
 export function waitlistHelp(snap, ctx) {
   const page = expanderPage(snap, 'waitlist_help', { eyebrow: 'Waitlist', heading: 'Using your status page' });
-  page.body += '<p class="center mt-26"><a class="btn line" href="/waitlist">Back to the waitlist</a></p>';
+  const login = snap.site.family_login ? `<a class="btn solid" href="${attr(snap.site.family_login)}" rel="noopener noreferrer" target="_blank">Sign in to see your details</a> ` : '';
+  page.body += `<p class="btn-row mt-26">${login}<a class="btn line" href="/waitlist">Back to the waitlist</a></p>`;
   return page;
 }
 

@@ -93,7 +93,8 @@ export async function readFeed(env, siteId, publicId, { now = Date.now() } = {})
 
 export async function setFeed(env, siteId, publicId) {
   await env.DB.batch([
-    env.DB.prepare('UPDATE sites SET kennelos_public_id = ? WHERE id = ?').bind(publicId, siteId),
+    // The Family login link comes with the next publish.
+    env.DB.prepare('UPDATE sites SET kennelos_public_id = ?, draft_changed_at = ? WHERE id = ?').bind(publicId, new Date().toISOString(), siteId),
     env.DB.prepare('DELETE FROM feed_cache WHERE site_id = ?').bind(siteId),
   ]);
 }

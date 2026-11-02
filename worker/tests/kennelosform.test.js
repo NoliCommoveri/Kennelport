@@ -279,3 +279,22 @@ test('an empty list says so; the last copy is shown, dated, when KennelOS can\'t
   const html = await (await b.waitlist()).text();
   assert.match(html, /Updated November 1, 2026\. Our records couldn&#39;t be reached just now/);
 });
+
+test('Family login: in the menu, the footer and the status-page help, once published', async () => {
+  const b = await breeder(kennelos(LIST));
+  const home = async () => (await call(b.env, SITE, '/')).text();
+  assert.doesNotMatch(await home(), /Family login/);
+  await b.post('/pages/waitlist/kennelos', { feed: FEED_URL });
+  assert.doesNotMatch(await home(), /Family login/, 'not before publishing');
+  assert.match(await (await b.get('/publish')).text(), /Family login link: added/);
+  await b.post('/publish');
+  const signin = 'https://apply.kennelos.example/list/kos1_11111111-2222-4333-8444-555555555555#signin';
+  const html = await home();
+  assert.match(html, new RegExp(`<li><a class="navtop" href="${signin}" rel="noopener noreferrer" target="_blank">Family login</a></li><li><a class="btn solid" href="/waitlist">`), 'beside the Waitlist button');
+  assert.match(html, new RegExp(`<li><a href="${signin}" rel="noopener noreferrer" target="_blank">Family login</a></li>`), 'in the footer');
+  assert.match(await (await call(b.env, SITE, '/waitlist/help')).text(), new RegExp(`<a class="btn solid" href="${signin}"[^>]*>Sign in to see your details</a>`));
+  await b.post('/pages/waitlist/kennelos', { remove: '1' });
+  assert.match(await (await b.get('/publish')).text(), /Family login link: removed/);
+  await b.post('/publish');
+  assert.doesNotMatch(await home(), /Family login/);
+});
