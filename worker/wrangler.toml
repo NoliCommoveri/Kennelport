@@ -16,11 +16,11 @@ workers_dev = true
 [observability]
 enabled = true
 
-# Setup step 3 (docs/KennelPort_Setup.md): paste the id the dashboard shows.
+# Setup step 3 (docs/KennelPort_Setup.md): the staging database, created 2026-11-02.
 [[d1_databases]]
 binding = "DB"
 database_name = "kennelport-staging"
-database_id = "REPLACE-WITH-STAGING-D1-ID"
+database_id = "7f576595-6cd2-42ae-b4be-3271cc9df7db"
 
 # Never public: every object is served through the Worker after a check.
 [[r2_buckets]]
