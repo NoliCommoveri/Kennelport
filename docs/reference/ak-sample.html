@@ -321,6 +321,26 @@ td.tip, th.tip { width: 36px; text-align: right; }
   table.list td.tip { grid-column: 3; grid-row: 1 / 3; align-self: center; width: auto; }
 }
 
+/* How to pay */
+.pay { max-width: 860px; margin: 28px auto 0; display: grid; gap: 16px; }
+.pay > header { display: grid; gap: 6px; }
+.pay-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 700px) { .pay-grid { grid-template-columns: minmax(0, 1fr); } }
+.pay-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 22px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+.pay-card h3 { font-size: 1.3rem; }
+.pay-when { font-size: .88rem; color: var(--muted); }
+.pay-when b { color: var(--ink); }
+.methods { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.methods li { display: grid; grid-template-columns: 5.2em minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); font-size: .92rem; }
+.methods li:first-child { border-top: 0; }
+.methods .m { font-weight: 700; }
+.methods .d { overflow-wrap: anywhere; }
+.copy { font: 700 .74rem var(--f-body); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); background: none; border: 1px solid var(--line); border-radius: var(--r); padding: 6px 9px; cursor: pointer; min-height: 32px; }
+.copy:hover { border-color: var(--accent); }
+.pay-note { background: var(--band); border-left: 3px solid var(--brass); padding: 10px 12px; font-size: .88rem; }
+.pay-safe { font-size: .86rem; color: var(--muted); text-align: center; max-width: 62ch; margin: 0 auto; }
+.pay-msg { font-size: .85rem; color: var(--held); min-height: 1.2em; }
+
 /* Apply form */
 .apply-form { max-width: 720px; margin: 28px auto 0; display: grid; gap: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: clamp(18px, 3vw, 30px); }
 .apply-form .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -530,6 +550,37 @@ footer.site .fine { grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,
       <div class="powered">Waitlist kept in KennelOS · positions update automatically</div>
     </div>
 
+    <section class="pay" id="how-to-pay" aria-labelledby="pay-h">
+      <header style="text-align:center;justify-items:center"><span class="eyebrow">How to pay</span><h2 id="pay-h">Paying your fee and deposit</h2><p class="muted" style="max-width:58ch">Use any of the ways below. Put the note shown in your payment so we can match it to you.</p></header>
+      <div class="pay-grid">
+        <article class="pay-card">
+          <span class="eyebrow">Step 2</span><h3>Application fee</h3>
+          <p class="pay-when"><b>When:</b> after we approve your application. Your place on the list is set the day it arrives.</p>
+          <ul class="methods">
+            <li><span class="m">Venmo</span><span class="d">@AK-Bostons-Sample</span><button type="button" class="copy" data-copy="@AK-Bostons-Sample">Copy</button></li>
+            <li><span class="m">Zelle</span><span class="d">payments@akbostons.example</span><button type="button" class="copy" data-copy="payments@akbostons.example">Copy</button></li>
+            <li><span class="m">PayPal</span><span class="d">Friends &amp; Family to payments@akbostons.example</span><button type="button" class="copy" data-copy="payments@akbostons.example">Copy</button></li>
+          </ul>
+          <p class="pay-note"><b>In the note:</b> your full name and "AK application".</p>
+          <div><button type="button" class="btn solid" data-pay="fee">Pay the fee online</button></div>
+          <p class="pay-msg" role="status"></p>
+        </article>
+        <article class="pay-card">
+          <span class="eyebrow">Step 4</span><h3>Puppy deposit</h3>
+          <p class="pay-when"><b>When:</b> within 48 hours of choosing your puppy. Your application fee counts toward it.</p>
+          <ul class="methods">
+            <li><span class="m">Zelle</span><span class="d">payments@akbostons.example</span><button type="button" class="copy" data-copy="payments@akbostons.example">Copy</button></li>
+            <li><span class="m">Check</span><span class="d">Payable to AK Boston Terriers; we'll send the mailing address when you choose</span><span></span></li>
+            <li><span class="m">Card</span><span class="d">Online, with the button below</span><span></span></li>
+          </ul>
+          <p class="pay-note"><b>In the note:</b> your full name and your puppy's name.</p>
+          <div><button type="button" class="btn solid" data-pay="deposit">Pay the deposit online</button></div>
+          <p class="pay-msg" role="status"></p>
+        </article>
+      </div>
+      <p class="pay-safe">These are our only payment details. We'll never ask you to pay by gift card, wire transfer or to anyone else's account. If someone does, please tell us.</p>
+    </section>
+
     <form class="apply-form" id="apply" novalidate>
       <div><span class="eyebrow">Puppy application</span><h2 style="margin-top:6px">Apply to join the waitlist</h2><p class="muted small" style="margin-top:6px">Your place on the list is set the day your application fee is received.</p></div>
       <div class="row"><label for="a-name">Your name<input id="a-name" type="text" required placeholder="First and last name"></label><label for="a-email">Email<input id="a-email" type="email" required placeholder="you@example.com"></label></div>
@@ -554,7 +605,7 @@ footer.site .fine { grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,
     <div style="display:grid;gap:14px"><a class="brand" href="#home"><svg><use href="#mono"/></svg><div><b>AK Boston Terriers</b><span>The American Gentleman</span></div></a><p class="small" style="color:var(--foot-muted);max-width:36ch">Home-raised, health-tested Boston Terriers, and a family to call on for the life of your dog.</p></div>
     <div><h4>About us</h4><ul><li><a href="#story">Our story</a></li><li><a href="#reviews">Reviews</a></li><li><a href="#contact">Contact</a></li></ul></div>
     <div><h4>Dogs and puppies</h4><ul><li><a href="#residents">Kennel residents</a></li><li><a href="#available">Available puppies</a></li><li><a href="#upcoming">Upcoming litters</a></li></ul></div>
-    <div><h4>Buying a puppy</h4><ul><li><a href="#steps">How it works</a></li><li><a href="#extras">Extended homegoing</a></li><li><a href="#policies">Policies</a></li><li><a href="#waitlist">Waitlist</a></li></ul></div>
+    <div><h4>Buying a puppy</h4><ul><li><a href="#steps">How it works</a></li><li><a href="#extras">Extended homegoing</a></li><li><a href="#how-to-pay">How to pay</a></li><li><a href="#policies">Policies</a></li><li><a href="#waitlist">Waitlist</a></li></ul></div>
     <div class="fine"><span>© 2026 AK Boston Terriers · Sample site</span><span>Made with KennelPort</span></div>
   </div>
 </footer>
@@ -588,9 +639,9 @@ const REVIEWS = [
 ];
 const STEPS = [
   ['Apply', 'Fill out the puppy application. We read every one and reply within a week.', 'We ask about your home, your schedule, other pets and what you hope for in a Boston. There are no wrong answers; it helps us match the right puppy to you.'],
-  ['Pay the application fee', 'Once approved, a $300 fee holds your place. Your place is set the day it arrives.', 'The fee comes off your puppy\'s price. If you change your mind before your turn, it can move to a later litter.'],
+  ['Pay the application fee', 'Once approved, a $300 fee holds your place. Your place is set the day it arrives.', 'The fee comes off your puppy\'s price. If you change your mind before your turn, it can move to a later litter.', true],
   ['Watch your number', 'Your name appears on our public waitlist as first name and last initial, or masked if you ask.', 'Positions move up as families ahead of you take puppies. You can sign in any time to see your own details, pause, or change your preferences.'],
-  ['Choose your puppy', 'When a litter is ready and it\'s your turn, we email you. You have 48 hours to pick or pass.', 'Passing once doesn\'t cost your place. You can tell us ahead of time to skip a litter that isn\'t right for you.'],
+  ['Choose your puppy', 'When a litter is ready and it\'s your turn, we email you. You have 48 hours to pick or pass.', 'Passing once doesn\'t cost your place. You can tell us ahead of time to skip a litter that isn\'t right for you. Your deposit is due within 48 hours of choosing.', true],
   ['Go home at 8 weeks', 'Pick up here or meet us. Your puppy comes with a care binder, food and a blanket that smells like home.', 'Puppies go home with their first shots, deworming, a vet check and microchip, plus our number for life.']
 ];
 const POLICIES = [
@@ -683,7 +734,7 @@ const reviewHtml = (r) => `<article class="review"><span class="stars" aria-labe
 $('home-reviews').innerHTML = REVIEWS.map(reviewHtml).join('');
 const renderReviews = () => { const t = $('review-topic').value; $('all-reviews').innerHTML = REVIEWS.filter((r) => t === 'all' || r.topic === t).map(reviewHtml).join(''); };
 $('review-topic').addEventListener('change', renderReviews); renderReviews();
-$('steps-track').innerHTML = STEPS.map(([t, s, more], i) => `<article class="step"><span class="n">${i + 1}</span><h3>${esc(t)}</h3><p>${esc(s)}</p><details class="x" style="border:0;background:none"><summary style="padding:4px 30px 4px 0;font-size:.92rem;font-family:var(--f-body);font-weight:700;color:var(--accent)">More detail</summary><div class="body" style="padding:6px 0 0;font-size:.9rem">${esc(more)}</div></details></article>`).join('');
+$('steps-track').innerHTML = STEPS.map(([t, s, more, pay], i) => `<article class="step"><span class="n">${i + 1}</span><h3>${esc(t)}</h3><p>${esc(s)}</p><details class="x" style="border:0;background:none"><summary style="padding:4px 30px 4px 0;font-size:.92rem;font-family:var(--f-body);font-weight:700;color:var(--accent)">More detail</summary><div class="body" style="padding:6px 0 0;font-size:.9rem">${esc(more)}</div></details>${pay ? '<a class="more" href="#how-to-pay">How to pay</a>' : ''}</article>`).join('');
 const acc = (list, openFirst) => list.map(([q, a], i) => `<details class="x"${openFirst && i === 0 ? ' open' : ''}><summary>${esc(q)}</summary><div class="body"><p>${esc(a)}</p></div></details>`).join('');
 $('pkgs').innerHTML = PKGS.map((p) => `<article class="pkg${p.top ? ' top' : ''}"><div class="weeks"><b>${p.weeks}</b><span>weeks${p.top ? ' · most complete' : ''}</span></div><h3>${esc(p.name)}</h3><div class="price">${esc(p.price)}</div><p>${esc(p.text)}</p><details${window.matchMedia('(min-width: 901px)').matches ? ' open' : ''}><summary>What's included</summary><p class="small muted" style="margin-top:8px">${esc(p.lead)}</p><ul class="checks">${p.items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>${p.foot ? `<p class="small muted" style="margin-top:10px">${esc(p.foot)}</p>` : ''}</details><a class="more" href="#apply">Ask about this package</a></article>`).join('');
 $('policy-acc').innerHTML = acc(POLICIES, true);
@@ -725,6 +776,19 @@ $('apply').addEventListener('submit', (e) => {
   const out = $('apply-done'); out.hidden = false;
   if (!name || !$('a-email').value.trim()) { out.textContent = 'Please add your name and email so we can reply.'; return; }
   out.textContent = `Thanks, ${name.split(/\s+/)[0]}. This is a sample site, so nothing was sent. On the live site, your application goes straight into AK's KennelOS waitlist for review.`;
+});
+
+// ---------- How to pay ----------
+document.addEventListener('click', async (e) => {
+  const c = e.target.closest('.copy');
+  if (c) {
+    try { await navigator.clipboard.writeText(c.dataset.copy); c.textContent = 'Copied'; }
+    catch (err) { const d = c.previousElementSibling; const r = document.createRange(); r.selectNodeContents(d); const s = getSelection(); s.removeAllRanges(); s.addRange(r); c.textContent = 'Selected'; }
+    setTimeout(() => { c.textContent = 'Copy'; }, 1600);
+    return;
+  }
+  const p = e.target.closest('[data-pay]');
+  if (p) p.closest('.pay-card').querySelector('.pay-msg').textContent = 'This is a sample site, so this button goes nowhere. On the live site it opens the kennel\'s own payment page.';
 });
 
 // ---------- Flip cards: tap to turn, again to turn back ----------

@@ -11,7 +11,7 @@ published as a claude.ai artifact, so it has no `<html>`/`<head>` wrapper of its
   Without them the page works with broken images.
 - **Real:** the kennel name, the dogs Willow, Ziva, Peaches, Onyx, Opal, Diamond and
   Contessa, and the three extended-homegoing packages (names, prices, checklists).
-- **Made up:** names marked * (Pearl, Boone), registered names, parents of each litter,
+- **Made up:** the payment details in How to pay (`@AK-Bostons-Sample`, `payments@akbostons.example`), names marked * (Pearl, Boone), registered names, parents of each litter,
   health results, reviews, policies, FAQ answers, and every waitlist family. The 16-week
   checklist past "Crate-training foundations" is filled in from the package's own
   description.

@@ -183,3 +183,10 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   **Show on website** switch, off by default. Amounts still follow the prices rule. With
   KennelOS linked it fills from the waitlist payment instructions and the fee account's
   pay link. Added to version 1 (8.1) and the data model (`payment_info`).
+
+## 2026-11-02: How to pay in the sample
+
+- Added a How to pay box to the AK sample's waitlist page (application fee and deposit:
+  when due, methods with copy buttons, the note to include, a Pay button, and the
+  only-real-details line), linked from How it works steps 2 and 4 and the footer. Payment
+  details are made up.
