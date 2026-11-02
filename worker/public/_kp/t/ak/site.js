@@ -170,7 +170,7 @@
   // KennelOS's application form, drawn by the waitlist page (plan 3.8). What the
   // visitor types is read as KennelOS's own form page reads it, sealed above, and
   // sent from this browser straight to KennelOS; then the emailed code, sent there
-  // too. Without this script (or WebCrypto) the page shows the link to KennelOS's
+  // too. KennelOS never hands this page the family's status link. Without this script (or WebCrypto) the page shows the link to KennelOS's
   // own application page instead.
   const kos = $('[data-kos-form]');
   if (kos && window.crypto?.subtle && window.fetch) {
@@ -279,9 +279,9 @@
       button.disabled = true;
       const r = await send('/f/verify', { public_id: d.publicId, code: $('#k-code', kos).value });
       button.disabled = false;
-      if (r.ok && r.body.status_token) {
-        // Her status page is one family's private page: it opens on KennelOS, in its own tab.
-        $('[data-kos-status]', kos).href = `${d.origin}/s/${encodeURIComponent(r.body.status_token)}`;
+      if (r.ok && r.body.confirmed) {
+        // KennelOS gives this page no status link and no session: the family signs
+        // in on KennelOS's own page to see their private status page.
         step('done');
         kos.scrollIntoView({ block: 'start' });
         return;

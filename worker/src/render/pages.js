@@ -474,8 +474,8 @@ function kennelosForm(snap, ctx) {
       <p class="small" data-kos-result role="status"></p>
       <p class="muted small">No email after a few minutes? Check your spam folder, or <button type="button" class="linkish" data-kos-resend>send a new code</button>.</p>
     </form>
-    <div data-kos-step="done" hidden><h3>Your application is in</h3><p class="small">${esc(snap.site.kennel_name)} will review it. Your own status page shows your place in line and anything waiting for you. Bookmark it to come back.</p>
-      <p><a class="btn solid" data-kos-status href="#" rel="noopener noreferrer" target="_blank">Open my status page</a></p></div>
+    <div data-kos-step="done" hidden><h3>Your application is in</h3><p class="small">${esc(snap.site.kennel_name)} will review it. To see your place in line and anything waiting for you, sign in on our KennelOS waitlist page with the email you applied with.</p>
+      <p><a class="btn solid" href="${attr(`${origin}${feed.links?.signin ?? `/list/${encodeURIComponent(publicId)}#signin`}`)}" rel="noopener noreferrer" target="_blank">See my details</a></p></div>
   </div>`;
 }
 

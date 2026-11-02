@@ -502,9 +502,11 @@ The application still goes only to KennelOS:
   or the name and email; nothing lands in KennelPort's Inbox (decision 26).
 - **Confirming, on the same page.** KennelOS emails its 6-digit code; the visitor types
   it into the site's page, which sends it to KennelOS's `POST /f/verify` (and **send a
-  new code** to `POST /f/code`). Then "Your application is in", with **Open my status
-  page** opening KennelOS's status page in a new tab, as from an embedded form. The
-  status page itself always stays on KennelOS: it's one family's private page.
+  new code** to `POST /f/code`). Then "Your application is in", with **See my details**
+  opening KennelOS's sign-in on its list page in a new tab. Asked from a website,
+  KennelOS's `/f/verify` confirms the application but returns no status link and no
+  session, so no KennelPort page ever holds the key to a family's private status page;
+  the family signs in on KennelOS to see it.
 - **In KennelOS:** those three family endpoints answer cross-origin requests from
   KennelPort sites (`https://*.kennelport.com`, no credentials; custom domains once
   **Connect website** sends them, phase 4). They hold no cookie and no session, so CORS

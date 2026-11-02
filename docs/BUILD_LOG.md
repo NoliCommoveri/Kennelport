@@ -555,3 +555,11 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - 109 tests (sealing checked by opening it as KennelOS does); the whole flow driven in
   Chromium at phone width against a stand-in KennelOS: answers sealed, opened with her
   key, the code step, a wrong code, a new code, the status link.
+
+## 2026-11-02: no status link for the website
+
+- Privacy: confirming a KennelOS application from the site's form no longer hands the
+  site the family's status-page link or a KennelOS session. KennelOS's `/f/verify`, asked
+  from a KennelPort site, confirms the application and returns only `confirmed`; the last
+  step's **See my details** opens KennelOS's own sign-in. Plan 3.8 updated. Tests and the
+  Chromium run updated.

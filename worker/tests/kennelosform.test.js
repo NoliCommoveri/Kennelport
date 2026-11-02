@@ -108,6 +108,8 @@ test('with a feed carrying her form, the waitlist page draws KennelOS\'s form, a
   assert.match(html, /data-kos-fallback>This form needs a browser with JavaScript on\. Apply on our <a href="https:\/\/apply\.kennelos\.example\/apply\/kos1_/);
   assert.match(html, /Already on our waitlist\? <a href="https:\/\/apply\.kennelos\.example\/list\/kos1_[^"]+#signin"/);
   assert.doesNotMatch(html, /action="\/waitlist#apply"/, 'no KennelPort application form');
+  assert.match(html, /<h3>Your application is in<\/h3>[\s\S]*?href="https:\/\/apply\.kennelos\.example\/list\/kos1_[^"]+#signin"[^>]*>See my details/, 'afterwards: KennelOS\'s own sign-in');
+  assert.doesNotMatch(html, /\/s\//, 'no status-page link is ever built here');
   assert.doesNotMatch(html, /Preferred sex/, 'not KennelPort\'s own questions');
 
   const csp = res.headers.get('content-security-policy');
