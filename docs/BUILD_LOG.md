@@ -387,3 +387,14 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - Closing a site now also deletes its messages, notification records and people.
 - Fix: the template's inputs without a type (names, phone) had no styling.
 - 65 tests.
+
+## 2026-11-02: phase 2, batch 4: download a copy, Delete my site, limits
+
+- Your site (manage app): storage used; Download a copy, a zip of content.json (loadable
+  back), messages.json, photos.json and every photo at full size, built in the browser
+  (`/_kp/m/zip.js`, stored entries with CRC-32); Delete my site for owners, typing the
+  subdomain, from a sign-in in the last 15 minutes, deleting everything as closing from
+  /ops does.
+- Storage and photo limits set per site in /ops, enforced on upload, shown on Photos and
+  Your site (with a warning past 90%).
+- 71 tests, including a zip opened by Python's zipfile; the download checked in a browser.

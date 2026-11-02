@@ -21,7 +21,7 @@ const HEADERS = {
   'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': MANAGE_CSP,
   'x-content-type-options': 'nosniff', 'referrer-policy': 'same-origin', 'x-frame-options': 'DENY',
 };
-const APP_VERSION = '4';
+const APP_VERSION = '5';
 
 const redirect = (location, headers = {}) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store', ...headers } });
 
@@ -119,7 +119,7 @@ async function siteHome(env, user, site) {
     ${tile('/lists/reviews', 'Reviews', 'Add or hide')}
     ${tile('/details', 'Kennel details', 'Name, contact, town')}
   </ul>
-  <p><a class="button" href="/notifications">Notifications on this device</a></p>
+  <p class="row"><a class="button" href="/notifications">Notifications on this device</a><a class="button" href="/s/${esc(site.subdomain)}/account">Your site: storage, copy, delete</a></p>
   <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}</p>
   <form method="post" action="/signout"><button class="link">Sign out</button></form>`);
 }
@@ -163,6 +163,7 @@ export async function handleManage(request, env, url) {
   const { pathname } = url;
   if (pathname === '/manifest.webmanifest') return manifest();
   if (pathname === '/sw.js' && env.ASSETS) return serviceWorker(env, request);
+  if (pathname === '/deleted') return page('Site deleted', '<section class="card"><h1>Your site has been deleted</h1><p class="muted">Everything on it is gone, and its address now says you\'re no longer hosting with KennelPort.</p><p><a href="/">KennelPort Site Manager</a></p></section>');
   if (pathname === '/offline') return page('Offline', '<section class="card"><h1>You\'re offline</h1><p class="muted">This screen will load when you\'re back online.</p></section>');
 
   // The service worker asking what a push should say: no session needed, the

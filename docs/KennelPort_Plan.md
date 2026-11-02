@@ -781,8 +781,10 @@ dark first: it shows dark unless the visitor's device asks for light explicitly.
 A site's content can be deleted **by the breeder** (a **Delete my site** button in the
 manage app, owner only) **or by you** (in the ops console). Either way:
 
-1. **Confirm.** The breeder types their subdomain to confirm. The screen offers **Download
-   a copy first** (a zip of their text and photos) but doesn't require it. The zip is
+1. **Confirm.** The breeder types their subdomain to confirm, from a sign-in made in the
+   last 15 minutes (as KennelOS asks before erasing anything), so a phone left signed in
+   can't delete the site. Owners only; editors can download a copy but not delete. The screen offers **Download
+   a copy first** (a zip of their text, photos and messages) but doesn't require it. The zip is
    **built in the browser**, not the Worker: the manage app fetches a list of the site's
    text (as JSON) and files, downloads each photo and file in turn, and writes them into
    an uncompressed zip (photos are already compressed) with a small zip writer copied

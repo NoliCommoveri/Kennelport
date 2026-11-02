@@ -15,6 +15,10 @@ import { changes } from '../diff.js';
 import { makePreviewToken } from '../site.js';
 import { siteLink } from '../ops/sites.js';
 import { STATUS_TEXT } from '../render/parts.js';
+import { exportContent } from '../content/io.js';
+import { closeSite, SiteError } from '../sites.js';
+
+export const FRESH_SIGN_IN_MS = 15 * 60 * 1000;
 
 const when = (iso) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }) + ' UTC';
 const redirect = (location) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store' } });
@@ -255,10 +259,10 @@ export function createScreens({ env, request, url, site, user, page }) {
         throw err;
       }
     }
-    let m = rest.match(/^\/([0-9a-f-]{36})\/thumb$/);
+    let m = rest.match(/^\/([0-9a-f-]{36})\/(thumb|full)$/);
     if (m && !post) {
       const p = await env.DB.prepare('SELECT r2_key, thumb_key, type FROM photos WHERE id = ? AND site_id = ?').bind(m[1], site.id).first();
-      const obj = p && await env.FILES.get(p.thumb_key || p.r2_key);
+      const obj = p && await env.FILES.get(m[2] === 'full' ? p.r2_key : (p.thumb_key || p.r2_key));
       if (!obj) return new Response('Not found', { status: 404 });
       return new Response(obj.body, { headers: { 'content-type': p.type, 'cache-control': 'private, max-age=86400' } });
     }
@@ -277,7 +281,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     const list = await photos();
     return {
       title: 'Photos', back: base,
-      body: `${note(url)}<form id="photo-form" class="card" method="post" action="${base}/photos/upload">
+      body: `${note(url)}${await usageLine()}<form id="photo-form" class="card" method="post" action="${base}/photos/upload">
         <label>Add photos<input type="file" accept="image/*" multiple required></label>
         <label>What's in the photo<span class="hint">Helps visitors who use screen readers, and search engines. For example "Willow on autumn leaves".</span><input name="alt" maxlength="200"></label>
         <button class="primary">Upload</button><p id="photo-status" class="muted small" role="status"></p>
@@ -390,6 +394,69 @@ export function createScreens({ env, request, url, site, user, page }) {
     };
   }
 
+  // ---------- storage, download a copy, delete my site (plan 4.3) ----------
+  async function usage() {
+    const limits = await env.DB.prepare('SELECT storage_limit, photo_limit FROM sites WHERE id = ?').bind(site.id).first();
+    const used = await env.DB.prepare('SELECT COUNT(*) AS n, COALESCE(SUM(bytes), 0) AS bytes FROM photos WHERE site_id = ? AND removed_at IS NULL').bind(site.id).first();
+    return { ...used, ...limits };
+  }
+  const mb = (b) => `${Math.round(b / 1024 / 1024 * 10) / 10} MB`;
+  async function usageLine() {
+    const u = await usage();
+    const parts = [`${u.n} photo${u.n === 1 ? '' : 's'}${u.photo_limit ? ` of ${u.photo_limit}` : ''}`, `${mb(u.bytes)}${u.storage_limit ? ` of ${mb(u.storage_limit)}` : ''} used`];
+    const near = (u.storage_limit && u.bytes > u.storage_limit * 0.9) || (u.photo_limit && u.n > u.photo_limit * 0.9);
+    return `<p class="${near ? 'error' : 'muted'} small">${esc(parts.join(' · '))}${near ? '. Nearly full: remove photos you no longer use, or ask KennelPort for more room.' : ''}</p>`;
+  }
+
+  async function exportManifest() {
+    const content = await exportContent(env, site.id);
+    const { results: msgs } = await env.DB.prepare('SELECT name, email, phone, topic, message, received_at FROM inquiries WHERE site_id = ? ORDER BY received_at').bind(site.id).all();
+    const { results: ph } = await env.DB.prepare('SELECT id, alt, type, width, height, created_at FROM photos WHERE site_id = ? AND removed_at IS NULL ORDER BY created_at').bind(site.id).all();
+    const date = new Date().toISOString().slice(0, 10);
+    return json({
+      filename: `${site.subdomain}-kennelport-${date}.zip`,
+      readme: `A copy of ${site.kennel_name || site.subdomain}'s KennelPort website, made ${date}.\n\n`
+        + 'content.json: everything on the site (dogs, litters, puppies, pages, reviews, extras...), in the form KennelPort can load back.\n'
+        + 'messages.json: the messages in your Inbox.\nphotos.json: each photo\'s description; the photos are in photos/, named by their id.\n',
+      content, messages: msgs,
+      photos: ph.map((p) => ({ ...p, file: `${p.id}.${p.type === 'image/webp' ? 'webp' : 'jpg'}`, url: `${base}/photos/${p.id}/full` })),
+    });
+  }
+
+  async function account() {
+    const rest = url.pathname.slice(`${base}/account`.length);
+    const owner = site.role === 'owner';
+    const fresh = Date.now() - Date.parse(user.signedInAt) <= FRESH_SIGN_IN_MS;
+    const storage = await usageLine();
+    const render = (err) => ({
+      title: 'Your site', back: base,
+      body: `<section class="card"><h2>Storage</h2>${storage}</section>
+        <section class="card"><h2>Download a copy</h2><p class="muted">A zip of your site's words, photos and messages. It's made on this device, so on a phone with many photos a computer may be quicker.</p>
+          <p><button id="export" data-manifest="${base}/export.json">Download a copy</button></p><p id="export-status" class="muted small" role="status"></p></section>
+        ${owner ? `<section class="card danger"><h2>Delete my site</h2>
+          <p>This deletes every dog, litter, puppy, page, photo, review and message <strong>straight away</strong>. There's no undo, and KennelPort keeps no copy, so download one first.</p>
+          <p class="muted small">Your address then shows "This breeder is no longer hosting with KennelPort", and it isn't given to anyone else. Cloudflare keeps its own backup of deleted database rows for up to 30 days, which KennelPort can't turn off. Emails already sent stay where they arrived.</p>
+          ${errorBox(err)}
+          ${fresh ? `<form method="post" action="${base}/account/delete">
+            <label>Type <strong>${esc(site.subdomain)}</strong> to confirm<input name="confirm" autocomplete="off" autocapitalize="none" spellcheck="false" required></label>
+            <button>Delete my site</button></form>`
+          : `<p>For safety, deleting needs a fresh sign-in. <form method="post" action="/signout" class="inline"><button class="link">Sign out</button></form>, sign in again, then come back here within 15 minutes.</p>`}
+        </section>` : ''}
+        <script src="/_kp/m/zip.js" defer></script>`,
+    });
+    if (rest === '/delete' && request.method === 'POST') {
+      if (!owner) return { title: 'Your site', back: base, body: '<p class="error">Only the owner can delete the site.</p>' };
+      if (!fresh) return render('Sign in again first.');
+      try { await closeSite(env, site.id, (await request.formData()).get('confirm')); } catch (err) {
+        if (err instanceof SiteError) return render(err.message);
+        throw err;
+      }
+      return new Response(null, { status: 303, headers: { location: '/deleted', 'cache-control': 'no-store' } });
+    }
+    if (rest || request.method === 'POST') return null;
+    return render();
+  }
+
   // ---------- routing ----------
   return async function route() {
     const p = url.pathname.slice(base.length);
@@ -401,6 +468,8 @@ export function createScreens({ env, request, url, site, user, page }) {
     else if (p.startsWith('/photos')) view = await photosScreen();
     else if (p.startsWith('/publish')) view = await publishScreen();
     else if (p.startsWith('/inbox')) view = await inbox();
+    else if (p === '/export.json' && request.method === 'GET') return exportManifest();
+    else if (p.startsWith('/account')) view = await account();
     else if (p.startsWith('/reviews-queue')) view = await queue();
     else if (p.startsWith('/dogs')) {
       const hm = p.match(/^\/dogs\/([0-9a-f-]{36})\/health/);
