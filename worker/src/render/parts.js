@@ -46,7 +46,7 @@ export function pageOn(snap, key, ctx) {
   if (!page || !page.enabled) return false;
   switch (key) {
     case 'dogs': return snap.dogs.some((d) => d.status === 'active');
-    case 'reviews': return snap.reviews.length > 0;
+    case 'reviews': return true; // the page carries the Share your review form even before the first review
     case 'litters': return snap.litters.length > 0;
     case 'older': return olderPuppies(snap, ctx.today).length > 0;
     case 'how_it_works': return snap.steps.length > 0;

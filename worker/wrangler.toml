@@ -53,13 +53,20 @@ fallthrough = true
 # MAIL_FROM: the sender for sign-in codes and invites, on a domain verified in
 # Resend. DEV_OUTBOX: staging only; until the RESEND_API_KEY secret is set, codes
 # and invites show on /ops instead of being emailed. Production must NOT set it.
-# Secrets, set in the dashboard: OPS_TOKEN, EMAIL_HMAC_KEY, RESEND_API_KEY.
+# Secrets, set in the dashboard: OPS_TOKEN, EMAIL_HMAC_KEY, RESEND_API_KEY,
+# VAPID_PRIVATE_JWK (push; /ops makes it), TURNSTILE_SECRET (with the variable
+# TURNSTILE_SITE_KEY, from the Turnstile page of the Cloudflare dashboard).
 [vars]
 ENV_NAME = "staging"
 ROOT_DOMAIN = "kennelport.com"
 ALLOW_HOST_OVERRIDE = "1"
 DEV_OUTBOX = "1"
 MAIL_FROM = "KennelPort <signin@kennelport.com>"
+VAPID_SUBJECT = "mailto:support@kennelport.com"
+
+# The daily cleanup (src/cleanup.js): messages after 90 days, and the rest.
+[triggers]
+crons = ["23 4 * * *"]
 
 # ---------------------------------------------------------------------------------
 [env.production]
@@ -89,3 +96,7 @@ bucket_name = "kennelport-files"
 ENV_NAME = "production"
 ROOT_DOMAIN = "kennelport.com"
 MAIL_FROM = "KennelPort <signin@kennelport.com>"
+VAPID_SUBJECT = "mailto:support@kennelport.com"
+
+[env.production.triggers]
+crons = ["23 4 * * *"]

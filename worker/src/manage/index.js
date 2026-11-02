@@ -14,13 +14,14 @@ import { makePreviewToken } from '../site.js';
 import { listSnapshots } from '../publish.js';
 import { siteLink } from '../ops/sites.js';
 import { createScreens } from './screens.js';
+import { vapidConfig, subscribe, unsubscribe, testPush, pendingPush, subscriptionFor } from '../push.js';
 
 export const MANAGE_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
 const HEADERS = {
   'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': MANAGE_CSP,
   'x-content-type-options': 'nosniff', 'referrer-policy': 'same-origin', 'x-frame-options': 'DENY',
 };
-const APP_VERSION = '3';
+const APP_VERSION = '4';
 
 const redirect = (location, headers = {}) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store', ...headers } });
 
@@ -96,7 +97,8 @@ async function siteHome(env, user, site) {
   const full = await env.DB.prepare('SELECT draft_changed_at, published_snapshot_id FROM sites WHERE id = ?').bind(site.id).first();
   const live = snaps.find((x) => x.id === full.published_snapshot_id);
   const changed = full.draft_changed_at && (!live || full.draft_changed_at > live.published_at);
-  const soon = (label, note) => `<li><span class="tile soon"><b>${esc(label)}</b><span>${esc(note)}</span></span></li>`;
+  const unread = await env.DB.prepare('SELECT COUNT(*) AS n FROM inquiries WHERE site_id = ? AND read_at IS NULL').bind(site.id).first('n');
+  const pending = await env.DB.prepare("SELECT COUNT(*) AS n FROM stories WHERE site_id = ? AND status = 'pending'").bind(site.id).first('n');
   const tile = (href, label, note, count) => `<li><a class="tile" href="/s/${esc(site.subdomain)}${href}"><b>${esc(label)}</b><span>${esc(note)}</span>${count ? `<span class="count">${count}</span>` : ''}</a></li>`;
   const previewLink = siteLink(env, site.subdomain, `/__preview?t=${encodeURIComponent(await makePreviewToken(env, site.id, 1))}`);
   return page(site.kennel_name || site.subdomain, `
@@ -108,8 +110,8 @@ async function siteHome(env, user, site) {
   <ul class="tiles">
     ${tile('/puppies', 'Puppies', 'Statuses at a glance')}
     ${tile('/photos', 'Photos', 'From your camera roll')}
-    ${soon('Inbox', 'Messages from your site · coming soon')}
-    ${soon('Reviews to approve', 'Coming soon')}
+    ${tile('/inbox', 'Inbox', 'Messages from your site', unread)}
+    ${tile('/reviews-queue', 'Reviews to approve', 'From families', pending)}
     ${tile('/dogs', 'Dogs', 'Cards, health results')}
     ${tile('/litters', 'Litters', 'Planned, current, past')}
     ${tile('/pages', 'Pages and wording', 'Home, about, policies, FAQ…')}
@@ -117,8 +119,23 @@ async function siteHome(env, user, site) {
     ${tile('/lists/reviews', 'Reviews', 'Add or hide')}
     ${tile('/details', 'Kennel details', 'Name, contact, town')}
   </ul>
+  <p><a class="button" href="/notifications">Notifications on this device</a></p>
   <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}</p>
   <form method="post" action="/signout"><button class="link">Sign out</button></form>`);
+}
+
+function notificationsPage(env, user) {
+  const { ready, publicKey } = vapidConfig(env);
+  const back = user.sites.length === 1 ? `/s/${user.sites[0].subdomain}` : '/';
+  return page('Notifications', `<section class="card" id="push" data-key="${esc(publicKey ?? '')}">
+    <h1>Notifications</h1>
+    <p class="muted">Get a notification on this phone or computer when someone sends a message from your site, or a family sends a review to approve. It says who it's from, never what they wrote.</p>
+    ${ready ? `<p id="push-state" class="muted small" role="status">Checking this device…</p>
+    <p class="row"><button class="primary" id="push-on" hidden>Turn on for this device</button><button id="push-test" hidden>Send a test</button><button id="push-off" hidden>Turn off</button></p>
+    <p class="muted small" id="push-ios" hidden>On an iPhone or iPad, notifications work only in the app on your home screen: in Safari, tap Share, then Add to Home Screen, open Site Manager from there and come back to this page.</p>`
+    : '<p class="muted">Notifications aren\'t set up on KennelPort yet.</p>'}
+    <p class="muted small">Each device is turned on separately. Signing out turns this device off.</p>
+  </section>`, { back });
 }
 
 // ---------- the app's own files ----------
@@ -147,6 +164,15 @@ export async function handleManage(request, env, url) {
   if (pathname === '/manifest.webmanifest') return manifest();
   if (pathname === '/sw.js' && env.ASSETS) return serviceWorker(env, request);
   if (pathname === '/offline') return page('Offline', '<section class="card"><h1>You\'re offline</h1><p class="muted">This screen will load when you\'re back online.</p></section>');
+
+  // The service worker asking what a push should say: no session needed, the
+  // subscription's own secret proves it (push.js).
+  if (pathname === '/push/pending' && request.method === 'POST') {
+    let body = {};
+    try { body = await request.json(); } catch { /* empty */ }
+    const text = await pendingPush(env, body);
+    return new Response(JSON.stringify(text ?? { title: 'KennelPort', body: 'Something new on your website.', path: '/', tag: 'kennelport' }), { headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
+  }
 
   const post = request.method === 'POST';
   if (post && !sameOrigin(request)) return page('Not allowed', '<section class="card"><p>That form didn\'t come from this app.</p></section>', { status: 403 });
@@ -179,6 +205,16 @@ export async function handleManage(request, env, url) {
   }
   if (!user) return pathname === '/' ? signInPage() : redirect('/');
 
+  if (pathname.startsWith('/push/') && post) {
+    let body = {};
+    try { body = await request.json(); } catch { /* empty */ }
+    const reply = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
+    if (pathname === '/push/subscribe') { const r = await subscribe(env, user, body); return reply(r, r.ok ? 200 : 400); }
+    if (pathname === '/push/unsubscribe') { await unsubscribe(env, user, body.endpoint); return reply({ ok: true }); }
+    if (pathname === '/push/test') return reply({ ok: await testPush(env, user, body.endpoint) });
+    if (pathname === '/push/status') return reply({ on: Boolean(await subscriptionFor(env, user, body.endpoint)) });
+  }
+  if (pathname === '/notifications') return notificationsPage(env, user);
   if (pathname === '/') return user.sites.length === 1 ? redirect(`/s/${user.sites[0].subdomain}`) : sitesPage(user);
 
   const m = pathname.match(/^\/s\/([a-z0-9-]+)(\/.*)?$/);

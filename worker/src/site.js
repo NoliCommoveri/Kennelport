@@ -15,6 +15,8 @@ import { renderPage, sitemap, robots } from './render/index.js';
 import { hmacHex, timingSafeEqual } from './lib/crypto.js';
 import { readCookie } from './lib/http.js';
 import { htmlPage, escapeHtml as esc } from './lib/html.js';
+import { receiveInquiry, receiveReview, turnstileOn } from './siteforms.js';
+import { pageOn } from './render/parts.js';
 
 export const PREVIEW_COOKIE = 'kp_preview';
 export const PREVIEW_DAYS = 7;
@@ -57,8 +59,15 @@ export async function previewTokenValid(env, siteId, token) {
 
 // ---------- responses ----------
 
-const html = (body, status = 200, extra = {}) => new Response(body, {
-  status, headers: { 'content-type': 'text/html; charset=utf-8', ...SITE_HEADERS, ...extra },
+// Pages with a form load Cloudflare Turnstile when it's set up (decision 17), and
+// only those pages.
+const TURNSTILE = 'https://challenges.cloudflare.com';
+const FORM_PATHS = ['/contact', '/reviews'];
+const cspFor = (env, path) => (turnstileOn(env) && FORM_PATHS.includes(path)
+  ? SITE_CSP.replace("script-src 'self'", `script-src 'self' ${TURNSTILE}`).replace("connect-src 'self'", `connect-src 'self' ${TURNSTILE}`).replace("default-src 'none';", `default-src 'none'; frame-src ${TURNSTILE};`)
+  : SITE_CSP);
+const html = (body, status = 200, extra = {}, csp = SITE_CSP) => new Response(body, {
+  status, headers: { 'content-type': 'text/html; charset=utf-8', ...SITE_HEADERS, 'content-security-policy': csp, ...extra },
 });
 const text = (body, type, extra = {}) => new Response(body, { headers: { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'public, max-age=300', ...extra } });
 
@@ -89,7 +98,8 @@ async function servePhoto(env, site, snap, url, { preview }) {
 
 export async function serveSite(request, env, ctxWorker, subdomain) {
   const url = new URL(request.url);
-  if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD' } });
+  const formPost = request.method === 'POST' && FORM_PATHS.includes(url.pathname);
+  if (request.method !== 'GET' && request.method !== 'HEAD' && !formPost) return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD' } });
   if (!(await schemaReady(env.DB))) {
     return htmlPage('Back soon', '<h1>Back soon</h1><p>This site is being updated. Please try again in a few minutes.</p>', { status: 503, headers: { 'retry-after': '300' } });
   }
@@ -131,7 +141,19 @@ export async function serveSite(request, env, ctxWorker, subdomain) {
     return htmlPage(site.kennel_name || site.subdomain, `<h1>${esc(site.kennel_name || site.subdomain)}</h1><p>This website is being built.</p>`);
   }
 
-  const ctx = { path: url.pathname, origin, today: today(), preview };
+  const ctx = { path: url.pathname, origin, today: today(), preview, turnstileKey: turnstileOn(env) ? env.TURNSTILE_SITE_KEY : null };
+
+  // A visitor sending the contact form or a review: never cached, answered with the
+  // same page and a thank-you (or the problem, with what they typed).
+  if (formPost) {
+    const from = request.headers.get('origin');
+    if (from && from !== origin) return new Response('Forbidden', { status: 403 });
+    const page = url.pathname === '/contact' ? 'contact' : 'reviews';
+    if (!pageOn(snap, page, ctx)) return new Response('Not found', { status: 404 });
+    const result = page === 'contact' ? await receiveInquiry(env, request, site.id, ctxWorker) : await receiveReview(env, request, site.id, ctxWorker);
+    const { status, html: body } = renderPage(snap, { ...ctx, form: { page, ...result } });
+    return html(body, result.ok ? status : 400, { 'cache-control': 'no-store' }, cspFor(env, url.pathname));
+  }
   if (url.pathname === '/sitemap.xml') return text(sitemap(snap, ctx), 'application/xml');
 
   // /about/ → /about, so every page has one address.
@@ -141,7 +163,7 @@ export async function serveSite(request, env, ctxWorker, subdomain) {
 
   if (preview) {
     const { status, html: body } = renderPage(snap, ctx);
-    return html(body, status, { 'cache-control': 'private, no-store' });
+    return html(body, status, { 'cache-control': 'private, no-store' }, cspFor(env, url.pathname));
   }
 
   // The cache: one entry per snapshot, path and day.
@@ -161,7 +183,7 @@ export async function serveSite(request, env, ctxWorker, subdomain) {
     const r = await env.DB.prepare('SELECT new_path FROM redirects WHERE site_id = ? AND old_path = ?').bind(site.id, url.pathname).first();
     if (r) return new Response(null, { status: 301, headers: { location: r.new_path, 'cache-control': 'public, max-age=300' } });
   }
-  const res = html(body, status, { 'cache-control': 'public, max-age=60' });
+  const res = html(body, status, { 'cache-control': 'public, max-age=60' }, cspFor(env, url.pathname));
   if (cache && status === 200) {
     const stored = res.clone();
     const put = cache.put(cacheKey, new Response(stored.body, { status, headers: { ...Object.fromEntries(stored.headers), 'cache-control': 'public, max-age=86400' } }));

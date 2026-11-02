@@ -68,6 +68,43 @@
     apply();
   }
 
+  // Share your review: the photo is made smaller here before it's sent (WebP, or
+  // JPEG where the browser can't make WebP), which also drops the camera's
+  // location data. The server checks again. Without this script the form still
+  // posts, and an oversized photo is refused with a reason.
+  for (const form of $$('form[data-photo-form]')) {
+    form.addEventListener('submit', async (e) => {
+      const input = $('input[type=file]', form);
+      const file = input?.files?.[0];
+      if (!file || !window.createImageBitmap || form.dataset.sending) return;
+      e.preventDefault();
+      form.dataset.sending = '1';
+      const button = $('button[type=submit]', form);
+      if (button) { button.disabled = true; button.textContent = 'Sending…'; }
+      const body = new FormData(form);
+      try {
+        const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(bitmap.width * scale); canvas.height = Math.round(bitmap.height * scale);
+        canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        const blob = (type, q) => new Promise((resolve) => canvas.toBlob(resolve, type, q));
+        let out = await blob('image/webp', 0.82);
+        if (!out || out.type !== 'image/webp') out = await blob('image/jpeg', 0.85);
+        body.set('photo', out, 'photo');
+      } catch { body.delete('photo'); }
+      try {
+        const res = await fetch(form.action, { method: 'POST', body });
+        const html = await res.text();
+        document.open(); document.write(html); document.close();
+      } catch {
+        delete form.dataset.sending;
+        if (button) { button.disabled = false; button.textContent = 'Send review'; }
+        alert("Your review couldn't be sent. Check your connection and try again; what you wrote is still here.");
+      }
+    });
+  }
+
   // Homegoing packages: "What's included" starts open on wide screens.
   if (window.matchMedia('(min-width: 901px)').matches) for (const d of $$('.pkg details')) d.open = true;
 })();

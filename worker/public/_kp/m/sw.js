@@ -2,8 +2,8 @@
 // saved offline. Pages come from the network first and fall back to the last copy
 // (or a plain offline screen); the app's own files come from the cache first.
 // Signed-in pages are cached per browser only. Bump VERSION when these files change.
-const VERSION = 'kp-manage-3';
-const SHELL = ['/offline', '/_kp/m/app.css?v=3', '/_kp/m/app.js?v=3', '/_kp/m/icon-192.png', '/_kp/m/icon-64.png'];
+const VERSION = 'kp-manage-4';
+const SHELL = ['/offline', '/_kp/m/app.css?v=4', '/_kp/m/app.js?v=4', '/_kp/m/icon-192.png', '/_kp/m/icon-64.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -32,4 +32,32 @@ self.addEventListener('fetch', (e) => {
       return res;
     })));
   }
+});
+
+// A push carries no text (src/push.js). Ask the server what to show, proving this
+// is the subscribed browser with the subscription's own secret. Whatever goes
+// wrong, a plain notification still shows: a push must always show one.
+const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+self.addEventListener('push', (e) => {
+  e.waitUntil((async () => {
+    let n = { title: 'KennelPort', body: 'Something new on your website.', path: '/', tag: 'kennelport' };
+    try {
+      const sub = await self.registration.pushManager.getSubscription();
+      if (sub) {
+        const res = await fetch('/push/pending', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint, auth: b64(sub.getKey('auth')) }) });
+        if (res.ok) n = { ...n, ...(await res.json()) };
+      }
+    } catch { /* show the plain one */ }
+    await self.registration.showNotification(n.title, { body: n.body, tag: n.tag, renotify: true, icon: '/_kp/m/icon-192.png', badge: '/_kp/m/icon-64.png', data: { path: n.path } });
+  })());
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const path = e.notification.data?.path || '/';
+  e.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const w of wins) if (new URL(w.url).origin === location.origin) { await w.navigate(path).catch(() => {}); return w.focus(); }
+    return self.clients.openWindow(path);
+  })());
 });

@@ -13,6 +13,7 @@ import { json, readCookie } from './lib/http.js';
 import { escapeHtml as esc, htmlPage } from './lib/html.js';
 import { serveSite } from './site.js';
 import { handleManage } from './manage/index.js';
+import { runCleanup } from './cleanup.js';
 
 const notFound = (what = 'There is no page at this address.') =>
   htmlPage('Not found', `<h1>Not found</h1><p>${esc(what)}</p>`, { status: 404 });
@@ -50,6 +51,11 @@ async function serveAsset(request, env) {
 }
 
 export default {
+  // The daily cleanup (wrangler.toml crons).
+  async scheduled(event, env, ctx) {
+    if (await schemaReady(env.DB)) ctx.waitUntil(runCleanup(env));
+  },
+
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 

@@ -16,6 +16,7 @@ import { makePreviewToken } from '../site.js';
 import { siteLink } from '../ops/sites.js';
 import { STATUS_TEXT } from '../render/parts.js';
 
+const when = (iso) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }) + ' UTC';
 const redirect = (location) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store' } });
 
 const NOTES = {
@@ -25,6 +26,9 @@ const NOTES = {
   moved: 'Moved.',
   status: 'Status changed in your draft.',
   uploaded: 'Photos added.',
+  deleted: 'Message deleted.',
+  approved: 'Approved. It shows on your site after you publish.',
+  declined: 'Declined and deleted.',
   published: 'Published. Visitors now see your changes.',
   undone: 'Undone. Visitors see the version before.',
 };
@@ -315,6 +319,77 @@ export function createScreens({ env, request, url, site, user, page }) {
     };
   }
 
+  // ---------- inbox (plan 3.10, decision 12) ----------
+  async function inbox() {
+    const rest = url.pathname.slice(`${base}/inbox`.length);
+    const post = request.method === 'POST';
+    const m = rest.match(/^\/([0-9a-f-]{36})(\/delete|\/unread)?$/);
+    if (m) {
+      const msg = await env.DB.prepare('SELECT * FROM inquiries WHERE id = ? AND site_id = ?').bind(m[1], site.id).first();
+      if (!msg) return null;
+      if (post && m[2] === '/delete') { await env.DB.prepare('DELETE FROM inquiries WHERE id = ? AND site_id = ?').bind(msg.id, site.id).run(); return redirect(`${base}/inbox?note=deleted`); }
+      if (post && m[2] === '/unread') { await env.DB.prepare('UPDATE inquiries SET read_at = NULL WHERE id = ?').bind(msg.id).run(); return redirect(`${base}/inbox`); }
+      if (post || m[2]) return null;
+      if (!msg.read_at) await env.DB.prepare('UPDATE inquiries SET read_at = ? WHERE id = ?').bind(new Date().toISOString(), msg.id).run();
+      const subject = `Re: ${msg.topic || `your message to ${site.kennel_name || site.subdomain}`}`;
+      const mailto = `mailto:${encodeURIComponent(msg.email)}?subject=${encodeURIComponent(subject)}`;
+      return {
+        title: msg.name, back: `${base}/inbox`,
+        body: `<section class="card"><p class="muted small">${esc(when(msg.received_at))}${msg.topic ? ` · ${esc(msg.topic)}` : ''}</p>
+          <p class="message">${esc(msg.message).replace(/\n/g, '<br>')}</p>
+          <dl class="kv"><dt>Email</dt><dd>${esc(msg.email)}</dd>${msg.phone ? `<dt>Phone</dt><dd><a href="tel:${esc(msg.phone.replace(/[^\d+]/g, ''))}">${esc(msg.phone)}</a></dd>` : ''}</dl>
+          <p class="row"><a class="button primary" href="${esc(mailto)}">Reply</a><button type="button" data-copy="${esc(msg.email)}">Copy email</button></p></section>
+          <form method="post" action="${base}/inbox/${msg.id}/unread"><button class="link">Mark as unread</button></form>
+          <form method="post" action="${base}/inbox/${msg.id}/delete" class="card danger"><button>Delete this message</button></form>`,
+      };
+    }
+    if (rest || post) return null;
+    const { results } = await env.DB.prepare('SELECT id, name, topic, message, received_at, read_at FROM inquiries WHERE site_id = ? ORDER BY received_at DESC LIMIT 200').bind(site.id).all();
+    return {
+      title: 'Inbox', back: base,
+      body: `${note(url)}${results.length ? `<ul class="items">${results.map((r) => `<li class="item${r.read_at ? '' : ' unread'}"><a href="${base}/inbox/${r.id}"><b>${r.read_at ? '' : '<span class="dot-new" aria-label="Unread"></span>'}${esc(r.name)}</b><span>${esc(when(r.received_at))} · ${esc(r.topic || r.message.slice(0, 80))}</span></a></li>`).join('')}</ul>` : '<section class="card"><p class="muted">No messages yet. Messages from your site\'s contact form land here.</p></section>'}
+        <p class="muted small">Messages are kept for 90 days, then deleted. Reply opens your own email.</p>`,
+    };
+  }
+
+  // ---------- reviews to approve (decision 13) ----------
+  async function queue() {
+    const rest = url.pathname.slice(`${base}/reviews-queue`.length);
+    const post = request.method === 'POST';
+    const m = rest.match(/^\/([0-9a-f-]{36})\/(approve|decline)$/);
+    if (m && post) {
+      const r = await env.DB.prepare("SELECT id, photo_id FROM stories WHERE id = ? AND site_id = ? AND status = 'pending'").bind(m[1], site.id).first();
+      if (!r) return redirect(`${base}/reviews-queue`);
+      const t = new Date().toISOString();
+      if (m[2] === 'approve') {
+        await env.DB.batch([
+          env.DB.prepare("UPDATE stories SET status = 'approved', sort = (SELECT COALESCE(MAX(sort), -1) + 1 FROM stories WHERE site_id = ? AND status != 'pending') WHERE id = ?").bind(site.id, r.id),
+          env.DB.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(t, site.id),
+        ]);
+        return redirect(`${base}/reviews-queue?note=approved`);
+      }
+      const s2 = [env.DB.prepare('DELETE FROM stories WHERE id = ?').bind(r.id)];
+      if (r.photo_id) s2.push(env.DB.prepare('UPDATE photos SET removed_at = ? WHERE id = ? AND site_id = ?').bind(t, r.photo_id, site.id));
+      await env.DB.batch(s2);
+      return redirect(`${base}/reviews-queue?note=declined`);
+    }
+    if (rest || post) return null;
+    const { results } = await env.DB.prepare("SELECT * FROM stories WHERE site_id = ? AND status = 'pending' ORDER BY submitted_at").bind(site.id).all();
+    return {
+      title: 'Reviews to approve', back: base,
+      body: `${note(url)}${results.map((r) => `<section class="card review-q">
+          <p><b>${esc(r.first_name)}</b>${r.town ? `, ${esc(r.town)}` : ''} <span class="muted small">· ${esc(when(r.submitted_at))}</span></p>
+          <p class="stars" aria-label="${r.rating} stars">${'★'.repeat(r.rating ?? 0)}</p>
+          <p class="message">${esc(r.quote).replace(/\n/g, '<br>')}</p>
+          ${r.puppy_name || r.home_month ? `<p class="muted small">${esc([r.puppy_name, r.home_month].filter(Boolean).join(' · '))}</p>` : ''}
+          ${r.photo_id ? `<img class="q-photo" src="${esc(photoUrl(r.photo_id))}" alt="Photo sent with the review">` : ''}
+          <p class="muted small">They agreed to it being shown with their first name and town.</p>
+          <div class="row"><form method="post" action="${base}/reviews-queue/${r.id}/approve"><button class="primary">Approve</button></form>
+          <form method="post" action="${base}/reviews-queue/${r.id}/decline"><button>Decline and delete</button></form></div></section>`).join('') || '<section class="card"><p class="muted">No reviews waiting. Families send them from the Reviews page on your site.</p></section>'}
+        <p class="muted small">An approved review shows on your site after you publish. You can hide it later under Reviews.</p>`,
+    };
+  }
+
   // ---------- routing ----------
   return async function route() {
     const p = url.pathname.slice(base.length);
@@ -325,6 +400,8 @@ export function createScreens({ env, request, url, site, user, page }) {
     else if (p.startsWith('/home')) view = await home();
     else if (p.startsWith('/photos')) view = await photosScreen();
     else if (p.startsWith('/publish')) view = await publishScreen();
+    else if (p.startsWith('/inbox')) view = await inbox();
+    else if (p.startsWith('/reviews-queue')) view = await queue();
     else if (p.startsWith('/dogs')) {
       const hm = p.match(/^\/dogs\/([0-9a-f-]{36})\/health/);
       if (hm) {

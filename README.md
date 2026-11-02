@@ -9,9 +9,9 @@ Status: version 1 in progress. Phase 0 is live on staging
 domain ([`docs/KennelPort_Setup.md`](docs/KennelPort_Setup.md)). Phase 1 is built: the
 AK template rendered from published snapshots, and `/ops` sites with JSON content
 editing, photos, preview, publish, undo, suspend and close; still to do in it: custom
-domains by hand, when the first site wants one. Phase 2 in progress: sign-in, invites, the installable manage app and its editing
-screens (with publish and its list of changes) are built; the inbox and review queue
-with push, and Delete my site, are next. Open: puppy labels (decision 10), needed before phase 4;
+domains by hand, when the first site wants one. Phase 2 in progress: sign-in, invites, the installable manage app, its editing screens
+with publish, the site's contact and review forms, the Inbox, the review queue and push
+notifications are built; Delete my site with its download is next. Open: puppy labels (decision 10), needed before phase 4;
 site rules wait until KennelPort is offered (9). See
 [`docs/KennelPort_Plan.md`](docs/KennelPort_Plan.md); after version 1:
 [`docs/KennelPort_Backlog.md`](docs/KennelPort_Backlog.md). Page directory from a survey of real breeder sites:
