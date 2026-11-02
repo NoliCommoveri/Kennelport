@@ -431,8 +431,24 @@ setting the breeder can get wrong:
 choice) is one of:
 - **The site's inquiry form** (section 3.10), set up as a puppy application with the
   breeder's own questions; answers arrive in the manage app's Inbox, with a push
-  notification (section 3.10). KennelPort is not a waitlist: no list, no places in line.
-  This is the manual route; it's never shown while KennelOS takes applications online (above).
+  notification (section 3.10). This is the manual route; it's never shown while
+  KennelOS takes applications online (above).
+- **The simple waitlist** (decided 2026-11-02, replacing "KennelPort is not a
+  waitlist"): a list the breeder keeps by hand, with no automation (no turns, deadlines,
+  status pages or matching; that's KennelOS's waitlist). **Add to waitlist** on an
+  application in the Inbox (name, email and phone carried over, a starting "wants" line
+  from the short answers, all editable), or **Add a family** for someone who applied
+  another way. **Your waitlist** in the manage app lists families in order, each with
+  **Offer pups** (her own email, filled in: "It's your turn to choose a pup! Please review
+  the available puppies on our website and reach out to us with your selection.", a link
+  to the Puppies page and her kennel name; the wording is a waitlist page setting),
+  **Fulfilled** (off the list, everyone below moves up; **Put back** returns them to their
+  place; deleted 90 days later), up and down, and Edit. The waitlist page shows it live,
+  with no publish, above the application form, drawn like the KennelOS list: place, the
+  name on the list (first name and last initial, editable, like "Megan R."), what they
+  want and the date added behind an ⓘ; never an email or phone. The application form
+  says names show that way. Not shown while a KennelOS feed is set: KennelOS's list
+  wins, so a family is never on two lists.
 - **A link or embed of the waitlist they already use** (a Google Form, Jotform, …),
   through the approved embed list (section 3.3) or as a button. Backlog; version 1 has
   the other two.
@@ -1022,6 +1038,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `dev_outbox` | staging only: codes and invites shown on `/ops` until email is connected |
 | `push_subscriptions` | endpoint_hash, email_hash, session_hash, endpoint, auth_secret, created_at, last_sent_at, last_shown_seq (section 3.10); as in KennelOS cloud, tied to the session it was made in |
 | `notices` | site_id, kind (`domain_live` / `domain_broken` / …), message, created_at, read_at: what the manage app shows the breeder |
+| `waitlist_entries` | site_id, name, list_name (what the site shows), email, phone, wants, added_on, inquiry_id (the application it came from), status (`waiting` / `fulfilled`), sort (order among those waiting; a place is never stored), created_at, done_at (fulfilled ones deleted 90 days after) (section 3.8) |
 | `feed_cache` | site_id, state (`ok` / `not_shared` / `not_found`), body (the KennelOS website feed's last copy), fetched_at, checked_at (the last time KennelOS was asked; retried after a minute when it couldn't be reached) (section 3.8) |
 | `dogs`, `litters`, `puppies` | site_id, slug, content fields, `source` (`kennelport` / `kennelos`), `kennelos_id` when linked, `hidden_by_kennelos` (section 5.3). A dog has a status (`active` / `retired` / `remembered`) and health_display (`normal_only` / `all` / `none`, 3.7); a litter a stage (`planned` / `current` / `past`) and either parent as a site dog or a typed name; a puppy one of 3.6's statuses. The full field list is `worker/src/migrations/0002_content.sql` |
 | `site_pages` | site_id, page key, enabled, menu_label, content (each page's wording, JSON with the keys the content model names, 3.12); order within its menu group comes with phase 6 |

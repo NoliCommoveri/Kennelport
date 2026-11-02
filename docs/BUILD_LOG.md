@@ -602,3 +602,23 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   The plan's phase 4 Family login footer link is done here.
 - Template assets version 7 (the list, Family login, the help page's buttons), with its
   fingerprint.
+
+## 2026-11-02: the simple waitlist
+
+- Decided with the owner: an optional waitlist kept by hand for breeders without KennelOS
+  (plan 3.8, replacing "KennelPort is not a waitlist"). Shown publicly as first name and
+  last initial; hidden while a KennelOS feed is set; families added from an application
+  or by hand; a short "wants" line she types.
+- `0009_waitlist.sql`: `waitlist_entries`. `src/waitlist.js`: add, edit, move, fulfil,
+  put back, delete; places come from the order, so fulfilling moves everyone up.
+- Manage app: **Your waitlist** (tile with the count waiting): each family with **Offer
+  pups** (a mailto filled with the waitlist page's Offer pups wording or the default, a
+  link to the Puppies page and the kennel name), **Fulfilled**, Edit, up and down; a
+  Fulfilled section with **Put back** and Delete. **Add to waitlist** on an application
+  in the Inbox, prefilled. Download a copy adds `waitlist.json`.
+- Site: the waitlist page reads it live (no publish) and draws it like the KennelOS list
+  (`familyList`, shared by both), above the form; the site's application form says names
+  show as first name and last initial. The daily cleanup deletes fulfilled families after
+  90 days; closing a site deletes them all.
+- 117 tests; the Your waitlist screen and the site's list checked in Chromium at phone
+  width. Manage app files changed (`app.css`, `zip.js`); version not bumped yet.

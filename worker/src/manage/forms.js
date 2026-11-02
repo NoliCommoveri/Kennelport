@@ -66,6 +66,7 @@ const LABELS = {
     closed_message: ['Message while closed', 'For example "Our waitlist for 2027 is full. Check back in the spring." Leave empty for a general one.'],
     form_heading: ['Application form heading', 'Leave empty for "Apply to join the waitlist".'],
     form_intro: ['Line under the form heading', 'For example "Your place on the list is set the day your application fee is received."'],
+    offer_message: ['Offer pups email', 'What Offer pups on Your waitlist fills in, after "Hi <name>,". Leave empty for "It\'s your turn to choose a pup! Please review the available puppies on our website and reach out to us with your selection." A link to your Puppies page and your kennel name follow.'],
   },
   questions: {
     type: ['Kind of answer', null],

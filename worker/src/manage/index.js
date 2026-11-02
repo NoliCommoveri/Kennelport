@@ -100,6 +100,7 @@ async function siteHome(env, user, site) {
   const changed = full.draft_changed_at && (!live || full.draft_changed_at > live.published_at);
   const unread = await env.DB.prepare('SELECT COUNT(*) AS n FROM inquiries WHERE site_id = ? AND read_at IS NULL').bind(site.id).first('n');
   const pending = await env.DB.prepare("SELECT COUNT(*) AS n FROM stories WHERE site_id = ? AND status = 'pending'").bind(site.id).first('n');
+  const listed = await env.DB.prepare("SELECT COUNT(*) AS n FROM waitlist_entries WHERE site_id = ? AND status = 'waiting'").bind(site.id).first('n');
   const tile = (href, label, note, count) => `<li><a class="tile" href="/s/${esc(site.subdomain)}${href}"><b>${esc(label)}</b><span>${esc(note)}</span>${count ? `<span class="count">${count}</span>` : ''}</a></li>`;
   const previewLink = siteLink(env, site.subdomain, `/__preview?t=${encodeURIComponent(await makePreviewToken(env, site.id, 1))}`);
   return page(site.kennel_name || site.subdomain, `
@@ -117,6 +118,7 @@ async function siteHome(env, user, site) {
     ${tile('/litters', 'Litters', 'Planned, current, past')}
     ${tile('/pages', 'Pages and wording', 'Home, about, policies, FAQ…')}
     ${tile('/lists/extras', 'Extras', 'Packages and prices')}
+    ${tile('/waitlist', 'Your waitlist', listed ? `${listed} famil${listed === 1 ? 'y' : 'ies'} waiting` : 'Families in order, offer pups')}
     ${tile('/pages/waitlist', 'Waitlist and application', 'Open or closed, your questions')}
     ${tile('/payment', 'How to pay', 'Fee, deposit, scam warning')}
     ${tile('/lists/reviews', 'Reviews', 'Add or hide')}
