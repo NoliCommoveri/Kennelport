@@ -25,7 +25,7 @@ input, select, textarea { font: inherit; font-weight: 400; color: var(--ink); ba
 textarea { min-height: 120px; }
 input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button, .button { font: inherit; font-weight: 700; min-height: 48px; padding: 10px 18px; border-radius: 10px; border: 1.5px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
-button.primary { background: var(--accent); color: var(--accent-ink); }
+button.primary, .button.primary { background: var(--accent); color: var(--accent-ink); }
 button.link { border: 0; min-height: 44px; padding: 0; background: none; text-decoration: underline; font-weight: 600; justify-content: flex-start; }
 button[disabled] { opacity: .5; }
 .row { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -43,3 +43,38 @@ button[disabled] { opacity: .5; }
 .offline-note { position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 12px 14px; border-radius: 10px; font-size: .9rem; }
 .save-msg { font-weight: 600; }
 .save-msg.bad { color: var(--error); }
+.hint { display: block; font-weight: 400; font-size: .82rem; color: var(--muted); }
+label.check { display: flex; gap: 10px; align-items: flex-start; font-weight: 600; }
+label.check input { width: 22px; height: 22px; min-height: 0; margin-top: 1px; flex: none; }
+fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; min-width: 0; }
+legend { font-weight: 700; font-size: .9rem; padding: 0; margin-bottom: 6px; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 8px; }
+.feature-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px; }
+.feature-row input:last-child { grid-column: 1 / -1; }
+.ph-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.ph-opt { position: relative; display: block; border-radius: 8px; overflow: hidden; border: 2px solid var(--line); aspect-ratio: 1; font-weight: 400; }
+.ph-opt img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ph-opt input { position: absolute; top: 6px; left: 6px; width: 20px; height: 20px; min-height: 0; z-index: 1; }
+.ph-opt:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.ph-opt.none { display: grid; place-items: center; background: var(--bg); font-size: .8rem; color: var(--muted); text-align: center; padding: 8px; }
+.items { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.item { display: flex; align-items: stretch; gap: 8px; }
+.item > a { flex: 1; display: grid; gap: 2px; padding: 12px 14px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); text-decoration: none; color: var(--ink); min-width: 0; }
+.item > a span { font-size: .82rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item .order { display: flex; gap: 4px; }
+.item .order button { min-height: 44px; min-width: 44px; padding: 0; }
+.pup { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 150px) auto; gap: 8px; align-items: center; border-top: 1px solid var(--line); padding-top: 10px; }
+.pup a { display: grid; text-decoration: none; color: var(--ink); min-width: 0; }
+.pup a span { font-size: .82rem; color: var(--muted); }
+.pup .save-msg { grid-column: 1 / -1; }
+@media (max-width: 380px) { .pup { grid-template-columns: minmax(0, 1fr) auto; } .pup a { grid-column: 1 / -1; } }
+.changes { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.changes li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); align-items: center; }
+.changes li:first-child { border-top: 0; }
+.changes a { font-weight: 700; white-space: nowrap; }
+.card.danger { border-color: color-mix(in srgb, var(--error) 40%, var(--line)); }
+.card.danger button { border-color: var(--error); color: var(--error); }
+.ph-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.ph-list img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; }
+.ph-list .card { padding: 10px; gap: 8px; }
+.ph-list form { gap: 6px; }

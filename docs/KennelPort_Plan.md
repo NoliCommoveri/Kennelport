@@ -89,7 +89,7 @@ breeder. One shared renderer means a template fix reaches every site at once.
 | Part | Purpose |
 |---|---|
 | **Renderer** | Server-side HTML from a template plus the site's published snapshot (section 4.1). Fast, works on any phone, good for search engines. No customer JavaScript. |
-| **Manage app** | Static pages on the reserved `manage` host. Forms for each section, photo upload with in-browser resizing. |
+| **Manage app** | Pages on the reserved `manage` host, rendered by the Worker. Forms for each section, built from the same content model the import and the snapshot use (`worker/src/content/model.js`, wording in `worker/src/manage/forms.js`); photo upload with in-browser resizing. |
 | **Ops console** | Your side: create site, edit any site, preview, publish, suspend, invite; later the request inbox. Same pattern as `cloud/`'s `/ops` in KennelOS. Until the manage app's forms exist (phase 2), you edit a site's content as one JSON document (download, edit, paste back), checked against the content model (`worker/src/content/model.js`) that the forms will use too; photos upload with the same resizing and checks as section 4.2. |
 | **D1** | All draft content and accounts. Tens of MB at most. |
 | **R2** | Photos, downloads and published snapshots (section 4.1). About 200 MB a year per active breeder once photos are resized (section 7). |

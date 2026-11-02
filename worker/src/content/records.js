@@ -1,0 +1,234 @@
+// One record at a time: what the manage app's forms save (phase 2). Built on the
+// content model (model.js), like the whole-document import (io.js), so the two
+// can't disagree about what a field may hold. Every write marks the draft as
+// changed; nothing is live until Publish.
+import {
+  DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, EXTRA_FIELDS,
+  EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, ContentError, cleanRecord, cleanValue, slugify,
+} from './model.js';
+
+const omit = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) => !keys.includes(k)));
+
+// Litters name their parents by dog id here (the import uses slugs).
+const LITTER_RECORD_FIELDS = { ...omit(LITTER_FIELDS, ['dam', 'sire']), dam_id: { type: 'dogid' }, sire_id: { type: 'dogid' } };
+
+// kind → where it lives and what it holds. `scope` is the parent column, if any.
+export const KINDS = {
+  dogs: { table: 'dogs', fields: DOG_FIELDS, slug: 'call_name', label: 'call_name', defaults: { status: 'active', health_display: 'normal_only', show_on_site: 1 }, stamps: true },
+  health: { table: 'health_results', fields: HEALTH_FIELDS, scope: 'dog_id', label: 'test', defaults: { normal: 1, show: 0 } },
+  litters: { table: 'litters', fields: LITTER_RECORD_FIELDS, slug: 'name', label: 'name', defaults: { show_on_site: 1 }, stamps: true },
+  puppies: { table: 'puppies', fields: PUPPY_FIELDS, scope: 'litter_id', slug: 'name', label: 'name', defaults: { status: 'coming_soon' }, stamps: true },
+  reviews: { table: 'stories', fields: omit(REVIEW_FIELDS, []), label: 'first_name', where: "kind = 'review'", fixed: { kind: 'review', submitted_by: 'breeder' }, defaults: { status: 'approved' } },
+  steps: { table: 'steps', fields: STEP_FIELDS, label: 'heading', where: "page = 'how_it_works'", fixed: { page: 'how_it_works' }, defaults: { pay_link: 0 } },
+  extras: { table: 'extras', fields: EXTRA_FIELDS, label: 'name', defaults: { featured: 0 }, json: ['checklist'] },
+};
+for (const page of EXPANDER_PAGES) {
+  KINDS[page] = { table: 'expanders', fields: EXPANDER_FIELDS, label: 'heading', where: `page = '${page}'`, fixed: { page }, defaults: { start_open: 0 } };
+}
+
+const now = () => new Date().toISOString();
+const touch = (env, siteId) => env.DB.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(now(), siteId);
+
+function kindOf(kind) {
+  const k = KINDS[kind];
+  if (!k) throw new Error(`unknown kind ${kind}`);
+  return k;
+}
+
+function whereClause(k, scopeId) {
+  const parts = ['site_id = ?'];
+  const args = [];
+  if (k.where) parts.push(k.where);
+  if (k.scope) { parts.push(`${k.scope} = ?`); args.push(scopeId); }
+  return { sql: parts.join(' AND '), args };
+}
+
+function decode(k, row) {
+  if (!row) return null;
+  const out = { ...row };
+  for (const c of k.json ?? []) out[c] = out[c] ? JSON.parse(out[c]) : [];
+  return out;
+}
+
+export async function listRecords(env, siteId, kind, scopeId = null) {
+  const k = kindOf(kind);
+  const w = whereClause(k, scopeId);
+  const { results } = await env.DB.prepare(`SELECT * FROM ${k.table} WHERE ${w.sql} ORDER BY sort, rowid`).bind(siteId, ...w.args).all();
+  return results.map((r) => decode(k, r));
+}
+
+export async function getRecord(env, siteId, kind, id) {
+  const k = kindOf(kind);
+  const row = await env.DB.prepare(`SELECT * FROM ${k.table} WHERE id = ? AND site_id = ?${k.where ? ` AND ${k.where}` : ''}`).bind(id, siteId).first();
+  return decode(k, row);
+}
+
+async function uniqueSlug(env, k, siteId, scopeId, wanted, exceptId) {
+  const base = slugify(wanted) || 'item';
+  const scopeSql = k.scope ? ` AND ${k.scope} = ?` : '';
+  for (let n = 1; n < 100; n++) {
+    const slug = n === 1 ? base : `${base.slice(0, 56)}-${n}`;
+    const clash = await env.DB.prepare(`SELECT id FROM ${k.table} WHERE site_id = ? AND slug = ?${scopeSql}`).bind(siteId, slug, ...(k.scope ? [scopeId] : [])).first();
+    if (!clash || clash.id === exceptId) return slug;
+  }
+  throw new ContentError('slug', 'could not find a free web address');
+}
+
+// Check references a record makes: photos on this site, parents that are this
+// site's dogs.
+async function checkRefs(env, siteId, k, clean) {
+  for (const [name, f] of Object.entries(k.fields)) {
+    const v = clean[name];
+    if (!v) continue;
+    if (f.type === 'photo') {
+      const ok = await env.DB.prepare('SELECT 1 FROM photos WHERE id = ? AND site_id = ? AND removed_at IS NULL').bind(v, siteId).first();
+      if (!ok) throw new ContentError(name, 'that photo is no longer on this site');
+    }
+    if (f.type === 'dogid') {
+      const ok = await env.DB.prepare('SELECT 1 FROM dogs WHERE id = ? AND site_id = ?').bind(v, siteId).first();
+      if (!ok) throw new ContentError(name, 'that dog is no longer on this site');
+    }
+  }
+}
+
+// Fields the record model knows that cleanValue doesn't: a parent dog by id.
+function cleanFields(fields, input, path) {
+  const plain = Object.fromEntries(Object.entries(fields).map(([n, f]) => [n, f.type === 'dogid' ? { type: 'photo' } : f]));
+  const out = cleanRecord(plain, input, path);
+  return out;
+}
+
+// Create (id null) or update. `input` holds every field of the kind (a form
+// sends them all). Returns the saved record.
+export async function saveRecord(env, siteId, kind, id, input, scopeId = null) {
+  const k = kindOf(kind);
+  const existing = id ? await getRecord(env, siteId, kind, id) : null;
+  if (id && !existing) throw new ContentError(kind, 'no longer exists');
+  if (k.slug && !input.slug) input = { ...input, slug: await uniqueSlug(env, k, siteId, scopeId, input[k.slug] ?? '', id) };
+  else if (k.slug) {
+    const clash = await env.DB.prepare(`SELECT id FROM ${k.table} WHERE site_id = ? AND slug = ?${k.scope ? ` AND ${k.scope} = ?` : ''}`).bind(siteId, input.slug, ...(k.scope ? [scopeId] : [])).first();
+    if (clash && clash.id !== id) throw new ContentError('slug', `"${input.slug}" is already used`);
+  }
+  const clean = cleanFields(k.fields, input, kind);
+  if (kind === 'extras' && clean.price_to !== null && clean.price_from !== null && clean.price_to < clean.price_from) throw new ContentError('price_to', 'lower than the starting price');
+  await checkRefs(env, siteId, k, clean);
+  for (const [c, v] of Object.entries(k.defaults ?? {})) if (clean[c] === null) clean[c] = v;
+  for (const c of k.json ?? []) clean[c] = clean[c]?.length ? JSON.stringify(clean[c]) : null;
+
+  const t = now();
+  if (existing) {
+    const cols = Object.keys(clean);
+    if (k.stamps) { cols.push('updated_at'); clean.updated_at = t; }
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE ${k.table} SET ${cols.map((c) => `${c} = ?`).join(', ')} WHERE id = ? AND site_id = ?`).bind(...cols.map((c) => clean[c]), id, siteId),
+      touch(env, siteId),
+    ]);
+    return getRecord(env, siteId, kind, id);
+  }
+  const w = whereClause(k, scopeId);
+  const last = await env.DB.prepare(`SELECT COALESCE(MAX(sort), -1) AS s FROM ${k.table} WHERE ${w.sql}`).bind(siteId, ...w.args).first('s');
+  const row = { id: crypto.randomUUID(), site_id: siteId, ...(k.fixed ?? {}), ...clean, sort: last + 1 };
+  if (k.scope) row[k.scope] = scopeId;
+  if (k.stamps) { row.created_at = t; row.updated_at = t; }
+  if (k.table === 'stories') { row.submitted_at = t; row.permission_confirmed_at = t; }
+  const cols = Object.keys(row);
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO ${k.table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`).bind(...cols.map((c) => row[c])),
+    touch(env, siteId),
+  ]);
+  return getRecord(env, siteId, kind, row.id);
+}
+
+// Quick changes that aren't a whole form: a puppy's status from the list.
+export async function setField(env, siteId, kind, id, field, value) {
+  const k = kindOf(kind);
+  const f = k.fields[field];
+  if (!f) throw new ContentError(field, 'not a known field');
+  const v = cleanValue(f, value, field);
+  const res = await env.DB.prepare(`UPDATE ${k.table} SET ${field} = ?${k.stamps ? ', updated_at = ?' : ''} WHERE id = ? AND site_id = ?`)
+    .bind(v, ...(k.stamps ? [now()] : []), id, siteId).run();
+  if (!res.meta.changes) throw new ContentError(kind, 'no longer exists');
+  await touch(env, siteId).run();
+}
+
+export async function removeRecord(env, siteId, kind, id) {
+  const k = kindOf(kind);
+  const s = [];
+  if (kind === 'dogs') {
+    s.push(env.DB.prepare('UPDATE litters SET dam_id = NULL WHERE site_id = ? AND dam_id = ?').bind(siteId, id));
+    s.push(env.DB.prepare('UPDATE litters SET sire_id = NULL WHERE site_id = ? AND sire_id = ?').bind(siteId, id));
+    s.push(env.DB.prepare('DELETE FROM health_results WHERE site_id = ? AND dog_id = ?').bind(siteId, id));
+  }
+  if (kind === 'litters') s.push(env.DB.prepare('DELETE FROM puppies WHERE site_id = ? AND litter_id = ?').bind(siteId, id));
+  s.push(env.DB.prepare(`DELETE FROM ${k.table} WHERE id = ? AND site_id = ?${k.where ? ` AND ${k.where}` : ''}`).bind(id, siteId));
+  s.push(touch(env, siteId));
+  await env.DB.batch(s);
+}
+
+// Move one place up (-1) or down (+1) in its list.
+export async function moveRecord(env, siteId, kind, id, dir, scopeId = null) {
+  const list = await listRecords(env, siteId, kind, scopeId);
+  const i = list.findIndex((r) => r.id === id);
+  const j = i + (dir < 0 ? -1 : 1);
+  if (i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  const k = kindOf(kind);
+  await env.DB.batch([...list.map((r, n) => env.DB.prepare(`UPDATE ${k.table} SET sort = ? WHERE id = ?`).bind(n, r.id)), touch(env, siteId)]);
+}
+
+// ---------- the kennel's details, a page's wording, a Home block ----------
+
+export async function saveSite(env, siteId, input) {
+  const clean = cleanRecord(SITE_FIELDS, input, 'site');
+  for (const c of ['dark_mode']) if (clean[c] === null) clean[c] = 'auto';
+  if (clean.show_other_prices === null) clean.show_other_prices = 0;
+  const cols = Object.keys(clean);
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE sites SET ${cols.map((c) => `${c} = ?`).join(', ')} WHERE id = ?`).bind(...cols.map((c) => clean[c]), siteId),
+    touch(env, siteId),
+  ]);
+}
+
+export async function getPage(env, siteId, key) {
+  const row = await env.DB.prepare('SELECT * FROM site_pages WHERE site_id = ? AND page = ?').bind(siteId, key).first();
+  return { enabled: row ? Boolean(row.enabled) : true, menu_label: row?.menu_label ?? null, ...(row ? JSON.parse(row.content) : {}) };
+}
+
+export async function savePage(env, siteId, key, input) {
+  const page = PAGES[key];
+  if (!page) throw new ContentError(key, 'not a page');
+  const enabled = page.canHide ? (input.enabled ? 1 : 0) : 1;
+  const menu_label = cleanValue({ type: 'text', max: 40 }, input.menu_label, 'menu_label');
+  const content = cleanRecord(page.fields, omit(input, ['enabled', 'menu_label']), key);
+  await checkRefs(env, siteId, { fields: page.fields }, content);
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO site_pages (site_id, page, enabled, menu_label, content) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT (site_id, page) DO UPDATE SET enabled = excluded.enabled, menu_label = excluded.menu_label, content = excluded.content`)
+      .bind(siteId, key, enabled, menu_label, JSON.stringify(stripNulls(content))),
+    touch(env, siteId),
+  ]);
+}
+
+export async function getBlock(env, siteId, key) {
+  const row = await env.DB.prepare('SELECT * FROM home_blocks WHERE site_id = ? AND block = ?').bind(siteId, key).first();
+  return { enabled: row ? Boolean(row.enabled) : true, ...(row ? JSON.parse(row.content) : {}) };
+}
+
+export async function saveBlock(env, siteId, key, input) {
+  const fields = HOME_BLOCKS[key];
+  if (!fields) throw new ContentError(key, 'not a Home block');
+  const content = cleanRecord(fields, omit(input, ['enabled']), key);
+  for (const id of content.photos ?? []) {
+    const ok = await env.DB.prepare('SELECT 1 FROM photos WHERE id = ? AND site_id = ? AND removed_at IS NULL').bind(id, siteId).first();
+    if (!ok) throw new ContentError('photos', 'a chosen photo is no longer on this site');
+  }
+  await checkRefs(env, siteId, { fields }, content);
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO home_blocks (site_id, block, enabled, content) VALUES (?, ?, ?, ?)
+      ON CONFLICT (site_id, block) DO UPDATE SET enabled = excluded.enabled, content = excluded.content`)
+      .bind(siteId, key, input.enabled ? 1 : 0, JSON.stringify(stripNulls(content))),
+    touch(env, siteId),
+  ]);
+}
+
+const stripNulls = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && !(Array.isArray(v) && !v.length)));

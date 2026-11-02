@@ -13,13 +13,14 @@ import {
 import { makePreviewToken } from '../site.js';
 import { listSnapshots } from '../publish.js';
 import { siteLink } from '../ops/sites.js';
+import { createScreens } from './screens.js';
 
 export const MANAGE_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
 const HEADERS = {
   'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': MANAGE_CSP,
   'x-content-type-options': 'nosniff', 'referrer-policy': 'same-origin', 'x-frame-options': 'DENY',
 };
-const APP_VERSION = '1';
+const APP_VERSION = '2';
 
 const redirect = (location, headers = {}) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store', ...headers } });
 
@@ -95,19 +96,25 @@ async function siteHome(env, user, site) {
   const live = snaps.find((x) => x.id === full.published_snapshot_id);
   const changed = full.draft_changed_at && (!live || full.draft_changed_at > live.published_at);
   const soon = (label, note) => `<li><span class="tile soon"><b>${esc(label)}</b><span>${esc(note)}</span></span></li>`;
+  const tile = (href, label, note, count) => `<li><a class="tile" href="/s/${esc(site.subdomain)}${href}"><b>${esc(label)}</b><span>${esc(note)}</span>${count ? `<span class="count">${count}</span>` : ''}</a></li>`;
   const previewLink = siteLink(env, site.subdomain, `/__preview?t=${encodeURIComponent(await makePreviewToken(env, site.id, 1))}`);
   return page(site.kennel_name || site.subdomain, `
   <section class="card status">
     <p><span class="dot ${site.status}"></span>${esc(STATUS_WORDS[site.status] ?? site.status)}${changed ? ' · <strong>changes not published yet</strong>' : ''}</p>
     <p class="row"><a class="button" href="${esc(siteLink(env, site.subdomain))}">View my site</a><a class="button" href="${esc(previewLink)}">Preview changes</a></p>
+    <p><a class="button primary" href="/s/${esc(site.subdomain)}/publish">${changed ? 'Review and publish' : 'Publish'}</a></p>
   </section>
   <ul class="tiles">
-    ${soon('Puppies', 'Statuses and photos · next update')}
-    ${soon('Photos', 'From your camera roll · next update')}
+    ${tile('/puppies', 'Puppies', 'Statuses at a glance')}
+    ${tile('/photos', 'Photos', 'From your camera roll')}
     ${soon('Inbox', 'Messages from your site · coming soon')}
-    ${soon('Reviews', 'Approve families\' reviews · coming soon')}
-    ${soon('Dogs and litters', 'next update')}
-    ${soon('Pages and wording', 'next update')}
+    ${soon('Reviews to approve', 'Coming soon')}
+    ${tile('/dogs', 'Dogs', 'Cards, health results')}
+    ${tile('/litters', 'Litters', 'Planned, current, past')}
+    ${tile('/pages', 'Pages and wording', 'Home, about, policies, FAQ…')}
+    ${tile('/lists/extras', 'Extras', 'Packages and prices')}
+    ${tile('/lists/reviews', 'Reviews', 'Add or hide')}
+    ${tile('/details', 'Kennel details', 'Name, contact, town')}
   </ul>
   <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}</p>
   <form method="post" action="/signout"><button class="link">Sign out</button></form>`);
@@ -178,6 +185,10 @@ export async function handleManage(request, env, url) {
     const site = user.sites.find((s) => s.subdomain === m[1]);
     if (!site) return page('Not found', '<section class="card"><p>You don\'t manage a site at this address.</p><p><a href="/">Your sites</a></p></section>', { status: 404 });
     if (!m[2] && !post) return siteHome(env, user, site);
+    if (m[2]) {
+      const res = await createScreens({ env, request, url, site, user, page })();
+      if (res) return res;
+    }
   }
   return page('Not found', '<section class="card"><p>There\'s nothing here.</p><p><a href="/">Home</a></p></section>', { status: 404 });
 }

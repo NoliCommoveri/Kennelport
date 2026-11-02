@@ -1,4 +1,4 @@
-// Photo upload for /ops (and the starting point for the manage app's, phase 2):
+// Photo upload, for the manage app and /ops (the form's action says where):
 // resize in the browser to about 1600px plus a 400px thumbnail, as WebP where the
 // browser can make it and JPEG where it can't (iPhone Safari may hand back PNG
 // when asked for WebP), then upload. Re-encoding drops the camera's location
