@@ -50,10 +50,16 @@ fallthrough = true
 # ALLOW_HOST_OVERRIDE: staging only. workers.dev can't receive the real hostnames,
 # so /__host?h=<hostname> sets a cookie the router reads instead (src/hosts.js).
 # Production must NOT set it. OPS_TOKEN is a secret, set in the dashboard, never here.
+# MAIL_FROM: the sender for sign-in codes and invites, on a domain verified in
+# Resend. DEV_OUTBOX: staging only; until the RESEND_API_KEY secret is set, codes
+# and invites show on /ops instead of being emailed. Production must NOT set it.
+# Secrets, set in the dashboard: OPS_TOKEN, EMAIL_HMAC_KEY, RESEND_API_KEY.
 [vars]
 ENV_NAME = "staging"
 ROOT_DOMAIN = "kennelport.com"
 ALLOW_HOST_OVERRIDE = "1"
+DEV_OUTBOX = "1"
+MAIL_FROM = "KennelPort <signin@kennelport.com>"
 
 # ---------------------------------------------------------------------------------
 [env.production]
@@ -82,3 +88,4 @@ bucket_name = "kennelport-files"
 [env.production.vars]
 ENV_NAME = "production"
 ROOT_DOMAIN = "kennelport.com"
+MAIL_FROM = "KennelPort <signin@kennelport.com>"

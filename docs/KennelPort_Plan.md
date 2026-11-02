@@ -703,8 +703,10 @@ dark first: it shows dark unless the visitor's device asks for light explicitly.
   connection; an edit made offline says so and isn't lost from the form. No offline sync,
   so nothing can conflict.
 - **Sign-in:** email and a 6-digit code, then a session for that browser. This is the
-  pattern KennelOS cloud already uses (`cloud/src/auth.js`), so reuse its approach and
-  rate limits.
+  pattern KennelOS cloud already uses (`cloud/src/auth.js`), with its approach and
+  rate limits. Nobody signs up: a code goes only to an address invited to a site from
+  `/ops`, and the screen answers the same either way, so it never reveals who has a
+  site.
 - **Roles:** `owner` (the breeder), optional `editor` (a helper), and `operator` (you, on
   every site).
 - **Limits:** a storage cap per site and limits on photo and album counts, set by you in
@@ -949,7 +951,8 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `sites` | id, subdomain (unique), kennel_name, tagline, blurb, breed, monogram, town, region, contact_email, contact_phone, facebook_url, facebook_label, instagram_url, template, scheme (section 3.13), dark_mode (`auto` / `light_only`), show_other_prices (3.2, off by default), kennelos_public_id (for the waitlist list, 3.8), status (`draft` / `live` / `suspended` / `closed`), published_snapshot_id, draft_changed_at, closed_at, storage_limit, photo_limit, album_limit, created_at |
 | `snapshots` | id, site_id, published_at, published_by, r2_key (the whole published site as JSON in R2, section 4.1), bytes; the last 10 per site kept |
 | `site_users` | site_id, email_hash, role (`owner` / `editor`). Only the keyed hash, as in KennelOS cloud: codes and invites go to the address typed at that moment, and nothing is emailed to a breeder later (notices reach them in the manage app and by push) |
-| `sessions`, `login_codes` | as in KennelOS cloud |
+| `sessions`, `login_codes`, `rate_limits` | as in KennelOS cloud, keyed by the email hash; a session is a cookie on the manage host (token kept as its SHA-256), 90 days, sliding |
+| `dev_outbox` | staging only: codes and invites shown on `/ops` until email is connected |
 | `push_subscriptions` | endpoint_hash, site_id, user, session, endpoint, auth_secret, created_at, last_sent_at (section 3.10); as in KennelOS cloud |
 | `notices` | site_id, kind (`domain_live` / `domain_broken` / …), message, created_at, read_at: what the manage app shows the breeder |
 | `feed_cache` | site_id, body (the KennelOS website feed's last copy), fetched_at (section 3.8) |
