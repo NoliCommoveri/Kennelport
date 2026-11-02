@@ -992,21 +992,25 @@ Each bundle is applied by these rules (decision 16):
   are never touched.
 - **New:** a record in the bundle with no match is created, with no photos yet.
 - **Gone from the bundle** (unticked **Show on website**, archived or deleted in
-  KennelOS): the record is **hidden**, not deleted, and its KennelPort photos, bio and
-  albums are kept. If it comes back in a later bundle, it reappears as it was. The breeder
-  can delete a hidden record in KennelPort.
+  KennelOS): the record leaves the site at the next Publish (its pages answer "not
+  found") and is kept **30 days**, in case it was a mistake: if it comes back in a bundle
+  within them, it reappears as it was. After 30 days the daily cleanup deletes it, with
+  its puppies, its albums, and the photos only it used (their files leave R2 the same
+  night). A website is what's for sale and coming up, not a history: KennelOS keeps the
+  record.
 - **A litter's stage follows KennelOS:** Expected → **Planned**; Whelped, Weaning or Ready
-  → **Current**; Sold or Closed → **Past** (off Home and the Puppies page; its own page
-  and its albums still answer, for links already shared). Marking a litter Sold or Closed
-  in KennelOS (Today already reminds her once every puppy has gone home) is what retires
-  it, without her doing anything on the website.
-- **Removing old things completely** is always the breeder's choice, in two steps:
-  unticking **Show on website** in KennelOS (or switching it off in KennelPort, unlinked)
-  takes the litter, its puppies and its albums off the site entirely: their pages answer
-  "not found" and nothing links to them. Deleting it in KennelPort then removes the
-  record; photos only it used can be removed in Photos, and the daily cleanup deletes
-  their files. A dog works the same way.
-- **A bundle never deletes a photo, file, album or page.**
+  → **Current**; Sold or Closed → **gone**, as above: off the site at the next Publish and
+  deleted 30 days later. Marking a litter Sold or Closed in KennelOS (Today already
+  reminds her once every puppy has gone home) retires it with nothing to do on the
+  website.
+- **Keep it:** during the 30 days the manage app lists what's about to go ("Spring
+  litter: deleted on May 3") with **Keep**, for the breeder who wants a litter to stay;
+  a kept litter shows as Past (off Home and the Puppies page, its own page still
+  answering) until she removes it. The Past litters page (backlog) is for those.
+- **Unlinked sites work the same way:** switching a litter or dog off, or marking a
+  litter Past without **Keep**, starts the same 30 days.
+- **A bundle itself never deletes a photo, file, album or page;** only the 30-day cleanup
+  does, and only for what has left the site.
 - **A summary** after each bundle: "3 updated, 1 new, 1 hidden. Preview, then Publish."
 
 **Who owns which field:**
@@ -1066,8 +1070,15 @@ These follow KennelOS's own rules, and each one needs its own decision there:
   like `assertOnlyKeys()`.
 - A `siteConfig` injection point (KennelPort URL or `null`), so Demo and any build without
   it show nothing.
-- **Request a website**: a Pro-only button. Lite and Demo don't show it; it goes through
-  `editionConfig.js` like other Pro-only features, never a hardcoded edition check.
+- **Pro only, all of it:** Request a website, Connect website, Update website and the
+  Show on website ticks are Pro features. Lite and Demo show none of them and can't link
+  (a Lite breeder can still have a KennelPort site, edited in KennelPort, with no link).
+  They go through `editionConfig.js` like other Pro-only features, never a hardcoded
+  edition check.
+- **A lapsed Pro license stops the link:** KennelOS checks the license (`license.js`)
+  before every Update website, and sends nothing while it has lapsed; the manage app shows
+  when the last bundle arrived. The site keeps what it has, and the breeder can unlink in
+  KennelPort to edit everything there. Renewing picks the link up again with no new code.
 - **The link token:** KennelOS now syncs across a breeder's devices. Keep the token in
   the device-only `device_secrets` table (never in a backup file or the cloud), so each
   device links once (decision 11).
@@ -1256,6 +1267,12 @@ Everything after version 1, with its order and designs, is in
 26. **Where an application goes:** to KennelOS's live list flow whenever the breeder takes
     applications online in KennelOS; to KennelPort's Inbox only when they don't and run
     their list by hand. Worked out by the site, not a choice (section 3.8).
+27. **The KennelOS link is Pro only:** Lite and Demo can't link at all (a Lite breeder can
+    still have a KennelPort site, kept apart), and a lapsed Pro license stops the link
+    until it's renewed (section 5.5).
+28. **The website isn't an archive:** what leaves the site (hidden, gone from the bundle,
+    a Sold or Closed litter, a litter marked Past) is deleted 30 days later with its
+    photos, unless the breeder presses **Keep** (section 5.3).
 
 **Open**
 
