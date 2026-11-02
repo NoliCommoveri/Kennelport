@@ -378,10 +378,12 @@ waitlist never disagree:
 | undecided | Coming soon |
 | health hold | Hidden |
 
-**Undecided puppies (open, decision 10):** KennelOS's waitlist currently treats an
-Undecided puppy as offerable (only Keeping, Placed and Health hold are held back), so the
-site's "Coming soon" could disagree with an offer. The owner is reviewing whether KennelOS
-should offer Undecided puppies at all; this row follows that answer.
+**Undecided puppies (decision 10):** an Undecided puppy is not for sale anywhere: not on
+the site, not on KennelOS's waitlist and not in Companion shares. The site shows it as
+Coming soon, with no price and no **Ask about this puppy**. KennelOS's waitlist today
+still treats Undecided as offerable (only Keeping, Placed and Health hold are held back),
+so `isPupAvailable` and Companion's export change to hold it back too (section 5.5); until
+they do, the site and the waitlist can disagree about an Undecided puppy.
 
 ### 3.7 What's public
 
@@ -942,6 +944,11 @@ These follow KennelOS's own rules, and each one needs its own decision there:
   `waitlist_config.website_feed` switch (off by default), `GET /f/site/<public_id>` with
   its own read limit, and the feed address to copy on the Online list card. No new fields
   leave KennelOS: it's the list the public page already shows.
+- **Undecided puppies are not for sale (decision 10):** `isPupAvailable` treats
+  Undecided like Keeping, so the waitlist never offers one, its public list's
+  **Available Puppies** leaves it out, and the website feed and bundle agree; Companion
+  shares (`shared/data/companionExport.js`) don't show an Undecided puppy as available or
+  with a price. Needed before phase 4, and worth doing in KennelOS on its own.
 - Service-worker precache entries and a cache bump for any new files.
 
 ---
@@ -1053,6 +1060,10 @@ Everything after version 1, with its order and designs, is in
    approved list (section 3.3).
 8. **When someone leaves:** the breeder or you deletes all content immediately, and the
    address shows a "no longer hosting with KennelPort" notice (section 4.3).
+10. **Undecided puppies:** not for sale anywhere. KennelOS's waitlist doesn't offer them
+    and Companion shares don't show them for sale; the site shows them as Coming soon,
+    with no price (sections 3.6, 5.5). Placed puppies show (with a hide switch per
+    litter) and health hold is hidden.
 11. **Link across devices:** each device links once; the token stays in KennelOS's
     device-only `device_secrets` table (section 5.5).
 12. **Inquiries:** stored in the manage app's inbox, never emailed, with a push
@@ -1091,9 +1102,6 @@ Everything after version 1, with its order and designs, is in
 
 9. **Content rules and suspension:** not needed for version 1. Terms of service and what
    gets a site suspended are written before any breeder outside the family gets a site.
-10. **Puppy labels:** whether KennelOS should offer Undecided puppies (section 3.6), and
-    then how they show. For now, placed puppies show (with a hide switch per litter) and
-    health hold is hidden.
 
 ---
 

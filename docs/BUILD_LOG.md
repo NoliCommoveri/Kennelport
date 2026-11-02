@@ -398,3 +398,12 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - Storage and photo limits set per site in /ops, enforced on upload, shown on Photos and
   Your site (with a warning past 90%).
 - 71 tests, including a zip opened by Python's zipfile; the download checked in a browser.
+
+## 2026-11-02: decision 10, Undecided puppies
+
+- Decided: an Undecided puppy is not for sale anywhere. KennelOS's waitlist won't offer
+  it and Companion shares won't show it for sale; the site shows it as Coming soon, with
+  no price and no Ask about this puppy (already how the renderer treats Coming soon).
+- Plan 3.6 and 5.5: the KennelOS changes this needs (`isPupAvailable` holds Undecided
+  back like Keeping; Companion's export leaves it out of what's for sale), before phase 4.
+  No decisions left open for version 1 except 9 (site rules).
