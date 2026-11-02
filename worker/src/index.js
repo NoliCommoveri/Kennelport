@@ -11,13 +11,11 @@ import { schemaReady } from './gate.js';
 import { classifyHost, effectiveHost, HOST_COOKIE } from './hosts.js';
 import { json, readCookie } from './lib/http.js';
 import { escapeHtml as esc, htmlPage } from './lib/html.js';
+import { serveSite } from './site.js';
 
 const notFound = (what = 'There is no page at this address.') =>
   htmlPage('Not found', `<h1>Not found</h1><p>${esc(what)}</p>`, { status: 404 });
 
-const maintenance = () =>
-  htmlPage('Back soon', '<h1>Back soon</h1><p>This site is being updated. Please try again in a few minutes.</p>',
-    { status: 503, headers: { 'retry-after': '300' } });
 
 // Staging only: choose which hostname to act as (hosts.js).
 function hostOverride(url, env) {
@@ -33,20 +31,25 @@ function hostOverride(url, env) {
   return htmlPage('Staging host', `${body}<p class="muted">Use <code>/__host?h=thornfield.${esc(env.ROOT_DOMAIN)}</code> to act as a site, <code>/__host?clear</code> to go back.</p>`, { headers: { 'set-cookie': cookie } });
 }
 
-async function serveSite(env, subdomain) {
-  if (!(await schemaReady(env.DB))) return maintenance();
-  const site = await env.DB.prepare('SELECT subdomain, kennel_name, status FROM sites WHERE subdomain = ?').bind(subdomain).first();
-  if (!site) return notFound('No KennelPort site has this address.');
-  if (site.status === 'closed') {
-    return htmlPage('No longer hosted', '<h1>This breeder is no longer hosting with KennelPort.</h1>', { status: 410 });
-  }
-  // Phase 1 replaces this with the template and the published snapshot.
-  return htmlPage(site.kennel_name || subdomain, `<h1>${esc(site.kennel_name || subdomain)}</h1><p>This website is being built.</p>`);
+// The template's own files (CSS, JS, fonts) under /_kp/, the same on every host.
+// Photos (/_kp/p/) are a site's own and go through serveSite.
+async function serveAsset(request, env) {
+  if (!env.ASSETS) return notFound();
+  const res = await env.ASSETS.fetch(request);
+  if (!res.ok) return res;
+  const out = new Response(res.body, res);
+  const fonts = new URL(request.url).pathname.startsWith('/_kp/fonts/');
+  out.headers.set('cache-control', fonts ? 'public, max-age=31536000, immutable' : 'public, max-age=86400');
+  out.headers.set('x-content-type-options', 'nosniff');
+  if (fonts) out.headers.set('access-control-allow-origin', '*');
+  return out;
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    if (url.pathname.startsWith('/_kp/') && !url.pathname.startsWith('/_kp/p/')) return serveAsset(request, env);
 
     if (env.ALLOW_HOST_OVERRIDE === '1' && url.pathname === '/__host') return hostOverride(url, env);
 
@@ -73,7 +76,7 @@ export default {
         return json({ error: 'not_found' }, 404);
 
       case 'site':
-        return serveSite(env, target.subdomain);
+        return serveSite(request, env, ctx, target.subdomain);
 
       // Custom domains and their fallback host arrive in phase 1 (by hand, plan 2.4).
       case 'fallback':
