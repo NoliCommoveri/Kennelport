@@ -460,3 +460,8 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   the sample starts with the cards empty and off.
 - 87 tests; the waitlist and puppy pages and the manage screen checked in Chromium at
   phone width.
+
+## 2026-11-02: production database
+
+- `kennelport.com` bought. Production's D1 database (`kennelport`) created and its id
+  set in `wrangler.toml`, so the production Worker can be connected (setup step 4).
