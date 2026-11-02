@@ -76,7 +76,7 @@ breeder. One shared renderer means a template fix reaches every site at once.
                                                │   ┌──────────── Worker: kennelport ────────────┐
  breeder ──▶ manage.kennelport.com            ─┼──▶│ renderer     public sites, OG previews     │──▶ D1  (sites, dogs, litters, pages, users, snapshots)
  you     ──▶ manage.kennelport.com/ops        ─┤   │ manage API   breeder sign-in + editing     │──▶ R2  (photos: full + thumbnail; files)
- KennelOS ─▶ api.kennelport.com               ─┘   │ ops          requests, set up, drafts      │──▶ Resend (sign-in codes, invites, inquiries)
+ KennelOS ─▶ api.kennelport.com               ─┘   │ ops          requests, set up, drafts      │──▶ Resend (sign-in codes, invites)
                                                    │ link API     KennelOS publishes here       │
                                                    └────────────────────────────────────────────┘
 ```
@@ -269,12 +269,13 @@ The subdomain picks the site; the path picks the page:
 - The same **Show prices** rule covers every other price on the site: extras (3.4), the
   delivery fee (3.5), stud fees and adults (3.9). Off, each shows "Contact us".
 
-**With KennelOS linked:** open (decision 6). Today's rule is that KennelOS never sends a
-price, so a linked breeder types prices in KennelPort like anyone else. KennelOS now holds
-litter prices (price and deposit per sex, a full-registration surcharge, already shown on
-families' turn cards), an extras price list (3.4) and a fee per mile (3.5), so keeping the
-rule means typing each price twice and watching them drift apart. The proposal: the bundle
-may carry them, still shown only where the breeder turns prices on.
+**With KennelOS linked (decision 6):** the breeder chooses, with a **Use my KennelOS
+prices** switch in the manage app, off by default.
+- *Off:* KennelOS sends no prices; the breeder types them in KennelPort like anyone else.
+- *On:* the bundle carries KennelOS's litter prices (price and deposit per sex, the
+  full-registration surcharge), its extras price list (3.4) and the fee per mile (3.5),
+  so each is typed once. They're read-only in KennelPort while the switch is on, and
+  still show only where the breeder turns **Show prices** on.
 
 ### 3.3 Embeds (YouTube, Facebook and others)
 
@@ -394,6 +395,11 @@ waitlist never disagree:
 | undecided | Coming soon |
 | health hold | Hidden |
 
+**Undecided puppies (open, decision 10):** KennelOS's waitlist currently treats an
+Undecided puppy as offerable (only Keeping, Placed and Health hold are held back), so the
+site's "Coming soon" could disagree with an offer. The owner is reviewing whether KennelOS
+should offer Undecided puppies at all; this row follows that answer.
+
 ### 3.7 What's public
 
 **On its own:** the breeder decides per dog and per litter what shows, with private
@@ -504,12 +510,22 @@ breeder turns on. Version 1 ships only the ones in decision 14; the rest are bac
   programs (AKC Breeder of Merit, Bred with H.E.A.R.T., …), as names with optional links.
   No logo images unless the breeder has the right to use them.
 - **Visiting policy:** by appointment only, what to expect, health precautions.
-- **Reviews:** quotes from families (a quote, a first name and town), added by the breeder
-  with the family's permission (a checkbox they tick to confirm), plus a link to their
-  Google reviews (or a free Google reviews widget). Never collected automatically from
-  visitors.
+- **Reviews (decision 13):** families submit them on the site, and the breeder approves
+  each before it shows.
+  - *The form* (`/reviews`, **Share your review**): first name, town, which dog or litter
+    (a drop-down), the review, star rating, an optional photo, and a required box: "You
+    may show this on your website with my first name and town." Turnstile, a honeypot and
+    per-site limits, as on the inquiry form (decision 17).
+  - *The queue:* submissions wait in the manage app's **Reviews to approve**. The breeder
+    approves or declines each as written; approved reviews can be hidden later. Nothing
+    shows until approved, and a declined one is deleted.
+  - *Photos* from families get the same checks as the breeder's (section 4.2: resized,
+    location data removed, size limits) and stay private until the review is approved.
+  - The breeder can also add a review themselves, ticking that the family agreed.
+  - Plus a link to their Google reviews (or a free Google reviews widget).
 - **Families' stories:** photos of grown puppies in their homes, with a first name and
-  town, under the same permission rule. Never a full name, address or buyer record.
+  town, submitted by families and approved like reviews, or added by the breeder with
+  the family's agreement. Never a full name, address or buyer record.
 
 **Dogs and litters, beyond the basics**
 - **Pedigree:** a three-generation pedigree on each dog page, typed in (or from KennelOS
@@ -553,9 +569,11 @@ about extras, pickup or stud service. It works with no KennelOS at all.
 - **The breeder's questions:** name and email always; then the fields they choose (phone,
   town, which litter or dog, preferences, a free-text message), from a fixed list of field
   types.
-- **Delivery:** emailed to the breeder through Resend, with the visitor's email as
-  reply-to. Kept in the manage app's inbox for 90 days, then deleted (decision 12), so a
-  lost email isn't a lost family.
+- **Delivery (decision 12):** to the manage app's **Inbox** only; KennelPort sends no
+  email about it, which keeps the breeder's mailbox and KennelPort's email allowance
+  clear. The inbox is a light page: newest first, unread marked, a count on the manage
+  app's home, and **Reply** opening the breeder's own email with the visitor's address
+  filled in (and **Copy email** beside it). Kept 90 days, then deleted.
 - **Spam:** Cloudflare Turnstile (free, usually invisible) on the form, plus a hidden
   honeypot field and per-site rate limits (decision 17). No CAPTCHA puzzles.
 - **No payments, no accounts** for visitors.
@@ -628,9 +646,8 @@ should go home, a write-up of the pairing, **Apply for this litter**, and "Last 
 - **Status in plain words:** Planned, Bred (awaiting confirmation), Confirmed. *With
   KennelOS linked:* from the pairing's status (`planned`, `bred`, `confirmed_pregnant`),
   per the Coming up switches.
-- **Picks (decision 18):** picks taken and open per sex, as counts, with the price per
-  pick when prices show. *On its own:* the breeder sets the counts. *With KennelOS
-  linked:* worked out from waitlist offers and sales; counts only, never who holds a pick.
+- **Picks (decision 18):** never shown. Litter pages don't say how many picks are taken
+  or open; each puppy's own status (section 3.6) is all a visitor sees.
 
 **Family login** (a link, not a page): linked breeders can show a **Family login** link
 in the footer that opens KennelOS's family status page, which already gives each family
@@ -702,6 +719,23 @@ dark first: it shows dark unless the visitor's device asks for light explicitly.
 
 ## 4. Breeder sign-in and editing
 
+**The stack, as the breeder sees it:**
+
+| Piece | Address | What it is |
+|---|---|---|
+| **The website** | `akbostons.kennelport.com`, or `www.akbostons.com` with their own domain (2.4) | What visitors see |
+| **The manage app** | `manage.kennelport.com` | Where the breeder edits, on a computer or a phone |
+| **KennelPort Site Manager** | the same manage app, installed | The manage app added to a phone's home screen as an app (below) |
+
+- **One manage app, two ways in.** The manage app is a progressive web app: in a computer
+  browser it's a normal site with a sign-in; on a phone, **Add to Home Screen** installs
+  it as **KennelPort Site Manager**, with its own icon and no browser bars. Same sign-in,
+  same screens, laid out for a phone: the quick jobs breeders do from a phone (mark a
+  puppy reserved, add photos from the camera roll, approve a review, read the inbox, post
+  a banner) are one or two taps from its home screen.
+- **Online only for edits.** The app's screens load offline, but saving needs a
+  connection; an edit made offline says so and isn't lost from the form. No offline sync,
+  so nothing can conflict.
 - **Sign-in:** email and a 6-digit code, then a session for that browser. This is the
   pattern KennelOS cloud already uses (`cloud/src/auth.js`), so reuse its approach and
   rate limits.
@@ -715,7 +749,16 @@ dark first: it shows dark unless the visitor's device asks for light explicitly.
 - **The tables are the draft.** Every edit in the manage app or ops console, and every
   KennelOS bundle (section 5.3), changes the site's tables directly. Nothing visitors see
   changes yet.
-- **Preview** renders the site from the tables, behind the private preview link.
+- **Preview before publishing.** Nothing an edit does is live until **Publish**:
+  - every edit screen has **Preview**, showing that page exactly as it will look, in the
+    site's scheme, with the change in it (on a phone, full screen; on a computer, beside
+    the form);
+  - **Preview site** opens the whole draft site behind the private preview link, every
+    page clickable, with a bar across the top saying it's a preview;
+  - **Publish** first lists what changed since the last publish ("Willow: new photo",
+    "Opal: Reserved", "Extras: 12-week package edited"), with **Preview** beside each,
+    then publishes them all at once.
+  A KennelOS update lands the same way: in the draft, listed under Publish.
 - **Publish** reads the whole site from the tables and writes it as one **snapshot**: a
   single JSON document with every page, dog, litter, puppy, album and embed that is
   visible, plus the list of photos and files it uses. The site then points at the new
@@ -757,7 +800,7 @@ manage app, owner only) **or by you** (in the ops console). Either way:
    No grace period, and KennelPort keeps no copy.
 3. **What's left elsewhere, said plainly.** R2 deletion is immediate. D1 keeps its own
    point-in-time recovery (Time Travel) for up to 30 days, which KennelPort can't turn
-   off, so deleted rows only disappear from it after that. Emails already sent (inquiries,
+   off, so deleted rows only disappear from it after that. Emails already sent (
    invites) stay in the inboxes they reached. The confirm screen and the privacy page say
    so.
 4. **Leave a closed marker.** The `sites` row stays with only its subdomain, status
@@ -800,7 +843,11 @@ waitlist (a published "projection"):
    dogs and litters in KennelPort. On the first bundle, the manage app suggests pairs by
    name (KennelPort's "Willow" with KennelOS's "Willow") and the breeder confirms each.
    Nothing is matched without that confirmation; unmatched KennelPort records stay as
-   they are.
+   they are. The same suggestion appears whenever a later bundle brings a new KennelOS
+   dog or litter whose name matches one still unlinked in KennelPort (a dog the breeder
+   added to the website first and to KennelOS later), so it joins the existing page,
+   with its photos and wording, instead of making a second one. KennelOS fields start
+   flowing to it only after the breeder confirms the match.
 4. From then on, KennelOS has an **Update website** button. Nothing is sent until the
    breeder presses it (no automatic publishing, decision 5). What arrives lands in the
    draft (section 4.1), so the breeder can still check it before pressing **Publish**.
@@ -829,10 +876,10 @@ Each bundle is applied by these rules (decision 16):
   names, groups and descriptions (section 3.4), shown pickup places and transport
   distances (section 3.5); a planned litter's status (section 3.11), retired and deceased
   status with the date of death, the waitlist steps behind How it works, and program
-  names and public descriptions. If decision 18 allows: pick counts. If decision 19
-  allows: milestones and weights, as draft diary entries. If decision 6 allows prices: litter prices, deposits, the
-  registration surcharge, extras prices and the fee per mile.
-- **KennelPort only:** website bio, prices (unless decision 6 allows them), photo choice
+  names and public descriptions. For litters opted in (decision 19): milestones and
+  weights, as draft diary entries. With **Use my KennelOS prices** on (decision 6): litter
+  prices, deposits, the registration surcharge, extras prices and the fee per mile.
+- **KennelPort only:** website bio, prices (unless **Use my KennelOS prices** is on), photo choice
   and order, albums, embeds, page text, layout, and everything in sections 3.9 and 3.10
   (policies, reviews and stories, news, stud and adults pages, downloads, events, the
   inquiry form and its inbox), plus the raising page, program terms, the wording of How
@@ -865,7 +912,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
   `editionConfig.js` like other Pro-only features, never a hardcoded edition check.
 - **The link token:** KennelOS now syncs across a breeder's devices. Keep the token in
   the device-only `device_secrets` table (never in a backup file or the cloud), so each
-  device links once; or decide one device publishes (decision 11).
+  device links once (decision 11).
 - **One link per kennel:** KennelOS supports more than one own kennel. Each site is one
   kennel; the bundle is scoped to that kennel's dogs and litters, and each kennel links
   separately.
@@ -901,7 +948,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `custom_domains` | site_id, hostname, cloudflare_hostname_id, registrar (detected, backlog), status (`pending` / `active` / `stuck` / `broken`), checked_at, connected_at |
 | `health_results` | site_id, dog, test, result, date, verify_url, show (off by default), certificate file (private unless ticked) |
 | `posts` | site_id, slug, title, date, body, cover photo (news, section 3.9) |
-| `stories` | site_id, kind (`review` / `at_home`), quote, first name, town, photo, permission_confirmed_at |
+| `stories` | site_id, kind (`review` / `at_home`), quote, rating, first name, town, dog or litter, photo, submitted_by (`family` / `breeder`), status (`pending` / `approved` / `hidden`), permission_confirmed_at, submitted_at |
 | `programs` | site_id, slug, title, description, terms, `kennelos_id` when linked |
 | `diary_entries` | site_id, litter, date, title, body, photos, `source` (`kennelport` / `kennelos`), draft until the breeder edits it |
 | `steps` | site_id, page (`how_it_works` / `raising`), order, heading, body, detail (the More detail expander), `source` |
@@ -948,7 +995,7 @@ Each phase is useful by itself, so you can stop after any one.
 |---|---|---|
 | **0. Set up** | Domain on Cloudflare, wildcard DNS, empty Worker with D1 and R2, staging and production | — |
 | **1. Renderer + ops** | One template, the ops console, preview links, snapshot publish and undo (4.1), reserved names, OG tags, close a site and the closed notice | Build and host the site yourself, with no breeder login yet |
-| **2. Breeder login** | Email-code sign-in, manage app, preview and publish, photo upload with resizing and the server checks (4.2), storage limits, **Delete my site** with download-a-copy | Hand the site over |
+| **2. Breeder login** | Email-code sign-in, manage app (installable as KennelPort Site Manager), the inbox and review queue, preview and publish with the list of changes, photo upload with resizing and the server checks (4.2), storage limits, **Delete my site** with download-a-copy | Hand the site over |
 | **3. The first site's pages** | Everything in the AK sample (decision 14): Home with its blocks, About (story, reviews, contact), Kennel residents with flip cards and health results (3.7), Puppies (available, upcoming, older) with statuses (3.6), How it works steps (3.11), Extras with homegoing packages (3.4), Policies and FAQ, the waitlist page and its status-page help (3.8, decision 21) with how to pay the application fee and deposit (3.9), inquiry form and inbox (3.10); plus the safe-payment notice, privacy page and search basics | The family site is complete and live |
 | **4. Customisation and schemes** | Page and Home-block switches, menu labels, any-length steps, expanders and extras (3.12); the colour schemes with light and dark versions (3.13) | Other breeders' sites can differ from AK's without new code |
 
@@ -986,13 +1033,30 @@ Rough order of likely need; any item can go first.
    connect only through the link code (section 5.2).
 5. **Publishing from KennelOS:** only when the breeder presses **Update website**; never
    automatic.
+6. **Prices from KennelOS:** the breeder chooses, with **Use my KennelOS prices**, off by
+   default (section 3.2).
 7. **Embeds:** yes, several providers, including YouTube and Facebook pages, built from an
    approved list (section 3.3).
 8. **When someone leaves:** the breeder or you deletes all content immediately, and the
    address shows a "no longer hosting with KennelPort" notice (section 4.3).
+11. **Link across devices:** each device links once; the token stays in KennelOS's
+    device-only `device_secrets` table (section 5.5).
+12. **Inquiries:** stored in the manage app's inbox only, never emailed; kept 90 days; the
+    breeder replies from their own email (section 3.10).
+13. **Reviews:** families submit them on the site; the breeder approves each before it
+    shows (section 3.9).
 14. **Which pages ship first:** the AK sample's pages (section 8.1, phase 3). Past
     litters and news, proposed earlier, move to the backlog because the sample doesn't
     have them.
+15. **Main address for a custom domain:** `www.`, with the bare domain forwarding to it.
+16. **How a KennelOS bundle changes the site:** as in section 5.3, with matching offered
+    whenever a new KennelOS record matches an unlinked one (section 5.2).
+17. **Spam check:** Turnstile from the start on the inquiry and review forms, with a
+    honeypot and rate limits.
+18. **Picks on litter pages:** never shown.
+19. **Litter diary from KennelOS:** opt-in per litter, drafts only.
+20. **Family login link:** a footer link to KennelOS's family status page, for linked
+    breeders; no KennelPort portal.
 21. **Waitlist in the site's style:** the Worker reads KennelOS's public list and draws it
     with the site's scheme, as the AK sample does, stacking on phones; sign-in and
     applications open KennelOS's own pages (sections 3.8, 5.5).
@@ -1007,38 +1071,11 @@ Rough order of likely need; any item can go first.
 
 **Open**
 
-6. **Prices from KennelOS:** the current rule is that KennelOS never sends prices, but
-   KennelOS now holds litter prices, extras prices and a fee per mile. Proposed: the
-   bundle may carry them, shown only where the breeder switches prices on. Sections 3.2,
-   5.1 and 5.3 follow whichever is chosen.
-9. **Content rules and suspension:** only needed once sites go beyond family: terms of
-   service and what gets a site suspended.
-10. **Puppy labels:** confirm the table in section 3.6, especially whether placed pups
-    stay visible and how health hold shows.
-11. **Link token across devices:** each device links once (token in `device_secrets`), or
-    one device is the publisher (section 5.5).
-12. **Inquiry storage:** inquiries are emailed and also kept in the manage app's inbox for
-    90 days (proposed), or emailed only and never stored. Storing means names and emails
-    sit in KennelPort's database; the privacy page says so either way.
-13. **Testimonials and permission:** proposed that the breeder confirms each family
-    agreed, with a date kept; visitors never post reviews themselves.
-15. **Main address for a custom domain:** proposed `www.` always, with the bare domain
-    pointing or forwarding to it, because a `www` CNAME works at every provider and a bare
-    domain doesn't. Cloudflare's own support for bare domains on custom hostnames without
-    CNAME flattening at the registrar is Enterprise-only.
-16. **How a KennelOS bundle changes the site:** proposed as in section 5.3: matched by
-    KennelOS id, KennelOS fields replaced, KennelPort fields untouched, records missing
-    from the bundle hidden rather than deleted, and a bundle never deletes photos.
-17. **Spam check on the inquiry form:** proposed Turnstile from the start (free, usually
-    invisible), with a honeypot and rate limits behind it.
-18. **Picks on litter pages:** showing picks taken and open per sex tells visitors how
-    full a litter is, a business choice. Proposed: a switch per litter, off by default;
-    from KennelOS, counts only.
-19. **Litter diary from KennelOS:** milestones (and weights, if chosen) arriving as draft
-    diary entries means new kinds of data in the bundle. Proposed: opt-in per litter,
-    drafts only.
-20. **Family login link:** proposed for linked breeders: a footer link to KennelOS's
-    family status page, with no KennelPort portal.
+9. **Content rules and suspension:** not needed for version 1. Terms of service and what
+   gets a site suspended are written before any breeder outside the family gets a site.
+10. **Puppy labels:** whether KennelOS should offer Undecided puppies (section 3.6), and
+    then how they show. For now, placed puppies show (with a hide switch per litter) and
+    health hold is hidden.
 
 ---
 
@@ -1061,6 +1098,7 @@ Rough order of likely need; any item can go first.
 | An embed provider tracks visitors or changes its embed | Click to load; previews stored on the site; plain-link fallback; providers listed in one place |
 | Tie-in to one host | Plain D1 and R2 data, with a full export for each site |
 | A scammer copies a breeder's site or photos to sell puppies that don't exist | The safe-payment notice on by default; official contacts on every page; you can point to the real site when families ask |
+| The review form is abused (fake or hostile reviews, unwanted photos) | Nothing shows until the breeder approves it; photos stay private until then and get the upload checks; Turnstile, a honeypot and rate limits |
 | The inquiry form attracts spam or collects more than it needs | Turnstile, a honeypot and rate limits; a fixed list of field types; inquiries deleted after 90 days (decision 12) |
 | A custom domain lapses or its records change | The daily check stops the redirect, so the `kennelport.com` address serves the site again; the breeder and you are emailed (section 2.4) |
 | A breeder breaks their email while editing DNS | The steps add only the site's records and say not to change nameservers or delete other records |

@@ -648,7 +648,7 @@ footer.site .fine { grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,
     <div style="display:grid;gap:14px"><a class="brand" href="#home"><svg><use href="#mono"/></svg><div><b>AK Boston Terriers</b><span>The American Gentleman</span></div></a><p class="small" style="color:var(--foot-muted);max-width:36ch">Home-raised, health-tested Boston Terriers, and a family to call on for the life of your dog.</p></div>
     <div><h4>About us</h4><ul><li><a href="#story">Our story</a></li><li><a href="#reviews">Reviews</a></li><li><a href="#contact">Contact</a></li></ul></div>
     <div><h4>Dogs and puppies</h4><ul><li><a href="#residents">Kennel residents</a></li><li><a href="#available">Available puppies</a></li><li><a href="#upcoming">Upcoming litters</a></li></ul></div>
-    <div><h4>Buying a puppy</h4><ul><li><a href="#steps">How it works</a></li><li><a href="#extras">Extended homegoing</a></li><li><a href="#how-to-pay">How to pay</a></li><li><a href="#policies">Policies</a></li><li><a href="#waitlist">Waitlist</a></li></ul></div>
+    <div><h4>Buying a puppy</h4><ul><li><a href="#steps">How it works</a></li><li><a href="#extras">Extended homegoing</a></li><li><a href="#how-to-pay">How to pay</a></li><li><a href="#policies">Policies</a></li><li><a href="#waitlist">Waitlist</a></li><li><a href="#wl-details">Family login</a></li></ul></div>
     <div class="fine"><span>© 2026 AK Boston Terriers · Sample site</span><span>Made with KennelPort</span></div>
   </div>
 </footer>
@@ -770,8 +770,8 @@ function litterCard({ eyebrow, title, dam, sire, rows, link }) {
     <dl class="kv">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>${link || ''}</article>`;
 }
 const L = {
-  gem: { eyebrow: 'Current litter', title: 'The Gem litter', dam: dogById.willow, sire: dogById.ruby, rows: [['Born', 'October 28, 2026'], ['Puppies', '1 girl, 2 boys'], ['Open picks', '1 female, 1 male'], ['Going home', 'December 23, 2026']], link: '<a class="more" href="#available">Meet the puppies</a>' },
-  ziva: { eyebrow: 'Older puppy', title: 'Ziva × Boone*', dam: dogById.ziva, sire: dogById.ruby, rows: [['Born', 'August 24, 2026'], ['Open picks', '1 female (Contessa)'], ['Going home', 'Ready now']], link: '<a class="more" href="#older">Meet Contessa</a>' },
+  gem: { eyebrow: 'Current litter', title: 'The Gem litter', dam: dogById.willow, sire: dogById.ruby, rows: [['Born', 'October 28, 2026'], ['Puppies', '1 girl, 2 boys'], ['Going home', 'December 23, 2026']], link: '<a class="more" href="#available">Meet the puppies</a>' },
+  ziva: { eyebrow: 'Older puppy', title: 'Ziva × Boone*', dam: dogById.ziva, sire: dogById.ruby, rows: [['Born', 'August 24, 2026'], ['Puppies', 'Contessa'], ['Going home', 'Ready now']], link: '<a class="more" href="#older">Meet Contessa</a>' },
   peaches: { eyebrow: 'Planned pairing', title: 'Peaches × Boone*', dam: dogById.peaches, sire: dogById.ruby, rows: [['Expected', 'Mid-February 2027'], ['Going home', 'Mid-April 2027'], ['Picks', 'Offered from the waitlist']], link: '<a class="more" href="#waitlist">See the waitlist</a>' },
   pearl: { eyebrow: 'Upcoming heat', title: 'Pearl*', dam: dogById.pearl, sire: null, rows: [['Heat', 'Estimated around March 2027'], ['Litter', 'Spring 2027, if all goes to plan']], link: '' }
 };

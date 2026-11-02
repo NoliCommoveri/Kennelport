@@ -204,3 +204,20 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - KennelOS now serves the waitlist feed for decision 21: `website_feed` switch, off by
   default, and `GET /f/site/<public_id>` (the public list plus page links, 404
   `not_shared` when off). Plan 3.8 and 5.5 updated to the real endpoint.
+
+## 2026-11-02: open decisions worked through; the manage app as a phone app
+
+- Decided: 6 (a **Use my KennelOS prices** switch, off by default), 11 (each device links
+  once), 12 (inquiries go to the manage app's inbox only, never emailed, kept 90 days;
+  the breeder replies from their own email; Resend now only sends sign-in codes and
+  invites), 13 (families submit reviews on the site, the breeder approves each; photos
+  private until approved), 15 (`www.` for custom domains), 16 (as proposed, with matching
+  offered whenever a new KennelOS record matches an unlinked website one), 17 (Turnstile
+  from the start, on the inquiry and review forms), 18 (pick counts never shown),
+  19 (diary drafts, opt-in per litter), 20 (Family login footer link). Deferred: 9 (site
+  rules, before any outside breeder). Still open: 10, with a found mismatch: KennelOS's
+  waitlist offers Undecided puppies, which the site would call Coming soon.
+- Section 4: the stack table (website, manage app, the manage app installed on a phone as
+  **KennelPort Site Manager**), online-only saving, and preview before publishing: a
+  Preview on every edit screen, Preview site, and a list of changes under Publish.
+- Sample: litter cards no longer show open picks; footer gains Family login.
