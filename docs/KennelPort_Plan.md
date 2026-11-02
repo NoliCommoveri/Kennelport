@@ -973,11 +973,20 @@ Each bundle is applied by these rules (decision 16):
   - *Pairing to litter:* a KennelOS litter carries its `pairing_id`, so the bundle sends
     it and KennelPort moves the website litter matched to that pairing onto the litter's
     id, keeping its photos, wording and address. Nothing is hidden or created.
-  - *Heats:* a planned heat is its own entry and is never carried over. It shows for as
-    long as the Coming up switch allows, even when the dam has a litter on the ground,
-    and leaves the bundle only once its date is past **and** the dam has a litter after
-    it. (KennelOS's public list drops a heat as soon as its date passes; the bundle keeps
-    it until the litter arrives, so the site doesn't go quiet between heat and litter.)
+  - *Heats:* a planned heat is a `heat_cycle` event she logged with a future date (her
+    estimate; the site shows its month only). KennelOS doesn't link a pairing to a heat,
+    so the bundle pairs them by date: a pairing of the same dam (not failed or cancelled)
+    **uses** a heat when its `planned_date` (else when it was entered) falls from 30 days
+    before to 60 days after the heat's date. Each pairing uses at most one heat, the
+    nearest. A used heat leaves the bundle and the pairing's entry takes over; nothing
+    carries over (a heat is only a month). A heat no pairing uses stays until 60 days
+    after its date (she may have skipped it, or the estimate was off: moving the date in
+    KennelOS keeps it up), then leaves. Older pairings and litters never use a future
+    heat, so a dam can show a litter on the ground, a pairing under way and her next heat
+    at once. A failed or cancelled pairing leaves the bundle; a pairing leads to at most
+    one litter (`pairing_id`, above). KennelOS's public list shows only future heats; the
+    bundle keeps a past one for those 60 days so the site doesn't go quiet before the
+    pairing is entered.
 - **Updated:** for a matched record, the KennelOS-owned fields (list below) are replaced
   with the bundle's values. KennelPort-only fields (bio, photos, albums, order, embeds)
   are never touched.
