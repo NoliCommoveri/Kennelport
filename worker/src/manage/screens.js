@@ -21,7 +21,7 @@ import { exportContent } from '../content/io.js';
 import { closeSite, SiteError } from '../sites.js';
 import { readFeed, parseFeedAddress, setFeed, FeedError, kennelosOrigin } from '../feed.js';
 import {
-  waiting, fulfilled, getEntry, addEntry, updateEntry, setFulfilled, removeEntry, moveEntry, offerMailto, suggestWants, listNameFor, WaitlistError,
+  waiting, fulfilled, getEntry, addEntry, updateEntry, setFulfilled, removeEntry, moveEntry, offerMailto, suggestWants, listNameFor, maskedNameFor, wantsPrivate, WaitlistError,
 } from '../waitlist.js';
 
 export const FRESH_SIGN_IN_MS = 15 * 60 * 1000;
@@ -553,6 +553,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     const form = (action, v, { err, edit = false, from = null } = {}) => `${errorBox(err)}<form method="post" action="${esc(action)}" class="card" data-save>
       ${from ? `<input type="hidden" name="inquiry_id" value="${esc(from)}">` : ''}
       ${FIELDS.map(([n, label, hint, max]) => `<label>${esc(label)}${hint ? `<span class="hint">${esc(hint)}</span>` : ''}<input name="${n}"${n === 'email' ? ' type="email"' : n === 'phone' ? ' type="tel"' : ''} value="${esc(v?.[n] ?? '')}" maxlength="${max}"${n === 'name' ? ' required' : ''}></label>`).join('')}
+      <label class="check"><input type="checkbox" name="private" value="1"${v?.private ? ' checked' : ''}> <span>Keep their name private<span class="hint">The list shows it masked, like "A***** K" for Andrea Kim, in place of the name on the list.</span></span></label>
       ${edit ? `<label>Added<span class="hint">Their place comes from the order of the list, not this date.</span><input name="added_on" type="date" value="${esc(v?.added_on ?? '')}"></label>` : ''}
       <button class="primary">${edit ? 'Save' : 'Add to waitlist'}</button></form>`;
     const values = async () => Object.fromEntries(await request.formData());
@@ -571,7 +572,11 @@ export function createScreens({ env, request, url, site, user, page }) {
       let v = {};
       if (fromId) {
         const msg = await env.DB.prepare('SELECT * FROM inquiries WHERE id = ? AND site_id = ?').bind(fromId, site.id).first();
-        if (msg) v = { name: msg.name, email: msg.email, phone: msg.phone, list_name: listNameFor(msg.name), wants: suggestWants(JSON.parse(msg.answers || '[]')) };
+        if (msg) {
+          const answers = JSON.parse(msg.answers || '[]');
+          const priv = wantsPrivate(answers);
+          v = { name: msg.name, email: msg.email, phone: msg.phone, private: priv, list_name: priv ? maskedNameFor(msg.name) : listNameFor(msg.name), wants: suggestWants(answers) };
+        }
       }
       return { title: 'Add to waitlist', back: fromId ? `${base}/inbox/${fromId}` : `${base}/waitlist`, body: `<p class="muted">They go to the end of the list. Check what the list will show before adding.</p>${form(`${base}/waitlist/new`, v, { from: fromId })}` };
     }
@@ -598,7 +603,7 @@ export function createScreens({ env, request, url, site, user, page }) {
       }
       return {
         title: e.name, back: `${base}/waitlist`,
-        body: `${form(`${base}/waitlist/${e.id}`, e, { edit: true })}
+        body: `${form(`${base}/waitlist/${e.id}`, { ...e, private: e.list_name === maskedNameFor(e.name) }, { edit: true })}
           <form method="post" action="${base}/waitlist/${e.id}/remove" class="card danger"><p class="muted small">Delete takes them off without marking them fulfilled, and can't be undone.</p><button>Delete from the waitlist</button></form>`,
       };
     }
@@ -610,7 +615,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     const list = await waiting(env, site.id);
     const done = await fulfilled(env, site.id);
     const fmt = (ymd) => (ymd ? new Date(`${ymd}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : '');
-    const item = (e, i) => `<li class="card wl-entry"><p><b>#${e.position} ${esc(e.name)}</b><span class="muted small"> · shown as ${esc(e.list_name)}</span></p>
+    const item = (e, i) => `<li class="card wl-entry"><p><b>#${e.position} ${esc(e.name)}</b><span class="muted small"> · shown as ${esc(e.list_name)}${e.list_name === maskedNameFor(e.name) ? ' (private)' : ''}</span></p>
       <p class="muted small">${esc([e.wants, `added ${fmt(e.added_on)}`].filter(Boolean).join(' · '))}</p>
       <div class="row">${e.email ? `<a class="button primary" href="${esc(offerMailto(e, { kennelName: site.kennel_name || site.subdomain, siteUrl, message: page.offer_message }))}">Offer pups</a>` : '<span class="muted small">No email: add one to offer pups.</span>'}
         <form method="post" action="${base}/waitlist/${e.id}/fulfil"><button>Fulfilled</button></form>

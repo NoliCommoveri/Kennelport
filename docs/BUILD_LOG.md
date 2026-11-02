@@ -622,3 +622,12 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   90 days; closing a site deletes them all.
 - 117 tests; the Your waitlist screen and the site's list checked in Chromium at phone
   width. Manage app files changed (`app.css`, `zip.js`); version not bumped yet.
+
+## 2026-11-02: keep my name private on the simple waitlist
+
+- The site's application form has **Keep my name private**; it's saved with the
+  application ("Show my name privately on the waitlist: Yes"). Add to waitlist then
+  starts with the name masked as KennelOS masks it (`maskedNameFor`: "A***** K"), and
+  the waitlist forms have a **Keep their name private** tick that always shows the
+  masked name. Your waitlist marks them "(private)". 118 tests; the form checked in
+  Chromium at phone width.

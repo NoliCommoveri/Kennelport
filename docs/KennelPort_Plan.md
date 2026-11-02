@@ -447,7 +447,10 @@ choice) is one of:
   with no publish, above the application form, drawn like the KennelOS list: place, the
   name on the list (first name and last initial, editable, like "Megan R."), what they
   want and the date added behind an ⓘ; never an email or phone. The application form
-  says names show that way. Not shown while a KennelOS feed is set: KennelOS's list
+  says names show that way, and offers **Keep my name private**: masked as KennelOS
+  masks them, the first name's first letter and an asterisk for each letter after it,
+  then the last initial (Andrea Kim shows as "A***** K"). The tick comes with the
+  application, so Add to waitlist starts masked; the breeder can tick it for anyone. Not shown while a KennelOS feed is set: KennelOS's list
   wins, so a family is never on two lists.
 - **A link or embed of the waitlist they already use** (a Google Form, Jotform, …),
   through the approved embed list (section 3.3) or as a button. Backlog; version 1 has

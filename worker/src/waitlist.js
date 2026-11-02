@@ -25,12 +25,26 @@ export function listNameFor(name) {
   return `${words[0]} ${words.at(-1)[0].toUpperCase()}.`.slice(0, 40);
 }
 
+// Shown privately, as KennelOS does: the first name's first letter and an asterisk
+// for each letter after it, then the last initial. "Andrea Kim" → "A***** K".
+export function maskedNameFor(name) {
+  const words = String(name ?? '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+  if (!words.length) return '';
+  const first = [...words[0]];
+  const masked = `${first[0].toUpperCase()}${'*'.repeat(first.length - 1)}`;
+  return (words.length > 1 ? `${masked} ${[...words.at(-1)][0].toUpperCase()}` : masked).slice(0, 40);
+}
+
+// The answer a family's "show my name privately" tick adds to their application.
+export const PRIVATE_ANSWER = ['Show my name privately on the waitlist', 'Yes'];
+export const wantsPrivate = (answers) => (answers ?? []).some(([q, a]) => q === PRIVATE_ANSWER[0] && a === 'Yes');
+
 // A starting line for "what they want", from an application's answers: the short
 // ones that say something ("Female", "Black & white"), not "Either", "Any color",
 // "Yes" or "No". The breeder edits it before adding.
 export function suggestWants(answers) {
   const skip = /^(either|any\b|no preference|yes|no)$|^any /i;
-  return (answers ?? []).map(([, a]) => String(a ?? '').trim())
+  return (answers ?? []).filter(([q]) => q !== PRIVATE_ANSWER[0]).map(([, a]) => String(a ?? '').trim())
     .filter((a) => a && a.length <= 30 && !a.includes('\n') && !skip.test(a)).slice(0, 3).join(' · ').slice(0, 120);
 }
 
@@ -40,7 +54,8 @@ function check(input) {
   if (email && !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) throw new WaitlistError("That email address doesn't look right.");
   return {
     name,
-    list_name: clean(input.list_name, 40, 'the name on the list') ?? listNameFor(name),
+    // Private: always the masked name, whatever was typed.
+    list_name: input.private ? maskedNameFor(name) : clean(input.list_name, 40, 'the name on the list') ?? listNameFor(name),
     email,
     phone: clean(input.phone, 30, 'the phone number'),
     wants: clean(input.wants, 120, 'what they want'),

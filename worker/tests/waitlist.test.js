@@ -141,3 +141,38 @@ test('with a KennelOS feed, the simple list is not shown; fulfilled ones go afte
   await closeSite(b.env, b.site.id, 'akbostons');
   assert.equal(b.env.DB.raw.prepare('SELECT COUNT(*) AS n FROM waitlist_entries').get().n, 0);
 });
+
+test('keep my name private: masked as KennelOS does, from the form or by hand', async () => {
+  const { maskedNameFor } = await import('../src/waitlist.js');
+  assert.equal(maskedNameFor('Andrea Kim'), 'A***** K');
+  assert.equal(maskedNameFor('cher'), 'C***');
+  assert.equal(maskedNameFor('José de la Peña'), 'J*** P');
+
+  const b = await breeder();
+  const page = await b.waitlist();
+  assert.match(page, /<input id="a-private" type="checkbox" name="private" value="1"> Keep my name private/);
+  const sent = await call(b.env, SITE, '/waitlist', { method: 'POST', headers: { origin: `https://${SITE}`, 'cf-connecting-ip': '198.51.100.9' }, body: new URLSearchParams({ name: 'Andrea Kim', email: 'andrea@example.com', private: '1' }) });
+  assert.equal(sent.status, 200);
+  const msg = b.env.DB.raw.prepare('SELECT id, answers FROM inquiries').get();
+  assert.deepEqual(JSON.parse(msg.answers).at(-1), ['Show my name privately on the waitlist', 'Yes']);
+  assert.match(await (await b.get(`/inbox/${msg.id}`)).text(), /<dt>Show my name privately on the waitlist<\/dt><dd>Yes<\/dd>/);
+  const form = await (await b.get(`/waitlist/new?from=${msg.id}`)).text();
+  assert.match(form, /name="list_name" value="A\*\*\*\*\* K"/);
+  assert.match(form, /name="private" value="1" checked/);
+  assert.doesNotMatch(form, /name="wants" value="Yes"/, 'the tick isn\'t a "want"');
+
+  await b.post('/waitlist/new', { inquiry_id: msg.id, name: 'Andrea Kim', list_name: 'Andrea K.', private: '1', email: 'andrea@example.com' });
+  await b.post('/waitlist/new', { name: 'Bo Park', private: '1' });
+  const html = await b.waitlist();
+  assert.match(html, /<td>A\*\*\*\*\* K<\/td>/, 'private wins over a typed name');
+  assert.match(html, /<td>B\* P<\/td>/);
+  const listPart = html.slice(html.indexOf('id="the-list"'), html.indexOf('id="apply"'));
+  assert.doesNotMatch(listPart, /Andrea|Bo Park|Park/, 'the list never names them');
+  const screen = await (await b.get('/waitlist')).text();
+  assert.match(screen, /shown as A\*\*\*\*\* K \(private\)/);
+  // Unticked on edit: back to the name on the list.
+  const [andrea] = b.entries();
+  assert.match(await (await b.get(`/waitlist/${andrea.id}`)).text(), /name="private" value="1" checked/);
+  await b.post(`/waitlist/${andrea.id}`, { name: 'Andrea Kim', list_name: '', email: 'andrea@example.com' });
+  assert.match(await b.waitlist(), /<td>Andrea K\.<\/td>/);
+});
