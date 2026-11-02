@@ -93,11 +93,16 @@ database_id = "0f4ec578-79cb-444b-9cf4-614857acaf11"
 binding = "FILES"
 bucket_name = "kennelport-files"
 
+# Plain variables must live here: a deploy replaces the Worker's variables with
+# this list, so one added only in the dashboard is lost on the next deploy.
+# TURNSTILE_SITE_KEY isn't secret (every visitor's browser gets it); its partner
+# TURNSTILE_SECRET is a dashboard secret, which deploys leave alone.
 [env.production.vars]
 ENV_NAME = "production"
 ROOT_DOMAIN = "kennelport.com"
 MAIL_FROM = "KennelPort <signin@kennelport.com>"
 VAPID_SUBJECT = "mailto:support@kennelport.com"
+TURNSTILE_SITE_KEY = "0x4AAAAAAFw9LuRAf6C2sL3e"
 
 [env.production.triggers]
 crons = ["23 4 * * *"]

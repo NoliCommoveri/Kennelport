@@ -465,3 +465,10 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 
 - `kennelport.com` bought. Production's D1 database (`kennelport`) created and its id
   set in `wrangler.toml`, so the production Worker can be connected (setup step 4).
+
+## 2026-11-02: production Turnstile key
+
+- Production's `TURNSTILE_SITE_KEY` in `wrangler.toml` (`[env.production.vars]`): a
+  deploy replaces plain variables with the file's, so a dashboard copy would be lost.
+  Setup step 5 now says so. Staging has no Turnstile key yet and relies on the honeypot
+  and rate limits.
