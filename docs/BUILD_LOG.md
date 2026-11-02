@@ -299,3 +299,9 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   wildcard records, D1 and R2, two Workers Builds connections, OPS_TOKEN, checks).
 - 14 tests (`node --test`); both configs pass `wrangler deploy --dry-run`; checked live
   under `wrangler dev`.
+
+## 2026-11-02: phase 0 live on staging
+
+- Staging deployed at `kennelport-staging.kennelport.workers.dev` in KennelPort's own
+  Cloudflare account; `/ops` setup checks (D1, R2, root domain) all OK and `0001` applied.
+  Production waits for the domain.

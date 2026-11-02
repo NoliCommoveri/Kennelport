@@ -4,10 +4,10 @@ Hosted websites for breeders, at `theirkennel.kennelport.com`, served by one Clo
 The operator sets up and drafts each site; breeders manage content through a simple login
 and can link their KennelOS data.
 
-Status: version 1 in progress. Phase 0 (plan 8.1) is coded: the Worker in [`worker/`](worker/)
-routes by hostname and has D1, R2, staging and production configs and `/ops`; the
-Cloudflare dashboard steps in [`docs/KennelPort_Setup.md`](docs/KennelPort_Setup.md) are
-still to do. Next: phase 1. Open: puppy labels (decision 10), needed before phase 4;
+Status: version 1 in progress. Phase 0 (plan 8.1) is live on staging
+(`kennelport-staging.kennelport.workers.dev`): the Worker in [`worker/`](worker/), D1, R2
+and `/ops`. Production waits for the `kennelport.com` domain
+([`docs/KennelPort_Setup.md`](docs/KennelPort_Setup.md)). Next: phase 1. Open: puppy labels (decision 10), needed before phase 4;
 site rules wait until KennelPort is offered (9). See
 [`docs/KennelPort_Plan.md`](docs/KennelPort_Plan.md); after version 1:
 [`docs/KennelPort_Backlog.md`](docs/KennelPort_Backlog.md). Page directory from a survey of real breeder sites:
