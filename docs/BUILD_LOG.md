@@ -671,3 +671,8 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   schemes reach real sites in phase 6.
 - 121 tests; the logo checked in Chromium at both widths, light and dark, opening and
   closing. Template and manage app files changed; versions not bumped yet.
+
+## 2026-11-02: versions for the logo
+
+- Template assets version 8 and manage app version 10 (the logo, its full-size view, and
+  white behind JPEG photos), with their fingerprints.
