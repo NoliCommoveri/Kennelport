@@ -453,8 +453,10 @@ embedded on the breeder's own site (`embed.js`, the **On your website** settings
 KennelOS's own look, which clashes with the site's scheme. The AK sample instead draws the
 list in the site's style: the same rows KennelOS publishes (position, listed name such as
 "Megan R." or "A****** K", Wants, the added date behind an ⓘ), the gap note when paused
-families are left out, a search box, Available Puppies and Coming up as expanders, and
-**Apply to join the waitlist**. To do that for real:
+families are left out, a search box, and **Apply to join the waitlist**, above the
+application form. Only the families: the site has its own puppy pages, so KennelOS's
+Available Puppies and Coming up aren't drawn there, and the list carries no Current
+Applicants sign-in box. To do that for real:
 - The Worker reads the kennel's **website feed** from KennelOS
   (`GET /f/site/<public_id>`: exactly the public list, plus paths for the list, sign-in
   and form), caches it for five minutes, and renders it with the site's scheme. KennelOS
@@ -1091,8 +1093,8 @@ their list by hand (3.8, decision 26: the breeder's own questions on the waitlis
 a closed switch, answers in the Inbox), and, for breeders who take applications online in
 KennelOS, the website feed read on the waitlist page with KennelOS's application form
 drawn in the site's style (3.8), and the KennelOS list itself in the site's style
-(decision 21: rows, the gap note, search, Available Puppies and Coming up, sign-in on
-KennelOS). Phase 3 is built.
+(decision 21: the families' rows, the gap note and search, above the application form).
+Phase 3 is built.
 
 If the first site wants its own domain, connect it by hand (section 2.4).
 

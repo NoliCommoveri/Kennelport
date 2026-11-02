@@ -583,3 +583,10 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   On a phone each row stacks and nothing scrolls sideways.
 - Phase 3 is built. 111 tests; the list checked in Chromium at phone and desktop widths
   (search, the ⓘ, no sideways scroll).
+
+## 2026-11-02: the list shows only the families
+
+- At the owner's word: the KennelOS list on a KennelPort site no longer draws Current
+  Applicants (the sign-in box), Available Puppies or Coming up. The site has its own
+  puppy pages, and the status-page sign-in belongs elsewhere. The list keeps its header,
+  search, rows and gap note, above the application form. Plan 3.8 updated.

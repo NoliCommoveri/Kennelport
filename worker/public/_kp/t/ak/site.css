@@ -302,10 +302,6 @@ td.tip, th.tip { width: 36px; text-align: right; }
 .added-tip::after { content: attr(data-tip); position: absolute; right: 0; bottom: calc(100% + 8px); white-space: nowrap; background: var(--ink); color: var(--bg); font: 600 .78rem/1 var(--f-body); padding: 7px 9px; border-radius: var(--r); opacity: 0; visibility: hidden; transition: opacity .15s; pointer-events: none; }
 .added-tip:hover::after, .added-tip:focus-visible::after, .added-tip.open::after { opacity: 1; visibility: visible; }
 .searchbox[hidden], table.list tr[hidden] { display: none; }
-.pup-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; margin-top: 6px; }
-.pup-col-head { font-weight: 700; font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
-.pup-col ul.plain { gap: 2px; } .pup-col ul.plain > li { border: 0; padding: 0; }
-.parent-tests ul ul { padding: 2px 0 0 14px; }
 .powered { text-align: center; font-size: .76rem; color: var(--muted); padding: 12px; border-top: 1px solid var(--line); letter-spacing: .04em; }
 
 @media (max-width: 520px) {

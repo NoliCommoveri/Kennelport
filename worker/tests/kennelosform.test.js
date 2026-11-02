@@ -106,7 +106,6 @@ test('with a feed carrying her form, the waitlist page draws KennelOS\'s form, a
   assert.match(html, /<summary>Is there a fee\?<\/summary>/);
   assert.match(html, /class="cf-turnstile" data-sitekey="0xKOS"/);
   assert.match(html, /data-kos-fallback>This form needs a browser with JavaScript on\. Apply on our <a href="https:\/\/apply\.kennelos\.example\/apply\/kos1_/);
-  assert.match(html, /Current Applicants: See Your Details[\s\S]*?href="https:\/\/apply\.kennelos\.example\/list\/kos1_[^"]+#signin"/);
   assert.ok(html.indexOf('id="the-list"') < html.indexOf('id="apply"'), 'the list, then the form');
   assert.doesNotMatch(html, /action="\/waitlist#apply"/, 'no KennelPort application form');
   assert.match(html, /<h3>Your application is in<\/h3>[\s\S]*?href="https:\/\/apply\.kennelos\.example\/list\/kos1_[^"]+#signin"[^>]*>See my details/, 'afterwards: KennelOS\'s own sign-in');
@@ -160,7 +159,6 @@ test('online applications off in KennelOS: the site\'s own form, with the Kennel
   const html = await res.text();
   assert.match(html, /action="\/waitlist#apply"/);
   assert.match(html, /Preferred sex/);
-  assert.match(html, /Sign in to see your details/);
   assert.doesNotMatch(res.headers.get('content-security-policy'), /kennelos/);
 });
 
@@ -264,14 +262,8 @@ test('the KennelOS list is drawn on the waitlist page in the site\'s style', asy
   assert.doesNotMatch(html, /<script>x<\/script>/);
   assert.match(html, /some applicant names may not be displayed above/, 'the gap note, since #3 is left out');
   assert.match(html, /data-wl-search hidden/, 'search shows only with the script');
-  // Available Puppies and Coming up, as KennelOS words them.
-  assert.match(html, /<h3>Available Puppies<\/h3>[\s\S]*?<strong>The Gem litter<\/strong>[\s\S]*?Dam: Willow CGC · Sire: Boone/);
-  assert.match(html, /<li>Patellas \(OFA\): Normal<\/li>/);
-  assert.match(html, /Born 10\/28\/2026 · Ready 12\/23\/2026/);
-  assert.match(html, /<div class="pup-col-head">Males<\/div><ul class="plain"><li><a href="https:\/\/photos\.example\/onyx" rel="noopener noreferrer" target="_blank">Onyx<\/a><\/li>/);
-  assert.match(html, /<strong>Pearl<\/strong>[\s\S]*?Upcoming heat · estimated around March 2027/);
-  assert.match(html, /Planned pairing/);
-  assert.match(html, /Heat dates are estimates/);
+  // Only the families: the site has its own puppy pages, and no sign-in box here.
+  for (const gone of ['Available Puppies', 'Coming up', 'The Gem litter', 'Current Applicants', '#signin']) assert.ok(!html.includes(gone), gone);
   // Online applications off: the site's own form follows the list.
   assert.match(html, /<a class="btn solid" href="#apply">Apply to join the waitlist<\/a>/);
   assert.match(html, /action="\/waitlist#apply"/);
