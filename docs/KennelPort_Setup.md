@@ -53,7 +53,7 @@ command:
 
 | Worker name | Branch | Deploy command | Address |
 |---|---|---|---|
-| `kennelport-staging` | `main` | `npx wrangler deploy` | `kennelport-staging.<account>.workers.dev` |
+| `kennelport-staging` | `main` | `npx wrangler deploy` | `kennelport-staging.kennelport.workers.dev` |
 | `kennelport` | `main` | `npx wrangler deploy --env production` | `kennelport.com`, `*.kennelport.com` |
 
 **Workers & Pages → Create → Import a repository** for each; the Worker name must match
@@ -68,7 +68,7 @@ manager. `/ops` stays closed until it's set.
 
 ## 6. Check it works
 
-- **Staging:** open `https://kennelport-staging.<account>.workers.dev/ops`, sign in with
+- **Staging:** open `https://kennelport-staging.kennelport.workers.dev/ops`, sign in with
   the staging token, press **Apply pending**. Every setup check should read OK.
   Staging can't receive real hostnames, so it acts as `manage.kennelport.com` by default;
   `/__host?h=thornfield.kennelport.com` makes your browser see it as that site, and
