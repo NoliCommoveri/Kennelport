@@ -405,9 +405,12 @@ setting the breeder can get wrong:
   emailed code, the breeder's KennelOS inbox, KennelOS's own alerts) and never touches
   KennelPort. The site offers no KennelPort application form, and no application ever
   lands in KennelPort's Inbox.
-- **Otherwise** (no KennelOS, or KennelOS without online applications, so the breeder runs
-  their list by hand): the site's own application form below, arriving in KennelPort's
-  Inbox as a message (section 3.10).
+- **The waitlist is connected to KennelOS but it isn't taking applications online right
+  now** (the feed has no `apply` link): no form at all. Apply buttons are hidden and
+  `/waitlist` shows the breeder's **Waitlist closed** message (below) beside the list;
+  plain questions still go through Contact. The site never falls back to its own form.
+- **No KennelOS waitlist connected** (the breeder runs their list by hand): the site's own
+  application form below, arriving in KennelPort's Inbox as a message (section 3.10).
 - Plain questions through the Contact form (section 3.10) come to KennelPort's Inbox either
   way.
 
@@ -416,7 +419,8 @@ choice) is one of:
 - **The site's inquiry form** (section 3.10), set up as a puppy application with the
   breeder's own questions; answers arrive in the manage app's Inbox, with a push
   notification (section 3.10). KennelPort is not a waitlist: no list, no places in line.
-  This is the manual route; it's never shown while applications go to KennelOS (above).
+  This is the manual route; it's never shown while the waitlist is connected to KennelOS
+  (above).
 - **A link or embed of the waitlist they already use** (a Google Form, Jotform, …),
   through the approved embed list (section 3.3) or as a button. Backlog; version 1 has
   the other two.
@@ -537,8 +541,8 @@ visitor stats) are in the backlog doc, section 5.
 ### 3.10 The inquiry form
 
 Every site has one form, used for Contact and questions about extras, pickup or stud
-service, and for puppy applications only when the breeder doesn't take them through
-KennelOS (section 3.8, decision 26). It works with no KennelOS at all.
+service, and for puppy applications only when no KennelOS waitlist is connected
+(section 3.8, decision 26). It works with no KennelOS at all.
 - **The breeder's questions:** name and email always; then the fields they choose (phone,
   town, which litter or dog, preferences, a free-text message), from a fixed list of field
   types.
@@ -1021,7 +1025,9 @@ Everything after version 1, with its order and designs, is in
     Midnight (design direction section 7), each with light and dark versions. Compared
     side by side in [`reference/scheme-lab.html`](reference/scheme-lab.html).
 26. **Where an application goes:** to KennelOS's live list flow whenever the breeder takes
-    applications online in KennelOS; to KennelPort's Inbox only when they don't and run
+    applications online in KennelOS; while a connected KennelOS waitlist isn't taking
+    them, nowhere (Apply is hidden and the closed message shows, never KennelPort's form);
+    to KennelPort's Inbox only when no KennelOS waitlist is connected and the breeder runs
     their list by hand. Worked out by the site, not a choice (section 3.8).
 
 **Open**
