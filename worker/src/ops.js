@@ -1,6 +1,6 @@
-// /ops on the manage host: the operator's page (plan 2.2). Phase 0 has only what
-// setting up needs: sign in, check that D1 and R2 are bound and working, and
-// apply migrations. Phase 1 adds sites, drafts, publishing and closing.
+// /ops on the manage host: the operator's page (plan 2.2): sign in, check that D1
+// and R2 are bound and working, apply migrations, and the sites (ops/sites.js:
+// create, content, photos, preview, publish, undo, suspend, close).
 //
 // Access is the OPS_TOKEN Worker secret, typed in once and held in a signed,
 // HttpOnly cookie, as in KennelOS cloud's /ops. Until the secret is set the page
@@ -11,6 +11,7 @@ import { resetGateCache } from './gate.js';
 import { hmacHex, timingSafeEqual } from './lib/crypto.js';
 import { readCookie } from './lib/http.js';
 import { escapeHtml as esc, htmlPage } from './lib/html.js';
+import { handleSites, sitesSection } from './ops/sites.js';
 
 const COOKIE = 'ops_session';
 const SESSION_SECONDS = 12 * 60 * 60;
@@ -67,12 +68,13 @@ export async function bindingChecks(env) {
   return checks;
 }
 
-async function statusPage(env, log = null) {
+async function statusPage(env, log = null, note = null) {
   const checks = await bindingChecks(env);
   const dbOk = checks[0].ok;
   const rows = dbOk ? await migrationStatus(env.DB) : [];
   const pending = rows.some((r) => r.state !== 'applied');
   const envName = env.ENV_NAME || 'unknown';
+  const sites = dbOk && !pending ? await sitesSection(env) : '';
 
   const checkRows = checks.map((c) => `<tr><td>${esc(c.name)}</td><td class="${c.ok ? 'ok' : 'bad'}">${c.ok ? 'OK' : 'Problem'}</td><td>${c.detail}</td></tr>`).join('');
   const migRows = rows.map((r) => `<tr><td><code>${esc(r.id)}</code></td><td>${esc(r.name)}</td><td class="${r.state === 'applied' ? 'ok' : 'bad'}">${esc(r.state)}</td><td class="muted">${esc(r.applied_at ?? '')}</td></tr>`).join('');
@@ -80,6 +82,8 @@ async function statusPage(env, log = null) {
 
   return htmlPage(TITLE, `<h1>${TITLE}</h1>
 <p class="muted">Environment: <strong>${esc(envName)}</strong></p>
+${note === 'released' ? '<p class="ok">Subdomain released.</p>' : ''}
+${sites}
 <h2>Setup checks</h2>
 <table>${checkRows}</table>
 <h2>Migrations</h2>
@@ -118,6 +122,10 @@ add <code>OPS_TOKEN</code> as a <em>Secret</em> (a long random string). Ops is c
     return statusPage(env, log);
   }
 
-  if (url.pathname === '/ops' && request.method === 'GET') return statusPage(env);
+  if (url.pathname === '/ops' && request.method === 'GET') return statusPage(env, null, url.searchParams.get('note'));
+  if (url.pathname.startsWith('/ops/sites')) {
+    const res = await handleSites(request, env, url);
+    if (res) return res;
+  }
   return htmlPage(TITLE, '<h1>Not found</h1>', { status: 404 });
 }

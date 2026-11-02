@@ -1,7 +1,7 @@
 # KennelPort: high-level plan (DRAFT)
 
-> Status: planning draft, checked against KennelOS. Phase 0 is built (`worker/`); the
-> rest is not. Section 8 says what
+> Status: planning draft, checked against KennelOS. Phase 0 and most of phase 1 are built
+> (`worker/`); the rest is not. Section 8 says what
 > version 1 is; section 9 lists the decisions still open. What comes after version 1 is
 > in [`KennelPort_Backlog.md`](KennelPort_Backlog.md). History of this plan lives in
 > [`BUILD_LOG.md`](BUILD_LOG.md).
@@ -90,7 +90,7 @@ breeder. One shared renderer means a template fix reaches every site at once.
 |---|---|
 | **Renderer** | Server-side HTML from a template plus the site's published snapshot (section 4.1). Fast, works on any phone, good for search engines. No customer JavaScript. |
 | **Manage app** | Static pages on the reserved `manage` host. Forms for each section, photo upload with in-browser resizing. |
-| **Ops console** | Your side: create site, edit any site, preview, publish, suspend, invite; later the request inbox. Same pattern as `cloud/`'s `/ops` in KennelOS. |
+| **Ops console** | Your side: create site, edit any site, preview, publish, suspend, invite; later the request inbox. Same pattern as `cloud/`'s `/ops` in KennelOS. Until the manage app's forms exist (phase 2), you edit a site's content as one JSON document (download, edit, paste back), checked against the content model (`worker/src/content/model.js`) that the forms will use too; photos upload with the same resizing and checks as section 4.2. |
 | **D1** | All draft content and accounts. Tens of MB at most. |
 | **R2** | Photos, downloads and published snapshots (section 4.1). About 200 MB a year per active breeder once photos are resized (section 7). |
 
@@ -824,10 +824,12 @@ snapshot, rendering a page or checking a big upload does. The plan keeps within 
   (4.3). The server only checks headers and chunks, which is quick.
 - **Publish** does most of its work waiting on D1 and R2; building the JSON is the only
   CPU-heavy step.
-- **Measured in phase 1:** publish and render the AK site's full content (every page, a
-  few years of litters and reviews) on the free plan and log CPU time. If publish or a
-  cold render passes the limit, move to Workers Paid (about $5 a month, section 7), which
-  allows far more CPU per request, rather than splitting the work up.
+- **Measured in phase 1** (`worker/scripts/cpu-check.mjs`): the AK site grown to five
+  years (24 litters, 60 reviews) makes a 50 KB snapshot; building its JSON, parsing it
+  and rendering any page each take well under 1 ms, against a budget of about 10 ms. The
+  free plan is enough. Confirm against staging's logs once real photos and content are
+  in; if a request ever passes the limit, move to Workers Paid (about $5 a month,
+  section 7) rather than splitting the work up.
 
 ---
 
@@ -944,25 +946,24 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 
 | Table | Key fields |
 |---|---|
-| `sites` | id, subdomain (unique), kennel_name, template, scheme (section 3.13), dark_mode (`auto` / `light_only`), kennelos_public_id (for the waitlist list, 3.8), status (`draft` / `live` / `suspended` / `closed`), published_snapshot_id, closed_at, storage_limit, photo_limit, album_limit, created_at |
+| `sites` | id, subdomain (unique), kennel_name, tagline, blurb, breed, monogram, town, region, contact_email, contact_phone, facebook_url, facebook_label, instagram_url, template, scheme (section 3.13), dark_mode (`auto` / `light_only`), show_other_prices (3.2, off by default), kennelos_public_id (for the waitlist list, 3.8), status (`draft` / `live` / `suspended` / `closed`), published_snapshot_id, draft_changed_at, closed_at, storage_limit, photo_limit, album_limit, created_at |
 | `snapshots` | id, site_id, published_at, published_by, r2_key (the whole published site as JSON in R2, section 4.1), bytes; the last 10 per site kept |
 | `site_users` | site_id, email_hash, role (`owner` / `editor`). Only the keyed hash, as in KennelOS cloud: codes and invites go to the address typed at that moment, and nothing is emailed to a breeder later (notices reach them in the manage app and by push) |
 | `sessions`, `login_codes` | as in KennelOS cloud |
 | `push_subscriptions` | endpoint_hash, site_id, user, session, endpoint, auth_secret, created_at, last_sent_at (section 3.10); as in KennelOS cloud |
 | `notices` | site_id, kind (`domain_live` / `domain_broken` / …), message, created_at, read_at: what the manage app shows the breeder |
 | `feed_cache` | site_id, body (the KennelOS website feed's last copy), fetched_at (section 3.8) |
-| `dogs`, `litters`, `puppies` | site_id, slug, content fields, `source` (`kennelport` / `kennelos`), `kennelos_id` when linked, `hidden_by_kennelos` (section 5.3) |
-| `pages` | site_id, slug, section type, content |
+| `dogs`, `litters`, `puppies` | site_id, slug, content fields, `source` (`kennelport` / `kennelos`), `kennelos_id` when linked, `hidden_by_kennelos` (section 5.3). A dog has a status (`active` / `retired` / `remembered`) and health_display (`normal_only` / `all` / `none`, 3.7); a litter a stage (`planned` / `current` / `past`) and either parent as a site dog or a typed name; a puppy one of 3.6's statuses. The full field list is `worker/src/migrations/0002_content.sql` |
+| `site_pages` | site_id, page key, enabled, menu_label, content (each page's wording, JSON with the keys the content model names, 3.12); order within its menu group comes with phase 6 |
 | `redirects` | site_id, old path, new path (written at publish time) |
 | `embeds` | site_id, page or record it sits on, provider, item id, title, preview photo, order |
-| `photos` | site_id, r2_key, thumb_key, width, height, bytes, alt text, public, removed_at |
+| `photos` | site_id, r2_key, thumb_key, type (WebP or JPEG), width, height, bytes, alt text, removed_at; public only when the published snapshot uses it (4.2) |
 | `albums`, `album_photos` | site_id, title, slug, cover; ordered photo list |
 | `links` | site_id, token_hash, linked_at, last_bundle_at, last_bundle_summary |
 | `custom_domains` | site_id, hostname, cloudflare_hostname_id, registrar (detected, backlog), status (`pending` / `active` / `stuck` / `broken`), checked_at, connected_at |
-| `health_results` | site_id, dog, test, result, date, verify_url, show (off by default), certificate file (private unless ticked) |
+| `health_results` | site_id, dog, test, result, normal, date, verify_url, show (off by default), certificate file (private unless ticked) |
 | `stories` | site_id, kind (`review` / `at_home`), quote, rating, first name, town, puppy_name, home_month (YYYY-MM), photo, submitted_by (`family` / `breeder`), status (`pending` / `approved` / `hidden`), permission_confirmed_at, submitted_at |
 | `steps` | site_id, page (`how_it_works` / `raising`), order, heading, body, detail (the More detail expander), `source` |
-| `site_pages` | site_id, page key, enabled, menu_label, order within its menu group (section 3.12) |
 | `home_blocks` | site_id, block key (`hero` / `facts` / `story` / `dogs` / `litters` / `reviews` / `waitlist`), enabled, content (wording, photos, facts, features) |
 | `expanders` | site_id, page (`policies` / `faq` / `waitlist_help`), order, heading, body, start_open |
 | `extras` | site_id, kind (`item` / `homegoing`), group, name, description, photo, price_from, price_to, weeks, lead_in, checklist, closing, featured, order, `source` (section 3.4) |

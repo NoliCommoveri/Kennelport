@@ -17,16 +17,19 @@ const notFound = (what = 'There is no page at this address.') =>
   htmlPage('Not found', `<h1>Not found</h1><p>${esc(what)}</p>`, { status: 404 });
 
 
-// Staging only: choose which hostname to act as (hosts.js).
+// Staging only: choose which hostname to act as (hosts.js). ?next=/path goes
+// straight there afterwards (a same-site path only).
 function hostOverride(url, env) {
   const h = (url.searchParams.get('h') ?? '').toLowerCase();
   const clear = url.searchParams.has('clear') || !h;
+  if (!clear && !/^[a-z0-9.-]{1,253}$/.test(h)) return htmlPage('Host', '<p>Not a hostname.</p>', { status: 400 });
   const cookie = clear
     ? `${HOST_COOKIE}=; Path=/; Secure; SameSite=Lax; Max-Age=0`
     : `${HOST_COOKIE}=${encodeURIComponent(h)}; Path=/; Secure; SameSite=Lax; Max-Age=86400`;
-  if (!clear && !/^[a-z0-9.-]{1,253}$/.test(h)) return htmlPage('Host', '<p>Not a hostname.</p>', { status: 400 });
+  const next = url.searchParams.get('next') ?? '';
+  if (/^\/(?!\/)/.test(next)) return new Response(null, { status: 303, headers: { location: next, 'set-cookie': cookie } });
   const body = clear
-    ? `<h1>Staging host</h1><p>Cleared: this staging Worker acts as <code>manage.${esc(env.ROOT_DOMAIN)}</code>.</p>`
+    ? `<h1>Staging host</h1><p>Cleared: this staging Worker acts as <code>manage.${esc(env.ROOT_DOMAIN)}</code>. <a href="/ops">Open ops</a>.</p>`
     : `<h1>Staging host</h1><p>This browser now sees staging as <code>${esc(h)}</code>. <a href="/">Open it</a>.</p>`;
   return htmlPage('Staging host', `${body}<p class="muted">Use <code>/__host?h=thornfield.${esc(env.ROOT_DOMAIN)}</code> to act as a site, <code>/__host?clear</code> to go back.</p>`, { headers: { 'set-cookie': cookie } });
 }
