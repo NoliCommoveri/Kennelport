@@ -191,6 +191,17 @@
     a.replaceWith(f);
   });
 
+  // Share: the phone's own share sheet where there is one, otherwise the link copied.
+  for (const row of $$('[data-share-row]')) {
+    row.hidden = false;
+    const say = $('[role=status]', row);
+    $('[data-share]', row).addEventListener('click', async () => {
+      const data = { title: document.title, url: location.href.split('#')[0] };
+      if (navigator.share) { try { await navigator.share(data); } catch { /* closed */ } return; }
+      try { await navigator.clipboard.writeText(data.url); say.textContent = 'Link copied.'; } catch { say.textContent = data.url; }
+    });
+  }
+
   // Homegoing packages: "What's included" starts open on wide screens.
   if (window.matchMedia('(min-width: 901px)').matches) for (const d of $$('.pkg details')) d.open = true;
 

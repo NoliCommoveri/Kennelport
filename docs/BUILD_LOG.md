@@ -704,3 +704,16 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   providers and nothing else (Turnstile joins the same `frame-src` on form pages). The
   change list names videos added or removed.
 - 129 tests; the boxes and the tap checked in Chromium at phone width.
+
+## 2026-11-02: phase 5, sharing
+
+- `src/lib/vendor/qrcode.js` (qrcode-generator 2.0.4, MIT, copied unchanged with its
+  header; no runtime dependency) and `src/qr.js` (an SVG, black on white, quiet zone).
+  Decoded with OpenCV to check it scans to the address.
+- Manage app: **Share** tile and screen: the published site, its current and planned
+  litters and its albums, each with its link, Copy link, a QR code and Download QR code.
+- Site: a **Share** button on dog, litter, puppy and album pages (`navigator.share`, or
+  the link copied), shown only with the script.
+- Phase 5 is built apart from KennelOS shares carrying album links (phase 4). 132 tests;
+  the Share screen checked in Chromium at phone width. Template and manage app files
+  changed; versions not bumped yet.

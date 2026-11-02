@@ -21,6 +21,7 @@ import { exportContent } from '../content/io.js';
 import { closeSite, SiteError } from '../sites.js';
 import { listEmbeds, addEmbed, removeEmbed, moveEmbed, EmbedError, EMBEDS_PER_PLACE } from '../embedStore.js';
 import { PROVIDERS } from '../embeds.js';
+import { qrSvg } from '../qr.js';
 import { readFeed, parseFeedAddress, setFeed, FeedError, kennelosOrigin, kennelosState } from '../feed.js';
 import {
   waiting, fulfilled, getEntry, addEntry, updateEntry, setFulfilled, removeEntry, moveEntry, offerMailto, suggestWants, listNameFor, maskedNameFor, wantsPrivate, WaitlistError,
@@ -135,6 +136,42 @@ export function createScreens({ env, request, url, site, user, page }) {
     return redirect(`${here}?note=saved#videos`);
   }
   const embedErr = () => url.searchParams.get('embed_error');
+
+  // ---------- sharing (plan 5.4): links and QR codes ----------
+  // The site and its litters and albums, as visitors see them: published ones only.
+  async function shareScreen() {
+    const rest = url.pathname.slice(`${base}/share`.length);
+    if (request.method !== 'GET') return null;
+    const row = await env.DB.prepare('SELECT published_snapshot_id FROM sites WHERE id = ?').bind(site.id).first();
+    const live = await loadSnapshot(env, site.id, row.published_snapshot_id);
+    const targets = [{ key: 'site', label: site.kennel_name || site.subdomain, path: '/' }];
+    if (live) {
+      if (live.pages?.litters?.enabled) for (const l of live.litters.filter((x) => x.stage !== 'past')) targets.push({ key: `litter-${l.slug}`, label: l.name, path: `/litters/${l.slug}` });
+      if (live.pages?.albums?.enabled) for (const a of live.albums ?? []) targets.push({ key: `album-${a.slug}`, label: a.title, path: `/albums/${a.slug}` });
+    }
+    const m = rest.match(/^\/qr\/([a-z0-9-]+)\.svg$/);
+    if (m) {
+      const t = targets.find((x) => x.key === m[1]);
+      if (!t) return null;
+      return new Response(qrSvg(siteLink(env, site.subdomain, t.path)), { headers: {
+        'content-type': 'image/svg+xml', 'cache-control': 'private, max-age=300', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'",
+        ...(url.searchParams.has('download') ? { 'content-disposition': `attachment; filename="${site.subdomain}-${m[1]}-qr.svg"` } : {}),
+      } });
+    }
+    if (rest) return null;
+    const card = (t) => {
+      const link = siteLink(env, site.subdomain, t.path);
+      return `<li class="card share-card"><img class="qr" src="${base}/share/qr/${t.key}.svg" alt="QR code for ${esc(t.label)}" width="132" height="132">
+        <div><b>${esc(t.label)}</b><p class="muted small share-link">${esc(link)}</p>
+        <p class="row"><button type="button" data-copy="${esc(link)}">Copy link</button><a class="button" href="${base}/share/qr/${t.key}.svg?download">Download QR code</a></p></div></li>`;
+    };
+    return {
+      title: 'Share', back: base,
+      body: `<p class="muted">Links to your site and its pages, and a QR code for each, for puppy packets, business cards and show tables. A link pasted into Facebook, Messenger or a text shows a picture card.${live ? '' : ' Publish your site first: these are the pages visitors can see.'}</p>
+        <ul class="share-list">${targets.map(card).join('')}</ul>
+        <p class="muted small">Litters and albums show here once they're published. The QR code is a picture you can print at any size.</p>`,
+    };
+  }
 
   // ---------- one list of records, generic ----------
   async function collection(path, kind, scopeId, { back, parentTitle } = {}) {
@@ -818,6 +855,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     else if (p.startsWith('/publish')) view = await publishScreen();
     else if (p.startsWith('/inbox')) view = await inbox();
     else if (p.startsWith('/embeds/')) view = await embedsAction();
+    else if (p === '/share' || p.startsWith('/share/')) view = await shareScreen();
     else if (p === '/waitlist' || p.startsWith('/waitlist/')) view = await waitlistScreen();
     else if (p === '/export.json' && request.method === 'GET') return exportManifest();
     else if (p.startsWith('/account')) view = await account();

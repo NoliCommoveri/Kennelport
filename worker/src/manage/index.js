@@ -129,6 +129,7 @@ async function siteHome(env, user, site) {
     ${tile('/payment', 'How to pay', 'Fee, deposit, scam warning')}
     ${tile('/lists/reviews', 'Reviews', 'Add or hide')}
     ${tile('/details', 'Kennel details', 'Name, contact, town')}
+    ${tile('/share', 'Share', 'Links and QR codes')}
   </ul>
   <p class="row"><a class="button" href="/notifications">Notifications on this device</a><a class="button" href="/s/${esc(site.subdomain)}/account">Your site: storage, copy, delete</a></p>
   <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}</p>

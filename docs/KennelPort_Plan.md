@@ -1,6 +1,6 @@
 # KennelPort: high-level plan (DRAFT)
 
-> Status: phases 0 to 3 are built (`worker/`); section 8.1 says how phase 3 came together.
+> Status: phases 0 to 3 are built (`worker/`), and phase 5 (albums, videos and posts, sharing) apart from its KennelOS part, which needs phase 4; section 8.1 says how phase 3 came together.
 > Section 8 says what version 1 is; section 9 lists the one decision still open. What comes after version 1 is
 > in [`KennelPort_Backlog.md`](KennelPort_Backlog.md). History of this plan lives in
 > [`BUILD_LOG.md`](BUILD_LOG.md).
@@ -1008,6 +1008,12 @@ Each bundle is applied by these rules (decision 16):
   description), so a link pasted into Facebook, Messenger or a text shows a picture card.
   `cloud/`'s family pages already do this.
 - A **QR code** for each site and album, for printed puppy packets and show tables.
+- **Built in phase 5:** the manage app's **Share** screen lists the published site, its
+  current and planned litters and its albums, each with its link, **Copy link** and a QR
+  code (an SVG drawn by the vendored `qrcode-generator`, MIT, in `src/lib/vendor/`) to
+  download and print. Dog, litter, puppy and album pages carry a **Share** button: the
+  phone's own share sheet, or the link copied. KennelOS shares carrying album links
+  wait for phase 4 (filling `dog.url`).
 
 ### 5.5 KennelOS changes this implies (for the KennelOS repo, later)
 

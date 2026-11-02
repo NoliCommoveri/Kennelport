@@ -518,3 +518,8 @@ dialog.viewer img { width: auto; height: auto; max-width: 96vw; max-height: 88dv
 .em-play::after { content: ""; position: absolute; left: 26px; top: 20px; border-left: 18px solid #fff; border-top: 12px solid transparent; border-bottom: 12px solid transparent; }
 .em-start:hover .em-play { background: var(--accent); }
 .em figcaption { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; font-size: .92rem; }
+
+/* Share (plan 5.4) */
+.share-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+.share-row.center { justify-content: center; }
+.share-row[hidden] { display: none; }

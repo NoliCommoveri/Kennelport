@@ -8,6 +8,10 @@ import {
 } from './parts.js';
 import { embedView } from '../embeds.js';
 
+// A Share button (plan 5.4): the phone's own share sheet, or the link copied.
+// Shown only with the template's script.
+const shareRow = (center = false) => `<p class="share-row${center ? ' center' : ''}" data-share-row hidden><button type="button" class="btn line" data-share>Share</button><span class="small muted" role="status"></span></p>`;
+
 // ---------- Videos and posts (plan 3.3) ----------
 // A preview (stored on the site) with a play button, linking to the original. The
 // template's script swaps in the provider's player only when tapped, so nothing
@@ -216,7 +220,7 @@ export function dog(snap, ctx, slug) {
         <span class="eyebrow">${esc([snap.site.breed, d.role].filter(Boolean).join(' · '))}</span><h1>${esc(d.call_name)}</h1>
         ${d.registered_name ? `<p class="reg">${esc(d.registered_name)}</p>` : ''}
         <dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
-        ${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''}${tests}
+        ${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''}${tests}${shareRow()}
       </div></div>
       ${embedsBlock(snap, `dog:${d.id}`, { inWrap: true })}
       ${litters.length ? `<div class="mt-26">${head('Litters', null)}<div class="litters">${litters.map((l) => litterCard(snap, l, ctx)).join('')}</div></div>` : ''}
@@ -280,7 +284,7 @@ export function litter(snap, ctx, slug) {
     body: `${pagehead({}, { eyebrow: l.stage === 'planned' ? (l.plan_label || 'Planned litter') : l.born_on ? `Born ${fmtDate(l.born_on)}` : 'Litter', heading: l.name, lede })}
       <section class="section tight"><div class="wrap">
         <p class="breadcrumb center"><a href="/litters">${esc(label(snap, 'litters'))}</a></p>
-        <div class="litters">${litterCard(snap, l, ctx, { link: false })}</div>
+        <div class="litters">${litterCard(snap, l, ctx, { link: false })}</div>${shareRow(true)}
         ${pups.length ? `<div class="mt-26 grid">${pups.map((pup) => puppyCard(snap, l, pup, ctx)).join('')}</div>` : ''}
         ${embedsBlock(snap, `litter:${l.id}`, { inWrap: true })}
         ${litterAlbums(snap, ctx, l)}
@@ -324,7 +328,7 @@ export function album(snap, ctx, slug) {
     body: `${pagehead({}, { eyebrow: l ? l.name : 'Photo album', heading: a.title, lede: a.description })}
       <section class="section tight"><div class="wrap">
         <p class="breadcrumb center">${l && snap.pages.litters.enabled ? `<a href="/litters/${attr(l.slug)}">${esc(l.name)}</a> · ` : ''}<a href="/albums">${esc(label(snap, 'albums'))}</a></p>
-        <div class="gallery">${photos}</div>
+        <div class="gallery">${photos}</div>${shareRow(true)}
         ${embedsBlock(snap, `album:${a.id}`, { inWrap: true })}
       </div></section>
       <dialog class="viewer" id="viewer" aria-label="Photo viewer"><img alt=""><button type="button" class="v-prev" aria-label="Previous photo">‹</button><button type="button" class="v-next" aria-label="Next photo">›</button><button type="button" class="v-close" aria-label="Close">×</button><span class="v-count small"></span></dialog>`,
@@ -346,7 +350,7 @@ export function puppy(snap, ctx, litterSlug, slug) {
         <dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
         ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}
         ${p.status === 'available' ? `<p><a class="btn solid" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">Ask about ${esc(p.name)}</a></p>` : ''}
-        ${safeNotice(snap, ctx)}
+        ${safeNotice(snap, ctx)}${shareRow()}
       </div></div>
     </div></section>`,
   };
