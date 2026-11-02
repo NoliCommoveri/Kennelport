@@ -10,6 +10,7 @@ import { ContentError } from '../content/model.js';
 import { AK_SAMPLE } from '../content/akSample.js';
 import { makePreviewToken, PREVIEW_DAYS } from '../site.js';
 import { savePhoto, PhotoError } from '../photos.js';
+import { inviteToSite, removeFromSite, AuthError } from '../auth.js';
 
 const TITLE = 'KennelPort ops';
 // The site page loads one script of our own (photo resizing); nothing else.
@@ -28,6 +29,8 @@ const NOTES = {
   suspended: 'Suspended: visitors see "isn\'t available right now".',
   resumed: 'Back on.',
   photo_removed: 'Photo removed from the draft.',
+  invited: 'Invited. They sign in at the manage app with that address.',
+  removed: 'Removed from this site.',
   closed: 'Site closed and its content deleted.',
   released: 'Subdomain released.',
 };
@@ -106,6 +109,17 @@ ${snaps.length ? `<table><tr><th>Published</th><th>Size</th><th></th></tr>${snap
 ${photoRows ? `<table>${photoRows}</table>` : '<p class="muted">No photos yet.</p>'}
 <script src="/_kp/ops/photos.js" defer></script>`;
 
+  const { results: people } = await env.DB.prepare('SELECT email_hash, role, invited_at, joined_at FROM site_users WHERE site_id = ? ORDER BY invited_at').bind(siteId).all();
+  const peopleSection = `<h2>People</h2>
+<p class="muted">Who can sign in to the manage app for this site. Addresses aren't kept, only a keyed hash, so people show by role and date.</p>
+${people.length ? `<table>${people.map((p) => `<tr><td>${esc(p.role)}</td><td class="muted">invited ${esc(fmtTime(p.invited_at))}${p.joined_at ? `, signed in ${esc(fmtTime(p.joined_at))}` : ', not signed in yet'}</td>
+<td><form method="post" action="/ops/sites/${esc(site.id)}/people/remove"><input type="hidden" name="email_hash" value="${esc(p.email_hash)}"><button>Remove</button></form></td></tr>`).join('')}</table>` : '<p class="muted">Nobody yet.</p>'}
+<form method="post" action="/ops/sites/${esc(site.id)}/people">
+  <p><label>Email<br><input type="email" name="email" required autocomplete="off"></label></p>
+  <p><label><input type="radio" name="role" value="owner" checked style="width:auto"> Owner (the breeder)</label> <label><input type="radio" name="role" value="editor" style="width:auto"> Editor (a helper)</label></p>
+  <p><button>Invite</button> <span class="muted">Sends an invite email. Inviting an address again resends it.</span></p>
+</form>`;
+
   const lifecycle = `<h2>Suspend or close</h2>
 <form method="post" action="/ops/sites/${esc(site.id)}/${site.status === 'suspended' ? 'resume' : 'suspend'}"><p><button>${site.status === 'suspended' ? 'Turn the site back on' : 'Suspend'}</button> <span class="muted">${site.status === 'suspended' ? '' : 'Hides the site; keeps everything.'}</span></p></form>
 <form method="post" action="/ops/sites/${esc(site.id)}/close">
@@ -114,7 +128,7 @@ ${photoRows ? `<table>${photoRows}</table>` : '<p class="muted">No photos yet.</
   <p><button>Close and delete everything</button></p>
 </form>`;
 
-  return page(`${top}${publishing}${contentSection}${photoSection}${lifecycle}`);
+  return page(`${top}${publishing}${peopleSection}${contentSection}${photoSection}${lifecycle}`);
 }
 
 // ---------- routes ----------
@@ -189,6 +203,25 @@ export async function handleSites(request, env, url) {
         return back('closed');
       }
       case 'release': await releaseSubdomain(env, siteId); return redirect('/ops?note=released');
+      case 'people': {
+        const form = await request.formData();
+        const site = await env.DB.prepare('SELECT subdomain FROM sites WHERE id = ?').bind(siteId).first();
+        try {
+          await inviteToSite(env, siteId, form.get('email'), String(form.get('role') ?? 'owner'), {
+            manageUrl: env.ALLOW_HOST_OVERRIDE === '1' ? new URL(request.url).origin : `https://manage.${env.ROOT_DOMAIN}`,
+            siteUrl: `https://${site?.subdomain}.${env.ROOT_DOMAIN}`,
+          });
+        } catch (err) {
+          if (err instanceof AuthError) return sitePage(env, siteId, { error: err.message });
+          throw err;
+        }
+        return back('invited');
+      }
+      case 'people/remove': {
+        const form = await request.formData();
+        await removeFromSite(env, siteId, String(form.get('email_hash') ?? ''));
+        return back('removed');
+      }
       case 'photos': {
         const form = await request.formData();
         const full = form.get('full');

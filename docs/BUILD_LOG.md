@@ -329,3 +329,18 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   release.
 - CPU check (plan 4.4): well under 1 ms per step on five years of AK content; the free
   plan is enough. 35 tests.
+
+## 2026-11-02: phase 2, batch 1: sign-in and the manage app's shell
+
+- `0003_accounts.sql`: site_users, login_codes, sessions, rate_limits, dev_outbox.
+  Addresses, codes and tokens kept only as hashes, as in KennelOS cloud.
+- Sign-in by emailed code (10 minutes, 5 tries, 5 codes an hour per address, 30 per IP);
+  a code goes only to an invited address, with the same answer either way. Sessions are
+  a 90-day sliding cookie on the manage host; every manage POST must come from that
+  origin.
+- `/ops`: setup checks for EMAIL_HMAC_KEY and email; People on each site (invite owner
+  or editor, remove); the staging outbox. Invites name the manage app's address.
+- The manage app: sign-in and code screens, site picker, the site's home (status, view
+  and preview), installable (manifest, icons, service worker: screens open offline,
+  nothing saves offline; a failed save keeps the form). Editing tiles say "next update".
+- 44 tests.

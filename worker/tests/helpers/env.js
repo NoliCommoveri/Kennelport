@@ -5,7 +5,7 @@ import { makeAssets } from './assets.js';
 
 export async function makeEnv(extra = {}, { migrated = true } = {}) {
   gate.resetGateCache();
-  const env = { DB: makeDb(), FILES: makeBucket(), ASSETS: makeAssets(), ROOT_DOMAIN: 'kennelport.com', ENV_NAME: 'test', OPS_TOKEN: 'ops-token', ...extra };
+  const env = { DB: makeDb(), FILES: makeBucket(), ASSETS: makeAssets(), ROOT_DOMAIN: 'kennelport.com', ENV_NAME: 'test', OPS_TOKEN: 'ops-token', EMAIL_HMAC_KEY: 'test-hmac', DEV_OUTBOX: '1', ...extra };
   if (migrated) await migrate.applyPending(env.DB);
   return env;
 }

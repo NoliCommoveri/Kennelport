@@ -12,6 +12,7 @@ import { hmacHex, timingSafeEqual } from './lib/crypto.js';
 import { readCookie } from './lib/http.js';
 import { escapeHtml as esc, htmlPage } from './lib/html.js';
 import { handleSites, sitesSection } from './ops/sites.js';
+import { mailMode, outboxRecent } from './mail.js';
 
 const COOKIE = 'ops_session';
 const SESSION_SECONDS = 12 * 60 * 60;
@@ -65,6 +66,9 @@ export async function bindingChecks(env) {
     checks.push({ name: 'R2 (FILES)', ok: false, detail: String(err?.message ?? err) });
   }
   checks.push({ name: 'Root domain', ok: Boolean(env.ROOT_DOMAIN), detail: env.ROOT_DOMAIN ? esc(env.ROOT_DOMAIN) : 'ROOT_DOMAIN not set' });
+  checks.push({ name: 'Sign-in key', ok: Boolean(env.EMAIL_HMAC_KEY), detail: env.EMAIL_HMAC_KEY ? 'EMAIL_HMAC_KEY set' : 'Add the secret EMAIL_HMAC_KEY (a long random string; never change it once breeders sign in)' });
+  const mode = mailMode(env);
+  checks.push({ name: 'Email', ok: Boolean(mode), detail: mode === 'resend' ? 'Resend (RESEND_API_KEY set)' : mode === 'outbox' ? 'Staging outbox: codes and invites show below instead of being emailed' : 'Add the secret RESEND_API_KEY; until then nobody can sign in' });
   return checks;
 }
 
@@ -75,6 +79,8 @@ async function statusPage(env, log = null, note = null) {
   const pending = rows.some((r) => r.state !== 'applied');
   const envName = env.ENV_NAME || 'unknown';
   const sites = dbOk && !pending ? await sitesSection(env) : '';
+  const outbox = dbOk && !pending && mailMode(env) === 'outbox' ? await outboxRecent(env) : [];
+  const outboxHtml = outbox.length ? `<h2>Staging outbox</h2><p class="muted">What would have been emailed, newest first. Addresses aren't kept.</p>${outbox.map((m) => `<pre>${esc(m.created_at.slice(0, 16).replace('T', ' '))} · ${esc(m.kind)}\n${esc(m.subject)}\n\n${esc(m.body)}</pre>`).join('')}` : '';
 
   const checkRows = checks.map((c) => `<tr><td>${esc(c.name)}</td><td class="${c.ok ? 'ok' : 'bad'}">${c.ok ? 'OK' : 'Problem'}</td><td>${c.detail}</td></tr>`).join('');
   const migRows = rows.map((r) => `<tr><td><code>${esc(r.id)}</code></td><td>${esc(r.name)}</td><td class="${r.state === 'applied' ? 'ok' : 'bad'}">${esc(r.state)}</td><td class="muted">${esc(r.applied_at ?? '')}</td></tr>`).join('');
@@ -89,6 +95,7 @@ ${sites}
 <h2>Migrations</h2>
 ${dbOk ? `<table><tr><th>Id</th><th>Name</th><th>State</th><th>Applied</th></tr>${migRows}</table>
 ${pending ? '<form method="post" action="/ops/migrate"><p><button>Apply pending</button></p></form>' : '<p class="ok">The database matches this deploy.</p>'}` : '<p class="bad">D1 isn\'t working, so migrations can\'t be read.</p>'}
+${outboxHtml}
 ${logHtml}
 <form method="post" action="/ops/logout"><p><button>Sign out</button></p></form>`);
 }

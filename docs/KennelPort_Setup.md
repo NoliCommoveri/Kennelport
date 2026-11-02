@@ -66,6 +66,14 @@ On each Worker, **Settings → Variables and Secrets → Add → Secret**: `OPS_
 random string, different for staging and production. Keep both in your password
 manager. `/ops` stays closed until it's set.
 
+For sign-in (phase 2), also on each Worker:
+- `EMAIL_HMAC_KEY`, **Secret**: another long random string, different per Worker. It
+  turns every email address into the keyed hash KennelPort keeps instead of the
+  address. **Never change it** once anyone has signed in: every invite and session
+  would stop matching.
+- `RESEND_API_KEY`, **Secret**, when email is set up (below). Until then staging shows
+  codes and invites in `/ops` (Staging outbox); production can't sign anyone in.
+
 ## 6. Check it works
 
 - **Staging:** open `https://kennelport-staging.kennelport.workers.dev/ops`, sign in with
@@ -80,7 +88,9 @@ manager. `/ops` stays closed until it's set.
 
 ## Later, not phase 0
 
-- **Resend** (sign-in codes and invites): phase 2.
+- **Resend** (sign-in codes and invites): create an account, verify `kennelport.com`
+  as a sending domain (it adds DNS records), make an API key and set it as
+  `RESEND_API_KEY`. `MAIL_FROM` in `wrangler.toml` is the sender.
 - **Cloudflare for SaaS** (custom domains, plan 2.4): when the first site wants its own
   domain.
 - **Turnstile** site key (forms): phase 3.

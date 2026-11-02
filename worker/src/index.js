@@ -12,6 +12,7 @@ import { classifyHost, effectiveHost, HOST_COOKIE } from './hosts.js';
 import { json, readCookie } from './lib/http.js';
 import { escapeHtml as esc, htmlPage } from './lib/html.js';
 import { serveSite } from './site.js';
+import { handleManage } from './manage/index.js';
 
 const notFound = (what = 'There is no page at this address.') =>
   htmlPage('Not found', `<h1>Not found</h1><p>${esc(what)}</p>`, { status: 404 });
@@ -68,8 +69,8 @@ export default {
           const ready = env.DB ? await schemaReady(env.DB) : false;
           return json({ ok: ready, maintenance: !ready });
         }
-        if (url.pathname === '/') return htmlPage('KennelPort Site Manager', '<h1>KennelPort Site Manager</h1><p>Coming soon.</p>');
-        return notFound();
+        if (!(await schemaReady(env.DB))) return htmlPage('Back soon', '<h1>Back soon</h1><p>KennelPort is being updated. Please try again in a few minutes.</p>', { status: 503, headers: { 'retry-after': '300' } });
+        return handleManage(request, env, url);
 
       case 'api':
         if (url.pathname === '/health') {
