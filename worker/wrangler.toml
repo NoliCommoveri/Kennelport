@@ -16,6 +16,17 @@ workers_dev = true
 [observability]
 enabled = true
 
+# The template's CSS, JS and fonts (public/_kp/), served BY the Worker
+# (src/index.js serveAsset), never in front of it: run_worker_first keeps every
+# request going to the router, so a site's paths and /ops are never shadowed by a
+# file. html_handling "none": a file is served at exactly its name. Inherited by
+# [env.production].
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
+html_handling = "none"
+
 # Setup step 3 (docs/KennelPort_Setup.md): the staging database, created 2026-11-02.
 [[d1_databases]]
 binding = "DB"

@@ -1,0 +1,221 @@
+// Pieces of the "ak" template shared by its pages: formatting, photos, cards and
+// the menu. Every value from a snapshot passes through esc() (or attr()) here.
+import { escapeHtml as esc } from '../lib/html.js';
+import { MENU_GROUPS, PAGES } from '../content/model.js';
+
+export { esc };
+export const attr = esc;
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+export function fmtDate(ymd) {
+  if (!ymd) return '';
+  const [y, m, d] = ymd.split('-').map(Number);
+  return `${MONTHS[m - 1]} ${d}, ${y}`;
+}
+export function fmtMonth(ym) {
+  if (!ym) return '';
+  const [y, m] = ym.split('-').map(Number);
+  return `${MONTHS[m - 1]} ${y}`;
+}
+const money = (n) => `$${Number(n).toLocaleString('en-US')}`;
+export function priceText(from, to) {
+  if (from == null) return '';
+  return to != null && to !== from ? `${money(from)}–${money(to)}` : money(from);
+}
+
+// Paragraphs from multi-line text.
+export const paras = (text) => String(text ?? '').split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)
+  .map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
+
+// ---------- photos ----------
+
+export const photoUrl = (id, { thumb = false } = {}) => `/_kp/p/${encodeURIComponent(id)}${thumb ? '?s=t' : ''}`;
+
+export function img(snap, id, { alt, cls = '', thumb = false, lazy = true } = {}) {
+  const p = id && snap.photos[id];
+  if (!p) return null;
+  const size = p.width && p.height ? ` width="${p.width}" height="${p.height}"` : '';
+  return `<img src="${photoUrl(id, { thumb: thumb && p.thumb })}" alt="${attr(alt ?? p.alt ?? '')}"${size}${cls ? ` class="${cls}"` : ''}${lazy ? ' loading="lazy"' : ''}>`;
+}
+
+// ---------- the menu ----------
+
+// Which pages show: switched on, and with something in them (plan 3.12).
+export function pageOn(snap, key, ctx) {
+  const page = snap.pages[key];
+  if (!page || !page.enabled) return false;
+  switch (key) {
+    case 'dogs': return snap.dogs.some((d) => d.status === 'active');
+    case 'reviews': return snap.reviews.length > 0;
+    case 'litters': return snap.litters.length > 0;
+    case 'older': return olderPuppies(snap, ctx.today).length > 0;
+    case 'how_it_works': return snap.steps.length > 0;
+    case 'extras': return snap.extras.length > 0;
+    case 'policies': return (snap.expanders.policies ?? []).length > 0;
+    case 'faq': return (snap.expanders.faq ?? []).length > 0;
+    case 'waitlist_help': return (snap.expanders.waitlist_help ?? []).length > 0;
+    default: return true;
+  }
+}
+
+export const label = (snap, key) => snap.pages[key]?.menu_label || PAGES[key].label;
+
+export function menuGroups(snap, ctx) {
+  const groups = [];
+  for (const g of MENU_GROUPS) {
+    const links = [];
+    for (const [key, page] of Object.entries(PAGES)) {
+      if (page.group !== g.key || !pageOn(snap, key, ctx)) continue;
+      links.push({ key, href: page.path, text: label(snap, key) });
+      // Sub-links that are places within a page.
+      if (key === 'dogs' && snap.dogs.some((d) => d.sex === 'female') && snap.dogs.some((d) => d.sex === 'male')) {
+        links.push({ key, href: '/dogs#girls', text: 'Girls' }, { key, href: '/dogs#boys', text: 'Boys' });
+      }
+      if (key === 'litters') {
+        const current = snap.litters.some((l) => l.stage === 'current');
+        const planned = snap.litters.some((l) => l.stage === 'planned');
+        links.pop();
+        if (current) links.push({ key, href: '/litters#available', text: 'Available' });
+        if (planned) links.push({ key, href: '/litters#upcoming', text: 'Upcoming litters' });
+        if (!current && !planned) links.push({ key, href: '/litters', text: label(snap, key) });
+      }
+    }
+    if (links.length) groups.push({ ...g, links });
+  }
+  return groups;
+}
+
+// ---------- litters and puppies ----------
+
+export const STATUS_TEXT = { available: 'Available', reserved: 'Reserved', placed: 'Placed', staying: 'Staying with us', coming_soon: 'Coming soon' };
+
+const isPast = (ymd, today) => Boolean(ymd) && ymd < today;
+
+// Available puppies past their litter's going-home date (plan 3.11).
+export function olderPuppies(snap, today) {
+  const out = [];
+  for (const l of snap.litters) {
+    if (l.stage !== 'current' || !isPast(l.ready_on, today)) continue;
+    for (const p of l.puppies) if (p.status === 'available') out.push({ litter: l, puppy: p });
+  }
+  return out;
+}
+
+export const sortPuppies = (pups) => [...pups].sort((a, b) => (a.status === 'reserved' || a.status === 'placed') - (b.status === 'reserved' || b.status === 'placed'));
+
+export function parentName(snap, l, role) {
+  const id = l[`${role}_id`];
+  const dog = id && snap.dogs.find((d) => d.id === id);
+  return dog ? dog.call_name : (l[`${role}_name`] || null);
+}
+
+export function pairNames(snap, l) {
+  const dam = parentName(snap, l, 'dam');
+  const sire = parentName(snap, l, 'sire');
+  if (dam && sire) return `${dam} × ${sire}`;
+  if (dam) return `${dam} × sire to be chosen`;
+  return sire ?? '';
+}
+
+function counts(pups) {
+  const g = pups.filter((p) => p.sex === 'female').length;
+  const b = pups.filter((p) => p.sex === 'male').length;
+  const part = (n, one, many) => (n ? `${n} ${n === 1 ? one : many}` : null);
+  return [part(g, 'girl', 'girls'), part(b, 'boy', 'boys')].filter(Boolean).join(', ') || 'Expected';
+}
+
+export function litterCard(snap, l, ctx, { link = true } = {}) {
+  const parent = (role) => {
+    const id = l[`${role}_id`];
+    const dog = id && snap.dogs.find((d) => d.id === id);
+    const name = parentName(snap, l, role);
+    return (dog && img(snap, dog.photo_id, { alt: dog.call_name, thumb: true })) || `<span class="ph">${esc(name ? name.slice(0, 1) : '?')}</span>`;
+  };
+  const older = l.stage === 'current' && isPast(l.ready_on, ctx.today);
+  const eyebrow = l.stage === 'planned' ? (l.plan_label || 'Planned litter') : l.stage === 'past' ? 'Past litter' : older ? 'Older puppies' : 'Current litter';
+  const rows = l.stage === 'planned'
+    ? [['Expected', l.expected_label], ['Going home', l.ready_label]]
+    : [['Born', fmtDate(l.born_on)], ['Puppies', l.puppies.length ? l.puppies.map((p) => p.name).length <= 2 ? l.puppies.map((p) => p.name).join(', ') : counts(l.puppies) : null],
+      ['Going home', older ? 'Ready now' : fmtDate(l.ready_on)]];
+  const more = !link ? '' : l.stage === 'planned'
+    ? (pageOn(snap, 'waitlist', ctx) ? '<a class="more" href="/waitlist">See the waitlist</a>' : '')
+    : `<a class="more" href="/litters/${attr(l.slug)}">Meet the puppies</a>`;
+  return `<article class="litter"><span class="eyebrow">${esc(eyebrow)}</span>
+    <div class="pair">${parent('dam')}<span class="x">×</span>${parent('sire')}<div class="names"><b>${esc(l.name)}</b><span class="small muted">${esc(pairNames(snap, l))}</span></div></div>
+    <dl class="kv">${rows.filter(([, v]) => v).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>${l.summary && l.stage === 'planned' ? `<p class="small muted">${esc(l.summary)}</p>` : ''}${more}</article>`;
+}
+
+// ---------- flip cards ----------
+
+export function dogCard(snap, d) {
+  const photo = img(snap, d.photo_id, { alt: d.call_name }) ?? '<div class="ph-photo">Photos coming soon</div>';
+  const bg = img(snap, d.photo_id, { alt: '', cls: 'bg', thumb: true }) ?? '';
+  const tests = d.health.length
+    ? `<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${esc(h.result)}</span></li>`).join('')}</ul>`
+    : `<span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${d.sex === 'female' ? 'Female' : 'Male'}</span></li>${d.color ? `<li><span>Color</span><span>${esc(d.color)}</span></li>` : ''}</ul>`;
+  const line = [snap.site.breed, d.role].filter(Boolean).join(' · ');
+  return `<div class="flip" tabindex="0" role="button" aria-label="${attr(d.call_name)}: turn the card over">
+    <div class="flip-in">
+      <div class="face front">${photo}<span class="turn" aria-hidden="true">↻</span>
+        <div class="cap"><span class="call">${esc(d.call_name)}</span>${d.registered_name ? `<span class="reg">${esc(d.registered_name)}</span>` : ''}<span class="line1"><span>${esc(line)}</span>${d.titles ? `<span>${esc(d.titles)}</span>` : ''}</span></div></div>
+      <div class="face back">${bg}<span class="call">${esc(d.call_name)}</span>${d.registered_name ? `<span class="reg">${esc(d.registered_name)}</span>` : ''}
+        ${tests}${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''}<a class="more" href="/dogs/${attr(d.slug)}">View profile</a></div>
+    </div></div>`;
+}
+
+export function puppyCard(snap, l, p, ctx) {
+  const photo = img(snap, p.photo_id, { alt: p.name }) ?? '<div class="ph-photo">Photos coming soon</div>';
+  const bg = img(snap, p.photo_id, { alt: '', cls: 'bg', thumb: true }) ?? '';
+  const sex = p.sex === 'female' ? 'Female' : 'Male';
+  const held = p.status === 'reserved' || p.status === 'placed';
+  const status = STATUS_TEXT[p.status] ?? '';
+  const reg = [l.name, p.collar].filter(Boolean).join(' · ');
+  const action = p.status === 'available'
+    ? (pageOn(snap, 'waitlist', ctx) ? '<a class="more" href="/waitlist">Ask about this puppy</a>' : '<a class="more" href="/contact">Ask about this puppy</a>')
+    : held ? `<span class="small muted">${p.status === 'reserved' ? 'Reserved for a waitlist family' : 'Gone to a new home'}</span>` : '';
+  return `<div class="flip" tabindex="0" role="button" aria-label="${attr(p.name)}: turn the card over">
+    <div class="flip-in">
+      <div class="face front">${held ? `<span class="ribbon">${esc(status)}</span>` : ''}${photo}<span class="turn" aria-hidden="true">↻</span>
+        <div class="cap"><span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span><span class="line1"><span>${esc([sex, p.color].filter(Boolean).join(' · '))}</span><span class="status ${p.status === 'available' ? 'avail' : 'res'}">${esc(status)}</span></span></div></div>
+      <div class="face back">${bg}<span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span>
+        <span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li></ul>
+        ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}${action}</div>
+    </div></div>`;
+}
+
+// ---------- other blocks ----------
+
+export function slider(items, { cls = '', ctl = '' } = {}) {
+  return `<div class="slider" data-slider><div class="track${cls ? ` ${cls}` : ''}">${items.join('')}</div>
+    <div class="slider-ctl">${ctl || '<span></span>'}<div class="arrows"><span class="count"></span><button class="arrow prev" type="button" aria-label="Previous">←</button><button class="arrow next" type="button" aria-label="Next">→</button></div></div></div>`;
+}
+
+export function reviewCard(snap, r) {
+  const stars = r.rating ? `<span class="stars" aria-label="${r.rating} stars">${'★'.repeat(r.rating)}</span>` : '';
+  const who = [r.first_name, r.town].filter(Boolean).join(', ');
+  const sub = r.puppy_name ? `${r.puppy_name}'s family${r.home_month ? `, home ${fmtMonth(r.home_month)}` : ''}` : `${snap.site.monogram || snap.site.kennel_name} family`;
+  const photo = img(snap, r.photo_id, { alt: '', thumb: true }) ?? '';
+  return `<article class="review"${r.topic ? ` data-topic="${attr(r.topic)}"` : ''}>${stars}<blockquote>${esc(r.quote)}</blockquote><div class="who">${photo}<div><b>${esc(who)}</b><div class="muted small">${esc(sub)}</div></div></div></article>`;
+}
+
+export const expanders = (rows) => rows.map((e) => `<details class="x"${e.start_open ? ' open' : ''}><summary>${esc(e.heading)}</summary><div class="body">${paras(e.body)}</div></details>`).join('');
+
+export function pagehead(page, fallback, { ornament = true } = {}) {
+  const heading = page?.heading || fallback.heading;
+  const eyebrow = page?.eyebrow ?? fallback.eyebrow;
+  const lede = page?.lede ?? fallback.lede;
+  return `<div class="wrap pagehead">${ornament ? '<svg class="sprig l" aria-hidden="true"><use href="#sprig"/></svg><svg class="sprig r" aria-hidden="true"><use href="#sprig"/></svg>' : ''}${eyebrow ? `<span class="eyebrow">${esc(eyebrow)}</span>` : ''}<h1>${esc(heading)}</h1>${lede ? `<p class="lede">${esc(lede)}</p>` : ''}</div>`;
+}
+
+export function head(eyebrow, heading, lede, { ornament = false } = {}) {
+  return `<div class="head">${ornament ? '<svg class="sprig l" aria-hidden="true"><use href="#sprig"/></svg><svg class="sprig r" aria-hidden="true"><use href="#sprig"/></svg>' : ''}${eyebrow ? `<span class="eyebrow">${esc(eyebrow)}</span>` : ''}${heading ? `<h2>${esc(heading)}</h2>` : ''}${lede ? `<p class="lede">${esc(lede)}</p>` : ''}</div>`;
+}
+
+export const ICONS = {
+  shield: '<path d="M16 4l10 4v7c0 7-4.5 11-10 13C10.5 26 6 22 6 15V8z"/><path d="M11.5 16l3 3 6-6"/>',
+  home: '<path d="M5 15l11-9 11 9"/><path d="M8 13v13h16V13"/><path d="M13 26v-7h6v7"/>',
+  heart: '<path d="M16 27s-10-6.2-10-13a5.5 5.5 0 0110-3.2A5.5 5.5 0 0126 14c0 6.8-10 13-10 13z"/>',
+  star: '<path d="M16 4l3.6 7.4 8.1 1.2-5.9 5.7 1.4 8.1L16 22.6l-7.2 3.8 1.4-8.1-5.9-5.7 8.1-1.2z"/>',
+  paw: '<circle cx="9" cy="13" r="2.5"/><circle cx="14" cy="8.5" r="2.5"/><circle cx="20" cy="8.5" r="2.5"/><circle cx="25" cy="13" r="2.5"/><path d="M10.5 23c0-4 2.5-7.5 5.5-7.5s5.5 3.5 5.5 7.5c0 2.5-2.5 3.5-5.5 3.5s-5.5-1-5.5-3.5z"/>',
+  leaf: '<path d="M7 25C7 13 14 6 26 6c0 12-7 19-19 19z"/><path d="M7 25L19 13"/>',
+};

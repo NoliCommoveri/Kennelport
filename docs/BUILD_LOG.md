@@ -299,3 +299,33 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   wildcard records, D1 and R2, two Workers Builds connections, OPS_TOKEN, checks).
 - 14 tests (`node --test`); both configs pass `wrangler deploy --dry-run`; checked live
   under `wrangler dev`.
+
+## 2026-11-02: phase 0 live on staging
+
+- Staging deployed at `kennelport-staging.kennelport.workers.dev` in KennelPort's own
+  Cloudflare account; `/ops` setup checks (D1, R2, root domain) all OK and `0001` applied.
+  Production waits for the domain.
+
+## 2026-11-02: phase 1 built (but custom domains)
+
+- `0002_content.sql`: dogs, health results, litters, puppies, reviews (`stories`),
+  steps, expanders, extras, home blocks, page settings, photos, snapshots, redirects, and
+  the kennel's own details on `sites` (with `show_other_prices`).
+- The content model (`src/content/model.js`) lists every field and its limits; content
+  goes in and out of `/ops` as one JSON document, checked whole before one batch write,
+  matched by slug so ids survive. The AK sample is that document (`akSample.js`).
+- Publish builds the visible site (ticked health results only, no hidden records,
+  approved reviews, only used photos), writes it to R2, then points the site at it;
+  keeps 10; undo steps back; renamed slugs redirect, chains collapsed.
+- The "ak" template: the AK sample's CSS and behaviour as server-rendered pages on the
+  plan's addresses, fonts served from the site, no inline styles (strict CSP), OG tags,
+  LocalBusiness data, sitemap and robots, a generated privacy page. The waitlist page is
+  a placeholder until phase 3.
+- Preview links (7 days, signed) set a cookie on the site's own host and render the draft
+  with a preview bar; pages are cached by snapshot, path and day.
+- `/ops`: sites list and create, content import/export, load the AK sample, photo upload
+  (resized in the browser, WebP or JPEG; the server checks type, size and camera data),
+  preview, publish, undo, suspend, close (everything deleted, 410 notice, name held) and
+  release.
+- CPU check (plan 4.4): well under 1 ms per step on five years of AK content; the free
+  plan is enough. 35 tests.

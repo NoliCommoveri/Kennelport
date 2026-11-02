@@ -1,10 +1,11 @@
 // A staging-shaped environment for tests, and a way to call the Worker as any host.
 import { worker, migrate, gate } from './worker.js';
 import { makeDb, makeBucket } from './d1.js';
+import { makeAssets } from './assets.js';
 
 export async function makeEnv(extra = {}, { migrated = true } = {}) {
   gate.resetGateCache();
-  const env = { DB: makeDb(), FILES: makeBucket(), ROOT_DOMAIN: 'kennelport.com', ENV_NAME: 'test', OPS_TOKEN: 'ops-token', ...extra };
+  const env = { DB: makeDb(), FILES: makeBucket(), ASSETS: makeAssets(), ROOT_DOMAIN: 'kennelport.com', ENV_NAME: 'test', OPS_TOKEN: 'ops-token', ...extra };
   if (migrated) await migrate.applyPending(env.DB);
   return env;
 }
