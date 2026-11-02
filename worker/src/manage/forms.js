@@ -64,6 +64,19 @@ const LABELS = {
   about: { text: ['Your story', 'Leave a blank line between paragraphs.'], facts: ['Facts', 'Pairs like "Litters a year" / "One or two".'] },
   contact: { location_note: ['Note about your location', 'For example "Exact address shared once your pickup is booked."'] },
   extras_page: { note: ['Note under the packages', null] },
+  payment: {
+    show_on_site: ['Show on my website', 'Off until you turn it on. It shows on your waitlist page under How to pay.'],
+    title: ['Heading', 'Leave empty for the usual name.'],
+    due_note: ['When it\'s due', 'For example "after we approve your application" or "within 48 hours of choosing your puppy".'],
+    methods: ['Ways to pay', 'One per row: the way, then what families need to pay that way, like "Venmo" and "@ak-bostons", or "Check" and "Payable to AK Boston Terriers". Amounts appear only if you type them here.'],
+    note: ['What to write in the payment note', 'For example "your full name and AK application".'],
+    pay_url: ['Link to your own payment page', 'Optional: Stripe, Square or PayPal. Shows as a button.'],
+    pay_label: ['Button wording', 'Leave empty for "Pay online".'],
+  },
+  safe_notice: {
+    enabled: ['Show the safe-payment notice', 'On your waitlist page and every puppy page. It warns families about scams that copy breeders\' photos and names.'],
+    text: ['Wording', null],
+  },
 };
 
 const ENUM_WORDS = {
@@ -83,7 +96,7 @@ export function labelFor(kind, name) {
 
 const enumWords = (kind, name, v) => ENUM_WORDS[`${name}_${kind}`]?.[v] ?? ENUM_WORDS[name]?.[v] ?? v;
 
-// ctx: { kind, photos: [{id, alt}], photoUrl(id), dogs: [{id, call_name}] }
+// ctx: { kind, photos: [{id, alt}], photoUrl(id), photoGroups, upload: {action, tags, alt}, dogs: [{id, call_name}] }
 export function field(name, f, value, ctx) {
   const [label, hint] = labelFor(ctx.kind, name);
   const id = `f-${name}`;
@@ -107,7 +120,7 @@ export function field(name, f, value, ctx) {
     case 'pairs': {
       const rows = [...(value ?? [])];
       while (rows.length < f.max) rows.push(['', '']);
-      return `<fieldset><legend>${esc(label)}${h}</legend>${rows.map(([a, b], i) => `<div class="pair"><input name="${name}.${i}.0" value="${esc(a)}" aria-label="${esc(label)} ${i + 1}, value" maxlength="${f.keyMax}"><input name="${name}.${i}.1" value="${esc(b)}" aria-label="${esc(label)} ${i + 1}, label" maxlength="${f.valueMax}"></div>`).join('')}</fieldset>`;
+      return `<fieldset><legend>${esc(label)}${h}</legend>${rows.map(([a, b], i) => `<div class="pair"><input name="${name}.${i}.0" value="${esc(a)}" aria-label="${esc(label)} ${i + 1}, ${esc(f.names?.[0] ?? 'value')}" maxlength="${f.keyMax}"${f.placeholders && !i ? ` placeholder="${esc(f.placeholders[0])}"` : ''}><input name="${name}.${i}.1" value="${esc(b)}" aria-label="${esc(label)} ${i + 1}, ${esc(f.names?.[1] ?? 'label')}" maxlength="${f.valueMax}"${f.placeholders && !i ? ` placeholder="${esc(f.placeholders[1])}"` : ''}></div>`).join('')}</fieldset>`;
     }
     case 'features': {
       const rows = [...(value ?? [])];
@@ -128,7 +141,7 @@ export function field(name, f, value, ctx) {
     case 'email':
       return `<label for="${id}">${esc(label)}${h}<input id="${id}" type="email" name="${name}" value="${esc(v)}"${req}></label>`;
     case 'slug':
-      return `<label for="${id}">${esc(label)}${h}<input id="${id}" name="${name}" value="${esc(v)}" pattern="[a-z0-9-]*" autocapitalize="none" spellcheck="false"></label>`;
+      return `<label for="${id}">${esc(label)}${h}<input id="${id}" name="${name}" value="${esc(v)}" pattern="[a-z0-9\\-]*" autocapitalize="none" spellcheck="false"></label>`;
     default:
       return f.multiline
         ? `<label for="${id}">${esc(label)}${h}<textarea id="${id}" name="${name}" rows="${f.max > 1000 ? 10 : 4}" maxlength="${f.max}"${req}>${esc(v)}</textarea></label>`
@@ -136,13 +149,31 @@ export function field(name, f, value, ctx) {
   }
 }
 
+// A photo picker shows the photos of what's being edited first (ctx.photoGroups:
+// [{ label, ids }], the first group being this record's own), then every other
+// photo folded away, and an Add photos button that uploads straight into the
+// first group, tagged with ctx.upload.tags (public/_kp/m/photos.js). Photos
+// chosen here are tagged with the record when the form is saved.
 function photoPicker(name, label, hint, chosen, ctx, { multiple, max }) {
   const photos = ctx.photos ?? [];
   const type = multiple ? 'checkbox' : 'radio';
+  const byId = new Map(photos.map((p) => [p.id, p]));
+  const groups = (ctx.photoGroups ?? [{ label: 'Photos', ids: photos.map((p) => p.id) }]).map((g) => ({ ...g, ids: g.ids.filter((id) => byId.has(id)) }));
+  const shown = new Set(groups.flatMap((g) => g.ids));
+  const strays = chosen.filter((id) => byId.has(id) && !shown.has(id));
+  groups[0] = { ...groups[0], ids: [...strays, ...groups[0].ids] };
+  for (const id of strays) shown.add(id);
+  const rest = photos.filter((p) => !shown.has(p.id));
+  const opt = (p) => `<label class="ph-opt"><input type="${type}" name="${name}" value="${esc(p.id)}"${chosen.includes(p.id) ? ' checked' : ''}><img src="${esc(ctx.photoUrl(p.id))}" alt="${esc(p.alt || 'Photo')}" loading="lazy"></label>`;
   const none = multiple ? '' : `<label class="ph-opt none"><input type="radio" name="${name}" value=""${chosen.length ? '' : ' checked'}><span>No photo</span></label>`;
-  const opts = photos.map((p) => `<label class="ph-opt"><input type="${type}" name="${name}" value="${esc(p.id)}"${chosen.includes(p.id) ? ' checked' : ''}><img src="${esc(ctx.photoUrl(p.id))}" alt="${esc(p.alt || 'Photo')}" loading="lazy"></label>`).join('');
-  return `<fieldset class="photos"><legend>${esc(label)}${hint ? `<span class="hint">${esc(hint)}</span>` : ''}${max ? `<span class="hint">Choose up to ${max}.</span>` : ''}</legend>
-    ${photos.length ? `<div class="ph-grid">${none}${opts}</div>` : `<p class="muted small">No photos yet. <a href="${esc(ctx.photosLink ?? '#')}">Add photos</a> first.</p>`}</fieldset>`;
+  const grid = (ids, first) => `<div class="ph-grid"${first ? ' data-first' : ''}>${first ? none : ''}${ids.map((id) => opt(byId.get(id))).join('')}</div>`;
+  const parts = groups.map((g, i) => (i === 0 || g.ids.length ? `<p class="ph-head">${esc(g.label)}${i === 0 && !g.ids.length ? ' <span class="muted small">· none yet</span>' : ''}</p>${grid(g.ids, i === 0)}` : ''));
+  const others = rest.length ? `<details class="ph-more"><summary>${groups[0].ids.length || groups.length > 1 ? 'Other photos' : 'Choose from your photos'} (${rest.length})</summary>${grid(rest.map((p) => p.id), false)}</details>` : '';
+  const up = ctx.upload;
+  const add = up ? `<div class="ph-add"><label class="button">Add photos<input type="file" accept="image/*" multiple data-add-photos></label><span class="muted small" role="status"></span></div>` : '';
+  return `<fieldset class="photos" data-picker data-name="${esc(name)}" data-type="${type}"${max ? ` data-max="${max}"` : ''}${up ? ` data-upload="${esc(up.action)}" data-tags="${esc(up.tags)}" data-alt="${esc(up.alt ?? '')}"` : ''}>
+    <legend>${esc(label)}${hint ? `<span class="hint">${esc(hint)}</span>` : ''}${max ? `<span class="hint">Choose up to ${max}.</span>` : ''}</legend>
+    ${parts.join('')}${others}${add}</fieldset>`;
 }
 
 // The web address goes last: most people never change it.

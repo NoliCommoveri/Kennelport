@@ -16,6 +16,17 @@
     if (f && e.target === f && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); f.classList.toggle('flipped'); }
   });
 
+  // How to pay: Copy buttons (hidden until this script runs). Where the clipboard
+  // isn't allowed, the details are selected instead, ready to copy by hand.
+  for (const b of $$('.copy[hidden]')) b.hidden = false;
+  document.addEventListener('click', async (e) => {
+    const c = e.target.closest('.copy');
+    if (!c) return;
+    try { await navigator.clipboard.writeText(c.dataset.copy); c.textContent = 'Copied'; }
+    catch { const r = document.createRange(); r.selectNodeContents(c.previousElementSibling); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); c.textContent = 'Selected'; }
+    setTimeout(() => { c.textContent = 'Copy'; }, 1600);
+  });
+
   // Sliding sets: snap track, arrows and "2 / 5".
   for (const s of $$('[data-slider]')) {
     const track = $('.track', s); const prev = $('.prev', s); const next = $('.next', s); const count = $('.count', s); const arrows = $('.arrows', s);

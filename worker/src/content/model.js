@@ -145,6 +145,24 @@ export const HOME_BLOCKS = {
 };
 export const HOME_BLOCK_ORDER = Object.keys(HOME_BLOCKS);
 
+// How to pay (plan 3.9): the application fee and the deposit, each its own card on
+// the waitlist page, off until the breeder turns it on. Methods are [method,
+// details] pairs ("Venmo", "@ak-bostons"). Amounts aren't fields: they follow the
+// prices rule (3.2) and appear only if typed into the wording.
+export const PAYMENT_KINDS = ['application_fee', 'deposit'];
+export const PAYMENT_FIELDS = {
+  show_on_site: BOOL,
+  title: S(60),
+  due_note: ML(240),
+  methods: { type: 'pairs', max: 6, keyMax: 24, valueMax: 160, placeholders: ['Venmo', '@your-handle'], names: ['way', 'details'] },
+  note: S(200),
+  pay_url: URL_,
+  pay_label: S(40),
+};
+// The safe-payment notice: on by default (plan 3.12), in the breeder's words or
+// the default (render/parts.js SAFE_NOTICE_TEXT).
+export const SAFE_NOTICE_FIELDS = { enabled: BOOL, text: ML(400) };
+
 // Icons a story feature may use: the template's own set.
 export const FEATURE_ICONS = ['shield', 'home', 'heart', 'star', 'paw', 'leaf'];
 

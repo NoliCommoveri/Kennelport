@@ -83,10 +83,11 @@ routes = [
 [env.production.observability]
 enabled = true
 
+# Setup step 3: the production database, created 2026-11-02.
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "kennelport"
-database_id = "REPLACE-WITH-PRODUCTION-D1-ID"
+database_id = "0f4ec578-79cb-444b-9cf4-614857acaf11"
 
 [[env.production.r2_buckets]]
 binding = "FILES"

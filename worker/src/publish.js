@@ -10,7 +10,7 @@
 // points the site at it, and records redirects for any address that changed. If
 // the R2 write fails nothing in D1 changes, so the old snapshot stays live.
 // The last KEEP snapshots are kept; older ones are deleted from D1 and R2.
-import { HOME_BLOCK_ORDER, PAGES } from './content/model.js';
+import { HOME_BLOCK_ORDER, PAGES, PAYMENT_KINDS } from './content/model.js';
 
 export const SNAPSHOT_VERSION = 1;
 export const KEEP = 10;
@@ -90,6 +90,17 @@ export async function buildSnapshot(env, siteId) {
     ...keep(x, ['site_id', 'sort', 'source']), featured: Boolean(x.featured), checklist: json(x.checklist, []),
   }));
 
+  // How to pay: only cards switched on; the notice is on unless switched off.
+  const payRows = Object.fromEntries((await all('SELECT * FROM payment_info WHERE site_id = ?')).map((p) => [p.kind, p]));
+  const payment = {};
+  for (const kind of PAYMENT_KINDS) {
+    const row = payRows[kind];
+    const c = row && row.show_on_site ? json(row.content, {}) : null;
+    if (c && (c.methods?.length || c.pay_url)) payment[kind] = c;
+  }
+  const notice = payRows.safe_notice;
+  payment.safe_notice = { enabled: notice ? Boolean(notice.show_on_site) : true, text: json(notice?.content, {}).text ?? null };
+
   // Every photo the visible site uses, and nothing else (plan 4.2).
   const used = new Set();
   const use = (id) => { if (id) used.add(id); };
@@ -115,7 +126,7 @@ export async function buildSnapshot(env, siteId) {
       instagram_url: site.instagram_url, template: site.template, scheme: site.scheme, dark_mode: site.dark_mode,
       show_other_prices: Boolean(site.show_other_prices),
     },
-    pages, home, dogs, litters, reviews, steps, expanders, extras, photos,
+    pages, home, dogs, litters, reviews, steps, expanders, extras, payment, photos,
   };
 }
 

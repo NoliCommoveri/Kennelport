@@ -83,5 +83,15 @@ export function changes(live, draft) {
   for (const [key, label, path] of [['policies', 'Policies', '/policies'], ['faq', 'FAQ', '/faq'], ['waitlist_help', 'Using your status page', '/waitlist/help']]) {
     if (!same(live.expanders[key] ?? [], draft.expanders[key] ?? [])) lines.push({ text: `${label}: edited`, path });
   }
+  // How to pay. Snapshots from before it existed had the notice on and no cards.
+  const pay = (snap) => snap.payment ?? { safe_notice: { enabled: true, text: null } };
+  const pa = pay(live); const pb = pay(draft);
+  for (const [kind, name] of [['application_fee', 'application fee'], ['deposit', 'deposit']]) {
+    if (same(pa[kind], pb[kind])) continue;
+    lines.push({ text: `How to pay, ${name}: ${!pa[kind] ? 'shown' : !pb[kind] ? 'no longer shown' : 'edited'}`, path: pb[kind] ? '/waitlist' : null });
+  }
+  if (!same(pa.safe_notice, pb.safe_notice)) {
+    lines.push({ text: `Safe-payment notice: ${pa.safe_notice?.enabled !== pb.safe_notice?.enabled ? (pb.safe_notice?.enabled ? 'switched on' : 'switched off') : 'wording edited'}`, path: '/waitlist' });
+  }
   return lines;
 }

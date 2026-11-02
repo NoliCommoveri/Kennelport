@@ -219,3 +219,64 @@ export const ICONS = {
   paw: '<circle cx="9" cy="13" r="2.5"/><circle cx="14" cy="8.5" r="2.5"/><circle cx="20" cy="8.5" r="2.5"/><circle cx="25" cy="13" r="2.5"/><path d="M10.5 23c0-4 2.5-7.5 5.5-7.5s5.5 3.5 5.5 7.5c0 2.5-2.5 3.5-5.5 3.5s-5.5-1-5.5-3.5z"/>',
   leaf: '<path d="M7 25C7 13 14 6 26 6c0 12-7 19-19 19z"/><path d="M7 25L19 13"/>',
 };
+
+// ---------- how to pay, and the safe-payment notice (plan 3.9) ----------
+
+export const SAFE_NOTICE_TEXT = "We'll never ask you to pay by gift card, wire transfer or into anyone else's account, and we only contact you from the details on this website. If someone asks you to, please tell us.";
+const PAY_TITLES = { application_fee: 'Application fee', deposit: 'Puppy deposit' };
+
+// The cards switched on, in order: [kind, content].
+export const payCards = (snap) => ['application_fee', 'deposit'].map((k) => [k, snap.payment?.[k]]).filter(([, v]) => v);
+// How to pay lives on the waitlist page, so links to it need that page on.
+export const payShown = (snap, ctx) => pageOn(snap, 'waitlist', ctx) && payCards(snap).length > 0;
+const noticeOn = (snap) => snap.payment?.safe_notice?.enabled ?? true;
+const noticeText = (snap) => snap.payment?.safe_notice?.text || SAFE_NOTICE_TEXT;
+
+// "Venmo, Zelle or PayPal": every method on the cards shown.
+function methodList(snap) {
+  const names = [...new Set(payCards(snap).flatMap(([, c]) => (c.methods ?? []).map(([m]) => m).filter(Boolean)))];
+  return names.length > 1 ? `${names.slice(0, -1).join(', ')} or ${names.at(-1)}` : names[0] ?? '';
+}
+
+// What a Copy button copies: an email address, an @handle or a phone number in
+// the details, if there is one.
+function copyable(detail) {
+  const m = String(detail ?? '').match(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+|@[\w.-]+|\+?\d[\d ().-]{6,}\d/);
+  return m ? m[0] : null;
+}
+
+function payCard([kind, c]) {
+  const methods = (c.methods ?? []).map(([m, d]) => {
+    const copy = copyable(d);
+    return `<li><span class="m">${esc(m)}</span><span class="d">${esc(d)}</span>${copy ? `<button type="button" class="copy" data-copy="${attr(copy)}" hidden>Copy</button>` : '<span></span>'}</li>`;
+  }).join('');
+  return `<article class="pay-card">
+    <h3>${esc(c.title || PAY_TITLES[kind])}</h3>
+    ${c.due_note ? `<p class="pay-when"><b>When:</b> ${esc(c.due_note)}</p>` : ''}
+    ${methods ? `<ul class="methods">${methods}</ul>` : ''}
+    ${c.note ? `<p class="pay-note"><b>In the note:</b> ${esc(c.note)}</p>` : ''}
+    ${c.pay_url ? `<p><a class="btn solid" href="${attr(c.pay_url)}" rel="noopener noreferrer" target="_blank">${esc(c.pay_label || 'Pay online')}</a></p>` : ''}
+  </article>`;
+}
+
+// The How to pay section of the waitlist page, with the notice under it.
+export function paySection(snap) {
+  const cards = payCards(snap);
+  const notice = noticeOn(snap) ? noticeText(snap) : '';
+  if (!cards.length && !notice) return '';
+  const heading = cards.length === 2 ? 'Paying your fee and deposit' : cards.length ? `Paying your ${(cards[0][1].title || PAY_TITLES[cards[0][0]]).toLowerCase()}` : 'Paying safely';
+  return `<section class="pay" id="how-to-pay" aria-labelledby="pay-h">
+    <header class="center"><span class="eyebrow">How to pay</span><h2 id="pay-h">${esc(heading)}</h2>${cards.length ? '<p class="muted">Use any of the ways below. Put the note shown in your payment so we can match it to you.</p>' : ''}</header>
+    ${cards.length ? `<div class="pay-grid${cards.length === 1 ? ' one' : ''}">${cards.map(payCard).join('')}</div>` : ''}
+    ${notice ? `<p class="pay-safe" role="note">${cards.length ? 'These are our only payment details. ' : ''}${esc(notice)}</p>` : ''}
+  </section>`;
+}
+
+// The notice on its own (puppy pages): which ways the breeder takes payment, and
+// where the details are.
+export function safeNotice(snap, ctx) {
+  if (!noticeOn(snap)) return '';
+  const list = methodList(snap);
+  const where = payShown(snap, ctx) ? ` <a href="/waitlist#how-to-pay">How to pay</a>` : '';
+  return `<p class="pay-safe" role="note">${list ? `We take payment only by ${esc(list)}${where ? `, to the details under${where}` : ''}. ` : where ? `Our only payment details are under${where}. ` : ''}${esc(noticeText(snap))}</p>`;
+}

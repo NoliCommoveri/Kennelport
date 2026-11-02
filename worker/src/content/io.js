@@ -6,7 +6,7 @@
 //     home: { hero: { enabled, ... } }, dogs: [{ ..., health: [...] }],
 //     litters: [{ ..., dam: '<dog slug>', puppies: [...] }], reviews: [...],
 //     steps: [...], expanders: { policies: [...], faq: [...], waitlist_help: [...] },
-//     extras: [...] }
+//     extras: [...], payment: { application_fee: {...}, deposit: {...}, safe_notice: {...} } }
 //
 // Every section is optional. A section that is present replaces that section of
 // the draft: dogs, litters and puppies are matched by slug, so their ids (and the
@@ -15,11 +15,11 @@
 // writes go in one batch, so an import lands whole or not at all.
 import {
   SITE_FIELDS, DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS,
-  STEP_FIELDS, EXPANDER_FIELDS, EXPANDER_PAGES, EXTRA_FIELDS, HOME_BLOCKS, PAGES,
+  STEP_FIELDS, EXPANDER_FIELDS, EXPANDER_PAGES, EXTRA_FIELDS, HOME_BLOCKS, PAGES, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS,
   ContentError, cleanRecord, cleanValue,
 } from './model.js';
 
-const SECTIONS = ['site', 'pages', 'home', 'dogs', 'litters', 'reviews', 'steps', 'expanders', 'extras'];
+const SECTIONS = ['site', 'pages', 'home', 'dogs', 'litters', 'reviews', 'steps', 'expanders', 'extras', 'payment'];
 const MAX_ITEMS = 200;
 
 const now = () => new Date().toISOString();
@@ -138,6 +138,14 @@ export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = ne
       return extra;
     });
   }
+  if ('payment' in doc) {
+    if (!doc.payment || typeof doc.payment !== 'object' || Array.isArray(doc.payment)) throw new ContentError('payment', 'must be an object');
+    out.payment = {};
+    for (const [kind, v] of Object.entries(doc.payment)) {
+      if (kind !== 'safe_notice' && !PAYMENT_KINDS.includes(kind)) throw new ContentError(`payment.${kind}`, `not a kind (${[...PAYMENT_KINDS, 'safe_notice'].join(', ')})`);
+      out.payment[kind] = cleanRecord(kind === 'safe_notice' ? SAFE_NOTICE_FIELDS : PAYMENT_FIELDS, v, `payment.${kind}`);
+    }
+  }
   return out;
 }
 
@@ -245,6 +253,11 @@ export async function importContent(env, siteId, doc) {
     s.push(db.prepare('DELETE FROM expanders WHERE site_id = ? AND page = ?').bind(siteId, page));
     rows.forEach((e, i) => s.push(insert(db, 'expanders', { id: uuid(), site_id: siteId, page, ...e, start_open: e.start_open ?? 0, sort: i })));
   }
+  for (const [kind, v] of Object.entries(clean.payment ?? {})) {
+    const notice = kind === 'safe_notice';
+    const content = Object.fromEntries(Object.entries(v).filter(([k, x]) => k !== 'enabled' && k !== 'show_on_site' && x !== null && !(Array.isArray(x) && !x.length)));
+    s.push(upsert(db, 'payment_info', ['site_id', 'kind'], { site_id: siteId, kind, show_on_site: (notice ? v.enabled ?? 1 : v.show_on_site) ? 1 : 0, content: JSON.stringify(content) }));
+  }
   if (clean.extras) {
     s.push(db.prepare('DELETE FROM extras WHERE site_id = ?').bind(siteId));
     clean.extras.forEach((x, i) => s.push(insert(db, 'extras', {
@@ -305,5 +318,11 @@ export async function exportContent(env, siteId) {
     if (out.checklist) out.checklist = JSON.parse(out.checklist);
     return out;
   });
+  const pay = await all('SELECT * FROM payment_info WHERE site_id = ?', siteId);
+  if (pay.length) {
+    doc.payment = Object.fromEntries(pay.map((p) => [p.kind, p.kind === 'safe_notice'
+      ? { enabled: Boolean(p.show_on_site), ...JSON.parse(p.content) }
+      : { show_on_site: Boolean(p.show_on_site), ...JSON.parse(p.content) }]));
+  }
   return doc;
 }

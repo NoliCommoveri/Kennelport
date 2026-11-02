@@ -4,8 +4,9 @@
 // changed; nothing is live until Publish.
 import {
   DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, EXTRA_FIELDS,
-  EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, ContentError, cleanRecord, cleanValue, slugify,
+  EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, cleanRecord, cleanValue, slugify,
 } from './model.js';
+import { untagStatements } from '../photoTags.js';
 
 const omit = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) => !keys.includes(k)));
 
@@ -153,7 +154,7 @@ export async function setField(env, siteId, kind, id, field, value) {
 
 export async function removeRecord(env, siteId, kind, id) {
   const k = kindOf(kind);
-  const s = [];
+  const s = untagStatements(env, siteId, kind, id);
   if (kind === 'dogs') {
     s.push(env.DB.prepare('UPDATE litters SET dam_id = NULL WHERE site_id = ? AND dam_id = ?').bind(siteId, id));
     s.push(env.DB.prepare('UPDATE litters SET sire_id = NULL WHERE site_id = ? AND sire_id = ?').bind(siteId, id));
@@ -232,3 +233,28 @@ export async function saveBlock(env, siteId, key, input) {
 }
 
 const stripNulls = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && !(Array.isArray(v) && !v.length)));
+
+// ---------- how to pay, and the safe-payment notice (plan 3.9) ----------
+
+export async function getPayment(env, siteId, kind) {
+  const row = await env.DB.prepare('SELECT * FROM payment_info WHERE site_id = ? AND kind = ?').bind(siteId, kind).first();
+  const content = row ? JSON.parse(row.content) : {};
+  if (kind === 'safe_notice') return { enabled: row ? Boolean(row.show_on_site) : true, ...content };
+  return { show_on_site: Boolean(row?.show_on_site), ...content, source: row?.source ?? 'kennelport' };
+}
+
+export async function savePayment(env, siteId, kind, input) {
+  const notice = kind === 'safe_notice';
+  if (!notice && !PAYMENT_KINDS.includes(kind)) throw new ContentError(kind, 'not a kind of payment');
+  const fields = notice ? SAFE_NOTICE_FIELDS : PAYMENT_FIELDS;
+  const clean = cleanRecord(fields, omit(input, ['source']), kind);
+  const on = notice ? clean.enabled : clean.show_on_site;
+  const content = stripNulls(omit(clean, ['enabled', 'show_on_site']));
+  if (!notice && on && !content.methods?.length && !content.pay_url) throw new ContentError('methods', 'add at least one way to pay, or a payment page link, before showing it');
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO payment_info (site_id, kind, show_on_site, content) VALUES (?, ?, ?, ?)
+      ON CONFLICT (site_id, kind) DO UPDATE SET show_on_site = excluded.show_on_site, content = excluded.content`)
+      .bind(siteId, kind, on ? 1 : 0, JSON.stringify(content)),
+    touch(env, siteId),
+  ]);
+}
