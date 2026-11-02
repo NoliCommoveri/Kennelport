@@ -90,9 +90,11 @@ For the forms and notifications (phase 2), on each Worker:
   notifications on again.
 - **Turnstile** (decision 17): in the Cloudflare dashboard, **Turnstile → Add widget**,
   with the hostnames the sites use (`kennelport.com`, and for staging
-  `kennelport-staging.kennelport.workers.dev`), mode **Managed**. Add its site key as the
-  variable `TURNSTILE_SITE_KEY` and its secret key as the secret `TURNSTILE_SECRET`.
-  Until both are set the forms rely on the hidden honeypot field and rate limits, and
+  `kennelport-staging.kennelport.workers.dev`), mode **Managed**. Add its secret key as
+  the secret `TURNSTILE_SECRET` in the dashboard. The site key goes in `wrangler.toml`
+  as `TURNSTILE_SITE_KEY` in that Worker's vars (send it to Claude to commit): a deploy
+  replaces a Worker's plain variables with the file's, so one added only in the
+  dashboard is lost on the next deploy. Secrets aren't affected. Until both are set the forms rely on the hidden honeypot field and rate limits, and
   `/ops` says so.
 
 ## 6. Check it works
