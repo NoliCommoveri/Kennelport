@@ -106,7 +106,9 @@ export async function serveSite(request, env, ctxWorker, subdomain) {
     }
     const exp = Number(token.split('.')[1]);
     const maxAge = Math.max(0, exp - Math.floor(Date.now() / 1000));
-    return new Response(null, { status: 303, headers: { location: '/', 'set-cookie': `${PREVIEW_COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`, 'cache-control': 'no-store' } });
+    const next = url.searchParams.get('next') ?? '/';
+    const location = /^\/(?!\/)/.test(next) ? next : '/';
+    return new Response(null, { status: 303, headers: { location, 'set-cookie': `${PREVIEW_COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`, 'cache-control': 'no-store' } });
   }
   if (url.pathname === '/__preview/exit') {
     return new Response(null, { status: 303, headers: { location: '/', 'set-cookie': `${PREVIEW_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`, 'cache-control': 'no-store' } });

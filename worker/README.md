@@ -14,6 +14,12 @@ Cloudflare dashboard: [`../docs/KennelPort_Setup.md`](../docs/KennelPort_Setup.m
   a site (snapshot or preview, photos, cache). `src/render/`: the "ak" template's pages,
   with its CSS, JS and fonts in `public/_kp/`.
 - `src/photos.js`: the server's photo checks; `src/sites.js`: create, suspend, close.
+- `src/auth.js`, `src/mail.js`: sign-in by emailed code, invites, sessions.
+- `src/manage/`: the manage app. `index.js` sign-in and home; `screens.js` the editing
+  screens; `forms.js` inputs and wording for every content field. `src/content/records.js`
+  saves one record at a time; `src/diff.js` is Publish's list of changes. Its CSS, JS,
+  service worker and icons are in `public/_kp/m/`; bump `APP_VERSION` (index.js) and
+  `VERSION` (sw.js) together when they change.
 - `scripts/cpu-check.mjs`: CPU time of publishing and rendering (plan 4.4).
 - `src/migrate.js`, `src/gate.js`, `src/lib/`: copied from KennelOS cloud; a fix found in
   one copy belongs in both.

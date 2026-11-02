@@ -344,3 +344,19 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   and preview), installable (manifest, icons, service worker: screens open offline,
   nothing saves offline; a failed save keeps the form). Editing tiles say "next update".
 - 44 tests.
+
+## 2026-11-02: phase 2, batch 2: editing in the manage app
+
+- Editing screens for the kennel details, every page's switch and wording, Home block by
+  block, dogs with their health results, litters with their puppies, reviews, How it
+  works steps, policies, FAQ, the status-page help, and extras: add, edit, remove,
+  reorder. Forms come from the content model, with the breeder's wording in
+  `manage/forms.js`; a form with a problem comes back with what was typed and the reason.
+- Puppies: one screen with every current puppy's status, set in one tap.
+- Photos: upload from the camera roll (the same resizing and checks), describe, remove;
+  photo pickers on every form that takes one.
+- Publish: the list of changes since the live version ("Opal: Reserved", "Willow: photo
+  added", "FAQ page: switched off"), each with a preview link that opens at that page,
+  then Publish or Undo.
+- New records start with Show on my website ticked. Records of another site or parent
+  are out of reach. 54 tests.

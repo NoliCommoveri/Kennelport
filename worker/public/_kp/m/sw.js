@@ -2,8 +2,8 @@
 // saved offline. Pages come from the network first and fall back to the last copy
 // (or a plain offline screen); the app's own files come from the cache first.
 // Signed-in pages are cached per browser only. Bump VERSION when these files change.
-const VERSION = 'kp-manage-1';
-const SHELL = ['/offline', '/_kp/m/app.css?v=1', '/_kp/m/app.js?v=1', '/_kp/m/icon-192.png'];
+const VERSION = 'kp-manage-2';
+const SHELL = ['/offline', '/_kp/m/app.css?v=2', '/_kp/m/app.js?v=2', '/_kp/m/icon-192.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
