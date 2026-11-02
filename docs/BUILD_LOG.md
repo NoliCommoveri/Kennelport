@@ -190,3 +190,11 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   when due, methods with copy buttons, the note to include, a Pay button, and the
   only-real-details line), linked from How it works steps 2 and 4 and the footer. Payment
   details are made up.
+
+## 2026-11-02: status-page help
+
+- Plan 3.8: a **Using your status page** page (`/waitlist/help`), opened from a button in
+  the Current Applicants box: breeder-written expanders on getting a code, signing in,
+  choosing or passing, asking for changes, messages and pickup times, leaving the list.
+  Starts as a draft outline from what KennelOS's status page does. Added to the sample
+  (`#applicant-help`) with draft text; the owner's breeder will write the real wording.

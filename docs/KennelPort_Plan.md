@@ -216,6 +216,7 @@ The subdomain picks the site; the path picks the page:
 | Extras | `/extras` |
 | Pickup and delivery | `/pickup` |
 | Waitlist or application | `/waitlist` |
+| Using your status page | `/waitlist/help` |
 | Policies | `/policies` |
 | Going home | `/going-home` |
 | The breed | `/breed` |
@@ -451,6 +452,15 @@ families are left out, a search box, Available Puppies and Coming up as expander
   and applications never pass through KennelPort.
 - If KennelOS can't be reached, the page shows the last list it read with its "Updated"
   date, or a link to the KennelOS list.
+- **Using your status page** (`/waitlist/help`): a **How to use your status page** button
+  in the Current Applicants box opens a page the breeder writes for families already on
+  the list: how to get a code and sign in, what the page shows, choosing a puppy or
+  passing, asking for changes (a pause, which litters, a preference), messages and pickup
+  times, leaving the list, signing in on a new device. Expanders, any number, in the
+  breeder's words. New sites start with a draft outline that follows what KennelOS's
+  status page can do (`cloud/public/family/status.js`), clearly marked as a draft until
+  the breeder rewrites it. It has its own **On** switch, and appears only when the
+  waitlist comes from KennelOS.
 - **On a phone** the list stacks: number, then the name with what they want underneath,
   then the ⓘ, so it never runs off the screen or scrolls sideways. Every part of the
   page fits a 320px-wide screen.
@@ -895,7 +905,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `steps` | site_id, page (`how_it_works` / `raising`), order, heading, body, detail (the More detail expander), `source` |
 | `site_pages` | site_id, page key, enabled, menu_label, order within its menu group (section 3.12) |
 | `home_blocks` | site_id, block key (`hero` / `facts` / `story` / `dogs` / `litters` / `reviews` / `waitlist`), enabled, content (wording, photos, facts, features) |
-| `expanders` | site_id, page (`policies` / `faq`), order, heading, body, start_open |
+| `expanders` | site_id, page (`policies` / `faq` / `waitlist_help`), order, heading, body, start_open |
 | `extras` | site_id, kind (`item` / `homegoing`), group, name, description, photo, price_from, price_to, weeks, lead_in, checklist, closing, featured, order, `source` (section 3.4) |
 | `files` | site_id, r2_key, title, bytes, public, removed_at (downloads and certificates, PDFs only) |
 | `events` | site_id, title, date, town |
@@ -937,7 +947,7 @@ Each phase is useful by itself, so you can stop after any one.
 | **0. Set up** | Domain on Cloudflare, wildcard DNS, empty Worker with D1 and R2, staging and production | — |
 | **1. Renderer + ops** | One template, the ops console, preview links, snapshot publish and undo (4.1), reserved names, OG tags, close a site and the closed notice | Build and host the site yourself, with no breeder login yet |
 | **2. Breeder login** | Email-code sign-in, manage app, preview and publish, photo upload with resizing and the server checks (4.2), storage limits, **Delete my site** with download-a-copy | Hand the site over |
-| **3. The first site's pages** | Everything in the AK sample (decision 14): Home with its blocks, About (story, reviews, contact), Kennel residents with flip cards and health results (3.7), Puppies (available, upcoming, older) with statuses (3.6), How it works steps (3.11), Extras with homegoing packages (3.4), Policies and FAQ, the waitlist page (3.8, decision 21) with how to pay the application fee and deposit (3.9), inquiry form and inbox (3.10); plus the safe-payment notice, privacy page and search basics | The family site is complete and live |
+| **3. The first site's pages** | Everything in the AK sample (decision 14): Home with its blocks, About (story, reviews, contact), Kennel residents with flip cards and health results (3.7), Puppies (available, upcoming, older) with statuses (3.6), How it works steps (3.11), Extras with homegoing packages (3.4), Policies and FAQ, the waitlist page and its status-page help (3.8, decision 21) with how to pay the application fee and deposit (3.9), inquiry form and inbox (3.10); plus the safe-payment notice, privacy page and search basics | The family site is complete and live |
 | **4. Customisation and schemes** | Page and Home-block switches, menu labels, any-length steps, expanders and extras (3.12); the colour schemes with light and dark versions (3.13) | Other breeders' sites can differ from AK's without new code |
 
 If the first site wants its own domain, connect it by hand (section 2.4).

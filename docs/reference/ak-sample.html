@@ -321,6 +321,8 @@ td.tip, th.tip { width: 36px; text-align: right; }
   table.list td.tip { grid-column: 3; grid-row: 1 / 3; align-self: center; width: auto; }
 }
 
+.draft-note { max-width: 820px; margin: 0 auto 16px; border: 1px dashed var(--brass); color: var(--muted); padding: 10px 14px; font-size: .88rem; border-radius: var(--r); }
+
 /* How to pay */
 .pay { max-width: 860px; margin: 28px auto 0; display: grid; gap: 16px; }
 .pay > header { display: grid; gap: 6px; }
@@ -540,6 +542,7 @@ footer.site .fine { grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,
           <form class="inline" id="code-form"><input id="code" type="text" inputmode="numeric" maxlength="7" placeholder="6-digit code" aria-label="Verification code" required><button class="btn solid" type="submit">View my details</button></form>
           <form class="inline" id="email-form"><input id="email" type="email" required placeholder="Email used on your application" aria-label="Email used on your application"><button class="btn line" type="submit">Send me a new code</button></form>
           <p class="note-sample" id="signin-result" role="status"></p>
+          <p><a class="btn line" href="#applicant-help">How to use your status page</a></p>
         </details>
         <details class="card" id="wl-available" open><summary><h3>Available Puppies</h3></summary><ul class="plain" id="wl-available-list"></ul></details>
         <details class="card" id="wl-upcoming"><summary><h3>Coming up</h3></summary><ul class="plain" id="wl-upcoming-list"></ul><p class="small muted" style="margin-top:12px">Plans can change. Heat dates are estimates: the month shown is approximate and can shift.</p></details>
@@ -596,6 +599,16 @@ footer.site .fine { grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,
       <div><button class="btn solid" type="submit">Send application</button></div>
       <p class="done" id="apply-done" hidden></p>
     </form>
+  </div></div>
+</section>
+
+<!-- ============ APPLICANT HELP ============ -->
+<section data-view="applicant-help" id="applicant-help">
+  <div class="wrap pagehead"><svg class="sprig l"><use href="#sprig"/></svg><svg class="sprig r"><use href="#sprig"/></svg><span class="eyebrow">Waitlist</span><h1>Using your status page</h1><p class="lede">Already on our waitlist? Your private status page shows your place, your litters and your turn, and it's where you send us changes.</p></div>
+  <div class="section" style="padding-top:28px"><div class="wrap">
+    <p class="draft-note">Draft outline. AK Boston Terriers will write this page; the headings below follow what the status page can do.</p>
+    <div class="acc" id="help-acc"></div>
+    <p style="text-align:center;margin-top:28px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap"><a class="btn solid" href="#wl-details">Sign in to see your details</a><a class="btn line" href="#waitlist">Back to the waitlist</a></p>
   </div></div>
 </section>
 </main>
@@ -661,6 +674,16 @@ const PKGS = [
   { weeks: 10, name: '10-Week Homegoing', price: '$2,500–$2,800', text: 'Two additional weeks with us before your puppy moves to their forever home.', lead: 'During this additional time, we continue working on:', items: ['Individualized socialization', 'Household exposure', 'Confidence-building experiences', 'Crate-training foundations', 'Potty-training foundations', 'Handling & grooming introduction', 'Age-appropriate enrichment', 'Household manners and routine'], foot: 'The extra time lets your puppy keep maturing within the structure and routine of our home before making the move to your family.' },
   { weeks: 12, name: '12-Week Extended Homegoing', price: '$3,000–$3,200', text: 'An additional month of development beyond the traditional 8-week homegoing age.', lead: 'Your puppy will continue receiving:', items: ['Individualized socialization', 'Household and environmental exposure', 'Confidence-building experiences', 'Crate-training foundations', 'Potty-training development', 'Grooming and handling practice', 'Age-appropriate enrichment and training', 'Continued structure and household routines'] },
   { weeks: 16, name: '16-Week Premier Development Package', price: '$4,200–$4,400', top: true, text: 'Our most comprehensive option, for families who want their puppy to stay with us through 16 weeks of age: eight more weeks for maturity, socialization, potty training, training foundations and veterinary care.', lead: 'During this time, your puppy continues receiving:', items: ['Individualized socialization', 'Household & environmental exposure', 'Confidence-building experiences', 'Crate-training foundations', 'Potty training', 'Training foundations', 'Veterinary care through 16 weeks'] }
+];
+const HELP = [
+  ['1. Get your sign-in code', 'Draft: we email a 6-digit code to the address on your application. No code? Enter that email under Current Applicants and press Send me a new code. Check your spam folder.'],
+  ['2. Sign in', 'Draft: enter the code under Current Applicants: See Your Details. Codes last 15 minutes and work once. This device remembers you for 90 days.'],
+  ['3. What you\'ll see', 'Draft: your place on the list, the litters you\'re waiting for and your place in each, your application fee if it\'s still due, and your turn when it comes.'],
+  ['4. Choosing your puppy, or passing', 'Draft: when it\'s your turn, the puppies still open show on your page. Choose one, or pass on this litter, before the deadline shown.'],
+  ['5. Asking for changes', 'Draft: ask for a pause, change which litters you\'re waiting for, or ask to change a preference such as sex or color. Requests come to us to approve, and your page shows them as waiting until we do.'],
+  ['6. Messages and pickup times', 'Draft: send us a private message, and once your puppy is nearly ready, ask for a pickup time.'],
+  ['7. Leaving the list', 'Draft: you can ask to leave the waitlist from your page at any time.'],
+  ['8. A new phone or computer', 'Draft: sign in again with a new code. Signing out on a shared computer keeps your page private.']
 ];
 // The KennelOS public list, in the shape the projection publishes (position, listed name, wants, added).
 const WL = {
@@ -738,6 +761,7 @@ $('steps-track').innerHTML = STEPS.map(([t, s, more, pay], i) => `<article class
 const acc = (list, openFirst) => list.map(([q, a], i) => `<details class="x"${openFirst && i === 0 ? ' open' : ''}><summary>${esc(q)}</summary><div class="body"><p>${esc(a)}</p></div></details>`).join('');
 $('pkgs').innerHTML = PKGS.map((p) => `<article class="pkg${p.top ? ' top' : ''}"><div class="weeks"><b>${p.weeks}</b><span>weeks${p.top ? ' · most complete' : ''}</span></div><h3>${esc(p.name)}</h3><div class="price">${esc(p.price)}</div><p>${esc(p.text)}</p><details${window.matchMedia('(min-width: 901px)').matches ? ' open' : ''}><summary>What's included</summary><p class="small muted" style="margin-top:8px">${esc(p.lead)}</p><ul class="checks">${p.items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>${p.foot ? `<p class="small muted" style="margin-top:10px">${esc(p.foot)}</p>` : ''}</details><a class="more" href="#apply">Ask about this package</a></article>`).join('');
 $('policy-acc').innerHTML = acc(POLICIES, true);
+$('help-acc').innerHTML = acc(HELP, true);
 $('faq-acc').innerHTML = acc(FAQ, true);
 
 // ---------- Waitlist (mirrors KennelOS's public list) ----------
@@ -843,6 +867,7 @@ function route() {
   else if (id === 'residents') { $('dog-filter').value = 'all'; filterDogs(); }
   nav.classList.remove('show'); $('menu-toggle').setAttribute('aria-expanded', 'false');
   for (const o of nav.querySelectorAll('li.open')) o.classList.remove('open');
+  if (id === 'wl-details') $('wl-details').open = true;
   if (id === 'apply') $('apply').scrollIntoView({ block: 'start' });
   else if (el === view || id === 'girls' || id === 'boys') window.scrollTo({ top: 0, behavior: 'auto' });
   else requestAnimationFrame(() => el.scrollIntoView({ block: 'start' }));
