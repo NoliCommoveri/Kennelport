@@ -265,6 +265,3 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   list flow; it arrives in KennelPort's Inbox only for breeders running their list by
   hand. Worked out from the website feed's `apply` link, not a setting; the former
   **Send to my KennelOS waitlist** choice is gone. Plan 3.8, 3.10 and decision 26.
-- Then: a connected KennelOS waitlist that isn't taking applications online gets no form
-  at all (Apply hidden, the **Waitlist closed** message shown); KennelPort's own form is
-  only for sites with no KennelOS waitlist connected.
