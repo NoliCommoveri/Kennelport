@@ -238,3 +238,22 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   the bundle, Use my KennelOS prices, Family login) and phase 5 (albums, embeds, sharing);
   customisation and schemes become phase 6. Both items left the backlog; decision 14 and
   the plan's opening updated.
+
+## 2026-11-02: plan review; backlog to its own doc; push notifications
+
+- The owner reviewed the plan and kept the multi-user setup in version 1 (they mean to
+  iterate quickly).
+- Backlog moved to `KennelPort_Backlog.md`: its order, requests, guided custom domains,
+  the pickup page, the rest of 3.9, the survey pages not in version 1, and their tables.
+  The plan keeps their addresses (3.1) and KennelOS fields (5.3) and points to the doc.
+- Decision 12 widened: new inquiries also send a push notification to each device that
+  turns them on, following KennelOS cloud's payload-free web push (`cloud/src/notify.js`);
+  the first name only, no message text through the push services. Phase 2 gains it;
+  `push_subscriptions` and `notices` added.
+- Contradictions fixed: 3.8 no longer says applications are emailed; breeders are never
+  emailed later (only the email hash is kept), so domain notices reach them in the manage
+  app and by push, and you by email; the waitlist feed's last copy is stored
+  (`feed_cache`); the safe-payment notice ships in version 1 and the How to pay safely page
+  is backlog; a litter's **Show prices** covers that litter, and a site-wide **Show other
+  prices** covers extras and other prices; preview builds a throwaway snapshot from the
+  draft so the renderer still reads only snapshots.
