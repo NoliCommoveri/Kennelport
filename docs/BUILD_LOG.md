@@ -228,3 +228,5 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   town, which puppy, star rating, review, optional photo with a preview, and the required
   permission box; the confirmation says it waits for approval (decision 13). Also fixed
   the application and review forms' drop-downs running past 320px-wide screens.
+- Review form: "Your AK puppy" drop-down replaced by the puppy's name and the month they
+  brought it home, both typed (plan 3.9 and `stories` updated).

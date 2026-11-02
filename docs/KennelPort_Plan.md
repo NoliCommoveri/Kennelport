@@ -512,8 +512,8 @@ breeder turns on. Version 1 ships only the ones in decision 14; the rest are bac
 - **Visiting policy:** by appointment only, what to expect, health precautions.
 - **Reviews (decision 13):** families submit them on the site, and the breeder approves
   each before it shows.
-  - *The form* (`/reviews`, **Share your review**): first name, town, which dog or litter
-    (a drop-down), the review, star rating, an optional photo, and a required box: "You
+  - *The form* (`/reviews`, **Share your review**): first name, town, their puppy's name
+    and the month and year they brought it home (typed), the review, star rating, an optional photo, and a required box: "You
     may show this on your website with my first name and town." Turnstile, a honeypot and
     per-site limits, as on the inquiry form (decision 17).
   - *The queue:* submissions wait in the manage app's **Reviews to approve**. The breeder
@@ -948,7 +948,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `custom_domains` | site_id, hostname, cloudflare_hostname_id, registrar (detected, backlog), status (`pending` / `active` / `stuck` / `broken`), checked_at, connected_at |
 | `health_results` | site_id, dog, test, result, date, verify_url, show (off by default), certificate file (private unless ticked) |
 | `posts` | site_id, slug, title, date, body, cover photo (news, section 3.9) |
-| `stories` | site_id, kind (`review` / `at_home`), quote, rating, first name, town, dog or litter, photo, submitted_by (`family` / `breeder`), status (`pending` / `approved` / `hidden`), permission_confirmed_at, submitted_at |
+| `stories` | site_id, kind (`review` / `at_home`), quote, rating, first name, town, puppy_name, home_month (YYYY-MM), photo, submitted_by (`family` / `breeder`), status (`pending` / `approved` / `hidden`), permission_confirmed_at, submitted_at |
 | `programs` | site_id, slug, title, description, terms, `kennelos_id` when linked |
 | `diary_entries` | site_id, litter, date, title, body, photos, `source` (`kennelport` / `kennelos`), draft until the breeder edits it |
 | `steps` | site_id, page (`how_it_works` / `raising`), order, heading, body, detail (the More detail expander), `source` |

@@ -351,7 +351,8 @@ td.tip, th.tip { width: 36px; text-align: right; }
 .review-form { text-align: left; margin-top: 0; }
 .apply-form .row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 560px) { .apply-form .row { grid-template-columns: minmax(0, 1fr); } }
-.apply-form select, .apply-form input[type="text"], .apply-form input[type="email"], .apply-form textarea { width: 100%; min-width: 0; }
+.apply-form select, .apply-form input[type="text"], .apply-form input[type="email"], .apply-form input[type="month"], .apply-form textarea { width: 100%; min-width: 0; }
+input[type="month"] { font: inherit; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--r); padding: 10px 12px; min-height: 44px; }
 .stars-in { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 6px; font-size: .85rem; font-weight: 700; }
 .stars-in legend { padding: 0; margin-bottom: 6px; }
 .star-row { display: inline-flex; flex-direction: row-reverse; justify-content: flex-end; gap: 2px; }
@@ -487,7 +488,10 @@ footer.site .fine { grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,
         <div><span class="eyebrow">AK families</span><h2 style="margin-top:6px">Share your review</h2><p class="muted small" style="margin-top:6px">Reviews appear on our site once we've read and approved them. We show your first name and town only.</p></div>
         <div class="row"><label for="r-name">First name<input id="r-name" type="text" autocomplete="given-name" placeholder="Sarah" required></label><label for="r-town">Town<input id="r-town" type="text" placeholder="Tulsa, OK"></label></div>
         <div class="row">
-          <label for="r-dog">Your AK puppy<select id="r-dog"><option value="">Choose one</option><option>From the Gem litter (Willow × Boone*)</option><option>From Ziva × Boone*</option><option>From an earlier litter</option><option>I'm still waiting for mine</option></select></label>
+          <label for="r-pup">Your puppy's name<input id="r-pup" type="text" placeholder="Biscuit"></label>
+          <label for="r-home">Brought home<input id="r-home" type="month" min="2015-01" max="2026-12" placeholder="YYYY-MM"></label>
+        </div>
+        <div class="row">
           <fieldset class="stars-in"><legend>Rating</legend>
             <div class="star-row" id="r-stars"><input type="radio" name="r-star" id="r-s5" value="5" checked><label for="r-s5" title="5 stars">★</label><input type="radio" name="r-star" id="r-s4" value="4"><label for="r-s4" title="4 stars">★</label><input type="radio" name="r-star" id="r-s3" value="3"><label for="r-s3" title="3 stars">★</label><input type="radio" name="r-star" id="r-s2" value="2"><label for="r-s2" title="2 stars">★</label><input type="radio" name="r-star" id="r-s1" value="1"><label for="r-s1" title="1 star">★</label></div>
           </fieldset>
