@@ -641,3 +641,8 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   the questions and the simple waitlist are each marked when unused. The questions list,
   Your waitlist (no Add a family) and the Inbox (no Add to waitlist) say the same.
   119 tests; Home and the settings checked in Chromium at phone width.
+
+## 2026-11-02: manage app version 9
+
+- Manage app version 9 (Your waitlist's layout, `waitlist.json` in Download a copy, the
+  greyed tile), with its fingerprint. Template unchanged at 7. 119 tests.
