@@ -436,7 +436,7 @@ embedded on the breeder's own site (`embed.js`, the **On your website** settings
 - The site's Litters section and the public list's **Available Puppies** draw on the same
   KennelOS data, so they agree.
 
-**Shown in the site's own style (proposed, decision 21).** An embedded frame keeps
+**Shown in the site's own style (decision 21).** An embedded frame keeps
 KennelOS's own look, which clashes with the site's scheme. The AK sample instead draws the
 list in the site's style: the same rows KennelOS publishes (position, listed name such as
 "Megan R." or "A****** K", Wants, the added date behind an ⓘ), the gap note when paused
@@ -451,6 +451,9 @@ families are left out, a search box, Available Puppies and Coming up as expander
   and applications never pass through KennelPort.
 - If KennelOS can't be reached, the page shows the last list it read with its "Updated"
   date, or a link to the KennelOS list.
+- **On a phone** the list stacks: number, then the name with what they want underneath,
+  then the ⓘ, so it never runs off the screen or scrolls sideways. Every part of the
+  page fits a 320px-wide screen.
 - The frame embed stays available as a fallback.
 
 ### 3.9 Standard breeder-site features
@@ -660,10 +663,10 @@ in both versions before it ships. Version 1 has six (decision 25): Lawn, Harbor,
 Clay, Slate and Midnight, set out in
 [`KennelPort_Design_Direction.md`](KennelPort_Design_Direction.md) section 7. Midnight is
 dark first: it shows dark unless the visitor's device asks for light explicitly.
-- **Dark mode:** each site follows the visitor's device setting by default, as the AK
-  sample does; the breeder can lock it to light (decision 23).
-- **Custom colour:** none in version 1. Whether a breeder may later pick their own accent
-  colour within a scheme is decision 22.
+- **Dark mode (decision 23):** each site follows the visitor's device setting, as the AK
+  sample does; the breeder can lock it to light with **Light only**.
+- **Custom colour (decision 22):** none in version 1. A breeder's own accent colour may
+  come later.
 
 ---
 
@@ -841,6 +844,12 @@ These follow KennelOS's own rules, and each one needs its own decision there:
   breeder has listed any (section 3.8), and dog `url` (section 5.4).
 - **Kels:** Request a website and Update website as Kels tasks; **Show on website** asked
   in Add dogs, Record a litter and when a pup is marked Keeping.
+- **The waitlist on the breeder's site (decision 21):** KennelPort's Worker reads the
+  public list (`GET /f/list/<public_id>`) server to server. KennelOS needs: a switch for
+  the breeder to allow it (alongside **On your website**), off by default; the kennel's
+  `public_id` shown in the app so it can be given to KennelPort; and rate limits that
+  allow a few cached reads an hour from KennelPort without a browser. No new fields
+  leave KennelOS: it's the list the public page already shows.
 - Service-worker precache entries and a cache bump for any new files.
 
 ---
@@ -958,6 +967,12 @@ Rough order of likely need; any item can go first.
 25. **Colour schemes:** all six ship in version 1: Lawn, Harbor, Heather, Clay, Slate and
     Midnight (design direction section 7), each with light and dark versions. Compared
     side by side in [`reference/scheme-lab.html`](reference/scheme-lab.html).
+21. **Waitlist in the site's style:** the Worker reads KennelOS's public list and draws it
+    with the site's scheme, as the AK sample does, stacking on phones; sign-in and
+    applications open KennelOS's own pages (sections 3.8, 5.5).
+22. **Custom accent colour:** none in version 1; perhaps later.
+23. **Dark mode:** sites follow the visitor's device setting, with a **Light only** switch
+    for the breeder (section 3.13).
 24. **Customisation model:** breeders change content, switch pages and Home blocks on and
     off, and choose a scheme; layouts stay fixed (section 3.12).
 
@@ -995,15 +1010,6 @@ Rough order of likely need; any item can go first.
     drafts only.
 20. **Family login link:** proposed for linked breeders: a footer link to KennelOS's
     family status page, with no KennelPort portal.
-21. **Waitlist in the site's style:** proposed that the Worker reads KennelOS's public list
-    and draws it with the site's scheme, as the AK sample shows it, with sign-in and
-    applications opening KennelOS's own pages (section 3.8). Needs a KennelOS check that
-    `/f/list/<public_id>` may be read server-to-server, and whether KennelOS should allow
-    it per kennel (like `embed_origins`).
-22. **Custom accent colour:** proposed none in version 1; later, perhaps one accent picked
-    from a short list per scheme, checked for contrast.
-23. **Dark mode:** proposed that sites follow the visitor's device setting, with a
-    **Light only** switch for the breeder.
 
 
 ---

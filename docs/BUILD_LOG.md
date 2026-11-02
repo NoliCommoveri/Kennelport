@@ -163,3 +163,14 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   Auto / Light / Dark (`docs/reference/scheme-lab.html`). The owner kept all six:
   decision 25 decided (Lawn, Harbor, Heather, Clay, Slate, Midnight, each light and dark;
   Midnight dark first). Contrast checks still due before they ship.
+
+## 2026-11-02: waitlist, accent colour and dark mode decided
+
+- Decision 21: the site draws the KennelOS waitlist in its own style from the public list,
+  with sign-in and applications on KennelOS's pages; the KennelOS change it needs (an
+  allow switch, the `public_id` shown, rate limits for KennelPort's cached reads) added
+  to 5.5. Decision 22: no custom accent colour in version 1. Decision 23: sites follow the
+  visitor's dark or light setting, with a **Light only** switch.
+- Fixed the AK sample and scheme lab running off the right on phones 360px and narrower:
+  the waitlist box and litter cards could grow past the screen. The waitlist table now
+  stacks on phones (number, name with wants underneath, ⓘ); every page fits 320px.
