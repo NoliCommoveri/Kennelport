@@ -1,6 +1,6 @@
 # KennelPort: high-level plan (DRAFT)
 
-> Status: phases 0 to 2 are built (`worker/`); most of phase 3 came with them, and section 8.1 says what's left of it.
+> Status: phases 0 to 3 are built (`worker/`); section 8.1 says how phase 3 came together.
 > Section 8 says what version 1 is; section 9 lists the one decision still open. What comes after version 1 is
 > in [`KennelPort_Backlog.md`](KennelPort_Backlog.md). History of this plan lives in
 > [`BUILD_LOG.md`](BUILD_LOG.md).
@@ -431,8 +431,34 @@ setting the breeder can get wrong:
 choice) is one of:
 - **The site's inquiry form** (section 3.10), set up as a puppy application with the
   breeder's own questions; answers arrive in the manage app's Inbox, with a push
-  notification (section 3.10). KennelPort is not a waitlist: no list, no places in line.
-  This is the manual route; it's never shown while KennelOS takes applications online (above).
+  notification (section 3.10). This is the manual route; it's never shown while
+  KennelOS takes applications online (above).
+- **The simple waitlist** (decided 2026-11-02, replacing "KennelPort is not a
+  waitlist"): a list the breeder keeps by hand, with no automation (no turns, deadlines,
+  status pages or matching; that's KennelOS's waitlist). **Add to waitlist** on an
+  application in the Inbox (name, email and phone carried over, a starting "wants" line
+  from the short answers, all editable), or **Add a family** for someone who applied
+  another way. **Your waitlist** in the manage app lists families in order, each with
+  **Offer pups** (her own email, filled in: "It's your turn to choose a pup! Please review
+  the available puppies on our website and reach out to us with your selection.", a link
+  to the Puppies page and her kennel name; the wording is a waitlist page setting),
+  **Fulfilled** (off the list, everyone below moves up; **Put back** returns them to their
+  place; deleted 90 days later), up and down, and Edit. The waitlist page shows it live,
+  with no publish, above the application form, drawn like the KennelOS list: place, the
+  name on the list (first name and last initial, editable, like "Megan R."), what they
+  want and the date added behind an ⓘ; never an email or phone. The application form
+  says names show that way, and offers **Keep my name private**: masked as KennelOS
+  masks them, the first name's first letter and an asterisk for each letter after it,
+  then the last initial (Andrea Kim shows as "A***** K"). The tick comes with the
+  application, so Add to waitlist starts masked; the breeder can tick it for anyone.
+- **The manage app steers by the KennelOS link.** Unlinked, **Waitlist and application**
+  opens with the KennelOS card saying a KennelOS waitlist can be linked, and Your
+  waitlist mentions it. Linked, the **Your waitlist** tile is greyed ("Not used: your
+  website shows your KennelOS waitlist"), its screen says so and drops Add a family, and
+  the Inbox drops Add to waitlist; while KennelOS takes applications online, the
+  application questions are marked not used too. Greyed screens still open, so nothing
+  set up is hidden. Not shown while a KennelOS feed is set: KennelOS's list
+  wins, so a family is never on two lists.
 - **A link or embed of the waitlist they already use** (a Google Form, Jotform, …),
   through the approved embed list (section 3.3) or as a button. Backlog; version 1 has
   the other two.
@@ -453,8 +479,14 @@ embedded on the breeder's own site (`embed.js`, the **On your website** settings
 KennelOS's own look, which clashes with the site's scheme. The AK sample instead draws the
 list in the site's style: the same rows KennelOS publishes (position, listed name such as
 "Megan R." or "A****** K", Wants, the added date behind an ⓘ), the gap note when paused
-families are left out, a search box, Available Puppies and Coming up as expanders, and
-**Apply to join the waitlist**. To do that for real:
+families are left out, a search box, and **Apply to join the waitlist**, above the
+application form. Only the families: the site has its own puppy pages, so KennelOS's
+Available Puppies and Coming up aren't drawn there, and the list carries no Current
+Applicants sign-in box. Families on the list sign in from **Family login**: in the top
+menu beside the Waitlist button, in the footer, and as a button on the status-page help
+page, each opening KennelOS's sign-in (`/list/<public_id>#signin`) in a new tab. It's
+part of the published site, so it appears (or goes) with the publish after the feed
+address is saved (or removed). To do that for real:
 - The Worker reads the kennel's **website feed** from KennelOS
   (`GET /f/site/<public_id>`: exactly the public list, plus paths for the list, sign-in
   and form), caches it for five minutes, and renders it with the site's scheme. KennelOS
@@ -1016,6 +1048,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `dev_outbox` | staging only: codes and invites shown on `/ops` until email is connected |
 | `push_subscriptions` | endpoint_hash, email_hash, session_hash, endpoint, auth_secret, created_at, last_sent_at, last_shown_seq (section 3.10); as in KennelOS cloud, tied to the session it was made in |
 | `notices` | site_id, kind (`domain_live` / `domain_broken` / …), message, created_at, read_at: what the manage app shows the breeder |
+| `waitlist_entries` | site_id, name, list_name (what the site shows), email, phone, wants, added_on, inquiry_id (the application it came from), status (`waiting` / `fulfilled`), sort (order among those waiting; a place is never stored), created_at, done_at (fulfilled ones deleted 90 days after) (section 3.8) |
 | `feed_cache` | site_id, state (`ok` / `not_shared` / `not_found`), body (the KennelOS website feed's last copy), fetched_at, checked_at (the last time KennelOS was asked; retried after a minute when it couldn't be reached) (section 3.8) |
 | `dogs`, `litters`, `puppies` | site_id, slug, content fields, `source` (`kennelport` / `kennelos`), `kennelos_id` when linked, `hidden_by_kennelos` (section 5.3). A dog has a status (`active` / `retired` / `remembered`) and health_display (`normal_only` / `all` / `none`, 3.7); a litter a stage (`planned` / `current` / `past`) and either parent as a site dog or a typed name; a puppy one of 3.6's statuses. The full field list is `worker/src/migrations/0002_content.sql` |
 | `site_pages` | site_id, page key, enabled, menu_label, content (each page's wording, JSON with the keys the content model names, 3.12); order within its menu group comes with phase 6 |
@@ -1078,7 +1111,7 @@ Each phase is useful by itself, so you can stop after any one.
 | **1. Renderer + ops** | One template with its fonts and libraries served from the site (3.3), the ops console, preview links, snapshot publish to R2 and undo (4.1), page caching and the CPU check (4.4), reserved names, OG tags, close a site and the closed notice | Build and host the site yourself, with no breeder login yet |
 | **2. Breeder login** | Email-code sign-in, manage app (installable as KennelPort Site Manager), the inbox with push notifications for new messages, the review queue, preview and publish with the list of changes, photo upload with resizing, the JPEG fallback and the server checks, tried on a real Android phone and iPhone (4.2), storage limits, **Delete my site** with the download-a-copy zip built in the browser (4.3) | Hand the site over |
 | **3. The first site's pages** | Everything in the AK sample (decision 14): Home with its blocks, About (story, reviews, contact), Kennel residents with flip cards and health results (3.7), Puppies (available, upcoming, older) with statuses (3.6), How it works steps (3.11), Extras with homegoing packages (3.4), Policies and FAQ, the waitlist page and its status-page help (3.8, decision 21) with how to pay the application fee and deposit (3.9), inquiry form and inbox (3.10); plus the safe-payment notice, privacy page and search basics | The family site is complete and live |
-| **4. The KennelOS link** | In KennelPort: link codes, matching existing website records to KennelOS ones (5.2), the bundle API and its rules (5.3), **Use my KennelOS prices** (3.2), the Family login footer link. In KennelOS (5.5): **Show on website** on dogs and litters, `siteExport.js`, **Connect website** and **Update website**, filling `dog.url`, the kennel's website and `extras_info_url`, and the Kels steps | Her dogs, litters, puppy statuses and health results come from KennelOS when she presses **Update website**; she types them only once |
+| **4. The KennelOS link** | In KennelPort: link codes, matching existing website records to KennelOS ones (5.2), the bundle API and its rules (5.3), **Use my KennelOS prices** (3.2). In KennelOS (5.5): **Show on website** on dogs and litters, `siteExport.js`, **Connect website** and **Update website**, filling `dog.url`, the kennel's website and `extras_info_url`, and the Kels steps | Her dogs, litters, puppy statuses and health results come from KennelOS when she presses **Update website**; she types them only once |
 | **5. Albums, embeds and sharing** | Albums with their own links, embeds from the approved list with stored previews (3.3), share links and QR codes, KennelOS shares carrying album links (5.4) | Litter albums and her YouTube and Facebook posts live on the site |
 | **6. Customisation and schemes** | Page and Home-block switches, menu labels, any-length steps, expanders and extras (3.12); the colour schemes with light and dark versions (3.13) | Other breeders' sites can differ from AK's without new code |
 
@@ -1090,11 +1123,9 @@ to pay and the safe-payment notice (3.9), and the application form for breeders 
 their list by hand (3.8, decision 26: the breeder's own questions on the waitlist page,
 a closed switch, answers in the Inbox), and, for breeders who take applications online in
 KennelOS, the website feed read on the waitlist page with KennelOS's application form
-drawn in the site's style (3.8). Left:
-- **The list from KennelOS in the site's own style** (3.8, decision 21): the feed is
-  read and kept (`feed_cache`), and KennelOS's application form is drawn in the site's
-  style; the list's rows, the gap note, search, Available Puppies and Coming up are
-  next. Until then the waitlist page links to the KennelOS list and its sign-in.
+drawn in the site's style (3.8), and the KennelOS list itself in the site's style
+(decision 21: the families' rows, the gap note and search, above the application form).
+Phase 3 is built.
 
 If the first site wants its own domain, connect it by hand (section 2.4).
 

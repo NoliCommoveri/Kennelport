@@ -19,7 +19,10 @@ import { APP_VERSION } from './version.js';
 import { STATUS_TEXT, SAFE_NOTICE_TEXT } from '../render/parts.js';
 import { exportContent } from '../content/io.js';
 import { closeSite, SiteError } from '../sites.js';
-import { readFeed, parseFeedAddress, setFeed, FeedError, kennelosOrigin } from '../feed.js';
+import { readFeed, parseFeedAddress, setFeed, FeedError, kennelosOrigin, kennelosState } from '../feed.js';
+import {
+  waiting, fulfilled, getEntry, addEntry, updateEntry, setFulfilled, removeEntry, moveEntry, offerMailto, suggestWants, listNameFor, maskedNameFor, wantsPrivate, WaitlistError,
+} from '../waitlist.js';
 
 export const FRESH_SIGN_IN_MS = 15 * 60 * 1000;
 
@@ -38,6 +41,11 @@ const NOTES = {
   approved: 'Approved. It shows on your site after you publish.',
   declined: 'Declined and deleted.',
   published: 'Published. Visitors now see your changes.',
+  listed: 'Added to your waitlist. It shows on your website now.',
+  fulfilled: 'Marked fulfilled. Everyone below moved up.',
+  back: 'Put back in its place.',
+  listsaved: 'Saved. Your website shows it now.',
+  unlisted: 'Deleted from your waitlist.',
   undone: 'Undone. Visitors see the version before.',
 };
 const note = (url) => (NOTES[url.searchParams.get('note')] ? `<p class="notice" role="status">${esc(NOTES[url.searchParams.get('note')])}</p>` : '');
@@ -86,6 +94,9 @@ export function createScreens({ env, request, url, site, user, page }) {
   const photoValues = (list, values) => Object.entries(list).flatMap(([n, f]) => (f.type === 'photo' ? [values[n]] : f.type === 'list' && f.item === 'photo' ? values[n] ?? [] : [])).filter(Boolean);
   const tagFromForm = (list, values, fd, subs) => tagPhotos(env, site.id, [...photoValues(list, values), ...fd.getAll('_new_photos')], subs);
 
+  let kosCache = null;
+  const kos = async () => (kosCache ??= await kennelosState(env, site.id));
+
   // ---------- one list of records, generic ----------
   async function collection(path, kind, scopeId, { back, parentTitle } = {}) {
     const k = KINDS[kind];
@@ -116,7 +127,7 @@ export function createScreens({ env, request, url, site, user, page }) {
       const rows = await listRecords(env, site.id, kind, scopeId);
       const items = rows.map((r, i) => `<li class="item"><a href="${esc(`${path}/${r.id}`)}"><b>${esc(L.name(r))}</b><span>${esc(L.sub(r) ?? '')}</span></a>
         <span class="order">${i ? `<form method="post" action="${esc(`${path}/${r.id}/up`)}"><button aria-label="Move ${esc(L.name(r))} up">↑</button></form>` : ''}${i < rows.length - 1 ? `<form method="post" action="${esc(`${path}/${r.id}/down`)}"><button aria-label="Move ${esc(L.name(r))} down">↓</button></form>` : ''}</span></li>`).join('');
-      const intro = kind === 'questions' ? `<p class="muted">The application form on your waitlist page always asks for the family's name and email. These questions come after, in this order. With none, it asks for a few lines about their family.</p>` : '';
+      const intro = kind === 'questions' ? `${(await kos()).online ? '<p class="error">Not used right now: KennelOS takes your applications online, so your website shows your KennelOS form. These questions come back if you turn online applications off in KennelOS or remove the link.</p>' : ''}<p class="muted">The application form on your waitlist page always asks for the family's name and email. These questions come after, in this order. With none, it asks for a few lines about their family.</p>` : '';
       return { title: parentTitle ? `${parentTitle}: ${L.title}` : L.title, back: back ?? base, body: `${note(url)}${intro}<ul class="items">${items || `<li class="muted">None yet.</li>`}</ul><p><a class="button primary" href="${esc(`${path}/new`)}">Add ${L.one}</a></p>` };
     }
     if (rest === 'new') {
@@ -235,7 +246,7 @@ export function createScreens({ env, request, url, site, user, page }) {
             : '<p class="error">KennelOS couldn\'t be reached just now. Your waitlist page links to your KennelOS pages until it can.</p>';
     }
     return `<form method="post" action="${base}/pages/waitlist/kennelos" class="card" id="kennelos"><h2>Your KennelOS waitlist</h2>
-      <p class="muted small">If you keep your waitlist in KennelOS, paste the website feed address from its Online list card. While you take applications online there, your waitlist page shows your KennelOS application form in your website's style, and applications go straight to KennelOS.</p>
+      ${id ? '<p class="muted small">Your waitlist page shows your KennelOS list. Remove the link to use the simple waitlist kept here instead.</p>' : `<p class="muted small">Keep your waitlist in KennelOS? Paste the website feed address from its Online list card. Your waitlist page then shows your KennelOS list, and while you take applications online there, your KennelOS application form, in your website's style, with applications going straight to KennelOS. The simple waitlist and the questions set up here are then not used (the questions are, if you don't take applications online in KennelOS). Without KennelOS, leave this empty and use the questions and Your waitlist below.</p>`}
       ${errorBox(err)}${state}
       <label>Website feed address<input name="feed" value="${esc(typed ?? (id ? `${origin}/f/site/${id}` : ''))}" placeholder="${esc(origin)}/f/site/…" autocapitalize="none" spellcheck="false"></label>
       <div class="row"><button class="primary">Save</button>${id ? '<button name="remove" value="1">Remove</button>' : ''}</div></form>`;
@@ -274,10 +285,10 @@ export function createScreens({ env, request, url, site, user, page }) {
     const pick = subject ? { groups: [{ label: `Photos for ${p.label}`, subject }], tags: [subject], alt: '' } : undefined;
     const render = async (err, values) => ({
       title: p.label, back: `${base}/pages`,
-      body: `${note(url)}${errorBox(err)}<form method="post" action="${base}/pages/${key}" data-save class="card">
+      body: `${note(url)}${key === 'waitlist' ? kennelos ?? await kennelosCard() : ''}${errorBox(err)}<form method="post" action="${base}/pages/${key}" data-save class="card">
         ${p.canHide ? fieldsWithLabel(all, values ?? current, await ctxFor(key === 'extras' ? 'extras_page' : key, pick), { enabled: ['This page is on', 'Off: it leaves the menu and its address says "This page isn\'t available". Its words are kept.'], menu_label: ['Name in the menu', `Leave empty for "${p.label}".`] }) : fieldsWithLabel(all, values ?? current, await ctxFor(key, pick), { menu_label: ['Name in the menu', `Leave empty for "${p.label}".`] })}
         <button class="primary">Save</button></form>
-        ${listLinkFor(key)}${key === 'waitlist' ? kennelos ?? await kennelosCard() : ''}`,
+        ${key === 'waitlist' ? await waitlistLinks() : listLinkFor(key)}`,
     });
     if (request.method !== 'POST' || show) return render();
     const fd = await request.formData();
@@ -288,6 +299,19 @@ export function createScreens({ env, request, url, site, user, page }) {
     }
     if (subject) await tagFromForm(all, values, fd, [subject]);
     return redirect(`${base}/pages/${key}?note=saved`);
+  }
+
+  // Under the waitlist page's settings: its questions and the simple waitlist, each
+  // marked when a linked KennelOS waitlist means it isn't used.
+  async function waitlistLinks() {
+    const k = await kos();
+    const questions = k.online
+      ? '<p class="muted small">Your application questions aren\'t used while KennelOS takes your applications online: your website shows your KennelOS form. <a href="' + base + '/lists/questions">See them anyway</a></p>'
+      : listLinkFor('waitlist');
+    const simple = k.linked
+      ? '<p class="muted small">Your simple waitlist isn\'t used while KennelOS is linked: your website shows your KennelOS list.</p>'
+      : `<p><a class="button" href="${base}/waitlist">Your waitlist</a></p>`;
+    return questions + simple;
   }
 
   const listLinkFor = (key) => {
@@ -485,6 +509,13 @@ export function createScreens({ env, request, url, site, user, page }) {
   }
 
   // ---------- inbox (plan 3.10, decision 12) ----------
+  // An application: already on the simple waitlist, or a button to add them.
+  async function listedLine(msg) {
+    const on = await env.DB.prepare("SELECT id, status FROM waitlist_entries WHERE site_id = ? AND inquiry_id = ?").bind(site.id, msg.id).first();
+    if (on) return `<p class="muted small">${on.status === 'waiting' ? 'On your waitlist.' : 'On your waitlist, marked fulfilled.'} <a href="${base}/waitlist">See the waitlist</a></p>`;
+    if ((await kos()).linked) return '';
+    return `<p><a class="button" href="${base}/waitlist/new?from=${esc(msg.id)}">Add to waitlist</a></p>`;
+  }
   async function inbox() {
     const rest = url.pathname.slice(`${base}/inbox`.length);
     const post = request.method === 'POST';
@@ -509,7 +540,8 @@ export function createScreens({ env, request, url, site, user, page }) {
         body: `<section class="card"><p class="muted small">${esc(when(msg.received_at))}${msg.topic ? ` · ${esc(msg.topic)}` : ''}</p>
           ${text}
           <dl class="kv"><dt>Email</dt><dd>${esc(msg.email)}</dd>${msg.phone ? `<dt>Phone</dt><dd><a href="tel:${esc(msg.phone.replace(/[^\d+]/g, ''))}">${esc(msg.phone)}</a></dd>` : ''}</dl>
-          <p class="row"><a class="button primary" href="${esc(mailto)}">Reply</a><button type="button" data-copy="${esc(msg.email)}">Copy email</button></p></section>
+          <p class="row"><a class="button primary" href="${esc(mailto)}">Reply</a><button type="button" data-copy="${esc(msg.email)}">Copy email</button></p>
+          ${application ? await listedLine(msg) : ''}</section>
           <form method="post" action="${base}/inbox/${msg.id}/unread"><button class="link">Mark as unread</button></form>
           <form method="post" action="${base}/inbox/${msg.id}/delete" class="card danger"><button>Delete this message</button></form>`,
       };
@@ -520,6 +552,102 @@ export function createScreens({ env, request, url, site, user, page }) {
       title: 'Inbox', back: base,
       body: `${note(url)}${results.length ? `<ul class="items">${results.map((r) => `<li class="item${r.read_at ? '' : ' unread'}"><a href="${base}/inbox/${r.id}"><b>${r.read_at ? '' : '<span class="dot-new" aria-label="Unread"></span>'}${esc(r.name)}</b><span>${esc(when(r.received_at))} · ${esc(r.topic || r.message.slice(0, 80))}</span></a></li>`).join('')}</ul>` : '<section class="card"><p class="muted">No messages yet. Messages from your site\'s contact form, and applications from your waitlist page, land here.</p></section>'}
         <p class="muted small">Messages are kept for 90 days, then deleted. Reply opens your own email.</p>`,
+    };
+  }
+
+  // ---------- the simple waitlist (plan 3.8) ----------
+  async function waitlistScreen() {
+    const rest = url.pathname.slice(`${base}/waitlist`.length);
+    const post = request.method === 'POST';
+    const back = (n) => redirect(`${base}/waitlist?note=${n}`);
+    const FIELDS = [
+      ['name', 'Their name', null, 80],
+      ['list_name', 'Name on the list', 'What your website shows. Leave empty for their first name and last initial, like "Megan R.".', 40],
+      ['email', 'Email', 'For Offer pups. Never shown.', 254],
+      ['phone', 'Phone', 'Never shown.', 30],
+      ['wants', 'What they want', 'Shown on the list, like "Female · Black & white".', 120],
+    ];
+    const form = (action, v, { err, edit = false, from = null } = {}) => `${errorBox(err)}<form method="post" action="${esc(action)}" class="card" data-save>
+      ${from ? `<input type="hidden" name="inquiry_id" value="${esc(from)}">` : ''}
+      ${FIELDS.map(([n, label, hint, max]) => `<label>${esc(label)}${hint ? `<span class="hint">${esc(hint)}</span>` : ''}<input name="${n}"${n === 'email' ? ' type="email"' : n === 'phone' ? ' type="tel"' : ''} value="${esc(v?.[n] ?? '')}" maxlength="${max}"${n === 'name' ? ' required' : ''}></label>`).join('')}
+      <label class="check"><input type="checkbox" name="private" value="1"${v?.private ? ' checked' : ''}> <span>Keep their name private<span class="hint">The list shows it masked, like "A***** K" for Andrea Kim, in place of the name on the list.</span></span></label>
+      ${edit ? `<label>Added<span class="hint">Their place comes from the order of the list, not this date.</span><input name="added_on" type="date" value="${esc(v?.added_on ?? '')}"></label>` : ''}
+      <button class="primary">${edit ? 'Save' : 'Add to waitlist'}</button></form>`;
+    const values = async () => Object.fromEntries(await request.formData());
+
+    if (rest === '/new') {
+      const fromId = url.searchParams.get('from');
+      if (post) {
+        const v = await values();
+        const inquiry = v.inquiry_id ? await env.DB.prepare('SELECT id FROM inquiries WHERE id = ? AND site_id = ?').bind(v.inquiry_id, site.id).first() : null;
+        try { await addEntry(env, site.id, v, { inquiryId: inquiry?.id ?? null }); } catch (err) {
+          if (!(err instanceof WaitlistError)) throw err;
+          return { title: 'Add to waitlist', back: `${base}/waitlist`, body: form(`${base}/waitlist/new`, v, { err: err.message, from: inquiry?.id }) };
+        }
+        return back('listed');
+      }
+      let v = {};
+      if (fromId) {
+        const msg = await env.DB.prepare('SELECT * FROM inquiries WHERE id = ? AND site_id = ?').bind(fromId, site.id).first();
+        if (msg) {
+          const answers = JSON.parse(msg.answers || '[]');
+          const priv = wantsPrivate(answers);
+          v = { name: msg.name, email: msg.email, phone: msg.phone, private: priv, list_name: priv ? maskedNameFor(msg.name) : listNameFor(msg.name), wants: suggestWants(answers) };
+        }
+      }
+      return { title: 'Add to waitlist', back: fromId ? `${base}/inbox/${fromId}` : `${base}/waitlist`, body: `<p class="muted">They go to the end of the list. Check what the list will show before adding.</p>${form(`${base}/waitlist/new`, v, { from: fromId })}` };
+    }
+
+    const m = rest.match(/^\/([0-9a-f-]{36})(?:\/(fulfil|back|up|down|remove))?$/);
+    if (m) {
+      const e = await getEntry(env, site.id, m[1]);
+      if (!e) return null;
+      if (m[2]) {
+        if (!post) return null;
+        if (m[2] === 'fulfil') { await setFulfilled(env, site.id, e.id, true); return back('fulfilled'); }
+        if (m[2] === 'back') { await setFulfilled(env, site.id, e.id, false); return back('back'); }
+        if (m[2] === 'remove') { await removeEntry(env, site.id, e.id); return back('unlisted'); }
+        await moveEntry(env, site.id, e.id, m[2] === 'up' ? -1 : 1);
+        return back('moved');
+      }
+      if (post) {
+        const v = await values();
+        try { await updateEntry(env, site.id, e.id, v); } catch (err) {
+          if (!(err instanceof WaitlistError)) throw err;
+          return { title: e.name, back: `${base}/waitlist`, body: form(`${base}/waitlist/${e.id}`, { ...e, ...v }, { err: err.message, edit: true }) };
+        }
+        return back('listsaved');
+      }
+      return {
+        title: e.name, back: `${base}/waitlist`,
+        body: `${form(`${base}/waitlist/${e.id}`, { ...e, private: e.list_name === maskedNameFor(e.name) }, { edit: true })}
+          <form method="post" action="${base}/waitlist/${e.id}/remove" class="card danger"><p class="muted small">Delete takes them off without marking them fulfilled, and can't be undone.</p><button>Delete from the waitlist</button></form>`,
+      };
+    }
+    if (rest || post) return null;
+
+    const k = await kos();
+    const page = await getPage(env, site.id, 'waitlist');
+    const siteUrl = siteLink(env, site.subdomain, '/litters');
+    const list = await waiting(env, site.id);
+    const done = await fulfilled(env, site.id);
+    const fmt = (ymd) => (ymd ? new Date(`${ymd}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : '');
+    const item = (e, i) => `<li class="card wl-entry"><p><b>#${e.position} ${esc(e.name)}</b><span class="muted small"> · shown as ${esc(e.list_name)}${e.list_name === maskedNameFor(e.name) ? ' (private)' : ''}</span></p>
+      <p class="muted small">${esc([e.wants, `added ${fmt(e.added_on)}`].filter(Boolean).join(' · '))}</p>
+      <div class="row">${e.email ? `<a class="button primary" href="${esc(offerMailto(e, { kennelName: site.kennel_name || site.subdomain, siteUrl, message: page.offer_message }))}">Offer pups</a>` : '<span class="muted small">No email: add one to offer pups.</span>'}
+        <form method="post" action="${base}/waitlist/${e.id}/fulfil"><button>Fulfilled</button></form>
+        <a class="button" href="${base}/waitlist/${e.id}">Edit</a>
+        <span class="order">${i ? `<form method="post" action="${base}/waitlist/${e.id}/up"><button aria-label="Move ${esc(e.name)} up">↑</button></form>` : ''}${i < list.length - 1 ? `<form method="post" action="${base}/waitlist/${e.id}/down"><button aria-label="Move ${esc(e.name)} down">↓</button></form>` : ''}</span></div></li>`;
+    return {
+      title: 'Your waitlist', back: base,
+      body: `${note(url)}${k.linked ? `<p class="error">Not used: your website shows your KennelOS waitlist, so this list isn't shown on it, and families are added in KennelOS. Remove the KennelOS link under <a href="${base}/pages/waitlist">Waitlist and application</a> to use this one instead.</p>` : ''}
+        <p class="muted">Families in order. Your website shows each one's place, the name on the list and what they want, straight away, with no publish. Offer pups opens your own email to them; Fulfilled takes them off and moves everyone below up.</p>
+        ${k.linked ? '' : `<p><a class="button primary" href="${base}/waitlist/new">Add a family</a></p>`}
+        ${!k.linked && k.offered ? `<p class="muted small">Keep your waitlist in KennelOS Pro instead, with turns, deadlines and status pages for families? Link it under <a href="${base}/pages/waitlist">Waitlist and application</a>.</p>` : ''}
+        <ul class="wl-list">${list.map(item).join('') || '<li class="muted">No one on the list yet. Add families from an application in your Inbox, or here.</li>'}</ul>
+        <p class="muted small">The Offer pups email's wording is under <a href="${base}/pages/waitlist">Waitlist and application</a>.</p>
+        ${done.length ? `<details class="card"><summary>Fulfilled (${done.length})</summary><p class="muted small">Kept 90 days, then deleted.</p><ul class="items">${done.map((e) => `<li class="item"><span><b>${esc(e.name)}</b> <span class="muted small">${esc(fmt(e.done_at.slice(0, 10)))}</span></span>
+          <span class="row"><form method="post" action="${base}/waitlist/${e.id}/back"><button>Put back</button></form><form method="post" action="${base}/waitlist/${e.id}/remove"><button class="link">Delete</button></form></span></li>`).join('')}</ul></details>` : ''}`,
     };
   }
 
@@ -587,8 +715,9 @@ export function createScreens({ env, request, url, site, user, page }) {
       filename: `${site.subdomain}-kennelport-${date}.zip`,
       readme: `A copy of ${site.kennel_name || site.subdomain}'s KennelPort website, made ${date}.\n\n`
         + 'content.json: everything on the site (dogs, litters, puppies, pages, reviews, extras...), in the form KennelPort can load back.\n'
-        + 'messages.json: the messages and applications in your Inbox.\nphotos.json: each photo\'s description and what it\'s of; the photos are in photos/, named by their id.\n',
+        + 'messages.json: the messages and applications in your Inbox.\nwaitlist.json: your waitlist, in order, and the families marked fulfilled.\nphotos.json: each photo\'s description and what it\'s of; the photos are in photos/, named by their id.\n',
       content, messages: msgs,
+      waitlist: (await env.DB.prepare('SELECT name, list_name, email, phone, wants, added_on, status, done_at FROM waitlist_entries WHERE site_id = ? ORDER BY status DESC, sort').bind(site.id).all()).results,
       photos: ph.map((p) => ({ ...p, of: (t.get(p.id) ?? []).filter((x) => names.has(x)).map((x) => names.get(x)), file: `${p.id}.${p.type === 'image/webp' ? 'webp' : 'jpg'}`, url: `${base}/photos/${p.id}/full` })),
     });
   }
@@ -639,6 +768,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     else if (p === '/payment' || /^\/payment\/(application_fee|deposit|safe_notice)$/.test(p)) view = await payment();
     else if (p.startsWith('/publish')) view = await publishScreen();
     else if (p.startsWith('/inbox')) view = await inbox();
+    else if (p === '/waitlist' || p.startsWith('/waitlist/')) view = await waitlistScreen();
     else if (p === '/export.json' && request.method === 'GET') return exportManifest();
     else if (p.startsWith('/account')) view = await account();
     else if (p.startsWith('/reviews-queue')) view = await queue();

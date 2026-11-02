@@ -301,6 +301,8 @@ td.tip, th.tip { width: 36px; text-align: right; }
 .added-tip { position: relative; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--surface); color: var(--muted); font: italic 700 .78rem/1 Georgia, serif; cursor: pointer; }
 .added-tip::after { content: attr(data-tip); position: absolute; right: 0; bottom: calc(100% + 8px); white-space: nowrap; background: var(--ink); color: var(--bg); font: 600 .78rem/1 var(--f-body); padding: 7px 9px; border-radius: var(--r); opacity: 0; visibility: hidden; transition: opacity .15s; pointer-events: none; }
 .added-tip:hover::after, .added-tip:focus-visible::after, .added-tip.open::after { opacity: 1; visibility: visible; }
+.searchbox[hidden], table.list tr[hidden] { display: none; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
 .powered { text-align: center; font-size: .76rem; color: var(--muted); padding: 12px; border-top: 1px solid var(--line); letter-spacing: .04em; }
 
 @media (max-width: 520px) {

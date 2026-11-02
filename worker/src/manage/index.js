@@ -15,6 +15,7 @@ import { makePreviewToken } from '../site.js';
 import { listSnapshots } from '../publish.js';
 import { siteLink } from '../ops/sites.js';
 import { createScreens } from './screens.js';
+import { kennelosState } from '../feed.js';
 import { vapidConfig, subscribe, unsubscribe, testPush, pendingPush, subscriptionFor } from '../push.js';
 
 export const MANAGE_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
@@ -100,7 +101,11 @@ async function siteHome(env, user, site) {
   const changed = full.draft_changed_at && (!live || full.draft_changed_at > live.published_at);
   const unread = await env.DB.prepare('SELECT COUNT(*) AS n FROM inquiries WHERE site_id = ? AND read_at IS NULL').bind(site.id).first('n');
   const pending = await env.DB.prepare("SELECT COUNT(*) AS n FROM stories WHERE site_id = ? AND status = 'pending'").bind(site.id).first('n');
-  const tile = (href, label, note, count) => `<li><a class="tile" href="/s/${esc(site.subdomain)}${href}"><b>${esc(label)}</b><span>${esc(note)}</span>${count ? `<span class="count">${count}</span>` : ''}</a></li>`;
+  const listed = await env.DB.prepare("SELECT COUNT(*) AS n FROM waitlist_entries WHERE site_id = ? AND status = 'waiting'").bind(site.id).first('n');
+  const tile = (href, label, note, count, off = false) => `<li><a class="tile${off ? ' off' : ''}" href="/s/${esc(site.subdomain)}${href}"><b>${esc(label)}</b><span>${esc(note)}</span>${count ? `<span class="count">${count}</span>` : ''}</a></li>`;
+  // Linked to a KennelOS waitlist (plan 3.8): the simple waitlist isn't used, and
+  // while KennelOS takes applications online, neither are the site's questions.
+  const kos = await kennelosState(env, site.id);
   const previewLink = siteLink(env, site.subdomain, `/__preview?t=${encodeURIComponent(await makePreviewToken(env, site.id, 1))}`);
   return page(site.kennel_name || site.subdomain, `
   <section class="card status">
@@ -117,7 +122,9 @@ async function siteHome(env, user, site) {
     ${tile('/litters', 'Litters', 'Planned, current, past')}
     ${tile('/pages', 'Pages and wording', 'Home, about, policies, FAQ…')}
     ${tile('/lists/extras', 'Extras', 'Packages and prices')}
-    ${tile('/pages/waitlist', 'Waitlist and application', 'Open or closed, your questions')}
+    ${kos.linked ? tile('/waitlist', 'Your waitlist', 'Not used: your website shows your KennelOS waitlist', 0, true)
+    : tile('/waitlist', 'Your waitlist', listed ? `${listed} famil${listed === 1 ? 'y' : 'ies'} waiting` : 'Families in order, offer pups', listed)}
+    ${tile('/pages/waitlist', 'Waitlist and application', kos.linked ? (kos.online ? 'Linked to KennelOS, which takes your applications' : 'Linked to KennelOS · your questions') : kos.offered ? 'Your questions, or link KennelOS' : 'Open or closed, your questions')}
     ${tile('/payment', 'How to pay', 'Fee, deposit, scam warning')}
     ${tile('/lists/reviews', 'Reviews', 'Add or hide')}
     ${tile('/details', 'Kennel details', 'Name, contact, town')}

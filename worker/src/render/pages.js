@@ -331,7 +331,8 @@ export const policies = (snap) => expanderPage(snap, 'policies', { eyebrow: 'Our
 export const faq = (snap) => expanderPage(snap, 'faq', { eyebrow: 'Questions', heading: 'FAQ' });
 export function waitlistHelp(snap, ctx) {
   const page = expanderPage(snap, 'waitlist_help', { eyebrow: 'Waitlist', heading: 'Using your status page' });
-  page.body += '<p class="center mt-26"><a class="btn line" href="/waitlist">Back to the waitlist</a></p>';
+  const login = snap.site.family_login ? `<a class="btn solid" href="${attr(snap.site.family_login)}" rel="noopener noreferrer" target="_blank">Sign in to see your details</a> ` : '';
+  page.body += `<p class="btn-row mt-26">${login}<a class="btn line" href="/waitlist">Back to the waitlist</a></p>`;
   return page;
 }
 
@@ -389,6 +390,8 @@ function applicationForm(snap, ctx) {
     ${formResult(ctx, 'waitlist', (name) => `Thanks${name ? `, ${name.split(/\s+/)[0]}` : ''}. Your application is on its way to ${snap.site.kennel_name}, and they'll reply to the email address you gave.`)}
     ${sent ? '' : `<div class="row"><label for="a-name">Your name<input id="a-name" name="name" autocomplete="name" maxlength="80" required value="${v(ctx, 'name')}"></label><label for="a-email">Email<input id="a-email" type="email" name="email" autocomplete="email" maxlength="254" required value="${v(ctx, 'email')}"></label></div>
     ${questions.length ? questionRows(snap, ctx, questions) : about}
+    <p class="muted small">If we add you to our waitlist, it shows your first name and last initial (like Megan R.) and what you're hoping for. Your email and phone never show.</p>
+    <label class="consent" for="a-private"><input id="a-private" type="checkbox" name="private" value="1"${ctx.form?.page === 'waitlist' && ctx.form.values?.private ? ' checked' : ''}> Keep my name private: show it as its first letter and an asterisk for each letter after it, then my last initial (Andrea Kim shows as A***** K)</label>
     ${honeypot}${turnstileBox(ctx)}
     <div><button class="btn solid" type="submit">Send application</button></div>`}
   </form>`;
@@ -479,6 +482,59 @@ function kennelosForm(snap, ctx) {
   </div>`;
 }
 
+// ---------- the KennelOS list, drawn in the site's style (plan 3.8, decision 21) ----------
+// The families on her list, in KennelOS's own words (its cloud/public/family/
+// common.js is the model). Only the list: the site has its own puppy pages, so the
+// feed's Available Puppies and Coming up aren't drawn here, and signing in to a
+// status page isn't offered from the list.
+
+const SEX_WORD = { any: 'Either', male: 'Male', female: 'Female' };
+const listDate = (ymd) => (/^\d{4}-\d{2}-\d{2}$/.test(String(ymd ?? '')) ? fmtDate(ymd) : '');
+// The list as the site draws it, from KennelOS's feed or the simple waitlist.
+// rows: { position, name, deciding?, wants (html, escaped), added }.
+function familyList(snap, ctx, { name, updated, intro, rows, applyHere, powered }) {
+  const added = (r) => (listDate(r.added) ? `<button type="button" class="added-tip" aria-label="Added ${attr(listDate(r.added))}" data-tip="Added ${attr(listDate(r.added))}">i</button>` : '');
+  const body = rows.map((r) => `<tr data-wl-row data-pos="${attr(r.position)}" data-name="${attr(r.name ?? '')}"${r.deciding ? ' class="deciding"' : ''}>
+      <td class="num">#${esc(r.position)}</td><td>${r.deciding ? `<em>${esc(r.name)}</em>` : esc(r.name)}</td>
+      <td>${r.wants}</td><td class="tip">${added(r)}</td></tr>`).join('');
+  const gaps = rows.some((r, i) => r.position !== i + 1);
+  const table = rows.length
+    ? `<table class="list"><thead><tr><th>#</th><th>Name</th><th>Wants</th><th class="tip"><span class="sr-only">Added</span></th></tr></thead><tbody>${body}</tbody></table>
+      <p class="muted" data-wl-none hidden></p>
+      ${gaps ? '<p class="small muted">Note: in special circumstances, some applicant names may not be displayed above. Their place is being held, but they are not currently eligible for available pups.</p>' : ''}`
+    : '<p class="muted">No families to show right now.</p>';
+  return `<div class="embed" id="the-list"><div class="embed-in">
+    <header><h2>${esc(name)} Waitlist</h2>${updated ? `<p class="muted small">${esc(updated)}</p>` : ''}
+      ${intro ? `<p class="intro">${esc(intro)}</p>` : ''}
+      ${applyHere ? '<div><a class="btn solid" href="#apply">Apply to join the waitlist</a></div>' : ''}</header>
+    ${rows.length ? '<div class="card searchbox" data-wl-search hidden><label for="wl-search" class="small muted">Find yourself on the list</label><input id="wl-search" type="search" placeholder="Search by name or number" autocomplete="off"></div>' : ''}
+    <div class="card"><div class="tablewrap">${table}</div></div>
+    <p class="small muted center">For questions or concerns, please contact ${esc(name)}.</p>
+  </div>${powered ? `<div class="powered">${esc(powered)}</div>` : ''}</div>`;
+}
+
+function kennelosList(snap, ctx, { applyHere }) {
+  const { feed, stale } = ctx.feed;
+  const wants = (r) => [SEX_WORD[r.pref_sex] || 'Either', ...(Array.isArray(r.wants_more) ? r.wants_more : [])].map(esc).join(' · ');
+  const rows = (Array.isArray(feed.rows) ? feed.rows : []).map((r) => ({
+    position: r.position, name: r.name, deciding: r.deciding, added: r.added,
+    wants: r.skipped ? `<em>${esc(listDate(r.skipped_until) ? `Skipped until ${listDate(r.skipped_until)}` : 'Skipped for now')}</em>` : wants(r),
+  }));
+  return familyList(snap, ctx, {
+    name: feed.kennel?.name || snap.site.kennel_name, rows, applyHere, intro: feed.kennel?.intro,
+    updated: listDate(feed.as_of) ? `Updated ${listDate(feed.as_of)}${stale ? ". Our records couldn't be reached just now, so this may be out of date." : ''}` : '',
+    powered: 'Waitlist kept in KennelOS · positions update automatically',
+  });
+}
+
+// The simple waitlist the breeder keeps in the manage app (no KennelOS).
+function simpleList(snap, ctx, { applyHere }) {
+  return familyList(snap, ctx, {
+    name: snap.site.kennel_name, applyHere, intro: null, updated: '', powered: null,
+    rows: ctx.waitlist.map((r) => ({ position: r.position, name: r.name, added: r.added, wants: esc(r.wants || '') })),
+  });
+}
+
 // While KennelOS can't say (its feed is off, or it can't be reached): its own pages.
 function kennelosLinks(snap, ctx) {
   const { origin, publicId } = ctx.feed;
@@ -503,14 +559,15 @@ export function waitlist(snap, ctx) {
   } else {
     main = applicationForm(snap, ctx);
   }
-  // Families already on a KennelOS list sign in there (the list itself is drawn here next).
-  const signin = f?.state === 'ok' && f.feed.links?.signin
-    ? `<p class="center mt-20 small">Already on our waitlist? <a href="${attr(`${f.origin}${f.feed.links.signin}`)}" rel="noopener" target="_blank">See your details</a> · <a href="${attr(`${f.origin}${f.feed.links.list}`)}" rel="noopener" target="_blank">See the waitlist</a></p>` : '';
+  // The KennelOS list, above the form, while the feed is shared; with no KennelOS,
+  // the simple waitlist, while it has anyone on it.
+  const list = f?.state === 'ok' ? kennelosList(snap, ctx, { applyHere: !p.closed })
+    : !f && ctx.waitlist?.length ? simpleList(snap, ctx, { applyHere: !p.closed }) : '';
   const pay = paySection(snap);
   return {
     title: snap.pages.waitlist.heading || label(snap, 'waitlist'), section: '/waitlist', description: p.lede,
     body: `${pagehead(p, { eyebrow: 'Waitlist', heading: 'Our waitlist' })}
-      <section class="section tight"><div class="wrap">${main}${signin}${help}</div>${pay ? `<div class="wrap">${pay}</div>` : ''}</section>`,
+      <section class="section tight"><div class="wrap">${list}${main}${help}</div>${pay ? `<div class="wrap">${pay}</div>` : ''}</section>`,
   };
 }
 

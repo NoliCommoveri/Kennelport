@@ -569,3 +569,80 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - Manage app version 8 (the Inbox's application answers, `app.css`) and template assets
   version 6 (the application form's hints, KennelOS's form and its script: `site.css`,
   `site.js`), with their fingerprints. 109 tests.
+
+## 2026-11-02: phase 3, the KennelOS list in the site's style
+
+- The waitlist page draws the KennelOS list from the feed (plan 3.8, decision 21), above
+  the application form, with KennelOS's own words (its `common.js` is the model): the
+  heading, Updated date (with a note when it's the last copy kept), her intro, the
+  rows (position, listed name, "Currently deciding", wants, Skipped until, the date
+  added behind an ⓘ that opens on tap), the gap note, Available Puppies (parents, their
+  registered names, pedigree and health tests under About the parents, dates, pups by
+  sex with photo links) and Coming up. Current Applicants opens KennelOS's sign-in.
+- Search by name or number (ignoring case and accents), shown only with the script.
+  On a phone each row stacks and nothing scrolls sideways.
+- Phase 3 is built. 111 tests; the list checked in Chromium at phone and desktop widths
+  (search, the ⓘ, no sideways scroll).
+
+## 2026-11-02: the list shows only the families
+
+- At the owner's word: the KennelOS list on a KennelPort site no longer draws Current
+  Applicants (the sign-in box), Available Puppies or Coming up. The site has its own
+  puppy pages, and the status-page sign-in belongs elsewhere. The list keeps its header,
+  search, rows and gap note, above the application form. Plan 3.8 updated.
+
+## 2026-11-02: Family login, and template version 7
+
+- At the owner's word, the status-page sign-in moved off the waitlist list to
+  **Family login**: in the top menu beside the Waitlist button, in the footer's Buying a
+  puppy column, and as **Sign in to see your details** on the status-page help page. Each
+  opens KennelOS's sign-in in a new tab. The snapshot carries it (`site.family_login`,
+  from `KENNELOS_ORIGIN` and the kennel id); saving or removing the feed address marks
+  the draft changed, and the change list says "Family login link: added" or "removed".
+  The plan's phase 4 Family login footer link is done here.
+- Template assets version 7 (the list, Family login, the help page's buttons), with its
+  fingerprint.
+
+## 2026-11-02: the simple waitlist
+
+- Decided with the owner: an optional waitlist kept by hand for breeders without KennelOS
+  (plan 3.8, replacing "KennelPort is not a waitlist"). Shown publicly as first name and
+  last initial; hidden while a KennelOS feed is set; families added from an application
+  or by hand; a short "wants" line she types.
+- `0009_waitlist.sql`: `waitlist_entries`. `src/waitlist.js`: add, edit, move, fulfil,
+  put back, delete; places come from the order, so fulfilling moves everyone up.
+- Manage app: **Your waitlist** (tile with the count waiting): each family with **Offer
+  pups** (a mailto filled with the waitlist page's Offer pups wording or the default, a
+  link to the Puppies page and the kennel name), **Fulfilled**, Edit, up and down; a
+  Fulfilled section with **Put back** and Delete. **Add to waitlist** on an application
+  in the Inbox, prefilled. Download a copy adds `waitlist.json`.
+- Site: the waitlist page reads it live (no publish) and draws it like the KennelOS list
+  (`familyList`, shared by both), above the form; the site's application form says names
+  show as first name and last initial. The daily cleanup deletes fulfilled families after
+  90 days; closing a site deletes them all.
+- 117 tests; the Your waitlist screen and the site's list checked in Chromium at phone
+  width. Manage app files changed (`app.css`, `zip.js`); version not bumped yet.
+
+## 2026-11-02: keep my name private on the simple waitlist
+
+- The site's application form has **Keep my name private**; it's saved with the
+  application ("Show my name privately on the waitlist: Yes"). Add to waitlist then
+  starts with the name masked as KennelOS masks it (`maskedNameFor`: "A***** K"), and
+  the waitlist forms have a **Keep their name private** tick that always shows the
+  masked name. Your waitlist marks them "(private)". 118 tests; the form checked in
+  Chromium at phone width.
+
+## 2026-11-02: steering between KennelOS and the simple waitlist
+
+- `kennelosState` (feed.js): linked or not, and whether KennelOS takes applications
+  online. Home: the Your waitlist tile is greyed when linked (`.tile.off`), and Waitlist
+  and application says what's in use. Waitlist and application: the KennelOS card comes
+  first (the full explanation when unlinked, one line when linked); under the settings,
+  the questions and the simple waitlist are each marked when unused. The questions list,
+  Your waitlist (no Add a family) and the Inbox (no Add to waitlist) say the same.
+  119 tests; Home and the settings checked in Chromium at phone width.
+
+## 2026-11-02: manage app version 9
+
+- Manage app version 9 (Your waitlist's layout, `waitlist.json` in Download a copy, the
+  greyed tile), with its fingerprint. Template unchanged at 7. 119 tests.

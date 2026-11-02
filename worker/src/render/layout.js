@@ -31,10 +31,13 @@ function header(snap, ctx) {
     return `<li><button class="navtop" type="button" aria-expanded="false"${current ? ' aria-current="page"' : ''}>${esc(g.label)} <i class="chev"></i></button>
       <ul class="drop">${g.links.map((l) => `<li><a href="${attr(l.href)}">${esc(l.text)}</a></li>`).join('')}</ul></li>`;
   }).join('');
+  // Family login (plan 3.8): KennelOS's sign-in, beside the Waitlist button.
+  const login = snap.site.family_login ? `<li><a class="navtop" href="${attr(snap.site.family_login)}" rel="noopener noreferrer" target="_blank">Family login</a></li>` : '';
+  const withLogin = login && items.includes('class="btn solid"') ? items.replace(/<li><a class="btn solid"/, `${login}<li><a class="btn solid"`) : items + login;
   return `<header class="site"><div class="wrap bar">
     <a class="brand" href="/" aria-label="${attr(snap.site.kennel_name)} home">${brand(snap)}</a>
     <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="main-nav"><span></span></button>
-    <nav class="main" id="main-nav" aria-label="Main"><ul>${items}</ul></nav>
+    <nav class="main" id="main-nav" aria-label="Main"><ul>${withLogin}</ul></nav>
   </div></header>`;
 }
 
@@ -44,11 +47,11 @@ function footer(snap, ctx) {
   const cols = [
     ['About us', groups.find((g) => g.key === 'about')?.links ?? []],
     ['Dogs and puppies', [...(groups.find((g) => g.key === 'residents')?.links.slice(0, 1) ?? []), ...(groups.find((g) => g.key === 'puppies')?.links ?? [])]],
-    ['Buying a puppy', [...(groups.find((g) => g.key === 'how')?.links ?? []), ...(pageOn(snap, 'waitlist', ctx) ? [{ href: '/waitlist', text: label(snap, 'waitlist') }] : []), ...(payShown(snap, ctx) ? [{ href: '/waitlist#how-to-pay', text: 'How to pay' }] : [])]],
+    ['Buying a puppy', [...(groups.find((g) => g.key === 'how')?.links ?? []), ...(pageOn(snap, 'waitlist', ctx) ? [{ href: '/waitlist', text: label(snap, 'waitlist') }] : []), ...(payShown(snap, ctx) ? [{ href: '/waitlist#how-to-pay', text: 'How to pay' }] : []), ...(snap.site.family_login ? [{ href: snap.site.family_login, text: 'Family login', external: true }] : [])]],
   ].filter(([, links]) => links.length);
   return `<footer class="site"><div class="wrap">
     <div class="foot-brand"><a class="brand" href="/">${brand(snap)}</a>${snap.site.blurb ? `<p class="small">${esc(snap.site.blurb)}</p>` : ''}</div>
-    ${cols.map(([h, links]) => `<div><h4>${esc(h)}</h4><ul>${links.map((l) => `<li><a href="${attr(l.href)}">${esc(l.text)}</a></li>`).join('')}</ul></div>`).join('')}
+    ${cols.map(([h, links]) => `<div><h4>${esc(h)}</h4><ul>${links.map((l) => `<li><a href="${attr(l.href)}"${l.external ? ' rel="noopener noreferrer" target="_blank"' : ''}>${esc(l.text)}</a></li>`).join('')}</ul></div>`).join('')}
     <div class="fine"><span>© ${esc(year)} ${esc(snap.site.kennel_name)} · <a href="/privacy">Privacy</a></span><span>Made with KennelPort</span></div>
   </div></footer>`;
 }

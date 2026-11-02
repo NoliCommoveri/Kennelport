@@ -106,7 +106,7 @@ test('with a feed carrying her form, the waitlist page draws KennelOS\'s form, a
   assert.match(html, /<summary>Is there a fee\?<\/summary>/);
   assert.match(html, /class="cf-turnstile" data-sitekey="0xKOS"/);
   assert.match(html, /data-kos-fallback>This form needs a browser with JavaScript on\. Apply on our <a href="https:\/\/apply\.kennelos\.example\/apply\/kos1_/);
-  assert.match(html, /Already on our waitlist\? <a href="https:\/\/apply\.kennelos\.example\/list\/kos1_[^"]+#signin"/);
+  assert.ok(html.indexOf('id="the-list"') < html.indexOf('id="apply"'), 'the list, then the form');
   assert.doesNotMatch(html, /action="\/waitlist#apply"/, 'no KennelPort application form');
   assert.match(html, /<h3>Your application is in<\/h3>[\s\S]*?href="https:\/\/apply\.kennelos\.example\/list\/kos1_[^"]+#signin"[^>]*>See my details/, 'afterwards: KennelOS\'s own sign-in');
   assert.doesNotMatch(html, /\/s\//, 'no status-page link is ever built here');
@@ -159,7 +159,6 @@ test('online applications off in KennelOS: the site\'s own form, with the Kennel
   const html = await res.text();
   assert.match(html, /action="\/waitlist#apply"/);
   assert.match(html, /Preferred sex/);
-  assert.match(html, /See your details/);
   assert.doesNotMatch(res.headers.get('content-security-policy'), /kennelos/);
 });
 
@@ -231,4 +230,111 @@ test('an application sealed in the browser opens only with her form key', async 
   // The key id is bound in: the same text under another id doesn't open.
   const env = JSON.parse(atob(sealed));
   await assert.rejects(openSealed(pair.privateKey, 'fk_2', btoa(JSON.stringify({ ...env, kid: 'fk_2' }))));
+});
+
+// The list itself, as KennelOS's /list page draws it.
+const LIST = {
+  ...feed(null),
+  kennel: { name: 'AK Boston Terriers', intro: 'Puppies go out in list order.\nThanks for waiting!', apply_open: false },
+  rows: [
+    { position: 1, name: 'Currently deciding', deciding: true, pref_sex: 'female', added: '2026-01-05' },
+    { position: 2, name: 'Megan R.', pref_sex: 'any', wants_more: ['Black & white'], added: '2026-02-10' },
+    { position: 4, name: 'A****** K', pref_sex: 'male', added: '2026-03-01', skipped: true, skipped_until: '2027-01-15' },
+    { position: 5, name: '<script>x</script>', pref_sex: 'female', added: '2026-04-01' },
+  ],
+  available: [{ id: 'l1', label: 'Willow 2026', nickname: 'The Gem litter', breed: 'Boston Terrier', whelp_date: '2026-10-28', ready_date: '2026-12-23', picks_open: true, pups_available: 2, pups_female: 1, pups_male: 1,
+    pups: [{ call_name: 'Opal', sex: 'female' }, { call_name: 'Onyx', sex: 'male', photos_url: 'https://photos.example/onyx' }],
+    dam: { name: 'Willow', titles: ['CGC'], tests: [{ name: 'Patellas (OFA)', result: 'Normal' }] }, sire: { name: 'Boone', titles: [] } }],
+  upcoming: [{ id: 'u1', kind: 'planned_heat', label: 'Pearl heat', breed: 'Boston Terrier', dam: { name: 'Pearl', titles: [] }, sire: { name: '', titles: [] }, expected_month: '2027-03' },
+    { id: 'u2', kind: 'planned_pairing', label: 'Peaches × Boone', dam: { name: 'Peaches', titles: [] }, sire: { name: 'Boone', titles: [] } }],
+};
+
+test('the KennelOS list is drawn on the waitlist page in the site\'s style', async () => {
+  const b = await breeder(kennelos(LIST));
+  await b.post('/pages/waitlist/kennelos', { feed: FEED_URL });
+  const html = await (await b.waitlist()).text();
+  assert.match(html, /<h2>AK Boston Terriers Waitlist<\/h2><p class="muted small">Updated November 1, 2026<\/p>/);
+  assert.match(html, /<p class="intro">Puppies go out in list order\.\nThanks for waiting!<\/p>/);
+  assert.match(html, /<td class="num">#1<\/td><td><em>Currently deciding<\/em><\/td>/);
+  assert.match(html, /<td>Either · Black &amp; white<\/td><td class="tip"><button type="button" class="added-tip" aria-label="Added February 10, 2026"/);
+  assert.match(html, /<em>Skipped until January 15, 2027<\/em>/);
+  assert.match(html, /&lt;script&gt;x&lt;\/script&gt;/, 'names escaped');
+  assert.doesNotMatch(html, /<script>x<\/script>/);
+  assert.match(html, /some applicant names may not be displayed above/, 'the gap note, since #3 is left out');
+  assert.match(html, /data-wl-search hidden/, 'search shows only with the script');
+  // Only the families: the site has its own puppy pages, and no sign-in box here.
+  for (const gone of ['Available Puppies', 'Coming up', 'The Gem litter', 'Current Applicants', '#signin']) assert.ok(!html.includes(gone), gone);
+  // Online applications off: the site's own form follows the list.
+  assert.match(html, /<a class="btn solid" href="#apply">Apply to join the waitlist<\/a>/);
+  assert.match(html, /action="\/waitlist#apply"/);
+});
+
+test('an empty list says so; the last copy is shown, dated, when KennelOS can\'t be reached', async () => {
+  const k = kennelos({ ...LIST, rows: [] });
+  const b = await breeder(k);
+  await b.post('/pages/waitlist/kennelos', { feed: FEED_URL });
+  assert.match(await (await b.waitlist()).text(), /No families to show right now\./);
+  k.answer = 'down';
+  b.env.DB.raw.prepare("UPDATE feed_cache SET checked_at = '2000-01-01T00:00:00Z'").run();
+  const html = await (await b.waitlist()).text();
+  assert.match(html, /Updated November 1, 2026\. Our records couldn&#39;t be reached just now/);
+});
+
+test('Family login: in the menu, the footer and the status-page help, once published', async () => {
+  const b = await breeder(kennelos(LIST));
+  const home = async () => (await call(b.env, SITE, '/')).text();
+  assert.doesNotMatch(await home(), /Family login/);
+  await b.post('/pages/waitlist/kennelos', { feed: FEED_URL });
+  assert.doesNotMatch(await home(), /Family login/, 'not before publishing');
+  assert.match(await (await b.get('/publish')).text(), /Family login link: added/);
+  await b.post('/publish');
+  const signin = 'https://apply.kennelos.example/list/kos1_11111111-2222-4333-8444-555555555555#signin';
+  const html = await home();
+  assert.match(html, new RegExp(`<li><a class="navtop" href="${signin}" rel="noopener noreferrer" target="_blank">Family login</a></li><li><a class="btn solid" href="/waitlist">`), 'beside the Waitlist button');
+  assert.match(html, new RegExp(`<li><a href="${signin}" rel="noopener noreferrer" target="_blank">Family login</a></li>`), 'in the footer');
+  assert.match(await (await call(b.env, SITE, '/waitlist/help')).text(), new RegExp(`<a class="btn solid" href="${signin}"[^>]*>Sign in to see your details</a>`));
+  await b.post('/pages/waitlist/kennelos', { remove: '1' });
+  assert.match(await (await b.get('/publish')).text(), /Family login link: removed/);
+  await b.post('/publish');
+  assert.doesNotMatch(await home(), /Family login/);
+});
+
+test('the manage app steers by the KennelOS link: says it can be linked, then greys out what is unused', async () => {
+  const k = kennelos(feed());
+  const b = await breeder(k);
+  // Not linked: KennelOS is offered; the simple waitlist and questions are in use.
+  let home = await (await b.get('')).text();
+  assert.match(home, /<a class="tile" href="\/s\/akbostons\/waitlist"><b>Your waitlist<\/b>/);
+  assert.match(home, /Waitlist and application<\/b><span>Your questions, or link KennelOS/);
+  let wl = await (await b.get('/pages/waitlist')).text();
+  assert.ok(wl.indexOf('Your KennelOS waitlist') < wl.indexOf('action="/s/akbostons/pages/waitlist"'), 'the KennelOS card comes first');
+  assert.match(wl, /Keep your waitlist in KennelOS\?/);
+  assert.match(wl, /Edit the application questions on this page/);
+  assert.match(await (await b.get('/waitlist')).text(), /Keep your waitlist in KennelOS Pro instead/);
+
+  // Linked, with online applications: both greyed, with the reason.
+  await b.post('/pages/waitlist/kennelos', { feed: FEED_URL });
+  home = await (await b.get('')).text();
+  assert.match(home, /<a class="tile off" href="\/s\/akbostons\/waitlist"><b>Your waitlist<\/b><span>Not used: your website shows your KennelOS waitlist/);
+  assert.match(home, /Waitlist and application<\/b><span>Linked to KennelOS, which takes your applications/);
+  wl = await (await b.get('/pages/waitlist')).text();
+  assert.match(wl, /application questions aren(&#39;|')t used while KennelOS takes your applications online/);
+  assert.match(wl, /simple waitlist isn(&#39;|')t used while KennelOS is linked/);
+  assert.match(await (await b.get('/lists/questions')).text(), /Not used right now: KennelOS takes your applications online/);
+  const screen = await (await b.get('/waitlist')).text();
+  assert.match(screen, /Not used: your website shows your KennelOS waitlist/);
+  assert.doesNotMatch(screen, /Add a family/);
+
+  // Linked, online applications off in KennelOS: the questions are in use again.
+  k.answer = feed(null);
+  b.env.DB.raw.prepare("UPDATE feed_cache SET checked_at = '2000-01-01T00:00:00Z'").run();
+  home = await (await b.get('')).text();
+  assert.match(home, /Linked to KennelOS · your questions/);
+  assert.doesNotMatch(await (await b.get('/lists/questions')).text(), /Not used right now/);
+  assert.match(home, /tile off" href="\/s\/akbostons\/waitlist"/, 'the simple waitlist still isn\'t');
+
+  // An application from the site's own form: no Add to waitlist while linked.
+  await call(b.env, SITE, '/waitlist', { method: 'POST', headers: { origin: `https://${SITE}`, 'cf-connecting-ip': '198.51.100.9' }, body: new URLSearchParams({ name: 'Megan Ross', email: 'm@example.com' }) });
+  const msg = b.env.DB.raw.prepare('SELECT id FROM inquiries').get();
+  assert.doesNotMatch(await (await b.get(`/inbox/${msg.id}`)).text(), /Add to waitlist/);
 });

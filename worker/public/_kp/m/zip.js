@@ -42,6 +42,7 @@
       const files = [
         { name: 'content.json', data: enc.encode(JSON.stringify(manifest.content, null, 2)) },
         { name: 'messages.json', data: enc.encode(JSON.stringify(manifest.messages, null, 2)) },
+        ...(manifest.waitlist ? [{ name: 'waitlist.json', data: enc.encode(JSON.stringify(manifest.waitlist, null, 2)) }] : []),
         { name: 'photos.json', data: enc.encode(JSON.stringify(manifest.photos.map(({ url, ...p }) => p), null, 2)) },
         { name: 'README.txt', data: enc.encode(manifest.readme) },
       ];

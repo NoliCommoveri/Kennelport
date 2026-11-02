@@ -11,6 +11,7 @@ import { hmacHex } from './lib/crypto.js';
 import { savePhoto, PhotoError } from './photos.js';
 import { notify } from './push.js';
 import { litterChoices, ABOUT_LABEL } from './render/parts.js';
+import { PRIVATE_ANSWER } from './waitlist.js';
 
 export const FORM_LIMITS = { perVisitorHour: 5, perSiteDay: 100 };
 export const HONEYPOT = 'website';
@@ -168,6 +169,8 @@ export async function receiveApplication(env, request, siteId, snap, ctxWorker, 
     // With no questions set up, the form asks for a few lines about them.
     const about = (snap.questions ?? []).length ? null : text(form, 'message', 3000, { required: true, label: 'a little about your family', multiline: true });
     if (about) list.push([ABOUT_LABEL, about]);
+    // Keep my name private: if they're added to the waitlist, it shows masked.
+    if (form.get('private')) list.push(PRIVATE_ANSWER);
     const phone = list.find(([label]) => (snap.questions ?? []).find((q) => q.label === label)?.type === 'phone')?.[1] ?? null;
     const id = crypto.randomUUID();
     await env.DB.prepare(`INSERT INTO inquiries (id, site_id, kind, name, email, phone, topic, message, answers, received_at)

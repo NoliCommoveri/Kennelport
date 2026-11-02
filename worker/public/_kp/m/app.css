@@ -36,6 +36,7 @@ button[disabled] { opacity: .5; }
 .tile b { font-size: 1rem; }
 .tile span { font-size: .82rem; color: var(--muted); }
 .tile.soon { opacity: .6; }
+.tile.off { opacity: .6; border-style: dashed; }
 .tile .count { justify-self: start; background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 0 9px; font-weight: 800; font-size: .8rem; }
 .status p:first-child { display: flex; align-items: center; gap: 8px; font-weight: 600; flex-wrap: wrap; }
 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); display: inline-block; }
@@ -74,6 +75,10 @@ legend { font-weight: 700; font-size: .9rem; padding: 0; margin-bottom: 6px; }
 .changes a { font-weight: 700; white-space: nowrap; }
 .card.danger { border-color: color-mix(in srgb, var(--error) 40%, var(--line)); }
 .card.danger button { border-color: var(--error); color: var(--error); }
+.wl-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.wl-entry { gap: 8px; } .wl-entry p { margin: 0; }
+.wl-entry .row form { flex: 1 1 110px; } .wl-entry .row form button { width: 100%; }
+.wl-entry .order { display: flex; gap: 4px; flex: 0 0 auto; } .wl-entry .order button { min-height: 44px; min-width: 44px; padding: 0; }
 .ph-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .ph-list img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; }
 .ph-list .card { padding: 10px; gap: 8px; }

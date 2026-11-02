@@ -11,6 +11,7 @@
 // the R2 write fails nothing in D1 changes, so the old snapshot stays live.
 // The last KEEP snapshots are kept; older ones are deleted from D1 and R2.
 import { HOME_BLOCK_ORDER, PAGES, PAYMENT_KINDS } from './content/model.js';
+import { kennelosOrigin } from './feed.js';
 
 export const SNAPSHOT_VERSION = 1;
 export const KEEP = 10;
@@ -130,6 +131,9 @@ export async function buildSnapshot(env, siteId) {
       contact_phone: site.contact_phone, facebook_url: site.facebook_url, facebook_label: site.facebook_label,
       instagram_url: site.instagram_url, template: site.template, scheme: site.scheme, dark_mode: site.dark_mode,
       show_other_prices: Boolean(site.show_other_prices),
+      // Families on her KennelOS waitlist sign in there (plan 3.8): the footer's,
+      // the menu's and the status-page help's Family login link.
+      family_login: kennelosOrigin(env) && site.kennelos_public_id ? `${kennelosOrigin(env)}/list/${encodeURIComponent(site.kennelos_public_id)}#signin` : null,
     },
     pages, home, dogs, litters, reviews, steps, expanders, extras, payment, questions, photos,
   };

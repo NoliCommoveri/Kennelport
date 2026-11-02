@@ -18,6 +18,7 @@ import { htmlPage, escapeHtml as esc } from './lib/html.js';
 import { receiveInquiry, receiveReview, receiveApplication, turnstileOn } from './siteforms.js';
 import { pageOn } from './render/parts.js';
 import { readFeed } from './feed.js';
+import { publicRows } from './waitlist.js';
 
 export const PREVIEW_COOKIE = 'kp_preview';
 export const PREVIEW_DAYS = 7;
@@ -151,10 +152,12 @@ export async function serveSite(request, env, ctxWorker, subdomain) {
   }
 
   const ctx = { path: url.pathname, origin, today: today(), preview, turnstileKey: turnstileOn(env) ? env.TURNSTILE_SITE_KEY : null };
-  // The waitlist page of a site linked to a KennelOS waitlist is drawn from the
-  // snapshot and the feed's five-minute copy, so it isn't cached with the snapshot.
-  const live = url.pathname === '/waitlist' && site.kennelos_public_id;
-  if (live) ctx.feed = await readFeed(env, site.id, site.kennelos_public_id);
+  // The waitlist page is drawn from the snapshot and the list as it is now: the
+  // KennelOS feed's five-minute copy, or the simple waitlist the breeder keeps (no
+  // publish needed), so it isn't cached with the snapshot.
+  const live = url.pathname === '/waitlist';
+  if (live && site.kennelos_public_id) ctx.feed = await readFeed(env, site.id, site.kennelos_public_id);
+  else if (live) ctx.waitlist = await publicRows(env, site.id);
 
   // A visitor sending the contact form, a review or an application: never cached, answered with the
   // same page and a thank-you (or the problem, with what they typed).

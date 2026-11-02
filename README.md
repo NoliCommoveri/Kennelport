@@ -12,10 +12,10 @@ editing, photos, preview, publish, undo, suspend and close (a custom domain is c
 by hand when the first site wants one). Phase 2 is built (sign-in, the installable manage
 app, editing and publish, photos tagged with what they're of, the site's contact and
 review forms, Inbox, review queue, push, download a copy, Delete my site, limits); photo
-upload works on a real Android phone and a real iPhone (plan 4.2). Phase 3 so far: How to pay and the safe-payment notice, the application
-form on the waitlist page, and the KennelOS website feed with KennelOS's application form
-drawn in the site's style. Next: the last of phase 3 (plan 8.1: the KennelOS list drawn in
-the site's style). Open: site
+upload works on a real Android phone and a real iPhone (plan 4.2). Phase 3 is built: How to pay and the safe-payment notice, the application form on the
+waitlist page, and the KennelOS website feed: the list and KennelOS's application form
+drawn in the site's style, and a simple waitlist kept by hand for sites without
+KennelOS (plan 3.8, 8.1). Next: phase 4, the KennelOS link. Open: site
 rules wait until KennelPort is offered (9). See
 [`docs/KennelPort_Plan.md`](docs/KennelPort_Plan.md); after version 1:
 [`docs/KennelPort_Backlog.md`](docs/KennelPort_Backlog.md). Page directory from a survey of real breeder sites:

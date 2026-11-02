@@ -201,7 +201,7 @@ export const PAGES = {
   extras:         { path: '/extras', group: 'how', label: 'Extras', canHide: true, fields: { ...HEAD, note: ML(300) } },
   policies:       { path: '/policies', group: 'how', label: 'Policies', canHide: true, fields: { ...HEAD } },
   faq:            { path: '/faq', group: 'how', label: 'FAQ', canHide: true, fields: { ...HEAD } },
-  waitlist:       { path: '/waitlist', group: 'waitlist', label: 'Waitlist', canHide: true, fields: { ...HEAD, closed: BOOL, closed_message: ML(400), form_heading: S(80), form_intro: ML(300) } },
+  waitlist:       { path: '/waitlist', group: 'waitlist', label: 'Waitlist', canHide: true, fields: { ...HEAD, closed: BOOL, closed_message: ML(400), form_heading: S(80), form_intro: ML(300), offer_message: ML(600) } },
   waitlist_help:  { path: '/waitlist/help', group: 'waitlist', label: 'Using your status page', canHide: true, fields: { ...HEAD } },
   privacy:        { path: '/privacy', group: null, label: 'Privacy', canHide: false, fields: {} },
 };

@@ -93,7 +93,18 @@ export async function readFeed(env, siteId, publicId, { now = Date.now() } = {})
 
 export async function setFeed(env, siteId, publicId) {
   await env.DB.batch([
-    env.DB.prepare('UPDATE sites SET kennelos_public_id = ? WHERE id = ?').bind(publicId, siteId),
+    // The Family login link comes with the next publish.
+    env.DB.prepare('UPDATE sites SET kennelos_public_id = ?, draft_changed_at = ? WHERE id = ?').bind(publicId, new Date().toISOString(), siteId),
     env.DB.prepare('DELETE FROM feed_cache WHERE site_id = ?').bind(siteId),
   ]);
+}
+
+// What the manage app needs to know to steer the breeder (plan 3.8): linked to a
+// KennelOS waitlist at all (then the simple waitlist isn't used), and whether
+// KennelOS takes applications online (then the site's own questions aren't used).
+export async function kennelosState(env, siteId) {
+  const row = await env.DB.prepare('SELECT kennelos_public_id FROM sites WHERE id = ?').bind(siteId).first();
+  if (!row?.kennelos_public_id || !kennelosOrigin(env)) return { linked: false, online: false, offered: Boolean(kennelosOrigin(env)) };
+  const f = await readFeed(env, siteId, row.kennelos_public_id);
+  return { linked: true, online: Boolean(f?.feed?.form), state: f?.state ?? 'unreachable', offered: true };
 }

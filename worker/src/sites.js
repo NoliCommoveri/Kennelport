@@ -26,7 +26,7 @@ export async function setSuspended(env, siteId, suspended) {
 }
 
 // Every table that holds a site's content, children before parents.
-const SITE_TABLES = ['health_results', 'puppies', 'litters', 'dogs', 'stories', 'steps', 'expanders', 'extras', 'home_blocks', 'site_pages', 'snapshots', 'redirects', 'photo_tags', 'photos', 'inquiries', 'notify_items', 'site_users', 'payment_info', 'form_fields', 'feed_cache'];
+const SITE_TABLES = ['health_results', 'puppies', 'litters', 'dogs', 'stories', 'steps', 'expanders', 'extras', 'home_blocks', 'site_pages', 'snapshots', 'redirects', 'photo_tags', 'photos', 'inquiries', 'notify_items', 'site_users', 'payment_info', 'form_fields', 'feed_cache', 'waitlist_entries'];
 
 // Close a site (plan 4.3): delete everything now, keep only the marker row.
 export async function closeSite(env, siteId, confirmSubdomain) {
