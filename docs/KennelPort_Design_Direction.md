@@ -147,12 +147,14 @@ and the inquiry form's choices (which litter, preferred sex, timing).
 - **Readable body text** on a phone: the survey's worst pages used 10–12px light grey
   body text.
 
-## 7. Colour schemes (proposed)
+## 7. Colour schemes
 
 Each scheme is a palette in light and dark versions, a font pairing and an ornament set
-(plan section 3.13). Breeders pick a scheme, never single colours. The first is the AK
-sample's; the rest are proposals to build as samples and judge side by side. Every
-scheme is contrast-checked in both versions before it ships.
+(plan section 3.13). Breeders pick a scheme, never single colours. All six ship in
+version 1 (decided after comparing them on the AK sample in
+[`reference/scheme-lab.html`](reference/scheme-lab.html), which holds each scheme's exact
+colours). Every scheme is contrast-checked in both versions before it ships; the lab's
+colours haven't had that check yet.
 
 | Scheme | Light | Dark | Fonts (display / body / script) | Ornaments |
 |---|---|---|---|---|
@@ -163,7 +165,8 @@ scheme is contrast-checked in both versions before it ships.
 | **Slate** | white ground, charcoal ink, steel-blue buttons | graphite ground, white ink, light steel buttons | DM Serif Display / Work Sans / none | none |
 | **Midnight** (dark first) | cream ground, ink-blue text, gold buttons | charcoal ground, cream ink, gold buttons and labels | Cormorant / Mulish / Pinyon Script | mountain line |
 
-Harbor matches the light blue the first site's owner already uses on their own pages.
+Clay and Slate have no script font: the script line shows in the display face's italic.
+Midnight's display face uses old-style numbers. Harbor matches the light blue the first site's owner already uses on their own pages.
 All fonts are free from Google Fonts.
 
 **What the AK sample showed about building it:** the flips, sliding sets, menus and
@@ -180,4 +183,5 @@ where they add something.
 - JavaScript and any free library or service may be used (the one rule: no cost).
 - The AK sample ([`reference/ak-sample.html`](reference/ak-sample.html)) is the reference
   for the first template: its layout, cards, sliding sets, expanders and Lawn scheme.
-- Breeders choose a colour scheme, not individual colours (section 7).
+- Breeders choose a colour scheme, not individual colours; all six schemes in section 7
+  ship (section 7).

@@ -15,5 +15,11 @@ published as a claude.ai artifact, so it has no `<html>`/`<head>` wrapper of its
   health results, reviews, policies, FAQ answers, and every waitlist family. The 16-week
   checklist past "Crate-training foundations" is filled in from the package's own
   description.
+**`scheme-lab.html`** is the same sample with a bar for switching between the six colour
+schemes (design direction section 7) and Auto, Light and Dark. Its `SCHEMES` list holds
+each scheme's light and dark colours, fonts and ornament, the starting point for the
+template's scheme files.
+
+In `ak-sample.html`:
 - **The waitlist** mirrors KennelOS's public list (`cloud/public/family/list.js` and
   `common.js` in KennelOS): same rows, names, Wants wording, gap note and ⓘ added date.

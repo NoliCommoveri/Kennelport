@@ -156,3 +156,10 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   schemes). Open: decisions 21–23 and 25.
 - Design direction: section 7, six proposed schemes (Lawn, Harbor, Heather, Clay, Slate,
   Midnight); the sample needed no JavaScript library.
+
+## 2026-11-02: colour schemes decided
+
+- Built a scheme lab: the AK sample with a switcher for the six proposed schemes and
+  Auto / Light / Dark (`docs/reference/scheme-lab.html`). The owner kept all six:
+  decision 25 decided (Lawn, Harbor, Heather, Clay, Slate, Midnight, each light and dark;
+  Midnight dark first). Contrast checks still due before they ship.

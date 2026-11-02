@@ -656,8 +656,10 @@ A **scheme** is a matched set: a palette with light and dark versions, a font pa
 (display serif, body sans, optional script) and an ornament set. The breeder picks one
 in the manage app with a live preview of their own site; switching is instant and can be
 undone like any edit. Every scheme is checked for contrast (normal text at least 4.5:1)
-in both versions before it ships. The proposed set and its colours are in
-[`KennelPort_Design_Direction.md`](KennelPort_Design_Direction.md) section 7.
+in both versions before it ships. Version 1 has six (decision 25): Lawn, Harbor, Heather,
+Clay, Slate and Midnight, set out in
+[`KennelPort_Design_Direction.md`](KennelPort_Design_Direction.md) section 7. Midnight is
+dark first: it shows dark unless the visitor's device asks for light explicitly.
 - **Dark mode:** each site follows the visitor's device setting by default, as the AK
   sample does; the breeder can lock it to light (decision 23).
 - **Custom colour:** none in version 1. Whether a breeder may later pick their own accent
@@ -953,6 +955,9 @@ Rough order of likely need; any item can go first.
 14. **Which pages ship first:** the AK sample's pages (section 8.1, phase 3). Past
     litters and news, proposed earlier, move to the backlog because the sample doesn't
     have them.
+25. **Colour schemes:** all six ship in version 1: Lawn, Harbor, Heather, Clay, Slate and
+    Midnight (design direction section 7), each with light and dark versions. Compared
+    side by side in [`reference/scheme-lab.html`](reference/scheme-lab.html).
 24. **Customisation model:** breeders change content, switch pages and Home blocks on and
     off, and choose a scheme; layouts stay fixed (section 3.12).
 
@@ -999,8 +1004,7 @@ Rough order of likely need; any item can go first.
     from a short list per scheme, checked for contrast.
 23. **Dark mode:** proposed that sites follow the visitor's device setting, with a
     **Light only** switch for the breeder.
-25. **Which schemes ship:** the proposed set in the design direction, section 7. How many
-    for version 1, and their names and colours.
+
 
 ---
 
