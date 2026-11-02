@@ -221,3 +221,10 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   **KennelPort Site Manager**), online-only saving, and preview before publishing: a
   Preview on every edit screen, Preview site, and a list of changes under Publish.
 - Sample: litter cards no longer show open picks; footer gains Family login.
+
+## 2026-11-02: review form in the sample
+
+- Added **Share your review** to the AK sample's reviews (About us menu too): first name,
+  town, which puppy, star rating, review, optional photo with a preview, and the required
+  permission box; the confirmation says it waits for approval (decision 13). Also fixed
+  the application and review forms' drop-downs running past 320px-wide screens.

@@ -343,6 +343,26 @@ td.tip, th.tip { width: 36px; text-align: right; }
 .pay-safe { font-size: .86rem; color: var(--muted); text-align: center; max-width: 62ch; margin: 0 auto; }
 .pay-msg { font-size: .85rem; color: var(--held); min-height: 1.2em; }
 
+/* Review form */
+.review-share { margin-top: 28px; text-align: center; }
+.review-share > summary { list-style: none; display: inline-flex; }
+.review-share > summary::-webkit-details-marker { display: none; }
+.review-share[open] > summary { display: none; }
+.review-form { text-align: left; margin-top: 0; }
+.apply-form .row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 560px) { .apply-form .row { grid-template-columns: minmax(0, 1fr); } }
+.apply-form select, .apply-form input[type="text"], .apply-form input[type="email"], .apply-form textarea { width: 100%; min-width: 0; }
+.stars-in { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 6px; font-size: .85rem; font-weight: 700; }
+.stars-in legend { padding: 0; margin-bottom: 6px; }
+.star-row { display: inline-flex; flex-direction: row-reverse; justify-content: flex-end; gap: 2px; }
+.star-row input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.apply-form .star-row label { font-size: 1.9rem; line-height: 1; color: var(--line); cursor: pointer; padding: 2px; display: block; }
+.apply-form .star-row input:checked ~ label, .apply-form .star-row label:hover, .apply-form .star-row label:hover ~ label { color: var(--brass); }
+.star-row input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.consent { display: flex !important; grid-template-columns: none; gap: 10px; align-items: flex-start; font-weight: 400 !important; font-size: .9rem !important; }
+.consent input { margin-top: 3px; width: 18px; height: 18px; flex: none; }
+input[type="file"] { font: inherit; font-size: .85rem; max-width: 100%; }
+
 /* Apply form */
 .apply-form { max-width: 720px; margin: 28px auto 0; display: grid; gap: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: clamp(18px, 3vw, 30px); }
 .apply-form .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -382,7 +402,7 @@ footer.site .fine { grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,
     <nav class="main" id="main-nav" aria-label="Main">
       <ul>
         <li><button class="navtop" data-for="about" aria-expanded="false">About us <i class="chev"></i></button>
-          <ul class="drop"><li><a href="#story">Our story</a></li><li><a href="#reviews">Reviews</a></li><li><a href="#contact">Contact</a></li></ul></li>
+          <ul class="drop"><li><a href="#story">Our story</a></li><li><a href="#reviews">Reviews</a></li><li><a href="#share-review">Share your review</a></li><li><a href="#contact">Contact</a></li></ul></li>
         <li><button class="navtop" data-for="residents" aria-expanded="false">Kennel residents <i class="chev"></i></button>
           <ul class="drop"><li><a href="#residents">All our Bostons</a></li><li><a href="#girls">Girls</a></li><li><a href="#boys">Boys</a></li></ul></li>
         <li><button class="navtop" data-for="puppies" aria-expanded="false">Puppies <i class="chev"></i></button>
@@ -461,6 +481,25 @@ footer.site .fine { grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,
     <div class="head"><span class="eyebrow">Reviews</span><h2>From our families</h2>
       <div class="filter" style="margin:8px 0 0"><label for="review-topic">Show</label><select id="review-topic"><option value="all">All reviews</option><option value="health">Health and care</option><option value="process">The waitlist and pickup</option><option value="temperament">Temperament</option></select></div></div>
     <div class="grid" id="all-reviews"></div>
+    <details class="review-share" id="share-review">
+      <summary class="btn line">Share your review</summary>
+      <form class="apply-form review-form" id="review-form" novalidate>
+        <div><span class="eyebrow">AK families</span><h2 style="margin-top:6px">Share your review</h2><p class="muted small" style="margin-top:6px">Reviews appear on our site once we've read and approved them. We show your first name and town only.</p></div>
+        <div class="row"><label for="r-name">First name<input id="r-name" type="text" autocomplete="given-name" placeholder="Sarah" required></label><label for="r-town">Town<input id="r-town" type="text" placeholder="Tulsa, OK"></label></div>
+        <div class="row">
+          <label for="r-dog">Your AK puppy<select id="r-dog"><option value="">Choose one</option><option>From the Gem litter (Willow × Boone*)</option><option>From Ziva × Boone*</option><option>From an earlier litter</option><option>I'm still waiting for mine</option></select></label>
+          <fieldset class="stars-in"><legend>Rating</legend>
+            <div class="star-row" id="r-stars"><input type="radio" name="r-star" id="r-s5" value="5" checked><label for="r-s5" title="5 stars">★</label><input type="radio" name="r-star" id="r-s4" value="4"><label for="r-s4" title="4 stars">★</label><input type="radio" name="r-star" id="r-s3" value="3"><label for="r-s3" title="3 stars">★</label><input type="radio" name="r-star" id="r-s2" value="2"><label for="r-s2" title="2 stars">★</label><input type="radio" name="r-star" id="r-s1" value="1"><label for="r-s1" title="1 star">★</label></div>
+          </fieldset>
+        </div>
+        <label for="r-text">Your review<textarea id="r-text" rows="4" maxlength="1500" placeholder="How is your Boston doing? What was it like working with us?" required></textarea></label>
+        <label for="r-photo">A photo of your Boston (optional)<input id="r-photo" type="file" accept="image/*"></label>
+        <img id="r-preview" alt="Your photo" hidden style="max-width:160px;border-radius:var(--r);border:1px solid var(--line)">
+        <label class="consent" for="r-ok"><input id="r-ok" type="checkbox" required> You may show this on your website with my first name and town.</label>
+        <div><button class="btn solid" type="submit">Send review</button></div>
+        <p class="done" id="review-done" hidden></p>
+      </form>
+    </details>
   </div></div>
   <div class="section" id="contact"><div class="wrap">
     <div class="head"><span class="eyebrow">Contact</span><h2>Say hello</h2><p class="lede">Visits are by appointment once you're on the waitlist. Messages are the quickest way to reach us.</p></div>
@@ -802,6 +841,21 @@ $('apply').addEventListener('submit', (e) => {
   out.textContent = `Thanks, ${name.split(/\s+/)[0]}. This is a sample site, so nothing was sent. On the live site, your application goes straight into AK's KennelOS waitlist for review.`;
 });
 
+// ---------- Review form (sample: held for approval, nothing sent) ----------
+$('r-photo').addEventListener('change', () => {
+  const f = $('r-photo').files[0]; const img = $('r-preview');
+  if (!f || !f.type.startsWith('image/')) { img.hidden = true; return; }
+  const rd = new FileReader(); rd.onload = () => { img.src = rd.result; img.hidden = false; }; rd.readAsDataURL(f);
+});
+$('review-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const out = $('review-done'); out.hidden = false;
+  const name = $('r-name').value.trim();
+  if (!name || !$('r-text').value.trim()) { out.textContent = 'Please add your first name and your review.'; return; }
+  if (!$('r-ok').checked) { out.textContent = 'Please tick the box so we may show your review on our website.'; return; }
+  out.textContent = `Thank you, ${name}! Your review goes to AK Boston Terriers to read, and it appears here once they approve it. (This is a sample site, so nothing was sent.)`;
+});
+
 // ---------- How to pay ----------
 document.addEventListener('click', async (e) => {
   const c = e.target.closest('.copy');
@@ -868,6 +922,7 @@ function route() {
   nav.classList.remove('show'); $('menu-toggle').setAttribute('aria-expanded', 'false');
   for (const o of nav.querySelectorAll('li.open')) o.classList.remove('open');
   if (id === 'wl-details') $('wl-details').open = true;
+  if (id === 'share-review') $('share-review').open = true;
   if (id === 'apply') $('apply').scrollIntoView({ block: 'start' });
   else if (el === view || id === 'girls' || id === 'boys') window.scrollTo({ top: 0, behavior: 'auto' });
   else requestAnimationFrame(() => el.scrollIntoView({ block: 'start' }));
