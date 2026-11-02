@@ -360,3 +360,41 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   then Publish or Undo.
 - New records start with Show on my website ticked. Records of another site or parent
   are out of reach. 54 tests.
+
+## 2026-11-02: the Site Manager icon
+
+- The owner's KennelPort Manager artwork is the app's icon: outer border removed so
+  phones can round it, cut to 64, 180, 192 and 512 pixels plus a maskable 512 with the
+  art in the middle 80%. The manifest's colours match it (teal #034655, cream #FCF4E9),
+  and the app's header shows it. Source in `docs/reference/kennelport-manager-icon.png`.
+
+## 2026-11-02: phase 2, batch 3: messages, reviews and push
+
+- `0004_messages.sql`: inquiries, push_subscriptions, notify_items.
+- The site's contact form (on Contact) and Share your review (on Reviews, which now shows
+  even before the first review). Turnstile when set up, a honeypot, 5 an hour per visitor
+  and 100 a day per site; another origin is refused; a problem keeps what was typed. A
+  review's photo is resized in the visitor's browser, checked on the server and private
+  until a published review uses it.
+- The manage app's Inbox (unread counts on Home, Reply opens the breeder's email, Copy
+  email, mark unread, delete; never emailed, deleted after 90 days by the daily cron) and
+  Reviews to approve (approve, then publish; decline deletes it and its photo).
+- Push notifications as in KennelOS cloud: payload-free VAPID pushes, the service worker
+  asks what to show with the subscription's secret, first name only ("New message from
+  Megan"), silent once signed out, gone subscriptions deleted. /notifications turns each
+  device on or off and sends a test; iPhones are told to install first. /ops makes the
+  key and checks push and Turnstile.
+- Closing a site now also deletes its messages, notification records and people.
+- Fix: the template's inputs without a type (names, phone) had no styling.
+- 65 tests.
+
+## 2026-11-02: phase 2, batch 4: download a copy, Delete my site, limits
+
+- Your site (manage app): storage used; Download a copy, a zip of content.json (loadable
+  back), messages.json, photos.json and every photo at full size, built in the browser
+  (`/_kp/m/zip.js`, stored entries with CRC-32); Delete my site for owners, typing the
+  subdomain, from a sign-in in the last 15 minutes, deleting everything as closing from
+  /ops does.
+- Storage and photo limits set per site in /ops, enforced on upload, shown on Photos and
+  Your site (with a warning past 90%).
+- 71 tests, including a zip opened by Python's zipfile; the download checked in a browser.

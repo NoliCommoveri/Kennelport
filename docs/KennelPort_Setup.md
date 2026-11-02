@@ -84,6 +84,17 @@ For sign-in (phase 2), also on each Worker:
 - `RESEND_API_KEY`, **Secret**, when email is set up (below). Until then staging shows
   codes and invites in `/ops` (Staging outbox); production can't sign anyone in.
 
+For the forms and notifications (phase 2), on each Worker:
+- `VAPID_PRIVATE_JWK`, **Secret**: the push notification key. In `/ops`, press **Make push
+  keys** and paste what it shows. Changing it later means every device turns
+  notifications on again.
+- **Turnstile** (decision 17): in the Cloudflare dashboard, **Turnstile → Add widget**,
+  with the hostnames the sites use (`kennelport.com`, and for staging
+  `kennelport-staging.kennelport.workers.dev`), mode **Managed**. Add its site key as the
+  variable `TURNSTILE_SITE_KEY` and its secret key as the secret `TURNSTILE_SECRET`.
+  Until both are set the forms rely on the hidden honeypot field and rate limits, and
+  `/ops` says so.
+
 ## 6. Check it works
 
 - **Staging:** open `https://kennelport-staging.kennelport.workers.dev/ops`, sign in with

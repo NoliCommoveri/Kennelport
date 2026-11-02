@@ -13,6 +13,8 @@ import { readCookie } from './lib/http.js';
 import { escapeHtml as esc, htmlPage } from './lib/html.js';
 import { handleSites, sitesSection } from './ops/sites.js';
 import { mailMode, outboxRecent } from './mail.js';
+import { vapidConfig, generateVapidKeys } from './push.js';
+import { turnstileOn } from './siteforms.js';
 
 const COOKIE = 'ops_session';
 const SESSION_SECONDS = 12 * 60 * 60;
@@ -68,11 +70,14 @@ export async function bindingChecks(env) {
   checks.push({ name: 'Root domain', ok: Boolean(env.ROOT_DOMAIN), detail: env.ROOT_DOMAIN ? esc(env.ROOT_DOMAIN) : 'ROOT_DOMAIN not set' });
   checks.push({ name: 'Sign-in key', ok: Boolean(env.EMAIL_HMAC_KEY), detail: env.EMAIL_HMAC_KEY ? 'EMAIL_HMAC_KEY set' : 'Add the secret EMAIL_HMAC_KEY (a long random string; never change it once breeders sign in)' });
   const mode = mailMode(env);
+  checks.push({ name: 'Push notifications', ok: vapidConfig(env).ready, detail: vapidConfig(env).ready ? 'VAPID_PRIVATE_JWK set' : 'Press Make push keys below and add the result as the secret VAPID_PRIVATE_JWK' });
+  checks.push({ name: 'Spam check', ok: turnstileOn(env), detail: turnstileOn(env) ? 'Turnstile on for the contact and review forms' : 'Turnstile off: forms rely on the honeypot and rate limits. Add TURNSTILE_SITE_KEY (variable) and TURNSTILE_SECRET (secret)' });
   checks.push({ name: 'Email', ok: Boolean(mode), detail: mode === 'resend' ? 'Resend (RESEND_API_KEY set)' : mode === 'outbox' ? 'Staging outbox: codes and invites show below instead of being emailed' : 'Add the secret RESEND_API_KEY; until then nobody can sign in' });
   return checks;
 }
 
-async function statusPage(env, log = null, note = null) {
+async function statusPage(env, log = null, note = null, keys = null) {
+  const pushKeysHtml = vapidConfig(env).ready ? '' : `<h2>Push keys</h2>${keys ? `<p>Add this as the Worker <strong>secret</strong> <code>VAPID_PRIVATE_JWK</code> (it is shown once, and kept nowhere):</p><pre>${esc(keys.privateJwk)}</pre>` : '<form method="post" action="/ops/push-keys"><p><button>Make push keys</button></p></form>'}`;
   const checks = await bindingChecks(env);
   const dbOk = checks[0].ok;
   const rows = dbOk ? await migrationStatus(env.DB) : [];
@@ -97,6 +102,7 @@ ${dbOk ? `<table><tr><th>Id</th><th>Name</th><th>State</th><th>Applied</th></tr>
 ${pending ? '<form method="post" action="/ops/migrate"><p><button>Apply pending</button></p></form>' : '<p class="ok">The database matches this deploy.</p>'}` : '<p class="bad">D1 isn\'t working, so migrations can\'t be read.</p>'}
 ${outboxHtml}
 ${logHtml}
+${pushKeysHtml}
 <form method="post" action="/ops/logout"><p><button>Sign out</button></p></form>`);
 }
 
@@ -129,6 +135,7 @@ add <code>OPS_TOKEN</code> as a <em>Secret</em> (a long random string). Ops is c
     return statusPage(env, log);
   }
 
+  if (url.pathname === '/ops/push-keys' && request.method === 'POST') return statusPage(env, null, null, await generateVapidKeys());
   if (url.pathname === '/ops' && request.method === 'GET') return statusPage(env, null, url.searchParams.get('note'));
   if (url.pathname.startsWith('/ops/sites')) {
     const res = await handleSites(request, env, url);

@@ -7,7 +7,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 "Muli
 a { color: var(--accent); }
 .top { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: env(safe-area-inset-top, 0px) max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px)); background: var(--surface); border-bottom: 1px solid var(--line); }
 .top .title { font-weight: 700; font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.top .mark { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); font-weight: 800; font-size: .8rem; letter-spacing: .04em; }
+.top .mark { width: 32px; height: 32px; border-radius: 8px; display: block; }
 .top .back { font-size: 2rem; line-height: 1; text-decoration: none; width: 32px; }
 main { max-width: 720px; margin: 0 auto; padding: 16px max(16px, env(safe-area-inset-right, 0px)) 32px max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 16px; }
 h1 { font-size: 1.4rem; line-height: 1.2; margin: 0 0 6px; }
@@ -78,3 +78,12 @@ legend { font-weight: 700; font-size: .9rem; padding: 0; margin-bottom: 6px; }
 .ph-list img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; }
 .ph-list .card { padding: 10px; gap: 8px; }
 .ph-list form { gap: 6px; }
+.item.unread > a b { font-weight: 800; }
+.dot-new { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); margin-right: 8px; vertical-align: middle; }
+.message { white-space: normal; overflow-wrap: anywhere; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: .92rem; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; overflow-wrap: anywhere; }
+.stars { color: #9C7A34; letter-spacing: 2px; }
+.q-photo { max-width: 200px; border-radius: 8px; }
+.review-q .row form { flex: 1 1 140px; }
+.review-q .row button { width: 100%; }

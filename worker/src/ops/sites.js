@@ -30,6 +30,7 @@ const NOTES = {
   resumed: 'Back on.',
   photo_removed: 'Photo removed from the draft.',
   invited: 'Invited. They sign in at the manage app with that address.',
+  limits: 'Limits saved.',
   removed: 'Removed from this site.',
   closed: 'Site closed and its content deleted.',
   released: 'Subdomain released.',
@@ -120,6 +121,15 @@ ${people.length ? `<table>${people.map((p) => `<tr><td>${esc(p.role)}</td><td cl
   <p><button>Invite</button> <span class="muted">Sends an invite email. Inviting an address again resends it.</span></p>
 </form>`;
 
+  const mbOf = (b) => (b ? Math.round(b / 1024 / 1024) : '');
+  const limitsSection = `<h2>Limits</h2>
+<p class="muted">Enforced on every upload. Empty means no limit. The breeder sees what's used on Photos and on Your site.</p>
+<form method="post" action="/ops/sites/${esc(site.id)}/limits">
+  <p><label>Storage, in MB<br><input name="storage_mb" inputmode="numeric" value="${esc(mbOf(site.storage_limit))}" placeholder="for example 500"></label></p>
+  <p><label>Photos<br><input name="photos" inputmode="numeric" value="${esc(site.photo_limit ?? '')}" placeholder="for example 400"></label></p>
+  <p><button>Save limits</button></p>
+</form>`;
+
   const lifecycle = `<h2>Suspend or close</h2>
 <form method="post" action="/ops/sites/${esc(site.id)}/${site.status === 'suspended' ? 'resume' : 'suspend'}"><p><button>${site.status === 'suspended' ? 'Turn the site back on' : 'Suspend'}</button> <span class="muted">${site.status === 'suspended' ? '' : 'Hides the site; keeps everything.'}</span></p></form>
 <form method="post" action="/ops/sites/${esc(site.id)}/close">
@@ -128,7 +138,7 @@ ${people.length ? `<table>${people.map((p) => `<tr><td>${esc(p.role)}</td><td cl
   <p><button>Close and delete everything</button></p>
 </form>`;
 
-  return page(`${top}${publishing}${peopleSection}${contentSection}${photoSection}${lifecycle}`);
+  return page(`${top}${publishing}${peopleSection}${contentSection}${photoSection}${limitsSection}${lifecycle}`);
 }
 
 // ---------- routes ----------
@@ -216,6 +226,15 @@ export async function handleSites(request, env, url) {
           throw err;
         }
         return back('invited');
+      }
+      case 'limits': {
+        const form = await request.formData();
+        const num = (v) => { const s = String(v ?? '').trim(); if (!s) return null; const n = Number(s); return Number.isInteger(n) && n > 0 && n < 1e6 ? n : NaN; };
+        const mbv = num(form.get('storage_mb'));
+        const photos = num(form.get('photos'));
+        if (Number.isNaN(mbv) || Number.isNaN(photos)) return sitePage(env, siteId, { error: 'Limits are whole numbers above 0, or empty for none.' });
+        await env.DB.prepare('UPDATE sites SET storage_limit = ?, photo_limit = ? WHERE id = ?').bind(mbv === null ? null : mbv * 1024 * 1024, photos, siteId).run();
+        return back('limits');
       }
       case 'people/remove': {
         const form = await request.formData();

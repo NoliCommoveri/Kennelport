@@ -31,3 +31,8 @@ template's scheme files.
 In `ak-sample.html`:
 - **The waitlist** mirrors KennelOS's public list (`cloud/public/family/list.js` and
   `common.js` in KennelOS): same rows, names, Wants wording, gap note and ⓘ added date.
+
+**`kennelport-manager-icon.png`** is the KennelPort Site Manager app icon, from the owner's
+artwork with its outer border removed (phones round icons themselves). The app's icon
+sizes in `worker/public/_kp/m/icon-*.png` are made from it; the maskable one keeps the
+art in Android's middle 80%.
