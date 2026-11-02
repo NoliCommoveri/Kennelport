@@ -4,6 +4,16 @@ What has to be done once, by hand, in the Cloudflare dashboard, for the Worker i
 [`../worker/`](../worker/) to run (plan 2.1, 8.1 phase 0). Nothing here is repeated per
 site. The code side is done; these steps are yours.
 
+## Before the domain is bought
+
+Staging needs no domain: it runs on its `workers.dev` address, and `kennelport.com` in
+its config is only a name the routing uses (`/__host` stands in for real hostnames). So
+until the domain is bought, do only the staging half: skip steps 1 and 2, create just
+`kennelport-staging` and `kennelport-files-staging` in step 3, connect just
+`kennelport-staging` in step 4, and set its `OPS_TOKEN` in step 5. Don't connect the
+production Worker yet: its routes name the `kennelport.com` zone, so its deploys fail
+until the zone exists. Everything up to phase 3 can be built and tried on staging.
+
 ## 1. The domain
 
 - Register `kennelport.com` (Cloudflare Registrar is at cost; any registrar works).
