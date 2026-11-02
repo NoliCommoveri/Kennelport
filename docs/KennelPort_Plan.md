@@ -1,6 +1,7 @@
 # KennelPort: high-level plan (DRAFT)
 
-> Status: planning draft, checked against KennelOS. Nothing is built. Section 8 says what
+> Status: planning draft, checked against KennelOS. Phase 0 is built (`worker/`); the
+> rest is not. Section 8 says what
 > version 1 is; section 9 lists the decisions still open. What comes after version 1 is
 > in [`KennelPort_Backlog.md`](KennelPort_Backlog.md). History of this plan lives in
 > [`BUILD_LOG.md`](BUILD_LOG.md).
@@ -102,6 +103,13 @@ KennelPort lives in this repo and deploys as its own Worker. It is not part of t
 KennelOS `cloud/` Worker. KennelOS treats it like any optional service: with no KennelPort
 URL configured, nothing about it shows or runs. That matches the KennelOS rule that
 `cloudUrl: null` must work.
+
+**Staging and production** are two Workers from the same code (`worker/wrangler.toml`),
+each with its own D1 and R2. Production answers on `kennelport.com` and
+`*.kennelport.com`. Staging lives on its `workers.dev` address, which can't receive those
+hostnames, so on staging only a cookie set by `/__host?h=<hostname>` stands in for the
+hostname and the same routing is tested there; without it, staging acts as the manage
+host. One-time dashboard steps: [`KennelPort_Setup.md`](KennelPort_Setup.md).
 
 ### 2.4 Custom domains (their own domain)
 

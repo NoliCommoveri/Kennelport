@@ -1,0 +1,123 @@
+// /ops on the manage host: the operator's page (plan 2.2). Phase 0 has only what
+// setting up needs: sign in, check that D1 and R2 are bound and working, and
+// apply migrations. Phase 1 adds sites, drafts, publishing and closing.
+//
+// Access is the OPS_TOKEN Worker secret, typed in once and held in a signed,
+// HttpOnly cookie, as in KennelOS cloud's /ops. Until the secret is set the page
+// refuses everything and says how to set it: it never falls open. Breeder
+// accounts have no way in.
+import { applyPending, migrationStatus } from './migrate.js';
+import { resetGateCache } from './gate.js';
+import { hmacHex, timingSafeEqual } from './lib/crypto.js';
+import { readCookie } from './lib/http.js';
+import { escapeHtml as esc, htmlPage } from './lib/html.js';
+
+const COOKIE = 'ops_session';
+const SESSION_SECONDS = 12 * 60 * 60;
+const TITLE = 'KennelPort ops';
+
+async function mintCookie(secret) {
+  const expires = Math.floor(Date.now() / 1000) + SESSION_SECONDS;
+  return `${expires}.${await hmacHex(secret, `ops:${expires}`)}`;
+}
+
+async function cookieValid(secret, value) {
+  if (!value) return false;
+  const [expiresRaw, sig] = value.split('.');
+  const expires = Number(expiresRaw);
+  if (!Number.isFinite(expires) || expires * 1000 < Date.now()) return false;
+  return timingSafeEqual(sig ?? '', await hmacHex(secret, `ops:${expires}`));
+}
+
+const redirect = (location, headers = {}) => new Response(null, { status: 303, headers: { location, ...headers } });
+
+function loginPage(error) {
+  return htmlPage(TITLE, `<h1>${TITLE}</h1>
+${error ? `<p class="bad">${esc(error)}</p>` : ''}
+<form method="post" action="/ops/login">
+  <p><label>Ops token<br><input type="password" name="token" autocomplete="current-password" required></label></p>
+  <p><button>Sign in</button></p>
+</form>`, { status: error ? 401 : 200 });
+}
+
+// Is each binding there and answering? Never throws: a missing binding is what
+// this section is for.
+export async function bindingChecks(env) {
+  const checks = [];
+  try {
+    if (!env.DB) throw new Error('not bound');
+    const one = await env.DB.prepare('SELECT 1 AS one').first('one');
+    checks.push({ name: 'D1 (DB)', ok: one === 1, detail: 'query answered' });
+  } catch (err) {
+    checks.push({ name: 'D1 (DB)', ok: false, detail: String(err?.message ?? err) });
+  }
+  try {
+    if (!env.FILES) throw new Error('not bound');
+    const key = '_ops/check.txt';
+    const stamp = new Date().toISOString();
+    await env.FILES.put(key, stamp);
+    const obj = await env.FILES.get(key);
+    const back = obj ? new TextDecoder().decode(await obj.arrayBuffer()) : null;
+    await env.FILES.delete(key);
+    checks.push({ name: 'R2 (FILES)', ok: back === stamp, detail: 'write, read and delete worked' });
+  } catch (err) {
+    checks.push({ name: 'R2 (FILES)', ok: false, detail: String(err?.message ?? err) });
+  }
+  checks.push({ name: 'Root domain', ok: Boolean(env.ROOT_DOMAIN), detail: env.ROOT_DOMAIN ? esc(env.ROOT_DOMAIN) : 'ROOT_DOMAIN not set' });
+  return checks;
+}
+
+async function statusPage(env, log = null) {
+  const checks = await bindingChecks(env);
+  const dbOk = checks[0].ok;
+  const rows = dbOk ? await migrationStatus(env.DB) : [];
+  const pending = rows.some((r) => r.state !== 'applied');
+  const envName = env.ENV_NAME || 'unknown';
+
+  const checkRows = checks.map((c) => `<tr><td>${esc(c.name)}</td><td class="${c.ok ? 'ok' : 'bad'}">${c.ok ? 'OK' : 'Problem'}</td><td>${c.detail}</td></tr>`).join('');
+  const migRows = rows.map((r) => `<tr><td><code>${esc(r.id)}</code></td><td>${esc(r.name)}</td><td class="${r.state === 'applied' ? 'ok' : 'bad'}">${esc(r.state)}</td><td class="muted">${esc(r.applied_at ?? '')}</td></tr>`).join('');
+  const logHtml = log ? `<h2>Last run</h2><pre>${esc(log.map((l) => l.ok ? `${l.id} ${l.name}: applied (${l.statements} statements)` : `${l.id} ${l.name}: FAILED: ${l.error}\n${(l.statementList ?? []).map((s, i) => `  [${i + 1}] ${s}`).join('\n')}`).join('\n') || 'Nothing pending.')}</pre>` : '';
+
+  return htmlPage(TITLE, `<h1>${TITLE}</h1>
+<p class="muted">Environment: <strong>${esc(envName)}</strong></p>
+<h2>Setup checks</h2>
+<table>${checkRows}</table>
+<h2>Migrations</h2>
+${dbOk ? `<table><tr><th>Id</th><th>Name</th><th>State</th><th>Applied</th></tr>${migRows}</table>
+${pending ? '<form method="post" action="/ops/migrate"><p><button>Apply pending</button></p></form>' : '<p class="ok">The database matches this deploy.</p>'}` : '<p class="bad">D1 isn\'t working, so migrations can\'t be read.</p>'}
+${logHtml}
+<form method="post" action="/ops/logout"><p><button>Sign out</button></p></form>`);
+}
+
+export async function handleOps(request, env) {
+  const url = new URL(request.url);
+
+  if (!env.OPS_TOKEN) {
+    return htmlPage(TITLE, `<h1>${TITLE}</h1><p class="bad"><strong>OPS_TOKEN is not set.</strong></p>
+<p>In the Cloudflare dashboard: Workers &amp; Pages → this Worker → Settings → Variables and Secrets,
+add <code>OPS_TOKEN</code> as a <em>Secret</em> (a long random string). Ops is closed until it is set.</p>`, { status: 503 });
+  }
+
+  if (url.pathname === '/ops/login' && request.method === 'POST') {
+    const form = await request.formData();
+    if (!timingSafeEqual(String(form.get('token') ?? ''), env.OPS_TOKEN)) return loginPage('That token is not right.');
+    return redirect('/ops', {
+      'set-cookie': `${COOKIE}=${await mintCookie(env.OPS_TOKEN)}; Path=/ops; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_SECONDS}`,
+    });
+  }
+
+  if (!(await cookieValid(env.OPS_TOKEN, readCookie(request, COOKIE)))) return loginPage(null);
+
+  if (url.pathname === '/ops/logout' && request.method === 'POST') {
+    return redirect('/ops', { 'set-cookie': `${COOKIE}=; Path=/ops; HttpOnly; Secure; SameSite=Strict; Max-Age=0` });
+  }
+
+  if (url.pathname === '/ops/migrate' && request.method === 'POST') {
+    const { log } = await applyPending(env.DB);
+    resetGateCache();
+    return statusPage(env, log);
+  }
+
+  if (url.pathname === '/ops' && request.method === 'GET') return statusPage(env);
+  return htmlPage(TITLE, '<h1>Not found</h1>', { status: 404 });
+}

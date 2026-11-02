@@ -281,3 +281,21 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - Fonts and libraries (3.3, and the design direction) are served from the site, never from
   Google Fonts or a CDN, so visitors aren't tracked; only Turnstile loads from outside.
 - Risks table: rows for each.
+
+## 2026-11-02: phase 0 coded
+
+- `worker/`: one Worker routing by hostname (`src/hosts.js`: home, manage, api, the
+  custom-domain fallback, reserved names, sites; two-level names and other domains get a
+  404 for now), D1 and R2 bindings, staging (workers.dev) and production
+  (`*.kennelport.com/*` and `kennelport.com/*` routes) in `wrangler.toml`.
+- `/ops` on the manage host: OPS_TOKEN sign-in, setup checks (D1 query, R2 write/read/
+  delete, root domain), migration status and Apply pending. Migration runner, gate, SQL
+  splitter and crypto helpers copied from KennelOS cloud; `0001` holds only `sites`.
+- Site hosts look up `sites`: unknown 404, closed 410 with the closed notice, otherwise a
+  placeholder until phase 1; everything reading D1 answers 503 until migrated.
+- Staging can't receive real hostnames, so `ALLOW_HOST_OVERRIDE` (staging only) lets a
+  `/__host` cookie stand in; plan 2.3 says so.
+- `docs/KennelPort_Setup.md`: the one-time dashboard steps (domain, proxied apex and
+  wildcard records, D1 and R2, two Workers Builds connections, OPS_TOKEN, checks).
+- 14 tests (`node --test`); both configs pass `wrangler deploy --dry-run`; checked live
+  under `wrangler dev`.

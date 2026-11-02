@@ -1,0 +1,73 @@
+# The KennelPort Worker (plan section 2): every site, the manage app, /ops and the
+# KennelOS link API, from one deploy. Deployed by Cloudflare Workers Builds with its
+# root directory set to `worker/` (docs/KennelPort_Setup.md).
+#
+# The top level is the STAGING Worker, on workers.dev only. [env.production] at
+# the bottom is the production one: its own name, D1, R2 and routes, deployed by a
+# second Workers Builds connection with the deploy command
+# `npx wrangler deploy --env production`.
+name = "kennelport-staging"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+# Worker logs are where the operator sees why something failed. Nothing in src/
+# may log an email address, a code, a token or a request body.
+[observability]
+enabled = true
+
+# Setup step 3 (docs/KennelPort_Setup.md): paste the id the dashboard shows.
+[[d1_databases]]
+binding = "DB"
+database_name = "kennelport-staging"
+database_id = "REPLACE-WITH-STAGING-D1-ID"
+
+# Never public: every object is served through the Worker after a check.
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "kennelport-files-staging"
+
+# Migration .sql files are bundled as text so /ops can apply them. The glob must
+# be `**/*.sql`: wrangler matches it against the import string
+# ('./0001_schema.sql').
+[[rules]]
+type = "Text"
+globs = ["**/*.sql"]
+fallthrough = true
+
+# ROOT_DOMAIN: the domain every site is a subdomain of.
+# ALLOW_HOST_OVERRIDE: staging only. workers.dev can't receive the real hostnames,
+# so /__host?h=<hostname> sets a cookie the router reads instead (src/hosts.js).
+# Production must NOT set it. OPS_TOKEN is a secret, set in the dashboard, never here.
+[vars]
+ENV_NAME = "staging"
+ROOT_DOMAIN = "kennelport.com"
+ALLOW_HOST_OVERRIDE = "1"
+
+# ---------------------------------------------------------------------------------
+[env.production]
+name = "kennelport"
+workers_dev = false
+
+# Every first-level subdomain and the bare domain (plan 2.1). Needs the proxied
+# wildcard and apex DNS records from setup step 2.
+routes = [
+  { pattern = "*.kennelport.com/*", zone_name = "kennelport.com" },
+  { pattern = "kennelport.com/*", zone_name = "kennelport.com" },
+]
+
+[env.production.observability]
+enabled = true
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "kennelport"
+database_id = "REPLACE-WITH-PRODUCTION-D1-ID"
+
+[[env.production.r2_buckets]]
+binding = "FILES"
+bucket_name = "kennelport-files"
+
+[env.production.vars]
+ENV_NAME = "production"
+ROOT_DOMAIN = "kennelport.com"
