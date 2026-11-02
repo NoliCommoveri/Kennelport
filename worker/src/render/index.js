@@ -21,6 +21,7 @@ const FIXED = {
   '/faq': ['faq', P.faq],
   '/waitlist': ['waitlist', P.waitlist],
   '/waitlist/help': ['waitlist_help', P.waitlistHelp],
+  '/albums': ['albums', P.albums],
   '/privacy': ['privacy', P.privacy],
 };
 
@@ -34,6 +35,8 @@ function pick(snap, ctx) {
   }
   let m = path.match(/^\/dogs\/([a-z0-9-]+)$/);
   if (m) return pageOn(snap, 'dogs', ctx) || snap.dogs.length ? P.dog(snap, ctx, m[1]) : null;
+  m = path.match(/^\/albums\/([a-z0-9-]+)$/);
+  if (m) return pageOn(snap, 'albums', ctx) ? P.album(snap, ctx, m[1]) : null;
   m = path.match(/^\/litters\/([a-z0-9-]+)$/);
   if (m) return snap.pages.litters.enabled ? P.litter(snap, ctx, m[1]) : null;
   m = path.match(/^\/litters\/([a-z0-9-]+)\/([a-z0-9-]+)$/);
@@ -53,6 +56,7 @@ export function sitePaths(snap, ctx) {
   const paths = [];
   for (const [path, [key]] of Object.entries(FIXED)) if (key === 'home' || pageOn(snap, key, ctx)) paths.push(path);
   for (const d of snap.dogs) paths.push(`/dogs/${d.slug}`);
+  if (pageOn(snap, 'albums', ctx)) for (const a of snap.albums) paths.push(`/albums/${a.slug}`);
   if (snap.pages.litters.enabled) {
     for (const l of snap.litters) {
       paths.push(`/litters/${l.slug}`);

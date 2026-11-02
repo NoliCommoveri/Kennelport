@@ -122,6 +122,7 @@ async function siteHome(env, user, site) {
     ${tile('/litters', 'Litters', 'Planned, current, past')}
     ${tile('/pages', 'Pages and wording', 'Home, about, policies, FAQ…')}
     ${tile('/lists/extras', 'Extras', 'Packages and prices')}
+    ${tile('/lists/albums', 'Albums', 'Photo galleries with their own link')}
     ${kos.linked ? tile('/waitlist', 'Your waitlist', 'Not used: your website shows your KennelOS waitlist', 0, true)
     : tile('/waitlist', 'Your waitlist', listed ? `${listed} famil${listed === 1 ? 'y' : 'ies'} waiting` : 'Families in order, offer pups', listed)}
     ${tile('/pages/waitlist', 'Waitlist and application', kos.linked ? (kos.online ? 'Linked to KennelOS, which takes your applications' : 'Linked to KennelOS · your questions') : kos.offered ? 'Your questions, or link KennelOS' : 'Open or closed, your questions')}

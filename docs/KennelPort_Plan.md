@@ -1061,7 +1061,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `embeds` | site_id, page or record it sits on, provider, item id, title, preview photo, order |
 | `photos` | site_id, r2_key, thumb_key, type (WebP or JPEG), width, height, bytes, alt text, removed_at; public only when the published snapshot uses it (4.2) |
 | `photo_tags` | site_id, photo_id, subject (`dog:` / `litter:` / `puppy:` / `extra:` + id, or `page:home` / `page:about`): what a photo is of, for the breeder only; never published (4.2) |
-| `albums`, `album_photos` | site_id, title, slug, cover; ordered photo list |
+| `albums` | site_id, slug, title, description, litter_id (its litter's page links to it), cover_photo_id (empty: the first photo), photos (JSON: the ordered photo ids; a removed photo drops out), show_on_site, sort. Built in phase 5 as one table: the ordered list is a JSON column rather than an `album_photos` table |
 | `links` | site_id, token_hash, linked_at, last_bundle_at, last_bundle_summary |
 | `custom_domains` | site_id, hostname, cloudflare_hostname_id, registrar (detected, backlog), status (`pending` / `active` / `stuck` / `broken`), checked_at, connected_at |
 | `health_results` | site_id, dog, test, result, normal, date, verify_url, show (off by default), certificate file (private unless ticked) |

@@ -63,6 +63,7 @@ const LISTS = {
   policies: { title: 'Policies', one: 'policy', name: (r) => r.heading, sub: () => '' },
   faq: { title: 'FAQ', one: 'question', name: (r) => r.heading, sub: () => '' },
   waitlist_help: { title: 'Using your status page', one: 'section', name: (r) => r.heading, sub: () => '' },
+  albums: { title: 'Albums', one: 'album', name: (r) => r.title, sub: (r) => [`${(r.photos ?? []).length} photo${(r.photos ?? []).length === 1 ? '' : 's'}`, r.show_on_site ? null : 'hidden'].filter(Boolean).join(' · ') },
   questions: { title: 'Application questions', one: 'question', name: (r) => r.label, sub: (r) => [QUESTION_WORDS[r.type], r.required ? 'must answer' : 'optional'].join(' · ') },
 };
 const QUESTION_WORDS = { text: 'Short answer', paragraph: 'Longer answer', choice: 'Choice', yes_no: 'Yes or no', litter: 'Which litter', phone: 'Phone', town: 'Town' };
@@ -77,11 +78,12 @@ export function createScreens({ env, request, url, site, user, page }) {
   let photosCache = null;
   const photos = async () => (photosCache ??= (await env.DB.prepare('SELECT id, alt FROM photos WHERE site_id = ? AND removed_at IS NULL ORDER BY created_at DESC').bind(site.id).all()).results);
   const dogsList = async () => (await env.DB.prepare('SELECT id, call_name FROM dogs WHERE site_id = ? ORDER BY sort').bind(site.id).all()).results;
+  const littersList = async () => (await env.DB.prepare('SELECT id, name FROM litters WHERE site_id = ? ORDER BY sort').bind(site.id).all()).results;
   let tagsCache = null;
   const tags = async () => (tagsCache ??= await tagsByPhoto(env, site.id));
   // pick: { groups: [{ label, subject }], tags: [subject…] to tag uploads with, alt }
   const ctxFor = async (kind, pick) => {
-    const ctx = { kind, photos: await photos(), photoUrl, dogs: await dogsList(), photosLink: `${base}/photos` };
+    const ctx = { kind, photos: await photos(), photoUrl, dogs: await dogsList(), litters: await littersList(), photosLink: `${base}/photos` };
     if (pick) {
       const t = await tags();
       ctx.photoGroups = pick.groups.map((g) => ({ label: g.label, ids: g.subject ? ctx.photos.filter((p) => (t.get(p.id) ?? []).includes(g.subject)).map((p) => p.id) : [] }));
@@ -108,6 +110,11 @@ export function createScreens({ env, request, url, site, user, page }) {
     const one = SUBJECT_OF[kind];
     const subsFor = (id) => [id && one ? `${one}:${id}` : null, kind === 'puppies' ? `litter:${scopeId}` : null].filter(Boolean);
     const pickFor = (rec) => {
+      // An album offers its litter's photos first; photos added here are tagged with it.
+      if (kind === 'albums') {
+        const lit = rec?.litter_id ? `litter:${rec.litter_id}` : null;
+        return { groups: [{ label: rec?.litter_id ? 'Photos of its litter' : 'Your photos', subject: lit }], tags: lit ? [lit] : [], alt: rec?.title ?? '' };
+      }
       if (!one) return null;
       const groups = [{ label: rec ? `Photos of ${L.name(rec)}` : `Photos of this ${L.one}`, subject: rec ? `${one}:${rec.id}` : null }];
       if (kind === 'puppies' && parentTitle) groups.push({ label: `Photos of ${parentTitle}`, subject: `litter:${scopeId}` });
@@ -318,7 +325,7 @@ export function createScreens({ env, request, url, site, user, page }) {
   }
 
   const listLinkFor = (key) => {
-    const kind = { reviews: 'reviews', how_it_works: 'steps', extras: 'extras', policies: 'policies', faq: 'faq', waitlist_help: 'waitlist_help', dogs: 'dogs', litters: 'litters', waitlist: 'questions' }[key];
+    const kind = { reviews: 'reviews', how_it_works: 'steps', extras: 'extras', policies: 'policies', faq: 'faq', waitlist_help: 'waitlist_help', dogs: 'dogs', litters: 'litters', waitlist: 'questions', albums: 'albums' }[key];
     if (!kind) return '';
     const href = ['dogs', 'litters'].includes(kind) ? `${base}/${kind}` : `${base}/lists/${kind}`;
     return `<p><a class="button" href="${esc(href)}">Edit the ${esc(LISTS[kind].title.toLowerCase())} on this page</a></p>`;
@@ -794,7 +801,7 @@ export function createScreens({ env, request, url, site, user, page }) {
         if (view && !(view instanceof Response)) view = await litterPhotos(await withChildren(view, `${base}/litters/${view.rec?.id}/puppies`, 'puppies', 'Puppies'));
       }
     } else {
-      const lm = p.match(/^\/lists\/(reviews|steps|extras|policies|faq|waitlist_help|questions)(\/|$)/);
+      const lm = p.match(/^\/lists\/(reviews|steps|extras|policies|faq|waitlist_help|questions|albums)(\/|$)/);
       if (lm) view = await collection(`${base}/lists/${lm[1]}`, lm[1], null, { back: lm[1] === 'questions' ? `${base}/pages/waitlist` : `${base}/pages` });
     }
     if (!view) return null;

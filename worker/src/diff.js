@@ -75,6 +75,7 @@ export function changes(live, draft) {
     ['How it works', 'steps', '/how-it-works', (s) => s.heading],
     ['Extras', 'extras', '/extras', (x) => x.name],
     ['Application form', 'questions', '/waitlist', (q) => q.label],
+    ['Albums', 'albums', '/albums', (a) => a.title],
   ]) {
     const a = live[key] ?? []; const b = draft[key] ?? [];
     if (same(a, b)) continue;

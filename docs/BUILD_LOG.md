@@ -676,3 +676,16 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 
 - Template assets version 8 and manage app version 10 (the logo, its full-size view, and
   white behind JPEG photos), with their fingerprints.
+
+## 2026-11-02: phase 5, albums
+
+- `0011_albums.sql`; `ALBUM_FIELDS` (title, description, litter, cover, photos, shown).
+  Manage app: **Albums** tile and list (the generic list screens), the photo picker
+  offering the litter's photos first; `album_limit` enforced; removing a litter keeps
+  its albums. Content document: `albums`, matched by slug so ids and redirects survive.
+- Site: `/albums` (cards with cover and count, in the Puppies menu as Photo albums,
+  hideable) and `/albums/<slug>` (a square-cropped gallery; tap for a full-screen viewer
+  with previous, next, arrow keys and swipe; without the script each photo opens
+  itself). A litter's page shows its albums. In the sitemap; a new address redirects
+  from the old. The change list names albums added, edited or removed.
+- 125 tests; the album pages and viewer checked in Chromium at phone width.

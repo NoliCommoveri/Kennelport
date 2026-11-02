@@ -479,3 +479,27 @@ input:not([type]), input[type="tel"], input[type="number"] { font: inherit; colo
 .pay-safe { font-size: .86rem; color: var(--muted); text-align: center; max-width: 62ch; margin: 0 auto; }
 .dogpage .pay-safe { text-align: left; margin: 14px 0 0; }
 .pay-safe a { color: var(--accent); font-weight: 700; }
+
+/* Albums (phase 5): cards, the gallery, and the viewer */
+.albums { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+.album-card { display: grid; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; min-width: 0; }
+.album-card img, .album-card .ph-photo { width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; display: block; }
+.album-card .ph-photo { background: var(--band); }
+.album-meta { display: grid; gap: 2px; padding: 12px 14px 14px; }
+.album-meta b { font: 500 1.1rem/1.25 var(--f-display); }
+.album-card:hover .album-meta b { color: var(--accent); }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+@media (max-width: 560px) { .gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; } }
+.gal-item { display: block; line-height: 0; border-radius: var(--r); overflow: hidden; cursor: zoom-in; }
+.gal-item img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; transition: transform .2s; }
+.gal-item:hover img { transform: scale(1.03); }
+dialog.viewer { border: 0; padding: 0; background: transparent; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; overflow: hidden; }
+dialog.viewer::backdrop { background: rgba(0, 0, 0, .92); }
+dialog.viewer[open] { display: grid; place-items: center; }
+dialog.viewer img { width: auto; height: auto; max-width: 96vw; max-height: 88dvh; object-fit: contain; border-radius: var(--r); }
+.viewer button { position: absolute; width: 48px; height: 48px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .14); color: #fff; font-size: 1.8rem; line-height: 1; cursor: pointer; }
+.viewer button:hover { background: rgba(255, 255, 255, .26); }
+.v-prev { left: 12px; top: 50%; transform: translateY(-50%); }
+.v-next { right: 12px; top: 50%; transform: translateY(-50%); }
+.v-close { right: 12px; top: 12px; }
+.v-count { position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; color: rgba(255, 255, 255, .8); }

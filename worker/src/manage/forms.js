@@ -69,6 +69,13 @@ const LABELS = {
     form_intro: ['Line under the form heading', 'For example "Your place on the list is set the day your application fee is received."'],
     offer_message: ['Offer pups email', 'What Offer pups on Your waitlist fills in, after "Hi <name>,". Leave empty for "It\'s your turn to choose a pup! Please review the available puppies on our website and reach out to us with your selection." A link to your Puppies page and your kennel name follow.'],
   },
+  albums: {
+    title: ['Title', 'For example "The Gem litter, week 6".'], description: ['A line about it', null],
+    litter_id: ['Litter', 'Its litter\'s page links to it, and that litter\'s photos are offered first below.'],
+    cover_photo_id: ['Cover photo', 'Leave as "No photo" to use the first photo.'],
+    photos: ['Photos', 'Tick the photos for this album. They show in the order they appear here, newest first.'],
+    show_on_site: ['Show on my website', null],
+  },
   questions: {
     type: ['Kind of answer', null],
     label: ['Question', 'For example "Preferred sex" or "Tell us about your home".'],
@@ -124,6 +131,10 @@ export function field(name, f, value, ctx) {
       return `<label class="check"><input type="checkbox" name="${name}" value="1"${value ? ' checked' : ''}> <span>${esc(label)}${h}</span></label>`;
     case 'enum':
       return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"${req}>${f.required ? '' : '<option value=""></option>'}${f.values.map((x) => `<option value="${esc(x)}"${x === value ? ' selected' : ''}>${esc(enumWords(ctx.kind, name, x))}</option>`).join('')}</select></label>`;
+    case 'litterid': {
+      const litters = ctx.litters ?? [];
+      return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"><option value="">None</option>${litters.map((l) => `<option value="${esc(l.id)}"${l.id === value ? ' selected' : ''}>${esc(l.name)}</option>`).join('')}</select></label>`;
+    }
     case 'dogid': {
       const dogs = ctx.dogs ?? [];
       return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"><option value="">—</option>${dogs.map((d) => `<option value="${esc(d.id)}"${d.id === value ? ' selected' : ''}>${esc(d.call_name)}</option>`).join('')}</select></label>`;

@@ -145,6 +145,36 @@
     zoom.addEventListener('click', () => zoom.close());
   }
 
+  // An album's viewer: a tap on a photo opens it full size; previous and next by
+  // buttons, arrow keys or a swipe; Escape, × or a tap outside the photo closes it.
+  const viewer = $('#viewer');
+  const shots = $$('[data-gallery]');
+  if (viewer && viewer.showModal && shots.length) {
+    const pic = $('img', viewer);
+    const count = $('.v-count', viewer);
+    let at = 0;
+    const show = (i) => {
+      at = (i + shots.length) % shots.length;
+      pic.src = shots[at].href;
+      pic.alt = $('img', shots[at])?.alt ?? '';
+      count.textContent = `${at + 1} / ${shots.length}`;
+    };
+    shots.forEach((a, i) => a.addEventListener('click', (e) => { e.preventDefault(); show(i); viewer.showModal(); }));
+    $('.v-prev', viewer).addEventListener('click', () => show(at - 1));
+    $('.v-next', viewer).addEventListener('click', () => show(at + 1));
+    $('.v-close', viewer).addEventListener('click', () => viewer.close());
+    viewer.addEventListener('click', (e) => { if (e.target === viewer) viewer.close(); });
+    viewer.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') show(at - 1); if (e.key === 'ArrowRight') show(at + 1); });
+    let x0 = null;
+    viewer.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+    viewer.addEventListener('touchend', (e) => {
+      if (x0 === null) return;
+      const dx = e.changedTouches[0].clientX - x0;
+      if (Math.abs(dx) > 40) show(at + (dx < 0 ? 1 : -1));
+      x0 = null;
+    });
+  }
+
   // Homegoing packages: "What's included" starts open on wide screens.
   if (window.matchMedia('(min-width: 901px)').matches) for (const d of $$('.pkg details')) d.open = true;
 

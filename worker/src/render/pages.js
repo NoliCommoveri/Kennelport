@@ -259,7 +259,50 @@ export function litter(snap, ctx, slug) {
         <p class="breadcrumb center"><a href="/litters">${esc(label(snap, 'litters'))}</a></p>
         <div class="litters">${litterCard(snap, l, ctx, { link: false })}</div>
         ${pups.length ? `<div class="mt-26 grid">${pups.map((pup) => puppyCard(snap, l, pup, ctx)).join('')}</div>` : ''}
+        ${litterAlbums(snap, ctx, l)}
       </div></section>`,
+  };
+}
+
+// ---------- Albums (phase 5) ----------
+// Each photo is a link to its full size; the template's script turns the set into
+// a viewer with previous and next (without it, the link opens the picture).
+
+function albumCard(snap, a) {
+  const cover = img(snap, a.cover_photo_id, { alt: '', thumb: true }) ?? '<div class="ph-photo" aria-hidden="true"></div>';
+  return `<a class="album-card" href="/albums/${attr(a.slug)}">${cover}<span class="album-meta"><b>${esc(a.title)}</b><span class="small muted">${a.photos.length} photo${a.photos.length === 1 ? '' : 's'}</span></span></a>`;
+}
+// A litter's albums, under its card on the litter's page.
+function litterAlbums(snap, ctx, l) {
+  const list = pageOn(snap, 'albums', ctx) ? (snap.albums ?? []).filter((a) => a.litter_id === l.id) : [];
+  return list.length ? `<div class="mt-26">${head('Photos', null)}<div class="albums">${list.map((a) => albumCard(snap, a)).join('')}</div></div>` : '';
+}
+
+export function albums(snap, ctx) {
+  const p = snap.pages.albums;
+  return {
+    title: p.heading || label(snap, 'albums'), section: '/litters', description: p.lede, image: snap.albums[0]?.cover_photo_id,
+    body: `${pagehead(p, { eyebrow: 'Puppies', heading: 'Photo albums' })}
+      <section class="section tight"><div class="wrap"><div class="albums">${snap.albums.map((a) => albumCard(snap, a)).join('')}</div></div></section>`,
+  };
+}
+
+export function album(snap, ctx, slug) {
+  const a = (snap.albums ?? []).find((x) => x.slug === slug);
+  if (!a) return null;
+  const l = a.litter_id && snap.litters.find((x) => x.id === a.litter_id);
+  const photos = a.photos.map((id, i) => {
+    const p = snap.photos[id];
+    return `<a class="gal-item" href="/_kp/p/${attr(encodeURIComponent(id))}" data-gallery${p?.width ? ` data-w="${p.width}" data-h="${p.height}"` : ''}>${img(snap, id, { thumb: true, alt: p?.alt || `${a.title}, photo ${i + 1}` })}</a>`;
+  }).join('');
+  return {
+    title: a.title, section: '/litters', description: a.description || `${a.photos.length} photos from ${snap.site.kennel_name}`, image: a.cover_photo_id,
+    body: `${pagehead({}, { eyebrow: l ? l.name : 'Photo album', heading: a.title, lede: a.description })}
+      <section class="section tight"><div class="wrap">
+        <p class="breadcrumb center">${l && snap.pages.litters.enabled ? `<a href="/litters/${attr(l.slug)}">${esc(l.name)}</a> · ` : ''}<a href="/albums">${esc(label(snap, 'albums'))}</a></p>
+        <div class="gallery">${photos}</div>
+      </div></section>
+      <dialog class="viewer" id="viewer" aria-label="Photo viewer"><img alt=""><button type="button" class="v-prev" aria-label="Previous photo">‹</button><button type="button" class="v-next" aria-label="Next photo">›</button><button type="button" class="v-close" aria-label="Close">×</button><span class="v-count small"></span></dialog>`,
   };
 }
 

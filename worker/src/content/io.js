@@ -7,7 +7,7 @@
 //     litters: [{ ..., dam: '<dog slug>', puppies: [...] }], reviews: [...],
 //     steps: [...], expanders: { policies: [...], faq: [...], waitlist_help: [...] },
 //     extras: [...], payment: { application_fee: {...}, deposit: {...}, safe_notice: {...} },
-//     questions: [...] }
+//     questions: [...], albums: [{ ..., litter: '<litter slug>', photos: [ids] }] }
 //
 // Every section is optional. A section that is present replaces that section of
 // the draft: dogs, litters and puppies are matched by slug, so their ids (and the
@@ -17,10 +17,10 @@
 import {
   SITE_FIELDS, DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS,
   STEP_FIELDS, EXPANDER_FIELDS, EXPANDER_PAGES, EXTRA_FIELDS, HOME_BLOCKS, PAGES, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS,
-  QUESTION_FIELDS, checkQuestion, ContentError, cleanRecord, cleanValue,
+  QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue,
 } from './model.js';
 
-const SECTIONS = ['site', 'pages', 'home', 'dogs', 'litters', 'reviews', 'steps', 'expanders', 'extras', 'payment', 'questions'];
+const SECTIONS = ['site', 'pages', 'home', 'dogs', 'litters', 'reviews', 'steps', 'expanders', 'extras', 'payment', 'questions', 'albums'];
 const MAX_ITEMS = 200;
 
 const now = () => new Date().toISOString();
@@ -44,7 +44,7 @@ const pick = (obj, keys) => Object.fromEntries(keys.filter((k) => k in obj).map(
 const omit = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) => !keys.includes(k)));
 
 // Check a whole document. Returns the cleaned sections; throws ContentError.
-export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = new Set() } = {}) {
+export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = new Set(), existingLitterSlugs = new Set() } = {}) {
   if (!doc || typeof doc !== 'object' || Array.isArray(doc)) throw new ContentError('content', 'must be a JSON object');
   for (const k of Object.keys(doc)) if (!SECTIONS.includes(k)) throw new ContentError(k, `not a section (sections: ${SECTIONS.join(', ')})`);
   const out = {};
@@ -150,6 +150,18 @@ export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = ne
       out.payment[kind] = cleanRecord(kind === 'safe_notice' ? SAFE_NOTICE_FIELDS : PAYMENT_FIELDS, v, `payment.${kind}`);
     }
   }
+  if ('albums' in doc) {
+    const litterSlugs = out.litters ? new Set(out.litters.map((l) => l.slug)) : existingLitterSlugs;
+    out.albums = list(doc.albums, 'albums').map((a, i) => {
+      const path = `albums[${i}]`;
+      const album = cleanRecord(ALBUM_FIELDS, a, path);
+      photo(album.cover_photo_id, `${path}.cover_photo_id`);
+      for (const id of album.photos ?? []) photo(id, `${path}.photos`);
+      if (album.litter && !litterSlugs.has(album.litter)) throw new ContentError(`${path}.litter`, `no litter with slug "${album.litter}"`);
+      return album;
+    });
+    uniqueSlugs(out.albums, 'albums');
+  }
   if ('questions' in doc) {
     out.questions = list(doc.questions, 'questions').map((q, i) => checkQuestion(cleanRecord(QUESTION_FIELDS, q, `questions[${i}]`), `questions[${i}]`));
     if (out.questions.length > 30) throw new ContentError('questions', 'at most 30 questions');
@@ -177,7 +189,8 @@ export async function importContent(env, siteId, doc) {
   const db = env.DB;
   const { results: photos } = await db.prepare('SELECT id FROM photos WHERE site_id = ? AND removed_at IS NULL').bind(siteId).all();
   const { results: existing } = await db.prepare('SELECT slug FROM dogs WHERE site_id = ?').bind(siteId).all();
-  const clean = cleanDocument(doc, { photoIds: new Set(photos.map((p) => p.id)), existingDogSlugs: new Set(existing.map((d) => d.slug)) });
+  const { results: existingLitters } = await db.prepare('SELECT slug FROM litters WHERE site_id = ?').bind(siteId).all();
+  const clean = cleanDocument(doc, { photoIds: new Set(photos.map((p) => p.id)), existingDogSlugs: new Set(existing.map((d) => d.slug)), existingLitterSlugs: new Set(existingLitters.map((l) => l.slug)) });
   const t = now();
   const s = [];
   const dogId = (slug) => (slug ? db.prepare('SELECT id FROM dogs WHERE site_id = ? AND slug = ?').bind(siteId, slug) : null);
@@ -272,6 +285,19 @@ export async function importContent(env, siteId, doc) {
       id: uuid(), site_id: siteId, form: 'application', ...q, required: q.required ?? 0, options: q.options?.length ? JSON.stringify(q.options) : null, sort: i,
     })));
   }
+  if (clean.albums) {
+    // Matched by slug, so an album keeps its id (and its address's redirects).
+    clean.albums.forEach((a, i) => {
+      const { litter, photos: ids, ...album } = a;
+      const row = { id: uuid(), site_id: siteId, ...album, photos: ids?.length ? JSON.stringify([...new Set(ids)]) : null, show_on_site: album.show_on_site ?? 1, sort: i, created_at: t, updated_at: t };
+      const cols = Object.keys(row);
+      const updates = cols.filter((c) => !['id', 'created_at', 'site_id', 'slug'].includes(c));
+      s.push(db.prepare(`INSERT INTO albums (${cols.join(', ')}, litter_id) VALUES (${cols.map(() => '?').join(', ')}, (SELECT id FROM litters WHERE site_id = ? AND slug = ?))
+        ON CONFLICT (site_id, slug) DO UPDATE SET ${updates.map((c) => `${c} = excluded.${c}`).join(', ')}, litter_id = excluded.litter_id`).bind(...cols.map((c) => row[c]), siteId, litter));
+    });
+    const slugs = clean.albums.map((a) => a.slug);
+    s.push(db.prepare(`DELETE FROM albums WHERE site_id = ?${notIn('slug', slugs)}`).bind(siteId, ...slugs));
+  }
   if (clean.extras) {
     s.push(db.prepare('DELETE FROM extras WHERE site_id = ?').bind(siteId));
     clean.extras.forEach((x, i) => s.push(insert(db, 'extras', {
@@ -335,6 +361,13 @@ export async function exportContent(env, siteId) {
   doc.questions = (await all("SELECT * FROM form_fields WHERE site_id = ? AND form = 'application' ORDER BY sort", siteId)).map((q) => {
     const out = bools(pick(strip(q, SYSTEM), Object.keys(QUESTION_FIELDS)), ['required']);
     if (out.options) out.options = JSON.parse(out.options);
+    return out;
+  });
+  const litterSlug = Object.fromEntries(litters.map((l) => [l.id, l.slug]));
+  doc.albums = (await all('SELECT * FROM albums WHERE site_id = ? ORDER BY sort, title', siteId)).map((a) => {
+    const out = bools(pick(strip(a, SYSTEM), Object.keys(ALBUM_FIELDS)), ['show_on_site']);
+    if (a.litter_id && litterSlug[a.litter_id]) out.litter = litterSlug[a.litter_id];
+    out.photos = a.photos ? JSON.parse(a.photos) : [];
     return out;
   });
   const pay = await all('SELECT * FROM payment_info WHERE site_id = ?', siteId);
