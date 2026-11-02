@@ -773,6 +773,14 @@ dark first: it shows dark unless the visitor's device asks for light explicitly.
   photos, within a maximum size and pixel dimensions; a WebP carrying an `EXIF` or `XMP`
   chunk, or a JPEG carrying an `APP1` (EXIF or XMP) segment, is rejected. Downloads must
   be PDFs. Each upload counts against the storage cap.
+- **Finding the right photo:** a breeder with ten dogs soon has hundreds of photos, so
+  each photo can be tagged with what it's of (a dog, a litter, a puppy, an extra, the
+  Home page or Our story). Every photo picker has its own **Add photos** button, and
+  photos added there are tagged with what's being edited; the picker shows that
+  record's photos first (a puppy's, then its litter's), with every other photo folded
+  away, and choosing one and saving tags it too. A litter's screen takes photos the
+  same way. The Photos screen filters by tag, including **Not sorted**. Tags are only
+  for the breeder: nothing about them is published.
 - **Private files stay private:** the renderer serves a photo or file only if the
   published snapshot lists it as public. Health certificates and anything not ticked
   **Show on site** are only reachable through the manage API with a signed-in session,
@@ -970,6 +978,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `redirects` | site_id, old path, new path (written at publish time) |
 | `embeds` | site_id, page or record it sits on, provider, item id, title, preview photo, order |
 | `photos` | site_id, r2_key, thumb_key, type (WebP or JPEG), width, height, bytes, alt text, removed_at; public only when the published snapshot uses it (4.2) |
+| `photo_tags` | site_id, photo_id, subject (`dog:` / `litter:` / `puppy:` / `extra:` + id, or `page:home` / `page:about`): what a photo is of, for the breeder only; never published (4.2) |
 | `albums`, `album_photos` | site_id, title, slug, cover; ordered photo list |
 | `links` | site_id, token_hash, linked_at, last_bundle_at, last_bundle_summary |
 | `custom_domains` | site_id, hostname, cloudflare_hostname_id, registrar (detected, backlog), status (`pending` / `active` / `stuck` / `broken`), checked_at, connected_at |

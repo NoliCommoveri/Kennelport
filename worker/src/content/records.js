@@ -6,6 +6,7 @@ import {
   DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, EXTRA_FIELDS,
   EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, ContentError, cleanRecord, cleanValue, slugify,
 } from './model.js';
+import { untagStatements } from '../photoTags.js';
 
 const omit = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) => !keys.includes(k)));
 
@@ -153,7 +154,7 @@ export async function setField(env, siteId, kind, id, field, value) {
 
 export async function removeRecord(env, siteId, kind, id) {
   const k = kindOf(kind);
-  const s = [];
+  const s = untagStatements(env, siteId, kind, id);
   if (kind === 'dogs') {
     s.push(env.DB.prepare('UPDATE litters SET dam_id = NULL WHERE site_id = ? AND dam_id = ?').bind(siteId, id));
     s.push(env.DB.prepare('UPDATE litters SET sire_id = NULL WHERE site_id = ? AND sire_id = ?').bind(siteId, id));

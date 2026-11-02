@@ -10,6 +10,7 @@ import { ContentError } from '../content/model.js';
 import { AK_SAMPLE } from '../content/akSample.js';
 import { makePreviewToken, PREVIEW_DAYS } from '../site.js';
 import { savePhoto, PhotoError } from '../photos.js';
+import { APP_VERSION } from '../manage/version.js';
 import { inviteToSite, removeFromSite, AuthError } from '../auth.js';
 
 const TITLE = 'KennelPort ops';
@@ -108,7 +109,7 @@ ${snaps.length ? `<table><tr><th>Published</th><th>Size</th><th></th></tr>${snap
   <p><button>Upload</button> <span id="photo-status" class="muted" role="status"></span></p>
 </form>
 ${photoRows ? `<table>${photoRows}</table>` : '<p class="muted">No photos yet.</p>'}
-<script src="/_kp/m/photos.js" defer></script>`;
+<script src="/_kp/m/photos.js?v=${APP_VERSION}" defer></script>`;
 
   const { results: people } = await env.DB.prepare('SELECT email_hash, role, invited_at, joined_at FROM site_users WHERE site_id = ? ORDER BY invited_at').bind(siteId).all();
   const peopleSection = `<h2>People</h2>

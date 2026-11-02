@@ -407,3 +407,24 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - Plan 3.6 and 5.5: the KennelOS changes this needs (`isPupAvailable` holds Undecided
   back like Keeping; Companion's export leaves it out of what's for sale), before phase 4.
   No decisions left open for version 1 except 9 (site rules).
+
+## 2026-11-02: photos tagged with what they're of
+
+- `0005_photo_tags.sql`: a photo can be of a dog, a litter, a puppy, an extra, the Home
+  page or Our story (several at once). For the breeder only; never published, and
+  tagging doesn't change the draft.
+- Every photo picker (dogs, puppies, extras, Home blocks, Our story) has an **Add
+  photos** button: photos are resized and uploaded in place, tagged with what's being
+  edited, and the newest is chosen, with nothing typed in the form lost. The picker shows
+  that record's photos first (a puppy's, then its litter's) and folds the rest under
+  **Other photos**. Saving tags whatever was chosen, so older photos get sorted as
+  they're used. A litter's screen has **Photos of this litter**.
+- Photos screen: filters (All, Not sorted, each dog, litter, puppy, extra, page with
+  photos), each photo's tags with × to take one off, **Photo of…** to add one, and
+  **Photos of** when uploading. Removing a dog or litter removes its tags; closing a
+  site removes them all; the download's photos.json says what each photo is of.
+- `photos.js` now loads on every manage page, versioned with the app (`manage/version.js`,
+  service worker cache bumped to 6).
+- Fix: the web-address field's pattern was an invalid regular expression in current
+  browsers, so it was ignored.
+- 79 tests; the dog screen's Add photos and Save driven in Chromium at phone width.

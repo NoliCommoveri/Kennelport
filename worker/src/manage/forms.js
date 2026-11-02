@@ -83,7 +83,7 @@ export function labelFor(kind, name) {
 
 const enumWords = (kind, name, v) => ENUM_WORDS[`${name}_${kind}`]?.[v] ?? ENUM_WORDS[name]?.[v] ?? v;
 
-// ctx: { kind, photos: [{id, alt}], photoUrl(id), dogs: [{id, call_name}] }
+// ctx: { kind, photos: [{id, alt}], photoUrl(id), photoGroups, upload: {action, tags, alt}, dogs: [{id, call_name}] }
 export function field(name, f, value, ctx) {
   const [label, hint] = labelFor(ctx.kind, name);
   const id = `f-${name}`;
@@ -128,7 +128,7 @@ export function field(name, f, value, ctx) {
     case 'email':
       return `<label for="${id}">${esc(label)}${h}<input id="${id}" type="email" name="${name}" value="${esc(v)}"${req}></label>`;
     case 'slug':
-      return `<label for="${id}">${esc(label)}${h}<input id="${id}" name="${name}" value="${esc(v)}" pattern="[a-z0-9-]*" autocapitalize="none" spellcheck="false"></label>`;
+      return `<label for="${id}">${esc(label)}${h}<input id="${id}" name="${name}" value="${esc(v)}" pattern="[a-z0-9\\-]*" autocapitalize="none" spellcheck="false"></label>`;
     default:
       return f.multiline
         ? `<label for="${id}">${esc(label)}${h}<textarea id="${id}" name="${name}" rows="${f.max > 1000 ? 10 : 4}" maxlength="${f.max}"${req}>${esc(v)}</textarea></label>`
@@ -136,13 +136,31 @@ export function field(name, f, value, ctx) {
   }
 }
 
+// A photo picker shows the photos of what's being edited first (ctx.photoGroups:
+// [{ label, ids }], the first group being this record's own), then every other
+// photo folded away, and an Add photos button that uploads straight into the
+// first group, tagged with ctx.upload.tags (public/_kp/m/photos.js). Photos
+// chosen here are tagged with the record when the form is saved.
 function photoPicker(name, label, hint, chosen, ctx, { multiple, max }) {
   const photos = ctx.photos ?? [];
   const type = multiple ? 'checkbox' : 'radio';
+  const byId = new Map(photos.map((p) => [p.id, p]));
+  const groups = (ctx.photoGroups ?? [{ label: 'Photos', ids: photos.map((p) => p.id) }]).map((g) => ({ ...g, ids: g.ids.filter((id) => byId.has(id)) }));
+  const shown = new Set(groups.flatMap((g) => g.ids));
+  const strays = chosen.filter((id) => byId.has(id) && !shown.has(id));
+  groups[0] = { ...groups[0], ids: [...strays, ...groups[0].ids] };
+  for (const id of strays) shown.add(id);
+  const rest = photos.filter((p) => !shown.has(p.id));
+  const opt = (p) => `<label class="ph-opt"><input type="${type}" name="${name}" value="${esc(p.id)}"${chosen.includes(p.id) ? ' checked' : ''}><img src="${esc(ctx.photoUrl(p.id))}" alt="${esc(p.alt || 'Photo')}" loading="lazy"></label>`;
   const none = multiple ? '' : `<label class="ph-opt none"><input type="radio" name="${name}" value=""${chosen.length ? '' : ' checked'}><span>No photo</span></label>`;
-  const opts = photos.map((p) => `<label class="ph-opt"><input type="${type}" name="${name}" value="${esc(p.id)}"${chosen.includes(p.id) ? ' checked' : ''}><img src="${esc(ctx.photoUrl(p.id))}" alt="${esc(p.alt || 'Photo')}" loading="lazy"></label>`).join('');
-  return `<fieldset class="photos"><legend>${esc(label)}${hint ? `<span class="hint">${esc(hint)}</span>` : ''}${max ? `<span class="hint">Choose up to ${max}.</span>` : ''}</legend>
-    ${photos.length ? `<div class="ph-grid">${none}${opts}</div>` : `<p class="muted small">No photos yet. <a href="${esc(ctx.photosLink ?? '#')}">Add photos</a> first.</p>`}</fieldset>`;
+  const grid = (ids, first) => `<div class="ph-grid"${first ? ' data-first' : ''}>${first ? none : ''}${ids.map((id) => opt(byId.get(id))).join('')}</div>`;
+  const parts = groups.map((g, i) => (i === 0 || g.ids.length ? `<p class="ph-head">${esc(g.label)}${i === 0 && !g.ids.length ? ' <span class="muted small">· none yet</span>' : ''}</p>${grid(g.ids, i === 0)}` : ''));
+  const others = rest.length ? `<details class="ph-more"><summary>${groups[0].ids.length || groups.length > 1 ? 'Other photos' : 'Choose from your photos'} (${rest.length})</summary>${grid(rest.map((p) => p.id), false)}</details>` : '';
+  const up = ctx.upload;
+  const add = up ? `<div class="ph-add"><label class="button">Add photos<input type="file" accept="image/*" multiple data-add-photos></label><span class="muted small" role="status"></span></div>` : '';
+  return `<fieldset class="photos" data-picker data-name="${esc(name)}" data-type="${type}"${max ? ` data-max="${max}"` : ''}${up ? ` data-upload="${esc(up.action)}" data-tags="${esc(up.tags)}" data-alt="${esc(up.alt ?? '')}"` : ''}>
+    <legend>${esc(label)}${hint ? `<span class="hint">${esc(hint)}</span>` : ''}${max ? `<span class="hint">Choose up to ${max}.</span>` : ''}</legend>
+    ${parts.join('')}${others}${add}</fieldset>`;
 }
 
 // The web address goes last: most people never change it.

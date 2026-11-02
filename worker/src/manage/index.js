@@ -6,6 +6,7 @@
 // Every POST must come from this origin (Origin, or Sec-Fetch-Site), on top of
 // the session cookie's SameSite=Lax: site subdomains are same-site with the
 // manage host, so the cookie alone isn't enough.
+import { APP_VERSION } from './version.js';
 import { escapeHtml as esc } from '../lib/html.js';
 import {
   startSignIn, verifySignIn, currentUser, signOut, clearSessionCookie, AuthError, CODE_TTL_MS,
@@ -21,7 +22,6 @@ const HEADERS = {
   'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': MANAGE_CSP,
   'x-content-type-options': 'nosniff', 'referrer-policy': 'same-origin', 'x-frame-options': 'DENY',
 };
-const APP_VERSION = '5';
 
 const redirect = (location, headers = {}) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store', ...headers } });
 
@@ -44,6 +44,7 @@ function page(title, body, { status = 200, back = null, headers = {} } = {}) {
 <meta name="apple-mobile-web-app-title" content="Site Manager">
 <link rel="stylesheet" href="/_kp/m/app.css?v=${APP_VERSION}">
 <script src="/_kp/m/app.js?v=${APP_VERSION}" defer></script>
+<script src="/_kp/m/photos.js?v=${APP_VERSION}" defer></script>
 </head><body>
 <header class="top">${back ? `<a class="back" href="${esc(back)}" aria-label="Back">‹</a>` : '<img class="mark" src="/_kp/m/icon-64.png" alt="" width="32" height="32">'}<span class="title">${esc(title)}</span></header>
 <main>${body}</main>
