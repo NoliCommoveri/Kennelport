@@ -230,3 +230,11 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   the application and review forms' drop-downs running past 320px-wide screens.
 - Review form: "Your AK puppy" drop-down replaced by the puppy's name and the month they
   brought it home, both typed (plan 3.9 and `stories` updated).
+
+## 2026-11-02: KennelOS link and albums move into version 1
+
+- The owner: the KennelOS link is why the first breeder wants the site, and albums and
+  embeds are wanted too. Version 1 gains phase 4 (the KennelOS link: both sides, matching,
+  the bundle, Use my KennelOS prices, Family login) and phase 5 (albums, embeds, sharing);
+  customisation and schemes become phase 6. Both items left the backlog; decision 14 and
+  the plan's opening updated.

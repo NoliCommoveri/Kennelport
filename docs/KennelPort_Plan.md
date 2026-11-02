@@ -18,7 +18,9 @@ was built as one page and approved by the owner: every page in the five-item men
 cards, sliding sets, expanders, the extended-homegoing extras and the KennelOS waitlist
 shown in the site's own style. Version 1 is that sample made real: the same look,
 with its content in forms (section 3.12), a choice of colour schemes (section 3.13) and
-pages a breeder can switch off. The sample's source is
+pages a breeder can switch off, plus the two things the first breeder wants most: the
+**KennelOS link**, so dogs, litters and health results come from KennelOS instead of being
+typed twice (section 5), and **albums and embeds** (section 3.3). The sample's source is
 [`reference/ak-sample.html`](reference/ak-sample.html); the reference folder's README
 says what's real and what's made up in it.
 
@@ -997,7 +999,9 @@ Each phase is useful by itself, so you can stop after any one.
 | **1. Renderer + ops** | One template, the ops console, preview links, snapshot publish and undo (4.1), reserved names, OG tags, close a site and the closed notice | Build and host the site yourself, with no breeder login yet |
 | **2. Breeder login** | Email-code sign-in, manage app (installable as KennelPort Site Manager), the inbox and review queue, preview and publish with the list of changes, photo upload with resizing and the server checks (4.2), storage limits, **Delete my site** with download-a-copy | Hand the site over |
 | **3. The first site's pages** | Everything in the AK sample (decision 14): Home with its blocks, About (story, reviews, contact), Kennel residents with flip cards and health results (3.7), Puppies (available, upcoming, older) with statuses (3.6), How it works steps (3.11), Extras with homegoing packages (3.4), Policies and FAQ, the waitlist page and its status-page help (3.8, decision 21) with how to pay the application fee and deposit (3.9), inquiry form and inbox (3.10); plus the safe-payment notice, privacy page and search basics | The family site is complete and live |
-| **4. Customisation and schemes** | Page and Home-block switches, menu labels, any-length steps, expanders and extras (3.12); the colour schemes with light and dark versions (3.13) | Other breeders' sites can differ from AK's without new code |
+| **4. The KennelOS link** | In KennelPort: link codes, matching existing website records to KennelOS ones (5.2), the bundle API and its rules (5.3), **Use my KennelOS prices** (3.2), the Family login footer link. In KennelOS (5.5): **Show on website** on dogs and litters, `siteExport.js`, **Connect website** and **Update website**, filling `dog.url`, the kennel's website and `extras_info_url`, and the Kels steps | Her dogs, litters, puppy statuses and health results come from KennelOS when she presses **Update website**; she types them only once |
+| **5. Albums, embeds and sharing** | Albums with their own links, embeds from the approved list with stored previews (3.3), share links and QR codes, KennelOS shares carrying album links (5.4) | Litter albums and her YouTube and Facebook posts live on the site |
+| **6. Customisation and schemes** | Page and Home-block switches, menu labels, any-length steps, expanders and extras (3.12); the colour schemes with light and dark versions (3.13) | Other breeders' sites can differ from AK's without new code |
 
 If the first site wants its own domain, connect it by hand (section 2.4).
 
@@ -1007,10 +1011,8 @@ Rough order of likely need; any item can go first.
 
 | Item | Delivers |
 |---|---|
-| **Albums, embeds & sharing** | Albums, embeds with stored previews (3.3), share links, QR codes |
 | **The rest of section 3.9** | Pickup page (3.5), waitlist page with outside forms (3.8), announcement banner, families' stories, past litters, news, adults, stud dogs, going home, the breed, downloads, events |
 | **Survey pages (3.11)** | Programs, how we raise puppies, how to pay safely as a page, retired and in-memory dogs, show results, litter diary, planned-litter status (no pick counts, decision 18) |
-| **KennelOS link** | Link codes, matching, the bundle API and its rules (5.3) in KennelPort; then in KennelOS: Show on website, `siteExport.js`, Update website, filling `dog.url`, the kennel's website, `extras_info_url` and the embed's allowed sites |
 | **Requests** | Public request form on `kennelport.com`, email alert, ops inbox; KennelOS's **Request a website** button |
 | **Guided custom domains** | **Your own domain** with registrar detection, guided steps and automatic checks (section 2.4) |
 | **Later** | More templates, visitor stats |
@@ -1045,9 +1047,9 @@ Rough order of likely need; any item can go first.
     breeder replies from their own email (section 3.10).
 13. **Reviews:** families submit them on the site; the breeder approves each before it
     shows (section 3.9).
-14. **Which pages ship first:** the AK sample's pages (section 8.1, phase 3). Past
-    litters and news, proposed earlier, move to the backlog because the sample doesn't
-    have them.
+14. **What ships first:** the AK sample's pages (section 8.1, phase 3), the KennelOS link
+    (phase 4) and albums, embeds and sharing (phase 5). Past litters, news and the other
+    standard pages wait in the backlog.
 15. **Main address for a custom domain:** `www.`, with the bare domain forwarding to it.
 16. **How a KennelOS bundle changes the site:** as in section 5.3, with matching offered
     whenever a new KennelOS record matches an unlinked one (section 5.2).

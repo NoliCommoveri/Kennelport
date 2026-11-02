@@ -4,7 +4,7 @@ Hosted websites for breeders, at `theirkennel.kennelport.com`, served by one Clo
 The operator sets up and drafts each site; breeders manage content through a simple login
 and can link their KennelOS data.
 
-Status: planning; version 1 is the first family site, built to match the approved AK sample
+Status: planning; version 1 is the first family site, built to match the approved AK sample, with the KennelOS link and albums
 ([`docs/reference/`](docs/reference/)). Open: puppy labels (decision 10); site rules wait until KennelPort is offered (9). See
 [`docs/KennelPort_Plan.md`](docs/KennelPort_Plan.md). Page directory from a survey of real breeder sites:
 [`docs/KennelPort_Site_Directory.md`](docs/KennelPort_Site_Directory.md); what they look like:
