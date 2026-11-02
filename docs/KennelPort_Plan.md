@@ -1,8 +1,8 @@
 # KennelPort: high-level plan (DRAFT)
 
-> Status: planning draft, checked against KennelOS. Phase 0 and most of phase 1 are built
-> (`worker/`); the rest is not. Section 8 says what
-> version 1 is; section 9 lists the decisions still open. What comes after version 1 is
+> Status: phases 0 to 2 are built (`worker/`), apart from photo upload tried on a real
+> iPhone (4.2); most of phase 3 came with them, and section 8.1 says what's left of it.
+> Section 8 says what version 1 is; section 9 lists the one decision still open. What comes after version 1 is
 > in [`KennelPort_Backlog.md`](KennelPort_Backlog.md). History of this plan lives in
 > [`BUILD_LOG.md`](BUILD_LOG.md).
 
@@ -765,9 +765,9 @@ dark first: it shows dark unless the visitor's device asks for light explicitly.
   actually got, and encodes JPEG (quality about 0.85) whenever it isn't WebP. iPhone
   photos stored as HEIC reach the page as JPEG through the photo picker; anything the
   browser can't decode gets a plain message ("This photo couldn't be read; try a
-  screenshot of it or a different photo"). Phase 2 is tested on a real iPhone and an
-  Android phone before it's done, since adding photos from the camera roll is the job
-  breeders do most from a phone.
+  screenshot of it or a different photo"). Adding photos from the camera roll is the job
+  breeders do most from a phone, so it's tried on real phones: an Android phone worked
+  (2026-11-02); a real iPhone is still to do, and phase 2 isn't done until it has.
 - **On the server, too:** the browser step can be skipped by anyone calling the upload
   API directly, so the server checks every upload itself: only WebP or JPEG accepted for
   photos, within a maximum size and pixel dimensions; a WebP carrying an `EXIF` or `XMP`
@@ -1032,11 +1032,26 @@ Each phase is useful by itself, so you can stop after any one.
 |---|---|---|
 | **0. Set up** | Domain on Cloudflare, wildcard DNS, empty Worker with D1 and R2, staging and production | — |
 | **1. Renderer + ops** | One template with its fonts and libraries served from the site (3.3), the ops console, preview links, snapshot publish to R2 and undo (4.1), page caching and the CPU check (4.4), reserved names, OG tags, close a site and the closed notice | Build and host the site yourself, with no breeder login yet |
-| **2. Breeder login** | Email-code sign-in, manage app (installable as KennelPort Site Manager), the inbox with push notifications for new messages, the review queue, preview and publish with the list of changes, photo upload with resizing, the JPEG fallback and the server checks, tested on a real iPhone and Android phone (4.2), storage limits, **Delete my site** with the download-a-copy zip built in the browser (4.3) | Hand the site over |
+| **2. Breeder login** | Email-code sign-in, manage app (installable as KennelPort Site Manager), the inbox with push notifications for new messages, the review queue, preview and publish with the list of changes, photo upload with resizing, the JPEG fallback and the server checks, tried on a real Android phone and iPhone (4.2), storage limits, **Delete my site** with the download-a-copy zip built in the browser (4.3) | Hand the site over |
 | **3. The first site's pages** | Everything in the AK sample (decision 14): Home with its blocks, About (story, reviews, contact), Kennel residents with flip cards and health results (3.7), Puppies (available, upcoming, older) with statuses (3.6), How it works steps (3.11), Extras with homegoing packages (3.4), Policies and FAQ, the waitlist page and its status-page help (3.8, decision 21) with how to pay the application fee and deposit (3.9), inquiry form and inbox (3.10); plus the safe-payment notice, privacy page and search basics | The family site is complete and live |
 | **4. The KennelOS link** | In KennelPort: link codes, matching existing website records to KennelOS ones (5.2), the bundle API and its rules (5.3), **Use my KennelOS prices** (3.2), the Family login footer link. In KennelOS (5.5): **Show on website** on dogs and litters, `siteExport.js`, **Connect website** and **Update website**, filling `dog.url`, the kennel's website and `extras_info_url`, and the Kels steps | Her dogs, litters, puppy statuses and health results come from KennelOS when she presses **Update website**; she types them only once |
 | **5. Albums, embeds and sharing** | Albums with their own links, embeds from the approved list with stored previews (3.3), share links and QR codes, KennelOS shares carrying album links (5.4) | Litter albums and her YouTube and Facebook posts live on the site |
 | **6. Customisation and schemes** | Page and Home-block switches, menu labels, any-length steps, expanders and extras (3.12); the colour schemes with light and dark versions (3.13) | Other breeders' sites can differ from AK's without new code |
+
+**Where phase 3 stands.** Most of it was built with phases 1 and 2: Home and its blocks,
+About, Kennel residents with health results, Puppies with statuses, How it works, Extras
+and homegoing packages, Policies, FAQ, the status-page help, the contact form and Inbox,
+reviews, the privacy page and search basics all render and can be edited. Left:
+- **How to pay** the application fee and deposit (3.9, `payment_info`) and the
+  **safe-payment notice**, on by default.
+- **The application form** for breeders who run their list by hand (3.8, decision 26):
+  the inquiry form set up with the breeder's own questions (`form_fields`), arriving in
+  the Inbox as an application.
+- **The waitlist page** (3.8), a placeholder now: the KennelOS list in the site's own
+  style (decision 21), with a link to the KennelOS list when the feed isn't shared or
+  can't be reached. This needs the website feed (`GET /f/site/<public_id>`) built in the
+  KennelOS repo first (5.5); KennelPort's side can be built and tested against a sample
+  feed meanwhile.
 
 If the first site wants its own domain, connect it by hand (section 2.4).
 
@@ -1132,7 +1147,7 @@ Everything after version 1, with its order and designs, is in
 | Building far more than the first site needs | Version 1 is section 8.1 only; everything else waits for someone to ask |
 | An embed provider tracks visitors or changes its embed | Click to load; previews stored on the site; plain-link fallback; providers listed in one place |
 | Tie-in to one host | Plain D1 and R2 data, with a full export for each site (built in the browser, section 4.3) |
-| Photo upload fails on iPhones, which can't always make WebP | JPEG whenever the browser hands back anything but WebP; the server accepts both and checks both for location data; tested on real phones in phase 2 (section 4.2) |
+| Photo upload fails on iPhones, which can't always make WebP | JPEG whenever the browser hands back anything but WebP; the server accepts both and checks both for location data; tried on a real Android phone, a real iPhone still to do (section 4.2) |
 | A large site outgrows D1's row size | Snapshots are stored in R2, with only their key in D1 (section 4.1) |
 | A page, publish or export runs past the free plan's CPU limit | Pages cached per snapshot; resizing and the export zip run in the browser; CPU measured in phase 1, with Workers Paid as the fallback (section 4.4) |
 | Fonts or libraries from Google or a CDN let them track visitors | Fonts and libraries are served from the site itself; only Turnstile loads from outside, on form pages (section 3.3) |

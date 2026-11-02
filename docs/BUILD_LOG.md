@@ -428,3 +428,12 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - Fix: the web-address field's pattern was an invalid regular expression in current
   browsers, so it was ignored.
 - 79 tests; the dog screen's Add photos and Save driven in Chromium at phone width.
+
+## 2026-11-02: real phones, and where phase 3 stands
+
+- Photo upload tried on a real Android phone: it worked. A real iPhone is still to do
+  (none to hand), so phase 2 stays open on that one item.
+- Plan 8.1: what's left of phase 3, since most of it came with phases 1 and 2 (how to
+  pay, the safe-payment notice, the application form for a list run by hand, the
+  waitlist page), and that the waitlist page in the site's style needs KennelOS's
+  website feed first. Plan status line and README brought up to date.
