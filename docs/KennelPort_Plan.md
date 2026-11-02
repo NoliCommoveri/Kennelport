@@ -470,6 +470,22 @@ breeder turns on. Version 1 ships only the ones in decision 14; the rest are bac
   about puppy scams ("We'll never ask for payment by gift card; we only use the contacts
   on this site"). On by default, because impersonation scams copy breeders' photos and
   names.
+- **How to pay:** how a family pays the **application fee** and the **deposit**, shown
+  openly on the site so nobody has to email to ask. For each of the two: the methods taken
+  (Venmo, Zelle, PayPal, check, card…), the details for each (handle, email, who a check
+  is made out to), what to write in the note ("your name and AK application"), when it's
+  due ("once you're approved", "within 48 hours of choosing your puppy"), and an optional
+  **Pay** button linking to the breeder's own payment page (Stripe, Square, PayPal). Each
+  has its own **Show on website** switch, off until the breeder turns it on. This is how
+  to pay, not what it costs: amounts follow the prices rule (section 3.2) and appear only
+  if the breeder types them into the wording. It shows on the waitlist page beside
+  **Apply**, under the matching How it works steps (3.11), and on How to pay safely, where
+  it doubles as the list of the only real payment details. Nothing on the site takes a
+  payment itself.
+  - *With KennelOS linked:* filled from KennelOS's waitlist **payment instructions** and
+    the fee account's pay link (`feePay`), the same text families already see on their
+    status pages and the application page. It reaches the site only while the breeder's
+    switch is on, and they can reword it in KennelPort.
 - **Memberships and programs:** breed club and kennel club memberships and breeder
   programs (AKC Breeder of Merit, Bred with H.E.A.R.T., …), as names with optional links.
   No logo images unless the breeder has the right to use them.
@@ -884,6 +900,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `files` | site_id, r2_key, title, bytes, public, removed_at (downloads and certificates, PDFs only) |
 | `events` | site_id, title, date, town |
 | `inquiries` | site_id, form answers, received_at, deleted after 90 days (section 3.10, decision 12) |
+| `payment_info` | site_id, kind (`application_fee` / `deposit`), methods, instructions, due_note, pay_url, show_on_site (off by default), `source` (section 3.9) |
 | `form_fields` | site_id, field type, label, required, order (the inquiry form's questions) |
 
 R2 keys look like `sites/<site_id>/photos/<photo_id>.webp`, so a whole site can be deleted
@@ -920,7 +937,7 @@ Each phase is useful by itself, so you can stop after any one.
 | **0. Set up** | Domain on Cloudflare, wildcard DNS, empty Worker with D1 and R2, staging and production | — |
 | **1. Renderer + ops** | One template, the ops console, preview links, snapshot publish and undo (4.1), reserved names, OG tags, close a site and the closed notice | Build and host the site yourself, with no breeder login yet |
 | **2. Breeder login** | Email-code sign-in, manage app, preview and publish, photo upload with resizing and the server checks (4.2), storage limits, **Delete my site** with download-a-copy | Hand the site over |
-| **3. The first site's pages** | Everything in the AK sample (decision 14): Home with its blocks, About (story, reviews, contact), Kennel residents with flip cards and health results (3.7), Puppies (available, upcoming, older) with statuses (3.6), How it works steps (3.11), Extras with homegoing packages (3.4), Policies and FAQ, the waitlist page (3.8, decision 21), inquiry form and inbox (3.10); plus the safe-payment notice, privacy page and search basics | The family site is complete and live |
+| **3. The first site's pages** | Everything in the AK sample (decision 14): Home with its blocks, About (story, reviews, contact), Kennel residents with flip cards and health results (3.7), Puppies (available, upcoming, older) with statuses (3.6), How it works steps (3.11), Extras with homegoing packages (3.4), Policies and FAQ, the waitlist page (3.8, decision 21) with how to pay the application fee and deposit (3.9), inquiry form and inbox (3.10); plus the safe-payment notice, privacy page and search basics | The family site is complete and live |
 | **4. Customisation and schemes** | Page and Home-block switches, menu labels, any-length steps, expanders and extras (3.12); the colour schemes with light and dark versions (3.13) | Other breeders' sites can differ from AK's without new code |
 
 If the first site wants its own domain, connect it by hand (section 2.4).

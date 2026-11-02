@@ -174,3 +174,12 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - Fixed the AK sample and scheme lab running off the right on phones 360px and narrower:
   the waitlist box and litter cards could grow past the screen. The waitlist table now
   stacks on phones (number, name with wants underneath, ⓘ); every page fits 320px.
+
+## 2026-11-02: how to pay, on the site
+
+- Plan 3.9: a **How to pay** section for the application fee and the deposit (methods,
+  details, note to include, when due, optional Pay button), shown openly on the waitlist
+  page, the matching How it works steps and How to pay safely, each with its own
+  **Show on website** switch, off by default. Amounts still follow the prices rule. With
+  KennelOS linked it fills from the waitlist payment instructions and the fee account's
+  pay link. Added to version 1 (8.1) and the data model (`payment_info`).
