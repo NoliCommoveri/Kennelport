@@ -407,7 +407,9 @@ setting the breeder can get wrong:
   lands in KennelPort's Inbox.
 - **Otherwise** (no KennelOS, or KennelOS without online applications, so the breeder runs
   their list by hand): the site's own application form below, arriving in KennelPort's
-  Inbox as a message (section 3.10).
+  Inbox as a message (section 3.10). This includes a connected KennelOS waitlist whose
+  online form is off: the feed has no `apply` link, so the site shows KennelPort's form.
+  A breeder who wants no applications at all uses the **Waitlist open / closed** switch.
 - Plain questions through the Contact form (section 3.10) come to KennelPort's Inbox either
   way.
 
@@ -416,7 +418,7 @@ choice) is one of:
 - **The site's inquiry form** (section 3.10), set up as a puppy application with the
   breeder's own questions; answers arrive in the manage app's Inbox, with a push
   notification (section 3.10). KennelPort is not a waitlist: no list, no places in line.
-  This is the manual route; it's never shown while applications go to KennelOS (above).
+  This is the manual route; it's never shown while KennelOS takes applications online (above).
 - **A link or embed of the waitlist they already use** (a Google Form, Jotform, …),
   through the approved embed list (section 3.3) or as a button. Backlog; version 1 has
   the other two.
