@@ -724,3 +724,17 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   those numbers with updated fingerprints rather than bumping again. `CLAUDE.md` now
   says to check whether the current number has gone out before asking about a bump,
   and, when it hasn't, just to update its fingerprint.
+
+## 2026-11-02: removed photos leave R2; usage on /ops
+
+- Migration `0013_usage.sql`: `photos.purged_at`, and `mail_counts` (emails per day
+  and kind, counts only).
+- The daily cleanup deletes the R2 files (full and thumbnail) of photos removed over a
+  day ago, unless a kept snapshot lists them: the live site serves from its snapshot
+  and Undo publish can go back to an older one, so those wait until the snapshots
+  naming them are pruned. The row stays, marked `purged_at`. At most 500 a run.
+- `/ops` opens with a **Usage** table (this month, now, free tier): sites, photos and
+  their size, removed photos still in R2, kept versions, R2 storage against 10 GB,
+  emails against Resend's 3,000 a month and 100 a day, form messages, breeder
+  accounts, push subscriptions. Emails are counted from this deploy on.
+- 134 tests. No template or manage app files changed, so no version bump.
