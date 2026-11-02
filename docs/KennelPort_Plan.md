@@ -450,7 +450,14 @@ choice) is one of:
   says names show that way, and offers **Keep my name private**: masked as KennelOS
   masks them, the first name's first letter and an asterisk for each letter after it,
   then the last initial (Andrea Kim shows as "A***** K"). The tick comes with the
-  application, so Add to waitlist starts masked; the breeder can tick it for anyone. Not shown while a KennelOS feed is set: KennelOS's list
+  application, so Add to waitlist starts masked; the breeder can tick it for anyone.
+- **The manage app steers by the KennelOS link.** Unlinked, **Waitlist and application**
+  opens with the KennelOS card saying a KennelOS waitlist can be linked, and Your
+  waitlist mentions it. Linked, the **Your waitlist** tile is greyed ("Not used: your
+  website shows your KennelOS waitlist"), its screen says so and drops Add a family, and
+  the Inbox drops Add to waitlist; while KennelOS takes applications online, the
+  application questions are marked not used too. Greyed screens still open, so nothing
+  set up is hidden. Not shown while a KennelOS feed is set: KennelOS's list
   wins, so a family is never on two lists.
 - **A link or embed of the waitlist they already use** (a Google Form, Jotform, …),
   through the approved embed list (section 3.3) or as a button. Backlog; version 1 has

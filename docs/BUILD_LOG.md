@@ -631,3 +631,13 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   the waitlist forms have a **Keep their name private** tick that always shows the
   masked name. Your waitlist marks them "(private)". 118 tests; the form checked in
   Chromium at phone width.
+
+## 2026-11-02: steering between KennelOS and the simple waitlist
+
+- `kennelosState` (feed.js): linked or not, and whether KennelOS takes applications
+  online. Home: the Your waitlist tile is greyed when linked (`.tile.off`), and Waitlist
+  and application says what's in use. Waitlist and application: the KennelOS card comes
+  first (the full explanation when unlinked, one line when linked); under the settings,
+  the questions and the simple waitlist are each marked when unused. The questions list,
+  Your waitlist (no Add a family) and the Inbox (no Add to waitlist) say the same.
+  119 tests; Home and the settings checked in Chromium at phone width.

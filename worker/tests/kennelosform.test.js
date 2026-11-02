@@ -298,3 +298,43 @@ test('Family login: in the menu, the footer and the status-page help, once publi
   await b.post('/publish');
   assert.doesNotMatch(await home(), /Family login/);
 });
+
+test('the manage app steers by the KennelOS link: says it can be linked, then greys out what is unused', async () => {
+  const k = kennelos(feed());
+  const b = await breeder(k);
+  // Not linked: KennelOS is offered; the simple waitlist and questions are in use.
+  let home = await (await b.get('')).text();
+  assert.match(home, /<a class="tile" href="\/s\/akbostons\/waitlist"><b>Your waitlist<\/b>/);
+  assert.match(home, /Waitlist and application<\/b><span>Your questions, or link KennelOS/);
+  let wl = await (await b.get('/pages/waitlist')).text();
+  assert.ok(wl.indexOf('Your KennelOS waitlist') < wl.indexOf('action="/s/akbostons/pages/waitlist"'), 'the KennelOS card comes first');
+  assert.match(wl, /Keep your waitlist in KennelOS\?/);
+  assert.match(wl, /Edit the application questions on this page/);
+  assert.match(await (await b.get('/waitlist')).text(), /Keep your waitlist in KennelOS Pro instead/);
+
+  // Linked, with online applications: both greyed, with the reason.
+  await b.post('/pages/waitlist/kennelos', { feed: FEED_URL });
+  home = await (await b.get('')).text();
+  assert.match(home, /<a class="tile off" href="\/s\/akbostons\/waitlist"><b>Your waitlist<\/b><span>Not used: your website shows your KennelOS waitlist/);
+  assert.match(home, /Waitlist and application<\/b><span>Linked to KennelOS, which takes your applications/);
+  wl = await (await b.get('/pages/waitlist')).text();
+  assert.match(wl, /application questions aren(&#39;|')t used while KennelOS takes your applications online/);
+  assert.match(wl, /simple waitlist isn(&#39;|')t used while KennelOS is linked/);
+  assert.match(await (await b.get('/lists/questions')).text(), /Not used right now: KennelOS takes your applications online/);
+  const screen = await (await b.get('/waitlist')).text();
+  assert.match(screen, /Not used: your website shows your KennelOS waitlist/);
+  assert.doesNotMatch(screen, /Add a family/);
+
+  // Linked, online applications off in KennelOS: the questions are in use again.
+  k.answer = feed(null);
+  b.env.DB.raw.prepare("UPDATE feed_cache SET checked_at = '2000-01-01T00:00:00Z'").run();
+  home = await (await b.get('')).text();
+  assert.match(home, /Linked to KennelOS · your questions/);
+  assert.doesNotMatch(await (await b.get('/lists/questions')).text(), /Not used right now/);
+  assert.match(home, /tile off" href="\/s\/akbostons\/waitlist"/, 'the simple waitlist still isn\'t');
+
+  // An application from the site's own form: no Add to waitlist while linked.
+  await call(b.env, SITE, '/waitlist', { method: 'POST', headers: { origin: `https://${SITE}`, 'cf-connecting-ip': '198.51.100.9' }, body: new URLSearchParams({ name: 'Megan Ross', email: 'm@example.com' }) });
+  const msg = b.env.DB.raw.prepare('SELECT id FROM inquiries').get();
+  assert.doesNotMatch(await (await b.get(`/inbox/${msg.id}`)).text(), /Add to waitlist/);
+});

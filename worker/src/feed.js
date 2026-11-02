@@ -98,3 +98,13 @@ export async function setFeed(env, siteId, publicId) {
     env.DB.prepare('DELETE FROM feed_cache WHERE site_id = ?').bind(siteId),
   ]);
 }
+
+// What the manage app needs to know to steer the breeder (plan 3.8): linked to a
+// KennelOS waitlist at all (then the simple waitlist isn't used), and whether
+// KennelOS takes applications online (then the site's own questions aren't used).
+export async function kennelosState(env, siteId) {
+  const row = await env.DB.prepare('SELECT kennelos_public_id FROM sites WHERE id = ?').bind(siteId).first();
+  if (!row?.kennelos_public_id || !kennelosOrigin(env)) return { linked: false, online: false, offered: Boolean(kennelosOrigin(env)) };
+  const f = await readFeed(env, siteId, row.kennelos_public_id);
+  return { linked: true, online: Boolean(f?.feed?.form), state: f?.state ?? 'unreachable', offered: true };
+}

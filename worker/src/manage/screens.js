@@ -19,7 +19,7 @@ import { APP_VERSION } from './version.js';
 import { STATUS_TEXT, SAFE_NOTICE_TEXT } from '../render/parts.js';
 import { exportContent } from '../content/io.js';
 import { closeSite, SiteError } from '../sites.js';
-import { readFeed, parseFeedAddress, setFeed, FeedError, kennelosOrigin } from '../feed.js';
+import { readFeed, parseFeedAddress, setFeed, FeedError, kennelosOrigin, kennelosState } from '../feed.js';
 import {
   waiting, fulfilled, getEntry, addEntry, updateEntry, setFulfilled, removeEntry, moveEntry, offerMailto, suggestWants, listNameFor, maskedNameFor, wantsPrivate, WaitlistError,
 } from '../waitlist.js';
@@ -94,6 +94,9 @@ export function createScreens({ env, request, url, site, user, page }) {
   const photoValues = (list, values) => Object.entries(list).flatMap(([n, f]) => (f.type === 'photo' ? [values[n]] : f.type === 'list' && f.item === 'photo' ? values[n] ?? [] : [])).filter(Boolean);
   const tagFromForm = (list, values, fd, subs) => tagPhotos(env, site.id, [...photoValues(list, values), ...fd.getAll('_new_photos')], subs);
 
+  let kosCache = null;
+  const kos = async () => (kosCache ??= await kennelosState(env, site.id));
+
   // ---------- one list of records, generic ----------
   async function collection(path, kind, scopeId, { back, parentTitle } = {}) {
     const k = KINDS[kind];
@@ -124,7 +127,7 @@ export function createScreens({ env, request, url, site, user, page }) {
       const rows = await listRecords(env, site.id, kind, scopeId);
       const items = rows.map((r, i) => `<li class="item"><a href="${esc(`${path}/${r.id}`)}"><b>${esc(L.name(r))}</b><span>${esc(L.sub(r) ?? '')}</span></a>
         <span class="order">${i ? `<form method="post" action="${esc(`${path}/${r.id}/up`)}"><button aria-label="Move ${esc(L.name(r))} up">↑</button></form>` : ''}${i < rows.length - 1 ? `<form method="post" action="${esc(`${path}/${r.id}/down`)}"><button aria-label="Move ${esc(L.name(r))} down">↓</button></form>` : ''}</span></li>`).join('');
-      const intro = kind === 'questions' ? `<p class="muted">The application form on your waitlist page always asks for the family's name and email. These questions come after, in this order. With none, it asks for a few lines about their family.</p>` : '';
+      const intro = kind === 'questions' ? `${(await kos()).online ? '<p class="error">Not used right now: KennelOS takes your applications online, so your website shows your KennelOS form. These questions come back if you turn online applications off in KennelOS or remove the link.</p>' : ''}<p class="muted">The application form on your waitlist page always asks for the family's name and email. These questions come after, in this order. With none, it asks for a few lines about their family.</p>` : '';
       return { title: parentTitle ? `${parentTitle}: ${L.title}` : L.title, back: back ?? base, body: `${note(url)}${intro}<ul class="items">${items || `<li class="muted">None yet.</li>`}</ul><p><a class="button primary" href="${esc(`${path}/new`)}">Add ${L.one}</a></p>` };
     }
     if (rest === 'new') {
@@ -243,7 +246,7 @@ export function createScreens({ env, request, url, site, user, page }) {
             : '<p class="error">KennelOS couldn\'t be reached just now. Your waitlist page links to your KennelOS pages until it can.</p>';
     }
     return `<form method="post" action="${base}/pages/waitlist/kennelos" class="card" id="kennelos"><h2>Your KennelOS waitlist</h2>
-      <p class="muted small">If you keep your waitlist in KennelOS, paste the website feed address from its Online list card. While you take applications online there, your waitlist page shows your KennelOS application form in your website's style, and applications go straight to KennelOS.</p>
+      ${id ? '<p class="muted small">Your waitlist page shows your KennelOS list. Remove the link to use the simple waitlist kept here instead.</p>' : `<p class="muted small">Keep your waitlist in KennelOS? Paste the website feed address from its Online list card. Your waitlist page then shows your KennelOS list, and while you take applications online there, your KennelOS application form, in your website's style, with applications going straight to KennelOS. The simple waitlist and the questions set up here are then not used (the questions are, if you don't take applications online in KennelOS). Without KennelOS, leave this empty and use the questions and Your waitlist below.</p>`}
       ${errorBox(err)}${state}
       <label>Website feed address<input name="feed" value="${esc(typed ?? (id ? `${origin}/f/site/${id}` : ''))}" placeholder="${esc(origin)}/f/site/…" autocapitalize="none" spellcheck="false"></label>
       <div class="row"><button class="primary">Save</button>${id ? '<button name="remove" value="1">Remove</button>' : ''}</div></form>`;
@@ -282,10 +285,10 @@ export function createScreens({ env, request, url, site, user, page }) {
     const pick = subject ? { groups: [{ label: `Photos for ${p.label}`, subject }], tags: [subject], alt: '' } : undefined;
     const render = async (err, values) => ({
       title: p.label, back: `${base}/pages`,
-      body: `${note(url)}${errorBox(err)}<form method="post" action="${base}/pages/${key}" data-save class="card">
+      body: `${note(url)}${key === 'waitlist' ? kennelos ?? await kennelosCard() : ''}${errorBox(err)}<form method="post" action="${base}/pages/${key}" data-save class="card">
         ${p.canHide ? fieldsWithLabel(all, values ?? current, await ctxFor(key === 'extras' ? 'extras_page' : key, pick), { enabled: ['This page is on', 'Off: it leaves the menu and its address says "This page isn\'t available". Its words are kept.'], menu_label: ['Name in the menu', `Leave empty for "${p.label}".`] }) : fieldsWithLabel(all, values ?? current, await ctxFor(key, pick), { menu_label: ['Name in the menu', `Leave empty for "${p.label}".`] })}
         <button class="primary">Save</button></form>
-        ${listLinkFor(key)}${key === 'waitlist' ? kennelos ?? await kennelosCard() : ''}`,
+        ${key === 'waitlist' ? await waitlistLinks() : listLinkFor(key)}`,
     });
     if (request.method !== 'POST' || show) return render();
     const fd = await request.formData();
@@ -296,6 +299,19 @@ export function createScreens({ env, request, url, site, user, page }) {
     }
     if (subject) await tagFromForm(all, values, fd, [subject]);
     return redirect(`${base}/pages/${key}?note=saved`);
+  }
+
+  // Under the waitlist page's settings: its questions and the simple waitlist, each
+  // marked when a linked KennelOS waitlist means it isn't used.
+  async function waitlistLinks() {
+    const k = await kos();
+    const questions = k.online
+      ? '<p class="muted small">Your application questions aren\'t used while KennelOS takes your applications online: your website shows your KennelOS form. <a href="' + base + '/lists/questions">See them anyway</a></p>'
+      : listLinkFor('waitlist');
+    const simple = k.linked
+      ? '<p class="muted small">Your simple waitlist isn\'t used while KennelOS is linked: your website shows your KennelOS list.</p>'
+      : `<p><a class="button" href="${base}/waitlist">Your waitlist</a></p>`;
+    return questions + simple;
   }
 
   const listLinkFor = (key) => {
@@ -497,6 +513,7 @@ export function createScreens({ env, request, url, site, user, page }) {
   async function listedLine(msg) {
     const on = await env.DB.prepare("SELECT id, status FROM waitlist_entries WHERE site_id = ? AND inquiry_id = ?").bind(site.id, msg.id).first();
     if (on) return `<p class="muted small">${on.status === 'waiting' ? 'On your waitlist.' : 'On your waitlist, marked fulfilled.'} <a href="${base}/waitlist">See the waitlist</a></p>`;
+    if ((await kos()).linked) return '';
     return `<p><a class="button" href="${base}/waitlist/new?from=${esc(msg.id)}">Add to waitlist</a></p>`;
   }
   async function inbox() {
@@ -609,7 +626,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     }
     if (rest || post) return null;
 
-    const row = await env.DB.prepare('SELECT kennelos_public_id FROM sites WHERE id = ?').bind(site.id).first();
+    const k = await kos();
     const page = await getPage(env, site.id, 'waitlist');
     const siteUrl = siteLink(env, site.subdomain, '/litters');
     const list = await waiting(env, site.id);
@@ -623,9 +640,10 @@ export function createScreens({ env, request, url, site, user, page }) {
         <span class="order">${i ? `<form method="post" action="${base}/waitlist/${e.id}/up"><button aria-label="Move ${esc(e.name)} up">↑</button></form>` : ''}${i < list.length - 1 ? `<form method="post" action="${base}/waitlist/${e.id}/down"><button aria-label="Move ${esc(e.name)} down">↓</button></form>` : ''}</span></div></li>`;
     return {
       title: 'Your waitlist', back: base,
-      body: `${note(url)}${row?.kennelos_public_id ? '<p class="error">Your website shows your KennelOS waitlist, so this list isn\'t shown on it. Remove the KennelOS feed address (Waitlist and application) to show this one instead.</p>' : ''}
+      body: `${note(url)}${k.linked ? `<p class="error">Not used: your website shows your KennelOS waitlist, so this list isn't shown on it, and families are added in KennelOS. Remove the KennelOS link under <a href="${base}/pages/waitlist">Waitlist and application</a> to use this one instead.</p>` : ''}
         <p class="muted">Families in order. Your website shows each one's place, the name on the list and what they want, straight away, with no publish. Offer pups opens your own email to them; Fulfilled takes them off and moves everyone below up.</p>
-        <p><a class="button primary" href="${base}/waitlist/new">Add a family</a></p>
+        ${k.linked ? '' : `<p><a class="button primary" href="${base}/waitlist/new">Add a family</a></p>`}
+        ${!k.linked && k.offered ? `<p class="muted small">Keep your waitlist in KennelOS Pro instead, with turns, deadlines and status pages for families? Link it under <a href="${base}/pages/waitlist">Waitlist and application</a>.</p>` : ''}
         <ul class="wl-list">${list.map(item).join('') || '<li class="muted">No one on the list yet. Add families from an application in your Inbox, or here.</li>'}</ul>
         <p class="muted small">The Offer pups email's wording is under <a href="${base}/pages/waitlist">Waitlist and application</a>.</p>
         ${done.length ? `<details class="card"><summary>Fulfilled (${done.length})</summary><p class="muted small">Kept 90 days, then deleted.</p><ul class="items">${done.map((e) => `<li class="item"><span><b>${esc(e.name)}</b> <span class="muted small">${esc(fmt(e.done_at.slice(0, 10)))}</span></span>

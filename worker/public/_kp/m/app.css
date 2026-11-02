@@ -36,6 +36,7 @@ button[disabled] { opacity: .5; }
 .tile b { font-size: 1rem; }
 .tile span { font-size: .82rem; color: var(--muted); }
 .tile.soon { opacity: .6; }
+.tile.off { opacity: .6; border-style: dashed; }
 .tile .count { justify-self: start; background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 0 9px; font-weight: 800; font-size: .8rem; }
 .status p:first-child { display: flex; align-items: center; gap: 8px; font-weight: 600; flex-wrap: wrap; }
 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); display: inline-block; }
