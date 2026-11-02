@@ -13,8 +13,9 @@ by hand when the first site wants one). Phase 2 is built (sign-in, the installab
 app, editing and publish, photos tagged with what they're of, the site's contact and
 review forms, Inbox, review queue, push, download a copy, Delete my site, limits); photo
 upload worked on a real Android phone, and still has to be tried on a real iPhone (plan
-4.2). Next: the rest of phase 3 (plan 8.1: how to pay, the safe-payment notice, the
-application form, the waitlist page, which needs KennelOS's website feed). Open: site
+4.2). Phase 3 so far: How to pay and the safe-payment notice. Next: the rest of phase 3
+(plan 8.1: the application form, and the waitlist page, which needs KennelOS's website
+feed). Open: site
 rules wait until KennelPort is offered (9). See
 [`docs/KennelPort_Plan.md`](docs/KennelPort_Plan.md); after version 1:
 [`docs/KennelPort_Backlog.md`](docs/KennelPort_Backlog.md). Page directory from a survey of real breeder sites:

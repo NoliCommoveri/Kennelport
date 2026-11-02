@@ -4,6 +4,7 @@
 import {
   esc, attr, fmtDate, priceText, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, parentName,
   litterCard, dogCard, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
+  paySection, safeNotice, payShown,
 } from './parts.js';
 
 const sprigs = '<svg class="sprig l" aria-hidden="true"><use href="#sprig"/></svg><svg class="sprig r" aria-hidden="true"><use href="#sprig"/></svg>';
@@ -277,6 +278,7 @@ export function puppy(snap, ctx, litterSlug, slug) {
         <dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
         ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}
         ${p.status === 'available' ? `<p><a class="btn solid" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">Ask about ${esc(p.name)}</a></p>` : ''}
+        ${safeNotice(snap, ctx)}
       </div></div>
     </div></section>`,
   };
@@ -286,7 +288,8 @@ export function puppy(snap, ctx, litterSlug, slug) {
 
 export function howItWorks(snap, ctx) {
   const p = snap.pages.how_it_works;
-  const items = snap.steps.map((s, i) => `<article class="step"><span class="n">${i + 1}</span><h3>${esc(s.heading)}</h3>${s.body ? `<p>${esc(s.body)}</p>` : ''}${s.detail ? `<details class="x"><summary>More detail</summary><div class="body">${paras(s.detail)}</div></details>` : ''}</article>`);
+  const pay = payShown(snap, ctx);
+  const items = snap.steps.map((s, i) => `<article class="step"><span class="n">${i + 1}</span><h3>${esc(s.heading)}</h3>${s.body ? `<p>${esc(s.body)}</p>` : ''}${s.detail ? `<details class="x"><summary>More detail</summary><div class="body">${paras(s.detail)}</div></details>` : ''}${s.pay_link && pay ? '<a class="more" href="/waitlist#how-to-pay">How to pay</a>' : ''}</article>`);
   return {
     title: snap.pages.how_it_works.heading || label(snap, 'how_it_works'), section: '/how-it-works', description: p.lede,
     body: `${pagehead(p, { eyebrow: 'How it works', heading: 'From application to home' })}
@@ -345,7 +348,7 @@ export function waitlist(snap, ctx) {
         <p class="muted">Our waitlist will be shown here soon. In the meantime, please get in touch and we'll tell you where it stands.</p>
         <a class="btn solid" href="/contact">Contact us</a>
         ${pageOn(snap, 'waitlist_help', ctx) ? `<a class="more" href="/waitlist/help">${esc(label(snap, 'waitlist_help'))}</a>` : ''}
-      </div></section>`,
+      </div>${paySection(snap) ? `<div class="wrap">${paySection(snap)}</div>` : ''}</section>`,
   };
 }
 

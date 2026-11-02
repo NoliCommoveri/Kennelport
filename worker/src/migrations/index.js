@@ -13,6 +13,7 @@ import content from './0002_content.sql';
 import accounts from './0003_accounts.sql';
 import messages from './0004_messages.sql';
 import photoTags from './0005_photo_tags.sql';
+import payment from './0006_payment.sql';
 
 export const MIGRATIONS = [
   { id: '0001', name: 'schema', sql: schema },
@@ -20,4 +21,5 @@ export const MIGRATIONS = [
   { id: '0003', name: 'accounts', sql: accounts },
   { id: '0004', name: 'messages', sql: messages },
   { id: '0005', name: 'photo_tags', sql: photoTags },
+  { id: '0006', name: 'payment', sql: payment },
 ];

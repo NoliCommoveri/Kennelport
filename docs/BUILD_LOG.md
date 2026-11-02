@@ -437,3 +437,26 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   pay, the safe-payment notice, the application form for a list run by hand, the
   waitlist page), and that the waitlist page in the site's style needs KennelOS's
   website feed first. Plan status line and README brought up to date.
+
+## 2026-11-02: phase 3, How to pay and the safe-payment notice
+
+- `0006_payment.sql`: payment_info, one row per kind (application fee, deposit, the
+  notice), its wording as JSON checked by the content model (`PAYMENT_FIELDS`,
+  `SAFE_NOTICE_FIELDS`); in the content document as `payment`, so it exports, imports
+  and goes with Download a copy.
+- Manage app: **How to pay** (a tile on Home) with the fee, the deposit and the notice.
+  Each card: Show on my website (off until turned on, and only with a way to pay or a
+  payment page), heading, when it's due, up to six ways to pay as way and details,
+  what to write in the note, an optional payment-page button. The notice: on by
+  default, its wording or a default about gift cards, wire transfers and other accounts.
+- Site: the waitlist page's How to pay section, as in the AK sample (cards side by side,
+  stacked on a phone, Copy buttons for an email, @handle or phone number, "These are our
+  only payment details" with the notice). How it works steps ticked How to pay link to
+  it, and so does the footer. Puppy pages carry the notice: "We take payment only by
+  Venmo or Zelle, to the details under How to pay." Links to it only while the waitlist
+  page is on. The change list names each: "How to pay, deposit: shown", "Safe-payment
+  notice: switched off".
+- Nothing in the AK sample content: its payment details are made up, so a site loading
+  the sample starts with the cards empty and off.
+- 87 tests; the waitlist and puppy pages and the manage screen checked in Chromium at
+  phone width.

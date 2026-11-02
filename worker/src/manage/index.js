@@ -117,6 +117,7 @@ async function siteHome(env, user, site) {
     ${tile('/litters', 'Litters', 'Planned, current, past')}
     ${tile('/pages', 'Pages and wording', 'Home, about, policies, FAQ…')}
     ${tile('/lists/extras', 'Extras', 'Packages and prices')}
+    ${tile('/payment', 'How to pay', 'Fee, deposit, scam warning')}
     ${tile('/lists/reviews', 'Reviews', 'Add or hide')}
     ${tile('/details', 'Kennel details', 'Name, contact, town')}
   </ul>

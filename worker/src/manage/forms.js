@@ -64,6 +64,19 @@ const LABELS = {
   about: { text: ['Your story', 'Leave a blank line between paragraphs.'], facts: ['Facts', 'Pairs like "Litters a year" / "One or two".'] },
   contact: { location_note: ['Note about your location', 'For example "Exact address shared once your pickup is booked."'] },
   extras_page: { note: ['Note under the packages', null] },
+  payment: {
+    show_on_site: ['Show on my website', 'Off until you turn it on. It shows on your waitlist page under How to pay.'],
+    title: ['Heading', 'Leave empty for the usual name.'],
+    due_note: ['When it\'s due', 'For example "after we approve your application" or "within 48 hours of choosing your puppy".'],
+    methods: ['Ways to pay', 'One per row: the way, then what families need to pay that way, like "Venmo" and "@ak-bostons", or "Check" and "Payable to AK Boston Terriers". Amounts appear only if you type them here.'],
+    note: ['What to write in the payment note', 'For example "your full name and AK application".'],
+    pay_url: ['Link to your own payment page', 'Optional: Stripe, Square or PayPal. Shows as a button.'],
+    pay_label: ['Button wording', 'Leave empty for "Pay online".'],
+  },
+  safe_notice: {
+    enabled: ['Show the safe-payment notice', 'On your waitlist page and every puppy page. It warns families about scams that copy breeders\' photos and names.'],
+    text: ['Wording', null],
+  },
 };
 
 const ENUM_WORDS = {
@@ -107,7 +120,7 @@ export function field(name, f, value, ctx) {
     case 'pairs': {
       const rows = [...(value ?? [])];
       while (rows.length < f.max) rows.push(['', '']);
-      return `<fieldset><legend>${esc(label)}${h}</legend>${rows.map(([a, b], i) => `<div class="pair"><input name="${name}.${i}.0" value="${esc(a)}" aria-label="${esc(label)} ${i + 1}, value" maxlength="${f.keyMax}"><input name="${name}.${i}.1" value="${esc(b)}" aria-label="${esc(label)} ${i + 1}, label" maxlength="${f.valueMax}"></div>`).join('')}</fieldset>`;
+      return `<fieldset><legend>${esc(label)}${h}</legend>${rows.map(([a, b], i) => `<div class="pair"><input name="${name}.${i}.0" value="${esc(a)}" aria-label="${esc(label)} ${i + 1}, ${esc(f.names?.[0] ?? 'value')}" maxlength="${f.keyMax}"${f.placeholders && !i ? ` placeholder="${esc(f.placeholders[0])}"` : ''}><input name="${name}.${i}.1" value="${esc(b)}" aria-label="${esc(label)} ${i + 1}, ${esc(f.names?.[1] ?? 'label')}" maxlength="${f.valueMax}"${f.placeholders && !i ? ` placeholder="${esc(f.placeholders[1])}"` : ''}></div>`).join('')}</fieldset>`;
     }
     case 'features': {
       const rows = [...(value ?? [])];

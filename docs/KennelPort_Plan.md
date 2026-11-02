@@ -991,7 +991,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `files` | site_id, r2_key, title, bytes, public, removed_at (downloads and certificates, PDFs only) |
 | `inquiries` | site_id, kind (`contact` / `application`), name, email, phone, topic, message, received_at, read_at; deleted after 90 days by the daily cleanup (section 3.10, decision 12). The breeder's own choice of fields (`form_fields`) comes with phase 3 |
 | `notify_items` | what happened, for push notifications: the kind and the sender's first name only; kept 8 days (section 3.10) |
-| `payment_info` | site_id, kind (`application_fee` / `deposit`), methods, instructions, due_note, pay_url, show_on_site (off by default), `source` (section 3.9) |
+| `payment_info` | site_id, kind (`application_fee` / `deposit` / `safe_notice`), show_on_site (off by default for the fee and deposit; the notice is on with no row), content (JSON: title, due_note, methods as [way, details] pairs, note, pay_url, pay_label; for the notice, its wording), `source` (section 3.9) |
 | `form_fields` | site_id, field type, label, required, order (the inquiry form's questions) |
 
 Tables for backlog items (requests, news, programs, the litter diary, events) are in
@@ -1041,9 +1041,8 @@ Each phase is useful by itself, so you can stop after any one.
 **Where phase 3 stands.** Most of it was built with phases 1 and 2: Home and its blocks,
 About, Kennel residents with health results, Puppies with statuses, How it works, Extras
 and homegoing packages, Policies, FAQ, the status-page help, the contact form and Inbox,
-reviews, the privacy page and search basics all render and can be edited. Left:
-- **How to pay** the application fee and deposit (3.9, `payment_info`) and the
-  **safe-payment notice**, on by default.
+reviews, the privacy page and search basics all render and can be edited, and so do How
+to pay and the safe-payment notice (3.9). Left:
 - **The application form** for breeders who run their list by hand (3.8, decision 26):
   the inquiry form set up with the breeder's own questions (`form_fields`), arriving in
   the Inbox as an application.

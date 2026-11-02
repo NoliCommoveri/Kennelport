@@ -1,8 +1,8 @@
 // The page around every "ak" page: <head> with title, description, share
 // preview (Open Graph) and structured data; the header and menu; the footer.
-import { esc, attr, menuGroups, photoUrl, label, pageOn } from './parts.js';
+import { esc, attr, menuGroups, photoUrl, label, pageOn, payShown } from './parts.js';
 
-export const ASSET_VERSION = '3';
+export const ASSET_VERSION = '4';
 
 function monogramSvg(snap) {
   const letters = (snap.site.monogram || snap.site.kennel_name.replace(/[^A-Za-z]/g, '').slice(0, 2) || 'K').slice(0, 3);
@@ -42,7 +42,7 @@ function footer(snap, ctx) {
   const cols = [
     ['About us', groups.find((g) => g.key === 'about')?.links ?? []],
     ['Dogs and puppies', [...(groups.find((g) => g.key === 'residents')?.links.slice(0, 1) ?? []), ...(groups.find((g) => g.key === 'puppies')?.links ?? [])]],
-    ['Buying a puppy', [...(groups.find((g) => g.key === 'how')?.links ?? []), ...(pageOn(snap, 'waitlist', ctx) ? [{ href: '/waitlist', text: label(snap, 'waitlist') }] : [])]],
+    ['Buying a puppy', [...(groups.find((g) => g.key === 'how')?.links ?? []), ...(pageOn(snap, 'waitlist', ctx) ? [{ href: '/waitlist', text: label(snap, 'waitlist') }] : []), ...(payShown(snap, ctx) ? [{ href: '/waitlist#how-to-pay', text: 'How to pay' }] : [])]],
   ].filter(([, links]) => links.length);
   return `<footer class="site"><div class="wrap">
     <div class="foot-brand"><a class="brand" href="/">${brand(snap)}</a>${snap.site.blurb ? `<p class="small">${esc(snap.site.blurb)}</p>` : ''}</div>

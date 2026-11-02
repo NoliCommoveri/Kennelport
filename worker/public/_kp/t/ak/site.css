@@ -425,3 +425,26 @@ footer.site .fine a { text-decoration: underline; }
 .cf-turnstile { min-height: 65px; }
 input:not([type]), input[type="tel"], input[type="number"] { font: inherit; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--r); padding: 10px 12px; min-height: 44px; max-width: 100%; }
 .apply-form input:not([type]), .apply-form input[type="tel"] { width: 100%; min-width: 0; }
+
+/* How to pay (plan 3.9), as in the AK sample. */
+.pay { max-width: 860px; margin: 40px auto 0; display: grid; gap: 16px; }
+.pay > header { display: grid; gap: 6px; justify-items: center; }
+.pay > header .muted { max-width: 58ch; }
+.pay-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.pay-grid.one { grid-template-columns: minmax(0, 1fr); max-width: 520px; width: 100%; margin: 0 auto; }
+@media (max-width: 700px) { .pay-grid { grid-template-columns: minmax(0, 1fr); } }
+.pay-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 22px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+.pay-card h3 { font-size: 1.3rem; }
+.pay-when { font-size: .88rem; color: var(--muted); }
+.pay-when b { color: var(--ink); }
+.methods { list-style: none; margin: 0; padding: 0; display: grid; }
+.methods li { display: grid; grid-template-columns: 5.2em minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); font-size: .92rem; }
+.methods li:first-child { border-top: 0; }
+.methods .m { font-weight: 700; overflow-wrap: anywhere; }
+.methods .d { overflow-wrap: anywhere; }
+.copy { font: 700 .74rem var(--f-body); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); background: none; border: 1px solid var(--line); border-radius: var(--r); padding: 6px 9px; cursor: pointer; min-height: 32px; }
+.copy:hover { border-color: var(--accent); }
+.pay-note { background: var(--band); border-left: 3px solid var(--brass); padding: 10px 12px; font-size: .88rem; }
+.pay-safe { font-size: .86rem; color: var(--muted); text-align: center; max-width: 62ch; margin: 0 auto; }
+.dogpage .pay-safe { text-align: left; margin: 14px 0 0; }
+.pay-safe a { color: var(--accent); font-weight: 700; }

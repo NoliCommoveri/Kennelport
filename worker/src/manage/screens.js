@@ -3,10 +3,10 @@
 // a problem comes back with what was typed and the reason.
 import { escapeHtml as esc } from '../lib/html.js';
 import { json } from '../lib/http.js';
-import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, SITE_FIELDS, ContentError } from '../content/model.js';
+import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError } from '../content/model.js';
 import {
   KINDS, listRecords, getRecord, saveRecord, setField, removeRecord, moveRecord,
-  saveSite, getPage, savePage, getBlock, saveBlock,
+  saveSite, getPage, savePage, getBlock, saveBlock, getPayment, savePayment,
 } from '../content/records.js';
 import { fields, parseForm } from './forms.js';
 import { savePhoto, PhotoError } from '../photos.js';
@@ -15,7 +15,7 @@ import { buildSnapshot, loadSnapshot, publish, undoPublish, listSnapshots } from
 import { changes } from '../diff.js';
 import { makePreviewToken } from '../site.js';
 import { siteLink } from '../ops/sites.js';
-import { STATUS_TEXT } from '../render/parts.js';
+import { STATUS_TEXT, SAFE_NOTICE_TEXT } from '../render/parts.js';
 import { exportContent } from '../content/io.js';
 import { closeSite, SiteError } from '../sites.js';
 
@@ -296,6 +296,38 @@ export function createScreens({ env, request, url, site, user, page }) {
     return redirect(`${base}/home/${key}?note=saved`);
   }
 
+  // ---------- how to pay, and the safe-payment notice (plan 3.9) ----------
+  async function payment() {
+    const kind = url.pathname.split('/')[4] ?? '';
+    const KINDS_HERE = { application_fee: ['Application fee', PAYMENT_FIELDS], deposit: ['Puppy deposit', PAYMENT_FIELDS], safe_notice: ['Safe-payment notice', SAFE_NOTICE_FIELDS] };
+    if (request.method === 'POST') {
+      const k = KINDS_HERE[kind];
+      if (!k) return null;
+      const values = parseForm(k[1], await request.formData());
+      try { await savePayment(env, site.id, kind, values); } catch (err) {
+        if (err instanceof ContentError) return render({ [kind]: [err.message, values] });
+        throw err;
+      }
+      return redirect(`${base}/payment?note=saved#${kind}`);
+    }
+    if (kind) return null;
+    return render({});
+
+    async function render(problems) {
+      const cards = [];
+      for (const [k, [title, flds]] of Object.entries(KINDS_HERE)) {
+        const [err, typed] = problems[k] ?? [];
+        const current = typed ?? await getPayment(env, site.id, k);
+        const intro = k === 'safe_notice'
+          ? `<p class="muted small">Leave the wording empty for: "${esc(SAFE_NOTICE_TEXT)}" Where the ways to pay above are shown, it starts "We take payment only by…" and links to them.</p>`
+          : `<p class="muted small">${k === 'application_fee' ? 'How a family pays the fee once you approve them.' : 'How a family pays the deposit once they choose a puppy.'} This is how to pay, not the price.</p>`;
+        cards.push(`<form method="post" action="${base}/payment/${k}" id="${k}" data-save class="card"><h2>${esc(title)}</h2>${intro}${errorBox(err)}
+          ${fields(flds, current, { kind: k === 'safe_notice' ? 'safe_notice' : 'payment' })}<button class="primary">Save</button></form>`);
+      }
+      return { title: 'How to pay', back: base, body: `${note(url)}<p class="muted">Shown on your waitlist page, so families don't have to email to ask. A How it works step can link here too: open the step and tick its How to pay box.</p>${cards.join('')}` };
+    }
+  }
+
   // ---------- photos ----------
   async function photosScreen() {
     const rest = url.pathname.slice(`${base}/photos`.length);
@@ -556,6 +588,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     else if (p.startsWith('/pages')) view = await pages();
     else if (p.startsWith('/home')) view = await home();
     else if (p.startsWith('/photos')) view = await photosScreen();
+    else if (p === '/payment' || /^\/payment\/(application_fee|deposit|safe_notice)$/.test(p)) view = await payment();
     else if (p.startsWith('/publish')) view = await publishScreen();
     else if (p.startsWith('/inbox')) view = await inbox();
     else if (p === '/export.json' && request.method === 'GET') return exportManifest();
