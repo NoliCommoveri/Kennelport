@@ -43,14 +43,16 @@ Libraries are loaded from a free CDN or served from the site; either costs nothi
 
 ## 1. Flip cards
 
-**Where:** dog cards (Our dogs, Retired, Stud), puppy cards on a litter page, team
-members on the About page, extras.
+**Where:** dog cards (Kennel residents: girls, boys, retired, stud), puppy cards on a
+litter page, team members on the About us page, extras.
 
-**What each side holds:**
-- *Front:* the photo, the name and one line ("Daisy · Boston Terrier · Dam").
-- *Back:* the facts real sites put in a list: registered name, date of birth, size, titles,
-  health highlights as the breeder chose (plan section 3.7), a short bio, and **View
-  profile**. For a puppy: sex, colour, collar, status (plan section 3.6), and **Ask about
+**What each side holds (decided):**
+- *Front:* the photo, with the **registered name and call name** beneath it or laid over
+  the photo, plus one line ("Boston Terrier · Dam").
+- *Back:* the **same photo faded to about 10%** as the background, with the registered
+  and call names still showing at the top, then the **health tests** (as the breeder
+  chose, plan section 3.7) and the **bio**, with **View profile** at the bottom. For a
+  puppy: its names, sex, colour, collar and status (plan section 3.6), and **Ask about
   this puppy**. With KennelOS linked, the back is where KennelOS's data lands.
 
 **How it behaves:** hover flips it on a desktop; a tap flips it on a phone, and a
@@ -71,10 +73,9 @@ front too, so nobody falls for a puppy that's taken.
 - **Reference sites** from the survey closest to this: Northwest Lagotto, Field Bred
   Golden Retrievers, Blackwood Acres, Lonestar Doodles.
 
-**Note on the Cotton Paws example:** its **View Profile**, **Learn More About Us**,
-**Read Our Full Story** and **Join the Waitlist** buttons are rounded pills, and its
-"View All Puppies" links are pill outlines. Under this preference they become square or
-lightly rounded rectangles.
+**The Cotton Paws example's buttons** (**View Profile**, **Learn More About Us**, **Read
+Our Full Story**, **Join the Waitlist**, the "View All Puppies" outlines) become square or
+lightly rounded rectangles (decided).
 
 ## 3. Sliding sets
 
@@ -96,16 +97,20 @@ puppies before reserved ones), and a "See all" link opens the full list as a gri
 ## 4. Menus, selects and expanders instead of walls
 
 **Navigation:** a short top menu with nested groups: drop-downs on a desktop, a menu
-with expanding sections on a phone. A proposed grouping of the plan's pages:
+with expanding sections on a phone. Five top-level items (decided), with the plan's pages
+nested under them:
 
 | Menu | Holds |
 |---|---|
-| **About** | Our story, Our family, Programs, How we raise puppies, Reviews |
-| **Our dogs** | Girls, Boys, Retired, In memory, Stud dogs |
+| **About us** | Our story, Our family, Reviews, Contact |
+| **Kennel residents** | Girls, Boys, Retired, In memory, Stud dogs |
 | **Puppies** | Available, Upcoming litters, Past litters, Older puppies |
-| **Buying a puppy** | How it works, Policies, Pickup and delivery, Extras, How to pay safely, FAQ |
-| **Apply** (the one button) | The waitlist or application |
-| Contact | in the menu and the footer |
+| **How it works** | The steps, Programs (guardian homes), How we raise puppies, Policies, Pickup and delivery, Extras, How to pay safely, FAQ |
+| **Waitlist** | The waitlist or application; styled as the one main button |
+
+The labels are the menu's default wording; the pages keep their fixed addresses (plan
+section 3.1: "Kennel residents" still opens `/dogs`), and a breeder can rename a label.
+Contact also sits in the footer.
 
 Empty sections disappear from the menu (no "Retired" item if there are no retired dogs).
 
@@ -141,12 +146,10 @@ and the inquiry form's choices (which litter, preferred sex, timing).
 - **Readable body text** on a phone: the survey's worst pages used 10–12px light grey
   body text.
 
-## Open questions
+## Decided
 
-1. **Flip cards:** "a flip animation to reveal more animation" is read here as "to reveal
-   more information" (facts on the back). Is that right, or should the back also animate
-   (a short video or a second photo)?
-2. **Example buttons:** confirm that the pill-shaped buttons in the Cotton Paws example
-   change to square or lightly rounded rectangles.
-3. **Menu grouping:** does the grouping in section 4 match how you'd expect visitors to
-   look for things?
+- Flip cards show more information, laid over a 10% faded copy of the photo (section 1).
+- Buttons are rectangles, not pills (section 2).
+- The top menu is About us · Kennel residents · Puppies · How it works · Waitlist
+  (section 4).
+- JavaScript and any free library or service may be used (the one rule: no cost).

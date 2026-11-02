@@ -128,3 +128,11 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - The owner confirmed JavaScript may be used to expand what the design can do. Added it
   to `KennelPort_Design_Direction.md` as the main tool, with free libraries for each
   preference (GSAP with ScrollTrigger, Swiper, PhotoSwipe, Lottie).
+
+## 2026-11-02: design decisions
+
+- Flip cards: registered and call name on the front (under or over the photo); the back
+  repeats the names with health tests and bio over a copy of the photo faded to about 10%.
+- Buttons are rectangles, not pills.
+- Top menu: About us · Kennel residents · Puppies · How it works · Waitlist, with the
+  plan's pages nested under them; labels are defaults over the fixed addresses.
