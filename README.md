@@ -12,8 +12,7 @@ editing, photos, preview, publish, undo, suspend and close (a custom domain is c
 by hand when the first site wants one). Phase 2 is built (sign-in, the installable manage
 app, editing and publish, photos tagged with what they're of, the site's contact and
 review forms, Inbox, review queue, push, download a copy, Delete my site, limits); photo
-upload worked on a real Android phone; on a real iPhone it found a fix (Apple's JPEGs
-carry an EXIF block, now dropped in the browser), to be tried again (plan 4.2). Phase 3 so far: How to pay and the safe-payment notice. Next: the rest of phase 3
+upload works on a real Android phone and a real iPhone (plan 4.2). Phase 3 so far: How to pay and the safe-payment notice. Next: the rest of phase 3
 (plan 8.1: the application form, and the waitlist page, which needs KennelOS's website
 feed). Open: site
 rules wait until KennelPort is offered (9). See

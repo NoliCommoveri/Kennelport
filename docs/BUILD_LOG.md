@@ -498,3 +498,8 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - `CLAUDE.md` (new, repo root): ask the owner before every bump; a failing versions
   test is the cue to ask, not to bump.
 - 93 tests.
+
+## 2026-11-02: iPhone upload works
+
+- Tried again on the real iPhone with the EXIF fix deployed: the photo uploaded. Phase 2
+  is done. Plan status, 4.2, the risks table and README brought up to date.

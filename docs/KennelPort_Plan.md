@@ -1,7 +1,6 @@
 # KennelPort: high-level plan (DRAFT)
 
-> Status: phases 0 to 2 are built (`worker/`), apart from photo upload tried on a real
-> iPhone (4.2); most of phase 3 came with them, and section 8.1 says what's left of it.
+> Status: phases 0 to 2 are built (`worker/`); most of phase 3 came with them, and section 8.1 says what's left of it.
 > Section 8 says what version 1 is; section 9 lists the one decision still open. What comes after version 1 is
 > in [`KennelPort_Backlog.md`](KennelPort_Backlog.md). History of this plan lives in
 > [`BUILD_LOG.md`](BUILD_LOG.md).
@@ -770,7 +769,7 @@ dark first: it shows dark unless the visitor's device asks for light explicitly.
   server refuses, so the browser drops it before uploading. Adding photos from the
   camera roll is the job breeders do most from a phone, so it's tried on real phones: an
   Android phone worked (2026-11-02); the first real iPhone try found the EXIF block, and
-  phase 2 is done once an iPhone upload works with that fix.
+  with that fix an iPhone upload worked too (2026-11-02).
 - **On the server, too:** the browser step can be skipped by anyone calling the upload
   API directly, so the server checks every upload itself: only WebP or JPEG accepted for
   photos, within a maximum size and pixel dimensions; a WebP carrying an `EXIF` or `XMP`
@@ -1149,7 +1148,7 @@ Everything after version 1, with its order and designs, is in
 | Building far more than the first site needs | Version 1 is section 8.1 only; everything else waits for someone to ask |
 | An embed provider tracks visitors or changes its embed | Click to load; previews stored on the site; plain-link fallback; providers listed in one place |
 | Tie-in to one host | Plain D1 and R2 data, with a full export for each site (built in the browser, section 4.3) |
-| Photo upload fails on iPhones, which can't always make WebP | JPEG whenever the browser hands back anything but WebP; the server accepts both and checks both for location data; tried on a real Android phone, a real iPhone still to do (section 4.2) |
+| Photo upload fails on iPhones, which can't always make WebP | JPEG whenever the browser hands back anything but WebP; the server accepts both and checks both for location data; tried on a real Android phone and a real iPhone (section 4.2) |
 | A large site outgrows D1's row size | Snapshots are stored in R2, with only their key in D1 (section 4.1) |
 | A page, publish or export runs past the free plan's CPU limit | Pages cached per snapshot; resizing and the export zip run in the browser; CPU measured in phase 1, with Workers Paid as the fallback (section 4.4) |
 | Fonts or libraries from Google or a CDN let them track visitors | Fonts and libraries are served from the site itself; only Turnstile loads from outside, on form pages (section 3.3) |
