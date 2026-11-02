@@ -295,12 +295,12 @@ store the HTML a breeder pastes**:
 - If a provider removes an item or changes its embed, the site shows a plain link
   instead of a blank box.
 
-**Content Security Policy.** Every page sends one: images, styles and scripts only from
-the site itself, frames only from the providers above, and no outside scripts. Even a
-mistake in a template can't load anything else. The one exception, if it's ever needed,
-is the inquiry form's spam check (section 3.10, decision 17): Turnstile needs a script
-from `challenges.cloudflare.com`, so only pages that show the form would allow that one
-address.
+**Outside services and libraries.** The template may use any free outside service or
+library it needs: web fonts, animation and slider libraries, Cloudflare Turnstile,
+Cloudflare Web Analytics, a reviews widget. The only rule is that it costs nothing.
+Every page sends a Content Security Policy listing exactly the services the template
+uses plus the embed providers above, so a breeder's content still can't load anything
+else (breeders never add code).
 
 Because embeds are built by KennelPort and breeders never add their own code, the manage
 app can stay on `manage.kennelport.com` (see section 9).
@@ -430,8 +430,8 @@ breeder turns on. Version 1 ships only the ones in decision 14; the rest are bac
 - **Visiting policy:** by appointment only, what to expect, health precautions.
 - **Reviews:** quotes from families (a quote, a first name and town), added by the breeder
   with the family's permission (a checkbox they tick to confirm), plus a link to their
-  Google reviews. Never collected automatically from visitors, and no review widgets
-  (they need outside scripts, section 3.3).
+  Google reviews (or a free Google reviews widget). Never collected automatically from
+  visitors.
 - **Families' stories:** photos of grown puppies in their homes, with a first name and
   town, under the same permission rule. Never a full name, address or buyer record.
 
@@ -461,14 +461,14 @@ breeder turns on. Version 1 ships only the ones in decision 14; the rest are bac
 - **Search and sharing:** a title and description per page, structured data
   (schema.org `LocalBusiness` with town and region only), `sitemap.xml`, a share image per
   page, and a favicon from the logo.
-- **Google Business Profile** and social links, shown as links (no tracking scripts).
+- **Google Business Profile** and social links, shown as links.
 - **Accessibility:** alt text asked for on every photo upload, colour choices checked for
   contrast, every page usable by keyboard and screen reader.
 - **Privacy page:** generated for every site (what the inquiry form collects, how long
-  it's kept, that the site sets no tracking cookies and loads no tracking scripts), with
-  the breeder's contact details.
-- **Visitor stats** (backlog): page counts kept by the Worker itself as it serves each
-  page (Workers Analytics Engine), with no script on the page and no cookies.
+  it's kept, which outside services the pages use), with the breeder's contact
+  details.
+- **Visitor stats** (backlog): page counts from Cloudflare Web Analytics or Workers
+  Analytics Engine, both free and cookie-free.
 
 ### 3.10 The inquiry form
 
@@ -480,10 +480,8 @@ about extras, pickup or stud service. It works with no KennelOS at all.
 - **Delivery:** emailed to the breeder through Resend, with the visitor's email as
   reply-to. Kept in the manage app's inbox for 90 days, then deleted (decision 12), so a
   lost email isn't a lost family.
-- **Spam:** to start, a hidden honeypot field, a minimum time on the page before sending,
-  and per-site rate limits, which need no outside script. Cloudflare Turnstile is added
-  only if spam gets through, and then only on pages that show the form (section 3.3,
-  decision 17). No CAPTCHA puzzles.
+- **Spam:** Cloudflare Turnstile (free, usually invisible) on the form, plus a hidden
+  honeypot field and per-site rate limits (decision 17). No CAPTCHA puzzles.
 - **No payments, no accounts** for visitors.
 - **With KennelOS linked:** the breeder can choose **Send to my KennelOS waitlist**
   instead, which embeds the KennelOS form (section 3.8). KennelPort never forwards
@@ -818,7 +816,7 @@ Rough order of likely need; any item can go first.
 | **KennelOS link** | Link codes, matching, the bundle API and its rules (5.3) in KennelPort; then in KennelOS: Show on website, `siteExport.js`, Update website, filling `dog.url`, the kennel's website, `extras_info_url` and the embed's allowed sites |
 | **Requests** | Public request form on `kennelport.com`, email alert, ops inbox; KennelOS's **Request a website** button |
 | **Guided custom domains** | **Your own domain** with registrar detection, guided steps and automatic checks (section 2.4) |
-| **Later** | More templates, visitor stats, Turnstile if spam needs it |
+| **Later** | More templates, visitor stats |
 
 ---
 
@@ -872,9 +870,8 @@ Rough order of likely need; any item can go first.
 16. **How a KennelOS bundle changes the site:** proposed as in section 5.3: matched by
     KennelOS id, KennelOS fields replaced, KennelPort fields untouched, records missing
     from the bundle hidden rather than deleted, and a bundle never deletes photos.
-17. **Spam check on the inquiry form:** proposed to start with a honeypot, a minimum time
-    on the page and rate limits, all without outside scripts; add Turnstile (one outside
-    script, form pages only) only if spam gets through.
+17. **Spam check on the inquiry form:** proposed Turnstile from the start (free, usually
+    invisible), with a honeypot and rate limits behind it.
 18. **Picks on litter pages:** showing picks taken and open per sex tells visitors how
     full a litter is, a business choice. Proposed: a switch per litter, off by default;
     from KennelOS, counts only.
@@ -905,7 +902,7 @@ Rough order of likely need; any item can go first.
 | An embed provider tracks visitors or changes its embed | Click to load; previews stored on the site; plain-link fallback; providers listed in one place |
 | Tie-in to one host | Plain D1 and R2 data, with a full export for each site |
 | A scammer copies a breeder's site or photos to sell puppies that don't exist | The safe-payment notice on by default; official contacts on every page; you can point to the real site when families ask |
-| The inquiry form attracts spam or collects more than it needs | Honeypot, timing check and rate limits (Turnstile if needed); a fixed list of field types; inquiries deleted after 90 days (decision 12) |
+| The inquiry form attracts spam or collects more than it needs | Turnstile, a honeypot and rate limits; a fixed list of field types; inquiries deleted after 90 days (decision 12) |
 | A custom domain lapses or its records change | The daily check stops the redirect, so the `kennelport.com` address serves the site again; the breeder and you are emailed (section 2.4) |
 | A breeder breaks their email while editing DNS | The steps add only the site's records and say not to change nameservers or delete other records |
 | A non-KennelOS breeder gets a lesser site | The parity rule (top of the plan): every section is a KennelPort form first; KennelOS only fills fields |

@@ -1,7 +1,7 @@
 # KennelPort: design direction (DRAFT)
 
 > Status: the owner's stated preferences for how a KennelPort site looks and behaves,
-> with how each one works within the plan's rules. Not a finished design. Evidence for
+> worked out in more detail. The only rule is that it costs nothing. Not a finished design. Evidence for
 > what real breeder sites do is in [`KennelPort_Visual_Survey.md`](KennelPort_Visual_Survey.md).
 
 ## The six preferences
@@ -21,22 +21,11 @@ sets on a few (photo carousels); expanders on two (Lonestar, Peterbuilt); severa
 are exactly the walls of buttons and text that preference 4 rules out (Angels of Gold's
 25-button sidebar, Ryan's Goldens, Shepherd Pals' pasted application).
 
-## The rules they work within
+## The one rule: it costs nothing
 
-From the plan: pages are rendered on the server from a template; breeders never add code;
-each page's Content Security Policy allows scripts, styles, images and fonts only from the
-site itself (plan section 3.3); most visitors are on phones; every page must be usable by
-keyboard and screen reader (plan section 3.9). So for every preference below:
-- **Everything works with no JavaScript.** Motion and interaction are built in CSS where
-  possible, with at most a small first-party script as an enhancement. Nothing from
-  outside the site.
-- **Every word is in the page's HTML,** even when it's on the back of a card, inside a
-  closed expander or on a slide that's off screen, so search engines and screen readers
-  get it.
-- **Motion respects the visitor's "reduce motion" setting:** flips become a fade, slides
-  jump instead of gliding.
-- **Touch first:** anything that responds to hover on a desktop responds to a tap on a
-  phone.
+Anything free is fair game: JavaScript, animation and slider libraries, web fonts from
+Google Fonts or anywhere else, icon sets, free outside services. Nothing that charges,
+now or at the scale of a few sites.
 
 ## 1. Flip cards
 
@@ -50,12 +39,10 @@ members on the About page, extras.
   profile**. For a puppy: sex, colour, collar, status (plan section 3.6), and **Ask about
   this puppy**. With KennelOS linked, the back is where KennelOS's data lands.
 
-**How it behaves:** hover or keyboard focus flips it on a desktop; a tap flips it on a
-phone, and a second tap (or a small "back" control) flips it back. A small, quiet cue
-says the card turns. The card keeps the same size on both sides, so a grid never jumps.
-
-**Watch for:** status must never be only on the back. A reserved puppy shows "Reserved"
-on the front too, so nobody falls for a puppy that's taken.
+**How it behaves:** hover flips it on a desktop; a tap flips it on a phone, and a
+second tap flips it back. A small, quiet cue says the card turns. The card keeps the
+same size on both sides, so a grid never jumps. A reserved puppy shows "Reserved" on the
+front too, so nobody falls for a puppy that's taken.
 
 ## 2. Professional, not playful
 
@@ -63,10 +50,8 @@ on the front too, so nobody falls for a puppy that's taken.
 - **Buttons:** rectangles: solid in the accent colour for the one main action on a
   screen (Apply, Join the waitlist), outlined or plain text with an arrow for the rest.
   No pill shapes, no stacks of coloured buttons.
-- **Links:** no raw blue underlined links and no visible web addresses. Links inside
-  paragraphs still need some cue besides colour so they can be found (accessibility
-  requires it): the text colour with a thin underline in the accent colour, or a weight
-  change. Navigation and buttons need no underline.
+- **Links:** no raw blue underlined links and no visible web addresses. Links look like
+  the surrounding text or the accent colour; navigation and buttons carry no underline.
 - **Badges and labels:** small caps text, or a thin outlined tag, not coloured lozenges.
   Status like Reserved / Available is a word with a small mark, not a bright pill.
 - **Reference sites** from the survey closest to this: Northwest Lagotto, Field Bred
@@ -91,9 +76,8 @@ steps of How it works, and older litters on Past litters.
 - On a phone the Cotton Paws example's four-across dog row can't fit; a sliding row is
   how it stays one row.
 
-**Watch for:** off-screen cards get less attention, so the most important item goes
-first (available puppies before reserved ones), and a "See all" link opens the full
-list as a grid.
+Off-screen cards get less attention, so the most important item goes first (available
+puppies before reserved ones), and a "See all" link opens the full list as a grid.
 
 ## 4. Menus, selects and expanders instead of walls
 
@@ -123,9 +107,8 @@ and the inquiry form's choices (which litter, preferred sex, timing).
 
 - **What:** light line-art behind or beside headings and in section corners: botanical
   sprigs (as in the example), leaves, a paw, a fence line, a mountain line, rope.
-- **How:** decorative only, so screen readers skip them; faint (low contrast against the
-  background) so text over them stays readable; drawn as small vector images served from
-  the site.
+- **How:** faint against the background so text over them stays readable; drawn as
+  small vector images, from a free ornament or illustration set.
 - **Who picks them:** each theme comes with a matching ornament set (botanical, ranch,
   mountain, coastal, none). Breeders choose a theme, not individual ornaments, which
   keeps every site tidy.
@@ -140,11 +123,9 @@ and the inquiry form's choices (which litter, preferred sex, timing).
   "Lifelong Companions", sans body.
 - **Small letter-spaced capitals** for labels above headings ("ABOUT COTTON PAWS", "OUR
   PARENT DOGS"), as in the example and the polished survey sites.
-- **At most three families per page**, and only the weights used, so pages stay fast.
-- **Fonts are served from the site itself** (the Content Security Policy allows nothing
-  else), so only openly licensed fonts that can be self-hosted.
-- **Readable body text:** 16px or larger on a phone, normal weight, strong contrast. The
-  survey's worst pages used 10–12px light grey body text.
+- **Any free font**, from Google Fonts or elsewhere.
+- **Readable body text** on a phone: the survey's worst pages used 10–12px light grey
+  body text.
 
 ## Open questions
 
@@ -153,7 +134,5 @@ and the inquiry form's choices (which litter, preferred sex, timing).
    (a short video or a second photo)?
 2. **Example buttons:** confirm that the pill-shaped buttons in the Cotton Paws example
    change to square or lightly rounded rectangles.
-3. **Links in paragraphs:** is a thin accent-coloured underline acceptable for links
-   inside text? Some cue is needed for accessibility.
-4. **Menu grouping:** does the grouping in section 4 match how you'd expect visitors to
+3. **Menu grouping:** does the grouping in section 4 match how you'd expect visitors to
    look for things?

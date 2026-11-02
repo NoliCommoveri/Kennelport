@@ -112,3 +112,13 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   `KennelPort_Design_Direction.md`, each worked through against the plan's rules (no
   outside scripts, works without JavaScript, phones, accessibility, reduced motion), with
   a proposed menu grouping and four open questions. Linked from plan section 3.
+
+## 2026-11-02: the only rule is no cost
+
+- The owner set one constraint for design and technology: it costs nothing. Removed the
+  self-imposed rules from `KennelPort_Design_Direction.md` (no outside scripts, no
+  JavaScript dependence, self-hosted fonts only, link-cue and motion requirements). In the
+  plan: the Content Security Policy now lists whichever free services the template uses
+  (section 3.3); Turnstile on the inquiry form from the start (3.10, decision 17); a free
+  Google reviews widget allowed; Cloudflare Web Analytics allowed for visitor stats.
+  Breeders still never add code, and the privacy rules are unchanged.
