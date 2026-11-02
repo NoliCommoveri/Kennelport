@@ -360,3 +360,10 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   then Publish or Undo.
 - New records start with Show on my website ticked. Records of another site or parent
   are out of reach. 54 tests.
+
+## 2026-11-02: the Site Manager icon
+
+- The owner's KennelPort Manager artwork is the app's icon: outer border removed so
+  phones can round it, cut to 64, 180, 192 and 512 pixels plus a maskable 512 with the
+  art in the middle 80%. The manifest's colours match it (teal #034655, cream #FCF4E9),
+  and the app's header shows it. Source in `docs/reference/kennelport-manager-icon.png`.

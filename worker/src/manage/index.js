@@ -20,7 +20,7 @@ const HEADERS = {
   'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': MANAGE_CSP,
   'x-content-type-options': 'nosniff', 'referrer-policy': 'same-origin', 'x-frame-options': 'DENY',
 };
-const APP_VERSION = '2';
+const APP_VERSION = '3';
 
 const redirect = (location, headers = {}) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store', ...headers } });
 
@@ -37,13 +37,14 @@ function page(title, body, { status = 200, back = null, headers = {} } = {}) {
 <meta name="robots" content="noindex">
 <title>${esc(title)} · KennelPort</title>
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#34523C">
+<meta name="theme-color" content="#034655">
+<link rel="icon" href="/_kp/m/icon-64.png" type="image/png">
 <link rel="apple-touch-icon" href="/_kp/m/icon-180.png">
 <meta name="apple-mobile-web-app-title" content="Site Manager">
 <link rel="stylesheet" href="/_kp/m/app.css?v=${APP_VERSION}">
 <script src="/_kp/m/app.js?v=${APP_VERSION}" defer></script>
 </head><body>
-<header class="top">${back ? `<a class="back" href="${esc(back)}" aria-label="Back">‹</a>` : '<span class="mark" aria-hidden="true">KP</span>'}<span class="title">${esc(title)}</span></header>
+<header class="top">${back ? `<a class="back" href="${esc(back)}" aria-label="Back">‹</a>` : '<img class="mark" src="/_kp/m/icon-64.png" alt="" width="32" height="32">'}<span class="title">${esc(title)}</span></header>
 <main>${body}</main>
 <p class="offline-note" id="offline-note" hidden role="status">You're offline. You can look around, but saving needs a connection.</p>
 </body></html>`, { status, headers: { ...HEADERS, ...headers } });
@@ -125,7 +126,7 @@ async function siteHome(env, user, site) {
 function manifest() {
   return new Response(JSON.stringify({
     name: 'KennelPort Site Manager', short_name: 'Site Manager', start_url: '/', scope: '/', display: 'standalone',
-    background_color: '#F5F2EA', theme_color: '#34523C', description: 'Manage your KennelPort website.',
+    background_color: '#FCF4E9', theme_color: '#034655', description: 'Manage your KennelPort website.',
     icons: [
       { src: '/_kp/m/icon-192.png', sizes: '192x192', type: 'image/png' },
       { src: '/_kp/m/icon-512.png', sizes: '512x512', type: 'image/png' },
