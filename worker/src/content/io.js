@@ -7,7 +7,8 @@
 //     litters: [{ ..., dam: '<dog slug>', puppies: [...] }], reviews: [...],
 //     steps: [...], expanders: { policies: [...], faq: [...], waitlist_help: [...] },
 //     extras: [...], payment: { application_fee: {...}, deposit: {...}, safe_notice: {...} },
-//     questions: [...], albums: [{ ..., litter: '<litter slug>', photos: [ids] }] }
+//     questions: [...], albums: [{ ..., litter: '<litter slug>', photos: [ids] }],
+//     embeds: [{ place: 'home' | 'about' | 'dog:<slug>' | 'litter:<slug>' | 'album:<slug>', provider, item, title, preview_photo_id }] }
 //
 // Every section is optional. A section that is present replaces that section of
 // the draft: dogs, litters and puppies are matched by slug, so their ids (and the
@@ -19,8 +20,9 @@ import {
   STEP_FIELDS, EXPANDER_FIELDS, EXPANDER_PAGES, EXTRA_FIELDS, HOME_BLOCKS, PAGES, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS,
   QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue,
 } from './model.js';
+import { PROVIDERS } from '../embeds.js';
 
-const SECTIONS = ['site', 'pages', 'home', 'dogs', 'litters', 'reviews', 'steps', 'expanders', 'extras', 'payment', 'questions', 'albums'];
+const SECTIONS = ['site', 'pages', 'home', 'dogs', 'litters', 'reviews', 'steps', 'expanders', 'extras', 'payment', 'questions', 'albums', 'embeds'];
 const MAX_ITEMS = 200;
 
 const now = () => new Date().toISOString();
@@ -162,6 +164,19 @@ export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = ne
     });
     uniqueSlugs(out.albums, 'albums');
   }
+  if ('embeds' in doc) {
+    out.embeds = list(doc.embeds, 'embeds').map((e, i) => {
+      const path = `embeds[${i}]`;
+      if (!e || typeof e !== 'object') throw new ContentError(path, 'must be an object');
+      const place = String(e.place ?? '');
+      if (!/^(home|about|(dog|litter|album):[a-z0-9-]{1,60})$/.test(place)) throw new ContentError(`${path}.place`, 'home, about, or dog:, litter: or album: and a slug');
+      if (!PROVIDERS[e.provider]) throw new ContentError(`${path}.provider`, `one of ${Object.keys(PROVIDERS).join(', ')}`);
+      const item = cleanValue({ type: 'text', max: 260, required: true }, e.item, `${path}.item`);
+      const title = cleanValue({ type: 'text', max: 120 }, e.title, `${path}.title`);
+      photo(e.preview_photo_id, `${path}.preview_photo_id`);
+      return { place, provider: e.provider, item, title, preview_photo_id: e.preview_photo_id ?? null };
+    });
+  }
   if ('questions' in doc) {
     out.questions = list(doc.questions, 'questions').map((q, i) => checkQuestion(cleanRecord(QUESTION_FIELDS, q, `questions[${i}]`), `questions[${i}]`));
     if (out.questions.length > 30) throw new ContentError('questions', 'at most 30 questions');
@@ -298,6 +313,17 @@ export async function importContent(env, siteId, doc) {
     const slugs = clean.albums.map((a) => a.slug);
     s.push(db.prepare(`DELETE FROM albums WHERE site_id = ?${notIn('slug', slugs)}`).bind(siteId, ...slugs));
   }
+  if (clean.embeds) {
+    // Replaced whole, after dogs, litters and albums so a place's slug finds its record.
+    s.push(db.prepare('DELETE FROM embeds WHERE site_id = ?').bind(siteId));
+    clean.embeds.forEach((e, i) => {
+      const [kind, slug] = e.place.split(':');
+      const table = { dog: 'dogs', litter: 'litters', album: 'albums' }[kind];
+      const place = table ? `'${kind}:' || (SELECT id FROM ${table} WHERE site_id = ? AND slug = ?)` : '?';
+      s.push(db.prepare(`INSERT INTO embeds (id, site_id, place, provider, item, title, preview_photo_id, sort, created_at) SELECT ?, ?, ${place}, ?, ?, ?, ?, ?, ? WHERE ${table ? `EXISTS (SELECT 1 FROM ${table} WHERE site_id = ? AND slug = ?)` : '1'}`)
+        .bind(uuid(), siteId, ...(table ? [siteId, slug] : [e.place]), e.provider, e.item, e.title, e.preview_photo_id, i, t, ...(table ? [siteId, slug] : [])));
+    });
+  }
   if (clean.extras) {
     s.push(db.prepare('DELETE FROM extras WHERE site_id = ?').bind(siteId));
     clean.extras.forEach((x, i) => s.push(insert(db, 'extras', {
@@ -369,6 +395,15 @@ export async function exportContent(env, siteId) {
     if (a.litter_id && litterSlug[a.litter_id]) out.litter = litterSlug[a.litter_id];
     out.photos = a.photos ? JSON.parse(a.photos) : [];
     return out;
+  });
+  const slugOfPlace = {
+    dog: Object.fromEntries(dogs.map((d) => [d.id, d.slug])), litter: litterSlug,
+    album: Object.fromEntries((await all('SELECT id, slug FROM albums WHERE site_id = ?', siteId)).map((a) => [a.id, a.slug])),
+  };
+  doc.embeds = (await all('SELECT * FROM embeds WHERE site_id = ? ORDER BY place, sort', siteId)).flatMap((e) => {
+    const [kind, id] = e.place.split(':');
+    const place = id ? (slugOfPlace[kind]?.[id] ? `${kind}:${slugOfPlace[kind][id]}` : null) : e.place;
+    return place ? [{ place, provider: e.provider, item: e.item, ...(e.title ? { title: e.title } : {}), ...(e.preview_photo_id ? { preview_photo_id: e.preview_photo_id } : {}) }] : [];
   });
   const pay = await all('SELECT * FROM payment_info WHERE site_id = ?', siteId);
   if (pay.length) {

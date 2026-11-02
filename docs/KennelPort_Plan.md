@@ -298,6 +298,11 @@ store the HTML a breeder pastes**:
   placeholder: the provider's name and a title the breeder types.
 - If a provider removes an item or changes its embed, the site shows a plain link
   instead of a blank box.
+- **Built in phase 5** for YouTube (videos, Shorts, playlists), Vimeo, TikTok, Instagram
+  (posts, reels) and Facebook (pages, posts, videos), on Home, Our story, and each dog,
+  litter and album (at most 12 in one place); every one also carries an "Open on …"
+  link, so a removed item still leads somewhere. Google Maps, Google Forms and Jotform
+  wait: maps need the town and region only, and the form embeds are backlog (3.8).
 
 **Outside services and libraries.** The template may use any free font, library or
 outside service it needs; the only rule is that it costs nothing. **Fonts and libraries
@@ -1058,7 +1063,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `dogs`, `litters`, `puppies` | site_id, slug, content fields, `source` (`kennelport` / `kennelos`), `kennelos_id` when linked, `hidden_by_kennelos` (section 5.3). A dog has a status (`active` / `retired` / `remembered`) and health_display (`normal_only` / `all` / `none`, 3.7); a litter a stage (`planned` / `current` / `past`) and either parent as a site dog or a typed name; a puppy one of 3.6's statuses. The full field list is `worker/src/migrations/0002_content.sql` |
 | `site_pages` | site_id, page key, enabled, menu_label, content (each page's wording, JSON with the keys the content model names, 3.12); order within its menu group comes with phase 6 |
 | `redirects` | site_id, old path, new path (written at publish time) |
-| `embeds` | site_id, page or record it sits on, provider, item id, title, preview photo, order |
+| `embeds` | site_id, place (`home`, `about`, or `dog:`/`litter:`/`album:` and its id), provider, item (read from the pasted link), title, preview_photo_id (the provider's preview, stored on the site), sort |
 | `photos` | site_id, r2_key, thumb_key, type (WebP or JPEG), width, height, bytes, alt text, removed_at; public only when the published snapshot uses it (4.2) |
 | `photo_tags` | site_id, photo_id, subject (`dog:` / `litter:` / `puppy:` / `extra:` + id, or `page:home` / `page:about`): what a photo is of, for the breeder only; never published (4.2) |
 | `albums` | site_id, slug, title, description, litter_id (its litter's page links to it), cover_photo_id (empty: the first photo), photos (JSON: the ordered photo ids; a removed photo drops out), show_on_site, sort. Built in phase 5 as one table: the ordered list is a JSON column rather than an `album_photos` table |

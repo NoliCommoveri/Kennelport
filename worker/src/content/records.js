@@ -181,6 +181,9 @@ export async function removeRecord(env, siteId, kind, id) {
   }
   if (kind === 'litters') s.push(env.DB.prepare('DELETE FROM puppies WHERE site_id = ? AND litter_id = ?').bind(siteId, id));
   if (kind === 'litters') s.push(env.DB.prepare('UPDATE albums SET litter_id = NULL WHERE site_id = ? AND litter_id = ?').bind(siteId, id));
+  // Videos and posts on a removed dog, litter or album go with it.
+  const place = { dogs: 'dog', litters: 'litter', albums: 'album' }[kind];
+  if (place) s.push(env.DB.prepare('DELETE FROM embeds WHERE site_id = ? AND place = ?').bind(siteId, `${place}:${id}`));
   s.push(env.DB.prepare(`DELETE FROM ${k.table} WHERE id = ? AND site_id = ?${k.where ? ` AND ${k.where}` : ''}`).bind(id, siteId));
   s.push(touch(env, siteId));
   await env.DB.batch(s);

@@ -19,6 +19,8 @@ import { APP_VERSION } from './version.js';
 import { STATUS_TEXT, SAFE_NOTICE_TEXT } from '../render/parts.js';
 import { exportContent } from '../content/io.js';
 import { closeSite, SiteError } from '../sites.js';
+import { listEmbeds, addEmbed, removeEmbed, moveEmbed, EmbedError, EMBEDS_PER_PLACE } from '../embedStore.js';
+import { PROVIDERS } from '../embeds.js';
 import { readFeed, parseFeedAddress, setFeed, FeedError, kennelosOrigin, kennelosState } from '../feed.js';
 import {
   waiting, fulfilled, getEntry, addEntry, updateEntry, setFulfilled, removeEntry, moveEntry, offerMailto, suggestWants, listNameFor, maskedNameFor, wantsPrivate, WaitlistError,
@@ -36,6 +38,7 @@ const NOTES = {
   moved: 'Moved.',
   status: 'Status changed in your draft.',
   uploaded: 'Photos added.',
+  embedded: 'Added to your draft. It shows on your site after you publish.',
   tagged: 'Saved.',
   deleted: 'Message deleted.',
   approved: 'Approved. It shows on your site after you publish.',
@@ -98,6 +101,40 @@ export function createScreens({ env, request, url, site, user, page }) {
 
   let kosCache = null;
   const kos = async () => (kosCache ??= await kennelosState(env, site.id));
+
+  // ---------- videos and posts (plan 3.3) ----------
+  // A card on the screen of whatever they sit on; its forms come back to `here`.
+  async function embedsCard(place, here, err) {
+    const list = await listEmbeds(env, site.id, place);
+    const hidden = `<input type="hidden" name="place" value="${esc(place)}"><input type="hidden" name="back" value="${esc(here)}">`;
+    const items = list.map((e, i) => `<li class="item"><span><b>${esc(e.title || PROVIDERS[e.provider]?.name || e.provider)}</b><span class="muted small"> · ${esc(PROVIDERS[e.provider]?.name ?? e.provider)}${e.preview_photo_id ? '' : ', no preview'}</span></span>
+      <span class="order">${i ? `<form method="post" action="${base}/embeds/${e.id}/up">${hidden}<button aria-label="Move up">↑</button></form>` : ''}${i < list.length - 1 ? `<form method="post" action="${base}/embeds/${e.id}/down">${hidden}<button aria-label="Move down">↓</button></form>` : ''}<form method="post" action="${base}/embeds/${e.id}/remove">${hidden}<button class="link">Remove</button></form></span></li>`).join('');
+    return `<section class="card" id="videos"><h2>Videos and posts</h2>
+      <p class="muted small">Paste the link to a video or post on ${esc(Object.values(PROVIDERS).map((p) => p.name).join(', '))}. Your site shows a preview, and plays it only when a visitor taps.</p>
+      ${err ? `<p class="error" role="alert">Not added: ${esc(err)}</p>` : ''}
+      ${items ? `<ul class="items">${items}</ul>` : ''}
+      ${list.length < EMBEDS_PER_PLACE ? `<form method="post" action="${base}/embeds/add">${hidden}<label>Link<input name="link" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=…" required></label><label>Title<span class="hint">Optional, shown under it, like "Opal at 6 weeks".</span><input name="title" maxlength="120"></label><button class="primary">Add</button></form>` : ''}</section>`;
+  }
+
+  async function embedsAction() {
+    if (request.method !== 'POST') return null;
+    const fd = await request.formData();
+    const back = String(fd.get('back') ?? '');
+    const here = back.startsWith(`${base}/`) && !back.includes('//') ? back : base;
+    const m = url.pathname.slice(`${base}/embeds`.length).match(/^\/(?:add|([0-9a-f-]{36})\/(remove|up|down))$/);
+    if (!m) return null;
+    if (m[2] === 'remove') await removeEmbed(env, site.id, m[1]);
+    else if (m[2]) await moveEmbed(env, site.id, m[1], m[2] === 'up' ? -1 : 1);
+    else {
+      try { await addEmbed(env, site.id, String(fd.get('place') ?? ''), { link: fd.get('link'), title: fd.get('title') }); } catch (err) {
+        if (!(err instanceof EmbedError)) throw err;
+        return redirect(`${here}${here.includes('?') ? '&' : '?'}embed_error=${encodeURIComponent(err.message)}#videos`);
+      }
+      return redirect(`${here}?note=embedded#videos`);
+    }
+    return redirect(`${here}?note=saved#videos`);
+  }
+  const embedErr = () => url.searchParams.get('embed_error');
 
   // ---------- one list of records, generic ----------
   async function collection(path, kind, scopeId, { back, parentTitle } = {}) {
@@ -162,6 +199,8 @@ export function createScreens({ env, request, url, site, user, page }) {
     if (!post) {
       const view = await form(rec);
       view.body = note(url) + view.body;
+      const place = { dogs: 'dog', litters: 'litter', albums: 'album' }[kind];
+      if (place) view.body += await embedsCard(`${place}:${rec.id}`, `${path}/${rec.id}`, embedErr());
       return { ...view, rec };
     }
     const fd = await request.formData();
@@ -298,7 +337,7 @@ export function createScreens({ env, request, url, site, user, page }) {
       body: `${note(url)}${key === 'waitlist' ? kennelos ?? await kennelosCard() : ''}${errorBox(err)}<form method="post" action="${base}/pages/${key}" data-save class="card">
         ${p.canHide ? fieldsWithLabel(all, values ?? current, await ctxFor(key === 'extras' ? 'extras_page' : key, pick), { enabled: ['This page is on', 'Off: it leaves the menu and its address says "This page isn\'t available". Its words are kept.'], menu_label: ['Name in the menu', `Leave empty for "${p.label}".`] }) : fieldsWithLabel(all, values ?? current, await ctxFor(key, pick), { menu_label: ['Name in the menu', `Leave empty for "${p.label}".`] })}
         <button class="primary">Save</button></form>
-        ${key === 'waitlist' ? await waitlistLinks() : listLinkFor(key)}`,
+        ${key === 'waitlist' ? await waitlistLinks() : listLinkFor(key)}${key === 'about' ? await embedsCard('about', `${base}/pages/about`, embedErr()) : ''}`,
     });
     if (request.method !== 'POST' || show) return render();
     const fd = await request.formData();
@@ -349,7 +388,7 @@ export function createScreens({ env, request, url, site, user, page }) {
         const v = await getBlock(env, site.id, b);
         rows.push(`<li class="item"><a href="${base}/home/${b}"><b>${esc(BLOCK_TITLES[b])}</b><span>${v.enabled ? 'on' : 'off'}</span></a></li>`);
       }
-      return { title: 'Home page', back: `${base}/pages`, body: `${note(url)}<p class="muted">Home is a fixed sequence of blocks. Switch each on or off and change its words.</p><ul class="items">${rows.join('')}</ul>` };
+      return { title: 'Home page', back: `${base}/pages`, body: `${note(url)}<p class="muted">Home is a fixed sequence of blocks. Switch each on or off and change its words.</p><ul class="items">${rows.join('')}</ul>${await embedsCard('home', `${base}/home`, embedErr())}` };
     }
     const flds = HOME_BLOCKS[key];
     if (!flds) return null;
@@ -778,6 +817,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     else if (p === '/payment' || /^\/payment\/(application_fee|deposit|safe_notice)$/.test(p)) view = await payment();
     else if (p.startsWith('/publish')) view = await publishScreen();
     else if (p.startsWith('/inbox')) view = await inbox();
+    else if (p.startsWith('/embeds/')) view = await embedsAction();
     else if (p === '/waitlist' || p.startsWith('/waitlist/')) view = await waitlistScreen();
     else if (p === '/export.json' && request.method === 'GET') return exportManifest();
     else if (p.startsWith('/account')) view = await account();

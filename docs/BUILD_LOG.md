@@ -689,3 +689,18 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   itself). A litter's page shows its albums. In the sitemap; a new address redirects
   from the old. The change list names albums added, edited or removed.
 - 125 tests; the album pages and viewer checked in Chromium at phone width.
+
+## 2026-11-02: phase 5, videos and posts
+
+- `src/embeds.js`: one entry per provider (how its links read, its player, its shape,
+  its preview); `readEmbedLink` refuses anything else. `0012_embeds.sql`;
+  `src/embedStore.js` adds one from a pasted link, copying the provider's preview (YouTube's
+  image, Vimeo's and TikTok's oEmbed) onto the site as a photo; removing it removes that.
+- Manage app: a **Videos and posts** card on Home's screen, Our story, and every dog,
+  litter and album: paste a link and an optional title, reorder, remove. Removing a dog,
+  litter or album removes its videos. Content document: `embeds`, by place and slug.
+- Site: a preview with a play button, linking to the original; `site.js` swaps in the
+  provider's player only on a tap. Every page's Content Security Policy frames these
+  providers and nothing else (Turnstile joins the same `frame-src` on form pages). The
+  change list names videos added or removed.
+- 129 tests; the boxes and the tap checked in Chromium at phone width.

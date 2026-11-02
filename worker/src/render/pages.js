@@ -6,6 +6,26 @@ import {
   litterCard, dogCard, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
   paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
 } from './parts.js';
+import { embedView } from '../embeds.js';
+
+// ---------- Videos and posts (plan 3.3) ----------
+// A preview (stored on the site) with a play button, linking to the original. The
+// template's script swaps in the provider's player only when tapped, so nothing
+// from YouTube, Facebook and the rest loads before that.
+function embedBox(snap, e) {
+  const v = embedView(e);
+  if (!v) return '';
+  const pic = img(snap, v.preview_photo_id, { alt: '', cls: 'em-pic' }) ?? `<span class="em-ph">${esc(v.name)}</span>`;
+  const label = v.title ? `${v.title} (${v.name})` : `${v.name} ${v.shape === 'post' ? 'post' : 'video'}`;
+  return `<figure class="em em-${v.shape}"><a class="em-start" href="${attr(v.link)}" rel="noopener noreferrer" target="_blank" data-embed="${attr(v.src)}" aria-label="Play: ${attr(label)}">${pic}<span class="em-play" aria-hidden="true"></span></a>
+    <figcaption><span>${esc(v.title || v.name)}</span><a class="small muted" href="${attr(v.link)}" rel="noopener noreferrer" target="_blank">Open on ${esc(v.name)}</a></figcaption></figure>`;
+}
+export function embedsBlock(snap, place, { heading = 'Videos and posts', band = false, inWrap = false } = {}) {
+  const list = snap.embeds?.[place] ?? [];
+  if (!list.length) return '';
+  const inner = `${head(null, heading)}<div class="ems">${list.map((e) => embedBox(snap, e)).join('')}</div>`;
+  return inWrap ? `<div class="mt-26">${inner}</div>` : `<section class="section${band ? ' band' : ''}"><div class="wrap">${inner}</div></section>`;
+}
 
 const sprigs = '<svg class="sprig l" aria-hidden="true"><use href="#sprig"/></svg><svg class="sprig r" aria-hidden="true"><use href="#sprig"/></svg>';
 const scriptLine = (text, script) => `${esc(text ?? '')}${script ? ` <span class="script">${esc(script)}</span>` : ''}`;
@@ -70,6 +90,8 @@ export function home(snap, ctx) {
     </div></section>`);
   }
 
+  parts.push(embedsBlock(snap, 'home'));
+
   if (h.waitlist.enabled && waitlistOn) {
     parts.push(`<section class="cta"><div class="wrap"><div><h2>${esc(h.waitlist.heading || 'Hoping for a puppy of your own?')}</h2>${h.waitlist.line ? `<p>${esc(h.waitlist.line)}</p>` : ''}</div><a class="btn" href="/waitlist">${esc(h.waitlist.button_label || 'Join the waitlist')}</a></div></section>`);
   }
@@ -87,7 +109,7 @@ export function about(snap, ctx) {
   return {
     title: snap.pages.about.heading || label(snap, 'about'), section: '/about', description: p.lede, image: p.photo_id,
     body: `${pagehead(p, { eyebrow: 'About us', heading: 'Our story' })}
-      <section class="section tight"><div class="wrap ${photo ? 'story' : 'prose'}">${photo}${text}</div></section>`,
+      <section class="section tight"><div class="wrap ${photo ? 'story' : 'prose'}">${photo}${text}</div></section>${embedsBlock(snap, 'about', { band: true })}`,
   };
 }
 
@@ -196,6 +218,7 @@ export function dog(snap, ctx, slug) {
         <dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
         ${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''}${tests}
       </div></div>
+      ${embedsBlock(snap, `dog:${d.id}`, { inWrap: true })}
       ${litters.length ? `<div class="mt-26">${head('Litters', null)}<div class="litters">${litters.map((l) => litterCard(snap, l, ctx)).join('')}</div></div>` : ''}
     </div></section>`,
   };
@@ -259,6 +282,7 @@ export function litter(snap, ctx, slug) {
         <p class="breadcrumb center"><a href="/litters">${esc(label(snap, 'litters'))}</a></p>
         <div class="litters">${litterCard(snap, l, ctx, { link: false })}</div>
         ${pups.length ? `<div class="mt-26 grid">${pups.map((pup) => puppyCard(snap, l, pup, ctx)).join('')}</div>` : ''}
+        ${embedsBlock(snap, `litter:${l.id}`, { inWrap: true })}
         ${litterAlbums(snap, ctx, l)}
       </div></section>`,
   };
@@ -301,6 +325,7 @@ export function album(snap, ctx, slug) {
       <section class="section tight"><div class="wrap">
         <p class="breadcrumb center">${l && snap.pages.litters.enabled ? `<a href="/litters/${attr(l.slug)}">${esc(l.name)}</a> · ` : ''}<a href="/albums">${esc(label(snap, 'albums'))}</a></p>
         <div class="gallery">${photos}</div>
+        ${embedsBlock(snap, `album:${a.id}`, { inWrap: true })}
       </div></section>
       <dialog class="viewer" id="viewer" aria-label="Photo viewer"><img alt=""><button type="button" class="v-prev" aria-label="Previous photo">‹</button><button type="button" class="v-next" aria-label="Next photo">›</button><button type="button" class="v-close" aria-label="Close">×</button><span class="v-count small"></span></dialog>`,
   };

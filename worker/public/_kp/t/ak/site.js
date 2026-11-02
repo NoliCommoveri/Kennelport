@@ -175,6 +175,22 @@
     });
   }
 
+  // Videos and posts: the provider's player replaces the preview only when tapped,
+  // so nothing loads from YouTube, Facebook and the rest before that. Without this
+  // script the preview is a link to the original.
+  document.addEventListener('click', (e) => {
+    const a = e.target instanceof Element ? e.target.closest('a[data-embed]') : null;
+    if (!a) return;
+    e.preventDefault();
+    const f = document.createElement('iframe');
+    f.src = a.dataset.embed;
+    f.title = a.getAttribute('aria-label')?.replace(/^Play: /, '') ?? 'Video';
+    f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+    f.allowFullscreen = true;
+    f.referrerPolicy = 'strict-origin-when-cross-origin';
+    a.replaceWith(f);
+  });
+
   // Homegoing packages: "What's included" starts open on wide screens.
   if (window.matchMedia('(min-width: 901px)').matches) for (const d of $$('.pkg details')) d.open = true;
 

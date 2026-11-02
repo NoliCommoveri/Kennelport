@@ -19,13 +19,16 @@ import { receiveInquiry, receiveReview, receiveApplication, turnstileOn } from '
 import { pageOn } from './render/parts.js';
 import { readFeed } from './feed.js';
 import { publicRows } from './waitlist.js';
+import { FRAME_ORIGINS } from './embeds.js';
 
 export const PREVIEW_COOKIE = 'kp_preview';
 export const PREVIEW_DAYS = 7;
 
 // The site's own pages may load only what the template serves from the site
 // itself (plan 3.3). Phase 3 adds Turnstile on form pages.
-export const SITE_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
+// Videos and posts (plan 3.3) load in frames from their providers, and only when a
+// visitor taps one; nothing else may be framed.
+export const SITE_CSP = `default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; frame-src ${FRAME_ORIGINS.join(' ')}; form-action 'self'; frame-ancestors 'none'; base-uri 'none'`;
 const SITE_HEADERS = {
   'content-security-policy': SITE_CSP,
   'x-content-type-options': 'nosniff',
@@ -65,7 +68,7 @@ export async function previewTokenValid(env, siteId, token) {
 // only those pages.
 const TURNSTILE = 'https://challenges.cloudflare.com';
 const FORM_PATHS = ['/contact', '/reviews', '/waitlist'];
-const withTurnstile = (csp) => csp.replace("script-src 'self'", `script-src 'self' ${TURNSTILE}`).replace("connect-src 'self'", `connect-src 'self' ${TURNSTILE}`).replace("default-src 'none';", `default-src 'none'; frame-src ${TURNSTILE};`);
+const withTurnstile = (csp) => csp.replace("script-src 'self'", `script-src 'self' ${TURNSTILE}`).replace("connect-src 'self'", `connect-src 'self' ${TURNSTILE}`).replace('frame-src ', `frame-src ${TURNSTILE} `);
 // The waitlist page with KennelOS's application form (plan 3.8): the visitor's
 // browser sends the sealed application straight to KennelOS, and runs KennelOS's
 // Turnstile check, so that page alone may connect to the KennelOS family host.

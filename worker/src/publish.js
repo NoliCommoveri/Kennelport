@@ -100,6 +100,14 @@ export async function buildSnapshot(env, siteId) {
     return { id: a.id, slug: a.slug, title: a.title, description: a.description, litter_id: litters.some((l) => l.id === a.litter_id) ? a.litter_id : null, cover_photo_id: cover, photos: ids };
   }).filter((a) => a.photos.length);
 
+  // Videos and posts (plan 3.3), by where they sit; only places still on the site.
+  const shownPlaces = new Set(['home', 'about', ...dogs.map((d) => `dog:${d.id}`), ...litters.map((l) => `litter:${l.id}`), ...albums.map((a) => `album:${a.id}`)]);
+  const embeds = {};
+  for (const e of await all('SELECT * FROM embeds WHERE site_id = ? ORDER BY place, sort, created_at')) {
+    if (!shownPlaces.has(e.place)) continue;
+    (embeds[e.place] ??= []).push({ id: e.id, provider: e.provider, item: e.item, title: e.title, preview_photo_id: e.preview_photo_id && livePhotos.has(e.preview_photo_id) ? e.preview_photo_id : null });
+  }
+
   // The application form's questions (plan 3.8), in order.
   const questions = (await all("SELECT * FROM form_fields WHERE site_id = ? AND form = 'application' ORDER BY sort")).map((q) => ({
     id: q.id, type: q.type, label: q.label, hint: q.hint, required: Boolean(q.required), options: json(q.options, null),
@@ -128,6 +136,7 @@ export async function buildSnapshot(env, siteId) {
   use(pages.about.photo_id);
   use(site.logo_photo_id);
   albums.forEach((a) => a.photos.forEach(use));
+  Object.values(embeds).flat().forEach((e) => use(e.preview_photo_id));
   const photoRows = used.size
     ? (await db.prepare(`SELECT * FROM photos WHERE site_id = ? AND removed_at IS NULL AND id IN (${[...used].map(() => '?').join(', ')})`).bind(siteId, ...used).all()).results
     : [];
@@ -146,7 +155,7 @@ export async function buildSnapshot(env, siteId) {
       // the menu's and the status-page help's Family login link.
       family_login: kennelosOrigin(env) && site.kennelos_public_id ? `${kennelosOrigin(env)}/list/${encodeURIComponent(site.kennelos_public_id)}#signin` : null,
     },
-    pages, home, dogs, litters, reviews, steps, expanders, extras, payment, questions, albums, photos,
+    pages, home, dogs, litters, reviews, steps, expanders, extras, payment, questions, albums, embeds, photos,
   };
 }
 
