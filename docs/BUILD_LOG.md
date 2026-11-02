@@ -717,3 +717,10 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - Phase 5 is built apart from KennelOS shares carrying album links (phase 4). 132 tests;
   the Share screen checked in Chromium at phone width. Template and manage app files
   changed; versions not bumped yet.
+
+## 2026-11-02: phase 5 rides versions 8 and 10
+
+- The logo's bump (template 8, manage app 10) hadn't reached `main`, so phase 5 keeps
+  those numbers with updated fingerprints rather than bumping again. `CLAUDE.md` now
+  says to check whether the current number has gone out before asking about a bump,
+  and, when it hasn't, just to update its fingerprint.
