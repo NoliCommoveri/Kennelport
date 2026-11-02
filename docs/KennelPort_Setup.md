@@ -53,12 +53,22 @@ command:
 
 | Worker name | Branch | Deploy command | Address |
 |---|---|---|---|
-| `kennelport-staging` | `main` | `npx wrangler deploy` | `kennelport-staging.kennelport.workers.dev` |
+| `kennelport-staging` | `main` | `npx wrangler deploy --env=""` | `kennelport-staging.kennelport.workers.dev` |
 | `kennelport` | `main` | `npx wrangler deploy --env production` | `kennelport.com`, `*.kennelport.com` |
 
 **Workers & Pages → Create → Import a repository** for each; the Worker name must match
 `name` in `wrangler.toml` (`kennelport-staging` at the top, `kennelport` under
-`[env.production]`). Production's routes come from `wrangler.toml`.
+`[env.production]`). Production's routes come from `wrangler.toml`. Staging's
+`--env=""` names the top-level (staging) settings explicitly; plain `npx wrangler deploy`
+does the same but warns "Multiple environments are defined".
+
+**If a merge doesn't start a build:** the Worker's Deployments list shows no build for
+the new commit, and GitHub's commit page shows no "Workers Builds" check. **Retry build**
+won't help: it rebuilds the same older commit (the build page names it, e.g. `main
+999f5af`). Check that the Cloudflare Workers and Pages app on GitHub still has access to
+this repository (GitHub → Settings → Applications → Installed GitHub Apps → Configure),
+then push or merge again, or disconnect and reconnect the repository under the Worker's
+Settings → Build, which builds the latest `main`.
 
 ## 5. Secrets
 
