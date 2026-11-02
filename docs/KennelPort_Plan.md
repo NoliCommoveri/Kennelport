@@ -953,7 +953,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `site_users` | site_id, email_hash, role (`owner` / `editor`). Only the keyed hash, as in KennelOS cloud: codes and invites go to the address typed at that moment, and nothing is emailed to a breeder later (notices reach them in the manage app and by push) |
 | `sessions`, `login_codes`, `rate_limits` | as in KennelOS cloud, keyed by the email hash; a session is a cookie on the manage host (token kept as its SHA-256), 90 days, sliding |
 | `dev_outbox` | staging only: codes and invites shown on `/ops` until email is connected |
-| `push_subscriptions` | endpoint_hash, site_id, user, session, endpoint, auth_secret, created_at, last_sent_at (section 3.10); as in KennelOS cloud |
+| `push_subscriptions` | endpoint_hash, email_hash, session_hash, endpoint, auth_secret, created_at, last_sent_at, last_shown_seq (section 3.10); as in KennelOS cloud, tied to the session it was made in |
 | `notices` | site_id, kind (`domain_live` / `domain_broken` / …), message, created_at, read_at: what the manage app shows the breeder |
 | `feed_cache` | site_id, body (the KennelOS website feed's last copy), fetched_at (section 3.8) |
 | `dogs`, `litters`, `puppies` | site_id, slug, content fields, `source` (`kennelport` / `kennelos`), `kennelos_id` when linked, `hidden_by_kennelos` (section 5.3). A dog has a status (`active` / `retired` / `remembered`) and health_display (`normal_only` / `all` / `none`, 3.7); a litter a stage (`planned` / `current` / `past`) and either parent as a site dog or a typed name; a puppy one of 3.6's statuses. The full field list is `worker/src/migrations/0002_content.sql` |
@@ -971,7 +971,8 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `expanders` | site_id, page (`policies` / `faq` / `waitlist_help`), order, heading, body, start_open |
 | `extras` | site_id, kind (`item` / `homegoing`), group, name, description, photo, price_from, price_to, weeks, lead_in, checklist, closing, featured, order, `source` (section 3.4) |
 | `files` | site_id, r2_key, title, bytes, public, removed_at (downloads and certificates, PDFs only) |
-| `inquiries` | site_id, form answers, received_at, read_at, deleted after 90 days (section 3.10, decision 12) |
+| `inquiries` | site_id, kind (`contact` / `application`), name, email, phone, topic, message, received_at, read_at; deleted after 90 days by the daily cleanup (section 3.10, decision 12). The breeder's own choice of fields (`form_fields`) comes with phase 3 |
+| `notify_items` | what happened, for push notifications: the kind and the sender's first name only; kept 8 days (section 3.10) |
 | `payment_info` | site_id, kind (`application_fee` / `deposit`), methods, instructions, due_note, pay_url, show_on_site (off by default), `source` (section 3.9) |
 | `form_fields` | site_id, field type, label, required, order (the inquiry form's questions) |
 
