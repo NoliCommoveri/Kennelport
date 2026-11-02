@@ -78,8 +78,8 @@ breeder. One shared renderer means a template fix reaches every site at once.
 ```
  visitor ──▶ thornfieldkennels.kennelport.com ─┐
                                                │   ┌──────────── Worker: kennelport ────────────┐
- breeder ──▶ manage.kennelport.com            ─┼──▶│ renderer     public sites, OG previews     │──▶ D1  (sites, dogs, litters, pages, users, snapshots)
- you     ──▶ manage.kennelport.com/ops        ─┤   │ manage API   breeder sign-in + editing     │──▶ R2  (photos: full + thumbnail; files)
+ breeder ──▶ manage.kennelport.com            ─┼──▶│ renderer     public sites, OG previews     │──▶ D1  (sites, dogs, litters, pages, users)
+ you     ──▶ manage.kennelport.com/ops        ─┤   │ manage API   breeder sign-in + editing     │──▶ R2  (photos: full + thumbnail; files; snapshots)
  KennelOS ─▶ api.kennelport.com               ─┘   │ ops          requests, set up, drafts      │──▶ Resend (sign-in codes, invites)
                                                    │ link API     KennelOS publishes here       │
                                                    └────────────────────────────────────────────┘
@@ -90,8 +90,8 @@ breeder. One shared renderer means a template fix reaches every site at once.
 | **Renderer** | Server-side HTML from a template plus the site's published snapshot (section 4.1). Fast, works on any phone, good for search engines. No customer JavaScript. |
 | **Manage app** | Static pages on the reserved `manage` host. Forms for each section, photo upload with in-browser resizing. |
 | **Ops console** | Your side: create site, edit any site, preview, publish, suspend, invite; later the request inbox. Same pattern as `cloud/`'s `/ops` in KennelOS. |
-| **D1** | All text content, accounts and published snapshots. Tens of MB at most. |
-| **R2** | Photos and downloads. About 200 MB a year per active breeder once photos are resized (section 7). |
+| **D1** | All draft content and accounts. Tens of MB at most. |
+| **R2** | Photos, downloads and published snapshots (section 4.1). About 200 MB a year per active breeder once photos are resized (section 7). |
 
 Reserved subdomains (`www`, `manage`, `api`, `ops`, `admin`, `mail`, `support`, `sites`,
 `kennelos`, `kennelport`, …) can never be given to a site.
@@ -292,12 +292,17 @@ store the HTML a breeder pastes**:
 - If a provider removes an item or changes its embed, the site shows a plain link
   instead of a blank box.
 
-**Outside services and libraries.** The template may use any free outside service or
-library it needs: web fonts, animation and slider libraries, Cloudflare Turnstile,
-Cloudflare Web Analytics, a reviews widget. The only rule is that it costs nothing.
-Every page sends a Content Security Policy listing exactly the services the template
-uses plus the embed providers above, so a breeder's content still can't load anything
-else (breeders never add code).
+**Outside services and libraries.** The template may use any free font, library or
+outside service it needs; the only rule is that it costs nothing. **Fonts and libraries
+are served from the site itself**, never from Google Fonts' or a CDN's servers: the font
+files (all under the SIL Open Font License, which allows this) and libraries such as
+Swiper or PhotoSwipe are copied into the template and served by the Worker. Loading them
+from a third party would hand that party every visitor's IP address on every page, which
+is exactly what click-to-load embeds avoid. Only services that have to run elsewhere load
+from outside: Cloudflare Turnstile, on the form pages only, and in the backlog Cloudflare
+Web Analytics and a reviews widget. Every page sends a Content Security Policy listing
+exactly those services plus the embed providers above, so a breeder's content still
+can't load anything else (breeders never add code).
 
 Because embeds are built by KennelPort and breeders never add their own code, the manage
 app can stay on `manage.kennelport.com` (see section 9).
@@ -720,9 +725,16 @@ dark first: it shows dark unless the visitor's device asks for light explicitly.
   single JSON document with every page, dog, litter, puppy, album and embed that is
   visible, plus the list of photos and files it uses. The site then points at the new
   snapshot in one step.
+- **Snapshots live in R2, not D1** (`sites/<site_id>/snapshots/<snapshot_id>.json`). D1
+  caps a single row at about 2 MB (from memory; check current limits), and a site with
+  years of litters, reviews and diary text could pass that. R2 has no such limit. The
+  JSON is written to R2 first; only then does the `sites` row in D1 point at it, so the
+  switch is still one step and a failed write leaves the old snapshot live.
 - **The renderer reads only the published snapshot**, never the draft tables. A publish
   is all or nothing (visitors never see half an edit), pages render from one read, and the
-  Worker can cache it by snapshot id.
+  Worker can cache it by snapshot id. Rendered pages are cached too (Cloudflare's cache,
+  keyed by snapshot id and path), so most visits cost no rendering at all (see the CPU
+  note in 4.4).
 - **Rollback:** the last 10 snapshots are kept; **Undo publish** in the manage app or ops
   console points the site back at the previous one.
 - **Redirects** are worked out at publish time: any path in the previous snapshot whose
@@ -732,13 +744,23 @@ dark first: it shows dark unless the visitor's device asks for light explicitly.
 
 ### 4.2 Photos and files
 
-- **In the browser:** photos are resized before upload (about 1600px WebP plus a 400px
-  thumbnail). Re-encoding also removes location data (EXIF GPS) from phone photos, which
-  would otherwise reveal where the breeder lives.
+- **In the browser:** photos are resized before upload (about 1600px plus a 400px
+  thumbnail), as WebP where the browser can make it and JPEG where it can't. Re-encoding
+  also removes location data (EXIF GPS) from phone photos, which would otherwise reveal
+  where the breeder lives.
+- **iPhones:** Safari has not reliably encoded WebP from a canvas: asked for
+  `image/webp`, it can quietly hand back a PNG. So the manage app checks the type it
+  actually got, and encodes JPEG (quality about 0.85) whenever it isn't WebP. iPhone
+  photos stored as HEIC reach the page as JPEG through the photo picker; anything the
+  browser can't decode gets a plain message ("This photo couldn't be read; try a
+  screenshot of it or a different photo"). Phase 2 is tested on a real iPhone and an
+  Android phone before it's done, since adding photos from the camera roll is the job
+  breeders do most from a phone.
 - **On the server, too:** the browser step can be skipped by anyone calling the upload
-  API directly, so the server checks every upload itself: only WebP accepted for photos,
-  within a maximum size and pixel dimensions, and any file carrying an `EXIF` or `XMP`
-  chunk is rejected. Downloads must be PDFs. Each upload counts against the storage cap.
+  API directly, so the server checks every upload itself: only WebP or JPEG accepted for
+  photos, within a maximum size and pixel dimensions; a WebP carrying an `EXIF` or `XMP`
+  chunk, or a JPEG carrying an `APP1` (EXIF or XMP) segment, is rejected. Downloads must
+  be PDFs. Each upload counts against the storage cap.
 - **Private files stay private:** the renderer serves a photo or file only if the
   published snapshot lists it as public. Health certificates and anything not ticked
   **Show on site** are only reachable through the manage API with a signed-in session,
@@ -750,7 +772,13 @@ A site's content can be deleted **by the breeder** (a **Delete my site** button 
 manage app, owner only) **or by you** (in the ops console). Either way:
 
 1. **Confirm.** The breeder types their subdomain to confirm. The screen offers **Download
-   a copy first** (a zip of their text and photos) but doesn't require it.
+   a copy first** (a zip of their text and photos) but doesn't require it. The zip is
+   **built in the browser**, not the Worker: the manage app fetches a list of the site's
+   text (as JSON) and files, downloads each photo and file in turn, and writes them into
+   an uncompressed zip (photos are already compressed) with a small zip writer copied
+   into the manage app. A Worker building a zip of a few hundred MB would run into its
+   memory and CPU limits; the breeder's browser has neither. It works best on a computer,
+   and the screen says so. The same export is each site's full export (section 10, tie-in).
 2. **Delete everything, immediately.** Every dog, litter, puppy, page, album, embed,
    snapshot and redirect row; every photo and file in R2 (`sites/<site_id>/`); every
    sign-in, session, push subscription and link token; every stored inquiry; the cached
@@ -775,6 +803,23 @@ manage app, owner only) **or by you** (in the ops console). Either way:
 
 Suspending (section 10) is different: it hides a site but keeps everything, so it can be
 turned back on.
+
+### 4.4 Worker limits
+
+Cloudflare's free Workers plan gives each request about 10 ms of CPU time (from memory;
+check current limits). Waiting on D1, R2 or a fetch doesn't count, but parsing a large
+snapshot, rendering a page or checking a big upload does. The plan keeps within it:
+- **Pages:** rendered pages are cached by snapshot id and path (4.1), so a page renders
+  once per publish, not once per visit; the snapshot is parsed once and kept in the
+  Worker's memory while it stays warm.
+- **Heavy work happens in the browser:** photo resizing (4.2) and the download-a-copy zip
+  (4.3). The server only checks headers and chunks, which is quick.
+- **Publish** does most of its work waiting on D1 and R2; building the JSON is the only
+  CPU-heavy step.
+- **Measured in phase 1:** publish and render the AK site's full content (every page, a
+  few years of litters and reviews) on the free plan and log CPU time. If publish or a
+  cold render passes the limit, move to Workers Paid (about $5 a month, section 7), which
+  allows far more CPU per request, rather than splitting the work up.
 
 ---
 
@@ -892,7 +937,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | Table | Key fields |
 |---|---|
 | `sites` | id, subdomain (unique), kennel_name, template, scheme (section 3.13), dark_mode (`auto` / `light_only`), kennelos_public_id (for the waitlist list, 3.8), status (`draft` / `live` / `suspended` / `closed`), published_snapshot_id, closed_at, storage_limit, photo_limit, album_limit, created_at |
-| `snapshots` | id, site_id, published_at, published_by, content (the whole published site as JSON, section 4.1); the last 10 per site kept |
+| `snapshots` | id, site_id, published_at, published_by, r2_key (the whole published site as JSON in R2, section 4.1), bytes; the last 10 per site kept |
 | `site_users` | site_id, email_hash, role (`owner` / `editor`). Only the keyed hash, as in KennelOS cloud: codes and invites go to the address typed at that moment, and nothing is emailed to a breeder later (notices reach them in the manage app and by push) |
 | `sessions`, `login_codes` | as in KennelOS cloud |
 | `push_subscriptions` | endpoint_hash, site_id, user, session, endpoint, auth_secret, created_at, last_sent_at (section 3.10); as in KennelOS cloud |
@@ -921,7 +966,8 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 Tables for backlog items (requests, news, programs, the litter diary, events) are in
 [`KennelPort_Backlog.md`](KennelPort_Backlog.md) section 7.
 
-R2 keys look like `sites/<site_id>/photos/<photo_id>.webp`, so a whole site can be deleted
+R2 keys look like `sites/<site_id>/photos/<photo_id>.webp` (or `.jpg`, section 4.2) and
+`sites/<site_id>/snapshots/<snapshot_id>.json`, so a whole site can be deleted
 or exported at once. Whether a file is public is decided by the published snapshot, never
 by its key (section 4.2). A closed site keeps only its `sites` row (subdomain, `closed`,
 closed_at); every other table is emptied for it (section 4.3).
@@ -933,7 +979,7 @@ closed_at); every other table is emptied for it (section 4.3).
 | Item | First site | 15 breeders |
 |---|---|---|
 | Domain (`kennelport.com`) | about $10–15 a year | same |
-| Workers | $0 (free tier) | $0; $5 a month if traffic grows |
+| Workers | $0 (free tier), or $5 a month if phase 1's CPU check says so (section 4.4) | $0–5 a month |
 | D1 | $0 | $0 (under 50 MB against a 5 GB free tier) |
 | R2 photos | $0 | $0 for about 3 years (about 3 GB a year against 10 GB free; no bandwidth fees) |
 | Resend email | $0 | $0 on the free tier at this volume |
@@ -954,8 +1000,8 @@ Each phase is useful by itself, so you can stop after any one.
 | Phase | Delivers | You can now… |
 |---|---|---|
 | **0. Set up** | Domain on Cloudflare, wildcard DNS, empty Worker with D1 and R2, staging and production | — |
-| **1. Renderer + ops** | One template, the ops console, preview links, snapshot publish and undo (4.1), reserved names, OG tags, close a site and the closed notice | Build and host the site yourself, with no breeder login yet |
-| **2. Breeder login** | Email-code sign-in, manage app (installable as KennelPort Site Manager), the inbox with push notifications for new messages, the review queue, preview and publish with the list of changes, photo upload with resizing and the server checks (4.2), storage limits, **Delete my site** with download-a-copy | Hand the site over |
+| **1. Renderer + ops** | One template with its fonts and libraries served from the site (3.3), the ops console, preview links, snapshot publish to R2 and undo (4.1), page caching and the CPU check (4.4), reserved names, OG tags, close a site and the closed notice | Build and host the site yourself, with no breeder login yet |
+| **2. Breeder login** | Email-code sign-in, manage app (installable as KennelPort Site Manager), the inbox with push notifications for new messages, the review queue, preview and publish with the list of changes, photo upload with resizing, the JPEG fallback and the server checks, tested on a real iPhone and Android phone (4.2), storage limits, **Delete my site** with the download-a-copy zip built in the browser (4.3) | Hand the site over |
 | **3. The first site's pages** | Everything in the AK sample (decision 14): Home with its blocks, About (story, reviews, contact), Kennel residents with flip cards and health results (3.7), Puppies (available, upcoming, older) with statuses (3.6), How it works steps (3.11), Extras with homegoing packages (3.4), Policies and FAQ, the waitlist page and its status-page help (3.8, decision 21) with how to pay the application fee and deposit (3.9), inquiry form and inbox (3.10); plus the safe-payment notice, privacy page and search basics | The family site is complete and live |
 | **4. The KennelOS link** | In KennelPort: link codes, matching existing website records to KennelOS ones (5.2), the bundle API and its rules (5.3), **Use my KennelOS prices** (3.2), the Family login footer link. In KennelOS (5.5): **Show on website** on dogs and litters, `siteExport.js`, **Connect website** and **Update website**, filling `dog.url`, the kennel's website and `extras_info_url`, and the Kels steps | Her dogs, litters, puppy statuses and health results come from KennelOS when she presses **Update website**; she types them only once |
 | **5. Albums, embeds and sharing** | Albums with their own links, embeds from the approved list with stored previews (3.3), share links and QR codes, KennelOS shares carrying album links (5.4) | Litter albums and her YouTube and Facebook posts live on the site |
@@ -1053,7 +1099,11 @@ Everything after version 1, with its order and designs, is in
 | You become the bottleneck | Breeders handle routine edits themselves; you only do setup and design |
 | Building far more than the first site needs | Version 1 is section 8.1 only; everything else waits for someone to ask |
 | An embed provider tracks visitors or changes its embed | Click to load; previews stored on the site; plain-link fallback; providers listed in one place |
-| Tie-in to one host | Plain D1 and R2 data, with a full export for each site |
+| Tie-in to one host | Plain D1 and R2 data, with a full export for each site (built in the browser, section 4.3) |
+| Photo upload fails on iPhones, which can't always make WebP | JPEG whenever the browser hands back anything but WebP; the server accepts both and checks both for location data; tested on real phones in phase 2 (section 4.2) |
+| A large site outgrows D1's row size | Snapshots are stored in R2, with only their key in D1 (section 4.1) |
+| A page, publish or export runs past the free plan's CPU limit | Pages cached per snapshot; resizing and the export zip run in the browser; CPU measured in phase 1, with Workers Paid as the fallback (section 4.4) |
+| Fonts or libraries from Google or a CDN let them track visitors | Fonts and libraries are served from the site itself; only Turnstile loads from outside, on form pages (section 3.3) |
 | A scammer copies a breeder's site or photos to sell puppies that don't exist | The safe-payment notice on by default; official contacts on every page; you can point to the real site when families ask |
 | The review form is abused (fake or hostile reviews, unwanted photos) | Nothing shows until the breeder approves it; photos stay private until then and get the upload checks; Turnstile, a honeypot and rate limits |
 | A breeder misses an inquiry because it isn't emailed | A push notification on each device that turns them on, and an unread count on the manage app's home (section 3.10) |

@@ -268,3 +268,16 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - Clarified (the previous change reverted): a connected KennelOS waitlist with its online
   form off shows KennelPort's own application form, since the feed carries no `apply`
   link; the **Waitlist open / closed** switch is how a breeder stops applications.
+
+## 2026-11-02: technical risks from the review
+
+- Photos (4.2): JPEG whenever the browser can't make WebP (iPhone Safari), the server
+  accepts both and rejects EXIF/XMP in either; phase 2 tested on real phones.
+- Snapshots (4.1) move to R2, with only their key in D1, since D1 caps a row at about
+  2 MB; rendered pages cached by snapshot id.
+- Download a copy (4.3) is a zip built in the browser, not the Worker.
+- New 4.4: the free plan's CPU limit, how the plan stays within it, and a phase 1
+  measurement with Workers Paid as the fallback.
+- Fonts and libraries (3.3, and the design direction) are served from the site, never from
+  Google Fonts or a CDN, so visitors aren't tracked; only Turnstile loads from outside.
+- Risks table: rows for each.
