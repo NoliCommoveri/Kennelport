@@ -393,12 +393,30 @@ public list and status pages, so nothing hidden there appears on the website:
 
 ### 3.8 The waitlist on the site
 
+**Where an application goes (decision 26).** One rule, worked out by the site, not a
+setting the breeder can get wrong:
+- **The breeder takes applications online in KennelOS** (their waitlist is connected and
+  the website feed carries an `apply` link, which KennelOS sends only while it takes
+  applications online; with the frame embed instead, the embedded KennelOS form is the
+  application):
+  every **Apply** button on the site, including **Apply to join the waitlist** and a
+  litter's **Apply for this litter**, opens KennelOS's own application page
+  (`/apply/<public_id>`). The application goes through KennelOS's live list flow (the
+  emailed code, the breeder's KennelOS inbox, KennelOS's own alerts) and never touches
+  KennelPort. The site offers no KennelPort application form, and no application ever
+  lands in KennelPort's Inbox.
+- **Otherwise** (no KennelOS, or KennelOS without online applications, so the breeder runs
+  their list by hand): the site's own application form below, arriving in KennelPort's
+  Inbox as a message (section 3.10).
+- Plain questions through the Contact form (section 3.10) come to KennelPort's Inbox either
+  way.
+
 **On its own:** `/waitlist` (shown as "Apply" or "Puppy application", the breeder's
 choice) is one of:
 - **The site's inquiry form** (section 3.10), set up as a puppy application with the
   breeder's own questions; answers arrive in the manage app's Inbox, with a push
-  notification (section 3.10). KennelPort is not a waitlist: no
-  list, no places in line.
+  notification (section 3.10). KennelPort is not a waitlist: no list, no places in line.
+  This is the manual route; it's never shown while applications go to KennelOS (above).
 - **A link or embed of the waitlist they already use** (a Google Form, Jotform, …),
   through the approved embed list (section 3.3) or as a button. Backlog; version 1 has
   the other two.
@@ -518,8 +536,9 @@ visitor stats) are in the backlog doc, section 5.
 
 ### 3.10 The inquiry form
 
-Every site has one form, used for Contact, puppy applications (section 3.8) and questions
-about extras, pickup or stud service. It works with no KennelOS at all.
+Every site has one form, used for Contact and questions about extras, pickup or stud
+service, and for puppy applications only when the breeder doesn't take them through
+KennelOS (section 3.8, decision 26). It works with no KennelOS at all.
 - **The breeder's questions:** name and email always; then the fields they choose (phone,
   town, which litter or dog, preferences, a free-text message), from a fixed list of field
   types.
@@ -531,7 +550,8 @@ about extras, pickup or stud service. It works with no KennelOS at all.
 - **Push notifications:** each signed-in device can turn on **Notify me of new messages**
   in the manage app. On a phone that means the installed KennelPort Site Manager (iPhones
   allow web push only for an app added to the Home Screen); on a computer, any modern
-  browser. A new inquiry or application sends one notification: "New message from
+  browser. A new inquiry, or an application on the manual route (3.8), sends one
+  notification: "New message from
   Megan" (the first name typed on the form, nothing else they wrote), and tapping it opens
   that message in the Inbox. Several arriving close together replace one another as "3
   new messages". It follows KennelOS cloud's pattern (`cloud/src/notify.js`): a signed
@@ -544,9 +564,9 @@ about extras, pickup or stud service. It works with no KennelOS at all.
 - **Spam:** Cloudflare Turnstile (free, usually invisible) on the form, plus a hidden
   honeypot field and per-site rate limits (decision 17). No CAPTCHA puzzles.
 - **No payments, no accounts** for visitors.
-- **With KennelOS linked:** the breeder can choose **Send to my KennelOS waitlist**
-  instead, which embeds the KennelOS form (section 3.8). KennelPort never forwards
-  inquiries into KennelOS by itself.
+- **With KennelOS applications:** applications skip this form and go to KennelOS
+  (section 3.8); KennelOS sends its own alerts for them. KennelPort never forwards an
+  inquiry into KennelOS, and never copies a KennelOS application into its Inbox.
 
 ### 3.11 Pages from the site survey
 
@@ -1000,6 +1020,9 @@ Everything after version 1, with its order and designs, is in
 25. **Colour schemes:** all six ship in version 1: Lawn, Harbor, Heather, Clay, Slate and
     Midnight (design direction section 7), each with light and dark versions. Compared
     side by side in [`reference/scheme-lab.html`](reference/scheme-lab.html).
+26. **Where an application goes:** to KennelOS's live list flow whenever the breeder takes
+    applications online in KennelOS; to KennelPort's Inbox only when they don't and run
+    their list by hand. Worked out by the site, not a choice (section 3.8).
 
 **Open**
 

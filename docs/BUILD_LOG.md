@@ -257,3 +257,11 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   is backlog; a litter's **Show prices** covers that litter, and a site-wide **Show other
   prices** covers extras and other prices; preview builds a throwaway snapshot from the
   draft so the renderer still reads only snapshots.
+
+## 2026-11-02: applications go to KennelOS when it takes them (decision 26)
+
+- The owner: when the breeder takes applications online in KennelOS, every Apply on the
+  site opens KennelOS's application page and the application goes through KennelOS's live
+  list flow; it arrives in KennelPort's Inbox only for breeders running their list by
+  hand. Worked out from the website feed's `apply` link, not a setting; the former
+  **Send to my KennelOS waitlist** choice is gone. Plan 3.8, 3.10 and decision 26.
