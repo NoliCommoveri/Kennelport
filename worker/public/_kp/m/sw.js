@@ -1,9 +1,12 @@
 // KennelPort Site Manager's service worker: screens open offline; nothing is
 // saved offline. Pages come from the network first and fall back to the last copy
 // (or a plain offline screen); the app's own files come from the cache first.
-// Signed-in pages are cached per browser only. Bump VERSION when these files change.
-const VERSION = 'kp-manage-7';
-const SHELL = ['/offline', '/_kp/m/app.css?v=7', '/_kp/m/app.js?v=7', '/_kp/m/photos.js?v=7', '/_kp/m/icon-192.png', '/_kp/m/icon-64.png'];
+// Signed-in pages are cached per browser only. __APP_VERSION__ is filled in by the
+// Worker as it serves this file (src/manage/index.js), from APP_VERSION in
+// src/manage/version.js: the one number to bump when anything in public/_kp/m/
+// changes. A new number means a new cache, so every file here is fetched again.
+const VERSION = 'kp-manage-__APP_VERSION__';
+const SHELL = ['/offline', '/_kp/m/app.css?v=__APP_VERSION__', '/_kp/m/app.js?v=__APP_VERSION__', '/_kp/m/photos.js?v=__APP_VERSION__', '/_kp/m/icon-192.png', '/_kp/m/icon-64.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

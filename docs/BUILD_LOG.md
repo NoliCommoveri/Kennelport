@@ -485,3 +485,16 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - Manage app version 7 (service worker cache bumped) and template assets version 5, so
   phones pick up the fix.
 - 90 tests. To try again on the iPhone once deployed.
+
+## 2026-11-02: one version number each, and a test for a missing bump
+
+- The manage app's service worker gets its version from `APP_VERSION`
+  (`src/manage/version.js`) as the Worker serves `/sw.js`, so that's the only number to
+  change; `zip.js` is now asked for with `?v=` too. The template's `ASSET_VERSION` moved
+  to `src/render/version.js`.
+- Each version sits beside a fingerprint of its files (`scripts/fingerprint.mjs`).
+  `tests/versions.test.js` fails when files under `public/_kp/m/` or `public/_kp/t/`
+  change and the version doesn't, and says how to bump.
+- `CLAUDE.md` (new, repo root): ask the owner before every bump; a failing versions
+  test is the cue to ask, not to bump.
+- 93 tests.
