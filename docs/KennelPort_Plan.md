@@ -964,9 +964,6 @@ Rough order of likely need; any item can go first.
 14. **Which pages ship first:** the AK sample's pages (section 8.1, phase 3). Past
     litters and news, proposed earlier, move to the backlog because the sample doesn't
     have them.
-25. **Colour schemes:** all six ship in version 1: Lawn, Harbor, Heather, Clay, Slate and
-    Midnight (design direction section 7), each with light and dark versions. Compared
-    side by side in [`reference/scheme-lab.html`](reference/scheme-lab.html).
 21. **Waitlist in the site's style:** the Worker reads KennelOS's public list and draws it
     with the site's scheme, as the AK sample does, stacking on phones; sign-in and
     applications open KennelOS's own pages (sections 3.8, 5.5).
@@ -975,6 +972,9 @@ Rough order of likely need; any item can go first.
     for the breeder (section 3.13).
 24. **Customisation model:** breeders change content, switch pages and Home blocks on and
     off, and choose a scheme; layouts stay fixed (section 3.12).
+25. **Colour schemes:** all six ship in version 1: Lawn, Harbor, Heather, Clay, Slate and
+    Midnight (design direction section 7), each with light and dark versions. Compared
+    side by side in [`reference/scheme-lab.html`](reference/scheme-lab.html).
 
 **Open**
 
@@ -1010,7 +1010,6 @@ Rough order of likely need; any item can go first.
     drafts only.
 20. **Family login link:** proposed for linked breeders: a footer link to KennelOS's
     family status page, with no KennelPort portal.
-
 
 ---
 
