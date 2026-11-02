@@ -27,6 +27,20 @@ Anything free is fair game: JavaScript, animation and slider libraries, web font
 Google Fonts or anywhere else, icon sets, free outside services. Nothing that charges,
 now or at the scale of a few sites.
 
+**JavaScript is the main tool** for expanding what the design can do: flips, slides,
+scroll effects, menus, filters and photo viewers. Free libraries that cover the six
+preferences (current licences to check when building):
+
+| Need | Free library |
+|---|---|
+| Flip cards, scroll-triggered reveals, page and section transitions | GSAP with ScrollTrigger (free for all uses, including its plugins) |
+| Sliding sets of cards, photos and steps | Swiper (MIT licence) |
+| Tapping a photo to view it full screen, with swipe between photos | PhotoSwipe (MIT licence) |
+| Small animated illustrations and ornaments | Lottie (MIT licence) with free animation files |
+| Menus, drop-downs and expanders | a few lines of the template's own code |
+
+Libraries are loaded from a free CDN or served from the site; either costs nothing.
+
 ## 1. Flip cards
 
 **Where:** dog cards (Our dogs, Retired, Stud), puppy cards on a litter page, team

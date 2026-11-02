@@ -122,3 +122,9 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   (section 3.3); Turnstile on the inquiry form from the start (3.10, decision 17); a free
   Google reviews widget allowed; Cloudflare Web Analytics allowed for visitor stats.
   Breeders still never add code, and the privacy rules are unchanged.
+
+## 2026-11-02: JavaScript for design
+
+- The owner confirmed JavaScript may be used to expand what the design can do. Added it
+  to `KennelPort_Design_Direction.md` as the main tool, with free libraries for each
+  preference (GSAP with ScrollTrigger, Swiper, PhotoSwipe, Lottie).
