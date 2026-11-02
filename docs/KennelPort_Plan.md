@@ -262,8 +262,8 @@ The subdomain picks the site; the path picks the page:
 prices** switch in the manage app, off by default.
 - *Off:* KennelOS sends no prices; the breeder types them in KennelPort like anyone else.
 - *On:* the bundle carries KennelOS's litter prices (price and deposit per sex, the
-  full-registration surcharge), its extras price list (3.4) and the fee per mile (3.5),
-  so each is typed once. They're read-only in KennelPort while the switch is on, and
+  full-registration surcharge) and its extras price list (3.4), so each is typed once
+  (the fee per mile joins them with the pickup page, backlog section 4). They're read-only in KennelPort while the switch is on, and
   still show only where the breeder turns the matching switch on.
 
 ### 3.3 Embeds (YouTube, Facebook and others)
@@ -1009,6 +1009,10 @@ Each bundle is applied by these rules (decision 16):
   answering) until she removes it. The Past litters page (backlog) is for those.
 - **Unlinked sites work the same way:** switching a litter or dog off, or marking a
   litter Past without **Keep**, starts the same 30 days.
+- **A kept litter on a linked site** stays exactly as it was and becomes ordinary
+  KennelPort content she can edit (KennelOS no longer sends a Sold or Closed litter).
+- **When this ships:** anything already off the site starts its 30 days on the day phase
+  4 is released, so nothing goes before the breeder has seen it in the "about to go" list.
 - **A bundle itself never deletes a photo, file, album or page;** only the 30-day cleanup
   does, and only for what has left the site.
 - **A summary** after each bundle: "3 updated, 1 new, 1 hidden. Preview, then Publish."
@@ -1019,12 +1023,13 @@ Each bundle is applied by these rules (decision 16):
   puppy status label (section 3.6), upcoming litters per the Coming up switches (planned
   heats as month and year only, planned and confirmed pairings, whelped litters before
   picks open: section 3.7), extras
-  names, groups and descriptions (section 3.4), shown pickup places and transport
-  distances (section 3.5); a planned litter's status (section 3.11), retired and deceased
-  status with the date of death, the waitlist steps behind How it works, and program
-  names and public descriptions. For litters opted in (decision 19): milestones and
-  weights, as draft diary entries. With **Use my KennelOS prices** on (decision 6): litter
-  prices, deposits, the registration surcharge, extras prices and the fee per mile.
+  names, groups and descriptions (section 3.4); a planned litter's status (section 3.11),
+  retired and deceased status with the date of death, the waitlist steps behind How it
+  works, and program names and public descriptions. With **Use my KennelOS prices** on
+  (decision 6): litter prices, deposits, the registration surcharge and extras prices.
+  **Not in phase 4:** pickup places, transport distances and the fee per mile wait for the
+  pickup page (backlog section 4), and milestones and weights for the litter diary
+  (backlog section 6, decision 19): nothing is sent that the site has nowhere to show.
 - **KennelPort only:** website bio, prices (unless **Use my KennelOS prices** is on), photo choice
   and order, albums, embeds, page text, layout, and everything in sections 3.9 and 3.10
   (policies, reviews and stories, news, stud and adults pages, downloads, events, the
