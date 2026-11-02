@@ -1006,9 +1006,10 @@ Each bundle is applied by these rules (decision 16):
   permanent link, and when linked, KennelOS can **fill the dog's `url` with its
   KennelPort page**, and a litter's `photos_url` with its litter page. Companion packages,
   the waitlist's photos links, and anything else that shares them, then point at the site
-  with no other changes. This runs one way: KennelPort sends the addresses back when a
-  bundle is applied, and never reads `url` or `photos_url`; a dog's photos live on the
-  site, not in KennelOS.
+  with no other changes. Only blank ones are filled: a dog or litter that already has
+  another photos link (a Google Photos album, say) keeps it. This runs one way:
+  KennelPort sends the addresses back when a bundle is applied, and never reads `url` or
+  `photos_url`; a dog's photos live on the site, not in KennelOS.
 - Every dog, litter, puppy and album page carries **Open Graph** tags (title, cover photo,
   description), so a link pasted into Facebook, Messenger or a text shows a picture card.
   `cloud/`'s family pages already do this.
