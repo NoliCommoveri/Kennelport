@@ -472,3 +472,16 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   deploy replaces plain variables with the file's, so a dashboard copy would be lost.
   Setup step 5 now says so. Staging has no Turnstile key yet and relies on the honeypot
   and rate limits.
+
+## 2026-11-02: the first real iPhone upload
+
+- On a real iPhone (Chrome, which on iOS is WebKit like every iPhone browser) every
+  upload was refused: "still carries its camera data". WebKit can't make WebP, so the
+  JPEG fallback ran, and Apple's JPEG encoder adds an APP1 EXIF block (size and colour;
+  no location, the canvas holds only pixels). The browser now drops APP1 segments
+  before uploading, in the manage app and the site's review form (`stripJpegMeta`, the
+  same in both; `tests/jpegmeta.test.js` runs both copies against the server's check).
+  The server still refuses any APP1.
+- Manage app version 7 (service worker cache bumped) and template assets version 5, so
+  phones pick up the fix.
+- 90 tests. To try again on the iPhone once deployed.

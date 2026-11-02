@@ -2,7 +2,7 @@
 // preview (Open Graph) and structured data; the header and menu; the footer.
 import { esc, attr, menuGroups, photoUrl, label, pageOn, payShown } from './parts.js';
 
-export const ASSET_VERSION = '4';
+export const ASSET_VERSION = '5';
 
 function monogramSvg(snap) {
   const letters = (snap.site.monogram || snap.site.kennel_name.replace(/[^A-Za-z]/g, '').slice(0, 2) || 'K').slice(0, 3);
