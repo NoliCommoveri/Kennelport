@@ -19,6 +19,7 @@ export const SITE_FIELDS = {
   blurb: ML(300),
   breed: S(60),
   monogram: S(3),
+  logo_photo_id: { type: 'photo' },
   town: S(60),
   region: S(60),
   contact_email: { type: 'email' },

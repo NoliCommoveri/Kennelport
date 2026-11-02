@@ -41,7 +41,15 @@
     canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
     const blob = (type, q) => new Promise((resolve) => canvas.toBlob(resolve, type, q));
     let b = await blob('image/webp', 0.82);
-    if (!b || b.type !== 'image/webp') b = await stripJpegMeta(await blob('image/jpeg', 0.85));
+    if (!b || b.type !== 'image/webp') {
+      // JPEG has no transparency: a logo's clear background would turn black, so
+      // white goes behind it first (WebP keeps it clear).
+      const ctx = canvas.getContext('2d');
+      ctx.globalCompositeOperation = 'destination-over';
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, w, h);
+      b = await stripJpegMeta(await blob('image/jpeg', 0.85));
+    }
     return b;
   }
 

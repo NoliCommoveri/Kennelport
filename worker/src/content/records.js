@@ -183,6 +183,7 @@ export async function moveRecord(env, siteId, kind, id, dir, scopeId = null) {
 
 export async function saveSite(env, siteId, input) {
   const clean = cleanRecord(SITE_FIELDS, input, 'site');
+  await checkRefs(env, siteId, { fields: SITE_FIELDS }, clean);
   for (const c of ['dark_mode']) if (clean[c] === null) clean[c] = 'auto';
   if (clean.show_other_prices === null) clean.show_other_prices = 0;
   const cols = Object.keys(clean);

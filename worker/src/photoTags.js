@@ -3,7 +3,7 @@
 // "page:home" or "page:about". Tags are for the breeder only: nothing here is
 // published, and changing them doesn't mark the draft as changed.
 
-const PAGE_SUBJECTS = { 'page:home': 'Home page', 'page:about': 'Our story' };
+const PAGE_SUBJECTS = { 'page:home': 'Home page', 'page:about': 'Our story', 'page:logo': 'Your logo' };
 
 // Every subject on the site that a photo can be of, with the name the breeder
 // sees, in the order the Photos screen lists them.

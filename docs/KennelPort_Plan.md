@@ -732,6 +732,11 @@ section headings and lead lines all have defaults the breeder can reword.
 
 **Look:** a colour scheme (section 3.13) and the kennel's logo. No free colour, font or
 layout controls.
+- **The logo** (built): chosen on Kennel details from the site's photos (or added there),
+  shown in place of the monogram at the top and foot of every page once published.
+  Tapping it in the header opens it full size; the kennel name beside it goes home.
+  A square or diamond logo works best; a clear background stays clear (WebP), and on
+  iPhones, which save JPEG, white goes behind it.
 
 **Fixed by the template:** page layouts, the order of blocks, card shapes and the flip,
 sliding sets, button and link styles, fonts within a scheme, and addresses (section 3.1).
@@ -1192,6 +1197,8 @@ Everything after version 1, with its order and designs, is in
 25. **Colour schemes:** all six ship in version 1: Lawn, Harbor, Heather, Clay, Slate and
     Midnight (design direction section 7), each with light and dark versions. Compared
     side by side in [`reference/scheme-lab.html`](reference/scheme-lab.html).
+    Proposed 2026-11-02: a seventh, **Tuxedo**, made to match the AK logo (design
+    direction section 7), waiting for the owner's yes.
 26. **Where an application goes:** to KennelOS's live list flow whenever the breeder takes
     applications online in KennelOS; to KennelPort's Inbox only when they don't and run
     their list by hand. Worked out by the site, not a choice (section 3.8).

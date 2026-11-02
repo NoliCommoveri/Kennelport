@@ -81,6 +81,18 @@ header.site { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50;
 .brand svg { width: 44px; height: 44px; flex: none; color: var(--ink); }
 .brand b { display: block; font: 600 1.15rem/1.1 var(--f-display); letter-spacing: .01em; }
 .brand span { display: block; font-size: .68rem; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+/* Her own logo in place of the monogram; tap for full size (plan 3.12). */
+.brand-logo { display: block; flex: none; line-height: 0; border-radius: var(--r); }
+.brand-logo img { height: 56px; width: auto; max-width: 96px; object-fit: contain; }
+a.brand-logo { cursor: zoom-in; }
+.brand-name { display: block; min-width: 0; }
+footer.site .brand-logo img { height: 64px; max-width: 110px; }
+@media (max-width: 420px) { .brand-logo img { height: 46px; max-width: 76px; } }
+dialog.logo-zoom { border: 0; padding: 0; background: transparent; max-width: min(92vw, 640px); max-height: 92vh; overflow: visible; }
+dialog.logo-zoom::backdrop { background: rgba(0, 0, 0, .78); }
+dialog.logo-zoom img { display: block; width: 100%; height: auto; max-height: 86vh; object-fit: contain; border-radius: var(--r); }
+dialog.logo-zoom form { position: absolute; top: -14px; right: -14px; }
+.logo-close { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--surface); color: var(--ink); font-size: 1.6rem; line-height: 1; cursor: pointer; box-shadow: var(--shadow); }
 nav.main > ul { display: flex; align-items: center; gap: 4px; list-style: none; margin: 0; padding: 0; }
 nav.main li { position: relative; }
 .navtop { display: inline-flex; align-items: center; gap: 6px; padding: 10px 12px; font: 600 .92rem var(--f-body); color: var(--ink); background: none; border: 0; cursor: pointer; border-radius: var(--r); }

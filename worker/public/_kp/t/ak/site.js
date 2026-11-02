@@ -137,6 +137,14 @@
     });
   }
 
+  // Her logo: a tap shows it full size in a dialog; a tap anywhere, Escape or ×
+  // closes it. Without this script the link opens the picture itself.
+  const zoom = $('#logo-zoom');
+  if (zoom && zoom.showModal) {
+    for (const a of $$('[data-logo-zoom]')) a.addEventListener('click', (e) => { e.preventDefault(); zoom.showModal(); });
+    zoom.addEventListener('click', () => zoom.close());
+  }
+
   // Homegoing packages: "What's included" starts open on wide screens.
   if (window.matchMedia('(min-width: 901px)').matches) for (const d of $$('.pkg details')) d.open = true;
 

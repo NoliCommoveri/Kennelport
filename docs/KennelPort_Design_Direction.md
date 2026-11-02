@@ -167,9 +167,15 @@ colours haven't had that check yet.
 | **Clay** | warm sand ground, saddle-brown ink, rust buttons | dark leather ground, cream ink, copper buttons | Bitter / Source Sans 3 / none | fence line, wheat |
 | **Slate** | white ground, charcoal ink, steel-blue buttons | graphite ground, white ink, light steel buttons | DM Serif Display / Work Sans / none | none |
 | **Midnight** (dark first) | cream ground, ink-blue text, gold buttons | charcoal ground, cream ink, gold buttons and labels | Cormorant / Mulish / Pinyon Script | mountain line |
+| **Tuxedo** (proposed) | soft white ground, black ink, black buttons, silver-grey labels | near-black ground, off-white ink, near-white buttons, silver labels | Cinzel / Lato / Pinyon Script | fleur-de-lis flourish |
 
 Clay and Slate have no script font: the script line shows in the display face's italic.
 Midnight's display face uses old-style numbers. Harbor matches the light blue the first site's owner already uses on their own pages.
+Tuxedo (proposed 2026-11-02, waiting for the AK owner's yes) is drawn from the AK
+logo: black, white and silver, Trajan-style capitals (Cinzel), its script line and its
+fleur-de-lis dividers. Its colours pass the contrast check in both versions (lowest
+normal-text pair 4.59:1 light, 6.02:1 dark). With a logo of its own, a site shows it in
+place of the monogram (plan 3.12).
 All fonts are free from Google Fonts (Open Font License), and the site serves its own
 copies (plan section 3.3).
 

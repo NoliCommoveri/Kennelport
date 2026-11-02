@@ -52,7 +52,10 @@ export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = ne
     if (id && !photoIds.has(id)) throw new ContentError(path, `no photo with id ${id} on this site`);
   };
 
-  if ('site' in doc) out.site = cleanRecord(SITE_FIELDS, doc.site, 'site', { partial: true });
+  if ('site' in doc) {
+    out.site = cleanRecord(SITE_FIELDS, doc.site, 'site', { partial: true });
+    if (out.site.logo_photo_id) photo(out.site.logo_photo_id, 'site.logo_photo_id');
+  }
 
   if ('pages' in doc) {
     if (!doc.pages || typeof doc.pages !== 'object') throw new ContentError('pages', 'must be an object');

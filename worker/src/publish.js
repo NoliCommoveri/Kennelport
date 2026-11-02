@@ -117,6 +117,7 @@ export async function buildSnapshot(env, siteId) {
   (home.hero.photos ?? []).forEach(use);
   use(home.story.photo_id);
   use(pages.about.photo_id);
+  use(site.logo_photo_id);
   const photoRows = used.size
     ? (await db.prepare(`SELECT * FROM photos WHERE site_id = ? AND removed_at IS NULL AND id IN (${[...used].map(() => '?').join(', ')})`).bind(siteId, ...used).all()).results
     : [];
@@ -127,7 +128,7 @@ export async function buildSnapshot(env, siteId) {
     built_at: new Date().toISOString(),
     site: {
       id: site.id, subdomain: site.subdomain, kennel_name: site.kennel_name ?? site.subdomain, tagline: site.tagline, blurb: site.blurb,
-      breed: site.breed, monogram: site.monogram, town: site.town, region: site.region, contact_email: site.contact_email,
+      breed: site.breed, monogram: site.monogram, logo_photo_id: site.logo_photo_id, town: site.town, region: site.region, contact_email: site.contact_email,
       contact_phone: site.contact_phone, facebook_url: site.facebook_url, facebook_label: site.facebook_label,
       instagram_url: site.instagram_url, template: site.template, scheme: site.scheme, dark_mode: site.dark_mode,
       show_other_prices: Boolean(site.show_other_prices),

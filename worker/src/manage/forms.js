@@ -23,7 +23,8 @@ const LABELS = {
   site: {
     kennel_name: ['Kennel name', null], tagline: ['Line under the name', 'Shown small in the header, like "The American Gentleman".'],
     blurb: ['One or two sentences about you', 'For the footer and for search engines.'], breed: ['Breed', null],
-    monogram: ['Monogram', 'Up to 3 letters in the logo.'], town: ['Town', 'Town and region only, never a street address.'], region: ['State or region', null],
+    monogram: ['Monogram', 'Up to 3 letters in the diamond at the top of the page, when you have no logo of your own.'],
+    logo_photo_id: ['Your logo', 'Shown in place of the monogram at the top and foot of every page. Tapping it shows it full size. A square or diamond logo works best.'], town: ['Town', 'Town and region only, never a street address.'], region: ['State or region', null],
     contact_email: ['Email for families', null], contact_phone: ['Phone', null], facebook_url: ['Facebook page address', null],
     facebook_label: ['Facebook page name', null], instagram_url: ['Instagram address', null],
     dark_mode: ['Dark mode', 'Follow each visitor\'s phone or computer setting, or always show the light version.'],

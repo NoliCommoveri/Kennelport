@@ -16,9 +16,29 @@ const SPRITES = (snap) => `<svg width="0" height="0" class="sr-only" aria-hidden
   ${monogramSvg(snap)}
 </svg>`;
 
+const logoOf = (snap) => (snap.site.logo_photo_id && snap.photos[snap.site.logo_photo_id] ? snap.photos[snap.site.logo_photo_id] : null);
+const nameBlock = (snap) => `<div><b>${esc(snap.site.kennel_name)}</b>${snap.site.tagline ? `<span>${esc(snap.site.tagline)}</span>` : ''}</div>`;
+const logoImg = (snap, cls = '') => {
+  const p = logoOf(snap);
+  const size = p.width && p.height ? ` width="${p.width}" height="${p.height}"` : '';
+  return `<img${cls ? ` class="${cls}"` : ''} src="${photoUrl(snap.site.logo_photo_id, { thumb: Boolean(p.thumb) })}" alt="${attr(p.alt || `${snap.site.kennel_name} logo`)}"${size}>`;
+};
+
+// The monogram, or her own logo (plan 3.12). In the header the logo is its own
+// link to the full-size picture, which the template's script opens in a dialog;
+// the name beside it goes home.
 function brand(snap) {
-  return `<svg aria-hidden="true"><use href="#mono"/></svg><div><b>${esc(snap.site.kennel_name)}</b>${snap.site.tagline ? `<span>${esc(snap.site.tagline)}</span>` : ''}</div>`;
+  return `<svg aria-hidden="true"><use href="#mono"/></svg>${nameBlock(snap)}`;
 }
+function headerBrand(snap) {
+  if (!logoOf(snap)) return `<a class="brand" href="/" aria-label="${attr(snap.site.kennel_name)} home">${brand(snap)}</a>`;
+  return `<div class="brand"><a class="brand-logo" href="${photoUrl(snap.site.logo_photo_id)}" data-logo-zoom aria-label="Show the ${attr(snap.site.kennel_name)} logo full size">${logoImg(snap)}</a><a class="brand-name" href="/" aria-label="${attr(snap.site.kennel_name)} home">${nameBlock(snap)}</a></div>`;
+}
+function footerBrand(snap) {
+  return `<a class="brand" href="/">${logoOf(snap) ? `<span class="brand-logo">${logoImg(snap)}</span>${nameBlock(snap)}` : brand(snap)}</a>`;
+}
+// The full-size logo, opened by site.js; without the script the link opens the picture.
+const logoDialog = (snap) => (logoOf(snap) ? `<dialog class="logo-zoom" id="logo-zoom" aria-label="${attr(snap.site.kennel_name)} logo"><form method="dialog"><button class="logo-close" aria-label="Close">×</button></form><img src="${photoUrl(snap.site.logo_photo_id)}" alt="${attr(logoOf(snap).alt || `${snap.site.kennel_name} logo`)}" loading="lazy"></dialog>` : '');
 
 function header(snap, ctx) {
   const groups = menuGroups(snap, ctx);
@@ -35,7 +55,7 @@ function header(snap, ctx) {
   const login = snap.site.family_login ? `<li><a class="navtop" href="${attr(snap.site.family_login)}" rel="noopener noreferrer" target="_blank">Family login</a></li>` : '';
   const withLogin = login && items.includes('class="btn solid"') ? items.replace(/<li><a class="btn solid"/, `${login}<li><a class="btn solid"`) : items + login;
   return `<header class="site"><div class="wrap bar">
-    <a class="brand" href="/" aria-label="${attr(snap.site.kennel_name)} home">${brand(snap)}</a>
+    ${headerBrand(snap)}
     <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="main-nav"><span></span></button>
     <nav class="main" id="main-nav" aria-label="Main"><ul>${withLogin}</ul></nav>
   </div></header>`;
@@ -50,7 +70,7 @@ function footer(snap, ctx) {
     ['Buying a puppy', [...(groups.find((g) => g.key === 'how')?.links ?? []), ...(pageOn(snap, 'waitlist', ctx) ? [{ href: '/waitlist', text: label(snap, 'waitlist') }] : []), ...(payShown(snap, ctx) ? [{ href: '/waitlist#how-to-pay', text: 'How to pay' }] : []), ...(snap.site.family_login ? [{ href: snap.site.family_login, text: 'Family login', external: true }] : [])]],
   ].filter(([, links]) => links.length);
   return `<footer class="site"><div class="wrap">
-    <div class="foot-brand"><a class="brand" href="/">${brand(snap)}</a>${snap.site.blurb ? `<p class="small">${esc(snap.site.blurb)}</p>` : ''}</div>
+    <div class="foot-brand">${footerBrand(snap)}${snap.site.blurb ? `<p class="small">${esc(snap.site.blurb)}</p>` : ''}</div>
     ${cols.map(([h, links]) => `<div><h4>${esc(h)}</h4><ul>${links.map((l) => `<li><a href="${attr(l.href)}"${l.external ? ' rel="noopener noreferrer" target="_blank"' : ''}>${esc(l.text)}</a></li>`).join('')}</ul></div>`).join('')}
     <div class="fine"><span>© ${esc(year)} ${esc(snap.site.kennel_name)} · <a href="/privacy">Privacy</a></span><span>Made with KennelPort</span></div>
   </div></footer>`;
@@ -93,6 +113,7 @@ ${ctx.preview ? '<div class="preview-bar" role="status">Preview: this is the dra
 ${SPRITES(snap)}
 ${header(snap, { ...ctx, section })}
 <main id="main">${body}</main>
+${logoDialog(snap)}
 ${footer(snap, ctx)}
 </body></html>`;
   return html;

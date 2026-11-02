@@ -220,13 +220,16 @@ export function createScreens({ env, request, url, site, user, page }) {
   // ---------- kennel details, pages, Home ----------
   async function details() {
     const row = await env.DB.prepare('SELECT * FROM sites WHERE id = ?').bind(site.id).first();
-    const render = async (err, values) => ({ title: 'Kennel details', back: base, body: `${note(url)}${errorBox(err)}<form method="post" action="${base}/details" data-save class="card">${fields(SITE_FIELDS, values ?? row, await ctxFor('site'))}<button class="primary">Save</button></form>` });
+    const logoPick = { groups: [{ label: 'Your logo', subject: 'page:logo' }], tags: ['page:logo'], alt: `${row.kennel_name ?? ''} logo` };
+    const render = async (err, values) => ({ title: 'Kennel details', back: base, body: `${note(url)}${errorBox(err)}<form method="post" action="${base}/details" data-save class="card">${fields(SITE_FIELDS, values ?? row, await ctxFor('site', logoPick))}<button class="primary">Save</button></form>` });
     if (request.method !== 'POST') return render();
-    const values = parseForm(SITE_FIELDS, await request.formData());
+    const fd = await request.formData();
+    const values = parseForm(SITE_FIELDS, fd);
     try { await saveSite(env, site.id, values); } catch (err) {
       if (err instanceof ContentError) return render(err.message, values);
       throw err;
     }
+    await tagFromForm(SITE_FIELDS, values, fd, ['page:logo']);
     return redirect(`${base}/details?note=saved`);
   }
 

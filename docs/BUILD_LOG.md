@@ -655,3 +655,19 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   Applicants box, Available Puppies or Coming up; Family login in the menu and footer,
   leading to the sign-in button on the status-page help page. Schemes unchanged.
   `ak-sample.html` (the page shared with the breeder) is left as it was.
+
+## 2026-11-02: the kennel's own logo; Tuxedo proposed
+
+- Logo (plan 3.12): `0010_logo.sql` (`sites.logo_photo_id`), **Your logo** on Kennel
+  details (a photo picker, tagged "Your logo"), in the content document and the
+  snapshot. The header shows it in place of the monogram, as a link to the full-size
+  picture that `site.js` opens in a dialog (× , Escape or a tap closes it); the name
+  beside it goes home. The footer shows it too. The change list says "logo". The manage
+  app's resizing puts white behind a picture saved as JPEG (iPhones), so a clear
+  background doesn't turn black.
+- Tuxedo, a seventh scheme made to match the AK logo (black, white, silver; Cinzel,
+  Lato, Pinyon Script; a fleur-de-lis flourish), added to the scheme lab with AK's logo
+  in its header, and republished; contrast checked. Proposed until the owner says yes;
+  schemes reach real sites in phase 6.
+- 121 tests; the logo checked in Chromium at both widths, light and dark, opening and
+  closing. Template and manage app files changed; versions not bumped yet.
