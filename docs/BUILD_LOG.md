@@ -526,3 +526,32 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - The AK sample's questions are the ones on its form (sex, color, timing, what for,
   about your home).
 - 102 tests; the form checked in Chromium at phone and desktop widths.
+
+## 2026-11-02: the KennelOS website feed, and KennelOS's application form in the site's style
+
+- Plan 3.8: a new part, **The KennelOS application form in the site's own style**, with
+  what KennelOS provides (5.5). Plan 8.1 no longer says the feed is still to be built in
+  KennelOS: it was (`GET /f/site/<public_id>`).
+- `0008_feed.sql`: `feed_cache`. `src/feed.js` reads the feed from `KENNELOS_ORIGIN`
+  (wrangler.toml, staging and production), keeps it five minutes, shows the last copy
+  when KennelOS can't be reached and asks again after a minute; `not_shared` and unknown
+  kennels are remembered as such.
+- Manage app: **Your KennelOS waitlist** on the waitlist page's screen: paste the feed
+  address (or the list or apply address), see whether it's connected and where
+  applications go, or remove it (which forgets the copy).
+- Site: `/waitlist` with a feed isn't cached with the snapshot. While KennelOS takes
+  applications online it draws KennelOS's form (her questions of every kind, the FAQ, the
+  matching notice, the public-list notice) instead of the site's own; `site.js` seals the
+  answers to her form key in the browser (`sealToKennelos`, as KennelOS's `seal.js`) and
+  sends them straight to KennelOS, then the emailed code; "Open my status page" opens
+  KennelOS's page in a new tab. Nothing reaches KennelPort: a post to `/waitlist` is
+  refused. Without scripts the form stays hidden and the KennelOS application page is
+  linked. Its Content Security Policy allows the KennelOS host (and Turnstile) on that
+  page only. Feed off or unreachable: links to the KennelOS apply and list pages; feed on
+  with online applications off: the site's own form (decision 26).
+- KennelOS (its own repo, same branch name): the feed carries `form`; `/f/apply`,
+  `/f/verify` and `/f/code` answer KennelPort sites cross-origin. Setup there: add
+  `kennelport.com` to KennelOS's Turnstile widget.
+- 109 tests (sealing checked by opening it as KennelOS does); the whole flow driven in
+  Chromium at phone width against a stand-in KennelOS: answers sealed, opened with her
+  key, the code step, a wrong code, a new code, the status link.

@@ -56,8 +56,12 @@ fallthrough = true
 # Secrets, set in the dashboard: OPS_TOKEN, EMAIL_HMAC_KEY, RESEND_API_KEY,
 # VAPID_PRIVATE_JWK (push; /ops makes it), TURNSTILE_SECRET (with the variable
 # TURNSTILE_SITE_KEY, from the Turnstile page of the Cloudflare dashboard).
+# KENNELOS_ORIGIN: KennelOS's family host (its FAMILY_PAGES_ORIGIN), the only place
+# a waitlist feed is read from and the only host a waitlist page may send a sealed
+# application to (src/feed.js, plan 3.8).
 [vars]
 ENV_NAME = "staging"
+KENNELOS_ORIGIN = "https://kennelos-api-staging.admin-kennelos.workers.dev"
 ROOT_DOMAIN = "kennelport.com"
 ALLOW_HOST_OVERRIDE = "1"
 DEV_OUTBOX = "1"
@@ -99,6 +103,7 @@ bucket_name = "kennelport-files"
 # TURNSTILE_SECRET is a dashboard secret, which deploys leave alone.
 [env.production.vars]
 ENV_NAME = "production"
+KENNELOS_ORIGIN = "https://apply.kennelos.app"
 ROOT_DOMAIN = "kennelport.com"
 MAIL_FROM = "KennelPort <signin@kennelport.com>"
 VAPID_SUBJECT = "mailto:support@kennelport.com"

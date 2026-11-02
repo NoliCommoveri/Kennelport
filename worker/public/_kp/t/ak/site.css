@@ -423,6 +423,22 @@ footer.site .fine a { text-decoration: underline; }
 .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 .apply-form .done.bad { border-left-color: #A3261E; }
 .apply-form .q-hint { font-weight: 400; color: var(--muted); font-size: .8rem; }
+/* KennelOS's application form, drawn here (plan 3.8) */
+.apply-form [hidden] { display: none !important; }
+.apply-form.kos { scroll-margin-top: 90px; }
+.apply-form [data-kos-step="done"] { display: grid; gap: 10px; justify-items: start; }
+.apply-form.kos form { display: grid; gap: 16px; min-width: 0; }
+.apply-form .q-hint { display: block; margin-top: 2px; }
+.apply-form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 8px; }
+.apply-form legend { font-size: .85rem; font-weight: 700; padding: 0; }
+.apply-form .choices { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.apply-form .choice { display: flex; gap: 8px; align-items: center; font-weight: 400; font-size: .92rem; }
+.apply-form .req { color: var(--accent); }
+.apply-form .notice-q { background: var(--band); border-radius: var(--r); padding: 14px 16px; display: grid; gap: 8px; }
+.apply-form input[type="date"] { width: 100%; min-width: 0; }
+.apply-form .kos-confirm { display: flex; align-items: end; }
+.kos-faq { display: grid; gap: 8px; }
+.linkish { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
 .cf-turnstile { min-height: 65px; }
 input:not([type]), input[type="tel"], input[type="number"] { font: inherit; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--r); padding: 10px 12px; min-height: 44px; max-width: 100%; }
 .apply-form input:not([type]), .apply-form input[type="tel"] { width: 100%; min-width: 0; }

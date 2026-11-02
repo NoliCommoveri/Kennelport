@@ -19,6 +19,7 @@ import { APP_VERSION } from './version.js';
 import { STATUS_TEXT, SAFE_NOTICE_TEXT } from '../render/parts.js';
 import { exportContent } from '../content/io.js';
 import { closeSite, SiteError } from '../sites.js';
+import { readFeed, parseFeedAddress, setFeed, FeedError, kennelosOrigin } from '../feed.js';
 
 export const FRESH_SIGN_IN_MS = 15 * 60 * 1000;
 
@@ -218,8 +219,44 @@ export function createScreens({ env, request, url, site, user, page }) {
     return redirect(`${base}/details?note=saved`);
   }
 
+  // The KennelOS website feed (plan 3.8): pasted on the waitlist page's screen.
+  async function kennelosCard(err, typed) {
+    const row = await env.DB.prepare('SELECT kennelos_public_id FROM sites WHERE id = ?').bind(site.id).first();
+    const id = row?.kennelos_public_id;
+    const origin = kennelosOrigin(env);
+    if (!origin) return '';
+    let state = '';
+    if (id) {
+      const f = await readFeed(env, site.id, id);
+      state = f.state === 'ok'
+        ? `<p class="notice">Connected. ${f.feed.form ? 'You take applications online in KennelOS, so your waitlist page shows your KennelOS application form, and applications go to KennelOS, not to this Inbox.' : 'You aren\'t taking applications online in KennelOS, so your waitlist page shows the application form set up here, and applications come to this Inbox.'}${f.stale ? ' KennelOS couldn\'t be reached just now; this is from its last copy.' : ''}</p>`
+        : f.state === 'not_shared' ? '<p class="error">KennelOS isn\'t sharing your list with your website. In KennelOS, open the Online list card and turn on "Let my KennelPort website show my list in its own style". Until then, your waitlist page links to your KennelOS pages.</p>'
+          : f.state === 'not_found' ? '<p class="error">KennelOS has no waitlist online at this address. Check the address, or put your list online in KennelOS first.</p>'
+            : '<p class="error">KennelOS couldn\'t be reached just now. Your waitlist page links to your KennelOS pages until it can.</p>';
+    }
+    return `<form method="post" action="${base}/pages/waitlist/kennelos" class="card" id="kennelos"><h2>Your KennelOS waitlist</h2>
+      <p class="muted small">If you keep your waitlist in KennelOS, paste the website feed address from its Online list card. While you take applications online there, your waitlist page shows your KennelOS application form in your website's style, and applications go straight to KennelOS.</p>
+      ${errorBox(err)}${state}
+      <label>Website feed address<input name="feed" value="${esc(typed ?? (id ? `${origin}/f/site/${id}` : ''))}" placeholder="${esc(origin)}/f/site/…" autocapitalize="none" spellcheck="false"></label>
+      <div class="row"><button class="primary">Save</button>${id ? '<button name="remove" value="1">Remove</button>' : ''}</div></form>`;
+  }
+
   async function pages() {
     const key = url.pathname.split('/')[4];
+    if (key === 'waitlist' && url.pathname.split('/')[5] === 'kennelos') {
+      if (request.method !== 'POST') return null;
+      const fd = await request.formData();
+      if (fd.get('remove')) { await setFeed(env, site.id, null); return redirect(`${base}/pages/waitlist?note=saved#kennelos`); }
+      try { await setFeed(env, site.id, parseFeedAddress(env, fd.get('feed'))); } catch (err) {
+        if (!(err instanceof FeedError)) throw err;
+        return pagesView('waitlist', await kennelosCard(err.message, String(fd.get('feed') ?? '')), { show: true });
+      }
+      return redirect(`${base}/pages/waitlist?note=saved#kennelos`);
+    }
+    return pagesView(key);
+  }
+
+  async function pagesView(key, kennelos = null, { show = false } = {}) {
     if (!key) {
       const rows = [];
       for (const [k, p] of Object.entries(PAGES)) {
@@ -240,9 +277,9 @@ export function createScreens({ env, request, url, site, user, page }) {
       body: `${note(url)}${errorBox(err)}<form method="post" action="${base}/pages/${key}" data-save class="card">
         ${p.canHide ? fieldsWithLabel(all, values ?? current, await ctxFor(key === 'extras' ? 'extras_page' : key, pick), { enabled: ['This page is on', 'Off: it leaves the menu and its address says "This page isn\'t available". Its words are kept.'], menu_label: ['Name in the menu', `Leave empty for "${p.label}".`] }) : fieldsWithLabel(all, values ?? current, await ctxFor(key, pick), { menu_label: ['Name in the menu', `Leave empty for "${p.label}".`] })}
         <button class="primary">Save</button></form>
-        ${listLinkFor(key)}`,
+        ${listLinkFor(key)}${key === 'waitlist' ? kennelos ?? await kennelosCard() : ''}`,
     });
-    if (request.method !== 'POST') return render();
+    if (request.method !== 'POST' || show) return render();
     const fd = await request.formData();
     const values = parseForm(all, fd);
     try { await savePage(env, site.id, key, values); } catch (err) {

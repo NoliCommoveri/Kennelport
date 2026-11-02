@@ -152,11 +152,14 @@ function answers(form, snap) {
   return out;
 }
 
-export async function receiveApplication(env, request, siteId, snap, ctxWorker) {
+// kennelos: the breeder takes applications online in KennelOS, so they go there
+// (from the visitor's browser), never here (decision 26).
+export async function receiveApplication(env, request, siteId, snap, ctxWorker, { kennelos = false } = {}) {
   const form = await request.formData();
   const values = Object.fromEntries([...form.keys()].map((k) => [k, String(form.get(k) ?? '')]));
   try {
     if (snap.pages.waitlist?.closed) throw new FormError("Our waitlist isn't taking applications right now.");
+    if (kennelos) throw new FormError('Please use the application form on this page; it sends your application straight to our waitlist.');
     if (!(await screen(env, request, siteId, form))) return { ok: true };
     const name = text(form, 'name', 80, { required: true, label: 'your name' });
     const email = text(form, 'email', 254, { required: true, label: 'your email' });
