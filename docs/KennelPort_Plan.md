@@ -1,6 +1,6 @@
 # KennelPort: high-level plan (DRAFT)
 
-> Status: phases 0 to 2 are built (`worker/`); most of phase 3 came with them, and section 8.1 says what's left of it.
+> Status: phases 0 to 3 are built (`worker/`); section 8.1 says how phase 3 came together.
 > Section 8 says what version 1 is; section 9 lists the one decision still open. What comes after version 1 is
 > in [`KennelPort_Backlog.md`](KennelPort_Backlog.md). History of this plan lives in
 > [`BUILD_LOG.md`](BUILD_LOG.md).
@@ -1090,11 +1090,9 @@ to pay and the safe-payment notice (3.9), and the application form for breeders 
 their list by hand (3.8, decision 26: the breeder's own questions on the waitlist page,
 a closed switch, answers in the Inbox), and, for breeders who take applications online in
 KennelOS, the website feed read on the waitlist page with KennelOS's application form
-drawn in the site's style (3.8). Left:
-- **The list from KennelOS in the site's own style** (3.8, decision 21): the feed is
-  read and kept (`feed_cache`), and KennelOS's application form is drawn in the site's
-  style; the list's rows, the gap note, search, Available Puppies and Coming up are
-  next. Until then the waitlist page links to the KennelOS list and its sign-in.
+drawn in the site's style (3.8), and the KennelOS list itself in the site's style
+(decision 21: rows, the gap note, search, Available Puppies and Coming up, sign-in on
+KennelOS). Phase 3 is built.
 
 If the first site wants its own domain, connect it by hand (section 2.4).
 

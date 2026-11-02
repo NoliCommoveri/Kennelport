@@ -4,7 +4,7 @@
 import {
   esc, attr, fmtDate, priceText, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, parentName,
   litterCard, dogCard, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
-  paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
+  paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL, fmtMonth,
 } from './parts.js';
 
 const sprigs = '<svg class="sprig l" aria-hidden="true"><use href="#sprig"/></svg><svg class="sprig r" aria-hidden="true"><use href="#sprig"/></svg>';
@@ -479,6 +479,102 @@ function kennelosForm(snap, ctx) {
   </div>`;
 }
 
+// ---------- the KennelOS list, drawn in the site's style (plan 3.8, decision 21) ----------
+// The feed is exactly KennelOS's public list (its /list page's rows, Available
+// Puppies and Coming up), so this draws what that page draws, with the same words:
+// KennelOS's cloud/public/family/common.js is the model. Signing in stays on
+// KennelOS's own page.
+
+const SEX_WORD = { any: 'Either', male: 'Male', female: 'Female' };
+const listDate = (ymd) => (/^\d{4}-\d{2}-\d{2}$/.test(String(ymd ?? '')) ? fmtDate(ymd) : '');
+const shortDate = (ymd) => (/^\d{4}-\d{2}-\d{2}$/.test(String(ymd ?? '')) ? `${ymd.slice(5, 7)}/${ymd.slice(8, 10)}/${ymd.slice(0, 4)}` : '');
+const okUrl = (u) => typeof u === 'string' && /^https?:\/\//i.test(u);
+const photosLink = (url, text = 'Photos') => (okUrl(url) ? `<a href="${attr(url)}" rel="noopener noreferrer" target="_blank">${esc(text)}</a>` : '');
+const parentText = (d) => [d?.name || '', ...(Array.isArray(d?.titles) ? d.titles : [])].filter(Boolean).join(' ');
+
+// A parent's registered name, pedigree and health testing, where she shows them.
+function parentDetails(role, d) {
+  const bits = [];
+  if (d?.registered_name) bits.push(`<li>Registered name: ${esc(d.registered_name)}</li>`);
+  if (d?.pedigree?.sire || d?.pedigree?.dam) bits.push(`<li>Pedigree: ${[d.pedigree.sire && `sire ${esc(d.pedigree.sire)}`, d.pedigree.dam && `dam ${esc(d.pedigree.dam)}`].filter(Boolean).join(', ')}</li>`);
+  for (const t of Array.isArray(d?.tests) ? d.tests : []) if (t?.name) bits.push(`<li>${esc(t.name)}: ${esc(t.result ?? '')}</li>`);
+  return bits.length ? `<li><strong>${role} ${esc(parentText(d))}</strong><ul>${bits.join('')}</ul></li>` : '';
+}
+function litterItem({ breed, name, dam, sire, when, photos, extra = '' }) {
+  const parents = dam?.name || sire?.name
+    ? `<div class="small">Dam: ${esc(parentText(dam))}${okUrl(dam?.photos_url) ? ` (${photosLink(dam.photos_url)})` : ''} · Sire: ${esc(parentText(sire))}${okUrl(sire?.photos_url) ? ` (${photosLink(sire.photos_url)})` : ''}</div>` : '';
+  const details = parentDetails('Dam', dam) + parentDetails('Sire', sire);
+  return `<li>${breed ? `<div class="small muted">${esc(breed)}</div>` : ''}<div><strong>${esc(name)}</strong></div>${parents}
+    ${details ? `<details class="small parent-tests"><summary>About the parents</summary><ul>${details}</ul></details>` : ''}
+    ${when ? `<div class="small muted">${esc(when)}</div>` : ''}${okUrl(photos) ? `<div class="small">${photosLink(photos, "See the litter's photos")}</div>` : ''}${extra}</li>`;
+}
+function litterWhen(l) {
+  const bits = [];
+  if (l.whelp_date) bits.push(`Born ${shortDate(l.whelp_date)}`);
+  else if (l.status === 'expected') bits.push('Expected');
+  if (l.status === 'ready') bits.push('Ready to go home');
+  else if (l.ready_date) bits.push(`Ready ${shortDate(l.ready_date)}`);
+  return bits.join(' · ');
+}
+function pupColumns(l) {
+  const pups = Array.isArray(l.pups) ? l.pups : null;
+  if (!pups) {
+    const part = (n, one, many) => (n ? `${n} ${n === 1 ? one : many}` : '');
+    const bits = [part(Number(l.pups_female) || 0, 'female', 'females'), part(Number(l.pups_male) || 0, 'male', 'males')].filter(Boolean);
+    return `<div class="small">${bits.length ? `${esc(bits.join(' and '))} remaining` : 'No puppies remaining'}</div>`;
+  }
+  if (!pups.length) return '<div class="small muted">No puppies remaining</div>';
+  const name = (d) => (okUrl(d.photos_url) ? photosLink(d.photos_url, d.call_name || 'Puppy') : esc(d.call_name || 'Puppy'));
+  const col = (label, list) => `<div class="pup-col"><div class="pup-col-head">${esc(label)}</div>${list.length ? `<ul class="plain">${list.map((d) => `<li>${name(d)}</li>`).join('')}</ul>` : '<div class="muted">None left</div>'}</div>`;
+  const other = pups.filter((d) => d.sex !== 'male' && d.sex !== 'female');
+  return `<div class="pup-cols small">${col('Males', pups.filter((d) => d.sex === 'male'))}${col('Females', pups.filter((d) => d.sex === 'female'))}${other.length ? col('Puppies', other) : ''}</div>`;
+}
+function upcomingItem(u) {
+  if (u.kind === 'planned_heat') {
+    const month = /^\d{4}-\d{2}$/.test(String(u.expected_month ?? '')) ? fmtMonth(u.expected_month) : '';
+    return litterItem({ breed: u.breed, name: parentText(u.dam) || u.label, when: month ? `Upcoming heat · estimated around ${month}` : 'Upcoming heat' });
+  }
+  const when = u.kind === 'early_litter'
+    ? [u.whelp_date ? `Born ${shortDate(u.whelp_date)}` : 'Born', u.picks_expected_date ? `Planned offering ${shortDate(u.picks_expected_date)}` : ''].filter(Boolean).join(' · ')
+    : u.kind === 'planned_pairing' ? 'Planned pairing' : u.expected_whelp_date ? `Expected ${shortDate(u.expected_whelp_date)}` : 'Expected';
+  return litterItem({ breed: u.breed, name: u.label, dam: u.dam, sire: u.sire, when, photos: u.photos_url });
+}
+
+function kennelosList(snap, ctx, { applyHere }) {
+  const { feed, origin, stale } = ctx.feed;
+  const rows = Array.isArray(feed.rows) ? feed.rows : [];
+  const available = Array.isArray(feed.available) ? feed.available : [];
+  const upcoming = Array.isArray(feed.upcoming) ? feed.upcoming : [];
+  const signin = `${origin}${feed.links?.signin ?? ''}`;
+  const name = feed.kennel?.name || snap.site.kennel_name;
+  const added = (r) => (listDate(r.added) ? `<button type="button" class="added-tip" aria-label="Added ${attr(listDate(r.added))}" data-tip="Added ${attr(listDate(r.added))}">i</button>` : '');
+  const wants = (r) => [SEX_WORD[r.pref_sex] || 'Either', ...(Array.isArray(r.wants_more) ? r.wants_more : [])].map(esc).join(' · ');
+  const body = rows.map((r) => `<tr data-wl-row data-pos="${attr(r.position)}" data-name="${attr(r.name ?? '')}"${r.deciding ? ' class="deciding"' : ''}>
+      <td class="num">#${esc(r.position)}</td><td>${r.deciding ? `<em>${esc(r.name)}</em>` : esc(r.name)}</td>
+      <td>${r.skipped ? `<em>${esc(listDate(r.skipped_until) ? `Skipped until ${listDate(r.skipped_until)}` : 'Skipped for now')}</em>` : wants(r)}</td><td class="tip">${added(r)}</td></tr>`).join('');
+  const gaps = rows.some((r, i) => r.position !== i + 1);
+  const table = rows.length
+    ? `<table class="list"><thead><tr><th>#</th><th>Name</th><th>Wants</th><th class="tip"><span class="sr-only">Added</span></th></tr></thead><tbody>${body}</tbody></table>
+      <p class="muted" data-wl-none hidden></p>
+      ${gaps ? '<p class="small muted">Note: in special circumstances, some applicant names may not be displayed above. Their place is being held, but they are not currently eligible for available pups.</p>' : ''}`
+    : '<p class="muted">No families to show right now.</p>';
+  const help = pageOn(snap, 'waitlist_help', ctx) ? `<p><a class="btn line" href="/waitlist/help">${esc(label(snap, 'waitlist_help') === 'Using your status page' ? 'How to use your status page' : label(snap, 'waitlist_help'))}</a></p>` : '';
+  const updated = listDate(feed.as_of) ? `Updated ${listDate(feed.as_of)}${stale ? ". Our records couldn't be reached just now, so this may be out of date." : ''}` : '';
+  return `<div class="embed" id="the-list"><div class="embed-in">
+    <header><h2>${esc(name)} Waitlist</h2>${updated ? `<p class="muted small">${esc(updated)}</p>` : ''}
+      ${feed.kennel?.intro ? `<p class="intro">${esc(feed.kennel.intro)}</p>` : ''}
+      ${applyHere ? '<div><a class="btn solid" href="#apply">Apply to join the waitlist</a></div>' : ''}</header>
+    <details class="card"><summary><h3>Current Applicants: See Your Details</h3></summary>
+      <p class="small muted">Your private status page is on KennelOS, the app we keep our waitlist in. Sign in there with the email address on your application; it sends you a code.</p>
+      <p><a class="btn solid" href="${attr(signin)}" rel="noopener noreferrer" target="_blank">Sign in to see your details</a></p>${help}</details>
+    ${available.length ? `<details class="card" open><summary><h3>Available Puppies</h3></summary><ul class="plain">${available.map((l) => litterItem({ breed: l.breed, name: l.nickname || l.label, dam: l.dam, sire: l.sire, when: litterWhen(l), photos: l.photos_url, extra: pupColumns(l) })).join('')}</ul></details>` : ''}
+    ${upcoming.length ? `<details class="card"><summary><h3>Coming up</h3></summary><ul class="plain">${upcoming.map(upcomingItem).join('')}</ul><p class="small muted mt-20">Plans can change.${upcoming.some((u) => u.kind === 'planned_heat') ? ' Heat dates are estimates: the month shown is approximate and can shift.' : ''}</p></details>` : ''}
+    ${rows.length ? '<div class="card searchbox" data-wl-search hidden><label for="wl-search" class="small muted">Find yourself on the list</label><input id="wl-search" type="search" placeholder="Search by name or number" autocomplete="off"></div>' : ''}
+    <div class="card"><div class="tablewrap">${table}</div></div>
+    <p class="small muted center">For questions or concerns, please contact ${esc(name)}.</p>
+  </div><div class="powered">Waitlist kept in KennelOS · positions update automatically</div></div>`;
+}
+
 // While KennelOS can't say (its feed is off, or it can't be reached): its own pages.
 function kennelosLinks(snap, ctx) {
   const { origin, publicId } = ctx.feed;
@@ -503,14 +599,13 @@ export function waitlist(snap, ctx) {
   } else {
     main = applicationForm(snap, ctx);
   }
-  // Families already on a KennelOS list sign in there (the list itself is drawn here next).
-  const signin = f?.state === 'ok' && f.feed.links?.signin
-    ? `<p class="center mt-20 small">Already on our waitlist? <a href="${attr(`${f.origin}${f.feed.links.signin}`)}" rel="noopener" target="_blank">See your details</a> · <a href="${attr(`${f.origin}${f.feed.links.list}`)}" rel="noopener" target="_blank">See the waitlist</a></p>` : '';
+  // The KennelOS list, above the form, while the feed is shared.
+  const list = f?.state === 'ok' ? kennelosList(snap, ctx, { applyHere: !p.closed }) : '';
   const pay = paySection(snap);
   return {
     title: snap.pages.waitlist.heading || label(snap, 'waitlist'), section: '/waitlist', description: p.lede,
     body: `${pagehead(p, { eyebrow: 'Waitlist', heading: 'Our waitlist' })}
-      <section class="section tight"><div class="wrap">${main}${signin}${help}</div>${pay ? `<div class="wrap">${pay}</div>` : ''}</section>`,
+      <section class="section tight"><div class="wrap">${list}${main}${list ? '' : help}</div>${pay ? `<div class="wrap">${pay}</div>` : ''}</section>`,
   };
 }
 

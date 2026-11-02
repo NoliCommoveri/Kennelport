@@ -569,3 +569,17 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - Manage app version 8 (the Inbox's application answers, `app.css`) and template assets
   version 6 (the application form's hints, KennelOS's form and its script: `site.css`,
   `site.js`), with their fingerprints. 109 tests.
+
+## 2026-11-02: phase 3, the KennelOS list in the site's style
+
+- The waitlist page draws the KennelOS list from the feed (plan 3.8, decision 21), above
+  the application form, with KennelOS's own words (its `common.js` is the model): the
+  heading, Updated date (with a note when it's the last copy kept), her intro, the
+  rows (position, listed name, "Currently deciding", wants, Skipped until, the date
+  added behind an ⓘ that opens on tap), the gap note, Available Puppies (parents, their
+  registered names, pedigree and health tests under About the parents, dates, pups by
+  sex with photo links) and Coming up. Current Applicants opens KennelOS's sign-in.
+- Search by name or number (ignoring case and accents), shown only with the script.
+  On a phone each row stacks and nothing scrolls sideways.
+- Phase 3 is built. 111 tests; the list checked in Chromium at phone and desktop widths
+  (search, the ⓘ, no sideways scroll).

@@ -140,6 +140,33 @@
   // Homegoing packages: "What's included" starts open on wide screens.
   if (window.matchMedia('(min-width: 901px)').matches) for (const d of $$('.pkg details')) d.open = true;
 
+  // The KennelOS list on the waitlist page (plan 3.8): find yourself by name or
+  // number (as KennelOS's own list does: a number is a position, exactly; anything
+  // else is looked for in the name, ignoring case and accents), and a tap on an ⓘ
+  // shows its date (touch screens have no hover).
+  const search = $('[data-wl-search]');
+  if (search) {
+    search.hidden = false;
+    const input = $('input', search);
+    const none = $('[data-wl-none]');
+    const fold = (x) => String(x ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
+    input.addEventListener('input', () => {
+      const q = fold(input.value);
+      let shown = 0;
+      for (const tr of $$('tr[data-wl-row]')) {
+        const hit = !q || (/^#?\d+$/.test(q) ? tr.dataset.pos === q.replace(/^#/, '') : fold(tr.dataset.name).includes(q));
+        tr.hidden = !hit;
+        if (hit) shown++;
+      }
+      if (none) { none.hidden = shown > 0; none.textContent = shown ? '' : `No one on the list matches "${input.value.trim()}".`; }
+    });
+  }
+  document.addEventListener('click', (e) => {
+    const tip = e.target instanceof Element ? e.target.closest('.added-tip') : null;
+    for (const t of $$('.added-tip.open')) if (t !== tip) t.classList.remove('open');
+    if (tip) tip.classList.toggle('open');
+  });
+
   // kennelos-seal:start (the same as KennelOS's cloud/public/family/seal.js, which
   // shared/data/waitlistCrypto.js opens; tests/kennelosform.test.js opens what this
   // seals). The answers are sealed to her form key here, in the visitor's browser:
