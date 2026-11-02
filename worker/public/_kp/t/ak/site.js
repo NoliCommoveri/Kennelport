@@ -137,6 +137,71 @@
     });
   }
 
+  // Her logo: a tap shows it full size in a dialog; a tap anywhere, Escape or ×
+  // closes it. Without this script the link opens the picture itself.
+  const zoom = $('#logo-zoom');
+  if (zoom && zoom.showModal) {
+    for (const a of $$('[data-logo-zoom]')) a.addEventListener('click', (e) => { e.preventDefault(); zoom.showModal(); });
+    zoom.addEventListener('click', () => zoom.close());
+  }
+
+  // An album's viewer: a tap on a photo opens it full size; previous and next by
+  // buttons, arrow keys or a swipe; Escape, × or a tap outside the photo closes it.
+  const viewer = $('#viewer');
+  const shots = $$('[data-gallery]');
+  if (viewer && viewer.showModal && shots.length) {
+    const pic = $('img', viewer);
+    const count = $('.v-count', viewer);
+    let at = 0;
+    const show = (i) => {
+      at = (i + shots.length) % shots.length;
+      pic.src = shots[at].href;
+      pic.alt = $('img', shots[at])?.alt ?? '';
+      count.textContent = `${at + 1} / ${shots.length}`;
+    };
+    shots.forEach((a, i) => a.addEventListener('click', (e) => { e.preventDefault(); show(i); viewer.showModal(); }));
+    $('.v-prev', viewer).addEventListener('click', () => show(at - 1));
+    $('.v-next', viewer).addEventListener('click', () => show(at + 1));
+    $('.v-close', viewer).addEventListener('click', () => viewer.close());
+    viewer.addEventListener('click', (e) => { if (e.target === viewer) viewer.close(); });
+    viewer.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') show(at - 1); if (e.key === 'ArrowRight') show(at + 1); });
+    let x0 = null;
+    viewer.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+    viewer.addEventListener('touchend', (e) => {
+      if (x0 === null) return;
+      const dx = e.changedTouches[0].clientX - x0;
+      if (Math.abs(dx) > 40) show(at + (dx < 0 ? 1 : -1));
+      x0 = null;
+    });
+  }
+
+  // Videos and posts: the provider's player replaces the preview only when tapped,
+  // so nothing loads from YouTube, Facebook and the rest before that. Without this
+  // script the preview is a link to the original.
+  document.addEventListener('click', (e) => {
+    const a = e.target instanceof Element ? e.target.closest('a[data-embed]') : null;
+    if (!a) return;
+    e.preventDefault();
+    const f = document.createElement('iframe');
+    f.src = a.dataset.embed;
+    f.title = a.getAttribute('aria-label')?.replace(/^Play: /, '') ?? 'Video';
+    f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+    f.allowFullscreen = true;
+    f.referrerPolicy = 'strict-origin-when-cross-origin';
+    a.replaceWith(f);
+  });
+
+  // Share: the phone's own share sheet where there is one, otherwise the link copied.
+  for (const row of $$('[data-share-row]')) {
+    row.hidden = false;
+    const say = $('[role=status]', row);
+    $('[data-share]', row).addEventListener('click', async () => {
+      const data = { title: document.title, url: location.href.split('#')[0] };
+      if (navigator.share) { try { await navigator.share(data); } catch { /* closed */ } return; }
+      try { await navigator.clipboard.writeText(data.url); say.textContent = 'Link copied.'; } catch { say.textContent = data.url; }
+    });
+  }
+
   // Homegoing packages: "What's included" starts open on wide screens.
   if (window.matchMedia('(min-width: 901px)').matches) for (const d of $$('.pkg details')) d.open = true;
 

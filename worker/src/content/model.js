@@ -19,6 +19,7 @@ export const SITE_FIELDS = {
   blurb: ML(300),
   breed: S(60),
   monogram: S(3),
+  logo_photo_id: { type: 'photo' },
   town: S(60),
   region: S(60),
   contact_email: { type: 'email' },
@@ -163,6 +164,19 @@ export const PAYMENT_FIELDS = {
 // the default (render/parts.js SAFE_NOTICE_TEXT).
 export const SAFE_NOTICE_FIELDS = { enabled: BOOL, text: ML(400) };
 
+// Albums (plan 3.1, phase 5): a gallery with its own address, optionally of one
+// litter (named by slug here, by id in the manage app), its photos in order.
+export const ALBUM_PHOTOS_MAX = 300;
+export const ALBUM_FIELDS = {
+  slug: { type: 'slug', required: true },
+  title: S(80, { required: true }),
+  description: ML(600),
+  litter: { type: 'litterref' },
+  cover_photo_id: { type: 'photo' },
+  photos: { type: 'list', item: 'photo', max: ALBUM_PHOTOS_MAX },
+  show_on_site: BOOL,
+};
+
 // The application form (plan 3.8, 3.10; decision 26), for breeders who run their
 // list by hand: name and email are always asked; then these questions, in order.
 // Each type has a fixed shape on the site and a fixed check on the server
@@ -202,6 +216,7 @@ export const PAGES = {
   policies:       { path: '/policies', group: 'how', label: 'Policies', canHide: true, fields: { ...HEAD } },
   faq:            { path: '/faq', group: 'how', label: 'FAQ', canHide: true, fields: { ...HEAD } },
   waitlist:       { path: '/waitlist', group: 'waitlist', label: 'Waitlist', canHide: true, fields: { ...HEAD, closed: BOOL, closed_message: ML(400), form_heading: S(80), form_intro: ML(300), offer_message: ML(600) } },
+  albums:         { path: '/albums', group: 'puppies', label: 'Photo albums', canHide: true, fields: { ...HEAD } },
   waitlist_help:  { path: '/waitlist/help', group: 'waitlist', label: 'Using your status page', canHide: true, fields: { ...HEAD } },
   privacy:        { path: '/privacy', group: null, label: 'Privacy', canHide: false, fields: {} },
 };
@@ -286,6 +301,7 @@ export function cleanValue(f, v, path) {
       return v;
     case 'photo':
     case 'dogref':
+    case 'litterref':
       if (typeof v !== 'string' || v.length > 80) throw new ContentError(path, 'a photo id or dog slug');
       return v;
     case 'list': {

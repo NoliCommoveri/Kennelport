@@ -7,7 +7,7 @@ import { STATUS_TEXT } from './render/parts.js';
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const strip = (o, keys) => Object.fromEntries(Object.entries(o ?? {}).filter(([k]) => !keys.includes(k)));
 const BLOCK_NAMES = { hero: 'top of the page', facts: 'facts row', story: 'story', dogs: 'dogs row', litters: 'litters', reviews: 'reviews', waitlist: 'waitlist band' };
-const SITE_NAMES = { kennel_name: 'name', tagline: 'line under the name', blurb: 'about-you line', breed: 'breed', monogram: 'monogram', town: 'town', region: 'region', contact_email: 'email', contact_phone: 'phone', facebook_url: 'Facebook', facebook_label: 'Facebook', instagram_url: 'Instagram', dark_mode: 'dark mode', show_other_prices: 'showing prices' };
+const SITE_NAMES = { kennel_name: 'name', tagline: 'line under the name', blurb: 'about-you line', breed: 'breed', monogram: 'monogram', logo_photo_id: 'logo', town: 'town', region: 'region', contact_email: 'email', contact_phone: 'phone', facebook_url: 'Facebook', facebook_label: 'Facebook', instagram_url: 'Instagram', dark_mode: 'dark mode', show_other_prices: 'showing prices' };
 
 function byId(list) { return Object.fromEntries((list ?? []).map((x) => [x.id, x])); }
 
@@ -75,6 +75,7 @@ export function changes(live, draft) {
     ['How it works', 'steps', '/how-it-works', (s) => s.heading],
     ['Extras', 'extras', '/extras', (x) => x.name],
     ['Application form', 'questions', '/waitlist', (q) => q.label],
+    ['Albums', 'albums', '/albums', (a) => a.title],
   ]) {
     const a = live[key] ?? []; const b = draft[key] ?? [];
     if (same(a, b)) continue;
@@ -88,6 +89,15 @@ export function changes(live, draft) {
   for (const [key, label, path] of [['policies', 'Policies', '/policies'], ['faq', 'FAQ', '/faq'], ['waitlist_help', 'Using your status page', '/waitlist/help']]) {
     if (!same(live.expanders[key] ?? [], draft.expanders[key] ?? [])) lines.push({ text: `${label}: edited`, path });
   }
+  // Videos and posts (phase 5): added or removed, by title or provider.
+  const flat = (snap) => Object.values(snap.embeds ?? {}).flat();
+  const ea = byId(flat(live)); const eb = byId(flat(draft));
+  const name = (e) => e.title || `a ${e.provider === 'youtube' ? 'YouTube' : e.provider[0].toUpperCase() + e.provider.slice(1)} link`;
+  const added = flat(draft).filter((e) => !ea[e.id]).map(name);
+  const gone = flat(live).filter((e) => !eb[e.id]).map(name);
+  const moved = !added.length && !gone.length && !same(Object.fromEntries(Object.entries(live.embeds ?? {}).map(([k, v]) => [k, v.map((e) => e.id)])), Object.fromEntries(Object.entries(draft.embeds ?? {}).map(([k, v]) => [k, v.map((e) => e.id)])));
+  if (added.length || gone.length || moved) lines.push({ text: `Videos and posts: ${[added.length && `${added.join(', ')} added`, gone.length && `${gone.join(', ')} removed`].filter(Boolean).join('; ') || 'order changed'}`, path: null });
+
   // How to pay. Snapshots from before it existed had the notice on and no cards.
   const pay = (snap) => snap.payment ?? { safe_notice: { enabled: true, text: null } };
   const pa = pay(live); const pb = pay(draft);

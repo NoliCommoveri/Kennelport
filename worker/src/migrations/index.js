@@ -17,6 +17,9 @@ import payment from './0006_payment.sql';
 import application from './0007_application.sql';
 import feed from './0008_feed.sql';
 import waitlist from './0009_waitlist.sql';
+import logo from './0010_logo.sql';
+import albums from './0011_albums.sql';
+import embeds from './0012_embeds.sql';
 
 export const MIGRATIONS = [
   { id: '0001', name: 'schema', sql: schema },
@@ -28,4 +31,7 @@ export const MIGRATIONS = [
   { id: '0007', name: 'application', sql: application },
   { id: '0008', name: 'feed', sql: feed },
   { id: '0009', name: 'waitlist', sql: waitlist },
+  { id: '0010', name: 'logo', sql: logo },
+  { id: '0011', name: 'albums', sql: albums },
+  { id: '0012', name: 'embeds', sql: embeds },
 ];

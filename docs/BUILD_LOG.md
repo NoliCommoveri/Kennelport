@@ -646,3 +646,81 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 
 - Manage app version 9 (Your waitlist's layout, `waitlist.json` in Download a copy, the
   greyed tile), with its fingerprint. Template unchanged at 7. 119 tests.
+
+## 2026-11-02: scheme lab rebuilt to match the site
+
+- `reference/scheme-lab.html` (the AK Colour Schemes artifact, republished to its link)
+  now shows the waitlist page as built: only the families' list, then the application
+  form (with the names line and Keep my name private), then How to pay; no Current
+  Applicants box, Available Puppies or Coming up; Family login in the menu and footer,
+  leading to the sign-in button on the status-page help page. Schemes unchanged.
+  `ak-sample.html` (the page shared with the breeder) is left as it was.
+
+## 2026-11-02: the kennel's own logo; Tuxedo proposed
+
+- Logo (plan 3.12): `0010_logo.sql` (`sites.logo_photo_id`), **Your logo** on Kennel
+  details (a photo picker, tagged "Your logo"), in the content document and the
+  snapshot. The header shows it in place of the monogram, as a link to the full-size
+  picture that `site.js` opens in a dialog (× , Escape or a tap closes it); the name
+  beside it goes home. The footer shows it too. The change list says "logo". The manage
+  app's resizing puts white behind a picture saved as JPEG (iPhones), so a clear
+  background doesn't turn black.
+- Tuxedo, a seventh scheme made to match the AK logo (black, white, silver; Cinzel,
+  Lato, Pinyon Script; a fleur-de-lis flourish), added to the scheme lab with AK's logo
+  in its header, and republished; contrast checked. Proposed until the owner says yes;
+  schemes reach real sites in phase 6.
+- 121 tests; the logo checked in Chromium at both widths, light and dark, opening and
+  closing. Template and manage app files changed; versions not bumped yet.
+
+## 2026-11-02: versions for the logo
+
+- Template assets version 8 and manage app version 10 (the logo, its full-size view, and
+  white behind JPEG photos), with their fingerprints.
+
+## 2026-11-02: phase 5, albums
+
+- `0011_albums.sql`; `ALBUM_FIELDS` (title, description, litter, cover, photos, shown).
+  Manage app: **Albums** tile and list (the generic list screens), the photo picker
+  offering the litter's photos first; `album_limit` enforced; removing a litter keeps
+  its albums. Content document: `albums`, matched by slug so ids and redirects survive.
+- Site: `/albums` (cards with cover and count, in the Puppies menu as Photo albums,
+  hideable) and `/albums/<slug>` (a square-cropped gallery; tap for a full-screen viewer
+  with previous, next, arrow keys and swipe; without the script each photo opens
+  itself). A litter's page shows its albums. In the sitemap; a new address redirects
+  from the old. The change list names albums added, edited or removed.
+- 125 tests; the album pages and viewer checked in Chromium at phone width.
+
+## 2026-11-02: phase 5, videos and posts
+
+- `src/embeds.js`: one entry per provider (how its links read, its player, its shape,
+  its preview); `readEmbedLink` refuses anything else. `0012_embeds.sql`;
+  `src/embedStore.js` adds one from a pasted link, copying the provider's preview (YouTube's
+  image, Vimeo's and TikTok's oEmbed) onto the site as a photo; removing it removes that.
+- Manage app: a **Videos and posts** card on Home's screen, Our story, and every dog,
+  litter and album: paste a link and an optional title, reorder, remove. Removing a dog,
+  litter or album removes its videos. Content document: `embeds`, by place and slug.
+- Site: a preview with a play button, linking to the original; `site.js` swaps in the
+  provider's player only on a tap. Every page's Content Security Policy frames these
+  providers and nothing else (Turnstile joins the same `frame-src` on form pages). The
+  change list names videos added or removed.
+- 129 tests; the boxes and the tap checked in Chromium at phone width.
+
+## 2026-11-02: phase 5, sharing
+
+- `src/lib/vendor/qrcode.js` (qrcode-generator 2.0.4, MIT, copied unchanged with its
+  header; no runtime dependency) and `src/qr.js` (an SVG, black on white, quiet zone).
+  Decoded with OpenCV to check it scans to the address.
+- Manage app: **Share** tile and screen: the published site, its current and planned
+  litters and its albums, each with its link, Copy link, a QR code and Download QR code.
+- Site: a **Share** button on dog, litter, puppy and album pages (`navigator.share`, or
+  the link copied), shown only with the script.
+- Phase 5 is built apart from KennelOS shares carrying album links (phase 4). 132 tests;
+  the Share screen checked in Chromium at phone width. Template and manage app files
+  changed; versions not bumped yet.
+
+## 2026-11-02: phase 5 rides versions 8 and 10
+
+- The logo's bump (template 8, manage app 10) hadn't reached `main`, so phase 5 keeps
+  those numbers with updated fingerprints rather than bumping again. `CLAUDE.md` now
+  says to check whether the current number has gone out before asking about a bump,
+  and, when it hasn't, just to update its fingerprint.

@@ -75,6 +75,11 @@ legend { font-weight: 700; font-size: .9rem; padding: 0; margin-bottom: 6px; }
 .changes a { font-weight: 700; white-space: nowrap; }
 .card.danger { border-color: color-mix(in srgb, var(--error) 40%, var(--line)); }
 .card.danger button { border-color: var(--error); color: var(--error); }
+.share-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.share-card { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 14px; align-items: start; }
+.share-card .qr { width: 132px; height: 132px; border-radius: 6px; background: #fff; }
+.share-link { overflow-wrap: anywhere; margin: 4px 0 8px; }
+@media (max-width: 380px) { .share-card { grid-template-columns: 1fr; } }
 .wl-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .wl-entry { gap: 8px; } .wl-entry p { margin: 0; }
 .wl-entry .row form { flex: 1 1 110px; } .wl-entry .row form button { width: 100%; }

@@ -54,6 +54,7 @@ export function pageOn(snap, key, ctx) {
     case 'policies': return (snap.expanders.policies ?? []).length > 0;
     case 'faq': return (snap.expanders.faq ?? []).length > 0;
     case 'waitlist_help': return (snap.expanders.waitlist_help ?? []).length > 0;
+    case 'albums': return (snap.albums ?? []).length > 0;
     default: return true;
   }
 }

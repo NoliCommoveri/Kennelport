@@ -19,6 +19,9 @@ import { APP_VERSION } from './version.js';
 import { STATUS_TEXT, SAFE_NOTICE_TEXT } from '../render/parts.js';
 import { exportContent } from '../content/io.js';
 import { closeSite, SiteError } from '../sites.js';
+import { listEmbeds, addEmbed, removeEmbed, moveEmbed, EmbedError, EMBEDS_PER_PLACE } from '../embedStore.js';
+import { PROVIDERS } from '../embeds.js';
+import { qrSvg } from '../qr.js';
 import { readFeed, parseFeedAddress, setFeed, FeedError, kennelosOrigin, kennelosState } from '../feed.js';
 import {
   waiting, fulfilled, getEntry, addEntry, updateEntry, setFulfilled, removeEntry, moveEntry, offerMailto, suggestWants, listNameFor, maskedNameFor, wantsPrivate, WaitlistError,
@@ -36,6 +39,7 @@ const NOTES = {
   moved: 'Moved.',
   status: 'Status changed in your draft.',
   uploaded: 'Photos added.',
+  embedded: 'Added to your draft. It shows on your site after you publish.',
   tagged: 'Saved.',
   deleted: 'Message deleted.',
   approved: 'Approved. It shows on your site after you publish.',
@@ -63,6 +67,7 @@ const LISTS = {
   policies: { title: 'Policies', one: 'policy', name: (r) => r.heading, sub: () => '' },
   faq: { title: 'FAQ', one: 'question', name: (r) => r.heading, sub: () => '' },
   waitlist_help: { title: 'Using your status page', one: 'section', name: (r) => r.heading, sub: () => '' },
+  albums: { title: 'Albums', one: 'album', name: (r) => r.title, sub: (r) => [`${(r.photos ?? []).length} photo${(r.photos ?? []).length === 1 ? '' : 's'}`, r.show_on_site ? null : 'hidden'].filter(Boolean).join(' · ') },
   questions: { title: 'Application questions', one: 'question', name: (r) => r.label, sub: (r) => [QUESTION_WORDS[r.type], r.required ? 'must answer' : 'optional'].join(' · ') },
 };
 const QUESTION_WORDS = { text: 'Short answer', paragraph: 'Longer answer', choice: 'Choice', yes_no: 'Yes or no', litter: 'Which litter', phone: 'Phone', town: 'Town' };
@@ -77,11 +82,12 @@ export function createScreens({ env, request, url, site, user, page }) {
   let photosCache = null;
   const photos = async () => (photosCache ??= (await env.DB.prepare('SELECT id, alt FROM photos WHERE site_id = ? AND removed_at IS NULL ORDER BY created_at DESC').bind(site.id).all()).results);
   const dogsList = async () => (await env.DB.prepare('SELECT id, call_name FROM dogs WHERE site_id = ? ORDER BY sort').bind(site.id).all()).results;
+  const littersList = async () => (await env.DB.prepare('SELECT id, name FROM litters WHERE site_id = ? ORDER BY sort').bind(site.id).all()).results;
   let tagsCache = null;
   const tags = async () => (tagsCache ??= await tagsByPhoto(env, site.id));
   // pick: { groups: [{ label, subject }], tags: [subject…] to tag uploads with, alt }
   const ctxFor = async (kind, pick) => {
-    const ctx = { kind, photos: await photos(), photoUrl, dogs: await dogsList(), photosLink: `${base}/photos` };
+    const ctx = { kind, photos: await photos(), photoUrl, dogs: await dogsList(), litters: await littersList(), photosLink: `${base}/photos` };
     if (pick) {
       const t = await tags();
       ctx.photoGroups = pick.groups.map((g) => ({ label: g.label, ids: g.subject ? ctx.photos.filter((p) => (t.get(p.id) ?? []).includes(g.subject)).map((p) => p.id) : [] }));
@@ -97,6 +103,76 @@ export function createScreens({ env, request, url, site, user, page }) {
   let kosCache = null;
   const kos = async () => (kosCache ??= await kennelosState(env, site.id));
 
+  // ---------- videos and posts (plan 3.3) ----------
+  // A card on the screen of whatever they sit on; its forms come back to `here`.
+  async function embedsCard(place, here, err) {
+    const list = await listEmbeds(env, site.id, place);
+    const hidden = `<input type="hidden" name="place" value="${esc(place)}"><input type="hidden" name="back" value="${esc(here)}">`;
+    const items = list.map((e, i) => `<li class="item"><span><b>${esc(e.title || PROVIDERS[e.provider]?.name || e.provider)}</b><span class="muted small"> · ${esc(PROVIDERS[e.provider]?.name ?? e.provider)}${e.preview_photo_id ? '' : ', no preview'}</span></span>
+      <span class="order">${i ? `<form method="post" action="${base}/embeds/${e.id}/up">${hidden}<button aria-label="Move up">↑</button></form>` : ''}${i < list.length - 1 ? `<form method="post" action="${base}/embeds/${e.id}/down">${hidden}<button aria-label="Move down">↓</button></form>` : ''}<form method="post" action="${base}/embeds/${e.id}/remove">${hidden}<button class="link">Remove</button></form></span></li>`).join('');
+    return `<section class="card" id="videos"><h2>Videos and posts</h2>
+      <p class="muted small">Paste the link to a video or post on ${esc(Object.values(PROVIDERS).map((p) => p.name).join(', '))}. Your site shows a preview, and plays it only when a visitor taps.</p>
+      ${err ? `<p class="error" role="alert">Not added: ${esc(err)}</p>` : ''}
+      ${items ? `<ul class="items">${items}</ul>` : ''}
+      ${list.length < EMBEDS_PER_PLACE ? `<form method="post" action="${base}/embeds/add">${hidden}<label>Link<input name="link" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=…" required></label><label>Title<span class="hint">Optional, shown under it, like "Opal at 6 weeks".</span><input name="title" maxlength="120"></label><button class="primary">Add</button></form>` : ''}</section>`;
+  }
+
+  async function embedsAction() {
+    if (request.method !== 'POST') return null;
+    const fd = await request.formData();
+    const back = String(fd.get('back') ?? '');
+    const here = back.startsWith(`${base}/`) && !back.includes('//') ? back : base;
+    const m = url.pathname.slice(`${base}/embeds`.length).match(/^\/(?:add|([0-9a-f-]{36})\/(remove|up|down))$/);
+    if (!m) return null;
+    if (m[2] === 'remove') await removeEmbed(env, site.id, m[1]);
+    else if (m[2]) await moveEmbed(env, site.id, m[1], m[2] === 'up' ? -1 : 1);
+    else {
+      try { await addEmbed(env, site.id, String(fd.get('place') ?? ''), { link: fd.get('link'), title: fd.get('title') }); } catch (err) {
+        if (!(err instanceof EmbedError)) throw err;
+        return redirect(`${here}${here.includes('?') ? '&' : '?'}embed_error=${encodeURIComponent(err.message)}#videos`);
+      }
+      return redirect(`${here}?note=embedded#videos`);
+    }
+    return redirect(`${here}?note=saved#videos`);
+  }
+  const embedErr = () => url.searchParams.get('embed_error');
+
+  // ---------- sharing (plan 5.4): links and QR codes ----------
+  // The site and its litters and albums, as visitors see them: published ones only.
+  async function shareScreen() {
+    const rest = url.pathname.slice(`${base}/share`.length);
+    if (request.method !== 'GET') return null;
+    const row = await env.DB.prepare('SELECT published_snapshot_id FROM sites WHERE id = ?').bind(site.id).first();
+    const live = await loadSnapshot(env, site.id, row.published_snapshot_id);
+    const targets = [{ key: 'site', label: site.kennel_name || site.subdomain, path: '/' }];
+    if (live) {
+      if (live.pages?.litters?.enabled) for (const l of live.litters.filter((x) => x.stage !== 'past')) targets.push({ key: `litter-${l.slug}`, label: l.name, path: `/litters/${l.slug}` });
+      if (live.pages?.albums?.enabled) for (const a of live.albums ?? []) targets.push({ key: `album-${a.slug}`, label: a.title, path: `/albums/${a.slug}` });
+    }
+    const m = rest.match(/^\/qr\/([a-z0-9-]+)\.svg$/);
+    if (m) {
+      const t = targets.find((x) => x.key === m[1]);
+      if (!t) return null;
+      return new Response(qrSvg(siteLink(env, site.subdomain, t.path)), { headers: {
+        'content-type': 'image/svg+xml', 'cache-control': 'private, max-age=300', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'",
+        ...(url.searchParams.has('download') ? { 'content-disposition': `attachment; filename="${site.subdomain}-${m[1]}-qr.svg"` } : {}),
+      } });
+    }
+    if (rest) return null;
+    const card = (t) => {
+      const link = siteLink(env, site.subdomain, t.path);
+      return `<li class="card share-card"><img class="qr" src="${base}/share/qr/${t.key}.svg" alt="QR code for ${esc(t.label)}" width="132" height="132">
+        <div><b>${esc(t.label)}</b><p class="muted small share-link">${esc(link)}</p>
+        <p class="row"><button type="button" data-copy="${esc(link)}">Copy link</button><a class="button" href="${base}/share/qr/${t.key}.svg?download">Download QR code</a></p></div></li>`;
+    };
+    return {
+      title: 'Share', back: base,
+      body: `<p class="muted">Links to your site and its pages, and a QR code for each, for puppy packets, business cards and show tables. A link pasted into Facebook, Messenger or a text shows a picture card.${live ? '' : ' Publish your site first: these are the pages visitors can see.'}</p>
+        <ul class="share-list">${targets.map(card).join('')}</ul>
+        <p class="muted small">Litters and albums show here once they're published. The QR code is a picture you can print at any size.</p>`,
+    };
+  }
+
   // ---------- one list of records, generic ----------
   async function collection(path, kind, scopeId, { back, parentTitle } = {}) {
     const k = KINDS[kind];
@@ -108,6 +184,11 @@ export function createScreens({ env, request, url, site, user, page }) {
     const one = SUBJECT_OF[kind];
     const subsFor = (id) => [id && one ? `${one}:${id}` : null, kind === 'puppies' ? `litter:${scopeId}` : null].filter(Boolean);
     const pickFor = (rec) => {
+      // An album offers its litter's photos first; photos added here are tagged with it.
+      if (kind === 'albums') {
+        const lit = rec?.litter_id ? `litter:${rec.litter_id}` : null;
+        return { groups: [{ label: rec?.litter_id ? 'Photos of its litter' : 'Your photos', subject: lit }], tags: lit ? [lit] : [], alt: rec?.title ?? '' };
+      }
       if (!one) return null;
       const groups = [{ label: rec ? `Photos of ${L.name(rec)}` : `Photos of this ${L.one}`, subject: rec ? `${one}:${rec.id}` : null }];
       if (kind === 'puppies' && parentTitle) groups.push({ label: `Photos of ${parentTitle}`, subject: `litter:${scopeId}` });
@@ -155,6 +236,8 @@ export function createScreens({ env, request, url, site, user, page }) {
     if (!post) {
       const view = await form(rec);
       view.body = note(url) + view.body;
+      const place = { dogs: 'dog', litters: 'litter', albums: 'album' }[kind];
+      if (place) view.body += await embedsCard(`${place}:${rec.id}`, `${path}/${rec.id}`, embedErr());
       return { ...view, rec };
     }
     const fd = await request.formData();
@@ -220,13 +303,16 @@ export function createScreens({ env, request, url, site, user, page }) {
   // ---------- kennel details, pages, Home ----------
   async function details() {
     const row = await env.DB.prepare('SELECT * FROM sites WHERE id = ?').bind(site.id).first();
-    const render = async (err, values) => ({ title: 'Kennel details', back: base, body: `${note(url)}${errorBox(err)}<form method="post" action="${base}/details" data-save class="card">${fields(SITE_FIELDS, values ?? row, await ctxFor('site'))}<button class="primary">Save</button></form>` });
+    const logoPick = { groups: [{ label: 'Your logo', subject: 'page:logo' }], tags: ['page:logo'], alt: `${row.kennel_name ?? ''} logo` };
+    const render = async (err, values) => ({ title: 'Kennel details', back: base, body: `${note(url)}${errorBox(err)}<form method="post" action="${base}/details" data-save class="card">${fields(SITE_FIELDS, values ?? row, await ctxFor('site', logoPick))}<button class="primary">Save</button></form>` });
     if (request.method !== 'POST') return render();
-    const values = parseForm(SITE_FIELDS, await request.formData());
+    const fd = await request.formData();
+    const values = parseForm(SITE_FIELDS, fd);
     try { await saveSite(env, site.id, values); } catch (err) {
       if (err instanceof ContentError) return render(err.message, values);
       throw err;
     }
+    await tagFromForm(SITE_FIELDS, values, fd, ['page:logo']);
     return redirect(`${base}/details?note=saved`);
   }
 
@@ -288,7 +374,7 @@ export function createScreens({ env, request, url, site, user, page }) {
       body: `${note(url)}${key === 'waitlist' ? kennelos ?? await kennelosCard() : ''}${errorBox(err)}<form method="post" action="${base}/pages/${key}" data-save class="card">
         ${p.canHide ? fieldsWithLabel(all, values ?? current, await ctxFor(key === 'extras' ? 'extras_page' : key, pick), { enabled: ['This page is on', 'Off: it leaves the menu and its address says "This page isn\'t available". Its words are kept.'], menu_label: ['Name in the menu', `Leave empty for "${p.label}".`] }) : fieldsWithLabel(all, values ?? current, await ctxFor(key, pick), { menu_label: ['Name in the menu', `Leave empty for "${p.label}".`] })}
         <button class="primary">Save</button></form>
-        ${key === 'waitlist' ? await waitlistLinks() : listLinkFor(key)}`,
+        ${key === 'waitlist' ? await waitlistLinks() : listLinkFor(key)}${key === 'about' ? await embedsCard('about', `${base}/pages/about`, embedErr()) : ''}`,
     });
     if (request.method !== 'POST' || show) return render();
     const fd = await request.formData();
@@ -315,7 +401,7 @@ export function createScreens({ env, request, url, site, user, page }) {
   }
 
   const listLinkFor = (key) => {
-    const kind = { reviews: 'reviews', how_it_works: 'steps', extras: 'extras', policies: 'policies', faq: 'faq', waitlist_help: 'waitlist_help', dogs: 'dogs', litters: 'litters', waitlist: 'questions' }[key];
+    const kind = { reviews: 'reviews', how_it_works: 'steps', extras: 'extras', policies: 'policies', faq: 'faq', waitlist_help: 'waitlist_help', dogs: 'dogs', litters: 'litters', waitlist: 'questions', albums: 'albums' }[key];
     if (!kind) return '';
     const href = ['dogs', 'litters'].includes(kind) ? `${base}/${kind}` : `${base}/lists/${kind}`;
     return `<p><a class="button" href="${esc(href)}">Edit the ${esc(LISTS[kind].title.toLowerCase())} on this page</a></p>`;
@@ -339,7 +425,7 @@ export function createScreens({ env, request, url, site, user, page }) {
         const v = await getBlock(env, site.id, b);
         rows.push(`<li class="item"><a href="${base}/home/${b}"><b>${esc(BLOCK_TITLES[b])}</b><span>${v.enabled ? 'on' : 'off'}</span></a></li>`);
       }
-      return { title: 'Home page', back: `${base}/pages`, body: `${note(url)}<p class="muted">Home is a fixed sequence of blocks. Switch each on or off and change its words.</p><ul class="items">${rows.join('')}</ul>` };
+      return { title: 'Home page', back: `${base}/pages`, body: `${note(url)}<p class="muted">Home is a fixed sequence of blocks. Switch each on or off and change its words.</p><ul class="items">${rows.join('')}</ul>${await embedsCard('home', `${base}/home`, embedErr())}` };
     }
     const flds = HOME_BLOCKS[key];
     if (!flds) return null;
@@ -768,6 +854,8 @@ export function createScreens({ env, request, url, site, user, page }) {
     else if (p === '/payment' || /^\/payment\/(application_fee|deposit|safe_notice)$/.test(p)) view = await payment();
     else if (p.startsWith('/publish')) view = await publishScreen();
     else if (p.startsWith('/inbox')) view = await inbox();
+    else if (p.startsWith('/embeds/')) view = await embedsAction();
+    else if (p === '/share' || p.startsWith('/share/')) view = await shareScreen();
     else if (p === '/waitlist' || p.startsWith('/waitlist/')) view = await waitlistScreen();
     else if (p === '/export.json' && request.method === 'GET') return exportManifest();
     else if (p.startsWith('/account')) view = await account();
@@ -791,7 +879,7 @@ export function createScreens({ env, request, url, site, user, page }) {
         if (view && !(view instanceof Response)) view = await litterPhotos(await withChildren(view, `${base}/litters/${view.rec?.id}/puppies`, 'puppies', 'Puppies'));
       }
     } else {
-      const lm = p.match(/^\/lists\/(reviews|steps|extras|policies|faq|waitlist_help|questions)(\/|$)/);
+      const lm = p.match(/^\/lists\/(reviews|steps|extras|policies|faq|waitlist_help|questions|albums)(\/|$)/);
       if (lm) view = await collection(`${base}/lists/${lm[1]}`, lm[1], null, { back: lm[1] === 'questions' ? `${base}/pages/waitlist` : `${base}/pages` });
     }
     if (!view) return null;

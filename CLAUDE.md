@@ -14,6 +14,14 @@ computers when its version number changes:
 fails for it. The owner may not be done changing things and wants to bump once, at
 the end. Say which files changed and ask; bump only after a yes.
 
+**First check whether the current number has gone out.** Compare it with the one on
+`main` (`git fetch origin main`, then `git show origin/main:worker/src/manage/version.js`
+or `.../render/version.js`). If the branch's number is already higher than `main`'s,
+it hasn't been released: no browser has cached it, so don't bump and don't ask. Just
+run the fingerprint script and update the fingerprint beside that same number, and
+say you did. Only when the number matches `main`'s (it has gone out) is a bump
+needed, and then ask as above.
+
 When a file there changes without a bump, `tests/versions.test.js` fails and says
 what to do. That failure is expected while work is in progress; it's the cue to ask,
 not to bump. After a yes: bump the number by one, run

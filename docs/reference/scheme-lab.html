@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Mulish:wght@400;600;700&family=Pinyon+Script&family=Cormorant+Garamond:wght@500;600&family=Nunito+Sans:wght@400;600;700&family=Allura&family=Libre+Caslon+Display&family=Karla:wght@400;600;700&family=Great+Vibes&family=Bitter:ital,wght@0,500;0,600;1,500&family=Source+Sans+3:wght@400;600;700&family=DM+Serif+Display:ital@0;1&family=Work+Sans:wght@400;600;700&family=Cormorant:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Mulish:wght@400;600;700&family=Pinyon+Script&family=Cormorant+Garamond:wght@500;600&family=Nunito+Sans:wght@400;600;700&family=Allura&family=Libre+Caslon+Display&family=Karla:wght@400;600;700&family=Great+Vibes&family=Bitter:ital,wght@0,500;0,600;1,500&family=Source+Sans+3:wght@400;600;700&family=DM+Serif+Display:ital@0;1&family=Work+Sans:wght@400;600;700&family=Cormorant:wght@500;600&family=Cinzel:wght@500;600&family=Lato:wght@400;700&display=swap">
 <style>
 /* Layout: a classic breeder home page (hero, story, dogs, litters, reviews, waitlist) as six hash-routed pages; tuxedo ink on ivory with a lawn-green accent. */
 :root {
@@ -85,6 +85,16 @@ header.site { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50;
 .brand svg { width: 44px; height: 44px; flex: none; color: var(--ink); }
 .brand b { display: block; font: 600 1.15rem/1.1 var(--f-display); letter-spacing: .01em; }
 .brand span { display: block; font-size: .68rem; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+.brand-logo { display: block; flex: none; line-height: 0; border-radius: var(--r); }
+.brand-logo img { height: 56px; width: auto; max-width: 96px; object-fit: contain; }
+a.brand-logo { cursor: zoom-in; }
+footer.site .brand-logo img { height: 64px; max-width: 110px; }
+@media (max-width: 420px) { .brand-logo img { height: 46px; max-width: 76px; } }
+dialog.logo-zoom { border: 0; padding: 0; background: transparent; max-width: min(92vw, 640px); max-height: 92vh; overflow: visible; }
+dialog.logo-zoom::backdrop { background: rgba(0, 0, 0, .78); }
+dialog.logo-zoom img { display: block; width: 100%; height: auto; max-height: 86vh; object-fit: contain; border-radius: var(--r); }
+dialog.logo-zoom form { position: absolute; top: -14px; right: -14px; }
+.logo-close { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--surface); color: var(--ink); font-size: 1.6rem; line-height: 1; cursor: pointer; box-shadow: var(--shadow); }
 nav.main > ul { display: flex; align-items: center; gap: 4px; list-style: none; margin: 0; padding: 0; }
 nav.main li { position: relative; }
 .navtop { display: inline-flex; align-items: center; gap: 6px; padding: 10px 12px; font: 600 .92rem var(--f-body); color: var(--ink); background: none; border: 0; cursor: pointer; border-radius: var(--r); }
@@ -416,11 +426,11 @@ footer.site .fine { grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,
   <symbol id="mono" viewBox="0 0 48 48"><g fill="none" stroke="currentColor"><rect x="9" y="9" width="30" height="30" transform="rotate(45 24 24)" stroke-width="1.4"/><rect x="12.5" y="12.5" width="23" height="23" transform="rotate(45 24 24)" stroke-width=".7"/></g><text x="24" y="29.5" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="15" font-style="italic" fill="currentColor">AK</text></symbol>
 </svg>
 
-<div class="sample"><div class="wrap"><strong>Scheme comparison</strong>The AK sample in each proposed KennelPort colour scheme. Pick one in the bar at the bottom.</div></div>
+<div class="sample"><div class="wrap"><strong>Scheme comparison</strong>The AK sample in each proposed KennelPort colour scheme, with AK's own logo (tap it). Pick one in the bar at the bottom; Tuxedo is made to match the logo.</div></div>
 
 <header class="site">
   <div class="wrap bar">
-    <a class="brand" href="#home" aria-label="AK Boston Terriers home"><svg><use href="#mono"/></svg><div><b>AK Boston Terriers</b><span>The American Gentleman</span></div></a>
+    <div class="brand"><a class="brand-logo" href="img/ak-logo.jpg" id="logo-open" aria-label="Show the AK Boston Terriers logo full size"><img src="img/ak-logo.jpg" alt="AK Boston Terriers logo"></a><a href="#home" aria-label="AK Boston Terriers home"><div><b>AK Boston Terriers</b><span>The American Gentleman</span></div></a></div>
     <button class="menu-toggle" id="menu-toggle" aria-label="Menu" aria-expanded="false" aria-controls="main-nav"><span></span></button>
     <nav class="main" id="main-nav" aria-label="Main">
       <ul>
@@ -432,6 +442,7 @@ footer.site .fine { grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,
           <ul class="drop"><li><a href="#available">Available</a></li><li><a href="#upcoming">Upcoming litters</a></li><li><a href="#older">Older puppies</a></li></ul></li>
         <li><button class="navtop" data-for="how" aria-expanded="false">How it works <i class="chev"></i></button>
           <ul class="drop"><li><a href="#steps">The steps</a></li><li><a href="#extras">Extras: extended homegoing</a></li><li><a href="#policies">Policies</a></li><li><a href="#faq">FAQ</a></li></ul></li>
+        <li><a class="navtop" href="#family-login">Family login</a></li>
         <li><a class="btn solid" href="#waitlist">Waitlist</a></li>
       </ul>
     </nav>
@@ -598,10 +609,9 @@ footer.site .fine { grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,
 
 <!-- ============ WAITLIST ============ -->
 <section data-view="waitlist" id="waitlist">
-  <div class="wrap pagehead"><svg class="sprig l"><use href="#sprig"/></svg><svg class="sprig r"><use href="#sprig"/></svg><span class="eyebrow">Waitlist</span><h1>Our waitlist</h1><p class="lede">This is our live list from KennelOS, the app we keep our records in. Find yourself on it, see which puppies are still open, and apply to join.</p></div>
+  <div class="wrap pagehead"><svg class="sprig l"><use href="#sprig"/></svg><svg class="sprig r"><use href="#sprig"/></svg><span class="eyebrow">Waitlist</span><h1>Our waitlist</h1><p class="lede">This is our live list from KennelOS, the app we keep our records in. Find yourself on it, and apply to join below.</p></div>
   <div class="section" style="padding-top:28px"><div class="wrap">
     <div class="embed">
-      <div class="embed-bar"><b>KennelOS</b><span>Waitlist · sample data</span></div>
       <div class="embed-in">
         <header>
           <h2>AK Boston Terriers Waitlist</h2>
@@ -609,22 +619,31 @@ footer.site .fine { grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,
           <p class="intro" id="wl-intro"></p>
           <div><a class="btn solid" href="#apply" id="apply-link">Apply to join the waitlist</a></div>
         </header>
-        <details class="card" id="wl-details">
-          <summary><h3>Current Applicants: See Your Details</h3></summary>
-          <p class="small muted">Access your private waitlist status page by entering your verification code below. A new verification code can be generated by entering the email address used on your waitlist application.</p>
-          <form class="inline" id="code-form"><input id="code" type="text" inputmode="numeric" maxlength="7" placeholder="6-digit code" aria-label="Verification code" required><button class="btn solid" type="submit">View my details</button></form>
-          <form class="inline" id="email-form"><input id="email" type="email" required placeholder="Email used on your application" aria-label="Email used on your application"><button class="btn line" type="submit">Send me a new code</button></form>
-          <p class="note-sample" id="signin-result" role="status"></p>
-          <p><a class="btn line" href="#applicant-help">How to use your status page</a></p>
-        </details>
-        <details class="card" id="wl-available" open><summary><h3>Available Puppies</h3></summary><ul class="plain" id="wl-available-list"></ul></details>
-        <details class="card" id="wl-upcoming"><summary><h3>Coming up</h3></summary><ul class="plain" id="wl-upcoming-list"></ul><p class="small muted" style="margin-top:12px">Plans can change. Heat dates are estimates: the month shown is approximate and can shift.</p></details>
         <div class="card searchbox"><label for="search" class="small muted">Find yourself on the list</label><input id="search" type="search" placeholder="Search by name or number" autocomplete="off"></div>
         <div class="card"><div class="tablewrap" id="wl-list"></div></div>
         <p class="small muted" style="text-align:center">For questions or concerns, please contact AK Boston Terriers.</p>
       </div>
       <div class="powered">Waitlist kept in KennelOS · positions update automatically</div>
     </div>
+
+    <form class="apply-form" id="apply" novalidate>
+      <div><span class="eyebrow">Puppy application</span><h2 style="margin-top:6px">Apply to join the waitlist</h2><p class="muted small" style="margin-top:6px">Your place on the list is set the day your application fee is received.</p></div>
+      <div class="row"><label for="a-name">Your name<input id="a-name" type="text" required placeholder="First and last name"></label><label for="a-email">Email<input id="a-email" type="email" required placeholder="you@example.com"></label></div>
+      <div class="row">
+        <label for="a-sex">Preferred sex<select id="a-sex"><option value="any">Either</option><option value="female">Female</option><option value="male">Male</option></select></label>
+        <label for="a-color">Color<select id="a-color"><option value="">Any color</option><option>Black &amp; white</option><option>Seal &amp; white</option><option>Brindle &amp; white</option></select></label>
+      </div>
+      <div class="row">
+        <label for="a-when">Timing<select id="a-when"><option>As soon as possible</option><option>Spring 2027</option><option>Summer 2027 or later</option></select></label>
+        <label for="a-purpose">Looking for<select id="a-purpose"><option>A family companion</option><option>Show or breeding (full registration)</option></select></label>
+      </div>
+      <label for="a-about">Tell us about your home<textarea id="a-about" rows="4" placeholder="Who lives with you, other pets, your yard, your schedule…"></textarea></label>
+      <p class="muted small">If we add you to our waitlist, it shows your first name and last initial (like Megan R.) and what you're hoping for. Your email and phone never show.</p>
+      <label class="consent" for="a-private"><input id="a-private" type="checkbox"> Keep my name private: show it as its first letter and an asterisk for each letter after it, then my last initial (Andrea Kim shows as A***** K)</label>
+      <div><button class="btn solid" type="submit">Send application</button></div>
+      <p class="done" id="apply-done" hidden></p>
+    </form>
+    <p style="text-align:center;margin-top:20px"><a class="more" href="#applicant-help">Using your status page</a></p>
 
     <section class="pay" id="how-to-pay" aria-labelledby="pay-h">
       <header style="text-align:center;justify-items:center"><span class="eyebrow">How to pay</span><h2 id="pay-h">Paying your fee and deposit</h2><p class="muted" style="max-width:58ch">Use any of the ways below. Put the note shown in your payment so we can match it to you.</p></header>
@@ -657,21 +676,6 @@ footer.site .fine { grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,
       <p class="pay-safe">These are our only payment details. We'll never ask you to pay by gift card, wire transfer or to anyone else's account. If someone does, please tell us.</p>
     </section>
 
-    <form class="apply-form" id="apply" novalidate>
-      <div><span class="eyebrow">Puppy application</span><h2 style="margin-top:6px">Apply to join the waitlist</h2><p class="muted small" style="margin-top:6px">Your place on the list is set the day your application fee is received.</p></div>
-      <div class="row"><label for="a-name">Your name<input id="a-name" type="text" required placeholder="First and last name"></label><label for="a-email">Email<input id="a-email" type="email" required placeholder="you@example.com"></label></div>
-      <div class="row">
-        <label for="a-sex">Preferred sex<select id="a-sex"><option value="any">Either</option><option value="female">Female</option><option value="male">Male</option></select></label>
-        <label for="a-color">Color<select id="a-color"><option value="">Any color</option><option>Black &amp; white</option><option>Seal &amp; white</option><option>Brindle &amp; white</option></select></label>
-      </div>
-      <div class="row">
-        <label for="a-when">Timing<select id="a-when"><option>As soon as possible</option><option>Spring 2027</option><option>Summer 2027 or later</option></select></label>
-        <label for="a-purpose">Looking for<select id="a-purpose"><option>A family companion</option><option>Show or breeding (full registration)</option></select></label>
-      </div>
-      <label for="a-about">Tell us about your home<textarea id="a-about" rows="4" placeholder="Who lives with you, other pets, your yard, your schedule…"></textarea></label>
-      <div><button class="btn solid" type="submit">Send application</button></div>
-      <p class="done" id="apply-done" hidden></p>
-    </form>
   </div></div>
 </section>
 
@@ -681,17 +685,19 @@ footer.site .fine { grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,
   <div class="section" style="padding-top:28px"><div class="wrap">
     <p class="draft-note">Draft outline. AK Boston Terriers will write this page; the headings below follow what the status page can do.</p>
     <div class="acc" id="help-acc"></div>
-    <p style="text-align:center;margin-top:28px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap"><a class="btn solid" href="#wl-details">Sign in to see your details</a><a class="btn line" href="#waitlist">Back to the waitlist</a></p>
+    <p id="family-login" style="text-align:center;margin-top:28px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap"><button type="button" class="btn solid" id="signin-btn">Sign in to see your details</button><a class="btn line" href="#waitlist">Back to the waitlist</a></p>
+    <p class="note-sample" id="signin-result" role="status" style="text-align:center"></p>
   </div></div>
 </section>
 </main>
+<dialog class="logo-zoom" id="logo-zoom" aria-label="AK Boston Terriers logo"><form method="dialog"><button class="logo-close" aria-label="Close">×</button></form><img src="img/ak-logo.jpg" alt="AK Boston Terriers logo"></dialog>
 
 <footer class="site">
   <div class="wrap">
-    <div style="display:grid;gap:14px"><a class="brand" href="#home"><svg><use href="#mono"/></svg><div><b>AK Boston Terriers</b><span>The American Gentleman</span></div></a><p class="small" style="color:var(--foot-muted);max-width:36ch">Home-raised, health-tested Boston Terriers, and a family to call on for the life of your dog.</p></div>
+    <div style="display:grid;gap:14px"><a class="brand" href="#home"><span class="brand-logo"><img src="img/ak-logo.jpg" alt="AK Boston Terriers logo"></span><div><b>AK Boston Terriers</b><span>The American Gentleman</span></div></a><p class="small" style="color:var(--foot-muted);max-width:36ch">Home-raised, health-tested Boston Terriers, and a family to call on for the life of your dog.</p></div>
     <div><h4>About us</h4><ul><li><a href="#story">Our story</a></li><li><a href="#reviews">Reviews</a></li><li><a href="#contact">Contact</a></li></ul></div>
     <div><h4>Dogs and puppies</h4><ul><li><a href="#residents">Kennel residents</a></li><li><a href="#available">Available puppies</a></li><li><a href="#upcoming">Upcoming litters</a></li></ul></div>
-    <div><h4>Buying a puppy</h4><ul><li><a href="#steps">How it works</a></li><li><a href="#extras">Extended homegoing</a></li><li><a href="#how-to-pay">How to pay</a></li><li><a href="#policies">Policies</a></li><li><a href="#waitlist">Waitlist</a></li><li><a href="#wl-details">Family login</a></li></ul></div>
+    <div><h4>Buying a puppy</h4><ul><li><a href="#steps">How it works</a></li><li><a href="#extras">Extended homegoing</a></li><li><a href="#how-to-pay">How to pay</a></li><li><a href="#policies">Policies</a></li><li><a href="#waitlist">Waitlist</a></li><li><a href="#family-login">Family login</a></li></ul></div>
     <div class="fine"><span>© 2026 AK Boston Terriers · Sample site</span><span>Made with KennelPort</span></div>
   </div>
 </footer>
@@ -842,19 +848,12 @@ const fmtDate = (ymd) => new Date(ymd + 'T12:00:00').toLocaleDateString('en-US',
 const fmtShort = (ymd) => { const [y, m, d] = ymd.split('-'); return `${m}/${d}/${y}`; };
 $('wl-updated').textContent = `Updated ${fmtDate(WL.as_of)}`;
 $('wl-intro').textContent = WL.intro;
-const testsHtml = (dam, sire) => {
-  const one = (role, id, name) => `<li><strong>${role} ${esc(name)}:</strong> ${(dogById[id]?.tests || []).map(([t, r]) => `${esc(t)}: ${esc(r)}`).join(' · ')}</li>`;
-  const damId = DOGS.find((d) => d.call === dam)?.id; const sireId = 'ruby';
-  return `<details class="small parent-tests"><summary>Health testing</summary><ul>${one('Dam', damId, dam)}${one('Sire', sireId, 'Boone*')}</ul></details>`;
-};
-$('wl-available-list').innerHTML = WL.available.map((l) => `<li><div class="small muted">Boston Terrier</div><div><strong>${esc(l.name)}</strong></div><div class="small">Dam: ${esc(l.dam)} · Sire: ${esc(l.sire)}</div>${l.tests ? testsHtml(l.dam, l.sire) : ''}<div class="small muted">${esc(l.when)}</div><div class="small">${esc(l.left)}</div></li>`).join('');
-$('wl-upcoming-list').innerHTML = WL.upcoming.map((u) => `<li><div class="small muted">Boston Terrier</div><div><strong>${esc(u.name)}</strong></div>${u.dam ? `<div class="small">Dam: ${esc(u.dam)} · Sire: ${esc(u.sire)}</div>` : ''}<div class="small muted">${esc(u.when)}</div></li>`).join('');
 const SEX = { male: 'Male', female: 'Female', any: 'Either' };
 function listHtml(rows, q) {
   q = q.trim().toLowerCase().replace(/^#/, '');
   const shown = rows.filter((r) => !q || r.name.toLowerCase().includes(q) || String(r.position) === q);
   if (!shown.length) return `<p class="muted">No one on the list matches "${esc(q)}".</p>`;
-  const body = shown.map((r) => `<tr${r.deciding ? ' class="deciding"' : ''}><td class="num">#${r.position}</td><td>${r.deciding ? `<em>${esc(r.name)}</em>` : esc(r.name)}</td><td>${r.deciding ? '' : [SEX[r.pref_sex] || 'Either', ...(r.wants_more || [])].map(esc).join(' · ')}</td><td class="tip"><button type="button" class="added-tip" aria-label="Added ${esc(fmtDate(r.added))}" data-tip="Added ${esc(fmtDate(r.added))}">i</button></td></tr>`).join('');
+  const body = shown.map((r) => `<tr${r.deciding ? ' class="deciding"' : ''}><td class="num">#${r.position}</td><td>${r.deciding ? `<em>${esc(r.name)}</em>` : esc(r.name)}</td><td>${[SEX[r.pref_sex] || 'Either', ...(r.wants_more || [])].map(esc).join(' · ')}</td><td class="tip"><button type="button" class="added-tip" aria-label="Added ${esc(fmtDate(r.added))}" data-tip="Added ${esc(fmtDate(r.added))}">i</button></td></tr>`).join('');
   const gaps = rows.some((r, i) => r.position !== i + 1);
   return `<table class="list"><thead><tr><th>#</th><th>Name</th><th>Wants</th><th class="tip"><span class="sr-only">Added</span></th></tr></thead><tbody>${body}</tbody></table>${gaps ? '<p class="small muted" style="margin-top:12px">Note: in special circumstances, some applicant names may not be displayed above. Their place is being held, but they are not currently eligible for available pups.</p>' : ''}`;
 }
@@ -865,8 +864,7 @@ document.addEventListener('click', (ev) => {
   for (const t of document.querySelectorAll('.added-tip.open')) if (t !== tip) t.classList.remove('open');
   if (tip) tip.classList.toggle('open');
 });
-$('code-form').addEventListener('submit', (e) => { e.preventDefault(); $('signin-result').textContent = 'This is a sample site, so there are no real accounts. On the live site, this opens your private status page.'; });
-$('email-form').addEventListener('submit', (e) => { e.preventDefault(); $('signin-result').textContent = 'This is a sample site, so no code was sent. On the live site, a code arrives by email.'; });
+$('signin-btn').addEventListener('click', () => { $('signin-result').textContent = 'This is a sample site, so there are no real accounts. On the live site, Family login opens the sign-in on our KennelOS waitlist page, where a code is emailed to you.'; });
 $('apply').addEventListener('submit', (e) => {
   e.preventDefault();
   const name = $('a-name').value.trim();
@@ -932,6 +930,10 @@ for (const s of document.querySelectorAll('[data-slider]')) {
   s._update = update;
 }
 
+// ---------- Her logo: a tap shows it full size ----------
+const zoom = $('logo-zoom');
+if (zoom.showModal) { $('logo-open').addEventListener('click', (e) => { e.preventDefault(); zoom.showModal(); }); zoom.addEventListener('click', () => zoom.close()); }
+
 // ---------- Menu ----------
 const nav = $('main-nav');
 $('menu-toggle').addEventListener('click', () => { const on = nav.classList.toggle('show'); $('menu-toggle').setAttribute('aria-expanded', on); });
@@ -955,7 +957,6 @@ function route() {
   else if (id === 'residents') { $('dog-filter').value = 'all'; filterDogs(); }
   nav.classList.remove('show'); $('menu-toggle').setAttribute('aria-expanded', 'false');
   for (const o of nav.querySelectorAll('li.open')) o.classList.remove('open');
-  if (id === 'wl-details') $('wl-details').open = true;
   if (id === 'share-review') $('share-review').open = true;
   if (id === 'apply') $('apply').scrollIntoView({ block: 'start' });
   else if (el === view || id === 'girls' || id === 'boys') window.scrollTo({ top: 0, behavior: 'auto' });
@@ -978,6 +979,7 @@ const ORN = {
   lavender: '<g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M14 56 C 34 44, 60 26, 112 6"/><path d="M40 56 C 56 46, 74 36, 104 22"/>' + [[70,26],[80,21],[90,16],[100,11],[108,8],[80,36],[88,32],[96,27]].map(([x, y]) => `<path d="M${x} ${y} l-3 -5 M${x} ${y} l5 -2"/>`).join('') + '</g>',
   fence: '<g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 56 V18 l4 -6 l4 6 V56"/><path d="M52 56 V18 l4 -6 l4 6 V56"/><path d="M92 56 V18 l4 -6 l4 6 V56"/><path d="M2 28 H118 M2 44 H118"/></g>',
   none: '',
+  fleur: '<g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 36 H44"/><path d="M76 36 H116"/><circle cx="48" cy="36" r="1.5"/><circle cx="72" cy="36" r="1.5"/><path d="M60 16 C 55 22, 55 29, 60 35 C 65 29, 65 22, 60 16 Z"/><path d="M59 31 C 53 26, 47 30, 50 35 C 52 38, 56 36, 55 33"/><path d="M61 31 C 67 26, 73 30, 70 35 C 68 38, 64 36, 65 33"/><path d="M54 38 H66"/><path d="M60 38 V45"/></g>',
   mountain: '<g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 54 L28 24 L38 34 L58 10 L80 38 L92 28 L118 54"/><path d="M52 18 l6 -8 l6 9"/><circle cx="100" cy="12" r="5"/></g>'
 };
 const SCHEMES = [
@@ -996,6 +998,9 @@ const SCHEMES = [
   { id: 'slate', name: 'Slate', fonts: ['"DM Serif Display", Georgia, serif', '"Work Sans", system-ui, sans-serif', '"DM Serif Display", Georgia, serif'], fontNames: 'DM Serif Display · Work Sans · no script (DM Serif italic)', w: 400, orn: 'none', ornName: 'no ornaments', r: '0px', scriptStyle: 'italic', scriptSize: '1em',
     light: t('#FFFFFF #F6F7F9 #1E2329 #57616C #DFE3E8 #3A5F82 #FFFFFF #4E6882 #F1F3F6 #1E2329 #EEF1F4 #9AA4AF #2F7550 #8E5B1C'),
     dark: t('#16191D #1F2328 #F1F3F5 #A3ACB6 #343A42 #A9C4DE #12202D #A9C4DE #1B1F23 #0E1012 #F1F3F5 #8A939D #84C9A1 #E3A962') },
+  { id: 'tuxedo', name: 'Tuxedo', fonts: ['"Cinzel", Georgia, serif', '"Lato", system-ui, sans-serif', '"Pinyon Script", cursive'], fontNames: 'Cinzel · Lato · Pinyon Script', w: 500, orn: 'fleur', ornName: 'fleur-de-lis flourish', r: '2px', scriptSize: '1.3em',
+    light: t('#F7F6F3 #FFFFFF #141414 #5A5A58 #D8D7D3 #1C1C1C #FFFFFF #6A6A66 #EDECE8 #111111 #EDEDEA #A3A3A0 #2F6E45 #8A5A1E'),
+    dark: t('#121212 #1C1C1C #EEEEEC #A7A7A3 #343432 #E6E6E3 #121212 #BDBDB8 #171717 #0A0A0A #EEEEEC #8E8E8A #84C49A #E3A962') },
   { id: 'midnight', name: 'Midnight', darkFirst: true, fonts: ['"Cormorant", Georgia, serif', '"Mulish", system-ui, sans-serif', '"Pinyon Script", cursive'], fontNames: 'Cormorant · Mulish · Pinyon Script', w: 600, orn: 'mountain', ornName: 'mountain line', r: '3px', scriptSize: '1.3em',
     light: t('#F4EEDF #FCF8EE #1C2437 #545A68 #DED5BF #7A5B17 #FFFFFF #7A5B17 #EBE3CF #151B2A #F1E9D6 #A49C88 #3E7A4B #8A5A1E'),
     dark: t('#15171B #1E2126 #F1E9D6 #ADA796 #343630 #D9B45A #1A1406 #D9B45A #1A1C20 #0C0D10 #F1E9D6 #8E8878 #8CC79A #E6AE62') }

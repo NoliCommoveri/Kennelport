@@ -1,6 +1,6 @@
 # KennelPort: high-level plan (DRAFT)
 
-> Status: phases 0 to 3 are built (`worker/`); section 8.1 says how phase 3 came together.
+> Status: phases 0 to 3 are built (`worker/`), and phase 5 (albums, videos and posts, sharing) apart from its KennelOS part, which needs phase 4; section 8.1 says how phase 3 came together.
 > Section 8 says what version 1 is; section 9 lists the one decision still open. What comes after version 1 is
 > in [`KennelPort_Backlog.md`](KennelPort_Backlog.md). History of this plan lives in
 > [`BUILD_LOG.md`](BUILD_LOG.md).
@@ -298,6 +298,11 @@ store the HTML a breeder pastes**:
   placeholder: the provider's name and a title the breeder types.
 - If a provider removes an item or changes its embed, the site shows a plain link
   instead of a blank box.
+- **Built in phase 5** for YouTube (videos, Shorts, playlists), Vimeo, TikTok, Instagram
+  (posts, reels) and Facebook (pages, posts, videos), on Home, Our story, and each dog,
+  litter and album (at most 12 in one place); every one also carries an "Open on …"
+  link, so a removed item still leads somewhere. Google Maps, Google Forms and Jotform
+  wait: maps need the town and region only, and the form embeds are backlog (3.8).
 
 **Outside services and libraries.** The template may use any free font, library or
 outside service it needs; the only rule is that it costs nothing. **Fonts and libraries
@@ -732,6 +737,11 @@ section headings and lead lines all have defaults the breeder can reword.
 
 **Look:** a colour scheme (section 3.13) and the kennel's logo. No free colour, font or
 layout controls.
+- **The logo** (built): chosen on Kennel details from the site's photos (or added there),
+  shown in place of the monogram at the top and foot of every page once published.
+  Tapping it in the header opens it full size; the kennel name beside it goes home.
+  A square or diamond logo works best; a clear background stays clear (WebP), and on
+  iPhones, which save JPEG, white goes behind it.
 
 **Fixed by the template:** page layouts, the order of blocks, card shapes and the flip,
 sliding sets, button and link styles, fonts within a scheme, and addresses (section 3.1).
@@ -998,6 +1008,12 @@ Each bundle is applied by these rules (decision 16):
   description), so a link pasted into Facebook, Messenger or a text shows a picture card.
   `cloud/`'s family pages already do this.
 - A **QR code** for each site and album, for printed puppy packets and show tables.
+- **Built in phase 5:** the manage app's **Share** screen lists the published site, its
+  current and planned litters and its albums, each with its link, **Copy link** and a QR
+  code (an SVG drawn by the vendored `qrcode-generator`, MIT, in `src/lib/vendor/`) to
+  download and print. Dog, litter, puppy and album pages carry a **Share** button: the
+  phone's own share sheet, or the link copied. KennelOS shares carrying album links
+  wait for phase 4 (filling `dog.url`).
 
 ### 5.5 KennelOS changes this implies (for the KennelOS repo, later)
 
@@ -1053,10 +1069,10 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `dogs`, `litters`, `puppies` | site_id, slug, content fields, `source` (`kennelport` / `kennelos`), `kennelos_id` when linked, `hidden_by_kennelos` (section 5.3). A dog has a status (`active` / `retired` / `remembered`) and health_display (`normal_only` / `all` / `none`, 3.7); a litter a stage (`planned` / `current` / `past`) and either parent as a site dog or a typed name; a puppy one of 3.6's statuses. The full field list is `worker/src/migrations/0002_content.sql` |
 | `site_pages` | site_id, page key, enabled, menu_label, content (each page's wording, JSON with the keys the content model names, 3.12); order within its menu group comes with phase 6 |
 | `redirects` | site_id, old path, new path (written at publish time) |
-| `embeds` | site_id, page or record it sits on, provider, item id, title, preview photo, order |
+| `embeds` | site_id, place (`home`, `about`, or `dog:`/`litter:`/`album:` and its id), provider, item (read from the pasted link), title, preview_photo_id (the provider's preview, stored on the site), sort |
 | `photos` | site_id, r2_key, thumb_key, type (WebP or JPEG), width, height, bytes, alt text, removed_at; public only when the published snapshot uses it (4.2) |
 | `photo_tags` | site_id, photo_id, subject (`dog:` / `litter:` / `puppy:` / `extra:` + id, or `page:home` / `page:about`): what a photo is of, for the breeder only; never published (4.2) |
-| `albums`, `album_photos` | site_id, title, slug, cover; ordered photo list |
+| `albums` | site_id, slug, title, description, litter_id (its litter's page links to it), cover_photo_id (empty: the first photo), photos (JSON: the ordered photo ids; a removed photo drops out), show_on_site, sort. Built in phase 5 as one table: the ordered list is a JSON column rather than an `album_photos` table |
 | `links` | site_id, token_hash, linked_at, last_bundle_at, last_bundle_summary |
 | `custom_domains` | site_id, hostname, cloudflare_hostname_id, registrar (detected, backlog), status (`pending` / `active` / `stuck` / `broken`), checked_at, connected_at |
 | `health_results` | site_id, dog, test, result, normal, date, verify_url, show (off by default), certificate file (private unless ticked) |
@@ -1192,6 +1208,8 @@ Everything after version 1, with its order and designs, is in
 25. **Colour schemes:** all six ship in version 1: Lawn, Harbor, Heather, Clay, Slate and
     Midnight (design direction section 7), each with light and dark versions. Compared
     side by side in [`reference/scheme-lab.html`](reference/scheme-lab.html).
+    Proposed 2026-11-02: a seventh, **Tuxedo**, made to match the AK logo (design
+    direction section 7), waiting for the owner's yes.
 26. **Where an application goes:** to KennelOS's live list flow whenever the breeder takes
     applications online in KennelOS; to KennelPort's Inbox only when they don't and run
     their list by hand. Worked out by the site, not a choice (section 3.8).

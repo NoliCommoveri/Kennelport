@@ -4,7 +4,7 @@
 // changed; nothing is live until Publish.
 import {
   DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, EXTRA_FIELDS,
-  EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, QUESTION_FIELDS, checkQuestion, ContentError, cleanRecord, cleanValue, slugify,
+  EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue, slugify,
 } from './model.js';
 import { untagStatements } from '../photoTags.js';
 
@@ -12,6 +12,8 @@ const omit = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) 
 
 // Litters name their parents by dog id here (the import uses slugs).
 const LITTER_RECORD_FIELDS = { ...omit(LITTER_FIELDS, ['dam', 'sire']), dam_id: { type: 'dogid' }, sire_id: { type: 'dogid' } };
+// Albums name their litter by id here (the import uses its slug).
+const ALBUM_RECORD_FIELDS = { ...omit(ALBUM_FIELDS, ['litter']), litter_id: { type: 'litterid' } };
 
 // kind → where it lives and what it holds. `scope` is the parent column, if any.
 export const KINDS = {
@@ -22,6 +24,7 @@ export const KINDS = {
   reviews: { table: 'stories', fields: omit(REVIEW_FIELDS, []), label: 'first_name', where: "kind = 'review'", fixed: { kind: 'review', submitted_by: 'breeder' }, defaults: { status: 'approved' } },
   steps: { table: 'steps', fields: STEP_FIELDS, label: 'heading', where: "page = 'how_it_works'", fixed: { page: 'how_it_works' }, defaults: { pay_link: 0 } },
   extras: { table: 'extras', fields: EXTRA_FIELDS, label: 'name', defaults: { featured: 0 }, json: ['checklist'] },
+  albums: { table: 'albums', fields: ALBUM_RECORD_FIELDS, slug: 'title', label: 'title', defaults: { show_on_site: 1 }, json: ['photos'], stamps: true },
   questions: { table: 'form_fields', fields: QUESTION_FIELDS, label: 'label', where: "form = 'application'", fixed: { form: 'application' }, defaults: { required: 0 }, json: ['options'] },
 };
 for (const page of EXPANDER_PAGES) {
@@ -86,6 +89,14 @@ async function checkRefs(env, siteId, k, clean) {
       const ok = await env.DB.prepare('SELECT 1 FROM photos WHERE id = ? AND site_id = ? AND removed_at IS NULL').bind(v, siteId).first();
       if (!ok) throw new ContentError(name, 'that photo is no longer on this site');
     }
+    if (f.type === 'list' && f.item === 'photo' && v.length) {
+      const { results } = await env.DB.prepare(`SELECT id FROM photos WHERE site_id = ? AND removed_at IS NULL AND id IN (${v.map(() => '?').join(', ')})`).bind(siteId, ...v).all();
+      if (results.length !== new Set(v).size) throw new ContentError(name, 'a chosen photo is no longer on this site');
+    }
+    if (f.type === 'litterid') {
+      const ok = await env.DB.prepare('SELECT 1 FROM litters WHERE id = ? AND site_id = ?').bind(v, siteId).first();
+      if (!ok) throw new ContentError(name, 'that litter is no longer on this site');
+    }
     if (f.type === 'dogid') {
       const ok = await env.DB.prepare('SELECT 1 FROM dogs WHERE id = ? AND site_id = ?').bind(v, siteId).first();
       if (!ok) throw new ContentError(name, 'that dog is no longer on this site');
@@ -95,7 +106,7 @@ async function checkRefs(env, siteId, k, clean) {
 
 // Fields the record model knows that cleanValue doesn't: a parent dog by id.
 function cleanFields(fields, input, path) {
-  const plain = Object.fromEntries(Object.entries(fields).map(([n, f]) => [n, f.type === 'dogid' ? { type: 'photo' } : f]));
+  const plain = Object.fromEntries(Object.entries(fields).map(([n, f]) => [n, f.type === 'dogid' || f.type === 'litterid' ? { type: 'photo' } : f]));
   const out = cleanRecord(plain, input, path);
   return out;
 }
@@ -114,6 +125,12 @@ export async function saveRecord(env, siteId, kind, id, input, scopeId = null) {
   const clean = cleanFields(k.fields, input, kind);
   if (kind === 'extras' && clean.price_to !== null && clean.price_from !== null && clean.price_to < clean.price_from) throw new ContentError('price_to', 'lower than the starting price');
   if (kind === 'questions') checkQuestion(clean, 'question');
+  if (kind === 'albums' && clean.photos) clean.photos = [...new Set(clean.photos)];
+  if (kind === 'albums' && !existing) {
+    const lim = await env.DB.prepare('SELECT album_limit FROM sites WHERE id = ?').bind(siteId).first('album_limit');
+    const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM albums WHERE site_id = ?').bind(siteId).first('n');
+    if (lim && n >= lim) throw new ContentError('albums', `this site has reached its limit of ${lim} albums`);
+  }
   await checkRefs(env, siteId, k, clean);
   for (const [c, v] of Object.entries(k.defaults ?? {})) if (clean[c] === null) clean[c] = v;
   for (const c of k.json ?? []) clean[c] = clean[c]?.length ? JSON.stringify(clean[c]) : null;
@@ -163,6 +180,10 @@ export async function removeRecord(env, siteId, kind, id) {
     s.push(env.DB.prepare('DELETE FROM health_results WHERE site_id = ? AND dog_id = ?').bind(siteId, id));
   }
   if (kind === 'litters') s.push(env.DB.prepare('DELETE FROM puppies WHERE site_id = ? AND litter_id = ?').bind(siteId, id));
+  if (kind === 'litters') s.push(env.DB.prepare('UPDATE albums SET litter_id = NULL WHERE site_id = ? AND litter_id = ?').bind(siteId, id));
+  // Videos and posts on a removed dog, litter or album go with it.
+  const place = { dogs: 'dog', litters: 'litter', albums: 'album' }[kind];
+  if (place) s.push(env.DB.prepare('DELETE FROM embeds WHERE site_id = ? AND place = ?').bind(siteId, `${place}:${id}`));
   s.push(env.DB.prepare(`DELETE FROM ${k.table} WHERE id = ? AND site_id = ?${k.where ? ` AND ${k.where}` : ''}`).bind(id, siteId));
   s.push(touch(env, siteId));
   await env.DB.batch(s);
@@ -183,6 +204,7 @@ export async function moveRecord(env, siteId, kind, id, dir, scopeId = null) {
 
 export async function saveSite(env, siteId, input) {
   const clean = cleanRecord(SITE_FIELDS, input, 'site');
+  await checkRefs(env, siteId, { fields: SITE_FIELDS }, clean);
   for (const c of ['dark_mode']) if (clean[c] === null) clean[c] = 'auto';
   if (clean.show_other_prices === null) clean.show_other_prices = 0;
   const cols = Object.keys(clean);

@@ -6,6 +6,30 @@ import {
   litterCard, dogCard, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
   paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
 } from './parts.js';
+import { embedView } from '../embeds.js';
+
+// A Share button (plan 5.4): the phone's own share sheet, or the link copied.
+// Shown only with the template's script.
+const shareRow = (center = false) => `<p class="share-row${center ? ' center' : ''}" data-share-row hidden><button type="button" class="btn line" data-share>Share</button><span class="small muted" role="status"></span></p>`;
+
+// ---------- Videos and posts (plan 3.3) ----------
+// A preview (stored on the site) with a play button, linking to the original. The
+// template's script swaps in the provider's player only when tapped, so nothing
+// from YouTube, Facebook and the rest loads before that.
+function embedBox(snap, e) {
+  const v = embedView(e);
+  if (!v) return '';
+  const pic = img(snap, v.preview_photo_id, { alt: '', cls: 'em-pic' }) ?? `<span class="em-ph">${esc(v.name)}</span>`;
+  const label = v.title ? `${v.title} (${v.name})` : `${v.name} ${v.shape === 'post' ? 'post' : 'video'}`;
+  return `<figure class="em em-${v.shape}"><a class="em-start" href="${attr(v.link)}" rel="noopener noreferrer" target="_blank" data-embed="${attr(v.src)}" aria-label="Play: ${attr(label)}">${pic}<span class="em-play" aria-hidden="true"></span></a>
+    <figcaption><span>${esc(v.title || v.name)}</span><a class="small muted" href="${attr(v.link)}" rel="noopener noreferrer" target="_blank">Open on ${esc(v.name)}</a></figcaption></figure>`;
+}
+export function embedsBlock(snap, place, { heading = 'Videos and posts', band = false, inWrap = false } = {}) {
+  const list = snap.embeds?.[place] ?? [];
+  if (!list.length) return '';
+  const inner = `${head(null, heading)}<div class="ems">${list.map((e) => embedBox(snap, e)).join('')}</div>`;
+  return inWrap ? `<div class="mt-26">${inner}</div>` : `<section class="section${band ? ' band' : ''}"><div class="wrap">${inner}</div></section>`;
+}
 
 const sprigs = '<svg class="sprig l" aria-hidden="true"><use href="#sprig"/></svg><svg class="sprig r" aria-hidden="true"><use href="#sprig"/></svg>';
 const scriptLine = (text, script) => `${esc(text ?? '')}${script ? ` <span class="script">${esc(script)}</span>` : ''}`;
@@ -70,6 +94,8 @@ export function home(snap, ctx) {
     </div></section>`);
   }
 
+  parts.push(embedsBlock(snap, 'home'));
+
   if (h.waitlist.enabled && waitlistOn) {
     parts.push(`<section class="cta"><div class="wrap"><div><h2>${esc(h.waitlist.heading || 'Hoping for a puppy of your own?')}</h2>${h.waitlist.line ? `<p>${esc(h.waitlist.line)}</p>` : ''}</div><a class="btn" href="/waitlist">${esc(h.waitlist.button_label || 'Join the waitlist')}</a></div></section>`);
   }
@@ -87,7 +113,7 @@ export function about(snap, ctx) {
   return {
     title: snap.pages.about.heading || label(snap, 'about'), section: '/about', description: p.lede, image: p.photo_id,
     body: `${pagehead(p, { eyebrow: 'About us', heading: 'Our story' })}
-      <section class="section tight"><div class="wrap ${photo ? 'story' : 'prose'}">${photo}${text}</div></section>`,
+      <section class="section tight"><div class="wrap ${photo ? 'story' : 'prose'}">${photo}${text}</div></section>${embedsBlock(snap, 'about', { band: true })}`,
   };
 }
 
@@ -194,8 +220,9 @@ export function dog(snap, ctx, slug) {
         <span class="eyebrow">${esc([snap.site.breed, d.role].filter(Boolean).join(' · '))}</span><h1>${esc(d.call_name)}</h1>
         ${d.registered_name ? `<p class="reg">${esc(d.registered_name)}</p>` : ''}
         <dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
-        ${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''}${tests}
+        ${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''}${tests}${shareRow()}
       </div></div>
+      ${embedsBlock(snap, `dog:${d.id}`, { inWrap: true })}
       ${litters.length ? `<div class="mt-26">${head('Litters', null)}<div class="litters">${litters.map((l) => litterCard(snap, l, ctx)).join('')}</div></div>` : ''}
     </div></section>`,
   };
@@ -257,9 +284,54 @@ export function litter(snap, ctx, slug) {
     body: `${pagehead({}, { eyebrow: l.stage === 'planned' ? (l.plan_label || 'Planned litter') : l.born_on ? `Born ${fmtDate(l.born_on)}` : 'Litter', heading: l.name, lede })}
       <section class="section tight"><div class="wrap">
         <p class="breadcrumb center"><a href="/litters">${esc(label(snap, 'litters'))}</a></p>
-        <div class="litters">${litterCard(snap, l, ctx, { link: false })}</div>
+        <div class="litters">${litterCard(snap, l, ctx, { link: false })}</div>${shareRow(true)}
         ${pups.length ? `<div class="mt-26 grid">${pups.map((pup) => puppyCard(snap, l, pup, ctx)).join('')}</div>` : ''}
+        ${embedsBlock(snap, `litter:${l.id}`, { inWrap: true })}
+        ${litterAlbums(snap, ctx, l)}
       </div></section>`,
+  };
+}
+
+// ---------- Albums (phase 5) ----------
+// Each photo is a link to its full size; the template's script turns the set into
+// a viewer with previous and next (without it, the link opens the picture).
+
+function albumCard(snap, a) {
+  const cover = img(snap, a.cover_photo_id, { alt: '', thumb: true }) ?? '<div class="ph-photo" aria-hidden="true"></div>';
+  return `<a class="album-card" href="/albums/${attr(a.slug)}">${cover}<span class="album-meta"><b>${esc(a.title)}</b><span class="small muted">${a.photos.length} photo${a.photos.length === 1 ? '' : 's'}</span></span></a>`;
+}
+// A litter's albums, under its card on the litter's page.
+function litterAlbums(snap, ctx, l) {
+  const list = pageOn(snap, 'albums', ctx) ? (snap.albums ?? []).filter((a) => a.litter_id === l.id) : [];
+  return list.length ? `<div class="mt-26">${head('Photos', null)}<div class="albums">${list.map((a) => albumCard(snap, a)).join('')}</div></div>` : '';
+}
+
+export function albums(snap, ctx) {
+  const p = snap.pages.albums;
+  return {
+    title: p.heading || label(snap, 'albums'), section: '/litters', description: p.lede, image: snap.albums[0]?.cover_photo_id,
+    body: `${pagehead(p, { eyebrow: 'Puppies', heading: 'Photo albums' })}
+      <section class="section tight"><div class="wrap"><div class="albums">${snap.albums.map((a) => albumCard(snap, a)).join('')}</div></div></section>`,
+  };
+}
+
+export function album(snap, ctx, slug) {
+  const a = (snap.albums ?? []).find((x) => x.slug === slug);
+  if (!a) return null;
+  const l = a.litter_id && snap.litters.find((x) => x.id === a.litter_id);
+  const photos = a.photos.map((id, i) => {
+    const p = snap.photos[id];
+    return `<a class="gal-item" href="/_kp/p/${attr(encodeURIComponent(id))}" data-gallery${p?.width ? ` data-w="${p.width}" data-h="${p.height}"` : ''}>${img(snap, id, { thumb: true, alt: p?.alt || `${a.title}, photo ${i + 1}` })}</a>`;
+  }).join('');
+  return {
+    title: a.title, section: '/litters', description: a.description || `${a.photos.length} photos from ${snap.site.kennel_name}`, image: a.cover_photo_id,
+    body: `${pagehead({}, { eyebrow: l ? l.name : 'Photo album', heading: a.title, lede: a.description })}
+      <section class="section tight"><div class="wrap">
+        <p class="breadcrumb center">${l && snap.pages.litters.enabled ? `<a href="/litters/${attr(l.slug)}">${esc(l.name)}</a> · ` : ''}<a href="/albums">${esc(label(snap, 'albums'))}</a></p>
+        <div class="gallery">${photos}</div>${shareRow(true)}
+        ${embedsBlock(snap, `album:${a.id}`, { inWrap: true })}
+      </div></section>
+      <dialog class="viewer" id="viewer" aria-label="Photo viewer"><img alt=""><button type="button" class="v-prev" aria-label="Previous photo">‹</button><button type="button" class="v-next" aria-label="Next photo">›</button><button type="button" class="v-close" aria-label="Close">×</button><span class="v-count small"></span></dialog>`,
   };
 }
 
@@ -278,7 +350,7 @@ export function puppy(snap, ctx, litterSlug, slug) {
         <dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
         ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}
         ${p.status === 'available' ? `<p><a class="btn solid" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">Ask about ${esc(p.name)}</a></p>` : ''}
-        ${safeNotice(snap, ctx)}
+        ${safeNotice(snap, ctx)}${shareRow()}
       </div></div>
     </div></section>`,
   };

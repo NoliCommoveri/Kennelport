@@ -31,6 +31,7 @@ export function recordPaths(snap) {
     paths[l.id] = `/litters/${l.slug}`;
     for (const p of l.puppies) paths[p.id] = `/litters/${l.slug}/${p.slug}`;
   }
+  for (const a of snap.albums ?? []) paths[a.id] = `/albums/${a.slug}`;
   return paths;
 }
 
@@ -91,6 +92,22 @@ export async function buildSnapshot(env, siteId) {
     ...keep(x, ['site_id', 'sort', 'source']), featured: Boolean(x.featured), checklist: json(x.checklist, []),
   }));
 
+  // Albums (phase 5): shown ones, their photos still on the site, in order.
+  const livePhotos = new Set((await all('SELECT id FROM photos WHERE site_id = ? AND removed_at IS NULL')).map((p) => p.id));
+  const albums = (await all('SELECT * FROM albums WHERE site_id = ? AND show_on_site = 1 ORDER BY sort, title')).map((a) => {
+    const ids = json(a.photos, []).filter((id) => livePhotos.has(id));
+    const cover = a.cover_photo_id && livePhotos.has(a.cover_photo_id) ? a.cover_photo_id : ids[0] ?? null;
+    return { id: a.id, slug: a.slug, title: a.title, description: a.description, litter_id: litters.some((l) => l.id === a.litter_id) ? a.litter_id : null, cover_photo_id: cover, photos: ids };
+  }).filter((a) => a.photos.length);
+
+  // Videos and posts (plan 3.3), by where they sit; only places still on the site.
+  const shownPlaces = new Set(['home', 'about', ...dogs.map((d) => `dog:${d.id}`), ...litters.map((l) => `litter:${l.id}`), ...albums.map((a) => `album:${a.id}`)]);
+  const embeds = {};
+  for (const e of await all('SELECT * FROM embeds WHERE site_id = ? ORDER BY place, sort, created_at')) {
+    if (!shownPlaces.has(e.place)) continue;
+    (embeds[e.place] ??= []).push({ id: e.id, provider: e.provider, item: e.item, title: e.title, preview_photo_id: e.preview_photo_id && livePhotos.has(e.preview_photo_id) ? e.preview_photo_id : null });
+  }
+
   // The application form's questions (plan 3.8), in order.
   const questions = (await all("SELECT * FROM form_fields WHERE site_id = ? AND form = 'application' ORDER BY sort")).map((q) => ({
     id: q.id, type: q.type, label: q.label, hint: q.hint, required: Boolean(q.required), options: json(q.options, null),
@@ -117,6 +134,9 @@ export async function buildSnapshot(env, siteId) {
   (home.hero.photos ?? []).forEach(use);
   use(home.story.photo_id);
   use(pages.about.photo_id);
+  use(site.logo_photo_id);
+  albums.forEach((a) => a.photos.forEach(use));
+  Object.values(embeds).flat().forEach((e) => use(e.preview_photo_id));
   const photoRows = used.size
     ? (await db.prepare(`SELECT * FROM photos WHERE site_id = ? AND removed_at IS NULL AND id IN (${[...used].map(() => '?').join(', ')})`).bind(siteId, ...used).all()).results
     : [];
@@ -127,7 +147,7 @@ export async function buildSnapshot(env, siteId) {
     built_at: new Date().toISOString(),
     site: {
       id: site.id, subdomain: site.subdomain, kennel_name: site.kennel_name ?? site.subdomain, tagline: site.tagline, blurb: site.blurb,
-      breed: site.breed, monogram: site.monogram, town: site.town, region: site.region, contact_email: site.contact_email,
+      breed: site.breed, monogram: site.monogram, logo_photo_id: site.logo_photo_id, town: site.town, region: site.region, contact_email: site.contact_email,
       contact_phone: site.contact_phone, facebook_url: site.facebook_url, facebook_label: site.facebook_label,
       instagram_url: site.instagram_url, template: site.template, scheme: site.scheme, dark_mode: site.dark_mode,
       show_other_prices: Boolean(site.show_other_prices),
@@ -135,7 +155,7 @@ export async function buildSnapshot(env, siteId) {
       // the menu's and the status-page help's Family login link.
       family_login: kennelosOrigin(env) && site.kennelos_public_id ? `${kennelosOrigin(env)}/list/${encodeURIComponent(site.kennelos_public_id)}#signin` : null,
     },
-    pages, home, dogs, litters, reviews, steps, expanders, extras, payment, questions, photos,
+    pages, home, dogs, litters, reviews, steps, expanders, extras, payment, questions, albums, embeds, photos,
   };
 }
 
