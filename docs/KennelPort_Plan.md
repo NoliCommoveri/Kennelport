@@ -765,9 +765,12 @@ dark first: it shows dark unless the visitor's device asks for light explicitly.
   actually got, and encodes JPEG (quality about 0.85) whenever it isn't WebP. iPhone
   photos stored as HEIC reach the page as JPEG through the photo picker; anything the
   browser can't decode gets a plain message ("This photo couldn't be read; try a
-  screenshot of it or a different photo"). Adding photos from the camera roll is the job
-  breeders do most from a phone, so it's tried on real phones: an Android phone worked
-  (2026-11-02); a real iPhone is still to do, and phase 2 isn't done until it has.
+  screenshot of it or a different photo"). Apple's JPEG encoder also writes a small EXIF
+  block (size and colour; no location, since a canvas holds only pixels), which the
+  server refuses, so the browser drops it before uploading. Adding photos from the
+  camera roll is the job breeders do most from a phone, so it's tried on real phones: an
+  Android phone worked (2026-11-02); the first real iPhone try found the EXIF block, and
+  phase 2 is done once an iPhone upload works with that fix.
 - **On the server, too:** the browser step can be skipped by anyone calling the upload
   API directly, so the server checks every upload itself: only WebP or JPEG accepted for
   photos, within a maximum size and pixel dimensions; a WebP carrying an `EXIF` or `XMP`

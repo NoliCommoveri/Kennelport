@@ -15,6 +15,7 @@ import { buildSnapshot, loadSnapshot, publish, undoPublish, listSnapshots } from
 import { changes } from '../diff.js';
 import { makePreviewToken } from '../site.js';
 import { siteLink } from '../ops/sites.js';
+import { APP_VERSION } from './version.js';
 import { STATUS_TEXT, SAFE_NOTICE_TEXT } from '../render/parts.js';
 import { exportContent } from '../content/io.js';
 import { closeSite, SiteError } from '../sites.js';
@@ -564,7 +565,7 @@ export function createScreens({ env, request, url, site, user, page }) {
             <button>Delete my site</button></form>`
           : `<p>For safety, deleting needs a fresh sign-in. <form method="post" action="/signout" class="inline"><button class="link">Sign out</button></form>, sign in again, then come back here within 15 minutes.</p>`}
         </section>` : ''}
-        <script src="/_kp/m/zip.js" defer></script>`,
+        <script src="/_kp/m/zip.js?v=${APP_VERSION}" defer></script>`,
     });
     if (rest === '/delete' && request.method === 'POST') {
       if (!owner) return { title: 'Your site', back: base, body: '<p class="error">Only the owner can delete the site.</p>' };

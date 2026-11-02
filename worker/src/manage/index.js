@@ -156,7 +156,8 @@ function manifest() {
 
 async function serviceWorker(env, request) {
   const res = await env.ASSETS.fetch(new Request(new URL('/_kp/m/sw.js', request.url)));
-  return new Response(res.body, { status: res.status, headers: { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache', 'service-worker-allowed': '/' } });
+  const body = res.ok ? (await res.text()).replaceAll('__APP_VERSION__', APP_VERSION) : res.body;
+  return new Response(body, { status: res.status, headers: { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache', 'service-worker-allowed': '/' } });
 }
 
 // ---------- routes ----------

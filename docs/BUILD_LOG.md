@@ -472,3 +472,29 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   deploy replaces plain variables with the file's, so a dashboard copy would be lost.
   Setup step 5 now says so. Staging has no Turnstile key yet and relies on the honeypot
   and rate limits.
+
+## 2026-11-02: the first real iPhone upload
+
+- On a real iPhone (Chrome, which on iOS is WebKit like every iPhone browser) every
+  upload was refused: "still carries its camera data". WebKit can't make WebP, so the
+  JPEG fallback ran, and Apple's JPEG encoder adds an APP1 EXIF block (size and colour;
+  no location, the canvas holds only pixels). The browser now drops APP1 segments
+  before uploading, in the manage app and the site's review form (`stripJpegMeta`, the
+  same in both; `tests/jpegmeta.test.js` runs both copies against the server's check).
+  The server still refuses any APP1.
+- Manage app version 7 (service worker cache bumped) and template assets version 5, so
+  phones pick up the fix.
+- 90 tests. To try again on the iPhone once deployed.
+
+## 2026-11-02: one version number each, and a test for a missing bump
+
+- The manage app's service worker gets its version from `APP_VERSION`
+  (`src/manage/version.js`) as the Worker serves `/sw.js`, so that's the only number to
+  change; `zip.js` is now asked for with `?v=` too. The template's `ASSET_VERSION` moved
+  to `src/render/version.js`.
+- Each version sits beside a fingerprint of its files (`scripts/fingerprint.mjs`).
+  `tests/versions.test.js` fails when files under `public/_kp/m/` or `public/_kp/t/`
+  change and the version doesn't, and says how to bump.
+- `CLAUDE.md` (new, repo root): ask the owner before every bump; a failing versions
+  test is the cue to ask, not to bump.
+- 93 tests.

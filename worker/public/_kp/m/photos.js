@@ -12,6 +12,26 @@
 //   tells the form's Save to tag it too (for a record not saved yet). Nothing
 //   else in the form is touched, so what's been typed stays.
 (() => {
+  // strip-jpeg-meta:start (the same in public/_kp/m/photos.js and public/_kp/t/ak/site.js;
+  // tests/jpegmeta.test.js checks both). iPhone browsers can't make WebP, and Apple's
+  // JPEG encoder adds an EXIF block (APP1: size and colour, never location, since the
+  // canvas holds only pixels). The server refuses any APP1, so drop it here.
+  async function stripJpegMeta(b) {
+    if (!b || b.type !== 'image/jpeg') return b;
+    const u = new Uint8Array(await b.arrayBuffer());
+    if (u[0] !== 0xff || u[1] !== 0xd8) return b;
+    const parts = [u.subarray(0, 2)];
+    let i = 2;
+    while (i + 4 <= u.length && u[i] === 0xff && u[i + 1] !== 0xda) {
+      const end = i + 2 + ((u[i + 2] << 8) | u[i + 3]);
+      if (u[i + 1] !== 0xe1) parts.push(u.subarray(i, end));
+      i = end;
+    }
+    parts.push(u.subarray(i));
+    return new Blob(parts, { type: 'image/jpeg' });
+  }
+  // strip-jpeg-meta:end
+
   async function encode(bitmap, side) {
     const scale = Math.min(1, side / Math.max(bitmap.width, bitmap.height));
     const w = Math.max(1, Math.round(bitmap.width * scale));
@@ -21,7 +41,7 @@
     canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
     const blob = (type, q) => new Promise((resolve) => canvas.toBlob(resolve, type, q));
     let b = await blob('image/webp', 0.82);
-    if (!b || b.type !== 'image/webp') b = await blob('image/jpeg', 0.85);
+    if (!b || b.type !== 'image/webp') b = await stripJpegMeta(await blob('image/jpeg', 0.85));
     return b;
   }
 
