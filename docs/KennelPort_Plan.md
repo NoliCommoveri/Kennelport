@@ -968,6 +968,16 @@ Each bundle is applied by these rules (decision 16):
 
 - **Matching:** records are matched by their KennelOS id (`kennelos_id`), never by name
   after the first link.
+- **Upcoming litters change record in KennelOS** (a heat event, then a pairing, then a
+  litter, each with its own id), so two rules keep the website's planned litter:
+  - *Pairing to litter:* a KennelOS litter carries its `pairing_id`, so the bundle sends
+    it and KennelPort moves the website litter matched to that pairing onto the litter's
+    id, keeping its photos, wording and address. Nothing is hidden or created.
+  - *Heats:* a planned heat is its own entry and is never carried over. It shows for as
+    long as the Coming up switch allows, even when the dam has a litter on the ground,
+    and leaves the bundle only once its date is past **and** the dam has a litter after
+    it. (KennelOS's public list drops a heat as soon as its date passes; the bundle keeps
+    it until the litter arrives, so the site doesn't go quiet between heat and litter.)
 - **Updated:** for a matched record, the KennelOS-owned fields (list below) are replaced
   with the bundle's values. KennelPort-only fields (bio, photos, albums, order, embeds)
   are never touched.
