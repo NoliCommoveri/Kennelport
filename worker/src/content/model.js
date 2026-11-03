@@ -145,6 +145,23 @@ export const EXTRA_FIELDS = {
   featured: BOOL,
 };
 
+// Recommended products (the /recommended page): food, gear and the like she
+// suggests, each with an optional referral link and code. Up to HOME_BADGES_MAX
+// with home_badge on also show as a logo right under the banner on Home, linked
+// the same way.
+export const HOME_BADGES_MAX = 2;
+export const PRODUCT_FIELDS = {
+  name: S(80, { required: true }),
+  grp: S(40),
+  description: ML(600),
+  photo_id: { type: 'photo' },
+  link_url: URL_,
+  link_label: S(40),
+  code: S(40),
+  code_note: S(120),
+  home_badge: BOOL,
+};
+
 // The Home collage (top of the page): pre-drawn layouts, each a list of box
 // shapes in box order. The breeder picks a layout, then a photo for each box, so
 // a wide photo goes in a wide box and isn't cut off at both sides. With fewer
@@ -271,6 +288,7 @@ export const PAGES = {
   older:          { path: '/litters/older', group: 'puppies', label: 'Older puppies', canHide: true, fields: { ...HEAD } },
   how_it_works:   { path: '/how-it-works', group: 'how', label: 'The steps', canHide: true, fields: { ...HEAD } },
   extras:         { path: '/extras', group: 'how', label: 'Extras', canHide: true, fields: { ...HEAD, note: ML(300) } },
+  products:       { path: '/recommended', group: 'how', label: 'Recommended products', canHide: true, fields: { ...HEAD, note: ML(300) } },
   policies:       { path: '/policies', group: 'how', label: 'Policies', canHide: true, fields: { ...HEAD } },
   faq:            { path: '/faq', group: 'how', label: 'FAQ', canHide: true, fields: { ...HEAD } },
   waitlist:       { path: '/waitlist', group: 'waitlist', label: 'Waitlist', canHide: true, fields: { ...HEAD, closed: BOOL, closed_message: ML(400), form_heading: S(80), form_intro: ML(300), offer_message: ML(600) } },

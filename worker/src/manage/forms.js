@@ -75,6 +75,14 @@ const LABELS = {
     weeks: ['Weeks (homegoing packages)', null], lead_in: ['Line above the checklist', 'For example "Your puppy will continue receiving:".'],
     checklist: ['What\'s included', 'One item per line.'], closing: ['Closing paragraph', null], featured: ['Mark as "most complete"', null],
   },
+  products: {
+    name: ['Name', 'For example "TLC Puppy Food".'], grp: ['Group', 'Optional, a small label above the name, like "Food" or "Toys".'],
+    photo_id: ['Picture', 'A logo or product photo. Pasting the embed code below copies theirs when it\'s a JPEG or WebP; otherwise download it from their page and choose it here.'],
+    link_url: ['Your referral link', 'Where tapping it goes, in a new tab.'], link_label: ['Button wording', 'Leave empty for "Shop now".'],
+    code: ['Discount or referral code', 'For example "AKBOSTON10". Shown as "Use code …".'], code_note: ['Line after the code', 'For example "for 10% off your first order".'],
+    home_badge: ['Show as a badge on my home page', 'Its picture shows right under your banner, linked to your referral link. Up to 2; they sit side by side, on phones too.'],
+  },
+  products_page: { note: ['Note under the products', 'For example "We may earn a small commission when you order through these links."'] },
   hero: {
     banner_photo_id: ['Banner photo', 'A wide strip right under the menu, across the whole page. Make it 1600 × 640 px (5:2) for a sharp fit. "No photo" for none.'],
     banner_focus: ['Banner: which part to keep', 'If the photo is taller than the strip: the part that shows.'],

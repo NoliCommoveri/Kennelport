@@ -97,6 +97,9 @@ export async function buildSnapshot(env, siteId) {
   const extras = (await all('SELECT * FROM extras WHERE site_id = ? ORDER BY sort')).map((x) => ({
     ...keep(x, ['site_id', 'sort', 'source']), featured: Boolean(x.featured), checklist: json(x.checklist, []),
   }));
+  const products = (await all('SELECT * FROM products WHERE site_id = ? ORDER BY sort')).map((x) => ({
+    ...keep(x, ['site_id', 'sort', 'source']), home_badge: Boolean(x.home_badge),
+  }));
 
   // Albums (phase 5): shown ones, their photos still on the site, in order.
   const livePhotos = new Set((await all('SELECT id FROM photos WHERE site_id = ? AND removed_at IS NULL')).map((p) => p.id));
@@ -137,6 +140,7 @@ export async function buildSnapshot(env, siteId) {
   litters.forEach((l) => l.puppies.forEach((p) => use(p.photo_id)));
   reviews.forEach((r) => use(r.photo_id));
   extras.forEach((x) => use(x.photo_id));
+  products.forEach((x) => use(x.photo_id));
   (home.hero.photos ?? []).forEach(use);
   use(home.hero.banner_photo_id);
   use(home.story.photo_id);
@@ -162,7 +166,7 @@ export async function buildSnapshot(env, siteId) {
       // the menu's and the status-page help's Family login link.
       family_login: kennelosOrigin(env) && site.kennelos_public_id ? `${kennelosOrigin(env)}/list/${encodeURIComponent(site.kennelos_public_id)}#signin` : null,
     },
-    pages, home, dogs, litters, reviews, steps, expanders, extras, payment, questions, albums, embeds, photos,
+    pages, home, dogs, litters, reviews, steps, expanders, extras, products, payment, questions, albums, embeds, photos,
   };
 }
 

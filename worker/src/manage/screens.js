@@ -21,6 +21,7 @@ import { exportContent } from '../content/io.js';
 import { closeSite, SiteError } from '../sites.js';
 import { listEmbeds, addEmbed, removeEmbed, moveEmbed, EmbedError, EMBEDS_PER_PLACE } from '../embedStore.js';
 import { PROVIDERS } from '../embeds.js';
+import { readBadgeCode, storeBadgeImage, BadgeCodeError } from '../badgeCode.js';
 import { qrSvg } from '../qr.js';
 import { readFeed, parseFeedAddress, setFeed, FeedError, kennelosOrigin, kennelosState } from '../feed.js';
 import {
@@ -74,16 +75,20 @@ const LISTS = {
   reviews: { title: 'Reviews', one: 'review', name: (r) => r.first_name, sub: (r) => (r.status === 'hidden' ? 'hidden' : r.quote.slice(0, 60)) },
   steps: { title: 'How it works', one: 'step', name: (r) => r.heading, sub: () => '' },
   extras: { title: 'Extras', one: 'extra', name: (r) => r.name, sub: (r) => (r.kind === 'homegoing' ? `${r.weeks ?? ''}-week package` : r.grp ?? '') },
+  products: { title: 'Recommended products', one: 'product', name: (r) => r.name, sub: (r) => [r.grp, r.code ? `code ${r.code}` : null, r.home_badge ? 'home page badge' : null].filter(Boolean).join(' · ') },
   policies: { title: 'Policies', one: 'policy', name: (r) => r.heading, sub: () => '' },
   faq: { title: 'FAQ', one: 'question', name: (r) => r.heading, sub: () => '' },
   waitlist_help: { title: 'Using your status page', one: 'section', name: (r) => r.heading, sub: () => '' },
   albums: { title: 'Albums', one: 'album', name: (r) => r.title, sub: (r) => [`${(r.photos ?? []).length} photo${(r.photos ?? []).length === 1 ? '' : 's'}`, r.show_on_site ? null : 'hidden'].filter(Boolean).join(' · ') },
   questions: { title: 'Application questions', one: 'question', name: (r) => r.label, sub: (r) => [QUESTION_WORDS[r.type], r.required ? 'must answer' : 'optional'].join(' · ') },
 };
+// Under a product's fields: the brand's embed code, read for its link and picture
+// (badgeCode.js), never kept.
+const BADGE_CODE_FIELD = `<label for="f-badge_code">Or paste the embed code they gave you<span class="hint">The HTML from the brand's referral page, starting with &lt;a href=. It fills in your referral link and the picture (copied onto your site). The code itself isn't kept.</span><textarea id="f-badge_code" name="_badge_code" rows="4" autocapitalize="none" spellcheck="false" placeholder="&lt;a href=&quot;https://…&quot;&gt;&lt;img src=&quot;https://…&quot;&gt;&lt;/a&gt;"></textarea></label>`;
 const QUESTION_WORDS = { text: 'Short answer', paragraph: 'Longer answer', choice: 'Choice', yes_no: 'Yes or no', litter: 'Which litter', phone: 'Phone', town: 'Town' };
 const FORM_KIND = { policies: 'expander', faq: 'expander', waitlist_help: 'expander' };
 // The kinds whose records a photo can be of (photoTags.js).
-const SUBJECT_OF = { dogs: 'dog', litters: 'litter', puppies: 'puppy', extras: 'extra' };
+const SUBJECT_OF = { dogs: 'dog', litters: 'litter', puppies: 'puppy', extras: 'extra', products: 'product' };
 const BLOCK_TITLES = { hero: 'Top of the page', facts: 'Facts row', story: 'Story', dogs: 'Dogs row', litters: 'Litters', reviews: 'Reviews', waitlist: 'Waitlist band' };
 
 export function createScreens({ env, request, url, site, user, page }) {
@@ -109,6 +114,22 @@ export function createScreens({ env, request, url, site, user, page }) {
   // photos button, are tagged as being of what was saved.
   const photoValues = (list, values) => Object.entries(list).flatMap(([n, f]) => (f.type === 'photo' ? [values[n]] : f.type === 'list' && f.item === 'photo' ? values[n] ?? [] : [])).filter(Boolean);
   const tagFromForm = (list, values, fd, subs) => tagPhotos(env, site.id, [...photoValues(list, values), ...fd.getAll('_new_photos')], subs);
+
+  // A pasted embed code fills in the product's link and picture (and its name, if
+  // empty). Its errors read as the form's.
+  async function fromBadgeCode(fd, values) {
+    const code = String(fd.get('_badge_code') ?? '').trim();
+    if (!code) return;
+    try {
+      const { link, image, alt } = readBadgeCode(code);
+      if (link) values.link_url = link;
+      if (!values.name && alt) values.name = alt;
+      if (image) values.photo_id = await storeBadgeImage(env, site.id, image, alt ?? values.name ?? '');
+    } catch (err) {
+      if (err instanceof BadgeCodeError) throw new ContentError('embed code', err.message);
+      throw err;
+    }
+  }
 
   let kosCache = null;
   const kos = async () => (kosCache ??= await kennelosState(env, site.id));
@@ -339,7 +360,7 @@ export function createScreens({ env, request, url, site, user, page }) {
       const lock = rec ? await lockedFor(kind, rec) : null;
       const from = lock ? `<p class="notice">This ${esc(L.one)} comes from KennelOS. What's marked "from KennelOS" changes there, then Update website; everything else here is yours.</p>` : '';
       const body = `${from}${errorBox(err)}<form method="post" action="${esc(action)}" data-save class="card">${fields(formFields, values ?? rec ?? { ...(k.defaults ?? {}) }, { ...await ctxFor(formKind, pickFor(rec)), locked: lock })}
-        <button class="primary">${rec ? 'Save' : `Add ${L.one}`}</button></form>
+        ${kind === 'products' ? BADGE_CODE_FIELD : ''}<button class="primary">${rec ? 'Save' : `Add ${L.one}`}</button></form>
         ${rec ? `<form method="post" action="${esc(`${path}/${rec.id}/remove`)}" class="card danger"><p class="muted small">Removing takes it off your draft; it stays on the live site until you publish.</p><button>Remove this ${L.one}</button></form>` : ''}`;
       return { title: rec ? L.name(rec) : `New ${L.one}`, back: path, body };
     };
@@ -358,7 +379,9 @@ export function createScreens({ env, request, url, site, user, page }) {
       const fd = await request.formData();
       const values = parseForm(formFields, fd);
       let saved;
-      try { saved = await saveRecord(env, site.id, kind, null, values, scopeId); } catch (err) {
+      try {
+        if (kind === 'products') await fromBadgeCode(fd, values);
+        saved = await saveRecord(env, site.id, kind, null, values, scopeId); } catch (err) {
         if (err instanceof ContentError) return form(null, err.message, values);
         throw err;
       }
@@ -386,7 +409,9 @@ export function createScreens({ env, request, url, site, user, page }) {
     const values = parseForm(formFields, fd);
     // KennelOS's fields keep what's stored, whatever the form sent.
     for (const f of await lockedFor(kind, rec) ?? []) values[f] = rec[f];
-    try { await saveRecord(env, site.id, kind, rec.id, values, scopeId); } catch (err) {
+    try {
+      if (kind === 'products') await fromBadgeCode(fd, values);
+      await saveRecord(env, site.id, kind, rec.id, values, scopeId); } catch (err) {
       if (err instanceof ContentError) return form(rec, err.message, values);
       throw err;
     }
@@ -519,7 +544,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     const render = async (err, values) => ({
       title: p.label, back: `${base}/pages`,
       body: `${note(url)}${key === 'waitlist' ? kennelos ?? await kennelosCard() : ''}${errorBox(err)}<form method="post" action="${base}/pages/${key}" data-save class="card">
-        ${p.canHide ? fieldsWithLabel(all, values ?? current, await ctxFor(key === 'extras' ? 'extras_page' : key, pick), { enabled: ['This page is on', 'Off: it leaves the menu and its address says "This page isn\'t available". Its words are kept.'], menu_label: ['Name in the menu', `Leave empty for "${p.label}".`] }) : fieldsWithLabel(all, values ?? current, await ctxFor(key, pick), { menu_label: ['Name in the menu', `Leave empty for "${p.label}".`] })}
+        ${p.canHide ? fieldsWithLabel(all, values ?? current, await ctxFor(key === 'extras' ? 'extras_page' : key === 'products' ? 'products_page' : key, pick), { enabled: ['This page is on', 'Off: it leaves the menu and its address says "This page isn\'t available". Its words are kept.'], menu_label: ['Name in the menu', `Leave empty for "${p.label}".`] }) : fieldsWithLabel(all, values ?? current, await ctxFor(key, pick), { menu_label: ['Name in the menu', `Leave empty for "${p.label}".`] })}
         <button class="primary">Save</button></form>
         ${key === 'waitlist' ? await waitlistLinks() : listLinkFor(key)}${key === 'about' ? await embedsCard('about', `${base}/pages/about`, embedErr()) : ''}`,
     });
@@ -548,7 +573,7 @@ export function createScreens({ env, request, url, site, user, page }) {
   }
 
   const listLinkFor = (key) => {
-    const kind = { reviews: 'reviews', how_it_works: 'steps', extras: 'extras', policies: 'policies', faq: 'faq', waitlist_help: 'waitlist_help', dogs: 'dogs', litters: 'litters', waitlist: 'questions', albums: 'albums' }[key];
+    const kind = { reviews: 'reviews', how_it_works: 'steps', extras: 'extras', products: 'products', policies: 'policies', faq: 'faq', waitlist_help: 'waitlist_help', dogs: 'dogs', litters: 'litters', waitlist: 'questions', albums: 'albums' }[key];
     if (!kind) return '';
     const href = ['dogs', 'litters'].includes(kind) ? `${base}/${kind}` : `${base}/lists/${kind}`;
     return `<p><a class="button" href="${esc(href)}">Edit the ${esc(LISTS[kind].title.toLowerCase())} on this page</a></p>`;
@@ -1038,7 +1063,7 @@ export function createScreens({ env, request, url, site, user, page }) {
         if (view && !(view instanceof Response)) view = await litterPhotos(await withChildren(view, `${base}/litters/${view.rec?.id}/puppies`, 'puppies', 'Puppies'));
       }
     } else {
-      const lm = p.match(/^\/lists\/(reviews|steps|extras|policies|faq|waitlist_help|questions|albums)(\/|$)/);
+      const lm = p.match(/^\/lists\/(reviews|steps|extras|products|policies|faq|waitlist_help|questions|albums)(\/|$)/);
       if (lm) view = await collection(`${base}/lists/${lm[1]}`, lm[1], null, { back: lm[1] === 'questions' ? `${base}/pages/waitlist` : `${base}/pages` });
     }
     if (!view) return null;
