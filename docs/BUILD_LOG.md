@@ -771,4 +771,5 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - New `hero` keys: `banner_photo_id`, `banner_focus`, `layout`, `frame`, `focus`
   (per box); `photos` now in box order, up to 4. No migration (block content is JSON).
 - Checked in Chromium at phone and computer widths, light and dark. 140 tests; template
-  and manage app files changed, versions not bumped yet.
+  and manage app files changed.
+- Released as site template 9 and manage app 11 (fingerprints updated).
