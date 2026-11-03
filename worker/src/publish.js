@@ -12,6 +12,7 @@
 // The last KEEP snapshots are kept; older ones are deleted from D1 and R2.
 import { HOME_BLOCK_ORDER, PAGES, PAYMENT_KINDS, ALBUM_PHOTOS_MAX } from './content/model.js';
 import { kennelosOrigin } from './feed.js';
+import { chunks, placeholders } from './lib/sql.js';
 
 export const SNAPSHOT_VERSION = 1;
 export const KEEP = 10;
@@ -99,7 +100,7 @@ export async function buildSnapshot(env, siteId) {
         delete out[`${role}_id`];
       }
     }
-    // Spoken-for (placed) puppies stay off with the litter's Show spoken-for
+    // Placed (reads Reserved) puppies stay off with the litter's Show placed
     // puppies off (plan 3.6).
     out.puppies = puppies.filter((p) => p.litter_id === l.id && (l.show_placed || p.status !== 'placed'))
       .map((p) => {
@@ -180,9 +181,12 @@ export async function buildSnapshot(env, siteId) {
   use(site.logo_photo_id);
   albums.forEach((a) => a.photos.forEach(use));
   Object.values(embeds).flat().forEach((e) => use(e.preview_photo_id));
-  const photoRows = used.size
-    ? (await db.prepare(`SELECT * FROM photos WHERE site_id = ? AND removed_at IS NULL AND id IN (${[...used].map(() => '?').join(', ')})`).bind(siteId, ...used).all()).results
-    : [];
+  // In slices: D1 takes at most 100 parameters a statement, and one album alone
+  // can hold 300 photos.
+  const photoRows = [];
+  for (const part of chunks([...used])) {
+    photoRows.push(...(await db.prepare(`SELECT * FROM photos WHERE site_id = ? AND removed_at IS NULL AND id IN (${placeholders(part)})`).bind(siteId, ...part).all()).results);
+  }
   const photos = Object.fromEntries(photoRows.map((p) => [p.id, { key: p.r2_key, thumb: p.thumb_key, type: p.type, width: p.width, height: p.height, alt: p.alt ?? '' }]));
 
   return {

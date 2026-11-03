@@ -7,6 +7,7 @@ import {
   EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue, slugify,
 } from './model.js';
 import { untagStatements } from '../photoTags.js';
+import { chunks, placeholders } from '../lib/sql.js';
 import { litterClockStatements } from '../kennelos/clock.js';
 
 const omit = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) => !keys.includes(k)));
@@ -97,8 +98,12 @@ async function checkRefs(env, siteId, k, clean) {
       if (!ok) throw new ContentError(name, 'that photo is no longer on this site');
     }
     if (f.type === 'list' && f.item === 'photo' && v.length) {
-      const { results } = await env.DB.prepare(`SELECT id FROM photos WHERE site_id = ? AND removed_at IS NULL AND id IN (${v.map(() => '?').join(', ')})`).bind(siteId, ...v).all();
-      if (results.length !== new Set(v).size) throw new ContentError(name, 'a chosen photo is no longer on this site');
+      const unique = [...new Set(v)];
+      let found = 0;
+      for (const part of chunks(unique)) {
+        found += (await env.DB.prepare(`SELECT id FROM photos WHERE site_id = ? AND removed_at IS NULL AND id IN (${placeholders(part)})`).bind(siteId, ...part).all()).results.length;
+      }
+      if (found !== unique.length) throw new ContentError(name, 'a chosen photo is no longer on this site');
     }
     if (f.type === 'litterid') {
       const ok = await env.DB.prepare('SELECT 1 FROM litters WHERE id = ? AND site_id = ?').bind(v, siteId).first();

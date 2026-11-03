@@ -196,12 +196,17 @@ test('KennelOS fields are read-only while linked; her own fields are hers', asyn
   assert.match(form, /Brindle <span class="muted small">· from KennelOS/);
   assert.doesNotMatch(form, /name="call_name"/);
   assert.match(form, /name="bio"/);
-  assert.equal((await b.post(`/dogs/${id}`, { call_name: 'Changed', color: 'Red', sex: 'male', bio: 'Her words', slug: 'nova', show_on_site: '1' })).status, 303);
+  assert.match(form, /name="weight"/);
+  assert.equal((await b.post(`/dogs/${id}`, { call_name: 'Changed', color: 'Red', sex: 'male', bio: 'Her words', weight: '22 lb', slug: 'nova', show_on_site: '1' })).status, 303);
   const d = b.row('SELECT * FROM dogs WHERE id = ?', id);
   assert.equal(d.call_name, 'Nova');
   assert.equal(d.color, 'Brindle');
   assert.equal(d.sex, 'female');
   assert.equal(d.bio, 'Her words');
+  assert.equal(d.weight, '22 lb');
+  // Weight is hers alone: the next bundle leaves it.
+  await api(b.env, '/v1/bundle', { body: bundle({ dogs: [DOG('d1', 'Nova', { color: 'Brindle' })] }), token });
+  assert.equal(b.row('SELECT weight FROM dogs WHERE id = ?', id).weight, '22 lb');
 });
 
 test('matching what is already there: asked, field by field, and never twice for a declined pair', async () => {
@@ -327,11 +332,12 @@ test('the hand-over: a kept puppy becomes a dog with its photos, and the litter 
   await send(bundle({ dogs: [DOG('d-nova', 'Nova')], litters: [{ id: 'l1', dam_id: 'd-nova', dam_name: 'Nova', born_on: '2026-01-01', puppies: [{ id: 'k1', name: 'Fern', sex: 'female', status: 'staying' }, { id: 'k2', name: 'Moss', sex: 'male', status: 'placed' }] }] }));
   const fern = b.row("SELECT * FROM puppies WHERE kennelos_id = 'k1'");
   const moss = b.row("SELECT * FROM puppies WHERE kennelos_id = 'k2'");
-  // Placed reads Spoken for: still here, not available to anyone else.
+  // Placed reads Reserved: still here, not available to anyone else.
   await b.post('/publish');
   const card = await b.page(`/litters/${b.row("SELECT slug FROM litters WHERE kennelos_id = 'l1'").slug}`);
-  assert.match(card, /Spoken for/);
-  assert.doesNotMatch(card, /Gone to a new home|Placed/);
+  assert.match(card, /Reserved/);
+  assert.match(card, /Joining our program/);
+  assert.doesNotMatch(card, /Gone to a new home|Placed|Spoken for/);
   const t = new Date().toISOString();
   for (const [pid, who] of [['ph-fern', fern], ['ph-moss', moss]]) {
     b.env.DB.raw.prepare("INSERT INTO photos (id, site_id, r2_key, type, bytes, created_at) VALUES (?, ?, ?, 'image/webp', 10, ?)").run(pid, b.site.id, `sites/${b.site.id}/photos/${pid}.webp`, t);
@@ -694,7 +700,7 @@ test("an undecided puppy reads Limited and is priced as limited, and can still b
   b.env.DB.raw.prepare("UPDATE puppies SET status = 'staying', registration = NULL WHERE slug = 'onyx'").run();
   await b.post('/publish');
   const onyx = await b.page('/litters/gem-2026/onyx');
-  assert.match(onyx, /Staying with us/);
+  assert.match(onyx, /Joining our program/);
   assert.doesNotMatch(onyx, /Registration/);
   assert.doesNotMatch(onyx, /Ask about full registration|\$3,/);
 });

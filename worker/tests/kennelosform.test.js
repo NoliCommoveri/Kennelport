@@ -299,7 +299,7 @@ test('Family login: in the menu, the footer and the status-page help, once publi
   assert.doesNotMatch(await home(), /Family login/);
 });
 
-test('the manage app steers by the KennelOS link: says it can be linked, then greys out what is unused', async () => {
+test('the manage app steers by the KennelOS link: says it can be linked, then leaves out what is unused', async () => {
   const k = kennelos(feed());
   const b = await breeder(k);
   // Not linked: KennelOS is offered; the simple waitlist and questions are in use.
@@ -315,7 +315,7 @@ test('the manage app steers by the KennelOS link: says it can be linked, then gr
   // Linked, with online applications: both greyed, with the reason.
   await b.post('/pages/waitlist/kennelos', { feed: FEED_URL });
   home = await (await b.get('')).text();
-  assert.match(home, /<a class="tile off" href="\/s\/akbostons\/waitlist"><b>Your waitlist<\/b><span>Not used: your website shows your KennelOS waitlist/);
+  assert.doesNotMatch(home, /href="\/s\/akbostons\/waitlist"/, 'no tile for the unused simple waitlist');
   assert.match(home, /Waitlist and application<\/b><span>Linked to KennelOS, which takes your applications/);
   wl = await (await b.get('/pages/waitlist')).text();
   assert.match(wl, /application questions aren(&#39;|')t used while KennelOS takes your applications online/);
@@ -331,7 +331,7 @@ test('the manage app steers by the KennelOS link: says it can be linked, then gr
   home = await (await b.get('')).text();
   assert.match(home, /Linked to KennelOS · your questions/);
   assert.doesNotMatch(await (await b.get('/lists/questions')).text(), /Not used right now/);
-  assert.match(home, /tile off" href="\/s\/akbostons\/waitlist"/, 'the simple waitlist still isn\'t');
+  assert.doesNotMatch(home, /href="\/s\/akbostons\/waitlist"/, 'the simple waitlist still isn\'t');
 
   // An application from the site's own form: no Add to waitlist while linked.
   await call(b.env, SITE, '/waitlist', { method: 'POST', headers: { origin: `https://${SITE}`, 'cf-connecting-ip': '198.51.100.9' }, body: new URLSearchParams({ name: 'Megan Ross', email: 'm@example.com' }) });

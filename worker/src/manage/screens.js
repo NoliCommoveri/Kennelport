@@ -10,7 +10,7 @@ import {
 } from '../content/records.js';
 import { fields, parseForm } from './forms.js';
 import { savePhoto, PhotoError } from '../photos.js';
-import { subjects, tagPhotos, untagPhoto, tagsByPhoto } from '../photoTags.js';
+import { subjects, isSubject, tagPhotos, untagPhoto, tagsByPhoto } from '../photoTags.js';
 import { buildSnapshot, loadSnapshot, publish, undoPublish, listSnapshots } from '../publish.js';
 import { changes } from '../diff.js';
 import { makePreviewToken } from '../site.js';
@@ -46,6 +46,8 @@ const NOTES = {
   uploaded: 'Photos added.',
   embedded: 'Added to your draft. It shows on your site after you publish.',
   tagged: 'Saved.',
+  tagmany: 'Tagged.',
+  tagnone: 'Nothing tagged: tick at least one photo, then choose who\'s in them.',
   deleted: 'Message deleted.',
   approved: 'Approved. It shows on your site after you publish.',
   declined: 'Declined and deleted.',
@@ -110,6 +112,21 @@ export function createScreens({ env, request, url, site, user, page }) {
   const littersList = async () => (await env.DB.prepare('SELECT id, name FROM litters WHERE site_id = ? ORDER BY sort').bind(site.id).all()).results;
   let tagsCache = null;
   const tags = async () => (tagsCache ??= await tagsByPhoto(env, site.id));
+
+  // Tagging many photos at once (the Photos screen, an album's screen): a tick box
+  // on each photo, joined by its form attribute to one bar that says who the ticked
+  // photos are of. `first`: { label, names: Map subject → name } offered at the top
+  // (an album's litter's puppies, by name alone: the group already says whose). `back`: where to return, under base.
+  const tagManyBar = (subs, { back, first = null }) => {
+    const opt = (x) => `<option value="${esc(x.subject)}">${esc(first?.names.get(x.subject) ?? x.label)}</option>`;
+    const rest = first ? subs.filter((x) => !first.names.has(x.subject)) : subs;
+    const top = first ? subs.filter((x) => first.names.has(x.subject)) : [];
+    const groups = [...new Set(rest.map((x) => x.group))];
+    return `<form method="post" action="${base}/photos/tag-many" id="tag-many" class="row"><input type="hidden" name="back" value="${esc(back)}">
+      <select name="subject" aria-label="Who the ticked photos are of"><option value="">Who's in them…</option>${top.length ? `<optgroup label="${esc(first.label)}">${top.map(opt).join('')}</optgroup>` : ''}${groups.map((g) => `<optgroup label="${esc(g)}">${rest.filter((x) => x.group === g).map(opt).join('')}</optgroup>`).join('')}</select>
+      <button class="primary">Tag</button></form>`;
+  };
+  const tickBox = (p) => `<label class="check"><input type="checkbox" name="photos" value="${esc(p.id)}" form="tag-many"> Tick</label>`;
   // pick: { groups: [{ label, subject }], tags: [subject…] to tag uploads with, alt }
   const ctxFor = async (kind, pick) => {
     const ctx = { kind, photos: await photos(), photoUrl, dogs: await dogsList(), litters: await littersList(), photosLink: `${base}/photos` };
@@ -385,7 +402,7 @@ export function createScreens({ env, request, url, site, user, page }) {
       const items = rows.map((r, i) => `<li class="item"><a href="${esc(`${path}/${r.id}`)}"><b>${esc(L.name(r))}</b><span>${esc(L.sub(r) ?? '')}</span></a>
         <span class="order">${i ? `<form method="post" action="${esc(`${path}/${r.id}/up`)}"><button aria-label="Move ${esc(L.name(r))} up">↑</button></form>` : ''}${i < rows.length - 1 ? `<form method="post" action="${esc(`${path}/${r.id}/down`)}"><button aria-label="Move ${esc(L.name(r))} down">↓</button></form>` : ''}</span></li>`).join('');
       const intro = kind === 'questions' ? `${(await kos()).online ? '<p class="error">Not used right now: KennelOS takes your applications online, so your website shows your KennelOS form. These questions come back if you turn online applications off in KennelOS or remove the link.</p>' : ''}<p class="muted">The application form on your waitlist page always asks for the family's name and email. These questions come after, in this order. With none, it asks for a few lines about their family.</p>` : '';
-      const extra = kind === 'litters' ? await leavingCard() : kind === 'dogs' ? await offSiteDogsCard(rows) : '';
+      const extra = kind === 'litters' ? await leavingCard() : kind === 'dogs' ? await offSiteDogsCard(rows) : kind === 'reviews' ? '<p><a class="button" href="' + base + '/reviews-queue">Reviews families sent</a></p>' : '';
       return { title: parentTitle ? `${parentTitle}: ${L.title}` : L.title, back: back ?? base, body: `${note(url)}${intro}${extra}<ul class="items">${items || `<li class="muted">None yet.</li>`}</ul><p><a class="button primary" href="${esc(`${path}/new`)}">Add ${L.one}</a></p>` };
     }
     if (rest === 'new') {
@@ -415,6 +432,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     if (!post) {
       const view = await form(rec);
       view.body = note(url) + view.body;
+      if (kind === 'albums') view.body += await whosInCard(rec, `${path}/${rec.id}`);
       const place = { dogs: 'dog', litters: 'litter', albums: 'album' }[kind];
       if (place) view.body += await embedsCard(`${place}:${rec.id}`, `${path}/${rec.id}`, embedErr());
       return { ...view, rec };
@@ -431,6 +449,31 @@ export function createScreens({ env, request, url, site, user, page }) {
     }
     if (one) await tagFromForm(formFields, values, fd, subsFor(rec.id));
     return redirect(`${path}/${rec.id}?note=saved`);
+  }
+
+  // An album's photos, to say who is in them, several at a time: its litter's
+  // puppies first. Tags are what put a photo on a puppy's page (the litter's Show
+  // each puppy's tagged photos) and offer it first in that puppy's picker.
+  async function whosInCard(rec, back) {
+    const ids = new Set(Array.isArray(rec.photos) ? rec.photos : []);
+    const list = (await photos()).filter((p) => ids.has(p.id));
+    if (!list.length) return '';
+    const subs = await subjects(env, site.id);
+    const names = new Map(subs.map((x) => [x.subject, x.label]));
+    const t = await tags();
+    let first = null;
+    if (rec.litter_id) {
+      const pups = (await env.DB.prepare('SELECT id, name FROM puppies WHERE site_id = ? AND litter_id = ?').bind(site.id, rec.litter_id).all()).results;
+      if (pups.length) first = { label: 'Puppies of its litter', names: new Map(pups.map((x) => [`puppy:${x.id}`, x.name])) };
+    }
+    const card = (p) => {
+      const mine = (t.get(p.id) ?? []).filter((x) => names.has(x));
+      return `<li class="card"><img src="${esc(photoUrl(p.id))}" alt="${esc(p.alt || 'Photo')}" loading="lazy">${tickBox(p)}
+        <div class="tags">${mine.map((x) => `<span class="tag">${esc(first?.names.get(x) ?? names.get(x))}</span>`).join('') || '<span class="muted small">No one yet</span>'}</div></li>`;
+    };
+    return `<section class="card" id="whos-in"><h2>Who's in these photos</h2>
+      <p class="muted small">Tick the photos with the same puppy or dog in them, choose who, then Tag. A puppy's photos show on its own page when its litter's "Show each puppy's tagged photos" is on, and are offered first when you choose its photo.</p>
+      ${tagManyBar(subs, { back: `${back}#whos-in`, first })}<ul class="ph-list">${list.map(card).join('')}</ul></section>`;
   }
 
   // A record's page plus the list under it (a dog's health results, a litter's puppies).
@@ -687,6 +730,16 @@ export function createScreens({ env, request, url, site, user, page }) {
         throw err;
       }
     }
+    if (rest === '/tag-many' && post) {
+      const form = await request.formData();
+      const asked = String(form.get('back') ?? '');
+      const [where, hash] = asked.startsWith(`${base}/`) && !/[\\\s]|\/\//.test(asked) ? asked.split('#') : [`${base}/photos`];
+      const ids = form.getAll('photos').map(String);
+      const subject = String(form.get('subject') ?? '');
+      const ok = ids.length && subject && await isSubject(env, site.id, subject);
+      if (ok) await tagPhotos(env, site.id, ids, [subject]);
+      return redirect(`${where}${where.includes('?') ? '&' : '?'}note=${ok ? 'tagmany' : 'tagnone'}${hash ? `#${hash}` : ''}`);
+    }
     let m = rest.match(/^\/([0-9a-f-]{36})\/(thumb|full)$/);
     if (m && !post) {
       const p = await env.DB.prepare('SELECT r2_key, thumb_key, type FROM photos WHERE id = ? AND site_id = ?').bind(m[1], site.id).first();
@@ -734,7 +787,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     const ofInput = of ? `<input type="hidden" name="of" value="${esc(of)}">` : '';
     const card = (p) => {
       const mine = known(p);
-      return `<li class="card"><img src="${esc(photoUrl(p.id))}" alt="${esc(p.alt || 'Photo')}" loading="lazy">
+      return `<li class="card"><img src="${esc(photoUrl(p.id))}" alt="${esc(p.alt || 'Photo')}" loading="lazy">${tickBox(p)}
         <div class="tags">${mine.map((x) => `<form method="post" action="${base}/photos/${p.id}/untag" class="tag">${ofInput}<input type="hidden" name="subject" value="${esc(x)}"><span>${esc(names.get(x))}</span><button class="link" aria-label="${esc(`Not ${names.get(x)}`)}">×</button></form>`).join('') || '<span class="muted small">Not sorted</span>'}</div>
         <form method="post" action="${base}/photos/${p.id}/tag" class="row">${ofInput}<select name="subject" aria-label="This photo is also of"><option value="">Photo of…</option>${options(mine)}</select><button>Add</button></form>
         <form method="post" action="${base}/photos/${p.id}/alt" data-save>${ofInput}<label>Description<input name="alt" value="${esc(p.alt ?? '')}" maxlength="200"></label><button>Save</button></form>
@@ -742,7 +795,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     };
     return {
       title: 'Photos', back: base,
-      body: `${note(url)}${await usageLine()}<form id="photo-form" class="card" method="post" action="${base}/photos/upload">
+      body: `${note(url)}<p class="row"><a class="button" href="${base}/lists/albums">Albums</a><span class="muted small">Galleries with their own link, made from these photos.</span></p>${await usageLine()}<form id="photo-form" class="card" method="post" action="${base}/photos/upload">
         <label>Add photos<input type="file" accept="image/*" multiple required></label>
         <label>Photos of<span class="hint">So they're offered first when you choose a photo for that dog, litter or page. You can also add photos from the dog's or litter's own screen.</span>
           <select name="tags"><option value="">Choose later</option>${options([], of)}</select></label>
@@ -750,6 +803,7 @@ export function createScreens({ env, request, url, site, user, page }) {
         <button class="primary">Upload</button><p id="photo-status" class="muted small" role="status"></p>
         <p class="muted small">Photos are made smaller on your phone before they're sent, and the camera's location is removed.</p></form>
         ${all.length ? `<nav class="chips" aria-label="Show photos of">${chips}</nav>` : ''}
+        ${list.length ? `<section class="card"><p class="muted small">To tag several at once: tick them, choose who\'s in them, then Tag.</p>${tagManyBar(subs, { back: `${base}/photos${of ? `?of=${encodeURIComponent(of)}` : ''}` })}</section>` : ''}
         <ul class="ph-list">${list.map(card).join('') || (all.length ? '<li class="muted">No photos here.</li>' : '')}</ul>`,
     };
   }
@@ -1088,7 +1142,7 @@ export function createScreens({ env, request, url, site, user, page }) {
       }
     } else {
       const lm = p.match(/^\/lists\/(reviews|steps|extras|products|policies|faq|waitlist_help|questions|albums)(\/|$)/);
-      if (lm) view = await collection(`${base}/lists/${lm[1]}`, lm[1], null, { back: lm[1] === 'questions' ? `${base}/pages/waitlist` : `${base}/pages` });
+      if (lm) view = await collection(`${base}/lists/${lm[1]}`, lm[1], null, { back: lm[1] === 'questions' ? `${base}/pages/waitlist` : lm[1] === 'albums' ? `${base}/photos` : `${base}/pages` });
     }
     if (!view) return null;
     if (view instanceof Response) return view;

@@ -202,3 +202,14 @@ test('what Publish would change: a field an older snapshot lacks, blank in the d
   next.litters[0].show_prices = !draft.litters[0].show_prices;
   assert.deepEqual(changes(old, next).map((x) => x.text), [`${draft.dogs[0].call_name}: edited`, `${draft.litters[0].name}: edited`]);
 });
+
+test("a dog's weight shows on its card, beside its health results, and on its page", async () => {
+  const { env, site } = await akSite();
+  env.DB.raw.prepare("UPDATE dogs SET weight = '18 lb' WHERE site_id = ? AND slug = 'willow'").run(site.id);
+  await publish(env, site.id, 'test');
+  const dogs = await (await call(env, H, '/dogs')).text();
+  // Willow has health results, so her card's back shows those, with her weight above them.
+  assert.match(dogs, /<li><span>Weight<\/span><span>18 lb<\/span><\/li><\/ul><span class="eyebrow">Health testing/);
+  assert.equal(dogs.match(/<span>Weight<\/span>/g).length, 1, 'only on the dog that has one');
+  assert.match(await (await call(env, H, '/dogs/willow')).text(), /Weight[\s\S]{0,40}18 lb/);
+});

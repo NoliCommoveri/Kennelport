@@ -42,7 +42,7 @@ const form = (fields, photos = []) => {
 test('an album made in the manage app gets its own page, a card on /albums, and a link from its litter', async () => {
   const b = await breeder();
   const [p1, p2, p3] = [await b.photo('Opal asleep'), await b.photo('Onyx'), await b.photo('All three')];
-  assert.match(await (await b.get('')).text(), /Albums<\/b><span>Photo galleries with their own link/);
+  assert.match(await (await b.get('')).text(), /Photos and albums<\/b><span>Camera roll, galleries/);
   const created = await b.post('/lists/albums/new', form({ title: 'The Gem litter, week 1', description: 'Their first week.', litter_id: b.litter, cover_photo_id: p3 }, [p1, p2, p3]));
   assert.equal(created.status, 303);
   assert.match(await (await b.get('/lists/albums')).text(), /The Gem litter, week 1<\/b><span>3 photos/);
@@ -226,4 +226,57 @@ test("a puppy's See more photos link is its own, and stands alone without tagged
   const both = await b.page('/litters/gem-2026/opal');
   assert.ok(both.indexOf('See more photos') > both.lastIndexOf('gal-item'), 'under its photos');
   assert.equal(both.includes('photos.app.goo.gl/opal'), true);
+});
+
+// D1 takes at most 100 parameters a statement (tests/helpers/d1.js holds the test
+// database to that too). A big album crashed the Worker (error 1101) when it was
+// saved, previewed and published, from one `IN (…)` list of all its photos.
+test('an album of 150 photos saves, publishes, previews and shows them all', async () => {
+  const { makePreviewToken } = await import('../src/site.js');
+  const b = await breeder();
+  const ids = [];
+  for (let i = 0; i < 150; i++) ids.push(await b.photo(`Photo ${i}`));
+  assert.equal((await b.post('/lists/albums/new', form({ title: 'Gem week 4', litter_id: b.litter }, ids))).status, 303);
+  assert.equal((await b.get('/publish')).status, 200);
+  assert.equal((await b.post('/publish', new URLSearchParams())).status, 303);
+  const page = await b.page('/albums/gem-week-4');
+  assert.equal((page.match(/data-gallery/g) ?? []).length, 150);
+  assert.match(await b.page('/litters/gem-2026'), /150 photos/);
+  const opal = `puppy:${b.env.DB.raw.prepare("SELECT id FROM puppies WHERE slug = 'opal'").get().id}`;
+  const f = new URLSearchParams({ subject: opal });
+  for (const id of ids) f.append('photos', id);
+  await b.post('/photos/tag-many', f);
+  assert.equal(b.env.DB.raw.prepare('SELECT COUNT(*) AS n FROM photo_tags WHERE subject = ?').get(opal).n, 150);
+  const token = await makePreviewToken(b.env, b.site.id);
+  const cookie = (await call(b.env, SITE, `/__preview?t=${encodeURIComponent(token)}`)).headers.get('set-cookie').split(';')[0];
+  assert.equal((await call(b.env, SITE, '/albums/gem-week-4', { headers: { cookie } })).status, 200);
+});
+
+test("an album's screen tags several photos at once with who's in them, its litter's puppies first; so does the Photos screen", async () => {
+  const b = await breeder();
+  const [p1, p2, p3] = [await b.photo('a'), await b.photo('b'), await b.photo('c')];
+  await b.post('/lists/albums/new', form({ title: 'Gem week 5', litter_id: b.litter }, [p1, p2, p3]));
+  const id = b.env.DB.raw.prepare("SELECT id FROM albums WHERE title = 'Gem week 5'").get().id;
+  const opal = b.env.DB.raw.prepare("SELECT id FROM puppies WHERE slug = 'opal'").get().id;
+  const screen = await (await b.get(`/lists/albums/${id}`)).text();
+  assert.match(screen, /<h2>Who's in these photos<\/h2>/);
+  assert.match(screen, /<option value="">Who's in them…<\/option><optgroup label="Puppies of its litter"><option value="puppy:[^"]+">/);
+  assert.equal((screen.match(/name="photos" value="[^"]+" form="tag-many"/g) ?? []).length, 3);
+  assert.match(screen, new RegExp(`<option value="puppy:${opal}">Opal</option>`), 'its own litter\'s puppies by name alone');
+
+  const tag = (fields, photos) => { const f = new URLSearchParams(fields); for (const x of photos) f.append('photos', x); return b.post('/photos/tag-many', f); };
+  const res = await tag({ subject: `puppy:${opal}`, back: `/s/akbostons/lists/albums/${id}#whos-in` }, [p1, p2]);
+  assert.equal(res.headers.get('location'), `/s/akbostons/lists/albums/${id}?note=tagmany#whos-in`);
+  const tagged = b.env.DB.raw.prepare('SELECT photo_id FROM photo_tags WHERE subject = ? ORDER BY photo_id').all(`puppy:${opal}`).map((r) => r.photo_id);
+  assert.deepEqual(tagged, [p1, p2].sort());
+  assert.match(await (await b.get(`/lists/albums/${id}`)).text(), /<span class="tag">Opal<\/span>/);
+
+  // Nothing ticked, a subject that isn't hers, or a way back off the app: nothing tagged, back to Photos.
+  assert.match((await tag({ subject: `puppy:${opal}`, back: `/s/akbostons/lists/albums/${id}` }, [])).headers.get('location'), /note=tagnone$/);
+  assert.match((await tag({ subject: 'puppy:00000000-0000-0000-0000-000000000000' }, [p3])).headers.get('location'), /^\/s\/akbostons\/photos\?note=tagnone$/);
+  assert.equal((await tag({ subject: `puppy:${opal}`, back: '//evil.example/x' }, [p3])).headers.get('location'), '/s/akbostons/photos?note=tagmany');
+
+  const photosScreen = await (await b.get('/photos')).text();
+  assert.match(photosScreen, /To tag several at once/);
+  assert.match(photosScreen, new RegExp(`name="photos" value="${p3}" form="tag-many"`));
 });

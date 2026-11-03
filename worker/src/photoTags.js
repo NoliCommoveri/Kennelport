@@ -1,3 +1,4 @@
+import { chunks, placeholders } from './lib/sql.js';
 // What each photo is of (migration 0005), so pickers can offer a dog's own photos
 // first. A subject is "dog:<id>", "litter:<id>", "puppy:<id>", "extra:<id>",
 // "product:<id>", "page:home" or "page:about". Tags are for the breeder only: nothing here is
@@ -42,7 +43,10 @@ export async function tagPhotos(env, siteId, photoIds, subjectList) {
   const subs = [];
   for (const s of new Set(subjectList.map(String))) if (await isSubject(env, siteId, s)) subs.push(s);
   if (!ids.length || !subs.length) return;
-  const { results } = await env.DB.prepare(`SELECT id FROM photos WHERE site_id = ? AND removed_at IS NULL AND id IN (${ids.map(() => '?').join(', ')})`).bind(siteId, ...ids).all();
+  const results = [];
+  for (const part of chunks(ids)) {
+    results.push(...(await env.DB.prepare(`SELECT id FROM photos WHERE site_id = ? AND removed_at IS NULL AND id IN (${placeholders(part)})`).bind(siteId, ...part).all()).results);
+  }
   const stmts = results.flatMap((p) => subs.map((s) => env.DB.prepare('INSERT OR IGNORE INTO photo_tags (site_id, photo_id, subject) VALUES (?, ?, ?)').bind(siteId, p.id, s)));
   if (stmts.length) await env.DB.batch(stmts);
 }

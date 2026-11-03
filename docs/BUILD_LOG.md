@@ -1076,3 +1076,25 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   address is made from the new name too, while it is still the one made from the old
   (`Writer.slugFromName`); an address she typed stays. Publish's redirects keep the old
   address, and its puppies' pages, working. Tests added.
+- **Puppy wording, and a dog's weight (2026-11-03).** A placed puppy now reads
+  Reserved on the site (was Spoken for) and a staying one Joining our program (was
+  Staying with us); in the manage app the status list says "Placed (shows as
+  Reserved)" so the two Reserved choices stay apart, and the litter switch is Show
+  placed puppies. Dogs get a Weight field (migration 0022, free text like "45 lb"),
+  the website's own: not in KennelOS's OWNED list, so a bundle never touches it. It
+  shows on the dog's flip card (with its details, or above its health results) and
+  on its page. Tests added.
+- **A big album no longer crashes the Worker (2026-11-03).** D1 takes at most 100
+  bound parameters a statement, and saving, previewing and publishing an album
+  checked or loaded all its photos (up to 300) in one `IN (…)` list: error 1101 on
+  testbostons once an album passed 99 photos. Those queries, and the same pattern in
+  photo tagging and the cleanup's purge, now run in slices of 90 (`lib/sql.js
+  chunks`). The test database (`tests/helpers/d1.js`) now refuses more than 100
+  parameters, as D1 does. Test added (a 150-photo album).
+- **Tag many photos at once (2026-11-03).** An album's screen gets "Who's in these
+  photos": its photos with a tick box each, and one "Who's in them…" menu (its
+  litter's puppies first) with Tag. The Photos screen gets the same tick boxes and
+  bar, for whatever filter is showing. Both post to `/photos/tag-many`, which tags
+  the ticked photos (in slices, under D1's limit) and returns to the screen it came
+  from. Plain form controls joined by the form attribute, with the app's existing
+  styles: no app files changed. Tests added.

@@ -97,3 +97,14 @@ export function splitStatements(sql) {
   if (buf.trim()) out.push(buf.trim());
   return out;
 }
+
+// D1 takes at most 100 bound parameters in one statement. A query with an
+// `IN (?, ?, …)` list of ids runs once per slice of this many, leaving room for
+// the statement's other parameters.
+export const IN_CHUNK = 90;
+export function chunks(list, size = IN_CHUNK) {
+  const out = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+}
+export const placeholders = (list) => list.map(() => '?').join(', ');

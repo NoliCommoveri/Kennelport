@@ -54,6 +54,7 @@ test('the Inbox: unread count, open marks read, reply and copy, delete', async (
   await contact(t.env, MSG);
   const home = await (await t.get('/s/akbostons')).text();
   assert.match(home, /Inbox<\/b><span>Messages from your site<\/span><span class="count">1<\/span>/);
+  assert.match(home, /id="needs-you">.*1 new message<\/b><span>In your inbox/s);
   const list = await (await t.get('/s/akbostons/inbox')).text();
   assert.match(list, /Megan Ross/);
   const id = t.env.DB.raw.prepare('SELECT id FROM inquiries').get().id;
@@ -62,7 +63,9 @@ test('the Inbox: unread count, open marks read, reply and copy, delete', async (
   assert.match(one, /href="mailto:megan%40example\.com\?subject=Re%3A%20Opal"/);
   assert.match(one, /data-copy="megan@example\.com"/);
   assert.ok(t.env.DB.raw.prepare('SELECT read_at FROM inquiries').get().read_at);
-  assert.doesNotMatch(await (await t.get('/s/akbostons')).text(), /<span class="count">/);
+  const after = await (await t.get('/s/akbostons')).text();
+  assert.doesNotMatch(after, /<span class="count">/);
+  assert.doesNotMatch(after, /id="needs-you"/, 'nothing waiting: no Needs you card');
   await t.post(`/s/akbostons/inbox/${id}/delete`);
   assert.equal(t.env.DB.raw.prepare('SELECT COUNT(*) AS n FROM inquiries').get().n, 0);
 });
@@ -121,7 +124,7 @@ test('a family review waits for approval, then shows after publish; its photo is
   assert.equal((await call(t.env, S, `/_kp/p/${dana.photo_id}`)).status, 404, 'private until approved and published');
   const queue = await (await t.get('/s/akbostons/reviews-queue')).text();
   assert.match(queue, /Biscuit is perfect\./);
-  assert.match(await (await t.get('/s/akbostons')).text(), /Reviews to approve<\/b><span>From families<\/span><span class="count">2<\/span>/);
+  assert.match(await (await t.get('/s/akbostons')).text(), /id="needs-you">.*2 reviews to approve<\/b><span>From families/s);
   await t.post(`/s/akbostons/reviews-queue/${dana.id}/approve`);
   assert.doesNotMatch(await (await call(t.env, S, '/reviews')).text(), /Lovely pup/, 'not live until published');
   await t.post('/s/akbostons/publish');
