@@ -841,7 +841,9 @@ test('a heat becoming a pairing, and a pairing a litter, become what a new one w
   assert.equal(pairing.plan_label, 'Planned pairing');
   assert.equal(pairing.expected_label, 'November 2099');
   assert.equal(pairing.summary, 'Her words');
-  assert.equal(pairing.slug, heat.slug);
+  // Its address follows its name; the old one keeps working once published.
+  assert.equal(heat.slug, 'claire-s-next-litter');
+  assert.equal(pairing.slug, 'claire-bubba');
   assert.equal(pairing.hidden_by_kennelos, 0);
   assert.equal(b.row("SELECT COUNT(*) AS n FROM litters WHERE kennelos_kind = 'pairing'").n, 1);
 
@@ -851,17 +853,33 @@ test('a heat becoming a pairing, and a pairing a litter, become what a new one w
   let l = b.row('SELECT * FROM litters WHERE id = ?', heat.id);
   assert.equal(l.kennelos_kind, 'litter');
   assert.equal(l.name, 'The Gem Litter');
+  assert.equal(l.slug, 'the-gem-litter');
   assert.equal(l.plan_label, null);
   assert.equal(l.stage, 'current');
 
   // A new nickname follows; once she renames it on the website, hers stays.
   await send(bundle({ dogs, litters: [{ ...litter, name: 'The Jewels' }] }));
   assert.equal(b.row('SELECT name FROM litters WHERE id = ?', heat.id).name, 'The Jewels');
+  assert.equal(b.row('SELECT slug FROM litters WHERE id = ?', heat.id).slug, 'the-jewels');
+  // Published, then renamed: the old address goes to the new one.
+  await b.post('/publish');
+  await send(bundle({ dogs, litters: [{ ...litter, name: 'The Rubies' }] }));
+  await b.post('/publish');
+  const moved = await call(b.env, SITE, '/litters/the-jewels');
+  assert.equal(moved.status, 301);
+  assert.match(moved.headers.get('location'), /\/litters\/the-rubies$/);
   b.env.DB.raw.prepare("UPDATE litters SET name = 'Her name', plan_label = 'Her label' WHERE id = ?").run(heat.id);
   await send(bundle({ dogs, litters: [{ ...litter, name: 'The Stones' }] }));
   l = b.row('SELECT * FROM litters WHERE id = ?', heat.id);
   assert.equal(l.name, 'Her name');
   assert.equal(l.plan_label, 'Her label');
+  assert.equal(l.slug, 'the-rubies');
+  // An address she typed stays, though the name follows.
+  b.env.DB.raw.prepare("UPDATE litters SET name = 'The Stones', kennelos_name = 'The Stones', slug = 'her-address' WHERE id = ?").run(heat.id);
+  await send(bundle({ dogs, litters: [{ ...litter, name: 'The Pearls' }] }));
+  l = b.row('SELECT * FROM litters WHERE id = ?', heat.id);
+  assert.equal(l.name, 'The Pearls');
+  assert.equal(l.slug, 'her-address');
 });
 
 test('a pairing made before names were kept takes its litter\'s nickname', async () => {

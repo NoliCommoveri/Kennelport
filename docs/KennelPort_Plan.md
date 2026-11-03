@@ -1175,7 +1175,9 @@ the same way Older puppies appears by itself once a litter's going-home date pas
     migration 0021), and its planned-litter label follows the kind while it is still one
     the site gave ("Upcoming heat", "Planned pairing", none for a litter). A name or label
     she changed on the website stays hers. A nickname set or changed later follows the
-    same way. Its address stays.
+    same way. Its web address follows the new name too, while it is still the one the
+    site made from the old name (an address she typed stays); Publish keeps the old
+    address working, its puppies' pages with it.
 - **Updated:** for a matched record, the KennelOS-owned fields (list below) are replaced
   with the bundle's values. KennelPort-only fields (bio, photos, albums, order, embeds, a
   dog's role, a litter's summary, a puppy's own price) are never touched.

@@ -1071,3 +1071,8 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   `diff.js` called every dog, litter and puppy "edited" until the next Publish. Values are
   now compared with blanks (null, '', false, empty lists) the same as a missing field and
   key order ignored, so only real changes are listed. Tests added.
+- **A litter's address follows its new name (2026-11-03).** When a website litter's name
+  follows KennelOS's (a heat becoming a pairing, a pairing a litter, a nickname), its web
+  address is made from the new name too, while it is still the one made from the old
+  (`Writer.slugFromName`); an address she typed stays. Publish's redirects keep the old
+  address, and its puppies' pages, working. Tests added.

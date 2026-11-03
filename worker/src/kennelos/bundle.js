@@ -30,9 +30,9 @@
 // share one, since a KennelOS puppy is a Dog. A litter's kind (litter, pairing,
 // heat) is part of its match, and a litter that names its pairing (or a pairing or
 // litter that names the heat it uses) takes over the website litter made from
-// that one, with its photos, wording and address. Taking over, it becomes what a
-// new one of its kind would be: the name and planned-litter label follow the new
-// kind, unless she has changed them on the website.
+// that one, with its photos and wording. Taking over, it becomes what a new one of
+// its kind would be: the name, its web address and the planned-litter label follow
+// the new kind, unless she has changed them on the website.
 import { ApiError } from '../lib/http.js';
 import { cleanValue, ContentError, slugify, PAYMENT_FIELDS, LITTER_PRICE_FIELDS } from '../content/model.js';
 import { PUBLIC_ID } from '../feed.js';
@@ -321,6 +321,12 @@ export class Writer {
     return ['heat', 'pairing', 'litter'].some((k) => cur.name === this.litterName(plain, k));
   }
 
+  // Is this address the one slug() made from that name (with or without a -2)?
+  slugFromName(slug, name) {
+    const base = slugify(name) || 'item';
+    return slug === base || (slug.startsWith(`${base.slice(0, 56)}-`) && /^\d+$/.test(slug.slice(base.slice(0, 56).length + 1)));
+  }
+
   createLitter(e, kind) {
     const id = crypto.randomUUID();
     const name = this.litterName(e, kind);
@@ -350,6 +356,12 @@ export class Writer {
     const name = this.litterName(e, kind);
     if (named) values.name = name;
     values.kennelos_name = named ? name : cur.kennelos_name ?? name;
+    // Its address follows a new name while it is still the one the site made from
+    // the old (her own stays). Publish keeps the old address working (redirects).
+    if (named && name !== cur.name && this.slugFromName(cur.slug, cur.name)) {
+      this.litterSlugs.delete(cur.slug);
+      values.slug = this.slug(this.litterSlugs, name);
+    }
     if (cur.plan_label == null || Object.values(PLAN_LABEL).includes(cur.plan_label)) values.plan_label = PLAN_LABEL[kind];
     // With Use my KennelOS prices, Show prices starts on the first time a litter's
     // prices arrive; from then on the switch is hers.
