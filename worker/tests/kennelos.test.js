@@ -394,6 +394,46 @@ test('Use my KennelOS prices: off, KennelOS sends none here; on, they arrive rea
   assert.match(await (await b.get(`/litters/${id}`)).text(), /3000 <span class="muted small">· from KennelOS/);
 });
 
+test('Use my KennelOS prices turns Show prices on: when switched on, and for litters it brings', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (body) => api(b.env, '/v1/bundle', { body, token });
+  const litter = (id, name) => ({ id, name, born_on: '2026-10-01', prices: { price_female: 3000 }, puppies: [] });
+  const shown = (id) => b.row('SELECT show_prices FROM litters WHERE kennelos_id = ?', id).show_prices;
+  // Off: a litter from KennelOS starts with Show prices off.
+  await send(bundle({ litters: [litter('l1', 'Spring')] }));
+  assert.equal(shown('l1'), 0);
+  // Switching it on turns it on for KennelOS's litters, not her own.
+  await b.post('/kennelos/prices', { on: '1' });
+  assert.equal(shown('l1'), 1);
+  assert.equal(b.row("SELECT show_prices FROM litters WHERE slug = 'gem-2026'").show_prices, 0);
+  // A new litter while it's on starts on; one she switched off after its prices
+  // came stays off.
+  await send(bundle({ litters: [litter('l1', 'Spring')] }));
+  assert.equal(b.row("SELECT price_female FROM litters WHERE kennelos_id = 'l1'").price_female, 3000);
+  b.env.DB.raw.prepare("UPDATE litters SET show_prices = 0 WHERE kennelos_id = 'l1'").run();
+  await send(bundle({ litters: [litter('l1', 'Spring'), litter('l2', 'Summer')] }));
+  assert.equal(shown('l2'), 1);
+  assert.equal(shown('l1'), 0);
+  // Saving the switch again while on changes nothing.
+  await b.post('/kennelos/prices', { on: '1' });
+  assert.equal(shown('l1'), 0);
+});
+
+test('a parent that is one of her dogs is not typed as a name too', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  await api(b.env, '/v1/bundle', { token, body: bundle({
+    dogs: [DOG('d-nova', 'Nova')],
+    litters: [{ id: 'l1', dam_id: 'd-nova', sire_id: 'd-out', dam_name: 'Nova', sire_name: 'Outside Stud', born_on: '2026-10-01', puppies: [] }],
+  }) });
+  const l = b.row("SELECT * FROM litters WHERE kennelos_id = 'l1'");
+  assert.equal(l.dam_id, b.row("SELECT id FROM dogs WHERE kennelos_id = 'd-nova'").id);
+  assert.equal(l.dam_name, null);
+  assert.equal(l.sire_id, null);
+  assert.equal(l.sire_name, 'Outside Stud');
+});
+
 test('prices are one number, worked out from the litter, shown only where switched on', async () => {
   const l = { price_female: 3000, full_reg_female: 500, price_male: null, full_reg_male: null };
   assert.deepEqual(puppyPrice(l, { sex: 'female', registration: 'limited' }), { from: 3000, to: 3000 });

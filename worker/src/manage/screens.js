@@ -184,7 +184,13 @@ export function createScreens({ env, request, url, site, user, page }) {
         }
       }
       if (rest === '/prices') {
-        await env.DB.prepare('UPDATE sites SET use_kennelos_prices = ?, draft_changed_at = ? WHERE id = ?').bind(fd.has('on') ? 1 : 0, new Date().toISOString(), site.id).run();
+        const t = new Date().toISOString();
+        // Switching it on also turns on Show prices for the litters KennelOS sends,
+        // so its prices show without a trip to each litter. Off leaves them as they are.
+        await env.DB.batch([
+          env.DB.prepare('UPDATE sites SET use_kennelos_prices = ?, draft_changed_at = ? WHERE id = ?').bind(fd.has('on') ? 1 : 0, t, site.id),
+          ...(fd.has('on') && !(await kosPrices()) ? [env.DB.prepare("UPDATE litters SET show_prices = 1, updated_at = ? WHERE site_id = ? AND source = 'kennelos' AND kennelos_kind = 'litter' AND show_prices = 0").bind(t, site.id)] : []),
+        ]);
         return here('saved', '#prices');
       }
       if (rest === '/unlink') {
@@ -234,7 +240,7 @@ export function createScreens({ env, request, url, site, user, page }) {
         const pending = await pendingMatches(env, site.id);
         if (pending.length) parts.push(await matchesCard(pending));
         parts.push(`<form method="post" action="${base}/kennelos/prices" class="card" id="prices"><h2>Prices</h2>
-          <label class="check"><input type="checkbox" name="on" value="1"${prices ? ' checked' : ''}> <span>Use my KennelOS prices<span class="hint">On: each litter's prices, deposits and full-registration amounts, and your extras' prices, come from KennelOS with the next Update website, and can't be changed here. Off: you type them here. Either way, they show only where you switch Show prices on. A puppy's own price and an adult's asking price are always typed here.</span></span></label>
+          <label class="check"><input type="checkbox" name="on" value="1"${prices ? ' checked' : ''}> <span>Use my KennelOS prices<span class="hint">On: each litter's prices, deposits and full-registration amounts, and your extras' prices, come from KennelOS with the next Update website, and can't be changed here. Switching it on turns on Show prices for those litters, and for each new one KennelOS sends; you can still switch a litter's off. Off: you type them here, and they show only where you switch Show prices on. A puppy's own price and an adult's asking price are always typed here.</span></span></label>
           <button>Save</button></form>`);
         if (owner) {
           parts.push(`<form method="post" action="${base}/kennelos/unlink" class="card danger"><h2>Unlink</h2>

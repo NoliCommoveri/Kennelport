@@ -279,8 +279,12 @@ export class Writer {
 
   litterValues(e, kind) {
     const planned = kind !== 'litter' || !e.born_on;
+    // A parent that is one of her website dogs is that dog; the typed name ("if not
+    // one of your dogs") is only for one that isn't, like an outside stud.
+    const damId = this.parent(e.dam_id);
+    const sireId = this.parent(e.sire_id);
     const v = {
-      dam_id: this.parent(e.dam_id), sire_id: this.parent(e.sire_id), dam_name: e.dam_name ?? null, sire_name: e.sire_name ?? null,
+      dam_id: damId, sire_id: sireId, dam_name: damId ? null : e.dam_name ?? null, sire_name: sireId ? null : e.sire_name ?? null,
       stage: planned ? 'planned' : 'current',
       born_on: kind === 'litter' ? e.born_on : null, ready_on: kind === 'litter' ? e.ready_on : null, deposits_on: kind === 'litter' ? e.deposits_on : null,
       expected_label: kind === 'heat' ? monthOf(`${e.month}-01`) : planned ? monthOf(e.expected_on ?? e.planned_on ?? null) : null,
@@ -303,7 +307,7 @@ export class Writer {
     this.insert('litters', {
       id, site_id: this.siteId, slug: this.slug(this.litterSlugs, name), name, ...this.litterValues(e, kind),
       plan_label: kind === 'heat' ? 'Upcoming heat' : kind === 'pairing' ? 'Planned pairing' : null,
-      show_on_site: 1, show_prices: 0, show_placed: 1, sort: this.sort.litters, source: 'kennelos', kennelos_id: e.id, kennelos_kind: kind,
+      show_on_site: 1, show_prices: this.prices && kind === 'litter' ? 1 : 0, show_placed: 1, sort: this.sort.litters, source: 'kennelos', kennelos_id: e.id, kennelos_kind: kind,
       hidden_by_kennelos: 0, created_at: this.t, updated_at: this.t,
     });
     this.puppySlugs.set(id, new Set());
@@ -317,6 +321,9 @@ export class Writer {
     values.hidden_by_kennelos = 0;
     values.kennelos_kind = kind;
     values.kennelos_id = e.id;
+    // With Use my KennelOS prices, Show prices starts on the first time a litter's
+    // prices arrive; from then on the switch is hers.
+    if (this.prices && kind === 'litter' && !cur.show_prices && LITTER_PRICE_FIELDS.every((k) => cur[k] == null) && LITTER_PRICE_FIELDS.some((k) => values[k] != null)) values.show_prices = 1;
     if (cur.hidden_by_kennelos) this.counts.back++;
     if (this.update('litters', cur, values)) this.counts.updated++;
     if (kind === 'litter') this.puppies(cur.id, e.puppies, this.st.puppies.filter((p) => p.litter_id === cur.id));
