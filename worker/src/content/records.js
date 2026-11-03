@@ -3,7 +3,7 @@
 // can't disagree about what a field may hold. Every write marks the draft as
 // changed; nothing is live until Publish.
 import {
-  DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, EXTRA_FIELDS,
+  DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, EXTRA_FIELDS, PRODUCT_FIELDS, HOME_BADGES_MAX, brandImageOk,
   EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue, slugify,
 } from './model.js';
 import { untagStatements } from '../photoTags.js';
@@ -25,6 +25,7 @@ export const KINDS = {
   reviews: { table: 'stories', fields: omit(REVIEW_FIELDS, []), label: 'first_name', where: "kind = 'review'", fixed: { kind: 'review', submitted_by: 'breeder' }, defaults: { status: 'approved' } },
   steps: { table: 'steps', fields: STEP_FIELDS, label: 'heading', where: "page = 'how_it_works'", fixed: { page: 'how_it_works' }, defaults: { pay_link: 0 } },
   extras: { table: 'extras', fields: EXTRA_FIELDS, label: 'name', defaults: { featured: 0 }, json: ['checklist'] },
+  products: { table: 'products', fields: PRODUCT_FIELDS, label: 'name', defaults: { home_badge: 0 } },
   albums: { table: 'albums', fields: ALBUM_RECORD_FIELDS, slug: 'title', label: 'title', defaults: { show_on_site: 1 }, json: ['photos'], stamps: true },
   questions: { table: 'form_fields', fields: QUESTION_FIELDS, label: 'label', where: "form = 'application'", fixed: { form: 'application' }, defaults: { required: 0 }, json: ['options'] },
 };
@@ -129,6 +130,12 @@ export async function saveRecord(env, siteId, kind, id, input, scopeId = null) {
   const clean = cleanFields(k.fields, input, kind);
   if (kind === 'extras' && clean.price_to !== null && clean.price_from !== null && clean.price_to < clean.price_from) throw new ContentError('price_to', 'lower than the starting price');
   if (kind === 'questions') checkQuestion(clean, 'question');
+  if (kind === 'products' && clean.image_url && !brandImageOk(clean.image_url)) throw new ContentError('image_url', "that picture's address isn't one your site can show from; choose a photo instead");
+  if (kind === 'products' && clean.home_badge) {
+    if (!clean.photo_id && !clean.image_url) throw new ContentError('home_badge', 'a home page badge needs a picture: choose one, or paste the embed code');
+    const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM products WHERE site_id = ? AND home_badge = 1 AND id != ?').bind(siteId, id ?? '').first('n');
+    if (n >= HOME_BADGES_MAX) throw new ContentError('home_badge', `the home page shows at most ${HOME_BADGES_MAX} badges: turn one off first`);
+  }
   if (kind === 'albums' && clean.photos) clean.photos = [...new Set(clean.photos)];
   if (kind === 'albums' && !existing) {
     const lim = await env.DB.prepare('SELECT album_limit FROM sites WHERE id = ?').bind(siteId).first('album_limit');

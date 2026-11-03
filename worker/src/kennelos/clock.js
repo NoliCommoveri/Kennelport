@@ -75,6 +75,7 @@ async function photosToRemove(env, siteId, litterId) {
   add(await all('SELECT photo_id FROM dogs WHERE site_id = ?', siteId), 'photo_id');
   add(await all('SELECT photo_id FROM puppies WHERE site_id = ? AND litter_id != ?', siteId, litterId), 'photo_id');
   add(await all('SELECT photo_id FROM extras WHERE site_id = ?', siteId), 'photo_id');
+  add(await all('SELECT photo_id FROM products WHERE site_id = ?', siteId), 'photo_id');
   add(await all('SELECT photo_id FROM stories WHERE site_id = ?', siteId), 'photo_id');
   add(await all('SELECT preview_photo_id FROM embeds WHERE site_id = ?', siteId), 'preview_photo_id');
   add(await all('SELECT logo_photo_id FROM sites WHERE id = ?', siteId), 'logo_photo_id');

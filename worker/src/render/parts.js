@@ -58,6 +58,7 @@ export function pageOn(snap, key, ctx) {
     case 'older': return olderPuppies(snap, ctx.today).length > 0;
     case 'how_it_works': return snap.steps.length > 0;
     case 'extras': return snap.extras.length > 0;
+    case 'products': return (snap.products ?? []).length > 0;
     case 'policies': return (snap.expanders.policies ?? []).length > 0;
     case 'faq': return (snap.expanders.faq ?? []).length > 0;
     case 'waitlist_help': return (snap.expanders.waitlist_help ?? []).length > 0;
