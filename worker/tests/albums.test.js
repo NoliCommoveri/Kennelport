@@ -262,13 +262,14 @@ test("an album's screen tags several photos at once with who's in them, its litt
   assert.match(screen, /<h2>Who's in these photos<\/h2>/);
   assert.match(screen, /<option value="">Who's in them…<\/option><optgroup label="Puppies of its litter"><option value="puppy:[^"]+">/);
   assert.equal((screen.match(/name="photos" value="[^"]+" form="tag-many"/g) ?? []).length, 3);
+  assert.match(screen, new RegExp(`<option value="puppy:${opal}">Opal</option>`), 'its own litter\'s puppies by name alone');
 
   const tag = (fields, photos) => { const f = new URLSearchParams(fields); for (const x of photos) f.append('photos', x); return b.post('/photos/tag-many', f); };
   const res = await tag({ subject: `puppy:${opal}`, back: `/s/akbostons/lists/albums/${id}#whos-in` }, [p1, p2]);
   assert.equal(res.headers.get('location'), `/s/akbostons/lists/albums/${id}?note=tagmany#whos-in`);
   const tagged = b.env.DB.raw.prepare('SELECT photo_id FROM photo_tags WHERE subject = ? ORDER BY photo_id').all(`puppy:${opal}`).map((r) => r.photo_id);
   assert.deepEqual(tagged, [p1, p2].sort());
-  assert.match(await (await b.get(`/lists/albums/${id}`)).text(), /<span class="tag">Opal \(The Gem litter\)<\/span>/);
+  assert.match(await (await b.get(`/lists/albums/${id}`)).text(), /<span class="tag">Opal<\/span>/);
 
   // Nothing ticked, a subject that isn't hers, or a way back off the app: nothing tagged, back to Photos.
   assert.match((await tag({ subject: `puppy:${opal}`, back: `/s/akbostons/lists/albums/${id}` }, [])).headers.get('location'), /note=tagnone$/);

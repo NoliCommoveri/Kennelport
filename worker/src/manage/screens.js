@@ -115,12 +115,12 @@ export function createScreens({ env, request, url, site, user, page }) {
 
   // Tagging many photos at once (the Photos screen, an album's screen): a tick box
   // on each photo, joined by its form attribute to one bar that says who the ticked
-  // photos are of. `first`: { label, subjects: Set } offered at the top (an
-  // album's litter's puppies). `back`: where to return, under base.
+  // photos are of. `first`: { label, names: Map subject → name } offered at the top
+  // (an album's litter's puppies, by name alone: the group already says whose). `back`: where to return, under base.
   const tagManyBar = (subs, { back, first = null }) => {
-    const opt = (x) => `<option value="${esc(x.subject)}">${esc(x.label)}</option>`;
-    const rest = first ? subs.filter((x) => !first.subjects.has(x.subject)) : subs;
-    const top = first ? subs.filter((x) => first.subjects.has(x.subject)) : [];
+    const opt = (x) => `<option value="${esc(x.subject)}">${esc(first?.names.get(x.subject) ?? x.label)}</option>`;
+    const rest = first ? subs.filter((x) => !first.names.has(x.subject)) : subs;
+    const top = first ? subs.filter((x) => first.names.has(x.subject)) : [];
     const groups = [...new Set(rest.map((x) => x.group))];
     return `<form method="post" action="${base}/photos/tag-many" id="tag-many" class="row"><input type="hidden" name="back" value="${esc(back)}">
       <select name="subject" aria-label="Who the ticked photos are of"><option value="">Who's in them…</option>${top.length ? `<optgroup label="${esc(first.label)}">${top.map(opt).join('')}</optgroup>` : ''}${groups.map((g) => `<optgroup label="${esc(g)}">${rest.filter((x) => x.group === g).map(opt).join('')}</optgroup>`).join('')}</select>
@@ -463,13 +463,13 @@ export function createScreens({ env, request, url, site, user, page }) {
     const t = await tags();
     let first = null;
     if (rec.litter_id) {
-      const pups = (await env.DB.prepare('SELECT id FROM puppies WHERE site_id = ? AND litter_id = ?').bind(site.id, rec.litter_id).all()).results;
-      if (pups.length) first = { label: 'Puppies of its litter', subjects: new Set(pups.map((x) => `puppy:${x.id}`)) };
+      const pups = (await env.DB.prepare('SELECT id, name FROM puppies WHERE site_id = ? AND litter_id = ?').bind(site.id, rec.litter_id).all()).results;
+      if (pups.length) first = { label: 'Puppies of its litter', names: new Map(pups.map((x) => [`puppy:${x.id}`, x.name])) };
     }
     const card = (p) => {
       const mine = (t.get(p.id) ?? []).filter((x) => names.has(x));
       return `<li class="card"><img src="${esc(photoUrl(p.id))}" alt="${esc(p.alt || 'Photo')}" loading="lazy">${tickBox(p)}
-        <div class="tags">${mine.map((x) => `<span class="tag">${esc(names.get(x))}</span>`).join('') || '<span class="muted small">No one yet</span>'}</div></li>`;
+        <div class="tags">${mine.map((x) => `<span class="tag">${esc(first?.names.get(x) ?? names.get(x))}</span>`).join('') || '<span class="muted small">No one yet</span>'}</div></li>`;
     };
     return `<section class="card" id="whos-in"><h2>Who's in these photos</h2>
       <p class="muted small">Tick the photos with the same puppy or dog in them, choose who, then Tag. A puppy's photos show on its own page when its litter's "Show each puppy's tagged photos" is on, and are offered first when you choose its photo.</p>
