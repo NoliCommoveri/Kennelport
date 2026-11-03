@@ -946,3 +946,18 @@ KennelOS repo and isn't started. 166 tests with custom domains.
 - Migration 0016 (never applied: it isn't on `main`) gains `products.kennelos_id`.
 - Each answer lists the optional sections this Worker takes (`site.sections`), so KennelOS
   sends `products` only where it's understood. Tests added.
+
+## 2026-11-03: colour schemes on real sites (plan 3.13)
+
+- All seven schemes reach sites: Lawn, Harbor, Heather, Clay, Slate, Midnight (dark
+  first) and Tuxedo, each light and dark. One list, `src/render/schemes.js`, holds the
+  palettes, font pairings and ornaments; `worker/scripts/schemes.mjs` writes
+  `public/_kp/t/ak/scheme-<id>.css` from it, and each page loads only its site's file
+  before `site.css`, with its heading font preloaded and its ornament in the sprig.
+  Fonts for the new pairings are served from `/_kp/fonts` (Latin, OFL, licences beside).
+- Contrast checked in both versions (`tests/schemes.test.js`, every text pair at
+  4.5:1 or better). Five light colours were darkened just enough to pass: the labels of
+  Lawn (#9C7A34 to #7E632A, the one visible change), Harbor, Heather and Clay, and
+  Clay's accent. The preview bar keeps its own gold.
+- Kennel details has **Colour scheme**: a card per scheme with its swatches and fonts.
+  Midnight is dark unless the breeder picks **Light only**.

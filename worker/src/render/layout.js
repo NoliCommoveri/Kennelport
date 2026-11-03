@@ -3,16 +3,17 @@
 import { esc, attr, menuGroups, photoUrl, label, pageOn, payShown } from './parts.js';
 
 import { ASSET_VERSION } from './version.js';
+import { schemeOf, schemeFile, preloadFont, ORNAMENTS } from './schemes.js';
 
 export { ASSET_VERSION };
 
 function monogramSvg(snap) {
   const letters = (snap.site.monogram || snap.site.kennel_name.replace(/[^A-Za-z]/g, '').slice(0, 2) || 'K').slice(0, 3);
-  return `<symbol id="mono" viewBox="0 0 48 48"><g fill="none" stroke="currentColor"><rect x="9" y="9" width="30" height="30" transform="rotate(45 24 24)" stroke-width="1.4"/><rect x="12.5" y="12.5" width="23" height="23" transform="rotate(45 24 24)" stroke-width=".7"/></g><text x="24" y="29.5" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="${letters.length > 2 ? 12 : 15}" font-style="italic" fill="currentColor">${esc(letters)}</text></symbol>`;
+  return `<symbol id="mono" viewBox="0 0 48 48"><g fill="none" stroke="currentColor"><rect x="9" y="9" width="30" height="30" transform="rotate(45 24 24)" stroke-width="1.4"/><rect x="12.5" y="12.5" width="23" height="23" transform="rotate(45 24 24)" stroke-width=".7"/></g><text x="24" y="29.5" text-anchor="middle" font-family="'${attr(schemeOf(snap.site.scheme).display)}', Georgia, serif" font-size="${letters.length > 2 ? 12 : 15}" font-style="italic" fill="currentColor">${esc(letters)}</text></symbol>`;
 }
 
 const SPRITES = (snap) => `<svg width="0" height="0" class="sr-only" aria-hidden="true">
-  <symbol id="sprig" viewBox="0 0 120 60"><g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M4 50 C 34 44, 64 32, 116 8"/><path d="M28 44 c-4-10 2-18 10-20 c2 9-3 17-10 20z"/><path d="M28 44 c10 4 18 0 22-7 c-9-3-17 0-22 7z"/><path d="M58 33 c-3-10 3-18 11-19 c1 9-4 16-11 19z"/><path d="M58 33 c10 3 18-1 21-9 c-9-2-17 1-21 9z"/><path d="M88 20 c-2-8 3-14 9-15 c1 7-3 12-9 15z"/><path d="M88 20 c8 2 14-2 16-8 c-7-1-13 2-16 8z"/></g></symbol>
+  <symbol id="sprig" viewBox="0 0 120 60">${ORNAMENTS[schemeOf(snap.site.scheme).ornament]}</symbol>
   ${monogramSvg(snap)}
 </svg>`;
 
@@ -96,7 +97,7 @@ export function layout(snap, ctx, { title, description, image, body, section, no
     ['og:description', desc], ['og:url', canonical],
     ...(shareImage && snap.photos[shareImage] ? [['og:image', `${ctx.origin}${photoUrl(shareImage)}`], ['og:image:alt', snap.photos[shareImage].alt || snap.site.kennel_name]] : []),
   ];
-  const theme = snap.site.dark_mode === 'light_only' ? ' data-theme="light"' : '';
+  const theme = `${snap.site.dark_mode === 'light_only' ? ' data-theme="light"' : ''} data-scheme="${attr(schemeOf(snap.site.scheme).id)}"`;
   const html = `<!doctype html><html lang="en"${theme}><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>${esc(pageTitle)}</title>
@@ -104,7 +105,8 @@ export function layout(snap, ctx, { title, description, image, body, section, no
 <link rel="canonical" href="${attr(canonical)}">
 ${noindex || ctx.preview ? '<meta name="robots" content="noindex">\n' : ''}${og.map(([p, c]) => `<meta property="${p}" content="${attr(c)}">`).join('\n')}
 <meta name="twitter:card" content="${og.some(([p]) => p === 'og:image') ? 'summary_large_image' : 'summary'}">
-<link rel="preload" href="/_kp/fonts/fraunces-opsz-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/_kp/fonts/${preloadFont(snap.site.scheme)}" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/_kp/t/ak/${schemeFile(snap.site.scheme)}?v=${ASSET_VERSION}">
 <link rel="stylesheet" href="/_kp/t/ak/site.css?v=${ASSET_VERSION}">
 <script src="/_kp/t/ak/site.js?v=${ASSET_VERSION}" defer></script>
 ${ctx.path === '/' ? structuredData(snap, ctx) : ''}

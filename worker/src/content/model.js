@@ -12,6 +12,8 @@ const URL_ = { type: 'url' };
 const INT = (min, max) => ({ type: 'int', min, max });
 const BOOL = { type: 'bool' };
 const ENUM = (...values) => ({ type: 'enum', values });
+// The colour schemes' ids (render/schemes.js holds the schemes themselves).
+export const SCHEME_IDS = ['lawn', 'harbor', 'heather', 'clay', 'slate', 'midnight', 'tuxedo'];
 
 export const SITE_FIELDS = {
   kennel_name: S(80, { required: true }),
@@ -27,6 +29,7 @@ export const SITE_FIELDS = {
   facebook_url: URL_,
   facebook_label: S(80),
   instagram_url: URL_,
+  scheme: { ...ENUM(...SCHEME_IDS), ui: 'scheme' },
   dark_mode: ENUM('auto', 'light_only'),
   show_other_prices: BOOL,
 };

@@ -3,6 +3,7 @@
 // turns a submitted form back into the values the model checks.
 import { escapeHtml as esc } from '../lib/html.js';
 import { FEATURE_ICONS, COLLAGE_LAYOUTS, FOCUS, collageLayout } from '../content/model.js';
+import { SCHEMES } from '../render/schemes.js';
 
 // [label, hint] per field name; kind-specific entries win over the shared ones.
 const SHARED = {
@@ -27,6 +28,7 @@ const LABELS = {
     logo_photo_id: ['Your logo', 'Shown in place of the monogram at the top and foot of every page. Tapping it shows it full size. A square or diamond logo works best.'], town: ['Town', 'Town and region only, never a street address.'], region: ['State or region', null],
     contact_email: ['Email for families', null], contact_phone: ['Phone', null], facebook_url: ['Facebook page address', null],
     facebook_label: ['Facebook page name', null], instagram_url: ['Instagram address', null],
+    scheme: ['Colour scheme', 'Colours, fonts and the little ornaments by headings, each with a light and a dark version. Preview, then Publish, to see it on your site.'],
     dark_mode: ['Dark mode', 'Follow each visitor\'s phone or computer setting, or always show the light version.'],
     show_other_prices: ['Show prices of extras and adults', 'Extras, and dogs looking for a home. Off: visitors see "Contact us for pricing". Litter prices have their own switch on each litter.'],
   },
@@ -149,8 +151,18 @@ const ENUM_WORDS = {
   frame: { mat: 'A soft mat around each photo', double: 'A mat with a fine inner line, like a framed print', sprig: 'A leafy vine round each photo', none: 'No frame' },
   kind: { item: 'Extra', homegoing: 'Extended homegoing package' },
   dark_mode: { auto: 'Follow the visitor\'s setting', light_only: 'Light only' },
+  scheme: Object.fromEntries(SCHEMES.map((x) => [x.id, x.name])),
   type_questions: { text: 'A short answer', paragraph: 'A longer answer (a few lines)', choice: 'A choice from a list', yes_no: 'Yes or no', litter: 'Which litter (your planned and current litters)', phone: 'A phone number', town: 'A town' },
 };
+
+// The colour schemes as cards: four swatches each (light ground and button, dark
+// ground and button), its name, and its fonts. Drawn as SVG: the app allows no
+// inline styles.
+function schemePicker(name, label, h, current) {
+  const fonts = (s) => [s.display, s.body, s.script].filter(Boolean).join(' · ');
+  const swatch = (s) => `<svg viewBox="0 0 88 28" width="88" height="28" aria-hidden="true">${[s.light.bg, s.light.accent, s.dark.bg, s.dark.accent].map((c, i) => `<rect x="${i * 22}" y="0" width="22" height="28" fill="${c}"/>`).join('')}<rect x=".5" y=".5" width="87" height="27" fill="none" stroke="#8884"/></svg>`;
+  return `<fieldset class="layouts"><legend>${esc(label)}${h}</legend>${SCHEMES.map((s) => `<label class="layout-opt"><input type="radio" name="${name}" value="${esc(s.id)}"${s.id === current ? ' checked' : ''}>${swatch(s)}<span><b>${esc(s.name)}</b><br>${esc(fonts(s))}${s.darkFirst ? '<br>Dark first' : ''}</span></label>`).join('')}</fieldset>`;
+}
 
 export function labelFor(kind, name) {
   return LABELS[kind]?.[name] ?? SHARED[name] ?? [name.replace(/_/g, ' '), null];
@@ -202,6 +214,7 @@ export function field(name, f, value, ctx) {
   const h = hint ? `<span class="hint">${esc(hint)}</span>` : '';
   const req = f.required ? ' required' : '';
   const v = value ?? '';
+  if (f.ui === 'scheme') return schemePicker(name, label, h, value ?? f.values[0]);
   switch (f.type) {
     case 'bool':
       return `<label class="check"><input type="checkbox" name="${name}" value="1"${value ? ' checked' : ''}> <span>${esc(label)}${h}</span></label>`;

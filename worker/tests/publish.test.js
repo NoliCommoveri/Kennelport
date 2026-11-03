@@ -151,7 +151,10 @@ test('sitemap, robots, trailing slashes and the template files', async () => {
   assert.equal((await call(env, H, '/about/')).headers.get('location'), '/about');
   const css = await call(env, H, '/_kp/t/ak/site.css');
   assert.equal(css.status, 200);
-  assert.match(await css.text(), /@font-face/);
+  assert.doesNotMatch(await css.text(), /@font-face/);
+  const scheme = await call(env, H, '/_kp/t/ak/scheme-lawn.css');
+  assert.equal(scheme.status, 200);
+  assert.match(await scheme.text(), /@font-face \{ font-family: "Fraunces"/);
   assert.equal((await call(env, 'manage.kennelport.com', '/_kp/fonts/mulish-400.woff2')).headers.get('cache-control'), 'public, max-age=31536000, immutable');
   assert.equal((await call(env, H, '/', { method: 'POST' })).status, 405);
 });
