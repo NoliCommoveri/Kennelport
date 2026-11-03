@@ -67,7 +67,10 @@ const LABELS = {
     photos: ['Photos', null], primary_label: ['Waitlist button', null], secondary_label: ['Puppies button', null],
   },
   facts: { items: ['Facts', 'Up to 3 pairs, like "8 wks" / "Before going home".'] },
-  story: { script: ['Script word', null], text: ['Text', null], features: ['Three features', null], link_label: ['Link to your story', null] },
+  story: {
+    photo_id: ['Photo', 'A tall photo (4:5) beside your words: best at 1280 × 1600 px. "No photo" leaves it out, and your words take the whole width.'],
+    script: ['Script word', null], text: ['Text', null], features: ['Three features', null], link_label: ['Link to your story', null],
+  },
   waitlist: {
     line: ['Line', null], button_label: ['Button', null],
     closed: ['Waitlist closed', 'On: the application form is replaced by your message below, and no applications can be sent.'],
