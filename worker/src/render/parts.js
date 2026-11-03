@@ -208,9 +208,11 @@ export function litterCard(snap, l, ctx, { link = true } = {}) {
 export function dogCard(snap, d, { sale = null } = {}) {
   const photo = img(snap, d.photo_id, { alt: d.call_name }) ?? '<div class="ph-photo">Photos coming soon</div>';
   const bg = img(snap, d.photo_id, { alt: '', cls: 'bg', thumb: true }) ?? '';
+  const registry = d.registry ? `<li><span>Registry</span><span>${esc(d.registry)}</span></li>` : '';
+  // Health results when it has some (its registry above them, where set), else its details.
   const tests = d.health.length
-    ? `<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${esc(h.result)}</span></li>`).join('')}</ul>`
-    : `<span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${d.sex === 'female' ? 'Female' : 'Male'}</span></li>${d.color ? `<li><span>Color</span><span>${esc(d.color)}</span></li>` : ''}</ul>`;
+    ? `${registry ? `<ul class="tests">${registry}</ul>` : ''}<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${esc(h.result)}</span></li>`).join('')}</ul>`
+    : `<span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${d.sex === 'female' ? 'Female' : 'Male'}</span></li>${d.color ? `<li><span>Color</span><span>${esc(d.color)}</span></li>` : ''}${registry}</ul>`;
   const line = [snap.site.breed, d.role].filter(Boolean).join(' · ');
   return `<div class="flip" tabindex="0" role="button" aria-label="${attr(d.call_name)}: turn the card over">
     <div class="flip-in">
@@ -286,7 +288,7 @@ export function puppyCard(snap, l, p, ctx) {
       <div class="face front">${held ? `<span class="ribbon">${esc(status)}</span>` : ''}${photo}<span class="turn" aria-hidden="true">↻</span>
         <div class="cap"><span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span><span class="line1"><span>${esc([sex, p.color].filter(Boolean).join(' · '))}</span><span class="status ${p.status === 'available' ? 'avail' : 'res'}">${esc(status)}</span></span></div></div>
       <div class="face back">${bg}<span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span>
-        <span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li>${regWord ? `<li><span>Registration</span><span>${regWord}</span></li>` : ''}${price ? `<li><span>Price</span><span>${esc(price)}</span></li>` : ''}</ul>
+        <span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li>${regWord ? `<li><span>Registration</span><span>${regWord}</span></li>` : ''}${p.registry ? `<li><span>Registry</span><span>${esc(p.registry)}</span></li>` : ''}${price ? `<li><span>Price</span><span>${esc(price)}</span></li>` : ''}</ul>
         ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}${action}</div>
     </div></div>`;
 }

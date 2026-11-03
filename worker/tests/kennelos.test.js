@@ -589,7 +589,7 @@ test('Recommended products from KennelOS: name, link, code and note are KennelOS
   const token = await linked(b);
   const send = async (body) => (await api(b.env, '/v1/bundle', { body, token })).json();
   // Answers say which optional sections this Worker takes.
-  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products']);
+  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products', 'registry']);
   // One she made by hand, with a picture and a Home badge.
   const site = b.site.id;
   const MINE = '00000000-0000-4000-8000-0000000000aa';
@@ -729,3 +729,33 @@ test('the Full Registration Surcharge: under the ask links, with Show prices on 
   assert.doesNotMatch(html, /Full Registration Surcharge|Ask about full registration/);
 });
 
+
+test('registry: from KennelOS on dogs and puppies, shown where set, read-only while linked', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (body) => api(b.env, '/v1/bundle', { body, token });
+  await send(bundle({
+    dogs: [DOG('d-nova', 'Nova', { registry: 'AKC' }), DOG('d-max', 'Max', { sex: 'male' })],
+    litters: [{ id: 'l1', dam_id: 'd-nova', dam_name: 'Nova', born_on: '2026-10-01', puppies: [
+      { id: 'k1', name: 'Fern', sex: 'female', status: 'available', registration: 'limited', registry: 'CKC' },
+      { id: 'k2', name: 'Moss', sex: 'male', status: 'available' }] }],
+  }));
+  assert.equal(b.row("SELECT registry FROM dogs WHERE kennelos_id = 'd-nova'").registry, 'AKC');
+  assert.equal(b.row("SELECT registry FROM dogs WHERE kennelos_id = 'd-max'").registry, null);
+  assert.equal(b.row("SELECT registry FROM puppies WHERE kennelos_id = 'k1'").registry, 'CKC');
+  await b.post('/publish');
+  const nova = b.row("SELECT slug FROM dogs WHERE kennelos_id = 'd-nova'").slug;
+  assert.match(await b.page(`/dogs/${nova}`), /<dt>Registry<\/dt><dd>AKC<\/dd>/);
+  assert.doesNotMatch(await b.page(`/dogs/${b.row("SELECT slug FROM dogs WHERE kennelos_id = 'd-max'").slug}`), /Registry/, 'none set: not shown');
+  const l = b.row("SELECT slug FROM litters WHERE kennelos_id = 'l1'").slug;
+  const html = await b.page(`/litters/${l}`);
+  assert.match(html, /<li><span>Registration<\/span><span>Limited<\/span><\/li><li><span>Registry<\/span><span>CKC<\/span><\/li>/);
+  assert.equal((html.match(/<span>Registry<\/span>/g) || []).length, 1, 'Moss has none');
+  assert.match(await b.page(`/litters/${l}/fern`), /<dt>Registry<\/dt><dd>CKC<\/dd>/);
+  // Read-only while linked.
+  const id = b.row("SELECT id FROM dogs WHERE kennelos_id = 'd-nova'").id;
+  assert.match(await (await b.get(`/dogs/${id}`)).text(), /<b>Registry<\/b><br>AKC <span class="muted small">· from KennelOS/);
+  // Her own dog: typed here.
+  const willow = b.row("SELECT id FROM dogs WHERE slug = 'willow'").id;
+  assert.match(await (await b.get(`/dogs/${willow}`)).text(), /name="registry"/);
+});

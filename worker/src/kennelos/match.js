@@ -10,7 +10,7 @@ import { litterClockStatements } from './clock.js';
 export class MatchError extends Error {}
 
 const WORDS = {
-  call_name: 'call name', registered_name: 'registered name', sex: 'sex', date_of_birth: 'born', color: 'colour',
+  call_name: 'call name', registered_name: 'registered name', registry: 'registry', sex: 'sex', date_of_birth: 'born', color: 'colour',
   status: 'where they show', upcoming: 'up and coming', for_sale: 'looking for a home', died_on: 'date of death', titles: 'titles',
   stage: 'stage', dam_id: 'dam', sire_id: 'sire', dam_name: 'dam\'s name', sire_name: 'sire\'s name', born_on: 'born',
   ready_on: 'going home', deposits_on: 'deposits open', expected_label: 'expected',

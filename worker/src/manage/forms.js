@@ -12,6 +12,7 @@ const SHARED = {
   bio: ['About', null],
   color: ['Color', null],
   sex: ['Sex', null],
+  registry: ['Registry', 'For example AKC or CKC. Shown on your site where set.'],
   status: ['Status', null],
   show_on_site: ['Show on my website', null],
   eyebrow: ['Small label above the heading', 'The letter-spaced line, like "OUR PARENT DOGS".'],

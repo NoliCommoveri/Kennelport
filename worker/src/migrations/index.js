@@ -24,7 +24,7 @@ import usage from './0013_usage.sql';
 import customDomains from './0014_custom_domains.sql';
 import kennelosLink from './0015_kennelos_link.sql';
 import products from './0016_products.sql';
-import askFullReg from './0017_ask_full_reg.sql';
+import registration from './0017_registration.sql';
 
 export const MIGRATIONS = [
   { id: '0001', name: 'schema', sql: schema },
@@ -43,5 +43,5 @@ export const MIGRATIONS = [
   { id: '0014', name: 'custom_domains', sql: customDomains },
   { id: '0015', name: 'kennelos_link', sql: kennelosLink },
   { id: '0016', name: 'products', sql: products },
-  { id: '0017', name: 'ask_full_reg', sql: askFullReg },
+  { id: '0017', name: 'registration', sql: registration },
 ];
