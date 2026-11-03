@@ -23,7 +23,7 @@ test('a closed site answers 410 on every path', async () => {
   }
 });
 
-test('reserved, two-level and custom hosts get nothing yet', async () => {
+test('reserved, two-level and unconnected custom hosts get nothing', async () => {
   const env = await makeEnv();
   for (const host of ['admin.kennelport.com', 'www.akbostons.kennelport.com', 'www.akbostons.com', 'sites.kennelport.com']) {
     assert.equal((await call(env, host, '/')).status, 404, host);

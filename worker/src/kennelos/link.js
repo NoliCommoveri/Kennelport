@@ -68,6 +68,13 @@ export async function makeLinkCode(env, siteId, createdBy) {
 
 export const siteAddress = (env, subdomain, path = '/') => `https://${subdomain}.${env.ROOT_DOMAIN}${path}`;
 
+// The site's main address: her own domain once it's active (plan 2.4), else its
+// kennelport.com one. What KennelOS is given, so its links don't go through a redirect.
+export async function siteBase(env, site) {
+  const domain = await env.DB.prepare("SELECT hostname FROM custom_domains WHERE site_id = ? AND status = 'active'").bind(site.id).first('hostname');
+  return domain ? `https://${domain}` : `https://${site.subdomain}.${env.ROOT_DOMAIN}`;
+}
+
 // KennelOS's Connect website: the code, the kennel it's for, a name for the
 // device. → the token, and what KennelOS needs to set up the rest (plan 5.2 step 2).
 export async function redeemCode(env, request, body) {
@@ -104,10 +111,11 @@ export async function redeemCode(env, request, body) {
 export async function siteFacts(env, site) {
   const waitlist = await env.DB.prepare("SELECT enabled FROM site_pages WHERE site_id = ? AND page = 'waitlist'").bind(site.id).first('enabled');
   const extras = await env.DB.prepare("SELECT enabled FROM site_pages WHERE site_id = ? AND page = 'extras'").bind(site.id).first('enabled');
+  const base = await siteBase(env, site);
   return {
     name: site.kennel_name || site.subdomain,
-    website: siteAddress(env, site.subdomain),
-    extras_info_url: extras === 0 ? null : siteAddress(env, site.subdomain, '/extras'),
+    website: `${base}/`,
+    extras_info_url: extras === 0 ? null : `${base}/extras`,
     waitlist_page: waitlist !== 0,
   };
 }

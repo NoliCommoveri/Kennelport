@@ -33,7 +33,7 @@ import { ApiError } from '../lib/http.js';
 import { cleanValue, ContentError, slugify, PAYMENT_FIELDS, LITTER_PRICE_FIELDS } from '../content/model.js';
 import { PUBLIC_ID } from '../feed.js';
 import { loadSnapshot } from '../publish.js';
-import { siteAddress, siteFacts } from './link.js';
+import { siteBase, siteFacts } from './link.js';
 import { litterClockStatements } from './clock.js';
 
 export const BUNDLE_FORMAT = 1;
@@ -518,6 +518,8 @@ export async function publishedAddresses(env, site) {
   const dogs = await kos('dogs');
   const litters = await kos('litters', " AND kennelos_kind = 'litter'");
   const pups = await kos('puppies');
+  const base = await siteBase(env, site);
+  const siteAddress = (_env, _sub, path) => `${base}${path}`;
   for (const d of snap.dogs) if (dogs.has(d.id)) out.dogs[dogs.get(d.id)] = siteAddress(env, site.subdomain, `/dogs/${d.slug}`);
   if (snap.pages?.litters?.enabled) {
     for (const l of snap.litters) {

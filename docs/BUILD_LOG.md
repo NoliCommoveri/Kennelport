@@ -838,12 +838,31 @@ question at a time. Nothing built yet; docs only (plan 5 rewritten, 3.2, 3.6, 3.
 - **Out of phase 4:** **Request a website** and KennelPort's request form (backlog 2 and
   7; decision 2 stands), and hiding one puppy that has no health hold (backlog 6).
 
+
+## 2026-11-03: custom domains, by hand (plan 2.4)
+
+- **`custom_domains`** (migration 0014): one per site, the main hostname (normally `www.`),
+  `pending` or `active`. The router finds a site from it; the partner name (bare ↔ `www.`)
+  301s to the main one with the same path.
+- **Pending** serves the site on the domain so it can be checked; **active** makes it the
+  main address and the `kennelport.com` address 301s there (an hour's cache, so stopping it
+  takes effect soon). Form posts are never redirected; staging never redirects.
+- **Ops console → Own domain**: add, make main, stop redirecting, remove. Closing a site
+  forgets its domain.
+- **Two ways in** (Setup, "Custom domains"): a domain in KennelPort's own Cloudflare account
+  is a Workers Custom Domain listed in `wrangler.toml`; any other breeder's goes through
+  Cloudflare for SaaS with a CNAME to `sites.kennelport.com`. Same code for both.
+- Pages already build their links, share previews and sitemap from the host serving them,
+  so on the domain they all use it. Not yet: the daily check (plan 2.4), and the manage
+  app's links and QR codes naming the domain (they use the `kennelport.com` address, which
+  redirects).
+
 ## 2026-11-03: phase 4 built, KennelPort's side
 
 Built from plan section 5 as settled the same day. The KennelOS side (5.5) is for the
-KennelOS repo and isn't started. 162 tests.
+KennelOS repo and isn't started. 166 tests with custom domains.
 
-- **Migration 0014** (additive): litter prices per sex with `show_prices` (off) and
+- **Migration 0015** (additive; 0014 is custom domains): litter prices per sex with `show_prices` (off) and
   `show_placed` (on), `price_note` and `deposits_on`; a puppy's `registration` and own
   `price`; a dog's `upcoming`, `for_sale`, `price` and `died_on`; a litter's
   `left_site_at`, `kept_at` and `kennelos_kind` (litter, pairing or heat); KennelOS ids
@@ -887,7 +906,9 @@ KennelOS repo and isn't started. 162 tests.
 - **Not set:** `KENNELOS_APP_ORIGINS` (wrangler.toml), the KennelOS Pro app's origins:
   every browser call to the API is refused until it is. Not in this build: programs
   (no page for them yet) and the backlog items 5.3 names.
-- No manage app files (`public/_kp/m/`) changed. The site template's files are changed
-  from the photo-shape commits brought over earlier, unreleased: the owner asked not to
-  bump `ASSET_VERSION` yet, so `tests/versions.test.js` fails until it is.
+- No manage app files (`public/_kp/m/`) changed, so the manage app stays at 11. Merged
+  with custom domains (whose migration keeps 0014; this one became 0015), and with
+  her own domain active, the addresses and website KennelOS is given are on it.
+- Released together with the photo-shape changes and custom domains as site template 10
+  (fingerprint updated).
 

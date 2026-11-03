@@ -1420,7 +1420,7 @@ drawn in the site's style (3.8), and the KennelOS list itself in the site's styl
 Phase 3 is built.
 
 **Where phase 4 stands.** KennelPort's side is built (`worker/src/kennelos/`, migration
-0014): **Link KennelOS** with its one-time codes and the `links` rows per device; the API
+0015): **Link KennelOS** with its one-time codes and the `links` rows per device; the API
 on `api.kennelport.com` (`POST /v1/link`, `GET` and `DELETE /v1/link`, `POST /v1/bundle`)
 with the KennelOS app origins in `KENNELOS_APP_ORIGINS`; the bundle, format 1, whose
 every key is listed at the top of `src/kennelos/bundle.js` and refused if unknown,

@@ -313,6 +313,11 @@ test('the answer carries the addresses of published pages only', async () => {
   assert.equal(second.addresses.dogs['d-nova'], 'https://akbostons.kennelport.com/dogs/nova');
   assert.equal(second.addresses.litters.l1, `https://akbostons.kennelport.com/litters/${slug}`);
   assert.equal(second.addresses.dogs.k1, `https://akbostons.kennelport.com/litters/${slug}/fern`);
+  // With her own domain the main address, that's what KennelOS is given.
+  b.env.DB.raw.prepare("INSERT INTO custom_domains (hostname, site_id, status, created_at) VALUES ('www.akbostonterriers.com', ?, 'active', ?)").run(b.site.id, new Date().toISOString());
+  const third = await (await send(bundle(body))).json();
+  assert.equal(third.addresses.dogs['d-nova'], 'https://www.akbostonterriers.com/dogs/nova');
+  assert.equal(third.site.website, 'https://www.akbostonterriers.com/');
 });
 
 test('the hand-over: a kept puppy becomes a dog with its photos, and the litter can go without them', async () => {
