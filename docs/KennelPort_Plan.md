@@ -1210,7 +1210,9 @@ the same way Older puppies appears by itself once a litter's going-home date pas
   date of birth, colour, earned titles, health results as data (3.7), litter dates
   including the deposits date, parents, each puppy's status and registration (3.2, 3.6),
   upcoming pairings and heats per the marks above, extras names, groups and descriptions
-  (3.4), a dog's retired, deceased (with the date of death) and for-sale status (3.7), a
+  (3.4), Recommended products' names, referral links, codes and code notes (from the
+  KennelOS Accounts she marks **Show on website**; picture, Home badge, button wording,
+  group, description and order stay hers), a dog's retired, deceased (with the date of death) and for-sale status (3.7), a
   planned litter's status (3.11), the waitlist steps behind How it works (3.11), How to
   pay (3.9), and program names and public descriptions. With **Use my KennelOS prices** on
   (decision 6): the litter's price and deposit per sex, the full-registration surcharge,
@@ -1432,7 +1434,8 @@ price, and the deposits date (3.2, 3.6); **Still deciding**; **Up and coming** a
 **Looking for a home** (3.7); the 30 days with **Keep** and **Not on your site** (5.3);
 **Unlink** and stopping one device; and the published addresses in each bundle's answer
 (5.4). Each answer also says whether **Use my KennelOS prices** is on
-(`kennelos_prices`), so KennelOS sends its prices, private there, only while it is; and on
+(`kennelos_prices`) and which optional bundle sections this Worker takes (`sections`,
+today `products`, so an older Worker is never sent a section it would refuse), so KennelOS sends its prices, private there, only while it is; and on
 staging the API answers `/v1/` on the workers.dev host, since KennelOS calls with no cookie.
 `KENNELOS_APP_ORIGINS` is `https://pro.kennelos.app` (staging adds the local dev server).
 KennelOS's side (5.5) is built too: the four marks, `siteExport.js` (format 1, checked

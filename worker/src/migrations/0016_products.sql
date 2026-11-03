@@ -2,6 +2,8 @@
 -- with an optional referral link and code. home_badge: also shown as a logo under
 -- the Home banner (at most two, content/records.js). image_url: the brand's own
 -- picture, shown from the brand's address (content/model.js BRAND_IMAGE_ORIGINS).
+-- kennelos_id: the KennelOS Account it comes from, when linked (plan 5.3; its
+-- name, link, code and code note are then KennelOS's).
 -- Additive only.
 CREATE TABLE IF NOT EXISTS products (
   id           TEXT PRIMARY KEY,
@@ -17,6 +19,7 @@ CREATE TABLE IF NOT EXISTS products (
   code_note    TEXT,
   home_badge   INTEGER NOT NULL DEFAULT 0,
   sort         INTEGER NOT NULL DEFAULT 0,
-  source       TEXT NOT NULL DEFAULT 'kennelport'
+  source       TEXT NOT NULL DEFAULT 'kennelport',
+  kennelos_id  TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_products_site ON products (site_id, sort);

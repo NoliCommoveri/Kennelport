@@ -17,6 +17,7 @@
 //     pairings: [{ id, dam_id, sire_id, dam_name, sire_name, planned_on, expected_on }],
 //     heats: [{ id, dam_id, dam_name, month }],
 //     extras?: [{ id, name, group, description, price_from, price_to }],
+//     products?: [{ id, name, link_url, code, code_note }],
 //     steps?: [{ id, heading, body }],
 //     payment?: { application_fee?: {…}, deposit?: {…} } }
 //
@@ -38,7 +39,12 @@ import { litterClockStatements } from './clock.js';
 
 export const BUNDLE_FORMAT = 1;
 export const MAX_BUNDLE_BYTES = 1024 * 1024;
-export const MAX = { dogs: 200, litters: 100, puppies: 30, pairings: 50, heats: 50, health: 60, extras: 100, steps: 20, titles: 20 };
+export const MAX = { dogs: 200, litters: 100, puppies: 30, pairings: 50, heats: 50, health: 60, extras: 100, products: 50, steps: 20, titles: 20 };
+
+// The optional sections this Worker takes. Each answer lists them (siteFacts), so
+// KennelOS sends a new section only to a Worker that knows it, instead of having
+// the whole bundle refused.
+export const SECTIONS = ['products'];
 
 // ---------- checking ----------
 
@@ -65,6 +71,9 @@ const SHAPES = {
   heat: { id: ID, dam_id: REF, dam_name: S(60), month: { type: 'month', required: true } },
   extra: { id: ID, name: S(80, true), group: S(40), description: ML(600), price_from: INT, price_to: INT },
   step: { id: ID, heading: S(80, true), body: ML(400) },
+  // A Recommended product from one of her KennelOS Accounts she marked Show on
+  // website: its referral link and code (meant to be handed out), never a login.
+  product: { id: ID, name: S(80, true), link_url: { type: 'url' }, code: S(40), code_note: S(120) },
   pay: Object.fromEntries(Object.entries(PAYMENT_FIELDS).filter(([k]) => k !== 'show_on_site')),
 };
 
@@ -100,7 +109,7 @@ function cleanList(shape, v, path, max) {
   return rows;
 }
 
-const TOP = ['format', 'bundle_id', 'kennel_id', 'sent_at', 'waitlist_public_id', 'dogs', 'litters', 'pairings', 'heats', 'extras', 'steps', 'payment'];
+const TOP = ['format', 'bundle_id', 'kennel_id', 'sent_at', 'waitlist_public_id', 'dogs', 'litters', 'pairings', 'heats', 'extras', 'products', 'steps', 'payment'];
 
 export function cleanBundle(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw bad('bundle', 'must be an object');
@@ -119,6 +128,7 @@ export function cleanBundle(body) {
     pairings: cleanList('pairing', body.pairings ?? [], 'pairings', MAX.pairings),
     heats: cleanList('heat', body.heats ?? [], 'heats', MAX.heats),
     extras: 'extras' in body ? cleanList('extra', body.extras, 'extras', MAX.extras) : null,
+    products: 'products' in body ? cleanList('product', body.products, 'products', MAX.products) : null,
     steps: 'steps' in body ? cleanList('step', body.steps, 'steps', MAX.steps) : null,
     payment: null,
   };
@@ -145,6 +155,7 @@ export const OWNED = {
   puppies: ['name', 'collar', 'sex', 'color', 'status', 'registration'],
   health: ['test', 'result', 'normal', 'date', 'verify_url'],
   extras: ['name', 'grp', 'description'],
+  products: ['name', 'link_url', 'code', 'code_note'],
   steps: ['heading', 'body'],
 };
 export const OWNED_PRICES = { litters: LITTER_PRICE_FIELDS, extras: ['price_from', 'price_to'] };
@@ -447,6 +458,34 @@ export async function applyBundle(env, device, body) {
     }
     const sent = new Set(clean.extras.map((x) => x.id));
     for (const x of st.extras) if (x.source === 'kennelos' && !sent.has(x.kennelos_id)) w.s.push(env.DB.prepare('DELETE FROM extras WHERE id = ?').bind(x.id));
+  }
+
+  // Recommended products from her Accounts: name, link, code and its note. The
+  // picture, Home badge, button wording, group, description and order stay hers. A
+  // product she made by hand with the same name is taken over (extras and products
+  // match by name, 5.2), keeping its picture. One KennelOS stops sending leaves;
+  // its picture stays in her photos.
+  if (clean.products) {
+    const products = (await env.DB.prepare('SELECT * FROM products WHERE site_id = ?').bind(site.id).all()).results;
+    const byKos = new Map(products.filter((x) => x.kennelos_id).map((x) => [x.kennelos_id, x]));
+    const free = products.filter((x) => !x.kennelos_id);
+    let sort = Math.max(-1, ...products.map((x) => x.sort));
+    for (const x of clean.products) {
+      const values = { name: x.name, link_url: x.link_url, code: x.code, code_note: x.code_note };
+      let cur = byKos.get(x.id);
+      if (!cur) {
+        const j = free.findIndex((p) => lower(p.name) === lower(x.name));
+        if (j >= 0) [cur] = free.splice(j, 1);
+      }
+      if (cur) {
+        if (w.update('products', cur, { ...values, source: 'kennelos', kennelos_id: x.id })) w.counts.updated++;
+        continue;
+      }
+      w.insert('products', { id: crypto.randomUUID(), site_id: site.id, ...values, home_badge: 0, sort: ++sort, source: 'kennelos', kennelos_id: x.id });
+      w.counts.created++;
+    }
+    const sent = new Set(clean.products.map((x) => x.id));
+    for (const x of products) if (x.source === 'kennelos' && !sent.has(x.kennelos_id)) w.s.push(env.DB.prepare('DELETE FROM products WHERE id = ?').bind(x.id));
   }
 
   // The waitlist steps behind How it works (3.11): only when KennelOS sends some.

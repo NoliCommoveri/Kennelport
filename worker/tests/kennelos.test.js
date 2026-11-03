@@ -506,3 +506,42 @@ test('staging: the link API answers /v1/ on its own host, since KennelOS sends n
   const prod = await makeEnv({ KENNELOS_APP_ORIGINS: APP });
   assert.notEqual((await call(prod, M, '/v1/link', { method: 'GET', headers: { origin: APP } })).headers.get('content-type'), 'application/json; charset=utf-8');
 });
+
+test('Recommended products from KennelOS: name, link, code and note are KennelOS\'s; picture, badge and wording stay hers', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = async (body) => (await api(b.env, '/v1/bundle', { body, token })).json();
+  // Answers say which optional sections this Worker takes.
+  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products']);
+  // One she made by hand, with a picture and a Home badge.
+  const site = b.site.id;
+  const MINE = '00000000-0000-4000-8000-0000000000aa';
+  b.env.DB.raw.prepare("INSERT INTO products (id, site_id, name, link_url, link_label, home_badge, sort, source) VALUES (?, ?, 'TLC Pet Food', 'https://old.example/r', 'Shop TLC', 1, 0, 'kennelport')").run(MINE, site);
+  const out = await send(bundle({ products: [
+    { id: 'acct-1', name: 'tlc pet food', link_url: 'https://tlcpetpro.com/r/ak', code: 'AK10', code_note: 'Takes 10% off your first order.' },
+    { id: 'acct-2', name: 'Chewy', link_url: 'https://chewy.com/r/ak' },
+  ] }));
+  assert.equal(out.summary.created, 1);
+  const tlc = b.row("SELECT * FROM products WHERE id = ?", MINE);
+  assert.equal(tlc.kennelos_id, 'acct-1', 'the same name is taken over');
+  assert.equal(tlc.link_url, 'https://tlcpetpro.com/r/ak');
+  assert.equal(tlc.code, 'AK10');
+  assert.equal(tlc.link_label, 'Shop TLC', 'her wording stays');
+  assert.equal(tlc.home_badge, 1, 'her badge stays');
+  assert.equal(b.row("SELECT source FROM products WHERE kennelos_id = 'acct-2'").source, 'kennelos');
+  // Read-only in the manage app while it comes from KennelOS.
+  const form = await (await b.get(`/lists/products/${MINE}`)).text();
+  assert.match(form, /from KennelOS/);
+  // Unticked in KennelOS: it leaves; Unlink makes the rest hers.
+  await send(bundle({ products: [{ id: 'acct-1', name: 'TLC Pet Food', link_url: 'https://tlcpetpro.com/r/ak' }] }));
+  assert.equal(b.row("SELECT COUNT(*) AS n FROM products WHERE kennelos_id = 'acct-2'").n, 0);
+  // A bundle with no products section leaves them alone (an older KennelOS).
+  await send(bundle());
+  assert.equal(b.row("SELECT COUNT(*) AS n FROM products WHERE kennelos_id = 'acct-1'").n, 1);
+  await b.post('/kennelos/unlink');
+  assert.equal(b.row("SELECT source FROM products WHERE id = ?", MINE).source, 'kennelport');
+  // Unknown keys are refused like every other section.
+  const t2 = await linked(b);
+  const bad = await api(b.env, '/v1/bundle', { body: bundle({ products: [{ id: 'x', name: 'X', password: 'hunter2' }] }), token: t2 });
+  assert.equal(bad.status, 400);
+});
