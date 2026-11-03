@@ -16,13 +16,14 @@ const { savePhoto } = await import('../src/photos.js');
 
 const S = 'akbostons.kennelport.com';
 
-async function site({ storyPhoto = true } = {}) {
+async function site({ storyPhoto = true, aboutPhoto = true } = {}) {
   forgetSnapshots();
   const env = await makeEnv();
   const row = await addSite(env, 'akbostons', { kennel_name: 'AK Boston Terriers' });
   const photo = (await savePhoto(env, row.id, { full: webp(1200, 1600), thumb: webp(300, 400), alt: 'Ziva' })).id;
   const doc = structuredClone(AK_SAMPLE);
   if (storyPhoto) doc.home.story = { ...doc.home.story, photo_id: photo };
+  if (aboutPhoto) doc.pages.about = { ...doc.pages.about, photo_id: photo };
   for (const d of doc.dogs ?? []) d.photo_id = photo;
   await importContent(env, row.id, doc);
   await publish(env, row.id, 'test');
@@ -76,4 +77,14 @@ test('the dog and puppy page photos keep their 4:5 too, not the photo\'s pixel h
   const box = rule(css, '.dogpage .photo');
   assert.match(box, /aspect-ratio: 4 \/ 5;/);
   assert.match(box, /height: auto;/, 'without height: auto the photo keeps its own pixel height and is zoomed in');
+});
+
+test('Our story shares the Home block\'s photo shape, so one rule keeps both right', async () => {
+  const { env, photo } = await site();
+  const page = await (await call(env, S, '/about')).text();
+  // The same .story box as the Home block: the rule checked above governs it too.
+  assert.match(page, new RegExp(`<div class="wrap story"><img src="/_kp/p/${photo}"[^>]*width="1200" height="1600"`));
+  // With no photo the page uses .prose instead, so nothing empty is drawn.
+  const bare = await site({ aboutPhoto: false });
+  assert.match(await (await call(bare.env, S, '/about')).text(), /<div class="wrap prose">/);
 });
