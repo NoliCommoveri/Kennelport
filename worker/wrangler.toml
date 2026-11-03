@@ -82,6 +82,12 @@ workers_dev = false
 routes = [
   { pattern = "*.kennelport.com/*", zone_name = "kennelport.com" },
   { pattern = "kennelport.com/*", zone_name = "kennelport.com" },
+  # Breeders' own domains that are zones in this Cloudflare account, as Workers
+  # Custom Domains (Setup, "Custom domains", way A). Each also needs its row in
+  # the ops console. A deploy fails if the zone already has an A, AAAA or CNAME
+  # record on one of these names.
+  { pattern = "www.akbostonterriers.com", custom_domain = true },
+  { pattern = "akbostonterriers.com", custom_domain = true },
 ]
 
 [env.production.observability]
