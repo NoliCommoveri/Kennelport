@@ -251,9 +251,17 @@ number from them.
 - **A puppy's price is one number; the site never shows the arithmetic.** Limited
   registration shows the litter's price for that sex; full registration shows that price
   plus the surcharge, as a single total. The site never prints "Full registration: +$300".
-- Where a puppy's registration isn't settled, its price shows as a range from the base to
-  the base plus the surcharge, and a litter's card shows the range across its sexes.
-  Ranges are worked out, never typed.
+- **A puppy whose registration isn't settled is shown as limited** (decided 2026-11-03):
+  its Registration line reads **Limited** and its price is the base for its sex, because
+  nearly every puppy goes home limited and a family reading a range from base to full
+  couldn't tell which number was theirs. Where the litter's **Families can ask about full
+  registration** tick is on, that puppy still carries **Ask about full registration** and
+  the **Full Registration Surcharge** under it (3.9), so nothing is hidden — the one
+  number is what a family would pay, and the surcharge says what full would add. A puppy
+  she has marked **Full** shows the total. A litter's card shows the range across its
+  sexes only. Ranges are worked out, never typed.
+  - KennelOS is unchanged: it still sends **Undecided** for a puppy with no plan set
+    (decision 10) and no registration with it. This is how KennelPort draws it.
 - A puppy can carry **its own price**, which overrides all of that and shows exactly as
   typed. Blank, which is the usual case, means it follows its litter.
 - Each litter has a **Show prices** switch, off by default. When off, the site shows
@@ -790,7 +798,16 @@ The order is fixed. Within each:
 **Lists of things breeders write, any length:**
 - *How it works steps:* one to ten (section 3.11).
 - *Policies and FAQ:* expanders, each a heading and text; the breeder picks which start
-  open.
+  open. A **FAQ question can also be shown at the top of other pages** (decided
+  2026-11-03): on the question itself she ticks the pages it rides on — Home, the Dogs
+  page, every dog's page, the Puppies page, every litter's page, every puppy's page,
+  Extras, The steps, Waitlist, Contact — and the same question, drawn the same way,
+  appears there as well as on the FAQ page. It answers a question where a family meets
+  it: the first use was "What is the difference between 'limited' and 'full'
+  registration?" at the top of every litter's page, beside the prices (3.2). The places
+  live on the question, so an export carries them and nothing points at a question that
+  has gone; a question she places shows whether or not the FAQ page itself is on. The
+  AK sample ships that question, placed on litters.
 - *Extras and homegoing packages:* section 3.4.
 - *Review topics:* the choices in the reviews filter.
 
@@ -1538,8 +1555,11 @@ Everything after version 1, with its order and designs, is in
     a wrong guess is invisible until a family complains (sections 3.6, 5.3).
 31. **A price is one number:** limited registration shows the litter's price for that sex,
     full registration shows that price plus the surcharge as a total, and the site never
-    prints "+$300". Ranges are worked out from sex and registration, never typed
-    (section 3.2).
+    prints "+$300". A puppy whose registration isn't settled is shown as limited — the
+    Registration line reads Limited and the price is the base — with Ask about full
+    registration and the surcharge under it where the litter allows it (amended
+    2026-11-03). The only range left is across the sexes, and ranges are worked out,
+    never typed (section 3.2).
 32. **Puppy statuses say what is true:** an undecided puppy reads **Still deciding**, not
     "Coming soon", which promises a sale she may never make (section 3.6).
 

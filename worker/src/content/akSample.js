@@ -116,6 +116,9 @@ export const AK_SAMPLE = {
       { heading: 'Take-back for life', body: "If you can ever no longer keep your dog, at any age, it comes back to us. We'll care for it and help find its next home." },
     ],
     faq: [
+      // Placed at the top of every litter's page as well (plan 3.9): it answers
+      // the question a family asks the moment it sees a price.
+      { heading: 'What is the difference between "limited" and "full" registration?', body: 'Limited registration means your puppy is registered with us as its breeder and cannot be bred or shown in conformation; it can do everything else, including obedience, agility and rally. Full registration is for approved show and breeding homes and costs more. Almost every puppy goes home on limited registration.', places: ['litter'] },
       { heading: 'How much is a puppy?', body: 'It depends on how long your puppy stays with us. Extended homegoing at 10, 12 or 16 weeks runs from $2,500 to $4,400; see Extras for each package. Your $300 application fee comes off the price.', start_open: true },
       { heading: 'Do Boston Terriers have breathing problems?', body: 'Bostons are a short-nosed breed, so we choose parents with open nostrils and good airways, keep them lean, and talk you through warm-weather care.' },
       { heading: 'Can I visit before my turn?', body: "Yes, once you're on the waitlist. Puppy visits start at five weeks, after their first vet check." },

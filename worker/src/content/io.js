@@ -18,7 +18,7 @@
 import {
   SITE_FIELDS, DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS,
   STEP_FIELDS, EXPANDER_FIELDS, EXPANDER_PAGES, EXTRA_FIELDS, PRODUCT_FIELDS, HOME_BADGES_MAX, brandImageOk, HOME_BLOCKS, PAGES, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS,
-  QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue,
+  QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue, FAQ_FIELDS,
 } from './model.js';
 import { PROVIDERS } from '../embeds.js';
 
@@ -133,7 +133,8 @@ export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = ne
     out.expanders = {};
     for (const [page, rows] of Object.entries(doc.expanders)) {
       if (!EXPANDER_PAGES.includes(page)) throw new ContentError(`expanders.${page}`, `not one of ${EXPANDER_PAGES.join(', ')}`);
-      out.expanders[page] = list(rows, `expanders.${page}`).map((e, i) => cleanRecord(EXPANDER_FIELDS, e, `expanders.${page}[${i}]`));
+      const fields = page === 'faq' ? FAQ_FIELDS : EXPANDER_FIELDS;
+      out.expanders[page] = list(rows, `expanders.${page}`).map((e, i) => cleanRecord(fields, e, `expanders.${page}[${i}]`));
     }
   }
   if ('extras' in doc) {
@@ -297,7 +298,10 @@ export async function importContent(env, siteId, doc) {
   }
   for (const [page, rows] of Object.entries(clean.expanders ?? {})) {
     s.push(db.prepare('DELETE FROM expanders WHERE site_id = ? AND page = ?').bind(siteId, page));
-    rows.forEach((e, i) => s.push(insert(db, 'expanders', { id: uuid(), site_id: siteId, page, ...e, start_open: e.start_open ?? 0, sort: i })));
+    rows.forEach((e, i) => s.push(insert(db, 'expanders', {
+      id: uuid(), site_id: siteId, page, ...e, start_open: e.start_open ?? 0,
+      ...(page === 'faq' ? { places: e.places?.length ? JSON.stringify(e.places) : null } : {}), sort: i,
+    })));
   }
   for (const [kind, v] of Object.entries(clean.payment ?? {})) {
     const notice = kind === 'safe_notice';
@@ -392,7 +396,11 @@ export async function exportContent(env, siteId) {
     .map((st) => bools(pick(strip(st, SYSTEM), Object.keys(STEP_FIELDS)), ['pay_link']));
   const exp = await all('SELECT * FROM expanders WHERE site_id = ? ORDER BY sort', siteId);
   doc.expanders = Object.fromEntries(EXPANDER_PAGES.map((p) => [p, exp.filter((e) => e.page === p)
-    .map((e) => bools(pick(strip(e, SYSTEM), Object.keys(EXPANDER_FIELDS)), ['start_open']))]));
+    .map((e) => {
+      const out = bools(pick(strip(e, SYSTEM), Object.keys(p === 'faq' ? FAQ_FIELDS : EXPANDER_FIELDS)), ['start_open']);
+      if ('places' in out) out.places = out.places ? JSON.parse(out.places) : [];
+      return out;
+    })]));
   doc.extras = (await all('SELECT * FROM extras WHERE site_id = ? ORDER BY sort', siteId)).map((x) => {
     const out = bools(pick(strip(x, SYSTEM), Object.keys(EXTRA_FIELDS)), ['featured']);
     if (out.checklist) out.checklist = JSON.parse(out.checklist);

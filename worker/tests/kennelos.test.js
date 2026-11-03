@@ -475,9 +475,12 @@ test('prices are one number, worked out from the litter, shown only where switch
   const l = { price_female: 3000, full_reg_female: 500, price_male: null, full_reg_male: null };
   assert.deepEqual(puppyPrice(l, { sex: 'female', registration: 'limited' }), { from: 3000, to: 3000 });
   assert.deepEqual(puppyPrice(l, { sex: 'female', registration: 'full' }), { from: 3500, to: 3500 });
-  assert.deepEqual(puppyPrice(l, { sex: 'male' }), { from: 3000, to: 3500 }); // blank sex: the other's
+  // Registration not settled: priced as limited, never a range to full (plan 3.2).
+  assert.deepEqual(puppyPrice(l, { sex: 'male' }), { from: 3000, to: 3000 }); // blank sex: the other's
   assert.deepEqual(puppyPrice(l, { sex: 'male', price: 2000 }), { from: 2000, to: 2000 });
-  assert.deepEqual(litterPriceRange({ price_female: 3000, price_male: 2800, full_reg_male: 400 }, []), { from: 2800, to: 3400 }); // a girl's surcharge blank: the boy's
+  // Across the litter: its base prices only; the surcharge is a line of its own.
+  assert.deepEqual(litterPriceRange({ price_female: 3000, price_male: 2800, full_reg_male: 400 }, []), { from: 2800, to: 3000 });
+  assert.deepEqual(litterPriceRange({ price_female: 3000, full_reg_female: 500 }, []), { from: 3000, to: 3000 });
 
   const b = await breeder();
   const gem = b.row("SELECT id FROM litters WHERE slug = 'gem-2026'").id;
@@ -490,7 +493,8 @@ test('prices are one number, worked out from the litter, shown only where switch
   await b.post(`/litters/${gem}/puppies/${opal}`, { name: 'Opal', sex: 'female', status: 'available', registration: 'full', slug: 'opal' });
   await b.post('/publish');
   const on = await b.page('/litters/gem-2026');
-  assert.match(on, /\$3,000–\$3,500/); // the litter: girls limited to full; boys follow the girls
+  assert.match(on, /<dt>Price<\/dt><dd>\$3,000<\/dd>/); // the litter: its base price, one number
+  assert.doesNotMatch(on, /\$3,000–\$3,500/);
   assert.match(on, /Intended base prices\./);
   assert.match(await b.page('/litters/gem-2026/opal'), /Price<\/dt><dd>\$3,500/);
   // Reserved puppies never show a price.
@@ -658,6 +662,41 @@ test('a new dog or litter starts on "Choose…", not on the first sex or stage',
   assert.notEqual((await b.post('/dogs/new', { call_name: 'Rex', show_on_site: '1' })).status, 303, 'no sex chosen: not saved');
   const willow = b.row("SELECT id FROM dogs WHERE slug = 'willow'").id;
   assert.doesNotMatch(await (await b.get(`/dogs/${willow}`)).text(), /Choose…/);
+});
+
+test("an undecided puppy reads Limited and is priced as limited, and can still be asked about", async () => {
+  const b = await breeder();
+  const gem = b.row("SELECT id FROM litters WHERE slug = 'gem-2026'").id;
+  // Opal undecided (KennelOS sends Undecided as before, and sends no registration),
+  // Diamond Full. Prices on, with a surcharge, and the ask allowed.
+  b.env.DB.raw.prepare("UPDATE puppies SET registration = NULL WHERE slug = 'opal'").run();
+  b.env.DB.raw.prepare("UPDATE puppies SET registration = 'full' WHERE slug = 'diamond'").run();
+  b.env.DB.raw.prepare("UPDATE puppies SET status = 'available' WHERE slug IN ('opal', 'diamond')").run();
+  b.env.DB.raw.prepare('UPDATE litters SET show_prices = 1, ask_full_reg = 1, price_female = 3000, price_male = 3000, full_reg_female = 500, full_reg_male = 500 WHERE id = ?').run(gem);
+  await b.post('/publish');
+
+  // The card and the page: Limited, and the base price, not a range to full.
+  const html = await b.page('/litters/gem-2026');
+  assert.match(html, /<span class="call">Opal<\/span>[\s\S]*?<li><span>Registration<\/span><span>Limited<\/span><\/li>[\s\S]*?<li><span>Price<\/span><span>\$3,000<\/span><\/li>/);
+  assert.doesNotMatch(html, /\$3,000–\$3,500/, 'nowhere a range from limited to full');
+  const opal = await b.page('/litters/gem-2026/opal');
+  assert.match(opal, /<dt>Price<\/dt><dd>\$3,000<\/dd>/);
+  assert.match(opal, /<dt>Registration<\/dt><dd>Limited<\/dd>/);
+  // And it still follows through to full registration: the ask, and the surcharge.
+  assert.match(opal, /puppy=opal#message">Ask about full registration<\/a><\/p><dl class="kv"><dt>Full Registration Surcharge<\/dt><dd>\$500<\/dd><\/dl>/);
+  // A puppy she has marked Full still shows the total, and is never asked about.
+  assert.match(await b.page('/litters/gem-2026/diamond'), /<dt>Price<\/dt><dd>\$3,500<\/dd>[\s\S]*?<dt>Registration<\/dt><dd>Full<\/dd>/);
+  assert.doesNotMatch(await b.page('/litters/gem-2026/diamond'), /Ask about full registration/);
+  // The litter's own row: one number, its base price.
+  assert.match(html, /<dt>Price<\/dt><dd>\$3,000<\/dd>/);
+
+  // A puppy staying here is for nobody: no registration line, no ask, no price.
+  b.env.DB.raw.prepare("UPDATE puppies SET status = 'staying', registration = NULL WHERE slug = 'onyx'").run();
+  await b.post('/publish');
+  const onyx = await b.page('/litters/gem-2026/onyx');
+  assert.match(onyx, /Staying with us/);
+  assert.doesNotMatch(onyx, /Registration/);
+  assert.doesNotMatch(onyx, /Ask about full registration|\$3,/);
 });
 
 test('registration on the puppy card; Ask about full registration on undecided puppies, with the litter\'s tick on and off', async () => {

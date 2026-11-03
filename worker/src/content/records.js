@@ -3,7 +3,7 @@
 // can't disagree about what a field may hold. Every write marks the draft as
 // changed; nothing is live until Publish.
 import {
-  DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, EXTRA_FIELDS, PRODUCT_FIELDS, HOME_BADGES_MAX, brandImageOk,
+  DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, FAQ_FIELDS, EXTRA_FIELDS, PRODUCT_FIELDS, HOME_BADGES_MAX, brandImageOk,
   EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue, slugify,
 } from './model.js';
 import { untagStatements } from '../photoTags.js';
@@ -30,7 +30,9 @@ export const KINDS = {
   questions: { table: 'form_fields', fields: QUESTION_FIELDS, label: 'label', where: "form = 'application'", fixed: { form: 'application' }, defaults: { required: 0 }, json: ['options'] },
 };
 for (const page of EXPANDER_PAGES) {
-  KINDS[page] = { table: 'expanders', fields: EXPANDER_FIELDS, label: 'heading', where: `page = '${page}'`, fixed: { page }, defaults: { start_open: 0 } };
+  // Only the FAQ carries places: a question can be shown again elsewhere on the
+  // site (model.js FAQ_PLACES), which Policies and the status-page help don't do.
+  KINDS[page] = { table: 'expanders', fields: page === 'faq' ? FAQ_FIELDS : EXPANDER_FIELDS, label: 'heading', where: `page = '${page}'`, fixed: { page }, defaults: { start_open: 0 }, ...(page === 'faq' ? { json: ['places'] } : {}) };
 }
 
 const now = () => new Date().toISOString();

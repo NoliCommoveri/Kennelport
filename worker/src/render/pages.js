@@ -5,10 +5,21 @@ import {
   esc, attr, fmtDate, priceText, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, parentName,
   litterCard, dogCard, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
   paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
-  dogGroups, depositsAhead, puppyStatus, puppyPriceText, REG_WORDS, fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
+  dogGroups, depositsAhead, puppyStatus, puppyPriceText, regText, fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
+  faqBlock,
 } from './parts.js';
 import { embedView } from '../embeds.js';
 import { COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk } from '../content/model.js';
+
+// A question from her FAQ, where she has placed it (plan 3.9): its own band under
+// the page's heading, so it sits above what the page is about and takes the
+// spacing every other section has. A record's own page (a dog, a litter, a puppy)
+// puts the same block inside its first wrap instead, under the breadcrumb, which
+// is why that one is `faqBlock` and this one wraps it in a section.
+const faqSection = (snap, place) => {
+  const html = faqBlock(snap, place);
+  return html ? `<section class="section tight"><div class="wrap">${html}</div></section>` : '';
+};
 
 // A Share button (plan 5.4): the phone's own share sheet, or the link copied.
 // Shown only with the template's script.
@@ -116,6 +127,9 @@ export function home(snap, ctx) {
 
   // With the top block off, the badges still lead the page.
   if (!h.hero.enabled) parts.push(homeBadges(snap));
+
+  // A question she has placed on Home: under the top block, above her story.
+  parts.push(faqSection(snap, 'home'));
 
   if (h.story.enabled && (h.story.text || h.story.heading)) {
     // No photo (or "No photo" in the manage app): the words take the whole width.
@@ -246,7 +260,7 @@ export function contact(snap, ctx) {
   if (place || p.location_note) cards.push(['Location', [place && esc(place), p.location_note && esc(p.location_note)].filter(Boolean).join('<br>')]);
   return {
     title: snap.pages.contact.heading || label(snap, 'contact'), section: '/contact', description: p.lede,
-    body: `${pagehead(p, { eyebrow: 'Contact', heading: 'Say hello' })}
+    body: `${pagehead(p, { eyebrow: 'Contact', heading: 'Say hello' })}${faqSection(snap, 'contact')}
       <section class="section tight"><div class="wrap"><div class="contact">${cards.map(([h, val]) => `<div><b>${esc(h)}</b><p class="muted small">${val}</p></div>`).join('')}</div>${contactForm(snap, ctx)}</div></section>`,
   };
 }
@@ -273,7 +287,7 @@ export function dogs(snap, ctx) {
     </div></section>` : '');
   return {
     title: snap.pages.dogs.heading || label(snap, 'dogs'), section: '/dogs', description: p.lede,
-    body: `${pagehead(p, { eyebrow: 'Kennel residents', heading: 'Our dogs' })}
+    body: `${pagehead(p, { eyebrow: 'Kennel residents', heading: 'Our dogs' })}${faqSection(snap, 'dogs')}
       ${list.length ? `<section class="section tight"><div class="wrap"><span id="girls"></span><span id="boys"></span>
       ${both ? '<div class="filter"><label for="dog-filter">Show</label><select id="dog-filter"><option value="all">All dogs</option><option value="female">Girls</option><option value="male">Boys</option></select></div>' : ''}
       <div class="grid" id="all-dogs">${list.map((d) => `<div data-sex="${d.sex}">${dogCard(snap, d)}</div>`).join('')}</div>
@@ -291,11 +305,13 @@ export function dog(snap, ctx, slug) {
   const tests = d.health.length ? `<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${h.verify_url ? `<a href="${attr(h.verify_url)}" rel="noopener">${esc(h.result)}</a>` : esc(h.result)}</span></li>`).join('')}</ul>` : '';
   const litters = snap.litters.filter((l) => l.dam_id === d.id || l.sire_id === d.id);
   const sale = saleOf(snap, ctx, d);
+  const faqs = faqBlock(snap, 'dog');
   return {
     title: d.call_name, section: '/dogs', description: d.bio || `${d.call_name}, ${[snap.site.breed, d.role].filter(Boolean).join(' ')}`, image: d.photo_id,
     body: `<section class="section"><div class="wrap">
       <p class="breadcrumb"><a href="/dogs">${esc(label(snap, 'dogs'))}</a></p>
-      <div class="dogpage">${photo}<div class="info">
+      ${faqs}
+      <div class="dogpage${faqs ? ' mt-26' : ''}">${photo}<div class="info">
         <span class="eyebrow">${esc([snap.site.breed, d.role].filter(Boolean).join(' · '))}</span><h1>${esc(d.call_name)}</h1>
         ${d.registered_name ? `<p class="reg">${esc(d.registered_name)}</p>` : ''}
         <dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
@@ -340,7 +356,7 @@ export function litters(snap, ctx) {
   if (!sections.length) sections.push('<section class="section tight"><div class="wrap notice"><p class="muted">No litters to show right now.</p></div></section>');
   return {
     title: snap.pages.litters.heading || label(snap, 'litters'), section: '/litters', description: p.lede,
-    body: `${pagehead(p, { eyebrow: 'Puppies', heading: 'Puppies' })}${sections.join('\n')}`,
+    body: `${pagehead(p, { eyebrow: 'Puppies', heading: 'Puppies' })}${faqSection(snap, 'litters')}${sections.join('\n')}`,
   };
 }
 
@@ -360,12 +376,14 @@ export function litter(snap, ctx, slug) {
   const pups = sortPuppies(l.puppies);
   const lede = [pairNames(snap, l), l.summary].filter(Boolean).join('. ');
   const note = l.show_prices && l.price_note ? `<p class="small muted center mt-20">${esc(l.price_note)}</p>` : '';
+  const faqs = faqBlock(snap, 'litter');
   return {
     title: l.name, section: '/litters', description: lede || l.name, image: pups.find((x) => x.photo_id)?.photo_id,
     body: `${pagehead({}, { eyebrow: l.stage === 'planned' ? (l.plan_label || 'Planned litter') : l.born_on ? `Born ${fmtDate(l.born_on)}` : 'Litter', heading: l.name, lede })}
       <section class="section tight"><div class="wrap">
         <p class="breadcrumb center"><a href="/litters">${esc(label(snap, 'litters'))}</a></p>
-        <div class="litters">${litterCard(snap, l, ctx, { link: false })}</div>${note}
+        ${faqs}
+        <div class="litters${faqs ? ' mt-26' : ''}">${litterCard(snap, l, ctx, { link: false })}</div>${note}
         ${fullRegLink(snap, l, null, ctx, 'btn line') ? `<div class="litters mt-20" id="full-registration"><div><p class="btn-row">${fullRegLink(snap, l, null, ctx, 'btn line')}</p>${fullRegSurchargeRow(snap, l, null, ctx) ? `<div class="mt-20">${fullRegSurchargeRow(snap, l, null, ctx)}</div>` : ''}</div></div>` : ''}${shareRow(true)}
         ${pups.length ? `<div class="mt-26 grid">${pups.map((pup) => puppyCard(snap, l, pup, ctx)).join('')}</div>` : ''}
         ${embedsBlock(snap, `litter:${l.id}`, { inWrap: true })}
@@ -422,7 +440,7 @@ export function puppy(snap, ctx, litterSlug, slug) {
   const photo = img(snap, p.photo_id, { alt: p.name, cls: 'photo', lazy: false }) ?? '<div class="photo" aria-hidden="true"></div>';
   const status = puppyStatus(l, p, ctx.today);
   const price = puppyPriceText(l, p);
-  const reg = REG_WORDS[p.registration];
+  const reg = regText(p);
   const facts = [['Sex', p.sex === 'female' ? 'Female' : 'Male'], ['Color', p.color], ['Collar', p.collar], ['Status', status], ['Price', price], ['Registration', reg], ['Registry', p.registry], ['Parents', pairNames(snap, l)], ['Born', fmtDate(l.born_on)]].filter(([, v]) => v);
   // Its own photos, where the litter publishes its puppies' tagged ones, and its own
   // "See more photos" link where she set one (its gallery elsewhere, never the
@@ -430,13 +448,15 @@ export function puppy(snap, ctx, litterSlug, slug) {
   // photos are usually in those too.
   const gallery = galleryHtml(snap, p.photos ?? [], p.name);
   const morePup = morePhotosHtml(p);
+  const faqs = faqBlock(snap, 'puppy');
   const pupGallery = gallery || morePup
     ? `<div class="mt-26">${head('Photos', `${p.name}'s photos`)}${gallery}${morePup}</div>` : '';
   return {
     title: `${p.name}, ${l.name}`, section: '/litters', description: p.bio || `${p.name}: ${status}`, image: p.photo_id,
     body: `<section class="section"><div class="wrap">
       <p class="breadcrumb"><a href="/litters/${attr(l.slug)}">${esc(l.name)}</a></p>
-      <div class="dogpage">${photo}<div class="info">
+      ${faqs}
+      <div class="dogpage${faqs ? ' mt-26' : ''}">${photo}<div class="info">
         <span class="status ${p.status === 'available' ? 'avail' : 'res'}">${esc(status)}</span><h1>${esc(p.name)}</h1>
         <dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
         ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}
@@ -456,7 +476,7 @@ export function howItWorks(snap, ctx) {
   const items = snap.steps.map((s, i) => `<article class="step"><span class="n">${i + 1}</span><h3>${esc(s.heading)}</h3>${s.body ? `<p>${esc(s.body)}</p>` : ''}${s.detail ? `<details class="x"><summary>More detail</summary><div class="body">${paras(s.detail)}</div></details>` : ''}${s.pay_link && pay ? '<a class="more" href="/waitlist#how-to-pay">How to pay</a>' : ''}</article>`);
   return {
     title: snap.pages.how_it_works.heading || label(snap, 'how_it_works'), section: '/how-it-works', description: p.lede,
-    body: `${pagehead(p, { eyebrow: 'How it works', heading: 'From application to home' })}
+    body: `${pagehead(p, { eyebrow: 'How it works', heading: 'From application to home' })}${faqSection(snap, 'how_it_works')}
       <section class="section tight" id="steps"><div class="wrap">${slider(items, { cls: 'three', ctl: '<span class="muted small">Swipe or use the arrows.</span>' })}</div></section>`,
   };
 }
@@ -476,7 +496,7 @@ export function extras(snap, ctx) {
   const itemHtml = items.map((x) => `<article class="pkg"><h3>${esc(x.name)}</h3>${x.grp ? `<span class="eyebrow">${esc(x.grp)}</span>` : ''}${price(x)}${x.description ? `<p>${esc(x.description)}</p>` : ''}<a class="more" href="${ask}">Ask about this</a></article>`).join('');
   return {
     title: snap.pages.extras.heading || label(snap, 'extras'), section: '/extras', description: p.lede,
-    body: `${pagehead(p, { eyebrow: 'Extras', heading: 'Extras' })}
+    body: `${pagehead(p, { eyebrow: 'Extras', heading: 'Extras' })}${faqSection(snap, 'extras')}
       <section class="section tight"><div class="wrap">
         ${pkgHtml ? `<div class="pkgs">${pkgHtml}</div>${p.note && prices ? `<p class="small muted center mt-20">${esc(p.note)}</p>` : ''}` : ''}
         ${itemHtml ? `<div class="pkgs mt-26">${itemHtml}</div>` : ''}
@@ -730,7 +750,7 @@ export function waitlist(snap, ctx) {
   const pay = paySection(snap);
   return {
     title: snap.pages.waitlist.heading || label(snap, 'waitlist'), section: '/waitlist', description: p.lede,
-    body: `${pagehead(p, { eyebrow: 'Waitlist', heading: 'Our waitlist' })}
+    body: `${pagehead(p, { eyebrow: 'Waitlist', heading: 'Our waitlist' })}${faqSection(snap, 'waitlist')}
       <section class="section tight"><div class="wrap">${list}${main}${help}</div>${pay ? `<div class="wrap">${pay}</div>` : ''}</section>`,
   };
 }

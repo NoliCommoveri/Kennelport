@@ -117,7 +117,12 @@ export async function buildSnapshot(env, siteId) {
     .map((s) => ({ ...keep(s, ['site_id', 'page', 'sort', 'source']), pay_link: Boolean(s.pay_link) }));
   const expRows = await all('SELECT * FROM expanders WHERE site_id = ? ORDER BY sort');
   const expanders = {};
-  for (const e of expRows) (expanders[e.page] ??= []).push({ heading: e.heading, body: e.body, start_open: Boolean(e.start_open) });
+  // A FAQ carries the pages it also shows at the top of (plan 3.9), so a page can
+  // draw it without reading the draft; the other expanders have no places.
+  for (const e of expRows) (expanders[e.page] ??= []).push({
+    heading: e.heading, body: e.body, start_open: Boolean(e.start_open),
+    ...(e.page === 'faq' ? { places: e.places ? JSON.parse(e.places) : [] } : {}),
+  });
   const extras = (await all('SELECT * FROM extras WHERE site_id = ? ORDER BY sort')).map((x) => ({
     ...keep(x, ['site_id', 'sort', 'source']), featured: Boolean(x.featured), checklist: json(x.checklist, []),
   }));

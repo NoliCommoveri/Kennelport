@@ -230,6 +230,14 @@ export const REG_WORDS = { limited: 'Limited', full: 'Full' };
 // links to the contact form with it filled in, and so does the litter while it has
 // one. Never for a puppy staying here, and only while the contact page is on.
 const undecided = (p) => !p.registration && p.status !== 'staying';
+
+// What a puppy's Registration line says. A puppy she hasn't settled reads
+// **Limited**, like the limited puppy it will almost certainly be, and is priced
+// that way (content/prices.js): a blank line told a family nothing, and a range
+// to full read as a higher price they might have to pay. She can still be asked
+// about full registration, where the litter's tick allows it, and the surcharge
+// shows under that link. A puppy staying here is for no one, so it says nothing.
+export const regText = (p) => (p.registration ? REG_WORDS[p.registration] : (undecided(p) ? REG_WORDS.limited : null));
 export function fullRegHref(snap, l, p, ctx) {
   if (!l.ask_full_reg || !pageOn(snap, 'contact', ctx)) return null;
   if (p ? !undecided(p) : !l.puppies.some(undecided)) return null;
@@ -279,7 +287,7 @@ export function puppyCard(snap, l, p, ctx) {
   const status = puppyStatus(l, p, ctx.today);
   const price = puppyPriceText(l, p);
   const reg = [l.name, p.collar].filter(Boolean).join(' · ');
-  const regWord = REG_WORDS[p.registration];
+  const regWord = regText(p);
   const action = (p.status === 'available'
     ? (pageOn(snap, 'waitlist', ctx) ? '<a class="more" href="/waitlist">Ask about this puppy</a>' : '<a class="more" href="/contact">Ask about this puppy</a>')
     : '') + fullRegLink(snap, l, p, ctx, 'more') + fullRegSurchargeRow(snap, l, p, ctx);
@@ -338,6 +346,18 @@ export function reviewCard(snap, r) {
 }
 
 export const expanders = (rows) => rows.map((e) => `<details class="x"${e.start_open ? ' open' : ''}><summary>${esc(e.heading)}</summary><div class="body">${paras(e.body)}</div></details>`).join('');
+
+// A question from the FAQ she has also put on this kind of page (plan 3.9, 3.12):
+// the same question, drawn the same way, at the top of the page. Her first use was
+// the difference between limited and full registration, at the top of every
+// litter's page, where a family meets a price. The FAQ page keeps showing all of
+// them, and a placed question shows whether or not that page is on, since it is
+// the question she wants read here, not a link to somewhere else.
+export const placedFaqs = (snap, place) => (snap.expanders?.faq ?? []).filter((e) => (e.places ?? []).includes(place));
+export function faqBlock(snap, place) {
+  const rows = placedFaqs(snap, place);
+  return rows.length ? `<div class="acc">${expanders(rows)}</div>` : '';
+}
 
 export function pagehead(page, fallback, { ornament = true } = {}) {
   const heading = page?.heading || fallback.heading;

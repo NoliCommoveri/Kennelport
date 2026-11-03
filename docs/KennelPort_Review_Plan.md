@@ -439,8 +439,9 @@ repo, and the deciding rule for where an application lands.
   progress tells her. (Plan 4.2 says this was proved on real devices; look for what the code
   does on the *second* and *tenth* photo.)
 - Publish: the diff list (`diff.js`), preview, undo, "matches waiting" on Home and Publish,
-  the bundle notice (`notices`), `Keep` on a leaving litter and the removal of "Remove now"
-  (`bd90b5c`) — is there still a way to remove a litter she wants gone today?
+  the bundle notice (`notices`), `Keep` on a leaving litter and **Remove now** beside Keep
+  (`bd90b5c`), which runs the cleanup's own `deleteLitter` today — is it reachable only
+  for a litter already on its way out, and does the card say what it cannot undo?
 - The matching screen's field-by-field "what this will change", and whether "Keep yours"
   is reversible.
 - Form validation and escaping on every hand-built HTML path in `screens.js`/`forms.js`
