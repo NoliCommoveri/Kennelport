@@ -75,13 +75,13 @@ export async function buildSnapshot(env, siteId) {
   const callNames = new Map((await all('SELECT id, call_name FROM dogs WHERE site_id = ?')).map((d) => [d.id, d.call_name]));
   // A puppy's own photos, from the photos she tagged as that puppy (0005), for the
   // litters with Show each puppy's tagged photos on. Tags are private otherwise
-  // (0018): nothing here without that tick. Removed photos are left out, oldest
-  // first, at most a published album's worth each.
+  // (0018): nothing here without that tick. Removed photos are left out, newest
+  // first, at most a published album's worth each (so the newest are the ones kept).
   const pupPhotos = new Map();
   if (littersRaw.some((l) => l.show_puppy_photos)) {
     for (const t of await all(`SELECT t.subject AS subject, t.photo_id AS photo_id FROM photo_tags t
         JOIN photos ph ON ph.id = t.photo_id AND ph.site_id = t.site_id
-        WHERE t.site_id = ? AND ph.removed_at IS NULL AND t.subject LIKE 'puppy:%' ORDER BY ph.created_at, t.photo_id`)) {
+        WHERE t.site_id = ? AND ph.removed_at IS NULL AND t.subject LIKE 'puppy:%' ORDER BY ph.created_at DESC, t.photo_id`)) {
       const id = t.subject.slice('puppy:'.length);
       if (!pupPhotos.has(id)) pupPhotos.set(id, []);
       const list = pupPhotos.get(id);
@@ -125,12 +125,15 @@ export async function buildSnapshot(env, siteId) {
     ...keep(x, ['site_id', 'sort', 'source']), home_badge: Boolean(x.home_badge),
   }));
 
-  // Albums (phase 5): shown ones, their photos still on the site, in order.
-  const livePhotos = new Set((await all('SELECT id FROM photos WHERE site_id = ? AND removed_at IS NULL')).map((p) => p.id));
+  // Albums (phase 5): shown ones, their photos still on the site. Newest album
+  // first, by her order (0019 starts them that way; her up/down arrows win), and
+  // each album's photos newest first too, like a puppy's own.
+  const livePhotos = new Map((await all('SELECT id, created_at FROM photos WHERE site_id = ? AND removed_at IS NULL')).map((p) => [p.id, p.created_at]));
+  const newestFirst = (ids) => [...ids].sort((a, b) => String(livePhotos.get(b)).localeCompare(String(livePhotos.get(a))));
   const albums = (await all('SELECT * FROM albums WHERE site_id = ? AND show_on_site = 1 ORDER BY sort, title')).map((a) => {
-    const ids = json(a.photos, []).filter((id) => livePhotos.has(id));
+    const ids = newestFirst(json(a.photos, []).filter((id) => livePhotos.has(id)));
     const cover = a.cover_photo_id && livePhotos.has(a.cover_photo_id) ? a.cover_photo_id : ids[0] ?? null;
-    return { id: a.id, slug: a.slug, title: a.title, description: a.description, litter_id: litters.some((l) => l.id === a.litter_id) ? a.litter_id : null, cover_photo_id: cover, photos: ids };
+    return { id: a.id, slug: a.slug, title: a.title, description: a.description, litter_id: litters.some((l) => l.id === a.litter_id) ? a.litter_id : null, cover_photo_id: cover, photos: ids, more_photos_url: a.more_photos_url ?? null };
   }).filter((a) => a.photos.length);
 
   // Videos and posts (plan 3.3), by where they sit; only places still on the site.

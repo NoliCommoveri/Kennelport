@@ -267,6 +267,7 @@ export const ALBUM_FIELDS = {
   litter: { type: 'litterref' },
   cover_photo_id: { type: 'photo' },
   photos: { type: 'list', item: 'photo', max: ALBUM_PHOTOS_MAX },
+  more_photos_url: URL_,
   show_on_site: BOOL,
 };
 

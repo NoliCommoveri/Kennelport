@@ -114,7 +114,8 @@ const LABELS = {
     title: ['Title', 'For example "The Gem litter, week 6".'], description: ['A line about it', null],
     litter_id: ['Litter', 'Its litter\'s page links to it, and that litter\'s photos are offered first below.'],
     cover_photo_id: ['Cover photo', 'Leave as "No photo" to use the first photo.'],
-    photos: ['Photos', 'Tick the photos for this album. They show in the order they appear here, newest first.'],
+    photos: ['Photos', 'Tick the photos for this album. They show newest first.'],
+    more_photos_url: ['More photos link', 'Where the rest of these photos live \u2014 your Google Photos or Shutterfly share, say. Shown under the album as "See more photos".'],
     show_on_site: ['Show on my website', null],
   },
   questions: {

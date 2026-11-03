@@ -157,8 +157,11 @@ export async function saveRecord(env, siteId, kind, id, input, scopeId = null) {
     return getRecord(env, siteId, kind, id);
   }
   const w = whereClause(k, scopeId);
-  const last = await env.DB.prepare(`SELECT COALESCE(MAX(sort), -1) AS s FROM ${k.table} WHERE ${w.sql}`).bind(siteId, ...w.args).first('s');
-  const row = { id: crypto.randomUUID(), site_id: siteId, ...(k.fixed ?? {}), ...clean, sort: last + 1 };
+  // Albums read newest first (0019), so a new one goes above the rest; everything
+  // else is added at the end. Her up/down arrows renumber the list either way.
+  const newestFirst = k.table === 'albums';
+  const edge = await env.DB.prepare(`SELECT COALESCE(${newestFirst ? 'MIN' : 'MAX'}(sort), ${newestFirst ? 1 : -1}) AS s FROM ${k.table} WHERE ${w.sql}`).bind(siteId, ...w.args).first('s');
+  const row = { id: crypto.randomUUID(), site_id: siteId, ...(k.fixed ?? {}), ...clean, sort: newestFirst ? edge - 1 : edge + 1 };
   if (k.scope) row[k.scope] = scopeId;
   if (k.stamps) { row.created_at = t; row.updated_at = t; }
   if (k.table === 'stories') { row.submitted_at = t; row.permission_confirmed_at = t; }

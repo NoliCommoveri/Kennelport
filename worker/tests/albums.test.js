@@ -154,3 +154,50 @@ test("a puppy's tagged photos are its own album, only with the litter's switch o
   assert.match(onyx, /<a class="album-card" href="\/albums\/the-gem-litter-week-1">/);
   assert.equal(onyx.includes('gal-item'), false);
 });
+
+// Photos get their created_at from the clock, so tests that care about order set it.
+const dated = (env, id, when) => env.DB.raw.prepare('UPDATE photos SET created_at = ? WHERE id = ?').run(when, id);
+
+test('albums read newest first, a new one goes on top, and her arrows still win', async () => {
+  const b = await breeder();
+  const p1 = await b.photo('one');
+  const made = [];
+  for (const title of ['Week 1', 'Week 2', 'Week 3']) {
+    await b.post('/lists/albums/new', form({ title }, [p1]));
+    made.push(b.env.DB.raw.prepare('SELECT id FROM albums WHERE title = ?').get(title).id);
+  }
+  await b.post('/publish', new URLSearchParams());
+  const order = (html) => [...html.matchAll(/album-meta"><b>([^<]+)<\/b>/g)].map((m) => m[1]);
+  assert.deepEqual(order(await b.page('/albums')), ['Week 3', 'Week 2', 'Week 1'], 'the newest album first');
+  // The manage app reads the same way round, so what she sees is what the site does.
+  assert.deepEqual([...(await (await b.get('/lists/albums')).text()).matchAll(/<b>(Week \d)<\/b>/g)].map((m) => m[1]), ['Week 3', 'Week 2', 'Week 1']);
+  // Her up/down arrows still decide: Week 1 moved to the top stays there.
+  await b.post(`/lists/albums/${made[0]}/up`, new URLSearchParams());
+  await b.post(`/lists/albums/${made[0]}/up`, new URLSearchParams());
+  await b.post('/publish', new URLSearchParams());
+  assert.deepEqual(order(await b.page('/albums')), ['Week 1', 'Week 3', 'Week 2'], 'her order wins');
+  // And a new album still lands above them all.
+  await b.post('/lists/albums/new', form({ title: 'Week 4' }, [p1]));
+  await b.post('/publish', new URLSearchParams());
+  assert.deepEqual(order(await b.page('/albums')), ['Week 4', 'Week 1', 'Week 3', 'Week 2']);
+});
+
+test("an album's photos read newest first, and \"See more photos\" links wherever she keeps the rest", async () => {
+  const b = await breeder();
+  const [old_, mid, recent] = [await b.photo('oldest'), await b.photo('middle'), await b.photo('newest')];
+  dated(b.env, old_, '2026-01-01T00:00:00.000Z');
+  dated(b.env, mid, '2026-06-01T00:00:00.000Z');
+  dated(b.env, recent, '2026-10-01T00:00:00.000Z');
+  // Ticked oldest first; the site turns them round.
+  await b.post('/lists/albums/new', form({ title: 'The Gem litter, week 1', more_photos_url: 'https://photos.app.goo.gl/abc123' }, [old_, mid, recent]));
+  await b.post('/publish', new URLSearchParams());
+  const page = await b.page('/albums/the-gem-litter-week-1');
+  assert.deepEqual([...page.matchAll(/gal-item" href="\/_kp\/p\/([^"]+)"/g)].map((m) => m[1]), [recent, mid, old_]);
+  // A third-party address, under the album, opening away from the site.
+  assert.match(page, /<p class="center mt-20"><a class="more" href="https:\/\/photos\.app\.goo\.gl\/abc123" target="_blank" rel="noopener noreferrer">See more photos<\/a><\/p>/, 'the arrow comes from .more in the CSS, never doubled');
+  assert.ok(page.indexOf('See more photos') > page.lastIndexOf('gal-item'), 'under the photos, not above them');
+  // None set: no line at all.
+  await b.post('/lists/albums/new', form({ title: 'Week 2' }, [mid]));
+  await b.post('/publish', new URLSearchParams());
+  assert.equal((await b.page('/albums/week-2')).includes('See more photos'), false);
+});

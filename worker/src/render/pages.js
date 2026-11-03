@@ -5,7 +5,7 @@ import {
   esc, attr, fmtDate, priceText, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, parentName,
   litterCard, dogCard, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
   paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
-  dogGroups, depositsAhead, puppyStatus, puppyPriceText, REG_WORDS, fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml,
+  dogGroups, depositsAhead, puppyStatus, puppyPriceText, REG_WORDS, fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
 } from './parts.js';
 import { embedView } from '../embeds.js';
 import { COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk } from '../content/model.js';
@@ -408,7 +408,7 @@ export function album(snap, ctx, slug) {
     body: `${pagehead({}, { eyebrow: l ? l.name : 'Photo album', heading: a.title, lede: a.description })}
       <section class="section tight"><div class="wrap">
         <p class="breadcrumb center">${l && snap.pages.litters.enabled ? `<a href="/litters/${attr(l.slug)}">${esc(l.name)}</a> · ` : ''}<a href="/albums">${esc(label(snap, 'albums'))}</a></p>
-        ${galleryHtml(snap, a.photos, a.title)}${shareRow(true)}
+        ${galleryHtml(snap, a.photos, a.title)}${morePhotosHtml(a)}${shareRow(true)}
         ${embedsBlock(snap, `album:${a.id}`, { inWrap: true })}
       </div></section>
       ${viewerHtml()}`,

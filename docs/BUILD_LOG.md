@@ -998,3 +998,13 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   site that leaves it off. Then the litter's albums, under "From \<litter\>" rather than a
   second "Photos". `galleryHtml` / `viewerHtml` in `parts.js` are now shared by the album
   page and the puppy page, so there's one gallery implementation.
+- **Albums newest first, and "See more photos".** Albums read newest first everywhere
+  they are listed (`/albums`, a litter page, a puppy page) and in the manage app, while
+  her up/down arrows still win: `sort` is still what orders them, migration 0019 only
+  sets the starting order (newest = lowest sort), and a new album is created below the
+  lowest instead of above the highest. Each album's photos read newest first too, by the
+  photo's own date, as a puppy's tagged photos now do (the cap keeps the newest).
+  Albums also carry **More photos link** (`more_photos_url`): any third-party address —
+  her Google Photos or Shutterfly share — shown right under the album as "See more
+  photos", opening in a new tab. The arrow is `.more`'s in the template CSS, not in the
+  words.

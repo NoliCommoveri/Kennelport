@@ -310,6 +310,15 @@ export function galleryHtml(snap, ids = [], altBase = '') {
   return items ? `<div class="gallery">${items}</div>` : '';
 }
 
+// Where the rest of an album's photos live (her Google Photos or Shutterfly share,
+// any third-party address): right under the album, opening in a new tab like any
+// address off the site. The arrow comes from `.more` in the template's CSS, so the
+// words don't carry one. Empty when she set none.
+export function morePhotosHtml(a) {
+  return a?.more_photos_url
+    ? `<p class="center mt-20"><a class="more" href="${attr(a.more_photos_url)}" target="_blank" rel="noopener noreferrer">See more photos</a></p>` : '';
+}
+
 // The viewer the gallery opens into: one per page, whatever galleries it holds.
 export const viewerHtml = () => '<dialog class="viewer" id="viewer" aria-label="Photo viewer"><img alt=""><button type="button" class="v-prev" aria-label="Previous photo">\u2039</button><button type="button" class="v-next" aria-label="Next photo">\u203a</button><button type="button" class="v-close" aria-label="Close">\u00d7</button><span class="v-count small"></span></dialog>';
 
