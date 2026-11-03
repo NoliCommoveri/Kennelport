@@ -24,6 +24,7 @@ export async function sendMail(env, { to, emailHash, kind, subject, text }) {
   if (mode === 'outbox') {
     await env.DB.prepare('INSERT INTO dev_outbox (email_hash, kind, subject, body, created_at) VALUES (?, ?, ?, ?, ?)')
       .bind(emailHash, kind, subject, text, new Date().toISOString()).run();
+    await countMail(env, kind);
     return;
   }
   if (mode !== 'resend') throw new MailError('Email isn\'t set up yet (RESEND_API_KEY).');
@@ -35,6 +36,17 @@ export async function sendMail(env, { to, emailHash, kind, subject, text }) {
   if (!res.ok) {
     console.error(`mail: resend answered ${res.status}`);
     throw new MailError('The email could not be sent. Try again in a minute.');
+  }
+  await countMail(env, kind);
+}
+
+// One more email of this kind today (/ops's usage table). Never stops a send.
+async function countMail(env, kind) {
+  try {
+    await env.DB.prepare('INSERT INTO mail_counts (day, kind, n) VALUES (?, ?, 1) ON CONFLICT (day, kind) DO UPDATE SET n = n + 1')
+      .bind(new Date().toISOString().slice(0, 10), String(kind || 'other')).run();
+  } catch (err) {
+    console.error(`mail: count failed: ${err?.message ?? err}`);
   }
 }
 

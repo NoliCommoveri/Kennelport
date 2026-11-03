@@ -262,8 +262,8 @@ The subdomain picks the site; the path picks the page:
 prices** switch in the manage app, off by default.
 - *Off:* KennelOS sends no prices; the breeder types them in KennelPort like anyone else.
 - *On:* the bundle carries KennelOS's litter prices (price and deposit per sex, the
-  full-registration surcharge), its extras price list (3.4) and the fee per mile (3.5),
-  so each is typed once. They're read-only in KennelPort while the switch is on, and
+  full-registration surcharge) and its extras price list (3.4), so each is typed once
+  (the fee per mile joins them with the pickup page, backlog section 4). They're read-only in KennelPort while the switch is on, and
   still show only where the breeder turns the matching switch on.
 
 ### 3.3 Embeds (YouTube, Facebook and others)
@@ -384,10 +384,10 @@ waitlist never disagree:
 
 **Undecided puppies (decision 10):** an Undecided puppy is not for sale anywhere: not on
 the site, not on KennelOS's waitlist and not in Companion shares. The site shows it as
-Coming soon, with no price and no **Ask about this puppy**. KennelOS's waitlist today
-still treats Undecided as offerable (only Keeping, Placed and Health hold are held back),
-so `isPupAvailable` and Companion's export change to hold it back too (section 5.5); until
-they do, the site and the waitlist can disagree about an Undecided puppy.
+Coming soon, with no price and no **Ask about this puppy**. KennelOS offers only puppies
+marked Available (`isPupAvailable`; a puppy with no plan set counts as Undecided), and
+Kels's **Tidy up** asks about the breeder's puppies left with no plan. Companion shares
+already listed only Available puppies.
 
 ### 3.7 What's public
 
@@ -968,27 +968,68 @@ Each bundle is applied by these rules (decision 16):
 
 - **Matching:** records are matched by their KennelOS id (`kennelos_id`), never by name
   after the first link.
+- **Upcoming litters change record in KennelOS** (a heat event, then a pairing, then a
+  litter, each with its own id), so two rules keep the website's planned litter:
+  - *Pairing to litter:* a KennelOS litter carries its `pairing_id`, so the bundle sends
+    it and KennelPort moves the website litter matched to that pairing onto the litter's
+    id, keeping its photos, wording and address. Nothing is hidden or created.
+  - *Heats:* a planned heat is a `heat_cycle` event she logged with a future date (her
+    estimate; the site shows its month only). KennelOS doesn't link a pairing to a heat,
+    so the bundle pairs them by date: a pairing of the same dam (not failed or cancelled)
+    **uses** a heat when its `planned_date` (else when it was entered) falls from 30 days
+    before to 60 days after the heat's date. Each pairing uses at most one heat, the
+    nearest. A used heat leaves the bundle and the pairing's entry takes over; nothing
+    carries over (a heat is only a month). A heat no pairing uses stays until 60 days
+    after its date (she may have skipped it, or the estimate was off: moving the date in
+    KennelOS keeps it up), then leaves. Older pairings and litters never use a future
+    heat, so a dam can show a litter on the ground, a pairing under way and her next heat
+    at once. A failed or cancelled pairing leaves the bundle; a pairing leads to at most
+    one litter (`pairing_id`, above). KennelOS's public list shows only future heats; the
+    bundle keeps a past one for those 60 days so the site doesn't go quiet before the
+    pairing is entered.
 - **Updated:** for a matched record, the KennelOS-owned fields (list below) are replaced
   with the bundle's values. KennelPort-only fields (bio, photos, albums, order, embeds)
   are never touched.
 - **New:** a record in the bundle with no match is created, with no photos yet.
 - **Gone from the bundle** (unticked **Show on website**, archived or deleted in
-  KennelOS): the record is **hidden**, not deleted, and its KennelPort photos, bio and
-  albums are kept. If it comes back in a later bundle, it reappears as it was. The breeder
-  can delete a hidden record in KennelPort.
-- **A bundle never deletes a photo, file, album or page.**
+  KennelOS): the record leaves the site at the next Publish (its pages answer "not
+  found") and is kept **30 days**, in case it was a mistake: if it comes back in a bundle
+  within them, it reappears as it was. After 30 days the daily cleanup deletes it, with
+  its puppies, its albums, and the photos only it used (their files leave R2 the same
+  night). A website is what's for sale and coming up, not a history: KennelOS keeps the
+  record.
+- **A litter's stage follows KennelOS:** Expected → **Planned**; Whelped, Weaning or Ready
+  → **Current**; Sold or Closed → **gone**, as above: off the site at the next Publish and
+  deleted 30 days later. Marking a litter Sold or Closed in KennelOS (Today already
+  reminds her once every puppy has gone home) retires it with nothing to do on the
+  website.
+- **Keep it:** during the 30 days the manage app lists what's about to go ("Spring
+  litter: deleted on May 3") with **Keep**, for the breeder who wants a litter to stay;
+  a kept litter shows as Past (off Home and the Puppies page, its own page still
+  answering) until she removes it. The Past litters page (backlog) is for those.
+- **Unlinked sites work the same way:** switching a litter or dog off, or marking a
+  litter Past without **Keep**, starts the same 30 days.
+- **A kept litter on a linked site** stays exactly as it was and becomes ordinary
+  KennelPort content she can edit (KennelOS no longer sends a Sold or Closed litter).
+- **When this ships:** anything already off the site starts its 30 days on the day phase
+  4 is released, so nothing goes before the breeder has seen it in the "about to go" list.
+- **A bundle itself never deletes a photo, file, album or page;** only the 30-day cleanup
+  does, and only for what has left the site.
 - **A summary** after each bundle: "3 updated, 1 new, 1 hidden. Preview, then Publish."
 
 **Who owns which field:**
 - **From KennelOS (read-only in KennelPort while linked):** name, registered name, sex,
   date of birth, colour, earned titles, health tests (section 3.7), litter dates, parents,
-  puppy status label (section 3.6), planned litters (per the Coming up switches), extras
-  names, groups and descriptions (section 3.4), shown pickup places and transport
-  distances (section 3.5); a planned litter's status (section 3.11), retired and deceased
-  status with the date of death, the waitlist steps behind How it works, and program
-  names and public descriptions. For litters opted in (decision 19): milestones and
-  weights, as draft diary entries. With **Use my KennelOS prices** on (decision 6): litter
-  prices, deposits, the registration surcharge, extras prices and the fee per mile.
+  puppy status label (section 3.6), upcoming litters per the Coming up switches (planned
+  heats as month and year only, planned and confirmed pairings, whelped litters before
+  picks open: section 3.7), extras
+  names, groups and descriptions (section 3.4); a planned litter's status (section 3.11),
+  retired and deceased status with the date of death, the waitlist steps behind How it
+  works, and program names and public descriptions. With **Use my KennelOS prices** on
+  (decision 6): litter prices, deposits, the registration surcharge and extras prices.
+  **Not in phase 4:** pickup places, transport distances and the fee per mile wait for the
+  pickup page (backlog section 4), and milestones and weights for the litter diary
+  (backlog section 6, decision 19): nothing is sent that the site has nowhere to show.
 - **KennelPort only:** website bio, prices (unless **Use my KennelOS prices** is on), photo choice
   and order, albums, embeds, page text, layout, and everything in sections 3.9 and 3.10
   (policies, reviews and stories, news, stud and adults pages, downloads, events, the
@@ -1002,8 +1043,14 @@ Each bundle is applied by these rules (decision 16):
 - KennelOS doesn't store dog photos today; a dog has a `url` field that Companion shares
   as its "photos link." KennelPort fills that gap: each dog page and album has a
   permanent link, and when linked, KennelOS can **fill the dog's `url` with its
-  KennelPort page**. Companion packages, and anything else that shares `url`, then point
-  at the site with no other changes.
+  KennelPort page**, and a litter's `photos_url` with its litter page. Companion packages,
+  the waitlist's photos links, and anything else that shares them, then point at the site
+  with no other changes. When a page leaves the site (hidden or deleted), the next bundle's
+  answer tells KennelOS, which blanks any `url` or `photos_url` still holding that address,
+  so no link points at a missing page. Only blank ones are filled: a dog or litter that already has
+  another photos link (a Google Photos album, say) keeps it. This runs one way:
+  KennelPort sends the addresses back when a bundle is applied, and never reads `url` or
+  `photos_url`; a dog's photos live on the site, not in KennelOS.
 - Every dog, litter, puppy and album page carries **Open Graph** tags (title, cover photo,
   description), so a link pasted into Facebook, Messenger or a text shows a picture card.
   `cloud/`'s family pages already do this.
@@ -1020,21 +1067,34 @@ Each bundle is applied by these rules (decision 16):
 These follow KennelOS's own rules, and each one needs its own decision there:
 - A `show_on_website` flag on Dog and Litter: a new field in `db.js`, classified in
   `syncRegistry.js`, documented in the End-State guide.
+- **Upcoming litters go too:** planned heats (month and year only), planned and confirmed
+  pairings and whelped litters before picks open, per the **Coming up** switches
+  (`waitlist_config.show_upcoming`), the same items the waitlist projection already builds
+  for the public list (`upcoming` in `waitlistProjection.js`).
 - `shared/data/siteExport.js`, the allow-list bundle builder, with a positive key check
   like `assertOnlyKeys()`.
-- A `siteConfig` injection point (KennelPort URL or `null`), so Demo and any build without
-  it show nothing.
-- **Request a website**: a Pro-only button. Lite and Demo don't show it; it goes through
-  `editionConfig.js` like other Pro-only features, never a hardcoded edition check.
+- The KennelPort address in `editionConfig.js` (`kennelportUrl`, beside `cloudUrl`):
+  Pro's carries it; Lite's, Demo's and the shared default are `null`, so they show
+  nothing and make no request.
+- **Pro only, all of it:** Request a website, Connect website, Update website and the
+  Show on website ticks are Pro features. Lite and Demo show none of them and can't link
+  (a Lite breeder can still have a KennelPort site, edited in KennelPort, with no link).
+  They go through `editionConfig.js` like other Pro-only features, never a hardcoded
+  edition check.
+- **A lapsed Pro license stops the link:** KennelOS checks the license (`license.js`)
+  before every Update website, and sends nothing while it has lapsed; the manage app shows
+  when the last bundle arrived. The site keeps what it has, and the breeder can unlink in
+  KennelPort to edit everything there. Renewing picks the link up again with no new code.
 - **The link token:** KennelOS now syncs across a breeder's devices. Keep the token in
   the device-only `device_secrets` table (never in a backup file or the cloud), so each
   device links once (decision 11).
 - **One link per kennel:** KennelOS supports more than one own kennel. Each site is one
   kennel; the bundle is scoped to that kennel's dogs and litters, and each kennel links
   separately.
-- **Filled in when linked:** the kennel's `website` (invoices and contract forms already
-  use it), `extras_info_url` (section 3.4), the waitlist embed's allowed sites when the
-  breeder has listed any (section 3.8), and dog `url` (section 5.4).
+- **Filled in when linked:** the kennel's `website` (invoices, receipts and contract forms
+  already print it), `extras_info_url` (section 3.4), the waitlist embed's allowed sites
+  (`embed_origins`) when the breeder has listed any (section 3.8), dog `url` and litter
+  `photos_url` (section 5.4).
 - **Kels:** Request a website and Update website as Kels tasks; **Show on website** asked
   in Add dogs, Record a litter and when a pup is marked Keeping.
 - **The waitlist on the breeder's site (decision 21): built in KennelOS.** The
@@ -1044,11 +1104,11 @@ These follow KennelOS's own rules, and each one needs its own decision there:
   in the site's style (3.8): the feed's `form` (what `/f/form` already serves), and
   `/f/apply`, `/f/verify` and `/f/code` answering cross-origin requests from KennelPort
   sites; `kennelport.com` added to KennelOS's Turnstile widget.
-- **Undecided puppies are not for sale (decision 10):** `isPupAvailable` treats
-  Undecided like Keeping, so the waitlist never offers one, its public list's
-  **Available Puppies** leaves it out, and the website feed and bundle agree; Companion
-  shares (`shared/data/companionExport.js`) don't show an Undecided puppy as available or
-  with a price. Needed before phase 4, and worth doing in KennelOS on its own.
+- **Undecided puppies are not for sale (decision 10): built in KennelOS.**
+  `isPupAvailable` offers only puppies marked Available (no plan set counts as Undecided),
+  so the waitlist, its public list's **Available Puppies** and the website feed agree, and
+  Kels's **Tidy up** asks about the breeder's puppies left with no plan. Companion shares
+  already listed only Available puppies.
 - Service-worker precache entries and a cache bump for any new files.
 
 ---
@@ -1175,7 +1235,7 @@ Everything after version 1, with its order and designs, is in
 8. **When someone leaves:** the breeder or you deletes all content immediately, and the
    address shows a "no longer hosting with KennelPort" notice (section 4.3).
 10. **Undecided puppies:** not for sale anywhere. KennelOS's waitlist doesn't offer them
-    and Companion shares don't show them for sale; the site shows them as Coming soon,
+    (nor a puppy with no plan set) and Companion shares don't show them for sale; the site shows them as Coming soon,
     with no price (sections 3.6, 5.5). Placed puppies show (with a hide switch per
     litter) and health hold is hidden.
 11. **Link across devices:** each device links once; the token stays in KennelOS's
@@ -1213,6 +1273,12 @@ Everything after version 1, with its order and designs, is in
 26. **Where an application goes:** to KennelOS's live list flow whenever the breeder takes
     applications online in KennelOS; to KennelPort's Inbox only when they don't and run
     their list by hand. Worked out by the site, not a choice (section 3.8).
+27. **The KennelOS link is Pro only:** Lite and Demo can't link at all (a Lite breeder can
+    still have a KennelPort site, kept apart), and a lapsed Pro license stops the link
+    until it's renewed (section 5.5).
+28. **The website isn't an archive:** what leaves the site (hidden, gone from the bundle,
+    a Sold or Closed litter, a litter marked Past) is deleted 30 days later with its
+    photos, unless the breeder presses **Keep** (section 5.3).
 
 **Open**
 

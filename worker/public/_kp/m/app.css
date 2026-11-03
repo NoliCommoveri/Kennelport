@@ -58,6 +58,13 @@ legend { font-weight: 700; font-size: .9rem; padding: 0; margin-bottom: 6px; }
 .ph-opt input { position: absolute; top: 6px; left: 6px; width: 20px; height: 20px; min-height: 0; z-index: 1; }
 .ph-opt:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
 .ph-opt.none { display: grid; place-items: center; background: var(--bg); font-size: .8rem; color: var(--muted); text-align: center; padding: 8px; }
+.layouts { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.layouts legend { grid-column: 1 / -1; }
+.layout-opt { position: relative; display: grid; justify-items: center; gap: 4px; padding: 10px 8px 8px; border: 2px solid var(--line); border-radius: 10px; font-weight: 400; font-size: .8rem; text-align: center; color: var(--muted); }
+.layout-opt input { position: absolute; top: 6px; left: 6px; width: 20px; height: 20px; min-height: 0; }
+.layout-opt:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); color: var(--ink); }
+.box { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+.box[hidden] { display: none; }
 .items { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .item { display: flex; align-items: stretch; gap: 8px; }
 .item > a { flex: 1; display: grid; gap: 2px; padding: 12px 14px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); text-decoration: none; color: var(--ink); min-width: 0; }

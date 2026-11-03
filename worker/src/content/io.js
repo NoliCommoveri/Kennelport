@@ -85,7 +85,7 @@ export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = ne
       const enabled = 'enabled' in v ? cleanValue({ type: 'bool' }, v.enabled, `${path}.enabled`) : 1;
       const content = cleanRecord(fields, omit(v, ['enabled']), path, { partial: true });
       for (const id of content.photos ?? []) photo(id, `${path}.photos`);
-      if (content.photo_id) photo(content.photo_id, `${path}.photo_id`);
+      for (const [n, f] of Object.entries(fields)) if (f.type === 'photo' && content[n]) photo(content[n], `${path}.${n}`);
       out.home[key] = { enabled, content };
     }
   }

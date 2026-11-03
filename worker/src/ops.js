@@ -12,6 +12,7 @@ import { hmacHex, timingSafeEqual } from './lib/crypto.js';
 import { readCookie } from './lib/http.js';
 import { escapeHtml as esc, htmlPage } from './lib/html.js';
 import { handleSites, sitesSection } from './ops/sites.js';
+import { usageSection } from './ops/usage.js';
 import { mailMode, outboxRecent } from './mail.js';
 import { vapidConfig, generateVapidKeys } from './push.js';
 import { turnstileOn } from './siteforms.js';
@@ -84,6 +85,7 @@ async function statusPage(env, log = null, note = null, keys = null) {
   const pending = rows.some((r) => r.state !== 'applied');
   const envName = env.ENV_NAME || 'unknown';
   const sites = dbOk && !pending ? await sitesSection(env) : '';
+  const usage = dbOk && !pending ? await usageSection(env) : '';
   const outbox = dbOk && !pending && mailMode(env) === 'outbox' ? await outboxRecent(env) : [];
   const outboxHtml = outbox.length ? `<h2>Staging outbox</h2><p class="muted">What would have been emailed, newest first. Addresses aren't kept.</p>${outbox.map((m) => `<pre>${esc(m.created_at.slice(0, 16).replace('T', ' '))} · ${esc(m.kind)}\n${esc(m.subject)}\n\n${esc(m.body)}</pre>`).join('')}` : '';
 
@@ -94,6 +96,7 @@ async function statusPage(env, log = null, note = null, keys = null) {
   return htmlPage(TITLE, `<h1>${TITLE}</h1>
 <p class="muted">Environment: <strong>${esc(envName)}</strong></p>
 ${note === 'released' ? '<p class="ok">Subdomain released.</p>' : ''}
+${usage}
 ${sites}
 <h2>Setup checks</h2>
 <table>${checkRows}</table>

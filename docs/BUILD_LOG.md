@@ -724,3 +724,52 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   those numbers with updated fingerprints rather than bumping again. `CLAUDE.md` now
   says to check whether the current number has gone out before asking about a bump,
   and, when it hasn't, just to update its fingerprint.
+
+## 2026-11-02: removed photos leave R2; usage on /ops
+
+- Migration `0013_usage.sql`: `photos.purged_at`, and `mail_counts` (emails per day
+  and kind, counts only).
+- The daily cleanup deletes the R2 files (full and thumbnail) of photos removed over a
+  day ago, unless a kept snapshot lists them: the live site serves from its snapshot
+  and Undo publish can go back to an older one, so those wait until the snapshots
+  naming them are pruned. The row stays, marked `purged_at`. At most 500 a run.
+- `/ops` opens with a **Usage** table (this month, now, free tier): sites, photos and
+  their size, removed photos still in R2, kept versions, R2 storage against 10 GB,
+  emails against Resend's 3,000 a month and 100 a day, form messages, breeder
+  accounts, push subscriptions. Emails are counted from this deploy on.
+- 134 tests. No template or manage app files changed, so no version bump.
+
+## 2026-11-02: plan checked against KennelOS before phase 4
+
+- Section 5 and the KennelOS parts of 3.2 to 3.11 checked against KennelOS's code. Fixed:
+  upcoming litters (planned heats, pairings) go in the bundle per the Coming up switches;
+  KennelOS fills litter `photos_url` as well as dog `url`, one way; invoices and receipts
+  already print the kennel's website. Decision 10 is now built in KennelOS (Undecided and
+  unset puppies aren't offered; Kels's Tidy up asks about pups with no plan).
+
+## 2026-11-03: the Home collage, its frames, and a banner
+
+- The top of Home drew three fixed boxes and filled any it had no photo for with grey
+  placeholders, so a breeder's photos rarely matched their shapes and wide photos were
+  cut off at both sides. Now (Top of the page, in the manage app):
+  - **Photo layout:** seven pre-drawn layouts (one wide; one tall; two tall; two wide;
+    one tall and two wide, the old look; one wide and two square; four square),
+    `COLLAGE_LAYOUTS` in `content/model.js`. Each box has its own shape (wide 4:3,
+    tall 4:5, square) and says the photo size that fills it sharply (1600 × 1200,
+    1280 × 1600, 1600 × 1600).
+  - **A photo per box**, and **which part to keep** (top, middle, bottom) per box. Box
+    pickers follow the layout as she picks it (`app.js`). With fewer photos than boxes
+    the site uses a layout for that many (`collageLayout`); never an empty box, and no
+    collage at all with no photos.
+  - **Frame, round each photo:** a soft mat (default), a mat with a brass inner rule,
+    a leafy vine (`vine-h.svg`, `vine-v.svg`, `vine-c.svg` used as masks
+    filled with the scheme's accent, so it follows light and dark), or none.
+  - **Banner photo:** an optional wide strip under the header, across the page (5:2,
+    best at 1600 × 640, at most 440 px tall), with which part to keep.
+  - Each box's shape is set on its photo, not the box, so a frame of any thickness
+    keeps the recommended sizes exact.
+- New `hero` keys: `banner_photo_id`, `banner_focus`, `layout`, `frame`, `focus`
+  (per box); `photos` now in box order, up to 4. No migration (block content is JSON).
+- Checked in Chromium at phone and computer widths, light and dark. 140 tests; template
+  and manage app files changed.
+- Released as site template 9 and manage app 11 (fingerprints updated).

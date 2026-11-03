@@ -132,9 +132,50 @@ nav.main li.open > .navtop .chev { transform: rotate(225deg) translate(-2px, -1p
 .hero-copy h1 .script { display: block; font-size: .78em; margin-top: 6px; }
 .hero-copy p { color: var(--muted); max-width: 46ch; font-size: 1.05rem; }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; }
-.hero-photos { display: grid; grid-template-columns: 1.3fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; aspect-ratio: 5 / 4.4; max-width: 100%; }
-.hero-photos img { width: 100%; height: 100%; object-fit: cover; border-radius: var(--r); display: block; }
-.hero-photos img:first-child { grid-row: span 2; }
+.hero.no-photos { grid-template-columns: 1fr; }
+/* The collage: each box has its own shape (wide 4:3, tall 4:5, square), set on its
+   photo so the frame round it doesn't change it, and the layout places them; the
+   breeder picks the photo for each box and which part to keep (f-top / f-middle /
+   f-bottom). */
+.hero-photos { position: relative; display: grid; gap: 12px; width: 100%; min-width: 0; }
+.hero-photos .box img { width: 100%; height: auto; object-fit: cover; border-radius: var(--r); display: block; }
+.box.wide img { aspect-ratio: 4 / 3; }
+.box.tall img { aspect-ratio: 4 / 5; }
+.box.square img { aspect-ratio: 1; }
+.f-top img { object-position: 50% 0; }
+.f-bottom img { object-position: 50% 100%; }
+.hero-photos.tall_two_wide .box.tall img { height: 100%; aspect-ratio: auto; }
+/* Each photo's frame, in the scheme's own colours. Mat: a soft card (the
+   parent-dog circles' surface border and hairline). Double: the mat with a brass
+   inner rule. Vine: a leafy stem all the way round the photo, its pieces masks
+   (vine-*.svg) filled with the accent. None: the bare photo. */
+.hero-photos .box { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: calc(var(--r) + 3px); padding: 5px; box-shadow: var(--shadow); min-width: 0; }
+.frame-double .box { padding: 10px; }
+.frame-double .box::after { content: ""; position: absolute; inset: 4px; border: 1.5px solid var(--brass); border-radius: calc(var(--r) + 1px); pointer-events: none; }
+.frame-none .box, .frame-sprig .box { background: none; border: 0; padding: 0; box-shadow: none; }
+.frame-sprig { gap: 16px; }
+.frame-sprig .box { padding: 22px; }
+.vine { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.vine i { position: absolute; display: block; background: var(--accent); opacity: .85; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+.vine .t, .vine .b { left: 56px; right: 56px; height: 28px; }
+.vine .l, .vine .r { top: 56px; bottom: 56px; width: 28px; }
+.vine .t { top: 0; } .vine .b { bottom: 0; transform: scaleY(-1); }
+.vine .l { left: 0; } .vine .r { right: 0; transform: scaleX(-1); }
+.vine i.t, .vine i.b { -webkit-mask: url(vine-h.svg) repeat-x 0 0 / 102px 28px; mask: url(vine-h.svg) repeat-x 0 0 / 102px 28px; }
+.vine i.l, .vine i.r { -webkit-mask: url(vine-v.svg) repeat-y 0 0 / 28px 102px; mask: url(vine-v.svg) repeat-y 0 0 / 28px 102px; }
+.vine .c { width: 56px; height: 56px; }
+.vine i.c { -webkit-mask: url(vine-c.svg) no-repeat 0 0 / 56px 56px; mask: url(vine-c.svg) no-repeat 0 0 / 56px 56px; }
+.vine .tl { top: 0; left: 0; } .vine .tr { top: 0; right: 0; transform: scaleX(-1); }
+.vine .bl { bottom: 0; left: 0; transform: scaleY(-1); } .vine .br { bottom: 0; right: 0; transform: scale(-1, -1); }
+.hero-photos.one_tall { max-width: 440px; justify-self: center; }
+.hero-photos.two_tall, .hero-photos.wide_two_square, .hero-photos.four_square { grid-template-columns: 1fr 1fr; }
+.hero-photos.two_wide { max-width: 520px; justify-self: center; }
+.hero-photos.tall_two_wide { grid-template-columns: 1.2fr 1fr; }
+.hero-photos.tall_two_wide .box.tall { grid-row: span 2; }
+.hero-photos.wide_two_square .box.wide { grid-column: span 2; }
+/* The banner: a wide strip right under the header, across the page. */
+.banner { aspect-ratio: 5 / 2; max-height: 440px; width: 100%; overflow: hidden; border-bottom: 4px solid var(--surface); box-shadow: 0 1px 0 var(--line); }
+.banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .facts { display: flex; flex-wrap: wrap; gap: 28px; border-top: 1px solid var(--line); padding-top: 18px; margin-top: 8px; }
 .facts div { display: grid; }
 .facts b { font: 500 1.6rem/1 var(--f-display); }
@@ -403,8 +444,7 @@ img { max-width: 100%; }
 .mt-26 { margin-top: 26px; }
 .mt-20 { margin-top: 20px; }
 .ph-photo { flex: 1; display: grid; place-items: center; background: var(--band); color: var(--muted); font-family: var(--f-display); font-size: 1.1rem; }
-.story-ph, .hero-ph { background: var(--line); border-radius: var(--r); aspect-ratio: 4 / 5; }
-.hero-photos .hero-ph:first-child { grid-row: span 2; aspect-ratio: auto; }
+.story-ph { background: var(--line); border-radius: var(--r); aspect-ratio: 4 / 5; }
 .narrow-grid { max-width: 300px; margin: 0 auto; }
 .step details.x { border: 0; background: none; }
 .step details.x > summary { padding: 4px 30px 4px 0; font-size: .92rem; font-family: var(--f-body); font-weight: 700; color: var(--accent); }
