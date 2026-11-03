@@ -32,8 +32,8 @@ export function embedsBlock(snap, place, { heading = 'Videos and posts', band = 
   return inWrap ? `<div class="mt-26">${inner}</div>` : `<section class="section${band ? ' band' : ''}"><div class="wrap">${inner}</div></section>`;
 }
 
-// The vine frame: a leafy stem along each edge and curled round each corner, in the
-// scheme's accent, drawn by masks in site.css.
+// The vine frame round each photo: a leafy stem along each edge and curled round
+// each corner, in the scheme's accent, drawn by masks in site.css.
 const VINE_PARTS = ['t', 'b', 'l', 'r', 'c tl', 'c tr', 'c bl', 'c br'];
 const VINE = `<div class="vine" aria-hidden="true">${VINE_PARTS.map((p) => `<i class="${p}"></i>`).join('')}</div>`;
 const sprigs = '<svg class="sprig l" aria-hidden="true"><use href="#sprig"/></svg><svg class="sprig r" aria-hidden="true"><use href="#sprig"/></svg>';
@@ -52,8 +52,8 @@ export function home(snap, ctx) {
     const chosen = (h.hero.photos ?? []).map((id, i) => ({ id, focus: h.hero.focus?.[i] ?? 'middle' })).filter((x) => snap.photos[x.id]);
     const layout = collageLayout(h.hero.layout, chosen.length);
     const boxes = layout ? COLLAGE_LAYOUTS[layout].boxes : [];
-    const photos = chosen.map((x, i) => `<div class="box ${boxes[i]} f-${x.focus}">${img(snap, x.id, { lazy: i > 0 })}</div>`);
     const frame = h.hero.frame ?? 'mat';
+    const photos = chosen.map((x, i) => `<div class="box ${boxes[i]} f-${x.focus}">${img(snap, x.id, { lazy: i > 0 })}${frame === 'sprig' ? VINE : ''}</div>`);
     const banner = h.hero.banner_photo_id && snap.photos[h.hero.banner_photo_id]
       ? `<div class="banner f-${h.hero.banner_focus ?? 'middle'}">${img(snap, h.hero.banner_photo_id, { lazy: false })}</div>` : '';
     const facts = h.facts.enabled && h.facts.items?.length
@@ -67,7 +67,7 @@ export function home(snap, ctx) {
       <h1>${scriptLine(h.hero.headline || snap.site.kennel_name, h.hero.script)}</h1>
       ${h.hero.intro ? `<p>${esc(h.hero.intro)}</p>` : ''}
       ${buttons ? `<div class="hero-actions">${buttons}</div>` : ''}${facts}
-    </div>${layout ? `<div class="hero-photos ${layout} frame-${frame}">${photos.join('')}${frame === 'sprig' ? VINE : ''}</div>` : ''}</section>`);
+    </div>${layout ? `<div class="hero-photos ${layout} frame-${frame}">${photos.join('')}</div>` : ''}</section>`);
   }
 
   if (h.story.enabled && (h.story.text || h.story.heading)) {

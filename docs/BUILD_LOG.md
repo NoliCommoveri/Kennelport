@@ -761,11 +761,13 @@ features and the inquiry form), and custom domains with guided, self-checking DN
     pickers follow the layout as she picks it (`app.js`). With fewer photos than boxes
     the site uses a layout for that many (`collageLayout`); never an empty box, and no
     collage at all with no photos.
-  - **Frame:** a soft mat (default), a mat with a brass inner rule, a leafy vine all
-    the way round the collage (`vine-h.svg`, `vine-v.svg`, `vine-c.svg` used as masks
+  - **Frame, round each photo:** a soft mat (default), a mat with a brass inner rule,
+    a leafy vine (`vine-h.svg`, `vine-v.svg`, `vine-c.svg` used as masks
     filled with the scheme's accent, so it follows light and dark), or none.
   - **Banner photo:** an optional wide strip under the header, across the page (5:2,
     best at 1600 × 640, at most 440 px tall), with which part to keep.
+  - Each box's shape is set on its photo, not the box, so a frame of any thickness
+    keeps the recommended sizes exact.
 - New `hero` keys: `banner_photo_id`, `banner_focus`, `layout`, `frame`, `focus`
   (per box); `photos` now in box order, up to 4. No migration (block content is JSON).
 - Checked in Chromium at phone and computer widths, light and dark. 140 tests; template

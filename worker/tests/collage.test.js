@@ -93,14 +93,14 @@ test('each box gets the photo she chose and the part to keep; the site draws it,
   assert.doesNotMatch(page2, /class="banner|hero-ph"/);
 });
 
-test('the frame she picks: a mat by default, a brass inner rule, or a leafy vine all round', async () => {
+test('the frame she picks: a mat by default, a brass inner rule, or a leafy vine round each photo', async () => {
   const b = await breeder();
   const p1 = await b.upload();
   const html = await (await b.get('/home/hero')).text();
   assert.match(html, /<select id="f-frame" name="frame"><option value="mat" selected>A soft mat around each photo/);
   await b.post('/home/hero', { enabled: '1', layout: 'one_wide', 'photos.0': p1, frame: 'sprig' });
   const page = await b.live();
-  assert.match(page, /<div class="hero-photos one_wide frame-sprig">.*<div class="vine" aria-hidden="true"><i class="t"><\/i><i class="b"><\/i><i class="l"><\/i><i class="r"><\/i><i class="c tl"><\/i>/s);
+  assert.match(page, /<div class="hero-photos one_wide frame-sprig"><div class="box wide f-middle"><img [^>]*><div class="vine" aria-hidden="true"><i class="t"><\/i><i class="b"><\/i><i class="l"><\/i><i class="r"><\/i><i class="c tl"><\/i>/s);
   for (const f of ['vine-h.svg', 'vine-v.svg', 'vine-c.svg']) {
     const r = await call(b.env, S, `/_kp/t/ak/${f}`);
     assert.equal(r.headers.get('content-type'), 'image/svg+xml', f);
