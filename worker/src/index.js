@@ -65,7 +65,11 @@ export default {
 
     if (env.ALLOW_HOST_OVERRIDE === '1' && url.pathname === '/__host') return hostOverride(url, env);
 
-    const target = classifyHost(effectiveHost(request, env, readCookie), env.ROOT_DOMAIN);
+    // Staging only: KennelOS's app can't send the host cookie (it calls with no
+    // credentials), so on workers.dev the link API answers its own paths as well.
+    const target = env.ALLOW_HOST_OVERRIDE === '1' && url.pathname.startsWith('/v1/')
+      ? { kind: 'api' }
+      : classifyHost(effectiveHost(request, env, readCookie), env.ROOT_DOMAIN);
 
     switch (target.kind) {
       case 'home':

@@ -381,10 +381,12 @@ test('Use my KennelOS prices: off, KennelOS sends none here; on, they arrive rea
   const token = await linked(b);
   const send = (body) => api(b.env, '/v1/bundle', { body, token });
   const litter = { id: 'l1', name: 'Spring', born_on: '2026-10-01', prices: { price_female: 3000, full_reg_female: 500, deposit_female: 500 }, puppies: [] };
-  await send(bundle({ litters: [litter], extras: [{ id: 'x1', name: 'Crate', price_from: 90 }] }));
+  const offAnswer = await (await send(bundle({ litters: [litter], extras: [{ id: 'x1', name: 'Crate', price_from: 90 }] }))).json();
+  assert.equal(offAnswer.site.kennelos_prices, false); // so KennelOS keeps its prices to itself
   assert.equal(b.row("SELECT price_female FROM litters WHERE kennelos_id = 'l1'").price_female, null);
   assert.equal(b.row("SELECT price_from FROM extras WHERE kennelos_id = 'x1'").price_from, null);
   await b.post('/kennelos/prices', { on: '1' });
+  assert.equal((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.kennelos_prices, true);
   await send(bundle({ litters: [litter], extras: [{ id: 'x1', name: 'Crate', price_from: 90 }] }));
   assert.equal(b.row("SELECT price_female FROM litters WHERE kennelos_id = 'l1'").price_female, 3000);
   assert.equal(b.row("SELECT price_from FROM extras WHERE kennelos_id = 'x1'").price_from, 90);
@@ -492,4 +494,15 @@ test('steps, How to pay, extras and her public list come with a bundle; whether 
   await send(bundle({ extras: [] }));
   assert.equal(b.row("SELECT COUNT(*) AS n FROM steps WHERE source = 'kennelos'").n, 2);
   assert.equal(b.row("SELECT COUNT(*) AS n FROM extras WHERE kennelos_id = 'x1'").n, 0);
+});
+
+test('staging: the link API answers /v1/ on its own host, since KennelOS sends no cookie', async () => {
+  const env = await makeEnv({ ALLOW_HOST_OVERRIDE: '1', KENNELOS_APP_ORIGINS: APP });
+  const res = await call(env, 'kennelport-staging.kennelport.workers.dev', '/v1/link', { method: 'GET', headers: { origin: APP } });
+  assert.equal(res.status, 401);
+  assert.equal((await res.json()).error, 'not_linked');
+  assert.equal(res.headers.get('access-control-allow-origin'), APP);
+  // Production never does: there /v1/ on a site's host is the site's.
+  const prod = await makeEnv({ KENNELOS_APP_ORIGINS: APP });
+  assert.notEqual((await call(prod, M, '/v1/link', { method: 'GET', headers: { origin: APP } })).headers.get('content-type'), 'application/json; charset=utf-8');
 });

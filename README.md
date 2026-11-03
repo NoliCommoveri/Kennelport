@@ -16,8 +16,9 @@ upload works on a real Android phone and a real iPhone (plan 4.2). Phase 3 is bu
 waitlist page, and the KennelOS website feed: the list and KennelOS's application form
 drawn in the site's style, and a simple waitlist kept by hand for sites without
 KennelOS (plan 3.8, 8.1). Phase 5 is built (albums, videos and posts, sharing and QR codes) apart from KennelOS
-shares carrying album links. Phase 4's KennelPort side is built (link codes, the bundle API, matching, litter prices,
-the 30 days with Keep, the Dogs page's new groups; plan 8.1); its KennelOS side (plan 5.5) is next, in the KennelOS repo. Open: site
+shares carrying album links. Phase 4 is built on both sides (link codes, the bundle API, matching, litter prices, the
+30 days with Keep, the Dogs page's new groups; in KennelOS the marks, Connect website and
+Update website; plan 8.1); next is trying it against staging. Open: site
 rules wait until KennelPort is offered (9). See
 [`docs/KennelPort_Plan.md`](docs/KennelPort_Plan.md); after version 1:
 [`docs/KennelPort_Backlog.md`](docs/KennelPort_Backlog.md). Page directory from a survey of real breeder sites:

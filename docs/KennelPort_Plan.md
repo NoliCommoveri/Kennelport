@@ -1,7 +1,7 @@
 # KennelPort: high-level plan (DRAFT)
 
 > Status: phases 0 to 3 are built (`worker/`), and phase 5 (albums, videos and posts, sharing) apart from its KennelOS part, which needs phase 4; section 8.1 says how phase 3 came together.
-> Phase 4 was settled on 2026-11-03 against KennelOS's code (section 5, decisions 29 to 32). Its KennelPort side is built; its KennelOS side (5.5) isn't yet (section 8.1).
+> Phase 4 was settled on 2026-11-03 against KennelOS's code (section 5, decisions 29 to 32). Both sides are built (section 8.1).
 > Section 8 says what version 1 is; section 9 lists the one decision still open. What comes after version 1 is
 > in [`KennelPort_Backlog.md`](KennelPort_Backlog.md). History of this plan lives in
 > [`BUILD_LOG.md`](BUILD_LOG.md).
@@ -1431,9 +1431,17 @@ fields with **Show prices** and **Show placed puppies**, a puppy's registration 
 price, and the deposits date (3.2, 3.6); **Still deciding**; **Up and coming** and
 **Looking for a home** (3.7); the 30 days with **Keep** and **Not on your site** (5.3);
 **Unlink** and stopping one device; and the published addresses in each bundle's answer
-(5.4). Still to do: everything in 5.5, in the KennelOS repo (`siteExport.js` builds the
-bundle in the format above), and setting `KENNELOS_APP_ORIGINS` once KennelOS Pro's
-origins are known: until then every browser call to the API is refused.
+(5.4). Each answer also says whether **Use my KennelOS prices** is on
+(`kennelos_prices`), so KennelOS sends its prices, private there, only while it is; and on
+staging the API answers `/v1/` on the workers.dev host, since KennelOS calls with no cookie.
+`KENNELOS_APP_ORIGINS` is `https://pro.kennelos.app` (staging adds the local dev server).
+KennelOS's side (5.5) is built too: the four marks, `siteExport.js` (format 1, checked
+against `cleanBundle`), `kennelportApi.js`, Connect website and Update website on Settings
+and as a Kels task, filling `dog.url`, `photos_url`, the kennel's website, `extras_info_url`
+and the feed, and the prompts at Active breeding, past Expected, and Sold or Closed. Not
+built from 5.5: a custom domain in KennelOS's `isWebsiteOrigin` (KennelOS's cloud doesn't
+know her domain yet), and the deposit's How to pay (KennelOS keeps no deposit
+instructions). Next: try the link end to end on staging.
 
 If the first site wants its own domain, connect it by hand (section 2.4).
 

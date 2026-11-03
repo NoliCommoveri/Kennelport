@@ -61,14 +61,15 @@ fallthrough = true
 # application to (src/feed.js, plan 3.8).
 # KENNELOS_APP_ORIGINS: the origins of the KennelOS Pro app (comma-separated), the
 # only browser origins the link API on api.kennelport.com answers (plan 5.3,
-# src/kennelos/api.js). Unset, every browser call to /v1/ is refused. Not set yet:
-# add the staging app's origin here and the production one under
-# [env.production.vars] once they're known.
+# src/kennelos/api.js). Unset, every browser call to /v1/ is refused. KennelOS Pro
+# is pro.kennelos.app; staging also takes the local dev server (KennelOS's
+# devKennelportUrl is this Worker, used on localhost and with ?cloud=staging).
 [vars]
 ENV_NAME = "staging"
 KENNELOS_ORIGIN = "https://kennelos-api-staging.admin-kennelos.workers.dev"
 ROOT_DOMAIN = "kennelport.com"
 ALLOW_HOST_OVERRIDE = "1"
+KENNELOS_APP_ORIGINS = "https://pro.kennelos.app, http://localhost:8000, http://127.0.0.1:8000"
 DEV_OUTBOX = "1"
 MAIL_FROM = "KennelPort <signin@kennelport.com>"
 VAPID_SUBJECT = "mailto:support@kennelport.com"
@@ -115,6 +116,7 @@ bucket_name = "kennelport-files"
 [env.production.vars]
 ENV_NAME = "production"
 KENNELOS_ORIGIN = "https://apply.kennelos.app"
+KENNELOS_APP_ORIGINS = "https://pro.kennelos.app"
 ROOT_DOMAIN = "kennelport.com"
 MAIL_FROM = "KennelPort <signin@kennelport.com>"
 VAPID_SUBJECT = "mailto:support@kennelport.com"

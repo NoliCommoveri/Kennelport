@@ -912,3 +912,18 @@ KennelOS repo and isn't started. 166 tests with custom domains.
 - Released together with the photo-shape changes and custom domains as site template 10
   (fingerprint updated).
 
+
+## 2026-11-03: Phase 4, KennelOS's side, and what KennelPort needed for it
+
+- KennelOS's side of the link is built (its repo: the four marks, `siteExport.js`,
+  `kennelportApi.js`, Connect website and Update website, the prompts; its End-State guide
+  §35). A bundle KennelOS builds was run through `cleanBundle` here and accepted.
+- **The prices switch in each answer:** `siteFacts` now carries `kennelos_prices` (Use my
+  KennelOS prices), so KennelOS sends its prices, which it keeps private, only while the
+  switch is on. Tested.
+- **Staging answers `/v1/` on its own host:** with `ALLOW_HOST_OVERRIDE`, a `/v1/` path is
+  the link API whatever the host cookie says, since KennelOS calls with no credentials and
+  so can't send it. Production is unchanged. Tested.
+- **`KENNELOS_APP_ORIGINS` set:** `https://pro.kennelos.app` in production; staging adds
+  `http://localhost:8000` and `http://127.0.0.1:8000` for KennelOS's dev server.
+- No manage app or site template files changed: no version bump.
