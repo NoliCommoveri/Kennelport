@@ -327,6 +327,11 @@ test('the hand-over: a kept puppy becomes a dog with its photos, and the litter 
   await send(bundle({ dogs: [DOG('d-nova', 'Nova')], litters: [{ id: 'l1', dam_id: 'd-nova', dam_name: 'Nova', born_on: '2026-01-01', puppies: [{ id: 'k1', name: 'Fern', sex: 'female', status: 'staying' }, { id: 'k2', name: 'Moss', sex: 'male', status: 'placed' }] }] }));
   const fern = b.row("SELECT * FROM puppies WHERE kennelos_id = 'k1'");
   const moss = b.row("SELECT * FROM puppies WHERE kennelos_id = 'k2'");
+  // Placed reads Spoken for: still here, not available to anyone else.
+  await b.post('/publish');
+  const card = await b.page(`/litters/${b.row("SELECT slug FROM litters WHERE kennelos_id = 'l1'").slug}`);
+  assert.match(card, /Spoken for/);
+  assert.doesNotMatch(card, /Gone to a new home|Placed/);
   const t = new Date().toISOString();
   for (const [pid, who] of [['ph-fern', fern], ['ph-moss', moss]]) {
     b.env.DB.raw.prepare("INSERT INTO photos (id, site_id, r2_key, type, bytes, created_at) VALUES (?, ?, ?, 'image/webp', 10, ?)").run(pid, b.site.id, `sites/${b.site.id}/photos/${pid}.webp`, t);

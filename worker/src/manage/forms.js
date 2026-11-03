@@ -55,7 +55,7 @@ const LABELS = {
     deposit_female: ['Deposit for a girl', null], deposit_male: ['Deposit for a boy', null],
     price_note: ['A note under the prices', 'For example "Prices are our intended base prices and may change before the contract is signed."'],
     show_prices: ['Show prices', 'Off: this litter and its puppies show "Contact us for pricing".'],
-    show_placed: ['Show placed puppies', 'Off: puppies marked Placed leave the site.'],
+    show_placed: ['Show spoken-for puppies', 'Off: puppies that are Spoken for leave the site.'],
   },
   puppies: {
     name: ['Name', null], collar: ['Collar', 'For example "pink collar".'],
@@ -140,7 +140,7 @@ const LABELS = {
 const ENUM_WORDS = {
   sex: { female: 'Female', male: 'Male' },
   status_dogs: { active: 'At home', retired: 'Retired', remembered: 'In memory' },
-  status_puppies: { available: 'Available', reserved: 'Reserved', placed: 'Placed', staying: 'Staying with us', coming_soon: 'Still deciding', hidden: 'Hidden' },
+  status_puppies: { available: 'Available', reserved: 'Reserved', placed: 'Spoken for', staying: 'Staying with us', coming_soon: 'Still deciding', hidden: 'Hidden' },
   registration: { limited: 'Limited', full: 'Full' },
   status_reviews: { approved: 'Shown', hidden: 'Hidden' },
   health_display: { normal_only: 'Normal results only', all: 'All ticked results', none: 'None' },
