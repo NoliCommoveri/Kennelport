@@ -159,6 +159,7 @@ export const OWNED = {
   steps: ['heading', 'body'],
 };
 export const OWNED_PRICES = { litters: LITTER_PRICE_FIELDS, extras: ['price_from', 'price_to'] };
+const FULL_REG_FIELDS = ['full_reg_female', 'full_reg_male'];
 
 const DOG_STATUS = {
   puppy: { status: 'active', upcoming: 1, for_sale: 0 },
@@ -295,6 +296,10 @@ export class Writer {
       expected_label: kind === 'heat' ? monthOf(`${e.month}-01`) : planned ? monthOf(e.expected_on ?? e.planned_on ?? null) : null,
     };
     if (this.prices && kind === 'litter') for (const k of LITTER_PRICE_FIELDS) v[k] = e.prices?.[k] ?? null;
+    // Without Use my KennelOS prices, KennelOS still sends the full-registration
+    // surcharge (for Ask about full registration): taken when it has one, so a
+    // surcharge she typed here isn't cleared by a blank.
+    else if (kind === 'litter') for (const k of FULL_REG_FIELDS) if (e.prices?.[k] != null) v[k] = e.prices[k];
     return v;
   }
 

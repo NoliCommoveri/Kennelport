@@ -690,3 +690,31 @@ test('registration on the puppy card, and a litter\'s Ask about full registratio
   assert.match(await b.page('/contact?full-reg=%3Cscript%3E'), /name="topic" maxlength="80" placeholder="[^"]*" value=""/);
   assert.match(await b.page('/contact'), /name="topic" maxlength="80" placeholder="[^"]*" value=""/);
 });
+
+test('the full-registration surcharge: from KennelOS without its prices, shown where families may ask, even with prices off', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (body) => api(b.env, '/v1/bundle', { body, token });
+  const surcharge = { price_female: null, price_male: null, full_reg_female: 500, full_reg_male: 400, deposit_female: null, deposit_male: null };
+  const litter = (prices) => ({ id: 'l1', dam_id: 'd-nova', dam_name: 'Nova', born_on: '2026-10-01', prices, puppies: [{ id: 'k1', name: 'Fern', sex: 'female', status: 'available', registration: 'limited' }, { id: 'k2', name: 'Moss', sex: 'male', status: 'available', registration: 'limited' }] });
+  await send(bundle({ dogs: [DOG('d-nova', 'Nova')], litters: [litter(surcharge)] }));
+  const l = b.row("SELECT * FROM litters WHERE kennelos_id = 'l1'");
+  assert.deepEqual([l.full_reg_female, l.full_reg_male, l.price_female, l.show_prices], [500, 400, null, 0]);
+  // A blank from KennelOS doesn't clear one she typed.
+  b.env.DB.raw.prepare('UPDATE litters SET full_reg_male = 450 WHERE id = ?').run(l.id);
+  await send(bundle({ dogs: [DOG('d-nova', 'Nova')], litters: [litter({ ...surcharge, full_reg_male: null })] }));
+  assert.equal(b.row('SELECT full_reg_male FROM litters WHERE id = ?', l.id).full_reg_male, 450);
+
+  await b.post('/publish');
+  let html = await b.page(`/litters/${l.slug}`);
+  assert.doesNotMatch(html, /Full registration adds/, 'not without the setting');
+  assert.match(html, /Contact us for pricing/);
+  b.env.DB.raw.prepare('UPDATE litters SET ask_full_reg = 1 WHERE id = ?').run(l.id);
+  await b.post('/publish');
+  html = await b.page(`/litters/${l.slug}`);
+  assert.match(html, /Full registration adds \$500 for a girl, \$450 for a boy\./);
+  assert.match(html, /<li><span>Full registration adds<\/span><span>\$500<\/span><\/li>/);
+  assert.match(html, /<li><span>Full registration adds<\/span><span>\$450<\/span><\/li>/);
+  assert.match(html, /Contact us for pricing/, 'the other prices stay off');
+  assert.match(await b.page(`/litters/${l.slug}/fern`), /<dt>Full registration adds<\/dt><dd>\$500<\/dd>/);
+});

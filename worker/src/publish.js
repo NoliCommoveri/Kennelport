@@ -22,6 +22,7 @@ const keep = (row, drop) => Object.fromEntries(Object.entries(row).filter(([k, v
 const SYSTEM = ['site_id', 'sort', 'source', 'kennelos_id', 'kennelos_kind', 'hidden_by_kennelos', 'created_at', 'updated_at', 'show_on_site', 'left_site_at', 'kept_at'];
 // A litter's figures go into the snapshot only with its Show prices on (plan 3.2).
 const LITTER_PRICES = ['price_female', 'price_male', 'full_reg_female', 'full_reg_male', 'deposit_female', 'deposit_male', 'price_note'];
+const FULL_REG = ['full_reg_female', 'full_reg_male'];
 
 export const snapshotKey = (siteId, snapshotId) => `sites/${siteId}/snapshots/${snapshotId}.json`;
 
@@ -74,7 +75,10 @@ export async function buildSnapshot(env, siteId) {
   // Every dog's call name, shown or not, for parents who aren't on the site.
   const callNames = new Map((await all('SELECT id, call_name FROM dogs WHERE site_id = ?')).map((d) => [d.id, d.call_name]));
   const litters = littersRaw.map((l) => {
-    const out = { ...keep(l, [...SYSTEM, 'show_placed', ...(l.show_prices ? [] : LITTER_PRICES)]), show_prices: Boolean(l.show_prices), ask_full_reg: Boolean(l.ask_full_reg) };
+    // Prices off: none go, save the full-registration surcharge while families
+    // may ask about full registration (the site shows it with that link).
+    const hidden = l.show_prices ? [] : LITTER_PRICES.filter((k) => !(l.ask_full_reg && FULL_REG.includes(k)));
+    const out = { ...keep(l, [...SYSTEM, 'show_placed', ...hidden]), show_prices: Boolean(l.show_prices), ask_full_reg: Boolean(l.ask_full_reg) };
     // A parent that isn't shown on the site is named, never linked: by the name
     // typed for her, else the dog's own call name, as plain text.
     for (const role of ['dam', 'sire']) {

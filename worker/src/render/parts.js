@@ -232,6 +232,19 @@ export function fullRegHref(snap, l, p, ctx) {
   if (p && (p.registration !== 'limited' || p.status === 'staying')) return null;
   return `/contact?full-reg=${encodeURIComponent(l.slug)}${p ? `&puppy=${encodeURIComponent(p.slug)}` : ''}#message`;
 }
+// What full registration adds, shown beside those links: one puppy's (by its sex),
+// or the litter's ("$500", or "$500 for a girl, $400 for a boy"). Either sex blank
+// means the same as the other, as with the prices. Null when none is set.
+export function fullRegAdds(l, p) {
+  const one = (sex) => l[`full_reg_${sex}`] ?? l[`full_reg_${sex === 'female' ? 'male' : 'female'}`] ?? null;
+  if (p) return one(p.sex) == null ? null : money(one(p.sex));
+  const sexes = l.puppies?.length ? [...new Set(l.puppies.map((x) => x.sex))] : ['female', 'male'];
+  const each = sexes.map((sex) => [sex, one(sex)]).filter(([, n]) => n != null);
+  if (!each.length) return null;
+  if (new Set(each.map(([, n]) => n)).size === 1) return money(each[0][1]);
+  return each.map(([sex, n]) => `${money(n)} for a ${sex === 'female' ? 'girl' : 'boy'}`).join(', ');
+}
+
 export function fullRegLink(snap, l, p, ctx, cls) {
   const href = fullRegHref(snap, l, p, ctx);
   return href ? `<a class="${cls}" href="${attr(href)}">Ask about full registration</a>` : '';
@@ -264,7 +277,7 @@ export function puppyCard(snap, l, p, ctx) {
       <div class="face front">${held ? `<span class="ribbon">${esc(status)}</span>` : ''}${photo}<span class="turn" aria-hidden="true">↻</span>
         <div class="cap"><span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span><span class="line1"><span>${esc([sex, p.color].filter(Boolean).join(' · '))}</span><span class="status ${p.status === 'available' ? 'avail' : 'res'}">${esc(status)}</span></span></div></div>
       <div class="face back">${bg}<span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span>
-        <span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li>${regWord ? `<li><span>Registration</span><span>${regWord}</span></li>` : ''}${price ? `<li><span>Price</span><span>${esc(price)}</span></li>` : ''}</ul>
+        <span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li>${regWord ? `<li><span>Registration</span><span>${regWord}</span></li>` : ''}${fullRegHref(snap, l, p, ctx) && fullRegAdds(l, p) ? `<li><span>Full registration adds</span><span>${esc(fullRegAdds(l, p))}</span></li>` : ''}${price ? `<li><span>Price</span><span>${esc(price)}</span></li>` : ''}</ul>
         ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}${action}</div>
     </div></div>`;
 }
