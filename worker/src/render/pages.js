@@ -71,9 +71,11 @@ export function home(snap, ctx) {
   }
 
   if (h.story.enabled && (h.story.text || h.story.heading)) {
-    const photo = img(snap, h.story.photo_id) ?? '<div class="story-ph" aria-hidden="true"></div>';
+    // No photo (or "No photo" in the manage app): the words take the whole width.
+    // An empty box was drawn here before, in flat grey.
+    const photo = img(snap, h.story.photo_id) ?? '';
     const features = (h.story.features ?? []).map((f) => `<div class="feature"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">${ICONS[f.icon] ?? ICONS.heart}</svg><b>${esc(f.title)}</b><p>${esc(f.text)}</p></div>`).join('');
-    parts.push(`<section class="section band"><div class="wrap story">${photo}<div class="story-copy">
+    parts.push(`<section class="section band"><div class="wrap story${photo ? '' : ' no-photo'}">${photo}<div class="story-copy">
       ${h.story.eyebrow ? `<span class="eyebrow">${esc(h.story.eyebrow)}</span>` : ''}
       <h2>${scriptLine(h.story.heading, h.story.script)}</h2>
       ${h.story.text ? `<p>${esc(h.story.text)}</p>` : ''}
