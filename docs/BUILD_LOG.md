@@ -1065,3 +1065,9 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   litter's facts the head doesn't give: deposits from, going home, its puppies counted by
   sex ("2 girls, 1 boy") under going home, and the price ranges. `parentCards`, `litterFacts`, `litterRows` in
   `render/parts.js`; site.css. Tests added.
+- **Publish's list of changes stops calling everything edited (2026-11-03).** A snapshot
+  keeps every column of a record, blanks included, so one published before a column was
+  added (registry, registration, the puppy photo settings) lacked keys the draft has, and
+  `diff.js` called every dog, litter and puppy "edited" until the next Publish. Values are
+  now compared with blanks (null, '', false, empty lists) the same as a missing field and
+  key order ignored, so only real changes are listed. Tests added.

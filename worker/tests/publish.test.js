@@ -185,3 +185,20 @@ test("a puppy card links to that puppy's own page, whatever its status, and only
   assert.equal(older.includes('View profile'), false, 'no link to a page that is switched off');
   assert.equal((await call(env, H, '/litters/gem-2026/opal')).status, 404);
 });
+
+test('what Publish would change: a field an older snapshot lacks, blank in the draft, is no change', async () => {
+  const { changes } = await import('../src/diff.js');
+  const { env, site } = await akSite();
+  const draft = await buildSnapshot(env, site.id);
+  assert.deepEqual(changes(structuredClone(draft), draft), []);
+  // Published before columns were added: those keys are missing, not blank.
+  const old = structuredClone(draft);
+  for (const d of old.dogs) { delete d.registry; d.health = d.health.map((h) => Object.fromEntries(Object.entries(h).reverse())); }
+  for (const l of old.litters) { delete l.ask_full_reg; delete l.more_photos_url; for (const p of l.puppies) { delete p.registration; delete p.registry; } }
+  assert.deepEqual(changes(old, draft), []);
+  // A real change still shows, a switch turned off included.
+  const next = structuredClone(draft);
+  next.dogs[0].registry = 'AKC';
+  next.litters[0].show_prices = !draft.litters[0].show_prices;
+  assert.deepEqual(changes(old, next).map((x) => x.text), [`${draft.dogs[0].call_name}: edited`, `${draft.litters[0].name}: edited`]);
+});
