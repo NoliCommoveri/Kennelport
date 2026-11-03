@@ -283,13 +283,18 @@ export function puppyCard(snap, l, p, ctx) {
   const action = (p.status === 'available'
     ? (pageOn(snap, 'waitlist', ctx) ? '<a class="more" href="/waitlist">Ask about this puppy</a>' : '<a class="more" href="/contact">Ask about this puppy</a>')
     : '') + fullRegLink(snap, l, p, ctx, 'more') + fullRegSurchargeRow(snap, l, p, ctx);
+  // Its own page, whatever its status, the way a dog card links to its profile. Only
+  // with the Puppies page on, which the puppy route needs (render/index.js): the
+  // Older puppies page can be on with Puppies off, and this must not go nowhere.
+  const profile = snap.pages.litters.enabled
+    ? `<a class="more" href="/litters/${attr(l.slug)}/${attr(p.slug)}">View profile</a>` : '';
   return `<div class="flip" tabindex="0" role="button" aria-label="${attr(p.name)}: turn the card over">
     <div class="flip-in">
       <div class="face front">${held ? `<span class="ribbon">${esc(status)}</span>` : ''}${photo}<span class="turn" aria-hidden="true">↻</span>
         <div class="cap"><span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span><span class="line1"><span>${esc([sex, p.color].filter(Boolean).join(' · '))}</span><span class="status ${p.status === 'available' ? 'avail' : 'res'}">${esc(status)}</span></span></div></div>
       <div class="face back">${bg}<span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span>
         <span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li>${regWord ? `<li><span>Registration</span><span>${regWord}</span></li>` : ''}${p.registry ? `<li><span>Registry</span><span>${esc(p.registry)}</span></li>` : ''}${price ? `<li><span>Price</span><span>${esc(price)}</span></li>` : ''}</ul>
-        ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}${action}</div>
+        ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}${action}${profile}</div>
     </div></div>`;
 }
 

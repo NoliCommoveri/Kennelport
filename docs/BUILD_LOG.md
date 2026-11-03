@@ -981,3 +981,11 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   "males $500, females $700"), and each undecided puppy's own by its sex. Off with Show
   prices off. The surcharge reaches KennelPort from KennelOS only with Use my KennelOS
   prices, as before.
+- **View profile on puppy cards.** A puppy's own page (`/litters/<litter>/<puppy>`) has
+  always rendered, for every status the snapshot carries — Available, "Available on
+  \<date\>" while deposits are ahead, Reserved, Still deciding, Staying, and Spoken for with
+  the litter's Show spoken-for on — but nothing linked to it: the cards had "Ask about this
+  puppy" (Available only) and the full-registration ask, and that was all. The card back now
+  ends with **View profile**, the way a dog card does, so every puppy on the Puppies page,
+  the Older puppies page and a litter page can be opened. Only with the Puppies page on,
+  since the puppy route needs it and the Older puppies page can be on while Puppies is off.

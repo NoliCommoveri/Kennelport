@@ -158,3 +158,30 @@ test('sitemap, robots, trailing slashes and the template files', async () => {
   assert.equal((await call(env, 'manage.kennelport.com', '/_kp/fonts/mulish-400.woff2')).headers.get('cache-control'), 'public, max-age=31536000, immutable');
   assert.equal((await call(env, H, '/', { method: 'POST' })).status, 405);
 });
+
+test("a puppy card links to that puppy's own page, whatever its status, and only with the Puppies page on", async () => {
+  const { env, site } = await akSite();
+  // The Gem litter's deposits are still ahead, so it sits under Coming up and its
+  // available pups read "Available on <date>": the case with no way through before.
+  await env.DB.prepare("UPDATE litters SET deposits_on = '2099-01-01' WHERE slug = 'gem-2026'").run();
+  await publish(env, site.id, 'test');
+  const litter = await (await call(env, H, '/litters/gem-2026')).text();
+  // Available, available-on-a-date and reserved pups all get the link, and it answers.
+  for (const slug of ['opal', 'diamond', 'onyx']) {
+    assert.match(litter, new RegExp(`href="/litters/gem-2026/${slug}">View profile</a>`), slug);
+    assert.equal((await call(env, H, `/litters/gem-2026/${slug}`)).status, 200, slug);
+  }
+  assert.match(litter, /Available on/, 'deposits ahead: the status says the date');
+  // Coming up leads to the litter page, which now leads to each puppy.
+  assert.match(await (await call(env, H, '/litters')).text(), /href="\/litters\/gem-2026">Meet the puppies<\/a>/);
+  // A current litter's pups on the Puppies page carry it too.
+  assert.match(await (await call(env, H, '/litters')).text(), /href="\/litters\/ziva-boone-2026\/contessa">View profile<\/a>/);
+  // The Older puppies page can be on with Puppies off, and the puppy route needs
+  // Puppies on: no link there that would 404.
+  await importContent(env, site.id, { pages: { litters: { enabled: false } } });
+  await publish(env, site.id, 'test');
+  const older = await (await call(env, H, '/litters/older')).text();
+  assert.equal(older.includes('Contessa'), true, 'the older puppy is still shown');
+  assert.equal(older.includes('View profile'), false, 'no link to a page that is switched off');
+  assert.equal((await call(env, H, '/litters/gem-2026/opal')).status, 404);
+});
