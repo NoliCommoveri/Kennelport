@@ -38,7 +38,7 @@ async function breeder() {
   const row = (sql, ...a) => env.DB.raw.prepare(sql).get(...a);
   const rows = (sql, ...a) => env.DB.raw.prepare(sql).all(...a);
   const page = async (p) => (await call(env, SITE, p)).text();
-  return { env, site, get, post, row, rows, page };
+  return { env, site, get, post, row, rows, page, cookie };
 }
 
 const api = (env, path, { method = 'POST', body, token, origin = APP } = {}) => call(env, API, path, {
@@ -397,6 +397,14 @@ test('Use my KennelOS prices: off, KennelOS sends none here; on, they arrive rea
   assert.equal(b.row("SELECT price_from FROM extras WHERE kennelos_id = 'x1'").price_from, 90);
   const id = b.row("SELECT id FROM litters WHERE kennelos_id = 'l1'").id;
   assert.match(await (await b.get(`/litters/${id}`)).text(), /3000 <span class="muted small">· from KennelOS/);
+});
+
+test("KennelOS's link-code link opens Link KennelOS", async () => {
+  const b = await breeder();
+  const res = await call(b.env, M, '/link-kennelos', { headers: { cookie: b.cookie } });
+  assert.equal(res.status, 303);
+  assert.equal(res.headers.get('location'), '/s/akbostons/kennelos');
+  assert.equal((await call(b.env, M, '/link-kennelos')).headers.get('location'), '/', 'signed out: sign in first');
 });
 
 test('KennelOS can set Use my KennelOS prices, and nothing else', async () => {
