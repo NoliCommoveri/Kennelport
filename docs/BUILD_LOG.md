@@ -1056,7 +1056,7 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   Now a website litter taking over (pairing to litter, and newly heat to pairing or
   litter, through the bundle's new `heat_id` on pairings and litters, a `sections` entry)
   becomes what a new one would be: name and planned-litter label follow the new kind
-  while still the site's own (`kennelos_name`, migration 0022; one from before counts as
+  while still the site's own (`kennelos_name`, migration 0021; one from before counts as
   KennelOS's while it reads like a name the site would have made). Her own name or label
   stays. A litter's page no longer repeats its card: under the head (which drops the
   parents' names when they are the litter's name), a card for each parent side by side,

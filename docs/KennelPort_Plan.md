@@ -1172,7 +1172,7 @@ the same way Older puppies appears by itself once a litter's going-home date pas
   - *Taking over* (heat to pairing, pairing to litter), the website litter becomes what a
     new one of its kind would be: its name follows KennelOS's (the litter's nickname,
     else "Dam × Sire") while it is still the name KennelOS last gave (`kennelos_name`,
-    migration 0022), and its planned-litter label follows the kind while it is still one
+    migration 0021), and its planned-litter label follows the kind while it is still one
     the site gave ("Upcoming heat", "Planned pairing", none for a litter). A name or label
     she changed on the website stays hers. A nickname set or changed later follows the
     same way. Its address stays.
