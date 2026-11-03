@@ -5,7 +5,7 @@ import {
   esc, attr, fmtDate, priceText, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, parentName,
   litterCard, dogCard, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
   paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
-  dogGroups, depositsAhead, puppyStatus, puppyPriceText, REG_WORDS, fullRegLink, fullRegHref, fullRegAdds,
+  dogGroups, depositsAhead, puppyStatus, puppyPriceText, REG_WORDS, fullRegLink, fullRegSurchargeRow,
 } from './parts.js';
 import { embedView } from '../embeds.js';
 import { COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk } from '../content/model.js';
@@ -366,7 +366,7 @@ export function litter(snap, ctx, slug) {
       <section class="section tight"><div class="wrap">
         <p class="breadcrumb center"><a href="/litters">${esc(label(snap, 'litters'))}</a></p>
         <div class="litters">${litterCard(snap, l, ctx, { link: false })}</div>${note}
-        ${fullRegLink(snap, l, null, ctx, 'btn line') ? `${fullRegAdds(l) ? `<p class="small muted center mt-20">Full registration adds ${esc(fullRegAdds(l))}.</p>` : ''}<p class="btn-row center mt-20">${fullRegLink(snap, l, null, ctx, 'btn line')}</p>` : ''}${shareRow(true)}
+        ${fullRegLink(snap, l, null, ctx, 'btn line') ? `<p class="btn-row center mt-20">${fullRegLink(snap, l, null, ctx, 'btn line')}</p>${fullRegSurchargeRow(snap, l, null, ctx) ? `<div class="narrow-grid mt-20">${fullRegSurchargeRow(snap, l, null, ctx)}</div>` : ''}` : ''}${shareRow(true)}
         ${pups.length ? `<div class="mt-26 grid">${pups.map((pup) => puppyCard(snap, l, pup, ctx)).join('')}</div>` : ''}
         ${embedsBlock(snap, `litter:${l.id}`, { inWrap: true })}
         ${litterAlbums(snap, ctx, l)}
@@ -425,7 +425,7 @@ export function puppy(snap, ctx, litterSlug, slug) {
   const status = puppyStatus(l, p, ctx.today);
   const price = puppyPriceText(l, p);
   const reg = REG_WORDS[p.registration];
-  const facts = [['Sex', p.sex === 'female' ? 'Female' : 'Male'], ['Color', p.color], ['Collar', p.collar], ['Status', status], ['Price', price], ['Registration', reg], ['Full registration adds', fullRegHref(snap, l, p, ctx) && fullRegAdds(l, p)], ['Parents', pairNames(snap, l)], ['Born', fmtDate(l.born_on)]].filter(([, v]) => v);
+  const facts = [['Sex', p.sex === 'female' ? 'Female' : 'Male'], ['Color', p.color], ['Collar', p.collar], ['Status', status], ['Price', price], ['Registration', reg], ['Parents', pairNames(snap, l)], ['Born', fmtDate(l.born_on)]].filter(([, v]) => v);
   return {
     title: `${p.name}, ${l.name}`, section: '/litters', description: p.bio || `${p.name}: ${status}`, image: p.photo_id,
     body: `<section class="section"><div class="wrap">
@@ -434,7 +434,7 @@ export function puppy(snap, ctx, litterSlug, slug) {
         <span class="status ${p.status === 'available' ? 'avail' : 'res'}">${esc(status)}</span><h1>${esc(p.name)}</h1>
         <dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
         ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}
-        ${p.status === 'available' || fullRegLink(snap, l, p, ctx, '') ? `<p>${p.status === 'available' ? `<a class="btn solid" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">Ask about ${esc(p.name)}</a> ` : ''}${fullRegLink(snap, l, p, ctx, 'btn line')}</p>` : ''}
+        ${p.status === 'available' || fullRegLink(snap, l, p, ctx, '') ? `<p>${p.status === 'available' ? `<a class="btn solid" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">Ask about ${esc(p.name)}</a> ` : ''}${fullRegLink(snap, l, p, ctx, 'btn line')}</p>` : ''}${fullRegSurchargeRow(snap, l, p, ctx, 'kv')}
         ${safeNotice(snap, ctx)}${shareRow()}
       </div></div>
     </div></section>`,

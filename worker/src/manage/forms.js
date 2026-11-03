@@ -58,7 +58,7 @@ const LABELS = {
     price_note: ['A note under the prices', 'For example "Prices are our intended base prices and may change before the contract is signed."'],
     show_prices: ['Show prices', 'Off: this litter and its puppies show "Contact us for pricing".'],
     show_placed: ['Show spoken-for puppies', 'Off: puppies that are Spoken for leave the site.'],
-    ask_full_reg: ['Families can ask about full registration', 'On: the litter page, and each puppy planned for Limited, show "Ask about full registration", which opens your contact form with the litter and puppy filled in. What full registration adds shows beside it, even with Show prices off.'],
+    ask_full_reg: ['Families can ask about full registration', 'On: the litter page, and each puppy planned for Limited, show "Ask about full registration", which opens your contact form with the litter and puppy filled in. With Show prices on, the Full Registration Surcharge shows under it.'],
   },
   puppies: {
     name: ['Name', null], collar: ['Collar', 'For example "pink collar".'],

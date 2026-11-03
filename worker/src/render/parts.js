@@ -232,17 +232,25 @@ export function fullRegHref(snap, l, p, ctx) {
   if (p && (p.registration !== 'limited' || p.status === 'staying')) return null;
   return `/contact?full-reg=${encodeURIComponent(l.slug)}${p ? `&puppy=${encodeURIComponent(p.slug)}` : ''}#message`;
 }
-// What full registration adds, shown beside those links: one puppy's (by its sex),
-// or the litter's ("$500", or "$500 for a girl, $400 for a boy"). Either sex blank
-// means the same as the other, as with the prices. Null when none is set.
-export function fullRegAdds(l, p) {
+// The litter's full-registration surcharge, shown under those links while its Show
+// prices is on: "$500" when the sexes match (or one is blank, meaning the same as
+// the other, as with the prices), else "males $500, females $700"; one puppy's by
+// its sex. Null when none is set or prices are off.
+export function fullRegSurcharge(l, p) {
+  if (!l.show_prices) return null;
   const one = (sex) => l[`full_reg_${sex}`] ?? l[`full_reg_${sex === 'female' ? 'male' : 'female'}`] ?? null;
   if (p) return one(p.sex) == null ? null : money(one(p.sex));
-  const sexes = l.puppies?.length ? [...new Set(l.puppies.map((x) => x.sex))] : ['female', 'male'];
-  const each = sexes.map((sex) => [sex, one(sex)]).filter(([, n]) => n != null);
-  if (!each.length) return null;
-  if (new Set(each.map(([, n]) => n)).size === 1) return money(each[0][1]);
-  return each.map(([sex, n]) => `${money(n)} for a ${sex === 'female' ? 'girl' : 'boy'}`).join(', ');
+  const m = one('male'); const f = one('female');
+  if (m == null) return null;
+  return m === f ? money(m) : `males ${money(m)}, females ${money(f)}`;
+}
+const SURCHARGE = 'Full Registration Surcharge';
+// Its detail row, under the ask link: the card's list style, or the puppy page's.
+export function fullRegSurchargeRow(snap, l, p, ctx, style = 'tests') {
+  const v = fullRegHref(snap, l, p, ctx) && fullRegSurcharge(l, p);
+  if (!v) return '';
+  return style === 'kv' ? `<dl class="kv"><dt>${SURCHARGE}</dt><dd>${esc(v)}</dd></dl>`
+    : `<ul class="tests"><li><span>${SURCHARGE}</span><span>${esc(v)}</span></li></ul>`;
 }
 
 export function fullRegLink(snap, l, p, ctx, cls) {
@@ -271,13 +279,13 @@ export function puppyCard(snap, l, p, ctx) {
   const regWord = REG_WORDS[p.registration];
   const action = (p.status === 'available'
     ? (pageOn(snap, 'waitlist', ctx) ? '<a class="more" href="/waitlist">Ask about this puppy</a>' : '<a class="more" href="/contact">Ask about this puppy</a>')
-    : '') + fullRegLink(snap, l, p, ctx, 'more');
+    : '') + fullRegLink(snap, l, p, ctx, 'more') + fullRegSurchargeRow(snap, l, p, ctx);
   return `<div class="flip" tabindex="0" role="button" aria-label="${attr(p.name)}: turn the card over">
     <div class="flip-in">
       <div class="face front">${held ? `<span class="ribbon">${esc(status)}</span>` : ''}${photo}<span class="turn" aria-hidden="true">↻</span>
         <div class="cap"><span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span><span class="line1"><span>${esc([sex, p.color].filter(Boolean).join(' · '))}</span><span class="status ${p.status === 'available' ? 'avail' : 'res'}">${esc(status)}</span></span></div></div>
       <div class="face back">${bg}<span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span>
-        <span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li>${regWord ? `<li><span>Registration</span><span>${regWord}</span></li>` : ''}${fullRegHref(snap, l, p, ctx) && fullRegAdds(l, p) ? `<li><span>Full registration adds</span><span>${esc(fullRegAdds(l, p))}</span></li>` : ''}${price ? `<li><span>Price</span><span>${esc(price)}</span></li>` : ''}</ul>
+        <span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li>${regWord ? `<li><span>Registration</span><span>${regWord}</span></li>` : ''}${price ? `<li><span>Price</span><span>${esc(price)}</span></li>` : ''}</ul>
         ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}${action}</div>
     </div></div>`;
 }

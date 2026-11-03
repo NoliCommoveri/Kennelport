@@ -975,8 +975,8 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   her own version until she answers.
 - Health: a KennelOS result sent unmarked (`normal: null`) counts as normal, and one
   Normal results only kept off for not being normal shows once it is.
-- **Full registration adds**: with a litter's Ask about full registration on, the litter
-  page says what full registration adds (per sex when they differ), and each Limited
-  puppy's card and page show its own, even with Show prices off (the snapshot keeps
-  just the surcharge then). Without Use my KennelOS prices, KennelOS still sends each
-  litter's surcharge, taken when it has one (a blank doesn't clear one typed here).
+- **Full Registration Surcharge**: with a litter's Ask about full registration and its
+  Show prices both on, a detail row under the ask link: the litter's ("$500", or
+  "males $500, females $700"), and each Limited puppy's own by its sex. Off with Show
+  prices off. The surcharge reaches KennelPort from KennelOS only with Use my KennelOS
+  prices, as before.
