@@ -59,6 +59,7 @@ const LABELS = {
     price_note: ['A note under the prices', 'For example "Prices are our intended base prices and may change before the contract is signed."'],
     show_prices: ['Show prices', 'Off: this litter and its puppies show "Contact us for pricing".'],
     show_placed: ['Show spoken-for puppies', 'Off: puppies that are Spoken for leave the site.'],
+    show_puppy_photos: ['Show each puppy\'s tagged photos on its page', 'On: a puppy\'s page shows the photos you\'ve tagged as that puppy, as its own album. Your photo tags are private otherwise, so this is what publishes them: tick it only where every tagged photo is one you\'d put on the site.'],
     ask_full_reg: ['Families can ask about full registration', 'On: each puppy with no registration set (you\'d sell it either way), and the litter page, show "Ask about full registration", which opens your contact form with the litter and puppy filled in. With Show prices on, the Full Registration Surcharge shows under it.'],
   },
   puppies: {

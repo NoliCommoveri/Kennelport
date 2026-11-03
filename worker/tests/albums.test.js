@@ -117,3 +117,40 @@ test('albums go out in the content document and come back in', async () => {
   await closeSite(b.env, b.site.id, 'akbostons');
   assert.equal(b.env.DB.raw.prepare('SELECT COUNT(*) AS n FROM albums').get().n, 0);
 });
+
+test("a puppy's tagged photos are its own album, only with the litter's switch on; its litter's albums sit under them", async () => {
+  const b = await breeder();
+  const opal = b.env.DB.raw.prepare("SELECT id FROM puppies WHERE slug = 'opal'").get().id;
+  const [p1, p2] = [await b.photo('Opal asleep'), await b.photo('Opal at six weeks')];
+  for (const id of [p1, p2]) await b.post(`/photos/${id}/tag`, new URLSearchParams({ subject: `puppy:${opal}` }));
+  // An album of the litter, to show under the puppy's own photos.
+  await b.post('/lists/albums/new', form({ title: 'The Gem litter, week 1', litter_id: b.litter }, [p1]));
+  await b.post('/publish', new URLSearchParams());
+
+  // Off by default: photo tags are private, so nothing of them is published.
+  const off = await b.page('/litters/gem-2026/opal');
+  assert.equal(off.includes('data-gallery'), false, 'no gallery without the tick');
+  assert.equal(off.includes('<dialog class="viewer"'), false, 'and no viewer');
+  assert.equal((await call(b.env, SITE, `/_kp/p/${p2}`)).status, 404, 'a photo only it would use is not served');
+  assert.match(off, /<a class="album-card" href="\/albums\/the-gem-litter-week-1">/, "the litter's album shows either way");
+  assert.match(off, /<h2>From The Gem litter<\/h2>/, "named for the litter, not a second \"Photos\"");
+
+  // On: the tagged photos are that puppy's album, with the viewer the template drives.
+  b.env.DB.raw.prepare("UPDATE litters SET show_puppy_photos = 1 WHERE slug = 'gem-2026'").run();
+  forgetSnapshots();
+  await b.post('/publish', new URLSearchParams());
+  const on = await b.page('/litters/gem-2026/opal');
+  assert.match(on, /Opal&#39;s photos/);
+  assert.equal((on.match(/data-gallery/g) ?? []).length, 2);
+  assert.match(on, new RegExp(`<a class="gal-item" href="/_kp/p/${p1}" data-gallery data-w="1200" data-h="900"><img src="/_kp/p/${p1}\\?s=t" alt="Opal asleep"`));
+  assert.match(on, /<dialog class="viewer" id="viewer"/);
+  assert.equal((await call(b.env, SITE, `/_kp/p/${p2}`)).status, 200, 'now served');
+  // Only the puppy they are tagged for.
+  const onyx = await b.page('/litters/gem-2026/onyx');
+  assert.equal(onyx.includes('data-gallery'), false, 'an untagged puppy gets no gallery');
+  assert.equal(onyx.includes('Onyx&#39;s photos'), false);
+  // Its litter's album is still there, so p1 appears as that card's cover, never as
+  // a photo of Onyx.
+  assert.match(onyx, /<a class="album-card" href="\/albums\/the-gem-litter-week-1">/);
+  assert.equal(onyx.includes('gal-item'), false);
+});

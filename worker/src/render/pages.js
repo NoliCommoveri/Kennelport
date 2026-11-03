@@ -5,7 +5,7 @@ import {
   esc, attr, fmtDate, priceText, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, parentName,
   litterCard, dogCard, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
   paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
-  dogGroups, depositsAhead, puppyStatus, puppyPriceText, REG_WORDS, fullRegLink, fullRegSurchargeRow,
+  dogGroups, depositsAhead, puppyStatus, puppyPriceText, REG_WORDS, fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml,
 } from './parts.js';
 import { embedView } from '../embeds.js';
 import { COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk } from '../content/model.js';
@@ -383,9 +383,11 @@ function albumCard(snap, a) {
   return `<a class="album-card" href="/albums/${attr(a.slug)}">${cover}<span class="album-meta"><b>${esc(a.title)}</b><span class="small muted">${a.photos.length} photo${a.photos.length === 1 ? '' : 's'}</span></span></a>`;
 }
 // A litter's albums, under its card on the litter's page.
-function litterAlbums(snap, ctx, l) {
+// Its albums, on the litter's page under "Photos". A puppy's page names the litter
+// instead, so it doesn't read "Photos" twice above its own photos.
+function litterAlbums(snap, ctx, l, { eyebrow = 'Photos', heading = null } = {}) {
   const list = pageOn(snap, 'albums', ctx) ? (snap.albums ?? []).filter((a) => a.litter_id === l.id) : [];
-  return list.length ? `<div class="mt-26">${head('Photos', null)}<div class="albums">${list.map((a) => albumCard(snap, a)).join('')}</div></div>` : '';
+  return list.length ? `<div class="mt-26">${head(eyebrow, heading)}<div class="albums">${list.map((a) => albumCard(snap, a)).join('')}</div></div>` : '';
 }
 
 export function albums(snap, ctx) {
@@ -401,19 +403,15 @@ export function album(snap, ctx, slug) {
   const a = (snap.albums ?? []).find((x) => x.slug === slug);
   if (!a) return null;
   const l = a.litter_id && snap.litters.find((x) => x.id === a.litter_id);
-  const photos = a.photos.map((id, i) => {
-    const p = snap.photos[id];
-    return `<a class="gal-item" href="/_kp/p/${attr(encodeURIComponent(id))}" data-gallery${p?.width ? ` data-w="${p.width}" data-h="${p.height}"` : ''}>${img(snap, id, { thumb: true, alt: p?.alt || `${a.title}, photo ${i + 1}` })}</a>`;
-  }).join('');
   return {
     title: a.title, section: '/litters', description: a.description || `${a.photos.length} photos from ${snap.site.kennel_name}`, image: a.cover_photo_id,
     body: `${pagehead({}, { eyebrow: l ? l.name : 'Photo album', heading: a.title, lede: a.description })}
       <section class="section tight"><div class="wrap">
         <p class="breadcrumb center">${l && snap.pages.litters.enabled ? `<a href="/litters/${attr(l.slug)}">${esc(l.name)}</a> · ` : ''}<a href="/albums">${esc(label(snap, 'albums'))}</a></p>
-        <div class="gallery">${photos}</div>${shareRow(true)}
+        ${galleryHtml(snap, a.photos, a.title)}${shareRow(true)}
         ${embedsBlock(snap, `album:${a.id}`, { inWrap: true })}
       </div></section>
-      <dialog class="viewer" id="viewer" aria-label="Photo viewer"><img alt=""><button type="button" class="v-prev" aria-label="Previous photo">‹</button><button type="button" class="v-next" aria-label="Next photo">›</button><button type="button" class="v-close" aria-label="Close">×</button><span class="v-count small"></span></dialog>`,
+      ${viewerHtml()}`,
   };
 }
 
@@ -426,6 +424,10 @@ export function puppy(snap, ctx, litterSlug, slug) {
   const price = puppyPriceText(l, p);
   const reg = REG_WORDS[p.registration];
   const facts = [['Sex', p.sex === 'female' ? 'Female' : 'Male'], ['Color', p.color], ['Collar', p.collar], ['Status', status], ['Price', price], ['Registration', reg], ['Registry', p.registry], ['Parents', pairNames(snap, l)], ['Born', fmtDate(l.born_on)]].filter(([, v]) => v);
+  // Its own photos, where the litter publishes its puppies' tagged ones, then the
+  // litter's albums: its photos are usually in those too.
+  const gallery = galleryHtml(snap, p.photos ?? [], p.name);
+  const pupGallery = gallery ? `<div class="mt-26">${head('Photos', `${p.name}'s photos`)}${gallery}</div>` : '';
   return {
     title: `${p.name}, ${l.name}`, section: '/litters', description: p.bio || `${p.name}: ${status}`, image: p.photo_id,
     body: `<section class="section"><div class="wrap">
@@ -437,7 +439,8 @@ export function puppy(snap, ctx, litterSlug, slug) {
         ${p.status === 'available' || fullRegLink(snap, l, p, ctx, '') ? `<p>${p.status === 'available' ? `<a class="btn solid" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">Ask about ${esc(p.name)}</a> ` : ''}${fullRegLink(snap, l, p, ctx, 'btn line')}</p>` : ''}${fullRegSurchargeRow(snap, l, p, ctx, 'kv')}
         ${safeNotice(snap, ctx)}${shareRow()}
       </div></div>
-    </div></section>`,
+      ${pupGallery}${litterAlbums(snap, ctx, l, { eyebrow: 'Albums', heading: `From ${l.name}` })}
+    </div></section>${pupGallery ? viewerHtml() : ''}`,
   };
 }
 

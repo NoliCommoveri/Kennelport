@@ -298,6 +298,21 @@ export function puppyCard(snap, l, p, ctx) {
     </div></div>`;
 }
 
+// A gallery of photos with the lightbox the template's site.js drives (an album's
+// photos, a puppy's tagged ones). `altBase` names the set for photos with no alt
+// of their own. Empty when there are none, so the caller can leave the block out.
+export function galleryHtml(snap, ids = [], altBase = '') {
+  const items = ids.map((id, i) => {
+    const p = snap.photos[id];
+    if (!p) return '';
+    return `<a class="gal-item" href="/_kp/p/${attr(encodeURIComponent(id))}" data-gallery${p.width ? ` data-w="${p.width}" data-h="${p.height}"` : ''}>${img(snap, id, { thumb: true, alt: p.alt || `${altBase}, photo ${i + 1}` })}</a>`;
+  }).join('');
+  return items ? `<div class="gallery">${items}</div>` : '';
+}
+
+// The viewer the gallery opens into: one per page, whatever galleries it holds.
+export const viewerHtml = () => '<dialog class="viewer" id="viewer" aria-label="Photo viewer"><img alt=""><button type="button" class="v-prev" aria-label="Previous photo">\u2039</button><button type="button" class="v-next" aria-label="Next photo">\u203a</button><button type="button" class="v-close" aria-label="Close">\u00d7</button><span class="v-count small"></span></dialog>';
+
 // ---------- other blocks ----------
 
 export function slider(items, { cls = '', ctl = '' } = {}) {

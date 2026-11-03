@@ -989,3 +989,12 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   ends with **View profile**, the way a dog card does, so every puppy on the Puppies page,
   the Older puppies page and a litter page can be opened. Only with the Puppies page on,
   since the puppy route needs it and the Older puppies page can be on while Puppies is off.
+- **A puppy's photos on its page.** Two blocks under the facts. First its own photos,
+  where the litter's new **Show each puppy's tagged photos on its page**
+  (`show_puppy_photos`, migration 0018, off by default) is on: the photos she has tagged
+  as that puppy (0005) become its album, oldest first, capped at `ALBUM_PHOTOS_MAX`, with
+  the same gallery and lightbox an album page uses. Photo tags have always been private
+  and unpublished, so that tick is what publishes them, per litter — nothing changes for a
+  site that leaves it off. Then the litter's albums, under "From \<litter\>" rather than a
+  second "Photos". `galleryHtml` / `viewerHtml` in `parts.js` are now shared by the album
+  page and the puppy page, so there's one gallery implementation.

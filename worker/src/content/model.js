@@ -89,6 +89,7 @@ export const LITTER_FIELDS = {
   show_prices: BOOL,
   show_placed: BOOL,
   ask_full_reg: BOOL,
+  show_puppy_photos: BOOL,
   show_on_site: BOOL,
 };
 // The litter's figures (plan 3.2): KennelOS's while Use my KennelOS prices is on.
