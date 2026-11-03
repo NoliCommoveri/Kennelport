@@ -676,7 +676,7 @@ test('registration on the puppy card, and a litter\'s Ask about full registratio
   b.env.DB.raw.prepare('UPDATE litters SET ask_full_reg = 1 WHERE id = ?').run(gem);
   await b.post('/publish');
   html = await b.page('/litters/gem-2026');
-  assert.match(html, /<a class="btn line" href="\/contact\?full-reg=gem-2026#message">Ask about full registration<\/a>/);
+  assert.match(html, /<div class="litters mt-20" id="full-registration"><div><p class="btn-row"><a class="btn line" href="\/contact\?full-reg=gem-2026#message">Ask about full registration<\/a>/);
   assert.match(html, /href="\/contact\?full-reg=gem-2026&amp;puppy=opal#message"/);
   assert.match(html, /href="\/contact\?full-reg=gem-2026&amp;puppy=onyx#message"/);
   assert.doesNotMatch(html, /puppy=diamond/, 'already full: no link');
@@ -702,7 +702,7 @@ test('the Full Registration Surcharge: under the ask links, only with the litter
   b.env.DB.raw.prepare('UPDATE litters SET show_prices = 1 WHERE id = ?').run(gem);
   await b.post('/publish');
   const html = await b.page('/litters/gem-2026');
-  assert.match(html, /Ask about full registration<\/a><\/p><div class="narrow-grid mt-20"><ul class="tests"><li><span>Full Registration Surcharge<\/span><span>males \$500, females \$700<\/span><\/li><\/ul><\/div>/);
+  assert.match(html, /Ask about full registration<\/a><\/p><div class="mt-20"><ul class="tests"><li><span>Full Registration Surcharge<\/span><span>males \$500, females \$700<\/span><\/li><\/ul><\/div><\/div><\/div>/);
   // Each Limited puppy: its own, under its ask link.
   assert.match(html, /puppy=opal#message">Ask about full registration<\/a><ul class="tests"><li><span>Full Registration Surcharge<\/span><span>\$700<\/span>/);
   assert.match(html, /puppy=diamond#message">Ask about full registration<\/a><ul class="tests"><li><span>Full Registration Surcharge<\/span><span>\$500<\/span>/);
@@ -710,5 +710,5 @@ test('the Full Registration Surcharge: under the ask links, only with the litter
   // The same for both: one figure.
   b.env.DB.raw.prepare('UPDATE litters SET full_reg_male = NULL WHERE id = ?').run(gem);
   await b.post('/publish');
-  assert.match(await b.page('/litters/gem-2026'), /<span>Full Registration Surcharge<\/span><span>\$700<\/span><\/li><\/ul><\/div>/);
+  assert.match(await b.page('/litters/gem-2026'), /<span>Full Registration Surcharge<\/span><span>\$700<\/span><\/li><\/ul><\/div><\/div><\/div>/);
 });
