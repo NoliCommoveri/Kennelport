@@ -12,6 +12,7 @@ const SHARED = {
   bio: ['About', null],
   color: ['Color', null],
   sex: ['Sex', null],
+  registry: ['Registry', 'For example AKC or CKC. Shown on your site where set.'],
   status: ['Status', null],
   show_on_site: ['Show on my website', null],
   eyebrow: ['Small label above the heading', 'The letter-spaced line, like "OUR PARENT DOGS".'],
@@ -58,11 +59,14 @@ const LABELS = {
     price_note: ['A note under the prices', 'For example "Prices are our intended base prices and may change before the contract is signed."'],
     show_prices: ['Show prices', 'Off: this litter and its puppies show "Contact us for pricing".'],
     show_placed: ['Show spoken-for puppies', 'Off: puppies that are Spoken for leave the site.'],
+    show_puppy_photos: ['Show each puppy\'s tagged photos on its page', 'On: a puppy\'s page shows the photos you\'ve tagged as that puppy, as its own album. Your photo tags are private otherwise, so this is what publishes them: tick it only where every tagged photo is one you\'d put on the site.'],
+    ask_full_reg: ['Families can ask about full registration', 'On: each puppy with no registration set (you\'d sell it either way), and the litter page, show "Ask about full registration", which opens your contact form with the litter and puppy filled in. With Show prices on, the Full Registration Surcharge shows under it.'],
   },
   puppies: {
     name: ['Name', null], collar: ['Collar', 'For example "pink collar".'],
-    registration: ['Registration', 'Empty while it isn\'t settled: the price shows as a range.'],
+    registration: ['Registration', 'Empty while it isn\'t settled, or when you\'d sell either way: the price shows as a range.'],
     price: ['Its own price, in dollars', 'Usually empty, to follow the litter\'s prices. Shown exactly as typed.'],
+    more_photos_url: ['More photos link', 'Where the rest of THIS puppy\'s photos live \u2014 your Google Photos or Shutterfly share for it. Shown under its photos on its page as "See more photos".'],
   },
   reviews: {
     quote: ['Review', null], rating: ['Stars', '1 to 5.'], first_name: ['Name shown', 'First name or family name only, like "The Rivera family".'],
@@ -111,7 +115,8 @@ const LABELS = {
     title: ['Title', 'For example "The Gem litter, week 6".'], description: ['A line about it', null],
     litter_id: ['Litter', 'Its litter\'s page links to it, and that litter\'s photos are offered first below.'],
     cover_photo_id: ['Cover photo', 'Leave as "No photo" to use the first photo.'],
-    photos: ['Photos', 'Tick the photos for this album. They show in the order they appear here, newest first.'],
+    photos: ['Photos', 'Tick the photos for this album. They show newest first.'],
+    more_photos_url: ['More photos link', 'Where the rest of these photos live \u2014 your Google Photos or Shutterfly share, say. Shown under the album as "See more photos".'],
     show_on_site: ['Show on my website', null],
   },
   questions: {
@@ -218,8 +223,14 @@ export function field(name, f, value, ctx) {
   switch (f.type) {
     case 'bool':
       return `<label class="check"><input type="checkbox" name="${name}" value="1"${value ? ' checked' : ''}> <span>${esc(label)}${h}</span></label>`;
-    case 'enum':
-      return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"${req}>${f.required || f.default ? '' : '<option value=""></option>'}${f.values.map((x) => `<option value="${esc(x)}"${x === (value ?? f.default) ? ' selected' : ''}>${esc(enumWords(ctx.kind, name, x))}</option>`).join('')}</select></label>`;
+    case 'enum': {
+      // A required choice with no default starts on "Choose…", not on its first
+      // value, so a new dog's sex (or a litter's stage) is never saved by accident.
+      const unset = value === null || value === undefined || value === '';
+      const blank = !f.required && !f.default ? '<option value=""></option>'
+        : f.required && !f.default && unset ? '<option value="" selected disabled>Choose…</option>' : '';
+      return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"${req}>${blank}${f.values.map((x) => `<option value="${esc(x)}"${x === (value ?? f.default) ? ' selected' : ''}>${esc(enumWords(ctx.kind, name, x))}</option>`).join('')}</select></label>`;
+    }
     case 'litterid': {
       const litters = ctx.litters ?? [];
       return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"><option value="">None</option>${litters.map((l) => `<option value="${esc(l.id)}"${l.id === value ? ' selected' : ''}>${esc(l.name)}</option>`).join('')}</select></label>`;

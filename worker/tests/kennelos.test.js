@@ -589,7 +589,7 @@ test('Recommended products from KennelOS: name, link, code and note are KennelOS
   const token = await linked(b);
   const send = async (body) => (await api(b.env, '/v1/bundle', { body, token })).json();
   // Answers say which optional sections this Worker takes.
-  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products']);
+  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products', 'registry']);
   // One she made by hand, with a picture and a Home badge.
   const site = b.site.id;
   const MINE = '00000000-0000-4000-8000-0000000000aa';
@@ -621,4 +621,164 @@ test('Recommended products from KennelOS: name, link, code and note are KennelOS
   const t2 = await linked(b);
   const bad = await api(b.env, '/v1/bundle', { body: bundle({ products: [{ id: 'x', name: 'X', password: 'hunter2' }] }), token: t2 });
   assert.equal(bad.status, 400);
+});
+
+test('health: an unmarked KennelOS result counts as normal; one kept off as not normal shows once it is', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (body) => api(b.env, '/v1/bundle', { body, token });
+  await send(bundle({ dogs: [DOG('d1', 'Nova', { health: [{ id: 'h1', test: 'BAER', result: 'Bilateral', normal: null }, { id: 'h2', test: 'DM', result: 'Carrier', normal: false }] })] }));
+  const shown = () => b.rows("SELECT kennelos_id, normal, show FROM health_results WHERE source = 'kennelos' ORDER BY kennelos_id").map((h) => [h.kennelos_id, h.normal, h.show]);
+  assert.deepEqual(shown(), [['h1', 1, 1], ['h2', 0, 0]]);
+  // Marked Normal later (or sent unmarked by a newer KennelOS): shown.
+  await send(bundle({ dogs: [DOG('d1', 'Nova', { health: [{ id: 'h1', test: 'BAER', result: 'Bilateral', normal: null }, { id: 'h2', test: 'DM', result: 'Clear', normal: null }] })] }));
+  assert.deepEqual(shown(), [['h1', 1, 1], ['h2', 1, 1]]);
+  // Her untick of a normal result stays hers.
+  b.env.DB.raw.prepare("UPDATE health_results SET show = 0 WHERE kennelos_id = 'h1'").run();
+  await send(bundle({ dogs: [DOG('d1', 'Nova', { health: [{ id: 'h1', test: 'BAER', result: 'Bilateral', normal: null }, { id: 'h2', test: 'DM', result: 'Clear', normal: null }] })] }));
+  assert.deepEqual(shown(), [['h1', 1, 0], ['h2', 1, 1]]);
+});
+
+test('matches waiting for her answer show at the top of Home and Publish', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  assert.doesNotMatch(await (await b.get('')).text(), /waiting for you to match/);
+  await api(b.env, '/v1/bundle', { body: bundle({ dogs: [DOG('d-willow', 'Willow', { sex: 'male' })] }), token });
+  for (const p of ['', '/publish']) {
+    const html = await (await b.get(p)).text();
+    assert.match(html, /1 from KennelOS is waiting for you to match\.[\s\S]*your website keeps showing your own version/);
+    assert.match(html, /href="\/s\/akbostons\/kennelos#matches">Answer it</);
+  }
+});
+
+test('a new dog or litter starts on "Choose…", not on the first sex or stage', async () => {
+  const b = await breeder();
+  assert.match(await (await b.get('/dogs/new')).text(), /name="sex" required><option value="" selected disabled>Choose…<\/option><option value="female">Female/);
+  assert.match(await (await b.get('/litters/new')).text(), /name="stage" required><option value="" selected disabled>Choose…<\/option>/);
+  assert.notEqual((await b.post('/dogs/new', { call_name: 'Rex', show_on_site: '1' })).status, 303, 'no sex chosen: not saved');
+  const willow = b.row("SELECT id FROM dogs WHERE slug = 'willow'").id;
+  assert.doesNotMatch(await (await b.get(`/dogs/${willow}`)).text(), /Choose…/);
+});
+
+test('registration on the puppy card; Ask about full registration on undecided puppies, with the litter\'s tick on and off', async () => {
+  const b = await breeder();
+  const gem = b.row("SELECT id FROM litters WHERE slug = 'gem-2026'").id;
+  // Opal undecided (no registration: either way), Onyx Limited, Diamond Full.
+  b.env.DB.raw.prepare("UPDATE puppies SET registration = 'limited' WHERE slug = 'onyx'").run();
+  b.env.DB.raw.prepare("UPDATE puppies SET registration = 'full' WHERE slug = 'diamond'").run();
+  await b.post('/publish');
+  let html = await b.page('/litters/gem-2026');
+  assert.match(html, /<li><span>Registration<\/span><span>Limited<\/span><\/li>/);
+  assert.match(html, /<li><span>Registration<\/span><span>Full<\/span><\/li>/);
+  assert.doesNotMatch(html, /Ask about full registration/, 'tick off: no ask anywhere');
+
+  const form = await (await b.get(`/litters/${gem}`)).text();
+  assert.match(form, /name="ask_full_reg" value="1"> <span>Families can ask about full registration/);
+  b.env.DB.raw.prepare('UPDATE litters SET ask_full_reg = 1 WHERE id = ?').run(gem);
+  await b.post('/publish');
+  html = await b.page('/litters/gem-2026');
+  assert.match(html, /<div class="litters mt-20" id="full-registration"><div><p class="btn-row"><a class="btn line" href="\/contact\?full-reg=gem-2026#message">Ask about full registration<\/a>/);
+  assert.match(html, /href="\/contact\?full-reg=gem-2026&amp;puppy=opal#message"/, 'undecided: asks');
+  assert.doesNotMatch(html, /puppy=onyx/, 'Limited: no ask');
+  assert.doesNotMatch(html, /puppy=diamond/, 'Full: no ask');
+  assert.match(await b.page('/litters/gem-2026/opal'), /href="\/contact\?full-reg=gem-2026&amp;puppy=opal#message">Ask about full registration/);
+  assert.doesNotMatch(await b.page('/litters/gem-2026/onyx'), /Ask about full registration/);
+
+  // The contact form, with the litter and puppy filled in from the site's own records.
+  const topic = (h) => h.match(/name="topic" maxlength="80" placeholder="[^"]*" value="([^"]*)"/)[1];
+  assert.equal(topic(await b.page('/contact?full-reg=gem-2026&puppy=opal')), 'Full registration: Opal, The Gem litter');
+  assert.equal(topic(await b.page('/contact?full-reg=gem-2026')), 'Full registration: The Gem litter');
+  assert.equal(topic(await b.page('/contact?full-reg=gem-2026&puppy=onyx')), '', 'not an undecided puppy');
+  assert.equal(topic(await b.page('/contact?full-reg=%3Cscript%3E')), '');
+  assert.equal(topic(await b.page('/contact')), '');
+
+  // No undecided puppy left: no litter button either.
+  b.env.DB.raw.prepare("UPDATE puppies SET registration = 'limited' WHERE slug = 'opal'").run();
+  await b.post('/publish');
+  assert.doesNotMatch(await b.page('/litters/gem-2026'), /Ask about full registration/);
+  assert.equal(topic(await b.page('/contact?full-reg=gem-2026')), '');
+});
+
+test('the Full Registration Surcharge: under the ask links, with Show prices on and off', async () => {
+  const b = await breeder();
+  const gem = b.row("SELECT id FROM litters WHERE slug = 'gem-2026'").id;
+  b.env.DB.raw.prepare("UPDATE puppies SET registration = 'limited' WHERE slug = 'onyx'").run(); // Opal and Diamond undecided
+  b.env.DB.raw.prepare('UPDATE litters SET ask_full_reg = 1, show_prices = 0, price_female = 3000, full_reg_female = 700, full_reg_male = 500 WHERE id = ?').run(gem);
+  await b.post('/publish');
+  let html = await b.page('/litters/gem-2026');
+  assert.match(html, /Ask about full registration/);
+  assert.doesNotMatch(html, /Full Registration Surcharge/, 'prices off: not shown');
+
+  b.env.DB.raw.prepare('UPDATE litters SET show_prices = 1 WHERE id = ?').run(gem);
+  await b.post('/publish');
+  html = await b.page('/litters/gem-2026');
+  assert.match(html, /Ask about full registration<\/a><\/p><div class="mt-20"><ul class="tests"><li><span>Full Registration Surcharge<\/span><span>males \$500, females \$700<\/span><\/li><\/ul><\/div><\/div><\/div>/);
+  // Each undecided puppy: its own, under its ask link; the Limited one has neither.
+  assert.match(html, /puppy=opal#message">Ask about full registration<\/a><ul class="tests"><li><span>Full Registration Surcharge<\/span><span>\$700<\/span>/);
+  assert.match(html, /puppy=diamond#message">Ask about full registration<\/a><ul class="tests"><li><span>Full Registration Surcharge<\/span><span>\$500<\/span>/);
+  assert.equal((html.match(/Full Registration Surcharge/g) || []).length, 3, 'the litter, Opal and Diamond; not Onyx');
+  assert.match(await b.page('/litters/gem-2026/opal'), /Ask about full registration<\/a><\/p><dl class="kv"><dt>Full Registration Surcharge<\/dt><dd>\$700<\/dd><\/dl>/);
+  // The same for both: one figure.
+  b.env.DB.raw.prepare('UPDATE litters SET full_reg_male = NULL WHERE id = ?').run(gem);
+  await b.post('/publish');
+  assert.match(await b.page('/litters/gem-2026'), /<span>Full Registration Surcharge<\/span><span>\$700<\/span><\/li><\/ul><\/div><\/div><\/div>/);
+  // The litter's tick off: neither, prices on or not.
+  b.env.DB.raw.prepare('UPDATE litters SET ask_full_reg = 0 WHERE id = ?').run(gem);
+  await b.post('/publish');
+  html = await b.page('/litters/gem-2026');
+  assert.doesNotMatch(html, /Full Registration Surcharge|Ask about full registration/);
+});
+
+
+test('registry: from KennelOS on dogs and puppies, shown where set, read-only while linked', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (body) => api(b.env, '/v1/bundle', { body, token });
+  await send(bundle({
+    dogs: [DOG('d-nova', 'Nova', { registry: 'AKC' }), DOG('d-max', 'Max', { sex: 'male' })],
+    litters: [{ id: 'l1', dam_id: 'd-nova', dam_name: 'Nova', born_on: '2026-10-01', puppies: [
+      { id: 'k1', name: 'Fern', sex: 'female', status: 'available', registration: 'limited', registry: 'CKC' },
+      { id: 'k2', name: 'Moss', sex: 'male', status: 'available' }] }],
+  }));
+  assert.equal(b.row("SELECT registry FROM dogs WHERE kennelos_id = 'd-nova'").registry, 'AKC');
+  assert.equal(b.row("SELECT registry FROM dogs WHERE kennelos_id = 'd-max'").registry, null);
+  assert.equal(b.row("SELECT registry FROM puppies WHERE kennelos_id = 'k1'").registry, 'CKC');
+  await b.post('/publish');
+  const nova = b.row("SELECT slug FROM dogs WHERE kennelos_id = 'd-nova'").slug;
+  assert.match(await b.page(`/dogs/${nova}`), /<dt>Registry<\/dt><dd>AKC<\/dd>/);
+  assert.doesNotMatch(await b.page(`/dogs/${b.row("SELECT slug FROM dogs WHERE kennelos_id = 'd-max'").slug}`), /Registry/, 'none set: not shown');
+  const l = b.row("SELECT slug FROM litters WHERE kennelos_id = 'l1'").slug;
+  const html = await b.page(`/litters/${l}`);
+  assert.match(html, /<li><span>Registration<\/span><span>Limited<\/span><\/li><li><span>Registry<\/span><span>CKC<\/span><\/li>/);
+  assert.equal((html.match(/<span>Registry<\/span>/g) || []).length, 1, 'Moss has none');
+  assert.match(await b.page(`/litters/${l}/fern`), /<dt>Registry<\/dt><dd>CKC<\/dd>/);
+  // Read-only while linked.
+  const id = b.row("SELECT id FROM dogs WHERE kennelos_id = 'd-nova'").id;
+  assert.match(await (await b.get(`/dogs/${id}`)).text(), /<b>Registry<\/b><br>AKC <span class="muted small">· from KennelOS/);
+  // Her own dog: typed here.
+  const willow = b.row("SELECT id FROM dogs WHERE slug = 'willow'").id;
+  assert.match(await (await b.get(`/dogs/${willow}`)).text(), /name="registry"/);
+});
+
+test("Remove now: a leaving litter goes today instead of waiting the 30 days", async () => {
+  const b = await breeder();
+  const gem = b.row("SELECT id FROM litters WHERE slug = 'gem-2026'").id;
+  await b.post(`/litters/${gem}`, { name: 'The Gem litter', stage: 'current', slug: 'gem-2026' }); // Show on my website unticked
+  assert.ok(b.row('SELECT left_site_at FROM litters WHERE id = ?', gem).left_site_at);
+  // Both buttons are offered, beside each other.
+  const page = await (await b.get('/litters')).text();
+  assert.match(page, /<button>Keep<\/button>[\s\S]*?remove-now"><button class="link">Remove now<\/button>/);
+  const pups = b.row('SELECT COUNT(*) AS n FROM puppies WHERE litter_id = ?', gem).n;
+  assert.ok(pups > 0);
+
+  assert.equal((await b.post(`/litters/${gem}/remove-now`)).status, 303);
+  assert.equal(b.row('SELECT COUNT(*) AS n FROM litters WHERE id = ?', gem).n, 0, 'gone now, not in 30 days');
+  assert.equal(b.row('SELECT COUNT(*) AS n FROM puppies WHERE litter_id = ?', gem).n, 0, 'its puppies with it');
+  assert.equal((await (await b.get('/litters')).text()).includes('Leaving your site'), false);
+
+  // Only a litter already on its way out: a live one can't be removed this way.
+  const ziva = b.row("SELECT id FROM litters WHERE slug = 'ziva-boone-2026'").id;
+  assert.equal(b.row('SELECT left_site_at FROM litters WHERE id = ?', ziva).left_site_at, null);
+  await b.post(`/litters/${ziva}/remove-now`);
+  assert.equal(b.row('SELECT COUNT(*) AS n FROM litters WHERE id = ?', ziva).n, 1, 'left alone');
 });

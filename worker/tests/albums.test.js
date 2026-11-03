@@ -117,3 +117,113 @@ test('albums go out in the content document and come back in', async () => {
   await closeSite(b.env, b.site.id, 'akbostons');
   assert.equal(b.env.DB.raw.prepare('SELECT COUNT(*) AS n FROM albums').get().n, 0);
 });
+
+test("a puppy's tagged photos are its own album, only with the litter's switch on; its litter's albums sit under them", async () => {
+  const b = await breeder();
+  const opal = b.env.DB.raw.prepare("SELECT id FROM puppies WHERE slug = 'opal'").get().id;
+  const [p1, p2] = [await b.photo('Opal asleep'), await b.photo('Opal at six weeks')];
+  for (const id of [p1, p2]) await b.post(`/photos/${id}/tag`, new URLSearchParams({ subject: `puppy:${opal}` }));
+  // An album of the litter, to show under the puppy's own photos.
+  await b.post('/lists/albums/new', form({ title: 'The Gem litter, week 1', litter_id: b.litter }, [p1]));
+  await b.post('/publish', new URLSearchParams());
+
+  // Off by default: photo tags are private, so nothing of them is published.
+  const off = await b.page('/litters/gem-2026/opal');
+  assert.equal(off.includes('data-gallery'), false, 'no gallery without the tick');
+  assert.equal(off.includes('<dialog class="viewer"'), false, 'and no viewer');
+  assert.equal((await call(b.env, SITE, `/_kp/p/${p2}`)).status, 404, 'a photo only it would use is not served');
+  assert.match(off, /<a class="album-card" href="\/albums\/the-gem-litter-week-1">/, "the litter's album shows either way");
+  assert.match(off, /<h2>From The Gem litter<\/h2>/, "named for the litter, not a second \"Photos\"");
+
+  // On: the tagged photos are that puppy's album, with the viewer the template drives.
+  b.env.DB.raw.prepare("UPDATE litters SET show_puppy_photos = 1 WHERE slug = 'gem-2026'").run();
+  forgetSnapshots();
+  await b.post('/publish', new URLSearchParams());
+  const on = await b.page('/litters/gem-2026/opal');
+  assert.match(on, /Opal&#39;s photos/);
+  assert.equal((on.match(/data-gallery/g) ?? []).length, 2);
+  assert.match(on, new RegExp(`<a class="gal-item" href="/_kp/p/${p1}" data-gallery data-w="1200" data-h="900"><img src="/_kp/p/${p1}\\?s=t" alt="Opal asleep"`));
+  assert.match(on, /<dialog class="viewer" id="viewer"/);
+  assert.equal((await call(b.env, SITE, `/_kp/p/${p2}`)).status, 200, 'now served');
+  // Only the puppy they are tagged for.
+  const onyx = await b.page('/litters/gem-2026/onyx');
+  assert.equal(onyx.includes('data-gallery'), false, 'an untagged puppy gets no gallery');
+  assert.equal(onyx.includes('Onyx&#39;s photos'), false);
+  // Its litter's album is still there, so p1 appears as that card's cover, never as
+  // a photo of Onyx.
+  assert.match(onyx, /<a class="album-card" href="\/albums\/the-gem-litter-week-1">/);
+  assert.equal(onyx.includes('gal-item'), false);
+});
+
+// Photos get their created_at from the clock, so tests that care about order set it.
+const dated = (env, id, when) => env.DB.raw.prepare('UPDATE photos SET created_at = ? WHERE id = ?').run(when, id);
+
+test('albums read newest first, a new one goes on top, and her arrows still win', async () => {
+  const b = await breeder();
+  const p1 = await b.photo('one');
+  const made = [];
+  for (const title of ['Week 1', 'Week 2', 'Week 3']) {
+    await b.post('/lists/albums/new', form({ title }, [p1]));
+    made.push(b.env.DB.raw.prepare('SELECT id FROM albums WHERE title = ?').get(title).id);
+  }
+  await b.post('/publish', new URLSearchParams());
+  const order = (html) => [...html.matchAll(/album-meta"><b>([^<]+)<\/b>/g)].map((m) => m[1]);
+  assert.deepEqual(order(await b.page('/albums')), ['Week 3', 'Week 2', 'Week 1'], 'the newest album first');
+  // The manage app reads the same way round, so what she sees is what the site does.
+  assert.deepEqual([...(await (await b.get('/lists/albums')).text()).matchAll(/<b>(Week \d)<\/b>/g)].map((m) => m[1]), ['Week 3', 'Week 2', 'Week 1']);
+  // Her up/down arrows still decide: Week 1 moved to the top stays there.
+  await b.post(`/lists/albums/${made[0]}/up`, new URLSearchParams());
+  await b.post(`/lists/albums/${made[0]}/up`, new URLSearchParams());
+  await b.post('/publish', new URLSearchParams());
+  assert.deepEqual(order(await b.page('/albums')), ['Week 1', 'Week 3', 'Week 2'], 'her order wins');
+  // And a new album still lands above them all.
+  await b.post('/lists/albums/new', form({ title: 'Week 4' }, [p1]));
+  await b.post('/publish', new URLSearchParams());
+  assert.deepEqual(order(await b.page('/albums')), ['Week 4', 'Week 1', 'Week 3', 'Week 2']);
+});
+
+test("an album's photos read newest first, and \"See more photos\" links wherever she keeps the rest", async () => {
+  const b = await breeder();
+  const [old_, mid, recent] = [await b.photo('oldest'), await b.photo('middle'), await b.photo('newest')];
+  dated(b.env, old_, '2026-01-01T00:00:00.000Z');
+  dated(b.env, mid, '2026-06-01T00:00:00.000Z');
+  dated(b.env, recent, '2026-10-01T00:00:00.000Z');
+  // Ticked oldest first; the site turns them round.
+  await b.post('/lists/albums/new', form({ title: 'The Gem litter, week 1', more_photos_url: 'https://photos.app.goo.gl/abc123' }, [old_, mid, recent]));
+  await b.post('/publish', new URLSearchParams());
+  const page = await b.page('/albums/the-gem-litter-week-1');
+  assert.deepEqual([...page.matchAll(/gal-item" href="\/_kp\/p\/([^"]+)"/g)].map((m) => m[1]), [recent, mid, old_]);
+  // A third-party address, under the album, opening away from the site.
+  assert.match(page, /<p class="center mt-20"><a class="more" href="https:\/\/photos\.app\.goo\.gl\/abc123" target="_blank" rel="noopener noreferrer">See more photos<\/a><\/p>/, 'the arrow comes from .more in the CSS, never doubled');
+  assert.ok(page.indexOf('See more photos') > page.lastIndexOf('gal-item'), 'under the photos, not above them');
+  // None set: no line at all.
+  await b.post('/lists/albums/new', form({ title: 'Week 2' }, [mid]));
+  await b.post('/publish', new URLSearchParams());
+  assert.equal((await b.page('/albums/week-2')).includes('See more photos'), false);
+});
+
+test("a puppy's See more photos link is its own, and stands alone without tagged photos", async () => {
+  const b = await breeder();
+  b.env.DB.raw.prepare("UPDATE puppies SET more_photos_url = ? WHERE slug = 'opal'").run('https://photos.app.goo.gl/opal');
+  await b.post('/publish', new URLSearchParams());
+  // Its litter never ticked Show tagged photos, so there is no gallery: the link
+  // still gets its own Photos block.
+  const page = await b.page('/litters/gem-2026/opal');
+  assert.match(page, /<h2>Opal&#39;s photos<\/h2>/);
+  assert.match(page, /<a class="more" href="https:\/\/photos\.app\.goo\.gl\/opal" target="_blank" rel="noopener noreferrer">See more photos<\/a>/);
+  assert.equal(page.includes('data-gallery'), false, 'no gallery, just the link');
+  // A littermate with none set gets no block at all.
+  const onyx = await b.page('/litters/gem-2026/onyx');
+  assert.equal(onyx.includes('See more photos'), false);
+  assert.equal(onyx.includes('Onyx&#39;s photos'), false);
+  // With the litter's switch on, the link sits under that puppy's own photos.
+  const shot = await b.photo('Opal asleep');
+  const opal = b.env.DB.raw.prepare("SELECT id FROM puppies WHERE slug = 'opal'").get().id;
+  await b.post(`/photos/${shot}/tag`, new URLSearchParams({ subject: `puppy:${opal}` }));
+  b.env.DB.raw.prepare("UPDATE litters SET show_puppy_photos = 1 WHERE slug = 'gem-2026'").run();
+  forgetSnapshots();
+  await b.post('/publish', new URLSearchParams());
+  const both = await b.page('/litters/gem-2026/opal');
+  assert.ok(both.indexOf('See more photos') > both.lastIndexOf('gal-item'), 'under its photos');
+  assert.equal(both.includes('photos.app.goo.gl/opal'), true);
+});

@@ -30,7 +30,7 @@ import {
 import { makeLinkCode, showCode, devices, stopDevice, unlinkSite, setKennelosPrices, LinkError, CODE_TTL_MS } from '../kennelos/link.js';
 import { OWNED, OWNED_PRICES } from '../kennelos/bundle.js';
 import { pendingMatches, matchChanges, confirmMatch, declineMatch, MatchError } from '../kennelos/match.js';
-import { leavingLitters, keepLitter, LITTER_DAYS } from '../kennelos/clock.js';
+import { leavingLitters, keepLitter, deleteLitter, LITTER_DAYS } from '../kennelos/clock.js';
 
 export const FRESH_SIGN_IN_MS = 15 * 60 * 1000;
 
@@ -57,6 +57,7 @@ const NOTES = {
   unlisted: 'Deleted from your waitlist.',
   undone: 'Undone. Visitors see the version before.',
   kept: 'Kept. It stays as a past litter until you remove it.',
+  litterremoved: 'Removed, with its puppies, albums and the photos nothing else uses.',
   matched: 'Matched. It now comes from KennelOS, with your photos and wording kept.',
   apart: 'Kept apart. KennelOS\'s one is added as new.',
   stopped: 'That device is no longer linked.',
@@ -90,6 +91,13 @@ const FORM_KIND = { policies: 'expander', faq: 'expander', waitlist_help: 'expan
 // The kinds whose records a photo can be of (photoTags.js).
 const SUBJECT_OF = { dogs: 'dog', litters: 'litter', puppies: 'puppy', extras: 'extra', products: 'product' };
 const BLOCK_TITLES = { hero: 'Top of the page', facts: 'Facts row', story: 'Story', dogs: 'Dogs row', litters: 'Litters', reviews: 'Reviews', waitlist: 'Waitlist band' };
+
+// Records from KennelOS that share a name with one already on the site wait for
+// her yes; until then the site keeps showing her own version, so this sits at the
+// top of Home and Publish, not only on the KennelOS screen.
+export function matchesWaiting(subdomain, n) {
+  return `<section class="card notice-card" role="status" id="matches-waiting"><p><strong>${n} from KennelOS ${n === 1 ? 'is' : 'are'} waiting for you to match.</strong> ${n === 1 ? 'It has' : 'They have'} the same name as one already on your website. Until you answer, your website keeps showing your own version, without what KennelOS sent (its sex, health results and so on).</p><p class="row"><a class="button primary" href="/s/${esc(subdomain)}/kennelos#matches">Answer ${n === 1 ? 'it' : 'them'}</a></p></section>`;
+}
 
 export function createScreens({ env, request, url, site, user, page }) {
   const base = `/s/${site.subdomain}`;
@@ -145,14 +153,16 @@ export function createScreens({ env, request, url, site, user, page }) {
     return new Set([...(OWNED[kind] ?? []), ...((await kosPrices()) ? OWNED_PRICES[kind] ?? [] : [])]);
   }
 
-  // Litters about to go (5.3): each with the day it's deleted, and Keep.
+  // Litters about to go (5.3): each with the day it's deleted, Keep, and Remove now
+  // for when she doesn't want to wait out the 30 days.
   async function leavingCard() {
     const list = await leavingLitters(env, site.id);
     if (!list.length) return '';
     return `<section class="card" id="leaving"><h2>Leaving your site</h2>
-      <p class="muted small">Litters off your site are deleted ${LITTER_DAYS} days after they left, with their puppies, albums and the photos nothing else uses. Keep one to have it stay as a past litter.</p>
+      <p class="muted small">Litters off your site are deleted ${LITTER_DAYS} days after they left, with their puppies, albums and the photos nothing else uses. Keep one to have it stay as a past litter, or Remove now to delete it today instead of waiting. Removing can't be undone.</p>
       <ul class="items">${list.map((l) => `<li class="item"><a href="${base}/litters/${l.id}"><b>${esc(l.name)}</b><span>Deleted on ${esc(day(l.deletes_on))}</span></a>
-        <form method="post" action="${base}/litters/${l.id}/keep"><button>Keep</button></form></li>`).join('')}</ul></section>`;
+        <form method="post" action="${base}/litters/${l.id}/keep"><button>Keep</button></form>
+        <form method="post" action="${base}/litters/${l.id}/remove-now"><button class="link">Remove now</button></form></li>`).join('')}</ul></section>`;
   }
 
   // Dogs that wait in the draft (5.3): never deleted by a clock; removing is hers.
@@ -762,9 +772,10 @@ export function createScreens({ env, request, url, site, user, page }) {
     const token = await makePreviewToken(env, site.id, 1);
     const prev = (path) => siteLink(env, site.subdomain, `/__preview?t=${encodeURIComponent(token)}&next=${encodeURIComponent(path)}`);
     const snaps = await listSnapshots(env, site.id);
+    const matches = await env.DB.prepare('SELECT COUNT(*) AS n FROM link_pending WHERE site_id = ?').bind(site.id).first('n');
     return {
       title: 'Publish', back: base,
-      body: `${note(url)}<section class="card"><h2>${list.length ? 'Changes since your last publish' : 'Nothing to publish'}</h2>
+      body: `${note(url)}${matches ? matchesWaiting(site.subdomain, matches) : ''}<section class="card"><h2>${list.length ? 'Changes since your last publish' : 'Nothing to publish'}</h2>
         ${list.length ? `<ul class="changes">${list.map((c) => `<li><span>${esc(c.text)}</span>${c.path ? `<a href="${esc(prev(c.path))}">Preview</a>` : ''}</li>`).join('')}</ul>` : '<p class="muted">Your website already shows everything in your draft.</p>'}
         <p class="row"><a class="button" href="${esc(prev('/'))}">Preview the whole site</a></p>
         ${list.length ? `<form method="post" action="${base}/publish"><button class="primary">Publish ${list.length} change${list.length === 1 ? '' : 's'}</button></form>` : ''}</section>
@@ -1045,6 +1056,15 @@ export function createScreens({ env, request, url, site, user, page }) {
     } else if (/^\/litters\/[0-9a-f-]{36}\/keep$/.test(p) && request.method === 'POST') {
       await keepLitter(env, site.id, p.split('/')[2]);
       return redirect(`${base}/litters?note=kept`);
+    } else if (/^\/litters\/[0-9a-f-]{36}\/remove-now$/.test(p) && request.method === 'POST') {
+      // Remove now (5.3): the same deletion the 30-day clock would do, today. Only a
+      // litter already on its way out, so this is never a way round the clock.
+      const id = p.split('/')[2];
+      const leaving = await leavingLitters(env, site.id);
+      if (!leaving.some((l) => l.id === id)) return redirect(`${base}/litters`);
+      await deleteLitter(env, site.id, id);
+      await env.DB.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(new Date().toISOString(), site.id).run();
+      return redirect(`${base}/litters?note=litterremoved`);
     }
     else if (p.startsWith('/dogs')) {
       const hm = p.match(/^\/dogs\/([0-9a-f-]{36})\/health/);

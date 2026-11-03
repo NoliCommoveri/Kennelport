@@ -16,7 +16,7 @@ import { hmacHex, timingSafeEqual } from './lib/crypto.js';
 import { readCookie } from './lib/http.js';
 import { htmlPage, escapeHtml as esc } from './lib/html.js';
 import { receiveInquiry, receiveReview, receiveApplication, turnstileOn } from './siteforms.js';
-import { pageOn } from './render/parts.js';
+import { pageOn, fullRegTopic } from './render/parts.js';
 import { readFeed } from './feed.js';
 import { publicRows } from './waitlist.js';
 import { FRAME_ORIGINS } from './embeds.js';
@@ -187,6 +187,15 @@ export async function serveSite(request, env, ctxWorker, subdomain, { onDomain =
     return html(body, result.ok ? status : 400, { 'cache-control': 'no-store' }, cspFor(env, url.pathname, ctx.feed));
   }
   if (url.pathname === '/sitemap.xml') return text(sitemap(snap, ctx), 'application/xml');
+
+  // A full-registration link (a litter's "Ask about full registration"): the
+  // contact form with its About line filled in from the snapshot. Not cached, as
+  // the cache keys on the path alone.
+  if (url.pathname === '/contact' && url.searchParams.has('full-reg')) {
+    const topic = fullRegTopic(snap, ctx, url.searchParams);
+    const { status, html: body } = renderPage(snap, { ...ctx, prefill: topic ? { topic } : null });
+    return html(body, status, { 'cache-control': preview ? 'private, no-store' : 'public, max-age=60' }, cspFor(env, url.pathname));
+  }
 
   // /about/ → /about, so every page has one address.
   if (url.pathname.length > 1 && url.pathname.endsWith('/')) {

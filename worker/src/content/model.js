@@ -38,6 +38,7 @@ export const DOG_FIELDS = {
   slug: { type: 'slug', required: true },
   call_name: S(40, { required: true }),
   registered_name: S(120),
+  registry: S(30),
   sex: { ...ENUM('female', 'male'), required: true },
   role: S(30),
   color: S(40),
@@ -87,6 +88,8 @@ export const LITTER_FIELDS = {
   price_note: S(200),
   show_prices: BOOL,
   show_placed: BOOL,
+  ask_full_reg: BOOL,
+  show_puppy_photos: BOOL,
   show_on_site: BOOL,
 };
 // The litter's figures (plan 3.2): KennelOS's while Use my KennelOS prices is on.
@@ -102,9 +105,11 @@ export const PUPPY_FIELDS = {
   color: S(40),
   status: ENUM(...PUPPY_STATUSES),
   registration: ENUM('limited', 'full'),
+  registry: S(30),
   price: INT(0, 100000),
   bio: ML(400),
   photo_id: { type: 'photo' },
+  more_photos_url: URL_,
 };
 
 export const REVIEW_FIELDS = {
@@ -263,6 +268,7 @@ export const ALBUM_FIELDS = {
   litter: { type: 'litterref' },
   cover_photo_id: { type: 'photo' },
   photos: { type: 'list', item: 'photo', max: ALBUM_PHOTOS_MAX },
+  more_photos_url: URL_,
   show_on_site: BOOL,
 };
 

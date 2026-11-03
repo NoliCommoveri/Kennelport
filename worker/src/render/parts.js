@@ -208,9 +208,11 @@ export function litterCard(snap, l, ctx, { link = true } = {}) {
 export function dogCard(snap, d, { sale = null } = {}) {
   const photo = img(snap, d.photo_id, { alt: d.call_name }) ?? '<div class="ph-photo">Photos coming soon</div>';
   const bg = img(snap, d.photo_id, { alt: '', cls: 'bg', thumb: true }) ?? '';
+  const registry = d.registry ? `<li><span>Registry</span><span>${esc(d.registry)}</span></li>` : '';
+  // Health results when it has some (its registry above them, where set), else its details.
   const tests = d.health.length
-    ? `<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${esc(h.result)}</span></li>`).join('')}</ul>`
-    : `<span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${d.sex === 'female' ? 'Female' : 'Male'}</span></li>${d.color ? `<li><span>Color</span><span>${esc(d.color)}</span></li>` : ''}</ul>`;
+    ? `${registry ? `<ul class="tests">${registry}</ul>` : ''}<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${esc(h.result)}</span></li>`).join('')}</ul>`
+    : `<span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${d.sex === 'female' ? 'Female' : 'Male'}</span></li>${d.color ? `<li><span>Color</span><span>${esc(d.color)}</span></li>` : ''}${registry}</ul>`;
   const line = [snap.site.breed, d.role].filter(Boolean).join(' · ');
   return `<div class="flip" tabindex="0" role="button" aria-label="${attr(d.call_name)}: turn the card over">
     <div class="flip-in">
@@ -221,6 +223,54 @@ export function dogCard(snap, d, { sale = null } = {}) {
     </div></div>`;
 }
 
+export const REG_WORDS = { limited: 'Limited', full: 'Full' };
+
+// A litter with "Families can ask about full registration" on (its own setting):
+// each of its undecided puppies (no registration set: she'd sell it either way)
+// links to the contact form with it filled in, and so does the litter while it has
+// one. Never for a puppy staying here, and only while the contact page is on.
+const undecided = (p) => !p.registration && p.status !== 'staying';
+export function fullRegHref(snap, l, p, ctx) {
+  if (!l.ask_full_reg || !pageOn(snap, 'contact', ctx)) return null;
+  if (p ? !undecided(p) : !l.puppies.some(undecided)) return null;
+  return `/contact?full-reg=${encodeURIComponent(l.slug)}${p ? `&puppy=${encodeURIComponent(p.slug)}` : ''}#message`;
+}
+// The litter's full-registration surcharge, shown under those links while its Show
+// prices is on: "$500" when the sexes match (or one is blank, meaning the same as
+// the other, as with the prices), else "males $500, females $700"; one puppy's by
+// its sex. Null when none is set or prices are off.
+export function fullRegSurcharge(l, p) {
+  if (!l.show_prices) return null;
+  const one = (sex) => l[`full_reg_${sex}`] ?? l[`full_reg_${sex === 'female' ? 'male' : 'female'}`] ?? null;
+  if (p) return one(p.sex) == null ? null : money(one(p.sex));
+  const m = one('male'); const f = one('female');
+  if (m == null) return null;
+  return m === f ? money(m) : `males ${money(m)}, females ${money(f)}`;
+}
+const SURCHARGE = 'Full Registration Surcharge';
+// Its detail row, under the ask link: the card's list style, or the puppy page's.
+export function fullRegSurchargeRow(snap, l, p, ctx, style = 'tests') {
+  const v = fullRegHref(snap, l, p, ctx) && fullRegSurcharge(l, p);
+  if (!v) return '';
+  return style === 'kv' ? `<dl class="kv"><dt>${SURCHARGE}</dt><dd>${esc(v)}</dd></dl>`
+    : `<ul class="tests"><li><span>${SURCHARGE}</span><span>${esc(v)}</span></li></ul>`;
+}
+
+export function fullRegLink(snap, l, p, ctx, cls) {
+  const href = fullRegHref(snap, l, p, ctx);
+  return href ? `<a class="${cls}" href="${attr(href)}">Ask about full registration</a>` : '';
+}
+
+// The contact form's About line from a full-registration link, made from the
+// snapshot (never from the address's own words): null when it names nothing shown.
+export function fullRegTopic(snap, ctx, params) {
+  const l = snap.litters.find((x) => x.slug === params.get('full-reg'));
+  if (!l || !fullRegHref(snap, l, null, ctx)) return null;
+  const p = params.get('puppy') ? l.puppies.find((x) => x.slug === params.get('puppy')) : null;
+  if (p && !fullRegHref(snap, l, p, ctx)) return null;
+  return `Full registration: ${p ? `${p.name}, ` : ''}${l.name}`.slice(0, 80);
+}
+
 export function puppyCard(snap, l, p, ctx) {
   const photo = img(snap, p.photo_id, { alt: p.name }) ?? '<div class="ph-photo">Photos coming soon</div>';
   const bg = img(snap, p.photo_id, { alt: '', cls: 'bg', thumb: true }) ?? '';
@@ -229,18 +279,48 @@ export function puppyCard(snap, l, p, ctx) {
   const status = puppyStatus(l, p, ctx.today);
   const price = puppyPriceText(l, p);
   const reg = [l.name, p.collar].filter(Boolean).join(' · ');
-  const action = p.status === 'available'
+  const regWord = REG_WORDS[p.registration];
+  const action = (p.status === 'available'
     ? (pageOn(snap, 'waitlist', ctx) ? '<a class="more" href="/waitlist">Ask about this puppy</a>' : '<a class="more" href="/contact">Ask about this puppy</a>')
-    : '';
+    : '') + fullRegLink(snap, l, p, ctx, 'more') + fullRegSurchargeRow(snap, l, p, ctx);
+  // Its own page, whatever its status, the way a dog card links to its profile. Only
+  // with the Puppies page on, which the puppy route needs (render/index.js): the
+  // Older puppies page can be on with Puppies off, and this must not go nowhere.
+  const profile = snap.pages.litters.enabled
+    ? `<a class="more" href="/litters/${attr(l.slug)}/${attr(p.slug)}">View profile</a>` : '';
   return `<div class="flip" tabindex="0" role="button" aria-label="${attr(p.name)}: turn the card over">
     <div class="flip-in">
       <div class="face front">${held ? `<span class="ribbon">${esc(status)}</span>` : ''}${photo}<span class="turn" aria-hidden="true">↻</span>
         <div class="cap"><span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span><span class="line1"><span>${esc([sex, p.color].filter(Boolean).join(' · '))}</span><span class="status ${p.status === 'available' ? 'avail' : 'res'}">${esc(status)}</span></span></div></div>
       <div class="face back">${bg}<span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span>
-        <span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li>${price ? `<li><span>Price</span><span>${esc(price)}</span></li>` : ''}</ul>
-        ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}${action}</div>
+        <span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li>${regWord ? `<li><span>Registration</span><span>${regWord}</span></li>` : ''}${p.registry ? `<li><span>Registry</span><span>${esc(p.registry)}</span></li>` : ''}${price ? `<li><span>Price</span><span>${esc(price)}</span></li>` : ''}</ul>
+        ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}${action}${profile}</div>
     </div></div>`;
 }
+
+// A gallery of photos with the lightbox the template's site.js drives (an album's
+// photos, a puppy's tagged ones). `altBase` names the set for photos with no alt
+// of their own. Empty when there are none, so the caller can leave the block out.
+export function galleryHtml(snap, ids = [], altBase = '') {
+  const items = ids.map((id, i) => {
+    const p = snap.photos[id];
+    if (!p) return '';
+    return `<a class="gal-item" href="/_kp/p/${attr(encodeURIComponent(id))}" data-gallery${p.width ? ` data-w="${p.width}" data-h="${p.height}"` : ''}>${img(snap, id, { thumb: true, alt: p.alt || `${altBase}, photo ${i + 1}` })}</a>`;
+  }).join('');
+  return items ? `<div class="gallery">${items}</div>` : '';
+}
+
+// Where the rest of an album's photos live (her Google Photos or Shutterfly share,
+// any third-party address): right under the album, opening in a new tab like any
+// address off the site. The arrow comes from `.more` in the template's CSS, so the
+// words don't carry one. Empty when she set none.
+export function morePhotosHtml(a) {
+  return a?.more_photos_url
+    ? `<p class="center mt-20"><a class="more" href="${attr(a.more_photos_url)}" target="_blank" rel="noopener noreferrer">See more photos</a></p>` : '';
+}
+
+// The viewer the gallery opens into: one per page, whatever galleries it holds.
+export const viewerHtml = () => '<dialog class="viewer" id="viewer" aria-label="Photo viewer"><img alt=""><button type="button" class="v-prev" aria-label="Previous photo">\u2039</button><button type="button" class="v-next" aria-label="Next photo">\u203a</button><button type="button" class="v-close" aria-label="Close">\u00d7</button><span class="v-count small"></span></dialog>';
 
 // ---------- other blocks ----------
 

@@ -5,7 +5,7 @@ import {
   esc, attr, fmtDate, priceText, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, parentName,
   litterCard, dogCard, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
   paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
-  dogGroups, depositsAhead, puppyStatus, puppyPriceText,
+  dogGroups, depositsAhead, puppyStatus, puppyPriceText, REG_WORDS, fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
 } from './parts.js';
 import { embedView } from '../embeds.js';
 import { COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk } from '../content/model.js';
@@ -192,7 +192,8 @@ export function reviews(snap, ctx) {
 
 // ---------- the forms visitors send (siteforms.js receives them) ----------
 
-const v = (ctx, name) => attr(ctx.form?.values?.[name] ?? '');
+// What she typed, or (before any send) what a link filled in (ctx.prefill).
+const v = (ctx, name) => attr(ctx.form?.values?.[name] ?? ctx.prefill?.[name] ?? '');
 const honeypot = '<div class="hp" aria-hidden="true"><label>Leave this empty<input name="website" tabindex="-1" autocomplete="off"></label></div>';
 const turnstileBox = (ctx) => (ctx.turnstileKey ? `<div class="cf-turnstile" data-sitekey="${attr(ctx.turnstileKey)}"></div><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>` : '');
 const formResult = (ctx, page, thanks) => {
@@ -286,7 +287,7 @@ export function dog(snap, ctx, slug) {
   const d = snap.dogs.find((x) => x.slug === slug);
   if (!d) return null;
   const photo = img(snap, d.photo_id, { alt: d.call_name, cls: 'photo', lazy: false }) ?? '<div class="photo" aria-hidden="true"></div>';
-  const facts = [['Sex', d.sex === 'female' ? 'Female' : 'Male'], ['Color', d.color], ['Born', fmtDate(d.date_of_birth)], ['Titles', d.titles]].filter(([, v]) => v);
+  const facts = [['Sex', d.sex === 'female' ? 'Female' : 'Male'], ['Color', d.color], ['Born', fmtDate(d.date_of_birth)], ['Registry', d.registry], ['Titles', d.titles]].filter(([, v]) => v);
   const tests = d.health.length ? `<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${h.verify_url ? `<a href="${attr(h.verify_url)}" rel="noopener">${esc(h.result)}</a>` : esc(h.result)}</span></li>`).join('')}</ul>` : '';
   const litters = snap.litters.filter((l) => l.dam_id === d.id || l.sire_id === d.id);
   const sale = saleOf(snap, ctx, d);
@@ -364,7 +365,8 @@ export function litter(snap, ctx, slug) {
     body: `${pagehead({}, { eyebrow: l.stage === 'planned' ? (l.plan_label || 'Planned litter') : l.born_on ? `Born ${fmtDate(l.born_on)}` : 'Litter', heading: l.name, lede })}
       <section class="section tight"><div class="wrap">
         <p class="breadcrumb center"><a href="/litters">${esc(label(snap, 'litters'))}</a></p>
-        <div class="litters">${litterCard(snap, l, ctx, { link: false })}</div>${note}${shareRow(true)}
+        <div class="litters">${litterCard(snap, l, ctx, { link: false })}</div>${note}
+        ${fullRegLink(snap, l, null, ctx, 'btn line') ? `<div class="litters mt-20" id="full-registration"><div><p class="btn-row">${fullRegLink(snap, l, null, ctx, 'btn line')}</p>${fullRegSurchargeRow(snap, l, null, ctx) ? `<div class="mt-20">${fullRegSurchargeRow(snap, l, null, ctx)}</div>` : ''}</div></div>` : ''}${shareRow(true)}
         ${pups.length ? `<div class="mt-26 grid">${pups.map((pup) => puppyCard(snap, l, pup, ctx)).join('')}</div>` : ''}
         ${embedsBlock(snap, `litter:${l.id}`, { inWrap: true })}
         ${litterAlbums(snap, ctx, l)}
@@ -381,9 +383,11 @@ function albumCard(snap, a) {
   return `<a class="album-card" href="/albums/${attr(a.slug)}">${cover}<span class="album-meta"><b>${esc(a.title)}</b><span class="small muted">${a.photos.length} photo${a.photos.length === 1 ? '' : 's'}</span></span></a>`;
 }
 // A litter's albums, under its card on the litter's page.
-function litterAlbums(snap, ctx, l) {
+// Its albums, on the litter's page under "Photos". A puppy's page names the litter
+// instead, so it doesn't read "Photos" twice above its own photos.
+function litterAlbums(snap, ctx, l, { eyebrow = 'Photos', heading = null } = {}) {
   const list = pageOn(snap, 'albums', ctx) ? (snap.albums ?? []).filter((a) => a.litter_id === l.id) : [];
-  return list.length ? `<div class="mt-26">${head('Photos', null)}<div class="albums">${list.map((a) => albumCard(snap, a)).join('')}</div></div>` : '';
+  return list.length ? `<div class="mt-26">${head(eyebrow, heading)}<div class="albums">${list.map((a) => albumCard(snap, a)).join('')}</div></div>` : '';
 }
 
 export function albums(snap, ctx) {
@@ -399,19 +403,15 @@ export function album(snap, ctx, slug) {
   const a = (snap.albums ?? []).find((x) => x.slug === slug);
   if (!a) return null;
   const l = a.litter_id && snap.litters.find((x) => x.id === a.litter_id);
-  const photos = a.photos.map((id, i) => {
-    const p = snap.photos[id];
-    return `<a class="gal-item" href="/_kp/p/${attr(encodeURIComponent(id))}" data-gallery${p?.width ? ` data-w="${p.width}" data-h="${p.height}"` : ''}>${img(snap, id, { thumb: true, alt: p?.alt || `${a.title}, photo ${i + 1}` })}</a>`;
-  }).join('');
   return {
     title: a.title, section: '/litters', description: a.description || `${a.photos.length} photos from ${snap.site.kennel_name}`, image: a.cover_photo_id,
     body: `${pagehead({}, { eyebrow: l ? l.name : 'Photo album', heading: a.title, lede: a.description })}
       <section class="section tight"><div class="wrap">
         <p class="breadcrumb center">${l && snap.pages.litters.enabled ? `<a href="/litters/${attr(l.slug)}">${esc(l.name)}</a> · ` : ''}<a href="/albums">${esc(label(snap, 'albums'))}</a></p>
-        <div class="gallery">${photos}</div>${shareRow(true)}
+        ${galleryHtml(snap, a.photos, a.title)}${morePhotosHtml(a)}${shareRow(true)}
         ${embedsBlock(snap, `album:${a.id}`, { inWrap: true })}
       </div></section>
-      <dialog class="viewer" id="viewer" aria-label="Photo viewer"><img alt=""><button type="button" class="v-prev" aria-label="Previous photo">‹</button><button type="button" class="v-next" aria-label="Next photo">›</button><button type="button" class="v-close" aria-label="Close">×</button><span class="v-count small"></span></dialog>`,
+      ${viewerHtml()}`,
   };
 }
 
@@ -422,8 +422,16 @@ export function puppy(snap, ctx, litterSlug, slug) {
   const photo = img(snap, p.photo_id, { alt: p.name, cls: 'photo', lazy: false }) ?? '<div class="photo" aria-hidden="true"></div>';
   const status = puppyStatus(l, p, ctx.today);
   const price = puppyPriceText(l, p);
-  const reg = { limited: 'Limited', full: 'Full' }[p.registration];
-  const facts = [['Sex', p.sex === 'female' ? 'Female' : 'Male'], ['Color', p.color], ['Collar', p.collar], ['Status', status], ['Price', price], ['Registration', reg], ['Parents', pairNames(snap, l)], ['Born', fmtDate(l.born_on)]].filter(([, v]) => v);
+  const reg = REG_WORDS[p.registration];
+  const facts = [['Sex', p.sex === 'female' ? 'Female' : 'Male'], ['Color', p.color], ['Collar', p.collar], ['Status', status], ['Price', price], ['Registration', reg], ['Registry', p.registry], ['Parents', pairNames(snap, l)], ['Born', fmtDate(l.born_on)]].filter(([, v]) => v);
+  // Its own photos, where the litter publishes its puppies' tagged ones, and its own
+  // "See more photos" link where she set one (its gallery elsewhere, never the
+  // litter's). Either alone is enough for the block. Then the litter's albums: its
+  // photos are usually in those too.
+  const gallery = galleryHtml(snap, p.photos ?? [], p.name);
+  const morePup = morePhotosHtml(p);
+  const pupGallery = gallery || morePup
+    ? `<div class="mt-26">${head('Photos', `${p.name}'s photos`)}${gallery}${morePup}</div>` : '';
   return {
     title: `${p.name}, ${l.name}`, section: '/litters', description: p.bio || `${p.name}: ${status}`, image: p.photo_id,
     body: `<section class="section"><div class="wrap">
@@ -432,10 +440,11 @@ export function puppy(snap, ctx, litterSlug, slug) {
         <span class="status ${p.status === 'available' ? 'avail' : 'res'}">${esc(status)}</span><h1>${esc(p.name)}</h1>
         <dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
         ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}
-        ${p.status === 'available' ? `<p><a class="btn solid" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">Ask about ${esc(p.name)}</a></p>` : ''}
+        ${p.status === 'available' || fullRegLink(snap, l, p, ctx, '') ? `<p>${p.status === 'available' ? `<a class="btn solid" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">Ask about ${esc(p.name)}</a> ` : ''}${fullRegLink(snap, l, p, ctx, 'btn line')}</p>` : ''}${fullRegSurchargeRow(snap, l, p, ctx, 'kv')}
         ${safeNotice(snap, ctx)}${shareRow()}
       </div></div>
-    </div></section>`,
+      ${pupGallery}${litterAlbums(snap, ctx, l, { eyebrow: 'Albums', heading: `From ${l.name}` })}
+    </div></section>${pupGallery ? viewerHtml() : ''}`,
   };
 }
 

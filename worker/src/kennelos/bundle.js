@@ -7,12 +7,12 @@
 // this side). Ids are KennelOS's own. Lists are capped (MAX).
 //
 //   { format: 1, bundle_id, kennel_id, waitlist_public_id?,
-//     dogs: [{ id, call_name, registered_name, sex, date_of_birth, color,
+//     dogs: [{ id, call_name, registered_name, registry, sex, date_of_birth, color,
 //              status: puppy | active_breeding | for_sale | retired_breeding | deceased,
 //              died_on, titles: [..], health: [{ id, test, result, normal, date, verify_url }] }],
 //     litters: [{ id, pairing_id, name, dam_id, sire_id, dam_name, sire_name,
 //                 expected_on, born_on, ready_on, deposits_on, prices: { price_female, … },
-//                 puppies: [{ id, name, collar, sex, color, registration,
+//                 puppies: [{ id, name, collar, sex, color, registration, registry,
 //                             status: available | reserved | placed | staying | undecided | hidden }] }],
 //     pairings: [{ id, dam_id, sire_id, dam_name, sire_name, planned_on, expected_on }],
 //     heats: [{ id, dam_id, dam_name, month }],
@@ -44,7 +44,7 @@ export const MAX = { dogs: 200, litters: 100, puppies: 30, pairings: 50, heats: 
 // The optional sections this Worker takes. Each answer lists them (siteFacts), so
 // KennelOS sends a new section only to a Worker that knows it, instead of having
 // the whole bundle refused.
-export const SECTIONS = ['products'];
+export const SECTIONS = ['products', 'registry'];
 
 // ---------- checking ----------
 
@@ -58,14 +58,14 @@ const ENUM = (values, req = false) => ({ type: 'enum', values, required: req });
 const SEX = ENUM(['female', 'male'], true);
 
 const SHAPES = {
-  dog: { id: ID, call_name: S(40, true), registered_name: S(120), sex: SEX, date_of_birth: DATE, color: S(40),
+  dog: { id: ID, call_name: S(40, true), registered_name: S(120), registry: S(30), sex: SEX, date_of_birth: DATE, color: S(40),
     status: ENUM(['puppy', 'active_breeding', 'for_sale', 'retired_breeding', 'deceased'], true), died_on: DATE,
     titles: { type: 'list', max: MAX.titles, itemMax: 30 }, health: { list: 'health', max: MAX.health } },
   health: { id: ID, test: S(60, true), result: S(60, true), normal: { type: 'bool' }, date: DATE, verify_url: { type: 'url' } },
   litter: { id: ID, pairing_id: REF, name: S(80), dam_id: REF, sire_id: REF, dam_name: S(60), sire_name: S(60),
     expected_on: DATE, born_on: DATE, ready_on: DATE, deposits_on: DATE, prices: { object: 'prices' }, puppies: { list: 'puppy', max: MAX.puppies } },
   prices: Object.fromEntries(LITTER_PRICE_FIELDS.map((k) => [k, INT])),
-  puppy: { id: ID, name: S(40, true), collar: S(30), sex: SEX, color: S(40), registration: ENUM(['limited', 'full']),
+  puppy: { id: ID, name: S(40, true), collar: S(30), sex: SEX, color: S(40), registration: ENUM(['limited', 'full']), registry: S(30),
     status: ENUM(['available', 'reserved', 'placed', 'staying', 'undecided', 'hidden'], true) },
   pairing: { id: ID, dam_id: REF, sire_id: REF, dam_name: S(60), sire_name: S(60), planned_on: DATE, expected_on: DATE },
   heat: { id: ID, dam_id: REF, dam_name: S(60), month: { type: 'month', required: true } },
@@ -150,9 +150,9 @@ export function cleanBundle(body) {
 // fields are KennelOS's blanks included; derived ones (titles, health results,
 // upcoming items) only overwrite when they have something.
 export const OWNED = {
-  dogs: ['call_name', 'registered_name', 'sex', 'date_of_birth', 'color', 'status', 'upcoming', 'for_sale', 'died_on', 'titles'],
+  dogs: ['call_name', 'registered_name', 'registry', 'sex', 'date_of_birth', 'color', 'status', 'upcoming', 'for_sale', 'died_on', 'titles'],
   litters: ['stage', 'dam_id', 'sire_id', 'dam_name', 'sire_name', 'born_on', 'ready_on', 'deposits_on', 'expected_label'],
-  puppies: ['name', 'collar', 'sex', 'color', 'status', 'registration'],
+  puppies: ['name', 'collar', 'sex', 'color', 'status', 'registration', 'registry'],
   health: ['test', 'result', 'normal', 'date', 'verify_url'],
   extras: ['name', 'grp', 'description'],
   products: ['name', 'link_url', 'code', 'code_note'],
@@ -228,7 +228,7 @@ export class Writer {
   // ----- dogs -----
   dogValues(bd) {
     const v = {
-      call_name: bd.call_name, registered_name: bd.registered_name, sex: bd.sex, date_of_birth: bd.date_of_birth, color: bd.color,
+      call_name: bd.call_name, registered_name: bd.registered_name, registry: bd.registry, sex: bd.sex, date_of_birth: bd.date_of_birth, color: bd.color,
       ...DOG_STATUS[bd.status], died_on: bd.status === 'deceased' ? bd.died_on : null,
     };
     if (bd.titles.length) v.titles = bd.titles.join(' ').slice(0, 120);
@@ -249,7 +249,9 @@ export class Writer {
 
   // Health results as data (plan 3.7): her own (typed) results stay; KennelOS's
   // are replaced with what it sent, when it sent any. A new one's Show on site is
-  // set once from the dog's Health results choice, and is hers from then on.
+  // set once from the dog's Health results choice, and is hers from then on, save
+  // one kept off as not normal, which follows the choice again once it is. A
+  // result KennelOS leaves unmarked (normal: null) counts as normal.
   health(dogId, display, list, existing = []) {
     if (!list.length) return;
     const mine = existing.filter((h) => h.dog_id === dogId && h.source === 'kennelos');
@@ -257,6 +259,9 @@ export class Writer {
     list.forEach((h, i) => {
       const values = { test: h.test, result: h.result, normal: h.normal ?? 1, date: h.date, verify_url: h.verify_url, sort: 100 + i };
       const cur = byKos.get(h.id);
+      // A result Normal results only kept off for not being normal shows once it
+      // is (KennelOS sends an unmarked result as normal now): the dog's rule, again.
+      if (cur && display === 'normal_only' && !cur.normal && !cur.show && values.normal) values.show = 1;
       if (cur) { this.update('health_results', cur, values); return; }
       const show = display === 'all' ? 1 : display === 'normal_only' ? values.normal : 0;
       this.insert('health_results', { id: crypto.randomUUID(), site_id: this.siteId, dog_id: dogId, ...values, show, source: 'kennelos', kennelos_id: h.id });
@@ -338,7 +343,7 @@ export class Writer {
     const taken = this.puppySlugs.get(litterId) ?? new Set();
     this.puppySlugs.set(litterId, taken);
     list.forEach((bp, i) => {
-      const values = { name: bp.name, collar: bp.collar, sex: bp.sex, color: bp.color, status: PUPPY_STATUS[bp.status], registration: bp.registration };
+      const values = { name: bp.name, collar: bp.collar, sex: bp.sex, color: bp.color, status: PUPPY_STATUS[bp.status], registration: bp.registration, registry: bp.registry };
       let cur = byKos.get(bp.id);
       if (cur && cur.litter_id !== litterId) cur = null;
       if (!cur) {

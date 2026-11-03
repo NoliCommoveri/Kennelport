@@ -961,3 +961,60 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   Clay's accent. The preview bar keeps its own gold.
 - Kennel details has **Colour scheme**: a card per scheme with its swatches and fonts.
   Midnight is dark unless the breeder picks **Light only**.
+
+## 2026-11-03: full-registration asks, Choose… for sex, matches and health fixes
+
+- A litter's **Families can ask about full registration** (`litters.ask_full_reg`, off;
+  migration 0017). On, each undecided puppy (no registration set: she'd sell it either
+  way; never one staying) links from its card and page to
+  `/contact?full-reg=<litter>&puppy=<puppy>`, and the litter page has the button while it
+  has one. The About line is filled in from the snapshot (never from the address's words)
+  and isn't cached. A puppy card's back shows its Registration.
+- The manage app's required choices with no default (a dog's or puppy's sex, a litter's
+  stage) start on **Choose…**, so a new dog isn't saved as Female by accident.
+- Matches waiting for her yes sit at the top of Home and Publish, saying the site keeps
+  her own version until she answers.
+- Health: a KennelOS result sent unmarked (`normal: null`) counts as normal, and one
+  Normal results only kept off for not being normal shows once it is.
+- **Full Registration Surcharge**: with a litter's Ask about full registration and its
+  Show prices both on, a detail row under the ask link: the litter's ("$500", or
+  "males $500, females $700"), and each undecided puppy's own by its sex. Off with Show
+  prices off. The surcharge reaches KennelPort from KennelOS only with Use my KennelOS
+  prices, as before.
+- **View profile on puppy cards.** A puppy's own page (`/litters/<litter>/<puppy>`) has
+  always rendered, for every status the snapshot carries — Available, "Available on
+  \<date\>" while deposits are ahead, Reserved, Still deciding, Staying, and Spoken for with
+  the litter's Show spoken-for on — but nothing linked to it: the cards had "Ask about this
+  puppy" (Available only) and the full-registration ask, and that was all. The card back now
+  ends with **View profile**, the way a dog card does, so every puppy on the Puppies page,
+  the Older puppies page and a litter page can be opened. Only with the Puppies page on,
+  since the puppy route needs it and the Older puppies page can be on while Puppies is off.
+- **A puppy's photos on its page.** Two blocks under the facts. First its own photos,
+  where the litter's new **Show each puppy's tagged photos on its page**
+  (`show_puppy_photos`, migration 0018, off by default) is on: the photos she has tagged
+  as that puppy (0005) become its album, oldest first, capped at `ALBUM_PHOTOS_MAX`, with
+  the same gallery and lightbox an album page uses. Photo tags have always been private
+  and unpublished, so that tick is what publishes them, per litter — nothing changes for a
+  site that leaves it off. Then the litter's albums, under "From \<litter\>" rather than a
+  second "Photos". `galleryHtml` / `viewerHtml` in `parts.js` are now shared by the album
+  page and the puppy page, so there's one gallery implementation.
+- **Albums newest first, and "See more photos".** Albums read newest first everywhere
+  they are listed (`/albums`, a litter page, a puppy page) and in the manage app, while
+  her up/down arrows still win: `sort` is still what orders them, migration 0019 only
+  sets the starting order (newest = lowest sort), and a new album is created below the
+  lowest instead of above the highest. Each album's photos read newest first too, by the
+  photo's own date, as a puppy's tagged photos now do (the cap keeps the newest).
+  Albums also carry **More photos link** (`more_photos_url`): any third-party address —
+  her Google Photos or Shutterfly share — shown right under the album as "See more
+  photos", opening in a new tab. The arrow is `.more`'s in the template CSS, not in the
+  words.
+- **Each puppy's own "See more photos" link.** A puppy record carries
+  `more_photos_url` (migration 0020): any third-party address for *that* puppy's photos,
+  never its litter's, shown under its photos on its page as "See more photos". It stands
+  alone — a puppy with the link but no tagged photos (its litter never ticked Show tagged
+  photos) still gets its Photos block, with just the link in it.
+- **Remove now, beside Keep.** A litter under "Leaving your site" waits 30 days before
+  the cleanup deletes it. **Remove now** does that same deletion today — its puppies,
+  albums and the photos nothing else uses (`deleteLitter`, exactly what the clock calls),
+  then marks the draft changed. Only a litter already on its way out, so it is never a way
+  round the clock; the card says it can't be undone.

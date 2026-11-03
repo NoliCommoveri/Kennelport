@@ -20,7 +20,7 @@ const ALBUM_RECORD_FIELDS = { ...omit(ALBUM_FIELDS, ['litter']), litter_id: { ty
 export const KINDS = {
   dogs: { table: 'dogs', fields: DOG_FIELDS, slug: 'call_name', label: 'call_name', defaults: { status: 'active', health_display: 'normal_only', show_on_site: 1, upcoming: 0, for_sale: 0 }, stamps: true },
   health: { table: 'health_results', fields: HEALTH_FIELDS, scope: 'dog_id', label: 'test', defaults: { normal: 1, show: 0 } },
-  litters: { table: 'litters', fields: LITTER_RECORD_FIELDS, slug: 'name', label: 'name', defaults: { show_on_site: 1, show_prices: 0, show_placed: 1 }, stamps: true },
+  litters: { table: 'litters', fields: LITTER_RECORD_FIELDS, slug: 'name', label: 'name', defaults: { show_on_site: 1, show_prices: 0, show_placed: 1, ask_full_reg: 0 }, stamps: true },
   puppies: { table: 'puppies', fields: PUPPY_FIELDS, scope: 'litter_id', slug: 'name', label: 'name', defaults: { status: 'coming_soon' }, stamps: true },
   reviews: { table: 'stories', fields: omit(REVIEW_FIELDS, []), label: 'first_name', where: "kind = 'review'", fixed: { kind: 'review', submitted_by: 'breeder' }, defaults: { status: 'approved' } },
   steps: { table: 'steps', fields: STEP_FIELDS, label: 'heading', where: "page = 'how_it_works'", fixed: { page: 'how_it_works' }, defaults: { pay_link: 0 } },
@@ -157,8 +157,11 @@ export async function saveRecord(env, siteId, kind, id, input, scopeId = null) {
     return getRecord(env, siteId, kind, id);
   }
   const w = whereClause(k, scopeId);
-  const last = await env.DB.prepare(`SELECT COALESCE(MAX(sort), -1) AS s FROM ${k.table} WHERE ${w.sql}`).bind(siteId, ...w.args).first('s');
-  const row = { id: crypto.randomUUID(), site_id: siteId, ...(k.fixed ?? {}), ...clean, sort: last + 1 };
+  // Albums read newest first (0019), so a new one goes above the rest; everything
+  // else is added at the end. Her up/down arrows renumber the list either way.
+  const newestFirst = k.table === 'albums';
+  const edge = await env.DB.prepare(`SELECT COALESCE(${newestFirst ? 'MIN' : 'MAX'}(sort), ${newestFirst ? 1 : -1}) AS s FROM ${k.table} WHERE ${w.sql}`).bind(siteId, ...w.args).first('s');
+  const row = { id: crypto.randomUUID(), site_id: siteId, ...(k.fixed ?? {}), ...clean, sort: newestFirst ? edge - 1 : edge + 1 };
   if (k.scope) row[k.scope] = scopeId;
   if (k.stamps) { row.created_at = t; row.updated_at = t; }
   if (k.table === 'stories') { row.submitted_at = t; row.permission_confirmed_at = t; }

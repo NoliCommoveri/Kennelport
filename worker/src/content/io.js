@@ -260,7 +260,7 @@ export async function importContent(env, siteId, doc) {
   if (clean.litters) {
     clean.litters.forEach((l, i) => {
       const { puppies, dam, sire, ...litter } = l;
-      const row = { id: uuid(), site_id: siteId, ...litter, show_on_site: litter.show_on_site ?? 1, show_prices: litter.show_prices ?? 0, show_placed: litter.show_placed ?? 1, sort: i, created_at: t, updated_at: t };
+      const row = { id: uuid(), site_id: siteId, ...litter, show_on_site: litter.show_on_site ?? 1, show_prices: litter.show_prices ?? 0, show_placed: litter.show_placed ?? 1, ask_full_reg: litter.ask_full_reg ?? 0, show_puppy_photos: litter.show_puppy_photos ?? 0, sort: i, created_at: t, updated_at: t };
       const cols = Object.keys(row);
       const updates = cols.filter((c) => !['id', 'created_at', 'site_id', 'slug'].includes(c));
       s.push(db.prepare(`INSERT INTO litters (${cols.join(', ')}, dam_id, sire_id) VALUES (${cols.map(() => '?').join(', ')},
@@ -379,7 +379,7 @@ export async function exportContent(env, siteId) {
   const litters = await all('SELECT * FROM litters WHERE site_id = ? ORDER BY sort, name', siteId);
   const puppies = await all('SELECT * FROM puppies WHERE site_id = ? ORDER BY sort, name', siteId);
   doc.litters = litters.map((l) => {
-    const out = bools(pick(strip(l, SYSTEM), Object.keys(LITTER_FIELDS)), ['show_on_site', 'show_prices', 'show_placed']);
+    const out = bools(pick(strip(l, SYSTEM), Object.keys(LITTER_FIELDS)), ['show_on_site', 'show_prices', 'show_placed', 'ask_full_reg', 'show_puppy_photos']);
     if (l.dam_id) out.dam = slugOf[l.dam_id];
     if (l.sire_id) out.sire = slugOf[l.sire_id];
     out.puppies = puppies.filter((p) => p.litter_id === l.id).map((p) => pick(strip(p, SYSTEM), Object.keys(PUPPY_FIELDS)));
