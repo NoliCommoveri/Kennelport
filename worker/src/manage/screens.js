@@ -385,7 +385,7 @@ export function createScreens({ env, request, url, site, user, page }) {
       const items = rows.map((r, i) => `<li class="item"><a href="${esc(`${path}/${r.id}`)}"><b>${esc(L.name(r))}</b><span>${esc(L.sub(r) ?? '')}</span></a>
         <span class="order">${i ? `<form method="post" action="${esc(`${path}/${r.id}/up`)}"><button aria-label="Move ${esc(L.name(r))} up">↑</button></form>` : ''}${i < rows.length - 1 ? `<form method="post" action="${esc(`${path}/${r.id}/down`)}"><button aria-label="Move ${esc(L.name(r))} down">↓</button></form>` : ''}</span></li>`).join('');
       const intro = kind === 'questions' ? `${(await kos()).online ? '<p class="error">Not used right now: KennelOS takes your applications online, so your website shows your KennelOS form. These questions come back if you turn online applications off in KennelOS or remove the link.</p>' : ''}<p class="muted">The application form on your waitlist page always asks for the family's name and email. These questions come after, in this order. With none, it asks for a few lines about their family.</p>` : '';
-      const extra = kind === 'litters' ? await leavingCard() : kind === 'dogs' ? await offSiteDogsCard(rows) : '';
+      const extra = kind === 'litters' ? await leavingCard() : kind === 'dogs' ? await offSiteDogsCard(rows) : kind === 'reviews' ? '<p><a class="button" href="' + base + '/reviews-queue">Reviews families sent</a></p>' : '';
       return { title: parentTitle ? `${parentTitle}: ${L.title}` : L.title, back: back ?? base, body: `${note(url)}${intro}${extra}<ul class="items">${items || `<li class="muted">None yet.</li>`}</ul><p><a class="button primary" href="${esc(`${path}/new`)}">Add ${L.one}</a></p>` };
     }
     if (rest === 'new') {
@@ -742,7 +742,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     };
     return {
       title: 'Photos', back: base,
-      body: `${note(url)}${await usageLine()}<form id="photo-form" class="card" method="post" action="${base}/photos/upload">
+      body: `${note(url)}<p class="row"><a class="button" href="${base}/lists/albums">Albums</a><span class="muted small">Galleries with their own link, made from these photos.</span></p>${await usageLine()}<form id="photo-form" class="card" method="post" action="${base}/photos/upload">
         <label>Add photos<input type="file" accept="image/*" multiple required></label>
         <label>Photos of<span class="hint">So they're offered first when you choose a photo for that dog, litter or page. You can also add photos from the dog's or litter's own screen.</span>
           <select name="tags"><option value="">Choose later</option>${options([], of)}</select></label>
@@ -1088,7 +1088,7 @@ export function createScreens({ env, request, url, site, user, page }) {
       }
     } else {
       const lm = p.match(/^\/lists\/(reviews|steps|extras|products|policies|faq|waitlist_help|questions|albums)(\/|$)/);
-      if (lm) view = await collection(`${base}/lists/${lm[1]}`, lm[1], null, { back: lm[1] === 'questions' ? `${base}/pages/waitlist` : `${base}/pages` });
+      if (lm) view = await collection(`${base}/lists/${lm[1]}`, lm[1], null, { back: lm[1] === 'questions' ? `${base}/pages/waitlist` : lm[1] === 'albums' ? `${base}/photos` : `${base}/pages` });
     }
     if (!view) return null;
     if (view instanceof Response) return view;

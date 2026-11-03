@@ -43,7 +43,7 @@ test('a QR code is an SVG of black squares on white, the same for the same addre
 
 test('the Share screen lists the published site, litters and albums, each with a link and a QR code', async () => {
   const b = await breeder();
-  assert.match(await (await b.get('')).text(), /Share<\/b><span>Links and QR codes/);
+  assert.match(await (await b.get('')).text(), /<a class="button" href="\/s\/akbostons\/share">Share<\/a>/);
   assert.match(await (await b.get('/share')).text(), /Publish your site first/);
   await b.post('/publish');
   const html = await (await b.get('/share')).text();

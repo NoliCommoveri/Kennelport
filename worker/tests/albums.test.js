@@ -42,7 +42,7 @@ const form = (fields, photos = []) => {
 test('an album made in the manage app gets its own page, a card on /albums, and a link from its litter', async () => {
   const b = await breeder();
   const [p1, p2, p3] = [await b.photo('Opal asleep'), await b.photo('Onyx'), await b.photo('All three')];
-  assert.match(await (await b.get('')).text(), /Albums<\/b><span>Photo galleries with their own link/);
+  assert.match(await (await b.get('')).text(), /Photos and albums<\/b><span>Camera roll, galleries/);
   const created = await b.post('/lists/albums/new', form({ title: 'The Gem litter, week 1', description: 'Their first week.', litter_id: b.litter, cover_photo_id: p3 }, [p1, p2, p3]));
   assert.equal(created.status, 303);
   assert.match(await (await b.get('/lists/albums')).text(), /The Gem litter, week 1<\/b><span>3 photos/);
