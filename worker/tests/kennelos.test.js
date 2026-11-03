@@ -425,13 +425,19 @@ test('a parent that is one of her dogs is not typed as a name too', async () => 
   const token = await linked(b);
   await api(b.env, '/v1/bundle', { token, body: bundle({
     dogs: [DOG('d-nova', 'Nova')],
-    litters: [{ id: 'l1', dam_id: 'd-nova', sire_id: 'd-out', dam_name: 'Nova', sire_name: 'Outside Stud', born_on: '2026-10-01', puppies: [] }],
+    litters: [{ id: 'l1', name: 'Autumn', dam_id: 'd-nova', sire_id: 'd-out', dam_name: 'Nova', sire_name: 'Outside Stud', born_on: '2026-10-01', puppies: [] }],
   }) });
   const l = b.row("SELECT * FROM litters WHERE kennelos_id = 'l1'");
   assert.equal(l.dam_id, b.row("SELECT id FROM dogs WHERE kennelos_id = 'd-nova'").id);
   assert.equal(l.dam_name, null);
   assert.equal(l.sire_id, null);
   assert.equal(l.sire_name, 'Outside Stud');
+  // Switched off the site, she's still named on the litter, as plain text.
+  b.env.DB.raw.prepare("UPDATE dogs SET show_on_site = 0 WHERE kennelos_id = 'd-nova'").run();
+  await b.post('/publish');
+  const html = await b.page(`/litters/${l.slug}`);
+  assert.match(html, /Nova × Outside Stud/);
+  assert.doesNotMatch(html, /href="\/dogs\/nova"/);
 });
 
 test('prices are one number, worked out from the litter, shown only where switched on', async () => {

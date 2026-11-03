@@ -71,13 +71,16 @@ export async function buildSnapshot(env, siteId) {
 
   const littersRaw = await all('SELECT * FROM litters WHERE site_id = ? AND show_on_site = 1 AND hidden_by_kennelos = 0 ORDER BY sort, name');
   const puppies = await all("SELECT * FROM puppies WHERE site_id = ? AND status != 'hidden' AND hidden_by_kennelos = 0 ORDER BY sort, name");
+  // Every dog's call name, shown or not, for parents who aren't on the site.
+  const callNames = new Map((await all('SELECT id, call_name FROM dogs WHERE site_id = ?')).map((d) => [d.id, d.call_name]));
   const litters = littersRaw.map((l) => {
     const out = { ...keep(l, [...SYSTEM, 'show_placed', ...(l.show_prices ? [] : LITTER_PRICES)]), show_prices: Boolean(l.show_prices) };
-    // A parent that isn't shown on the site is named, never linked.
+    // A parent that isn't shown on the site is named, never linked: by the name
+    // typed for her, else the dog's own call name, as plain text.
     for (const role of ['dam', 'sire']) {
       const id = l[`${role}_id`];
       if (id && !dogById[id]) {
-        out[`${role}_name`] = out[`${role}_name`] ?? null;
+        out[`${role}_name`] = out[`${role}_name`] || callNames.get(id) || null;
         delete out[`${role}_id`];
       }
     }
