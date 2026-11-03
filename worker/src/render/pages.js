@@ -32,7 +32,10 @@ export function embedsBlock(snap, place, { heading = 'Videos and posts', band = 
   return inWrap ? `<div class="mt-26">${inner}</div>` : `<section class="section${band ? ' band' : ''}"><div class="wrap">${inner}</div></section>`;
 }
 
-const CORNER_SPRIGS = '<svg class="corner tl" aria-hidden="true"><use href="#sprig"/></svg><svg class="corner br" aria-hidden="true"><use href="#sprig"/></svg>';
+// The vine frame: a leafy stem along each edge and curled round each corner, in the
+// scheme's accent, drawn by masks in site.css.
+const VINE_PARTS = ['t', 'b', 'l', 'r', 'c tl', 'c tr', 'c bl', 'c br'];
+const VINE = `<div class="vine" aria-hidden="true">${VINE_PARTS.map((p) => `<i class="${p}"></i>`).join('')}</div>`;
 const sprigs = '<svg class="sprig l" aria-hidden="true"><use href="#sprig"/></svg><svg class="sprig r" aria-hidden="true"><use href="#sprig"/></svg>';
 const scriptLine = (text, script) => `${esc(text ?? '')}${script ? ` <span class="script">${esc(script)}</span>` : ''}`;
 
@@ -64,7 +67,7 @@ export function home(snap, ctx) {
       <h1>${scriptLine(h.hero.headline || snap.site.kennel_name, h.hero.script)}</h1>
       ${h.hero.intro ? `<p>${esc(h.hero.intro)}</p>` : ''}
       ${buttons ? `<div class="hero-actions">${buttons}</div>` : ''}${facts}
-    </div>${layout ? `<div class="hero-photos ${layout} frame-${frame}">${photos.join('')}${frame === 'sprig' ? CORNER_SPRIGS : ''}</div>` : ''}</section>`);
+    </div>${layout ? `<div class="hero-photos ${layout} frame-${frame}">${photos.join('')}${frame === 'sprig' ? VINE : ''}</div>` : ''}</section>`);
   }
 
   if (h.story.enabled && (h.story.text || h.story.heading)) {

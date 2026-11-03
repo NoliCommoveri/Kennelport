@@ -116,7 +116,7 @@ const ENUM_WORDS = {
   health_display: { normal_only: 'Normal results only', all: 'All ticked results', none: 'None' },
   stage: { planned: 'Planned', current: 'Born (current)', past: 'Past' },
   banner_focus: { top: 'The top', middle: 'The middle', bottom: 'The bottom' },
-  frame: { mat: 'A soft mat around each photo', double: 'A mat with a fine inner line, like a framed print', sprig: 'A mat, with sage sprigs at the corners', none: 'No frame' },
+  frame: { mat: 'A soft mat around each photo', double: 'A mat with a fine inner line, like a framed print', sprig: 'A leafy vine all the way round', none: 'No frame' },
   kind: { item: 'Extra', homegoing: 'Extended homegoing package' },
   dark_mode: { auto: 'Follow the visitor\'s setting', light_only: 'Light only' },
   type_questions: { text: 'A short answer', paragraph: 'A longer answer (a few lines)', choice: 'A choice from a list', yes_no: 'Yes or no', litter: 'Which litter (your planned and current litters)', phone: 'A phone number', town: 'A town' },

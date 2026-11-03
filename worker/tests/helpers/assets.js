@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../../public', import.meta.url));
-const TYPES = { css: 'text/css', js: 'text/javascript', woff2: 'font/woff2', txt: 'text/plain' };
+const TYPES = { css: 'text/css', js: 'text/javascript', woff2: 'font/woff2', txt: 'text/plain', svg: 'image/svg+xml' };
 
 export function makeAssets() {
   return {

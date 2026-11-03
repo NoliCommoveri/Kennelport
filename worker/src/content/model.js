@@ -143,8 +143,8 @@ export const COLLAGE_LAYOUTS = {
 };
 export const FOCUS = ['top', 'middle', 'bottom'];
 // How the collage's boxes are framed, in the scheme's own colours: a soft mat, the
-// mat with a brass inner rule, the mat with the site's sage sprigs at the
-// collage's corners, or bare photos.
+// mat with a brass inner rule, a leafy vine all round the collage ('sprig'), or
+// bare photos.
 export const FRAMES = ['mat', 'double', 'sprig', 'none'];
 
 // The layout the site draws for `count` photos: the chosen one when it has that

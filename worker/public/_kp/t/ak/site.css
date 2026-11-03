@@ -144,12 +144,22 @@ nav.main li.open > .navtop .chev { transform: rotate(225deg) translate(-2px, -1p
 .frame-double .box { padding: 10px; }
 .frame-double .box::after { content: ""; position: absolute; inset: 4px; border: 1.5px solid var(--brass); border-radius: calc(var(--r) + 1px); pointer-events: none; }
 .frame-none .box { background: none; border: 0; padding: 0; box-shadow: none; }
-/* Sage sprigs: the site's ornament, growing from the collage's top-left and
-   bottom-right corners over the mat. */
-.hero-photos .corner { position: absolute; width: 150px; height: 75px; color: var(--accent); opacity: .8; pointer-events: none; z-index: 1; }
-.hero-photos .corner.tl { left: -48px; top: -46px; transform: scaleX(-1) rotate(-14deg); }
-.hero-photos .corner.br { right: -48px; bottom: -46px; transform: scaleY(-1) rotate(-14deg); }
-@media (max-width: 720px) { .hero-photos.frame-sprig { margin-block: 26px; } .hero-photos .corner { width: 110px; height: 55px; } .hero-photos .corner.tl { left: -14px; top: -34px; } .hero-photos .corner.br { right: -14px; bottom: -34px; } }
+/* The vine: a leafy stem all the way round the collage. Each piece is a mask
+   (vine-*.svg) filled with the scheme's accent, so it follows light and dark. */
+.hero-photos.frame-sprig { padding: 40px; }
+.vine { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.vine i { position: absolute; display: block; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+.vine i { background: var(--accent); opacity: .8; }
+.vine .t, .vine .b { left: 90px; right: 90px; height: 44px; }
+.vine .l, .vine .r { top: 90px; bottom: 90px; width: 44px; }
+.vine .t { top: 0; } .vine .b { bottom: 0; transform: scaleY(-1); }
+.vine .l { left: 0; } .vine .r { right: 0; transform: scaleX(-1); }
+.vine i.t, .vine i.b { -webkit-mask: url(vine-h.svg) repeat-x 0 0 / 160px 44px; mask: url(vine-h.svg) repeat-x 0 0 / 160px 44px; }
+.vine i.l, .vine i.r { -webkit-mask: url(vine-v.svg) repeat-y 0 0 / 44px 160px; mask: url(vine-v.svg) repeat-y 0 0 / 44px 160px; }
+.vine .c { width: 90px; height: 90px; }
+.vine i.c { -webkit-mask: url(vine-c.svg) no-repeat 0 0 / 90px 90px; mask: url(vine-c.svg) no-repeat 0 0 / 90px 90px; }
+.vine .tl { top: 0; left: 0; } .vine .tr { top: 0; right: 0; transform: scaleX(-1); }
+.vine .bl { bottom: 0; left: 0; transform: scaleY(-1); } .vine .br { bottom: 0; right: 0; transform: scale(-1, -1); }
 .hero-photos .box img { width: 100%; height: 100%; object-fit: cover; border-radius: var(--r); display: block; }
 .box.wide { aspect-ratio: 4 / 3; }
 .box.tall { aspect-ratio: 4 / 5; }
