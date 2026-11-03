@@ -961,3 +961,17 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   Clay's accent. The preview bar keeps its own gold.
 - Kennel details has **Colour scheme**: a card per scheme with its swatches and fonts.
   Midnight is dark unless the breeder picks **Light only**.
+
+## 2026-11-03: full-registration asks, Choose… for sex, matches and health fixes
+
+- A litter's **Families can ask about full registration** (`litters.ask_full_reg`, off;
+  migration 0017). On, the litter page and each puppy planned for Limited (card and
+  page, never one staying) link to `/contact?full-reg=<litter>&puppy=<puppy>`, whose
+  About line is filled in from the snapshot (never from the address's words) and isn't
+  cached. A puppy card's back shows its Registration.
+- The manage app's required choices with no default (a dog's or puppy's sex, a litter's
+  stage) start on **Choose…**, so a new dog isn't saved as Female by accident.
+- Matches waiting for her yes sit at the top of Home and Publish, saying the site keeps
+  her own version until she answers.
+- Health: a KennelOS result sent unmarked (`normal: null`) counts as normal, and one
+  Normal results only kept off for not being normal shows once it is.

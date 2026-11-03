@@ -622,3 +622,71 @@ test('Recommended products from KennelOS: name, link, code and note are KennelOS
   const bad = await api(b.env, '/v1/bundle', { body: bundle({ products: [{ id: 'x', name: 'X', password: 'hunter2' }] }), token: t2 });
   assert.equal(bad.status, 400);
 });
+
+test('health: an unmarked KennelOS result counts as normal; one kept off as not normal shows once it is', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (body) => api(b.env, '/v1/bundle', { body, token });
+  await send(bundle({ dogs: [DOG('d1', 'Nova', { health: [{ id: 'h1', test: 'BAER', result: 'Bilateral', normal: null }, { id: 'h2', test: 'DM', result: 'Carrier', normal: false }] })] }));
+  const shown = () => b.rows("SELECT kennelos_id, normal, show FROM health_results WHERE source = 'kennelos' ORDER BY kennelos_id").map((h) => [h.kennelos_id, h.normal, h.show]);
+  assert.deepEqual(shown(), [['h1', 1, 1], ['h2', 0, 0]]);
+  // Marked Normal later (or sent unmarked by a newer KennelOS): shown.
+  await send(bundle({ dogs: [DOG('d1', 'Nova', { health: [{ id: 'h1', test: 'BAER', result: 'Bilateral', normal: null }, { id: 'h2', test: 'DM', result: 'Clear', normal: null }] })] }));
+  assert.deepEqual(shown(), [['h1', 1, 1], ['h2', 1, 1]]);
+  // Her untick of a normal result stays hers.
+  b.env.DB.raw.prepare("UPDATE health_results SET show = 0 WHERE kennelos_id = 'h1'").run();
+  await send(bundle({ dogs: [DOG('d1', 'Nova', { health: [{ id: 'h1', test: 'BAER', result: 'Bilateral', normal: null }, { id: 'h2', test: 'DM', result: 'Clear', normal: null }] })] }));
+  assert.deepEqual(shown(), [['h1', 1, 0], ['h2', 1, 1]]);
+});
+
+test('matches waiting for her answer show at the top of Home and Publish', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  assert.doesNotMatch(await (await b.get('')).text(), /waiting for you to match/);
+  await api(b.env, '/v1/bundle', { body: bundle({ dogs: [DOG('d-willow', 'Willow', { sex: 'male' })] }), token });
+  for (const p of ['', '/publish']) {
+    const html = await (await b.get(p)).text();
+    assert.match(html, /1 from KennelOS is waiting for you to match\.[\s\S]*your website keeps showing your own version/);
+    assert.match(html, /href="\/s\/akbostons\/kennelos#matches">Answer it</);
+  }
+});
+
+test('a new dog or litter starts on "Choose…", not on the first sex or stage', async () => {
+  const b = await breeder();
+  assert.match(await (await b.get('/dogs/new')).text(), /name="sex" required><option value="" selected disabled>Choose…<\/option><option value="female">Female/);
+  assert.match(await (await b.get('/litters/new')).text(), /name="stage" required><option value="" selected disabled>Choose…<\/option>/);
+  assert.notEqual((await b.post('/dogs/new', { call_name: 'Rex', show_on_site: '1' })).status, 303, 'no sex chosen: not saved');
+  const willow = b.row("SELECT id FROM dogs WHERE slug = 'willow'").id;
+  assert.doesNotMatch(await (await b.get(`/dogs/${willow}`)).text(), /Choose…/);
+});
+
+test('registration on the puppy card, and a litter\'s Ask about full registration', async () => {
+  const b = await breeder();
+  const gem = b.row("SELECT id FROM litters WHERE slug = 'gem-2026'").id;
+  b.env.DB.raw.prepare("UPDATE puppies SET registration = 'limited' WHERE slug IN ('opal', 'onyx')").run();
+  b.env.DB.raw.prepare("UPDATE puppies SET registration = 'full' WHERE slug = 'diamond'").run();
+  await b.post('/publish');
+  let html = await b.page('/litters/gem-2026');
+  assert.match(html, /<li><span>Registration<\/span><span>Limited<\/span><\/li>/);
+  assert.match(html, /<li><span>Registration<\/span><span>Full<\/span><\/li>/);
+  assert.doesNotMatch(html, /Ask about full registration/, 'off by default');
+
+  const form = await (await b.get(`/litters/${gem}`)).text();
+  assert.match(form, /name="ask_full_reg" value="1"> <span>Families can ask about full registration/);
+  b.env.DB.raw.prepare('UPDATE litters SET ask_full_reg = 1 WHERE id = ?').run(gem);
+  await b.post('/publish');
+  html = await b.page('/litters/gem-2026');
+  assert.match(html, /<a class="btn line" href="\/contact\?full-reg=gem-2026#message">Ask about full registration<\/a>/);
+  assert.match(html, /href="\/contact\?full-reg=gem-2026&amp;puppy=opal#message"/);
+  assert.match(html, /href="\/contact\?full-reg=gem-2026&amp;puppy=onyx#message"/);
+  assert.doesNotMatch(html, /puppy=diamond/, 'already full: no link');
+  assert.match(await b.page('/litters/gem-2026/opal'), /<dt>Registration<\/dt><dd>Limited<\/dd>[\s\S]*href="\/contact\?full-reg=gem-2026&amp;puppy=opal#message">Ask about full registration/);
+
+  // The contact form, with the litter and puppy filled in from the site's own records.
+  const contact = await b.page('/contact?full-reg=gem-2026&puppy=opal');
+  assert.match(contact, /name="topic" maxlength="80" placeholder="[^"]*" value="Full registration: Opal, The Gem litter"/);
+  assert.match(await b.page('/contact?full-reg=gem-2026'), /value="Full registration: The Gem litter"/);
+  assert.match(await b.page('/contact?full-reg=gem-2026&puppy=diamond'), /name="topic" maxlength="80" placeholder="[^"]*" value=""/);
+  assert.match(await b.page('/contact?full-reg=%3Cscript%3E'), /name="topic" maxlength="80" placeholder="[^"]*" value=""/);
+  assert.match(await b.page('/contact'), /name="topic" maxlength="80" placeholder="[^"]*" value=""/);
+});

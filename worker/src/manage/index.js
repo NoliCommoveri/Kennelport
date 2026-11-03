@@ -14,7 +14,7 @@ import {
 import { makePreviewToken } from '../site.js';
 import { listSnapshots } from '../publish.js';
 import { siteLink } from '../ops/sites.js';
-import { createScreens } from './screens.js';
+import { createScreens, matchesWaiting } from './screens.js';
 import { kennelosState } from '../feed.js';
 import { vapidConfig, subscribe, unsubscribe, testPush, pendingPush, subscriptionFor } from '../push.js';
 
@@ -114,6 +114,7 @@ async function siteHome(env, user, site) {
   const { results: notices } = await env.DB.prepare('SELECT id, message, created_at FROM notices WHERE site_id = ? AND read_at IS NULL ORDER BY created_at DESC LIMIT 3').bind(site.id).all();
   const day = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
   return page(site.kennel_name || site.subdomain, `
+  ${matches ? matchesWaiting(site.subdomain, matches) : ''}
   ${notices.map((n) => `<section class="card notice-card" role="status"><p>${esc(n.message)}</p><p class="row"><a class="button" href="/s/${esc(site.subdomain)}/publish">Review and publish</a><form method="post" action="/s/${esc(site.subdomain)}/notices/${esc(n.id)}/read"><button class="link">Done</button></form></p></section>`).join('')}
   <section class="card status">
     <p><span class="dot ${site.status}"></span>${esc(STATUS_WORDS[site.status] ?? site.status)}${changed ? ' · <strong>changes not published yet</strong>' : ''}</p>

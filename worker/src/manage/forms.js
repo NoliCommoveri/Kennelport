@@ -58,6 +58,7 @@ const LABELS = {
     price_note: ['A note under the prices', 'For example "Prices are our intended base prices and may change before the contract is signed."'],
     show_prices: ['Show prices', 'Off: this litter and its puppies show "Contact us for pricing".'],
     show_placed: ['Show spoken-for puppies', 'Off: puppies that are Spoken for leave the site.'],
+    ask_full_reg: ['Families can ask about full registration', 'On: the litter page, and each puppy planned for Limited, show "Ask about full registration", which opens your contact form with the litter and puppy filled in.'],
   },
   puppies: {
     name: ['Name', null], collar: ['Collar', 'For example "pink collar".'],
@@ -218,8 +219,14 @@ export function field(name, f, value, ctx) {
   switch (f.type) {
     case 'bool':
       return `<label class="check"><input type="checkbox" name="${name}" value="1"${value ? ' checked' : ''}> <span>${esc(label)}${h}</span></label>`;
-    case 'enum':
-      return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"${req}>${f.required || f.default ? '' : '<option value=""></option>'}${f.values.map((x) => `<option value="${esc(x)}"${x === (value ?? f.default) ? ' selected' : ''}>${esc(enumWords(ctx.kind, name, x))}</option>`).join('')}</select></label>`;
+    case 'enum': {
+      // A required choice with no default starts on "Choose…", not on its first
+      // value, so a new dog's sex (or a litter's stage) is never saved by accident.
+      const unset = value === null || value === undefined || value === '';
+      const blank = !f.required && !f.default ? '<option value=""></option>'
+        : f.required && !f.default && unset ? '<option value="" selected disabled>Choose…</option>' : '';
+      return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"${req}>${blank}${f.values.map((x) => `<option value="${esc(x)}"${x === (value ?? f.default) ? ' selected' : ''}>${esc(enumWords(ctx.kind, name, x))}</option>`).join('')}</select></label>`;
+    }
     case 'litterid': {
       const litters = ctx.litters ?? [];
       return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"><option value="">None</option>${litters.map((l) => `<option value="${esc(l.id)}"${l.id === value ? ' selected' : ''}>${esc(l.name)}</option>`).join('')}</select></label>`;

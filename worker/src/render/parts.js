@@ -221,6 +221,32 @@ export function dogCard(snap, d, { sale = null } = {}) {
     </div></div>`;
 }
 
+export const REG_WORDS = { limited: 'Limited', full: 'Full' };
+
+// A litter with "Families can ask about full registration" on (its own setting):
+// the litter, and each of its puppies planned for Limited, link to the contact
+// form with them filled in. Never for a puppy staying here, and only while the
+// contact page is on.
+export function fullRegHref(snap, l, p, ctx) {
+  if (!l.ask_full_reg || !pageOn(snap, 'contact', ctx)) return null;
+  if (p && (p.registration !== 'limited' || p.status === 'staying')) return null;
+  return `/contact?full-reg=${encodeURIComponent(l.slug)}${p ? `&puppy=${encodeURIComponent(p.slug)}` : ''}#message`;
+}
+export function fullRegLink(snap, l, p, ctx, cls) {
+  const href = fullRegHref(snap, l, p, ctx);
+  return href ? `<a class="${cls}" href="${attr(href)}">Ask about full registration</a>` : '';
+}
+
+// The contact form's About line from a full-registration link, made from the
+// snapshot (never from the address's own words): null when it names nothing shown.
+export function fullRegTopic(snap, ctx, params) {
+  const l = snap.litters.find((x) => x.slug === params.get('full-reg'));
+  if (!l || !fullRegHref(snap, l, null, ctx)) return null;
+  const p = params.get('puppy') ? l.puppies.find((x) => x.slug === params.get('puppy')) : null;
+  if (p && !fullRegHref(snap, l, p, ctx)) return null;
+  return `Full registration: ${p ? `${p.name}, ` : ''}${l.name}`.slice(0, 80);
+}
+
 export function puppyCard(snap, l, p, ctx) {
   const photo = img(snap, p.photo_id, { alt: p.name }) ?? '<div class="ph-photo">Photos coming soon</div>';
   const bg = img(snap, p.photo_id, { alt: '', cls: 'bg', thumb: true }) ?? '';
@@ -229,15 +255,16 @@ export function puppyCard(snap, l, p, ctx) {
   const status = puppyStatus(l, p, ctx.today);
   const price = puppyPriceText(l, p);
   const reg = [l.name, p.collar].filter(Boolean).join(' · ');
-  const action = p.status === 'available'
+  const regWord = REG_WORDS[p.registration];
+  const action = (p.status === 'available'
     ? (pageOn(snap, 'waitlist', ctx) ? '<a class="more" href="/waitlist">Ask about this puppy</a>' : '<a class="more" href="/contact">Ask about this puppy</a>')
-    : '';
+    : '') + fullRegLink(snap, l, p, ctx, 'more');
   return `<div class="flip" tabindex="0" role="button" aria-label="${attr(p.name)}: turn the card over">
     <div class="flip-in">
       <div class="face front">${held ? `<span class="ribbon">${esc(status)}</span>` : ''}${photo}<span class="turn" aria-hidden="true">↻</span>
         <div class="cap"><span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span><span class="line1"><span>${esc([sex, p.color].filter(Boolean).join(' · '))}</span><span class="status ${p.status === 'available' ? 'avail' : 'res'}">${esc(status)}</span></span></div></div>
       <div class="face back">${bg}<span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span>
-        <span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li>${price ? `<li><span>Price</span><span>${esc(price)}</span></li>` : ''}</ul>
+        <span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li>${regWord ? `<li><span>Registration</span><span>${regWord}</span></li>` : ''}${price ? `<li><span>Price</span><span>${esc(price)}</span></li>` : ''}</ul>
         ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}${action}</div>
     </div></div>`;
 }

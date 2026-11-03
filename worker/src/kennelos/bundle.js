@@ -249,7 +249,9 @@ export class Writer {
 
   // Health results as data (plan 3.7): her own (typed) results stay; KennelOS's
   // are replaced with what it sent, when it sent any. A new one's Show on site is
-  // set once from the dog's Health results choice, and is hers from then on.
+  // set once from the dog's Health results choice, and is hers from then on, save
+  // one kept off as not normal, which follows the choice again once it is. A
+  // result KennelOS leaves unmarked (normal: null) counts as normal.
   health(dogId, display, list, existing = []) {
     if (!list.length) return;
     const mine = existing.filter((h) => h.dog_id === dogId && h.source === 'kennelos');
@@ -257,6 +259,9 @@ export class Writer {
     list.forEach((h, i) => {
       const values = { test: h.test, result: h.result, normal: h.normal ?? 1, date: h.date, verify_url: h.verify_url, sort: 100 + i };
       const cur = byKos.get(h.id);
+      // A result Normal results only kept off for not being normal shows once it
+      // is (KennelOS sends an unmarked result as normal now): the dog's rule, again.
+      if (cur && display === 'normal_only' && !cur.normal && !cur.show && values.normal) values.show = 1;
       if (cur) { this.update('health_results', cur, values); return; }
       const show = display === 'all' ? 1 : display === 'normal_only' ? values.normal : 0;
       this.insert('health_results', { id: crypto.randomUUID(), site_id: this.siteId, dog_id: dogId, ...values, show, source: 'kennelos', kennelos_id: h.id });

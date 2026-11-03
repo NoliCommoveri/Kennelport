@@ -91,6 +91,13 @@ const FORM_KIND = { policies: 'expander', faq: 'expander', waitlist_help: 'expan
 const SUBJECT_OF = { dogs: 'dog', litters: 'litter', puppies: 'puppy', extras: 'extra', products: 'product' };
 const BLOCK_TITLES = { hero: 'Top of the page', facts: 'Facts row', story: 'Story', dogs: 'Dogs row', litters: 'Litters', reviews: 'Reviews', waitlist: 'Waitlist band' };
 
+// Records from KennelOS that share a name with one already on the site wait for
+// her yes; until then the site keeps showing her own version, so this sits at the
+// top of Home and Publish, not only on the KennelOS screen.
+export function matchesWaiting(subdomain, n) {
+  return `<section class="card notice-card" role="status" id="matches-waiting"><p><strong>${n} from KennelOS ${n === 1 ? 'is' : 'are'} waiting for you to match.</strong> ${n === 1 ? 'It has' : 'They have'} the same name as one already on your website. Until you answer, your website keeps showing your own version, without what KennelOS sent (its sex, health results and so on).</p><p class="row"><a class="button primary" href="/s/${esc(subdomain)}/kennelos#matches">Answer ${n === 1 ? 'it' : 'them'}</a></p></section>`;
+}
+
 export function createScreens({ env, request, url, site, user, page }) {
   const base = `/s/${site.subdomain}`;
   const photoUrl = (id) => `${base}/photos/${id}/thumb`;
@@ -762,9 +769,10 @@ export function createScreens({ env, request, url, site, user, page }) {
     const token = await makePreviewToken(env, site.id, 1);
     const prev = (path) => siteLink(env, site.subdomain, `/__preview?t=${encodeURIComponent(token)}&next=${encodeURIComponent(path)}`);
     const snaps = await listSnapshots(env, site.id);
+    const matches = await env.DB.prepare('SELECT COUNT(*) AS n FROM link_pending WHERE site_id = ?').bind(site.id).first('n');
     return {
       title: 'Publish', back: base,
-      body: `${note(url)}<section class="card"><h2>${list.length ? 'Changes since your last publish' : 'Nothing to publish'}</h2>
+      body: `${note(url)}${matches ? matchesWaiting(site.subdomain, matches) : ''}<section class="card"><h2>${list.length ? 'Changes since your last publish' : 'Nothing to publish'}</h2>
         ${list.length ? `<ul class="changes">${list.map((c) => `<li><span>${esc(c.text)}</span>${c.path ? `<a href="${esc(prev(c.path))}">Preview</a>` : ''}</li>`).join('')}</ul>` : '<p class="muted">Your website already shows everything in your draft.</p>'}
         <p class="row"><a class="button" href="${esc(prev('/'))}">Preview the whole site</a></p>
         ${list.length ? `<form method="post" action="${base}/publish"><button class="primary">Publish ${list.length} change${list.length === 1 ? '' : 's'}</button></form>` : ''}</section>
