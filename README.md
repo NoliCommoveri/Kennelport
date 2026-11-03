@@ -16,7 +16,7 @@ upload works on a real Android phone and a real iPhone (plan 4.2). Phase 3 is bu
 waitlist page, and the KennelOS website feed: the list and KennelOS's application form
 drawn in the site's style, and a simple waitlist kept by hand for sites without
 KennelOS (plan 3.8, 8.1). Phase 5 is built (albums, videos and posts, sharing and QR codes) apart from KennelOS
-shares carrying album links. Next: phase 4, the KennelOS link. Open: site
+shares carrying album links. Next: phase 4, the KennelOS link, designed on 2026-11-03 (plan 5) and not yet built. Open: site
 rules wait until KennelPort is offered (9). See
 [`docs/KennelPort_Plan.md`](docs/KennelPort_Plan.md); after version 1:
 [`docs/KennelPort_Backlog.md`](docs/KennelPort_Backlog.md). Page directory from a survey of real breeder sites:

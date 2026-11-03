@@ -1,6 +1,7 @@
 # KennelPort: high-level plan (DRAFT)
 
 > Status: phases 0 to 3 are built (`worker/`), and phase 5 (albums, videos and posts, sharing) apart from its KennelOS part, which needs phase 4; section 8.1 says how phase 3 came together.
+> Phase 4 is designed and not yet built: section 5 was settled on 2026-11-03 against KennelOS's code (decisions 29 to 32).
 > Section 8 says what version 1 is; section 9 lists the one decision still open. What comes after version 1 is
 > in [`KennelPort_Backlog.md`](KennelPort_Backlog.md). History of this plan lives in
 > [`BUILD_LOG.md`](BUILD_LOG.md).
@@ -163,7 +164,7 @@ is in [`KennelPort_Design_Direction.md`](KennelPort_Design_Direction.md). The se
 
 - **Home:** kennel name, logo, hero photo, short intro, an optional announcement banner (section 3.9)
 - **About:** the kennel's story, breed(s), location (town and region only, never a street address), visiting policy, memberships and breeder programs (section 3.9)
-- **Our dogs:** a card per dog (name, registered name, sex, photos, titles, health testing as section 3.7 allows, short bio, pedigree) linking to a dog page
+- **Our dogs:** a card per dog (name, registered name, sex, photos, titles, health testing as section 3.7 allows, short bio) linking to a dog page, grouped into girls and boys, up and coming, and adults looking for a home (section 3.7)
 - **Litters and puppies:** current, planned and past litters, parents, puppies with status (section 3.6) and photos
 - **Albums:** photo galleries, each with its own shareable link
 - **Extras:** the paid extras the breeder offers families (photo packages, training, …), grouped, with descriptions and prices (section 3.4)
@@ -171,7 +172,7 @@ is in [`KennelPort_Design_Direction.md`](KennelPort_Design_Direction.md). The se
 - **Waitlist / apply:** an inquiry form on every site; or the breeder's own waitlist (KennelOS, or any other) embedded or linked (section 3.8)
 - **Contact:** email, phone, social links, and the inquiry form (section 3.10)
 - **Policies:** health guarantee, how reserving works, deposits and refunds, spay/neuter and returns (section 3.9)
-- **Optional pages:** FAQ, puppy care and going home, the breed, reviews and families' stories, news, stud dogs, adults available, downloads (section 3.9)
+- **Optional pages:** FAQ, puppy care and going home, the breed, reviews and families' stories, news, stud dogs, an adults page (an adult for sale already shows on the Dogs page, 3.7), downloads, a three-generation pedigree (section 3.9)
 - **Buying and raising:** how it works, programs such as guardian homes, how we raise puppies, how to pay safely (section 3.11)
 - **More dog and litter pages:** retired dogs, in memory, older puppies, show results, a litter diary, and planned-litter pages with their status and picks (section 3.11)
 - **Embeds:** videos and social feeds placed on any page (section 3.3)
@@ -241,30 +242,41 @@ The subdomain picks the site; the path picks the page:
 
 ### 3.2 Prices
 
-**On its own:** the breeder types every price in KennelPort.
-- A litter can carry a price per sex (or one price) and a deposit per sex; a puppy can
-  override its litter's price.
-- **Registration:** a litter can add a surcharge for full registration (KennelOS's
-  `full_reg_surcharge_male` / `_female`), shown as "Full registration: +$X".
+**On its own:** the breeder types her prices on the litter, and the site works out every
+number from them.
+- A litter carries a **price per sex**, a **deposit per sex**, and a **full-registration
+  surcharge per sex** (KennelOS's `full_reg_surcharge_male` / `_female`). Either sex's
+  price may be blank to use the other's, so a breeder who prices girls and boys alike
+  types one number.
+- **A puppy's price is one number; the site never shows the arithmetic.** Limited
+  registration shows the litter's price for that sex; full registration shows that price
+  plus the surcharge, as a single total. The site never prints "Full registration: +$300".
+- Where a puppy's registration isn't settled, its price shows as a range from the base to
+  the base plus the surcharge, and a litter's card shows the range across its sexes.
+  Ranges are worked out, never typed.
+- A puppy can carry **its own price**, which overrides all of that and shows exactly as
+  typed. Blank, which is the usual case, means it follows its litter.
 - Each litter has a **Show prices** switch, off by default. When off, the site shows
   "Contact us for pricing" for that litter and its puppies.
 - Puppies marked reserved or placed never show a price.
-- **Ranges:** any price can be one amount or a from–to range ("$2,500–$2,800"), as breeders
-  often price by puppy within a package.
 - A short notice under prices, in the breeder's wording (KennelOS's turn cards say prices
   are intended base prices and may change before contract signing).
-- Prices that don't belong to a litter (extras, 3.4; and in the backlog the delivery fee,
-  stud fees and adults) follow one site-wide **Show other prices** switch, also off by
-  default. Off, each shows "Contact us". "Prices show" elsewhere in this plan means the
-  switch that covers that price is on.
+- Prices that don't belong to a litter — extras (3.4), an adult for sale (3.7), and in the
+  backlog the delivery fee and stud fees — follow one site-wide **Show other prices**
+  switch, also off by default. Off, each shows "Contact us". "Prices show" elsewhere in
+  this plan means the switch that covers that price is on.
 
 **With KennelOS linked (decision 6):** the breeder chooses, with a **Use my KennelOS
 prices** switch in the manage app, off by default.
 - *Off:* KennelOS sends no prices; the breeder types them in KennelPort like anyone else.
-- *On:* the bundle carries KennelOS's litter prices (price and deposit per sex, the
-  full-registration surcharge) and its extras price list (3.4), so each is typed once
-  (the fee per mile joins them with the pickup page, backlog section 4). They're read-only in KennelPort while the switch is on, and
-  still show only where the breeder turns the matching switch on.
+- *On:* the bundle carries the litter's six figures (price, deposit and full-registration
+  surcharge, each per sex: KennelOS's `expected_price_*`, `expected_deposit_*`,
+  `full_reg_surcharge_*`) and its extras price list (3.4), so each is typed once (the fee
+  per mile joins them with the pickup page, backlog section 4). They're read-only in
+  KennelPort while the switch is on, and still show only where the breeder turns the
+  matching switch on.
+- **A puppy's own price and an adult's asking price stay hers** either way: KennelOS keeps
+  a figure like that on a Sale, which is buyer data and never leaves it (5.3).
 
 ### 3.3 Embeds (YouTube, Facebook and others)
 
@@ -362,16 +374,29 @@ shows the same way on every site:
 
 | Status | What visitors see |
 |---|---|
-| Available | Available, with its price if prices show |
+| Available | Available, with its price if prices show — or "Available on 12 December" before the litter's deposits date (below) |
 | Reserved | Reserved, no price |
-| Placed | Placed (or hidden, per litter) |
+| Placed | Placed, unless the litter's **Show placed puppies** switch is off (on by default) |
 | Staying with us | Staying with us, no price |
-| Coming soon | Not yet available, no price |
+| Still deciding | Still deciding, no price, no **Ask about this puppy** |
 | Hidden | Not shown |
 
-**With KennelOS linked:** the status is worked out in KennelOS and arrives read-only, with
-the same availability check its waitlist uses (`isPupAvailable`), so the site and the
-waitlist never disagree:
+**"Still deciding", not "Coming soon"** (decided 2026-11-03). The label used to read
+"Coming soon", which promises the puppy will go on sale. She may keep it, place it
+privately, or never offer it at all, so the site says what is true — she hasn't decided —
+and promises nothing. Nothing with "yet" in it works either, for the same reason.
+
+**Available, and when.** A breeder marks a puppy Available as soon as she means to sell
+it, often the day it is born; but nobody takes a deposit on a three-day-old puppy, and
+she can't sell until the litter is through its first weeks. So an Available puppy reads
+**Available on 12 December** until its litter's deposits date (section 5.3), and plainly
+**Available** from that day. Its price shows throughout (3.2), and **Ask about this
+puppy** works throughout: asking isn't buying, and those weeks are when she builds her
+line of families.
+
+**With KennelOS linked:** the status is her own word in KennelOS — a puppy's
+`disposition` — and arrives read-only, with the same availability check its waitlist uses
+(`isPupAvailable`), so the site and the waitlist never disagree:
 
 | KennelOS | Site status |
 |---|---|
@@ -379,36 +404,69 @@ waitlist never disagree:
 | a waitlist pick awaiting its deposit, or a sale before delivery | Reserved |
 | placed | Placed |
 | keeping | Staying with us |
-| undecided | Coming soon |
+| undecided (or unset) | Still deciding |
 | health hold | Hidden |
+
+A litter's puppies come with the litter, which she marks once; she never ticks puppies one
+at a time (5.3). Hiding one particular puppy that is not on a health hold has no word in
+KennelOS yet, and waits.
 
 **Undecided puppies (decision 10):** an Undecided puppy is not for sale anywhere: not on
 the site, not on KennelOS's waitlist and not in Companion shares. The site shows it as
-Coming soon, with no price and no **Ask about this puppy**. KennelOS offers only puppies
-marked Available (`isPupAvailable`; a puppy with no plan set counts as Undecided), and
-Kels's **Tidy up** asks about the breeder's puppies left with no plan. Companion shares
-already listed only Available puppies.
+Still deciding, with no price and no **Ask about this puppy**. KennelOS offers only
+puppies marked Available (`isPupAvailable`; a puppy with no plan set counts as Undecided),
+and Kels's **Tidy up** asks about the breeder's puppies left with no plan. Companion
+shares already listed only Available puppies.
 
 ### 3.7 What's public
 
 **On its own:** the breeder decides per dog and per litter what shows, with private
 defaults:
-- **Health tests:** each result they enter (test, result, date, and the lab's public
+- **Health tests:** each result she enters (test, result, date, and the lab's public
   verification link where one exists, such as OFA's) has **Show on site**, off by
   default; a dog can show **Normal results only** or **All results**. Uploaded
   certificates are private unless ticked (section 4.2 says how that's enforced).
 - **Titles and awards:** typed per dog (CH, GCH, CGC, …), shown on the dog card.
+- **Which dogs appear.** A dog's card sits in one of four groups on the Dogs page, from
+  its status:
+  - **Girls and boys** — the breeding dogs, which is what the page shows today;
+  - **Up and coming** — young stock she has kept and isn't breeding yet (`dogs.upcoming`),
+    so a puppy she keeps still has a page once its litter has gone from the site (5.3);
+  - **Looking for a home** — an adult she is placing, with its price if prices show (3.2)
+    and **Ask about this dog**. A dog she can't breed is a dog she needs to place, and
+    that is what the site is for;
+  - **retired and in memory**, which stay off the site until their pages are built
+    (backlog section 6).
+  A group with nothing in it doesn't appear (3.12).
 - **Planned litters:** shown or not per litter; a planned breeding can show as month and
   year only.
 - **Never:** a buyer, a family, an address or a sale.
 
-**With KennelOS linked:** the bundle applies the choices already made for KennelOS's
-public list and status pages, so nothing hidden there appears on the website:
-- health tests per the `parent_tests` setting and each dog's override, using the Normal /
-  Abnormal flag on each result; certificates in the KennelOS private vault are never sent;
-- titles from logged show results;
-- planned litters per the **Coming up** public switches (planned heats month and year
-  only, planned pairings, confirmed pairings, whelped litters before picks open).
+**With KennelOS linked:** her marks in KennelOS decide which records are offered, and her
+own settings in KennelPort decide how they show — a waitlist setting never gates a
+website section (5.1):
+- **health tests arrive as data** (test, result, the Normal/Abnormal flag, date, the
+  verification link) for every dog she has ticked, and what shows is her KennelPort
+  setting: the dog's **Health results** choice (normal only / all / none) and each
+  result's own tick, which is set from that choice when the result first arrives and is
+  hers from then on (5.3). Abnormal results travel with their flag, so switching a dog to
+  **All results** needs no new bundle; certificates in the KennelOS private vault are
+  never sent. `parent_tests` and `Dog.waitlist_tests` keep deciding what KennelOS's own
+  family pages show, and nothing here;
+- **titles** from logged show results (KennelOS builds them from `title_earned` events);
+- **a dog's group** follows the status she set in KennelOS:
+
+| KennelOS `status` | On the site |
+|---|---|
+| `puppy`, ticked | Up and coming |
+| `active_breeding` | Girls / boys |
+| `for_sale` | Looking for a home |
+| `retired_breeding` | retired (not shown until the backlog page) |
+| `deceased` | in memory, with the date of death |
+| `pet_home`, `external_reference` | not on the site |
+
+- **upcoming litters, pairings and heats** per the marks in section 5.3 (a heat as its
+  month and year only).
 
 ### 3.8 The waitlist on the site
 
@@ -563,8 +621,8 @@ The application still goes only to KennelOS:
 ### 3.9 Standard breeder-site features
 
 What visitors expect on a breeder's website, whether or not the breeder uses KennelOS.
-All are KennelPort content only; KennelOS fills none of them. Each is a section the
-breeder turns on. These are the ones version 1 ships (decision 14); the rest (stories,
+Each is a section the breeder turns on, and all are KennelPort content apart from **How
+to pay**, which a linked breeder's waitlist settings fill (below). These are the ones version 1 ships (decision 14); the rest (stories,
 past litters, adults, stud dogs, the breed, a banner, news, going home, downloads, events,
 visitor stats) are in the backlog doc, section 5.
 
@@ -612,8 +670,10 @@ visitor stats) are in the backlog doc, section 5.
   - Plus a link to their Google reviews (or a free Google reviews widget).
 
 **Dogs and litters, beyond the basics**
-- **Pedigree:** a three-generation pedigree on each dog page, typed in (or from KennelOS
-  when linked: its pedigree-only ancestors), with titles.
+- **Pedigree:** backlog ([`KennelPort_Backlog.md`](KennelPort_Backlog.md) section 6). A
+  three-generation pedigree on each dog page is in neither the data model nor the AK
+  sample, so it waits with the other survey pages; KennelOS already holds the ancestors
+  (`pedigree_only` dogs) and a `parent_pedigree` switch for when it lands.
 
 **Basics of a good website**
 - **Search and sharing:** a title and description per page, structured data
@@ -687,6 +747,8 @@ paying the balance. 14 of the 28 sites read had a page like this.
 
 **Planned litters.** A planned litter shows on Puppies as an upcoming litter; its own
 page with a status in plain words is backlog (backlog section 6).
+  Which upcoming litters show at all is her mark on the record, not a waitlist setting
+  (5.1).
 - **Picks (decision 18):** never shown. Litter pages don't say how many picks are taken
   or open; each puppy's own status (section 3.6) is all a visitor sees.
 
@@ -731,6 +793,12 @@ The order is fixed. Within each:
   open.
 - *Extras and homegoing packages:* section 3.4.
 - *Review topics:* the choices in the reviews filter.
+
+**Switches on single records.** Each litter has **Show prices** (off) and **Show placed
+puppies** (on); each dog a **Health results** choice (normal only / all / none) and each
+result its own **Show on site** tick (off); the site has one **Show other prices** switch
+(off) for everything outside a litter. A linked breeder keeps all of them: KennelOS offers
+a record, her switches publish it (5.3).
 
 **Wording everywhere.** The small letter-spaced labels above headings ("OUR PARENT DOGS"),
 section headings and lead lines all have defaults the breeder can reword.
@@ -941,102 +1009,228 @@ waitlist (a published "projection"):
   with no buyer names, notes, contracts or contacts, and no prices unless decision 6
   allows them. A new field in KennelOS never reaches the site until someone adds it to
   the list.
-- Only records the breeder marks **Show on website** go into the bundle.
-- KennelOS pushes the bundle to KennelPort. KennelPort never reads anything from KennelOS.
+- Only records the breeder marks **Show on website** go into the bundle (section 5.2).
+- KennelOS pushes the bundle to KennelPort, and KennelPort answers only with the addresses
+  of the pages it made (section 5.4). The one thing KennelPort reads from KennelOS is the
+  **public** waitlist feed (section 3.8) — the list anyone can see on her KennelOS list
+  page, with no token and no link — which is separate from all of this.
+
+Two rules keep the two apps from blurring into each other. Both were decided on
+2026-11-03, when section 5 was read against KennelOS's code and found to be leaning on
+waitlist settings:
+
+- **A waitlist setting may fill a field; it may never gate a section.** Her waitlist
+  settings supply content — the How it works steps (3.11), How to pay (3.9) — but what
+  appears on the website is decided by a **Show on website** mark on the record in
+  KennelOS, and by her own switches in KennelPort. So `waitlist_config.show_upcoming` and
+  `parent_tests` keep deciding what KennelOS's own list and family pages show, and decide
+  nothing here. Both default to off: as the website's gate they would have left a breeder
+  who doesn't publish a public list with no upcoming litters and no health results, and
+  nothing on either screen to explain why.
+- **She says what a record is; the site never works it out.** The bundle carries the marks
+  and dates she set, never a status inferred from her records. Inference leans on data
+  hygiene, and when it gets something wrong nobody finds out until a family says
+  something; a mark she set wrong is on her own site, where she can see it and fix it in
+  a tap.
 
 ### 5.2 Linking
 
-1. In KennelPort's manage app: **Link KennelOS** shows a one-time link code.
-2. In KennelOS (Settings or Import/Export): **Connect website** takes that code. KennelPort
-   returns a token, which KennelOS stores through `settings.js`.
-3. **Matching what's already there.** A breeder who started without KennelOS already has
+1. **The code.** In KennelPort's manage app, **Link KennelOS** shows a one-time code:
+   eight characters, a quarter of an hour, single use, owners only, rate-limited like a
+   sign-in code (section 4).
+2. **Connect website.** In KennelOS (Settings or Import/Export, Pro only), **Connect
+   website** takes the code and posts it to `api.kennelport.com`, which answers with a
+   token KennelOS keeps in the device-only `device_secrets` table (decision 11). The
+   answer also carries the site's address and whether its waitlist page wants her public
+   list, so **Connect website** sets the feed up too (section 3.8) and she never pastes a
+   feed address. "Linked" then means one thing on both sides.
+3. **One kennel to one site, each device once.** The link row records which KennelOS
+   kennel it is for, and a bundle from any other kennel is refused: KennelOS allows more
+   than one own kennel, and each links to its own site separately. A second device takes
+   its own code and gets its own row, so the manage app can show "Her phone — last update
+   3 November" and stop one device without touching the others.
+4. **Matching what's already there.** A breeder who started without KennelOS already has
    dogs and litters in KennelPort. On the first bundle, the manage app suggests pairs by
    name (KennelPort's "Willow" with KennelOS's "Willow") and the breeder confirms each.
    Nothing is matched without that confirmation; unmatched KennelPort records stay as
    they are. The same suggestion appears whenever a later bundle brings a new KennelOS
-   dog or litter whose name matches one still unlinked in KennelPort (a dog the breeder
-   added to the website first and to KennelOS later), so it joins the existing page,
-   with its photos and wording, instead of making a second one. KennelOS fields start
-   flowing to it only after the breeder confirms the match.
-4. From then on, KennelOS has an **Update website** button. Nothing is sent until the
-   breeder presses it (no automatic publishing, decision 5). What arrives lands in the
-   draft (section 4.1), so the breeder can still check it before pressing **Publish**.
+   dog or litter whose name matches one still unlinked in KennelPort (a dog she added to
+   the website first and to KennelOS later), so it joins the existing page, with its
+   photos and wording, instead of making a second one. A pair she declines is remembered,
+   so she isn't asked again at every bundle. Matching is offered for dogs and litters:
+   puppies come with their litter, and extras match by name.
+   - **The screen says what the match will change**, field by field — "Willow: colour
+     'Black & white' → blank. Keep yours?" — because this is the one moment a bundle meets
+     fields she typed by hand ("What a blank means", 5.3).
+5. **Update website.** From then on KennelOS has an **Update website** button. Nothing is
+   sent until she presses it (no automatic publishing, decision 5). What arrives lands in
+   the draft (section 4.1), so she can still check it before pressing **Publish**.
+6. **Unlinking.** **Unlink** in the manage app (owners only) revokes every device's token;
+   KennelOS's next **Update website** says the website is no longer linked and offers to
+   connect again. Unlinking clears `source` and `kennelos_id` on every record, so the
+   draft becomes ordinary KennelPort content she can edit, exactly as it stood.
 
 ### 5.3 What a bundle does to the site
 
-Each bundle is applied by these rules (decision 16):
+**How it arrives.** KennelOS's app posts the bundle to `api.kennelport.com` with its token
+in an `Authorization` header and no cookie, from one of the KennelOS origins the Worker
+allows (`KENNELOS_APP_ORIGINS` — KennelOS Pro is a static app on its own origin, which is
+not the family host in `KENNELOS_ORIGIN`). Each bundle carries a format version and an id:
+a bundle id already applied is answered with its first summary instead of being applied
+twice, so a retry over a bad connection is safe, and a version this Worker doesn't know is
+refused with a line asking her to let KennelOS update itself. A bundle is applied in one
+batch, all of it or none, and is capped in bytes and in records per section like the
+operator's import (section 4.1). There is no queue: KennelOS is offline-first, so a press
+that can't reach KennelPort says so and she presses it again.
+
+**What puts something on the site.** Four marks in KennelOS, each on the record it belongs
+to, and nothing else:
+
+| Mark | What it does |
+|---|---|
+| `Dog.show_on_website` | this dog has a page and a card (3.7) |
+| `Dog.heats_online` | her coming heats may show, as a month (3.7) |
+| `Pairing.show_on_website` | this pairing shows under Coming up |
+| `Litter.show_on_website` | this litter and its puppies show |
+
+A litter's puppies come with the litter: she never ticks eight puppies one at a time, and
+each puppy's own disposition says what it is (3.6). A pairing or a heat shows whether or
+not its dam has a page of her own; without one, parents show as names, like an outside
+stud.
+
+**Where a litter sits is decided by her dates, not by its KennelOS status:**
+
+| What she has | Where it shows |
+|---|---|
+| Ticked, no whelp date | Coming up — "Expected March" |
+| Ticked, whelped, deposits date still ahead | Coming up — "Born 2 November · deposits from 12 December", its puppies reading "Available on 12 December" (3.6) |
+| Ticked, deposits date reached, or blank | Puppies, among what's available |
+| Unticked | Off the site at the next Publish |
+
+The deposits date is KennelOS's `accept_deposits_date` — already a date she sets for her
+families ("Shown to prospective families when set") and already meaning exactly this:
+`depositsDueLitters()` reads it as the day deposits were planned to open. Blank means
+available straight away. The site moves the litter on the day from the published snapshot,
+the same way Older puppies appears by itself once a litter's going-home date passes
+(3.11), with no bundle and no Publish needed.
+
+**KennelOS asks her at the three moments that matter, and never changes a mark itself:**
+- recording a pairing or a litter — "Show this on the website?", pre-ticked when the dam
+  is already on the website;
+- the litter's status moving past Expected — "When do deposits open?", if that date is
+  blank, since blank means available now;
+- the litter going Sold or Closed — "Take the Spring litter off the website?", beside
+  "Willow is staying with you — keep her on the site?" (the hand-over, below). Today
+  already nudges her here once every puppy has gone home.
+
+**Then, record by record:**
 
 - **Matching:** records are matched by their KennelOS id (`kennelos_id`), never by name
-  after the first link.
+  after the first link, and only within one table. A puppy and a dog may hold the same
+  KennelOS id — a KennelOS puppy *is* a Dog record — and a bundle never turns one into the
+  other.
 - **Upcoming litters change record in KennelOS** (a heat event, then a pairing, then a
   litter, each with its own id), so two rules keep the website's planned litter:
   - *Pairing to litter:* a KennelOS litter carries its `pairing_id`, so the bundle sends
     it and KennelPort moves the website litter matched to that pairing onto the litter's
-    id, keeping its photos, wording and address. Nothing is hidden or created.
+    id, keeping its photos, wording and address. The litter inherits the pairing's mark,
+    so the page can't drop off the site at whelping. Nothing is hidden or created.
   - *Heats:* a planned heat is a `heat_cycle` event she logged with a future date (her
-    estimate; the site shows its month only). KennelOS doesn't link a pairing to a heat,
-    so the bundle pairs them by date: a pairing of the same dam (not failed or cancelled)
-    **uses** a heat when its `planned_date` (else when it was entered) falls from 30 days
-    before to 60 days after the heat's date. Each pairing uses at most one heat, the
-    nearest. A used heat leaves the bundle and the pairing's entry takes over; nothing
-    carries over (a heat is only a month). A heat no pairing uses stays until 60 days
-    after its date (she may have skipped it, or the estimate was off: moving the date in
-    KennelOS keeps it up), then leaves. Older pairings and litters never use a future
-    heat, so a dam can show a litter on the ground, a pairing under way and her next heat
-    at once. A failed or cancelled pairing leaves the bundle; a pairing leads to at most
-    one litter (`pairing_id`, above). KennelOS's public list shows only future heats; the
-    bundle keeps a past one for those 60 days so the site doesn't go quiet before the
-    pairing is entered.
+    estimate; the site shows its month only), for a dam whose `heats_online` is on.
+    KennelOS doesn't link a pairing to a heat, so the bundle pairs them by date: a pairing
+    of the same dam (not failed or cancelled) **uses** a heat when its `planned_date`
+    (else when it was entered) falls from 30 days before to 60 days after the heat's date.
+    Each pairing uses at most one heat, the nearest. A used heat leaves the bundle and the
+    pairing's entry takes over; nothing carries over (a heat is only a month). A heat no
+    pairing uses stays until 60 days after its date (she may have skipped it, or the
+    estimate was off: moving the date in KennelOS keeps it up), then leaves. Older
+    pairings and litters never use a future heat, so a dam can show a litter on the
+    ground, a pairing under way and her next heat at once. A failed or cancelled pairing
+    leaves the bundle; a pairing leads to at most one litter (`pairing_id`, above). This
+    is `siteExport.js`'s own work: KennelOS's public list keeps only future heats of
+    active breeding dams (`plannedHeats()`), and the 60-day tail and the pairing match are
+    the website's rules, not the list's.
 - **Updated:** for a matched record, the KennelOS-owned fields (list below) are replaced
-  with the bundle's values. KennelPort-only fields (bio, photos, albums, order, embeds)
-  are never touched.
-- **New:** a record in the bundle with no match is created, with no photos yet.
-- **Gone from the bundle** (unticked **Show on website**, archived or deleted in
-  KennelOS): the record leaves the site at the next Publish (its pages answer "not
-  found") and is kept **30 days**, in case it was a mistake: if it comes back in a bundle
-  within them, it reappears as it was. After 30 days the daily cleanup deletes it, with
-  its puppies, its albums, and the photos only it used (their files leave R2 the same
-  night). A website is what's for sale and coming up, not a history: KennelOS keeps the
-  record.
-- **A litter's stage follows KennelOS:** Expected → **Planned**; Whelped, Weaning or Ready
-  → **Current**; Sold or Closed → **gone**, as above: off the site at the next Publish and
-  deleted 30 days later. Marking a litter Sold or Closed in KennelOS (Today already
-  reminds her once every puppy has gone home) retires it with nothing to do on the
-  website.
-- **Keep it:** during the 30 days the manage app lists what's about to go ("Spring
-  litter: deleted on May 3") with **Keep**, for the breeder who wants a litter to stay;
-  a kept litter shows as Past (off Home and the Puppies page, its own page still
-  answering) until she removes it. The Past litters page (backlog) is for those.
-- **Unlinked sites work the same way:** switching a litter or dog off, or marking a
-  litter Past without **Keep**, starts the same 30 days.
-- **A kept litter on a linked site** stays exactly as it was and becomes ordinary
-  KennelPort content she can edit (KennelOS no longer sends a Sold or Closed litter).
-- **When this ships:** anything already off the site starts its 30 days on the day phase
-  4 is released, so nothing goes before the breeder has seen it in the "about to go" list.
+  with the bundle's values. KennelPort-only fields (bio, photos, albums, order, embeds, a
+  dog's role, a litter's summary, a puppy's own price) are never touched.
+- **What a blank means.** A **stored** field — call name, registered name, sex, date of
+  birth, colour, the litter's dates and prices — is KennelOS's, blanks included, so
+  clearing it there clears it here. A **derived** field — titles (built from logged
+  `title_earned` events), health results, the upcoming items — only ever overwrites when
+  it has something: an empty derivation means "nothing logged yet", never "delete what she
+  typed", and a derived field has no way to say "cleared". The first bundle after a match
+  never blanks a typed value silently; the matching screen shows each one and she chooses
+  (5.2).
+- **New:** a record in the bundle with no match is created, with no photos yet. The summary
+  says so, since a new dog or litter needs a photo before its page looks right.
+- **Gone from the bundle** (unticked **Show on website**, archived or deleted in KennelOS):
+  the record leaves the site at the next Publish — its pages answer "not found" — and what
+  happens next depends on what it is.
+- **A litter is not an archive; a dog is** (decision 28).
+  - A **litter** that has left the site is kept **30 days**, in case it was a mistake: if
+    it comes back in a bundle within them, it reappears as it was. After 30 days the daily
+    cleanup deletes it, with its puppies, its albums, and the photos nothing else uses
+    (their files leave R2 the same night). During those 30 days the manage app lists what
+    is about to go ("Spring litter: deleted on 3 May") with **Keep**, for the breeder who
+    wants a litter to stay; a kept litter shows as Past (off Home and the Puppies page,
+    its own page still answering) until she removes it. The Past litters page (backlog) is
+    for those.
+  - A **dog is never deleted by a clock.** A dog switched off, unticked, or archived in
+    KennelOS stops being published and waits in the draft; the same screen lists it under
+    "Not on your site" with **Remove**, and removing is always her own act. Nearly every
+    reason to hide a dog is temporary — a girl in season, a dog out on co-ownership, a
+    tidy-up before show season — and archiving in KennelOS is ordinary housekeeping, so a
+    clock here would fire on a tidy-up in another app. Her dog photos live on KennelPort
+    and nowhere else (5.4), so it would quietly destroy the only copy. Storage is already
+    held by the per-site limits (section 4).
+  - **A kept litter on a linked site** stays exactly as it was and becomes ordinary
+    KennelPort content she can edit (KennelOS no longer sends a Sold or Closed litter).
+  - **Unlinked sites work the same way:** switching a litter off, or marking it Past
+    without **Keep**, starts the same 30 days. Dogs behave as above, linked or not.
+  - **When this ships:** any litter already off the site starts its 30 days on the day
+    phase 4 is released, so nothing goes before the breeder has seen it in the list.
+- **The hand-over, when a kept puppy becomes a dog.** KennelOS keeps one record for a
+  dog's whole life, so a puppy she keeps is the same Dog record as the grown girl. On the
+  website that puppy is a row under its litter, and the row goes when the litter goes — so
+  the moment the litter leaves is the moment to ask (above). On her yes, KennelPort makes
+  the dog from the same KennelOS id and **moves the puppy's photos to it at once**, which
+  is what stops the litter's deletion taking the only pictures of her as a puppy; the
+  cleanup never deletes a photo a surviving record uses. She lands under **Up and coming**
+  while KennelOS still calls her a puppy, and joins the girls when KennelOS says
+  `active_breeding` (3.7).
 - **A bundle itself never deletes a photo, file, album or page;** only the 30-day cleanup
-  does, and only for what has left the site.
-- **A summary** after each bundle: "3 updated, 1 new, 1 hidden. Preview, then Publish."
+  does, and only for a litter that has left the site.
+- **A summary** after each bundle: "3 updated, 1 new (needs photos), 1 off the site.
+  Preview, then Publish." It lands in the manage app with a notice, so she finds it next
+  time she opens the app whether or not she was there when it arrived, and the changes
+  themselves appear in Publish's list like any other edit (section 4.1).
 
 **Who owns which field:**
 - **From KennelOS (read-only in KennelPort while linked):** name, registered name, sex,
-  date of birth, colour, earned titles, health tests (section 3.7), litter dates, parents,
-  puppy status label (section 3.6), upcoming litters per the Coming up switches (planned
-  heats as month and year only, planned and confirmed pairings, whelped litters before
-  picks open: section 3.7), extras
-  names, groups and descriptions (section 3.4); a planned litter's status (section 3.11),
-  retired and deceased status with the date of death, the waitlist steps behind How it
-  works, and program names and public descriptions. With **Use my KennelOS prices** on
-  (decision 6): litter prices, deposits, the registration surcharge and extras prices.
+  date of birth, colour, earned titles, health results as data (3.7), litter dates
+  including the deposits date, parents, each puppy's status and registration (3.2, 3.6),
+  upcoming pairings and heats per the marks above, extras names, groups and descriptions
+  (3.4), a dog's retired, deceased (with the date of death) and for-sale status (3.7), a
+  planned litter's status (3.11), the waitlist steps behind How it works (3.11), How to
+  pay (3.9), and program names and public descriptions. With **Use my KennelOS prices** on
+  (decision 6): the litter's price and deposit per sex, the full-registration surcharge,
+  and the extras prices.
   **Not in phase 4:** pickup places, transport distances and the fee per mile wait for the
   pickup page (backlog section 4), and milestones and weights for the litter diary
   (backlog section 6, decision 19): nothing is sent that the site has nowhere to show.
-- **KennelPort only:** website bio, prices (unless **Use my KennelOS prices** is on), photo choice
-  and order, albums, embeds, page text, layout, and everything in sections 3.9 and 3.10
-  (policies, reviews and stories, news, stud and adults pages, downloads, events, the
-  inquiry form and its inbox), plus the raising page, program terms, the wording of How
-  it works and How to pay safely, diary text and photos, and tributes.
+- **KennelPort only:** website bio, a dog's role, a litter's summary, a puppy's own price,
+  an adult's asking price, and prices in general unless **Use my KennelOS prices** is on;
+  photo choice and order, albums, embeds, page text, layout; the **Show prices**, **Show
+  other prices** and **Show placed puppies** switches, each health result's **Show on
+  site** tick and each dog's **Health results** setting (3.7); and everything in sections
+  3.9 and 3.10 bar How to pay (policies, reviews and stories, news, stud and adults pages,
+  downloads, events, the inquiry form and its inbox), plus the raising page, program
+  terms, the wording of How it works and How to pay safely, diary text and photos, and
+  tributes.
 - Unlinked sites edit everything in KennelPort. Unlinking turns every KennelOS-sourced
-  record into ordinary, editable KennelPort data, as it stands in the draft.
+  record into ordinary, editable KennelPort data, as it stands in the draft (5.2).
+- **Her own switches still win.** A record KennelOS offers can be switched off in
+  KennelPort: the mark in KennelOS offers it, her switch publishes it.
 
 ### 5.4 Photos and shares
 
@@ -1045,12 +1239,18 @@ Each bundle is applied by these rules (decision 16):
   permanent link, and when linked, KennelOS can **fill the dog's `url` with its
   KennelPort page**, and a litter's `photos_url` with its litter page. Companion packages,
   the waitlist's photos links, and anything else that shares them, then point at the site
-  with no other changes. When a page leaves the site (hidden or deleted), the next bundle's
-  answer tells KennelOS, which blanks any `url` or `photos_url` still holding that address,
-  so no link points at a missing page. Only blank ones are filled: a dog or litter that already has
-  another photos link (a Google Photos album, say) keeps it. This runs one way:
-  KennelPort sends the addresses back when a bundle is applied, and never reads `url` or
-  `photos_url`; a dog's photos live on the site, not in KennelOS.
+  with no other changes.
+  - **Only addresses that work.** KennelPort sends a page's address once the **published**
+    snapshot carries it, not when the draft does, so a link is never handed over before
+    the page answers. When a page leaves the site, the next bundle's answer tells KennelOS,
+    which blanks any `url` or `photos_url` still holding that address.
+  - **Only blank ones are filled**, so a dog or litter that already has another photos
+    link (a Google Photos album, say) keeps it — with one addition: KennelPort may replace
+    an address **it wrote itself**, and never one she typed. Without that, a puppy page's
+    address would sit in `dog.url` for life once the grown dog has a page of her own
+    (5.3).
+  - This runs one way: KennelPort sends the addresses back when a bundle is applied, and
+    never reads `url` or `photos_url`; a dog's photos live on the site, not in KennelOS.
 - Every dog, litter, puppy and album page carries **Open Graph** tags (title, cover photo,
   description), so a link pasted into Facebook, Messenger or a text shows a picture card.
   `cloud/`'s family pages already do this.
@@ -1065,22 +1265,31 @@ Each bundle is applied by these rules (decision 16):
 ### 5.5 KennelOS changes this implies (for the KennelOS repo, later)
 
 These follow KennelOS's own rules, and each one needs its own decision there:
-- A `show_on_website` flag on Dog and Litter: a new field in `db.js`, classified in
-  `syncRegistry.js`, documented in the End-State guide.
+- **The four marks** (5.3), each a plain field, classified in `syncRegistry.js` and
+  documented in the End-State guide: `show_on_website` on Dog and on Litter;
+  `show_on_website` on Pairing; and `heats_online` on Dog, beside `photos_online` and
+  `waitlist_tests`, which are per-dog display choices of exactly this kind. A heat is a
+  routine log entry twice a year per girl, so the choice belongs to the dam, not to each
+  event.
 - **Upcoming litters go too:** planned heats (month and year only), planned and confirmed
-  pairings and whelped litters before picks open, per the **Coming up** switches
-  (`waitlist_config.show_upcoming`), the same items the waitlist projection already builds
-  for the public list (`upcoming` in `waitlistProjection.js`).
+  pairings and whelped litters, per the marks rather than
+  `waitlist_config.show_upcoming`, which stays KennelOS's own (5.1). The items themselves
+  are the ones `upcomingItems()` and `plannedHeats()` already build for the public list,
+  with the website's own heat rules on top (5.3).
 - `shared/data/siteExport.js`, the allow-list bundle builder, with a positive key check
   like `assertOnlyKeys()`.
-- The KennelPort address in `editionConfig.js` (`kennelportUrl`, beside `cloudUrl`):
-  Pro's carries it; Lite's, Demo's and the shared default are `null`, so they show
-  nothing and make no request.
-- **Pro only, all of it:** Request a website, Connect website, Update website and the
-  Show on website ticks are Pro features. Lite and Demo show none of them and can't link
-  (a Lite breeder can still have a KennelPort site, edited in KennelPort, with no link).
-  They go through `editionConfig.js` like other Pro-only features, never a hardcoded
-  edition check.
+- `shared/data/kennelportApi.js`: the only module that talks to KennelPort, as
+  `jotformApi.js` and `stripeApi.js` are for theirs (`cloudApi.js` is the cloud's own).
+- The KennelPort address in `editionConfig.js` (`kennelportUrl`, beside `cloudUrl`), with
+  a staging one like `devCloudUrl` so a deployed Pro can be tried against staging. Pro's
+  carries it; Lite's, Demo's and the shared default are `null`, so they show nothing and
+  make no request.
+- **Pro only, all of it:** Connect website, Update website and the Show on website marks
+  are Pro features. Lite and Demo show none of them and can't link (a Lite breeder can
+  still have a KennelPort site, edited in KennelPort, with no link). They go through
+  `editionConfig.js` like other Pro-only features, never a hardcoded edition check.
+  (**Request a website** is backlogged with KennelPort's own request form, backlog
+  sections 2 and 7; decision 2 still stands for when it is built.)
 - **A lapsed Pro license stops the link:** KennelOS checks the license (`license.js`)
   before every Update website, and sends nothing while it has lapsed; the manage app shows
   when the last bundle arrived. The site keeps what it has, and the breeder can unlink in
@@ -1094,9 +1303,15 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 - **Filled in when linked:** the kennel's `website` (invoices, receipts and contract forms
   already print it), `extras_info_url` (section 3.4), the waitlist embed's allowed sites
   (`embed_origins`) when the breeder has listed any (section 3.8), dog `url` and litter
-  `photos_url` (section 5.4).
-- **Kels:** Request a website and Update website as Kels tasks; **Show on website** asked
-  in Add dogs, Record a litter and when a pup is marked Keeping.
+  `photos_url` (section 5.4). A site's **custom domain** joins `isWebsiteOrigin` in
+  `cloud/src/lib/cors.js`, which its own comment already reserves for Connect website,
+  so her application form keeps working on her own domain.
+- **Kels and the prompts:** Update website as a Kels task; **Show on website** asked when
+  a dog's status becomes `active_breeding`, and when recording a pairing or a litter; the
+  deposits date asked when a litter moves past Expected; and at Sold or Closed, whether to
+  take the litter off the website and whether to keep a puppy she is keeping (5.3). It is
+  *not* asked when a pup is marked Keeping: that is months before the dog is a resident,
+  and the litter's own page is still carrying her.
 - **The waitlist on the breeder's site (decision 21): built in KennelOS.** The
   `waitlist_config.website_feed` switch (off by default), `GET /f/site/<public_id>` with
   its own read limit, and the feed address to copy on the Online list card. No new fields
@@ -1126,16 +1341,17 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `notices` | site_id, kind (`domain_live` / `domain_broken` / …), message, created_at, read_at: what the manage app shows the breeder |
 | `waitlist_entries` | site_id, name, list_name (what the site shows), email, phone, wants, added_on, inquiry_id (the application it came from), status (`waiting` / `fulfilled`), sort (order among those waiting; a place is never stored), created_at, done_at (fulfilled ones deleted 90 days after) (section 3.8) |
 | `feed_cache` | site_id, state (`ok` / `not_shared` / `not_found`), body (the KennelOS website feed's last copy), fetched_at, checked_at (the last time KennelOS was asked; retried after a minute when it couldn't be reached) (section 3.8) |
-| `dogs`, `litters`, `puppies` | site_id, slug, content fields, `source` (`kennelport` / `kennelos`), `kennelos_id` when linked, `hidden_by_kennelos` (section 5.3). A dog has a status (`active` / `retired` / `remembered`) and health_display (`normal_only` / `all` / `none`, 3.7); a litter a stage (`planned` / `current` / `past`) and either parent as a site dog or a typed name; a puppy one of 3.6's statuses. The full field list is `worker/src/migrations/0002_content.sql` |
+| `dogs`, `litters`, `puppies` | site_id, slug, content fields, `source` (`kennelport` / `kennelos`), `kennelos_id` when linked, `hidden_by_kennelos` (section 5.3). A dog has a status (`active` / `retired` / `remembered`), `upcoming` (young stock she has kept, 3.7), `health_display` (`normal_only` / `all` / `none`, 3.7) and a `price` for an adult looking for a home; a litter a stage (`planned` / `current` / `past`), either parent as a site dog or a typed name, `deposits_on` (when Available starts, 5.3), `price_female` / `price_male`, `deposit_female` / `deposit_male`, `full_reg_female` / `full_reg_male`, `price_note`, `show_prices` (off) and `show_placed` (on), and `left_site_at` / `kept_at` for the 30 days (5.3: litters only, since a dog has no clock); a puppy one of 3.6's statuses, a `registration` (`limited` / `full`) and an optional `price` of its own. The full field list is `worker/src/migrations/0002_content.sql` |
 | `site_pages` | site_id, page key, enabled, menu_label, content (each page's wording, JSON with the keys the content model names, 3.12); order within its menu group comes with phase 6 |
 | `redirects` | site_id, old path, new path (written at publish time) |
 | `embeds` | site_id, place (`home`, `about`, or `dog:`/`litter:`/`album:` and its id), provider, item (read from the pasted link), title, preview_photo_id (the provider's preview, stored on the site), sort |
 | `photos` | site_id, r2_key, thumb_key, type (WebP or JPEG), width, height, bytes, alt text, removed_at; public only when the published snapshot uses it (4.2) |
 | `photo_tags` | site_id, photo_id, subject (`dog:` / `litter:` / `puppy:` / `extra:` + id, or `page:home` / `page:about`): what a photo is of, for the breeder only; never published (4.2) |
 | `albums` | site_id, slug, title, description, litter_id (its litter's page links to it), cover_photo_id (empty: the first photo), photos (JSON: the ordered photo ids; a removed photo drops out), show_on_site, sort. Built in phase 5 as one table: the ordered list is a JSON column rather than an `album_photos` table |
-| `links` | site_id, token_hash, linked_at, last_bundle_at, last_bundle_summary |
+| `links` | site_id, kennelos_kennel_id (the one kennel this site takes bundles from; another is refused), token_hash, device_label, linked_at, last_seen_at, last_bundle_id (a repeat is answered, not applied twice), last_bundle_at, last_bundle_summary: one row per KennelOS device (5.2), stopped one at a time or all at once by **Unlink** |
+| `link_codes` | site_id, code_hash, created_by, expires_at (a quarter of an hour), used_at: the one-time codes **Link KennelOS** shows (5.2) |
 | `custom_domains` | site_id, hostname, cloudflare_hostname_id, registrar (detected, backlog), status (`pending` / `active` / `stuck` / `broken`), checked_at, connected_at |
-| `health_results` | site_id, dog, test, result, normal, date, verify_url, show (off by default), certificate file (private unless ticked) |
+| `health_results` | site_id, dog, test, result, normal, date, verify_url, show (off by default; for a result from KennelOS it is set once from the dog's **Health results** choice and is hers from then on, 5.3), certificate file (private unless ticked), `source` |
 | `stories` | site_id, kind (`review` / `at_home`), quote, rating, first name, town, puppy_name, home_month (YYYY-MM), photo, submitted_by (`family` / `breeder`), status (`pending` / `approved` / `hidden`), permission_confirmed_at, submitted_at |
 | `steps` | site_id, page (`how_it_works` / `raising`), order, heading, body, detail (the More detail expander), `source` |
 | `home_blocks` | site_id, block key (`hero` / `facts` / `story` / `dogs` / `litters` / `reviews` / `waitlist`), enabled, content (wording, photos, facts, features) |
@@ -1187,7 +1403,7 @@ Each phase is useful by itself, so you can stop after any one.
 | **1. Renderer + ops** | One template with its fonts and libraries served from the site (3.3), the ops console, preview links, snapshot publish to R2 and undo (4.1), page caching and the CPU check (4.4), reserved names, OG tags, close a site and the closed notice | Build and host the site yourself, with no breeder login yet |
 | **2. Breeder login** | Email-code sign-in, manage app (installable as KennelPort Site Manager), the inbox with push notifications for new messages, the review queue, preview and publish with the list of changes, photo upload with resizing, the JPEG fallback and the server checks, tried on a real Android phone and iPhone (4.2), storage limits, **Delete my site** with the download-a-copy zip built in the browser (4.3) | Hand the site over |
 | **3. The first site's pages** | Everything in the AK sample (decision 14): Home with its blocks, About (story, reviews, contact), Kennel residents with flip cards and health results (3.7), Puppies (available, upcoming, older) with statuses (3.6), How it works steps (3.11), Extras with homegoing packages (3.4), Policies and FAQ, the waitlist page and its status-page help (3.8, decision 21) with how to pay the application fee and deposit (3.9), inquiry form and inbox (3.10); plus the safe-payment notice, privacy page and search basics | The family site is complete and live |
-| **4. The KennelOS link** | In KennelPort: link codes, matching existing website records to KennelOS ones (5.2), the bundle API and its rules (5.3), **Use my KennelOS prices** (3.2). In KennelOS (5.5): **Show on website** on dogs and litters, `siteExport.js`, **Connect website** and **Update website**, filling `dog.url`, the kennel's website and `extras_info_url`, and the Kels steps | Her dogs, litters, puppy statuses and health results come from KennelOS when she presses **Update website**; she types them only once |
+| **4. The KennelOS link** | In KennelPort: link codes and the bundle API on `api.kennelport.com` (5.2, 5.3), matching existing website records to KennelOS ones (5.2), the litter price fields and **Use my KennelOS prices** (3.2), the 30 days with **Keep** for litters (5.3), **Up and coming** and **Looking for a home** on the Dogs page (3.7). In KennelOS (5.5): the four **Show on website** marks, `siteExport.js`, `kennelportApi.js`, **Connect website** and **Update website**, filling `dog.url`, the kennel's website and `extras_info_url`, and the Kels prompts | Her dogs, litters, puppy statuses and health results come from KennelOS when she presses **Update website**; she types them only once |
 | **5. Albums, embeds and sharing** | Albums with their own links, embeds from the approved list with stored previews (3.3), share links and QR codes, KennelOS shares carrying album links (5.4) | Litter albums and her YouTube and Facebook posts live on the site |
 | **6. Customisation and schemes** | Page and Home-block switches, menu labels, any-length steps, expanders and extras (3.12); the colour schemes with light and dark versions (3.13) | Other breeders' sites can differ from AK's without new code |
 
@@ -1221,7 +1437,9 @@ Everything after version 1, with its order and designs, is in
    (section 3.3).
 2. **Who can request a site:** the in-app **Request a website** button is KennelOS Pro
    only. A KennelPort site never requires KennelOS: anyone can ask through the public
-   request form, and you approve every request either way.
+   request form, and you approve every request either way. The button and the request form are
+   backlogged out of phase 4 (backlog sections 2 and 7); this decision stands for when
+   they are built.
 3. **Pricing:** not now. KennelPort isn't for sale; the first site is for family. Revisit
    only if it's ever offered to others.
 4. **Accounts:** KennelPort has its **own sign-in**, separate from KennelOS cloud. The two
@@ -1235,7 +1453,7 @@ Everything after version 1, with its order and designs, is in
 8. **When someone leaves:** the breeder or you deletes all content immediately, and the
    address shows a "no longer hosting with KennelPort" notice (section 4.3).
 10. **Undecided puppies:** not for sale anywhere. KennelOS's waitlist doesn't offer them
-    (nor a puppy with no plan set) and Companion shares don't show them for sale; the site shows them as Coming soon,
+    (nor a puppy with no plan set) and Companion shares don't show them for sale; the site shows them as Still deciding,
     with no price (sections 3.6, 5.5). Placed puppies show (with a hide switch per
     litter) and health hold is hidden.
 11. **Link across devices:** each device links once; the token stays in KennelOS's
@@ -1249,8 +1467,9 @@ Everything after version 1, with its order and designs, is in
     (phase 4) and albums, embeds and sharing (phase 5). Past litters, news and the other
     standard pages wait in the backlog ([`KennelPort_Backlog.md`](KennelPort_Backlog.md)).
 15. **Main address for a custom domain:** `www.`, with the bare domain forwarding to it.
-16. **How a KennelOS bundle changes the site:** as in section 5.3, with matching offered
-    whenever a new KennelOS record matches an unlinked one (section 5.2).
+16. **How a KennelOS bundle changes the site:** as in section 5.3 — four **Show on
+    website** marks decide what is offered, her own dates decide where a litter sits, and
+    matching is offered whenever a new KennelOS record matches an unlinked one (5.2).
 17. **Spam check:** Turnstile from the start on the inquiry and review forms, with a
     honeypot and rate limits.
 18. **Picks on litter pages:** never shown.
@@ -1276,9 +1495,25 @@ Everything after version 1, with its order and designs, is in
 27. **The KennelOS link is Pro only:** Lite and Demo can't link at all (a Lite breeder can
     still have a KennelPort site, kept apart), and a lapsed Pro license stops the link
     until it's renewed (section 5.5).
-28. **The website isn't an archive:** what leaves the site (hidden, gone from the bundle,
-    a Sold or Closed litter, a litter marked Past) is deleted 30 days later with its
-    photos, unless the breeder presses **Keep** (section 5.3).
+28. **A litter isn't an archive; a dog is:** a litter that leaves the site (hidden, gone
+    from the bundle, Sold or Closed, marked Past) is deleted 30 days later with its
+    puppies, albums and photos, unless the breeder presses **Keep**. A dog is never
+    deleted by a clock: switched off, it waits in the draft until she removes it, because
+    her dog photos exist on KennelPort and nowhere else (section 5.3).
+29. **What puts a record on the website:** a **Show on website** mark on the record in
+    KennelOS, and the breeder's own switches in KennelPort. A waitlist setting may fill a
+    field but never gates a website section, so `show_upcoming` and `parent_tests` keep
+    deciding only what KennelOS's own pages show (sections 5.1, 5.3).
+30. **She says, the site doesn't guess:** a litter's place comes from her mark plus her
+    own dates — `accept_deposits_date` decides when Available means available, for the
+    litter and on every puppy card. Nothing is inferred from dispositions or picks, because
+    a wrong guess is invisible until a family complains (sections 3.6, 5.3).
+31. **A price is one number:** limited registration shows the litter's price for that sex,
+    full registration shows that price plus the surcharge as a total, and the site never
+    prints "+$300". Ranges are worked out from sex and registration, never typed
+    (section 3.2).
+32. **Puppy statuses say what is true:** an undecided puppy reads **Still deciding**, not
+    "Coming soon", which promises a sale she may never make (section 3.6).
 
 **Open**
 
@@ -1295,7 +1530,9 @@ Everything after version 1, with its order and designs, is in
 | Photos reveal a breeder's home | Location data removed on upload and checked again by the server; addresses shown only as town and region |
 | A pickup page reveals a breeder's home | Only places marked **Show to families**; the standard location should be a public place (section 3.5) |
 | A private certificate or unticked photo is reachable by URL | The renderer serves only what the published snapshot lists as public (section 4.2) |
-| The site shows something hidden on KennelOS's public pages | The bundle applies KennelOS's own health-test, Coming up and availability rules (sections 3.6, 3.7) |
+| The site shows something she keeps off her KennelOS pages | Nothing is in a bundle without a **Show on website** mark on that record, and what shows is her own KennelPort switches (5.1, 5.3) |
+| A status the site worked out is wrong, and nobody notices until a family says so | The site never infers one: her marks and her dates decide, and both are visible on her own site (decision 30) |
+| A bundle blanks fields she typed before linking | Stored fields are KennelOS's, blanks included; derived ones (titles, health results) only overwrite when they have something, and the matching screen shows every blanking before she confirms (5.3) |
 | Private KennelOS data leaks to a public site | Allow-list bundle with a positive key check, and per-record opt-in (section 5.1) |
 | A bundle wipes work done in KennelPort | Bundles replace only KennelOS-owned fields, hide rather than delete, and land in the draft (section 5.3) |
 | A half-finished edit goes live | Publish swaps in a whole snapshot at once; **Undo publish** goes back (section 4.1) |
