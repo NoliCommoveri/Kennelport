@@ -7,6 +7,7 @@ import {
   paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
 } from './parts.js';
 import { embedView } from '../embeds.js';
+import { COLLAGE_LAYOUTS, collageLayout } from '../content/model.js';
 
 // A Share button (plan 5.4): the phone's own share sheet, or the link copied.
 // Shown only with the template's script.
@@ -31,6 +32,7 @@ export function embedsBlock(snap, place, { heading = 'Videos and posts', band = 
   return inWrap ? `<div class="mt-26">${inner}</div>` : `<section class="section${band ? ' band' : ''}"><div class="wrap">${inner}</div></section>`;
 }
 
+const CORNER_SPRIGS = '<svg class="corner tl" aria-hidden="true"><use href="#sprig"/></svg><svg class="corner br" aria-hidden="true"><use href="#sprig"/></svg>';
 const sprigs = '<svg class="sprig l" aria-hidden="true"><use href="#sprig"/></svg><svg class="sprig r" aria-hidden="true"><use href="#sprig"/></svg>';
 const scriptLine = (text, script) => `${esc(text ?? '')}${script ? ` <span class="script">${esc(script)}</span>` : ''}`;
 
@@ -42,20 +44,27 @@ export function home(snap, ctx) {
   const waitlistOn = pageOn(snap, 'waitlist', ctx);
 
   if (h.hero.enabled) {
-    const photos = (h.hero.photos ?? []).map((id, i) => img(snap, id, { lazy: i > 0 })).filter(Boolean);
-    while (photos.length < 3) photos.push('<div class="hero-ph" aria-hidden="true"></div>');
+    // The collage: the breeder's layout, each box its own shape with her photo in it
+    // and the part she chose to keep; never an empty box (collageLayout).
+    const chosen = (h.hero.photos ?? []).map((id, i) => ({ id, focus: h.hero.focus?.[i] ?? 'middle' })).filter((x) => snap.photos[x.id]);
+    const layout = collageLayout(h.hero.layout, chosen.length);
+    const boxes = layout ? COLLAGE_LAYOUTS[layout].boxes : [];
+    const photos = chosen.map((x, i) => `<div class="box ${boxes[i]} f-${x.focus}">${img(snap, x.id, { lazy: i > 0 })}</div>`);
+    const frame = h.hero.frame ?? 'mat';
+    const banner = h.hero.banner_photo_id && snap.photos[h.hero.banner_photo_id]
+      ? `<div class="banner f-${h.hero.banner_focus ?? 'middle'}">${img(snap, h.hero.banner_photo_id, { lazy: false })}</div>` : '';
     const facts = h.facts.enabled && h.facts.items?.length
       ? `<div class="facts">${h.facts.items.map(([v, l]) => `<div><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join('')}</div>` : '';
     const buttons = [
       waitlistOn ? `<a class="btn solid" href="/waitlist">${esc(h.hero.primary_label || 'Join the waitlist')}</a>` : '',
       pageOn(snap, 'litters', ctx) ? `<a class="btn line" href="/litters">${esc(h.hero.secondary_label || 'See our puppies')}</a>` : '',
     ].join('');
-    parts.push(`<section class="wrap hero"><div class="hero-copy">
+    parts.push(`${banner}<section class="wrap hero${layout ? '' : ' no-photos'}"><div class="hero-copy">
       ${h.hero.eyebrow ? `<span class="eyebrow">${esc(h.hero.eyebrow)}</span>` : ''}
       <h1>${scriptLine(h.hero.headline || snap.site.kennel_name, h.hero.script)}</h1>
       ${h.hero.intro ? `<p>${esc(h.hero.intro)}</p>` : ''}
       ${buttons ? `<div class="hero-actions">${buttons}</div>` : ''}${facts}
-    </div><div class="hero-photos">${photos.join('')}</div></section>`);
+    </div>${layout ? `<div class="hero-photos ${layout} frame-${frame}">${photos.join('')}${frame === 'sprig' ? CORNER_SPRIGS : ''}</div>` : ''}</section>`);
   }
 
   if (h.story.enabled && (h.story.text || h.story.heading)) {
@@ -100,7 +109,7 @@ export function home(snap, ctx) {
     parts.push(`<section class="cta"><div class="wrap"><div><h2>${esc(h.waitlist.heading || 'Hoping for a puppy of your own?')}</h2>${h.waitlist.line ? `<p>${esc(h.waitlist.line)}</p>` : ''}</div><a class="btn" href="/waitlist">${esc(h.waitlist.button_label || 'Join the waitlist')}</a></div></section>`);
   }
 
-  return { title: null, section: '/', image: h.hero.photos?.[0], body: parts.join('\n') };
+  return { title: null, section: '/', image: h.hero.photos?.[0] ?? h.hero.banner_photo_id, body: parts.join('\n') };
 }
 
 // ---------- About us ----------

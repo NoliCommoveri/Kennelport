@@ -746,3 +746,27 @@ features and the inquiry form), and custom domains with guided, self-checking DN
   KennelOS fills litter `photos_url` as well as dog `url`, one way; invoices and receipts
   already print the kennel's website. Decision 10 is now built in KennelOS (Undecided and
   unset puppies aren't offered; Kels's Tidy up asks about pups with no plan).
+
+## 2026-11-03: the Home collage, its frames, and a banner
+
+- The top of Home drew three fixed boxes and filled any it had no photo for with grey
+  placeholders, so a breeder's photos rarely matched their shapes and wide photos were
+  cut off at both sides. Now (Top of the page, in the manage app):
+  - **Photo layout:** seven pre-drawn layouts (one wide; one tall; two tall; two wide;
+    one tall and two wide, the old look; one wide and two square; four square),
+    `COLLAGE_LAYOUTS` in `content/model.js`. Each box has its own shape (wide 4:3,
+    tall 4:5, square) and says the photo size that fills it sharply (1600 × 1200,
+    1280 × 1600, 1600 × 1600).
+  - **A photo per box**, and **which part to keep** (top, middle, bottom) per box. Box
+    pickers follow the layout as she picks it (`app.js`). With fewer photos than boxes
+    the site uses a layout for that many (`collageLayout`); never an empty box, and no
+    collage at all with no photos.
+  - **Frame:** a soft mat (default), a mat with a brass inner rule, the mat with the
+    site's sage sprigs at the collage's corners, or none; all in the scheme's colours,
+    light and dark.
+  - **Banner photo:** an optional wide strip under the header, across the page (5:2,
+    best at 1600 × 640, at most 440 px tall), with which part to keep.
+- New `hero` keys: `banner_photo_id`, `banner_focus`, `layout`, `frame`, `focus`
+  (per box); `photos` now in box order, up to 4. No migration (block content is JSON).
+- Checked in Chromium at phone and computer widths, light and dark. 140 tests; template
+  and manage app files changed, versions not bumped yet.

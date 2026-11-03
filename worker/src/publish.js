@@ -132,6 +132,7 @@ export async function buildSnapshot(env, siteId) {
   reviews.forEach((r) => use(r.photo_id));
   extras.forEach((x) => use(x.photo_id));
   (home.hero.photos ?? []).forEach(use);
+  use(home.hero.banner_photo_id);
   use(home.story.photo_id);
   use(pages.about.photo_id);
   use(site.logo_photo_id);

@@ -75,6 +75,25 @@
     });
   }
 
+  // The Home collage (/home/hero): picking a layout shows that many boxes, each
+  // saying its shape and the photo size that fills it (forms.js BOX_WORDS).
+  const SHAPES = { wide: 'Wide box (4:3): best at 1600 × 1200 px.', tall: 'Tall box (4:5): best at 1280 × 1600 px.', square: 'Square box (1:1): best at 1600 × 1600 px.' };
+  for (const set of document.querySelectorAll('[data-layouts]')) {
+    const form = set.closest('form');
+    const show = () => {
+      const on = set.querySelector('input:checked');
+      if (!on) return;
+      const shapes = on.dataset.boxes.split(',');
+      for (const box of form.querySelectorAll('.box[data-box]')) {
+        const i = Number(box.dataset.box);
+        box.hidden = i >= shapes.length;
+        const hint = box.querySelector('legend .hint');
+        if (hint && shapes[i]) hint.textContent = SHAPES[shapes[i]];
+      }
+    };
+    set.addEventListener('change', show);
+  }
+
   for (const form of document.querySelectorAll('form[data-save]')) {
     form.addEventListener('submit', async (e) => {
       if (form.dataset.sending) { e.preventDefault(); return; }

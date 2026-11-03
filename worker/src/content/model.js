@@ -127,11 +127,51 @@ export const EXTRA_FIELDS = {
   featured: BOOL,
 };
 
+// The Home collage (top of the page): pre-drawn layouts, each a list of box
+// shapes in box order. The breeder picks a layout, then a photo for each box, so
+// a wide photo goes in a wide box and isn't cut off at both sides. With fewer
+// photos than boxes, the site uses the layout for that many (collageLayout).
+export const BOX_SHAPES = { wide: 'wide', tall: 'tall', square: 'square' };
+export const COLLAGE_LAYOUTS = {
+  one_wide: { label: 'One wide photo', boxes: ['wide'] },
+  one_tall: { label: 'One tall photo', boxes: ['tall'] },
+  two_tall: { label: 'Two tall, side by side', boxes: ['tall', 'tall'] },
+  two_wide: { label: 'Two wide, one above the other', boxes: ['wide', 'wide'] },
+  tall_two_wide: { label: 'One tall, two wide beside it', boxes: ['tall', 'wide', 'wide'] },
+  wide_two_square: { label: 'One wide, two square below', boxes: ['wide', 'square', 'square'] },
+  four_square: { label: 'Four square', boxes: ['square', 'square', 'square', 'square'] },
+};
+export const FOCUS = ['top', 'middle', 'bottom'];
+// How the collage's boxes are framed, in the scheme's own colours: a soft mat, the
+// mat with a brass inner rule, the mat with the site's sage sprigs at the
+// collage's corners, or bare photos.
+export const FRAMES = ['mat', 'double', 'sprig', 'none'];
+
+// The layout the site draws for `count` photos: the chosen one when it has that
+// many boxes, else one for that many (keeping the chosen first box's shape where
+// it can), else none.
+export function collageLayout(layout, count) {
+  const chosen = COLLAGE_LAYOUTS[layout];
+  if (chosen && chosen.boxes.length === count) return layout;
+  const first = chosen?.boxes[0];
+  switch (count) {
+    case 0: return null;
+    case 1: return first === 'tall' ? 'one_tall' : 'one_wide';
+    case 2: return chosen && chosen.boxes.slice(0, 2).every((b) => b === 'wide') ? 'two_wide' : 'two_tall';
+    case 3: return first === 'wide' ? 'wide_two_square' : 'tall_two_wide';
+    default: return 'four_square';
+  }
+}
+
 // Home blocks (plan 3.12): fixed order; each has an On switch and these keys.
 export const HOME_BLOCKS = {
   hero: {
+    banner_photo_id: { type: 'photo' }, banner_focus: { ...ENUM(...FOCUS), default: 'middle' },
     eyebrow: S(60), headline: S(80), script: S(60), intro: ML(400),
-    photos: { type: 'list', max: 3, item: 'photo' },
+    layout: { type: 'layout', values: Object.keys(COLLAGE_LAYOUTS) },
+    frame: { ...ENUM(...FRAMES), default: 'mat' },
+    photos: { type: 'list', max: 4, item: 'photo', boxes: true },
+    focus: { type: 'list', max: 4, item: 'focus' },
     primary_label: S(30), secondary_label: S(30),
   },
   facts: { items: { type: 'pairs', max: 3, keyMax: 12, valueMax: 30 } },
@@ -297,6 +337,7 @@ export function cleanValue(f, v, path) {
       if (typeof v !== 'boolean' && v !== 0 && v !== 1) throw new ContentError(path, 'true or false');
       return v ? 1 : 0;
     case 'enum':
+    case 'layout':
       if (!f.values.includes(v)) throw new ContentError(path, `one of ${f.values.join(', ')}`);
       return v;
     case 'photo':
@@ -308,6 +349,7 @@ export function cleanValue(f, v, path) {
       if (!Array.isArray(v)) throw new ContentError(path, 'a list');
       if (v.length > f.max) throw new ContentError(path, `at most ${f.max} items`);
       if (f.item === 'photo') return v.map((x, i) => cleanValue({ type: 'photo', required: true }, x, `${path}[${i}]`));
+      if (f.item === 'focus') return v.map((x, i) => cleanValue({ type: 'enum', values: FOCUS, required: true }, x, `${path}[${i}]`));
       return v.map((x, i) => cleanText(x, { max: f.itemMax }, `${path}[${i}]`)).filter(Boolean);
     }
     case 'pairs': {

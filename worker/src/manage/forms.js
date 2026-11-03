@@ -2,7 +2,7 @@
 // the words a breeder sees (LABELS) kept here, next to the inputs. parseForm()
 // turns a submitted form back into the values the model checks.
 import { escapeHtml as esc } from '../lib/html.js';
-import { FEATURE_ICONS } from '../content/model.js';
+import { FEATURE_ICONS, COLLAGE_LAYOUTS, FOCUS, collageLayout } from '../content/model.js';
 
 // [label, hint] per field name; kind-specific entries win over the shared ones.
 const SHARED = {
@@ -58,7 +58,14 @@ const LABELS = {
     weeks: ['Weeks (homegoing packages)', null], lead_in: ['Line above the checklist', 'For example "Your puppy will continue receiving:".'],
     checklist: ['What\'s included', 'One item per line.'], closing: ['Closing paragraph', null], featured: ['Mark as "most complete"', null],
   },
-  hero: { headline: ['Headline', null], script: ['Script line', 'The handwritten-style line, like "and tuxedos to match".'], intro: ['Intro', null], photos: ['Photos', 'Up to 3.'], primary_label: ['Waitlist button', null], secondary_label: ['Puppies button', null] },
+  hero: {
+    banner_photo_id: ['Banner photo', 'A wide strip right under the menu, across the whole page. Make it 1600 × 640 px (5:2) for a sharp fit. "No photo" for none.'],
+    banner_focus: ['Banner: which part to keep', 'If the photo is taller than the strip: the part that shows.'],
+    headline: ['Headline', null], script: ['Script line', 'The handwritten-style line, like "and tuxedos to match".'], intro: ['Intro', null],
+    layout: ['Photo layout', 'Pick the boxes, then a photo for each box below. With fewer photos than boxes, your site uses a layout for that many.'],
+    frame: ['Frame', 'In your site\'s colours.'],
+    photos: ['Photos', null], primary_label: ['Waitlist button', null], secondary_label: ['Puppies button', null],
+  },
   facts: { items: ['Facts', 'Up to 3 pairs, like "8 wks" / "Before going home".'] },
   story: { script: ['Script word', null], text: ['Text', null], features: ['Three features', null], link_label: ['Link to your story', null] },
   waitlist: {
@@ -108,6 +115,8 @@ const ENUM_WORDS = {
   status_reviews: { approved: 'Shown', hidden: 'Hidden' },
   health_display: { normal_only: 'Normal results only', all: 'All ticked results', none: 'None' },
   stage: { planned: 'Planned', current: 'Born (current)', past: 'Past' },
+  banner_focus: { top: 'The top', middle: 'The middle', bottom: 'The bottom' },
+  frame: { mat: 'A soft mat around each photo', double: 'A mat with a fine inner line, like a framed print', sprig: 'A mat, with sage sprigs at the corners', none: 'No frame' },
   kind: { item: 'Extra', homegoing: 'Extended homegoing package' },
   dark_mode: { auto: 'Follow the visitor\'s setting', light_only: 'Light only' },
   type_questions: { text: 'A short answer', paragraph: 'A longer answer (a few lines)', choice: 'A choice from a list', yes_no: 'Yes or no', litter: 'Which litter (your planned and current litters)', phone: 'A phone number', town: 'A town' },
@@ -116,6 +125,29 @@ const ENUM_WORDS = {
 export function labelFor(kind, name) {
   return LABELS[kind]?.[name] ?? SHARED[name] ?? [name.replace(/_/g, ' '), null];
 }
+
+// Each box shape: what it's called, and the photo size that fills it sharply
+// (uploads are resized to 1600 px on the long side).
+export const BOX_WORDS = {
+  wide: { name: 'Wide', ratio: '4:3', size: '1600 × 1200' },
+  tall: { name: 'Tall', ratio: '4:5', size: '1280 × 1600' },
+  square: { name: 'Square', ratio: '1:1', size: '1600 × 1600' },
+};
+const boxHint = (shape) => `${BOX_WORDS[shape].name} box (${BOX_WORDS[shape].ratio}): best at ${BOX_WORDS[shape].size} px.`;
+const FOCUS_WORDS = { top: 'The top', middle: 'The middle', bottom: 'The bottom' };
+
+// Each layout's little drawing: its boxes as [x, y, w, h] in a 50 × 40 frame.
+const LAYOUT_RECTS = {
+  one_wide: [[5, 5, 40, 30]],
+  one_tall: [[13, 5, 24, 30]],
+  two_tall: [[3, 5, 21, 30], [26, 5, 21, 30]],
+  two_wide: [[8, 1, 34, 18.5], [8, 20.5, 34, 18.5]],
+  tall_two_wide: [[2, 4, 22, 32], [26, 4, 22, 15], [26, 21, 22, 15]],
+  wide_two_square: [[9, 1, 32, 20], [9, 23, 15, 15], [26, 23, 15, 15]],
+  four_square: [[6, 1, 18, 18], [26, 1, 18, 18], [6, 21, 18, 18], [26, 21, 18, 18]],
+};
+const layoutSvg = (key) => `<svg viewBox="0 0 50 40" width="75" height="60" aria-hidden="true">${LAYOUT_RECTS[key].map(([x, y, w, h], i) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="${x + w / 2}" y="${y + h / 2 + 3}" text-anchor="middle" font-size="9" fill="currentColor">${i + 1}</text>`).join('')}</svg>`;
+const chosenLayout = (values) => values?.layout ?? collageLayout(null, (values?.photos ?? []).length) ?? 'tall_two_wide';
 
 const enumWords = (kind, name, v) => ENUM_WORDS[`${name}_${kind}`]?.[v] ?? ENUM_WORDS[name]?.[v] ?? v;
 
@@ -130,7 +162,7 @@ export function field(name, f, value, ctx) {
     case 'bool':
       return `<label class="check"><input type="checkbox" name="${name}" value="1"${value ? ' checked' : ''}> <span>${esc(label)}${h}</span></label>`;
     case 'enum':
-      return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"${req}>${f.required ? '' : '<option value=""></option>'}${f.values.map((x) => `<option value="${esc(x)}"${x === value ? ' selected' : ''}>${esc(enumWords(ctx.kind, name, x))}</option>`).join('')}</select></label>`;
+      return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"${req}>${f.required || f.default ? '' : '<option value=""></option>'}${f.values.map((x) => `<option value="${esc(x)}"${x === (value ?? f.default) ? ' selected' : ''}>${esc(enumWords(ctx.kind, name, x))}</option>`).join('')}</select></label>`;
     case 'litterid': {
       const litters = ctx.litters ?? [];
       return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"><option value="">None</option>${litters.map((l) => `<option value="${esc(l.id)}"${l.id === value ? ' selected' : ''}>${esc(l.name)}</option>`).join('')}</select></label>`;
@@ -141,7 +173,23 @@ export function field(name, f, value, ctx) {
     }
     case 'photo':
       return photoPicker(name, label, hint, value ? [value] : [], ctx, { multiple: false });
+    case 'layout': {
+      const current = chosenLayout(ctx.values);
+      return `<fieldset class="layouts" data-layouts><legend>${esc(label)}${h}</legend>${f.values.map((k) => `<label class="layout-opt"><input type="radio" name="${name}" value="${esc(k)}" data-boxes="${COLLAGE_LAYOUTS[k].boxes.join(',')}"${k === current ? ' checked' : ''}>${layoutSvg(k)}<span>${esc(COLLAGE_LAYOUTS[k].label)}</span></label>`).join('')}</fieldset>`;
+    }
     case 'list':
+      if (f.item === 'focus') return '';
+      if (f.item === 'photo' && f.boxes) {
+        // One photo per box, in box order, each with which part to keep. Boxes the
+        // layout doesn't have are hidden (app.js shows them when the layout changes).
+        const boxes = COLLAGE_LAYOUTS[chosenLayout(ctx.values)].boxes;
+        const focus = ctx.values?.focus ?? [];
+        return Array.from({ length: f.max }, (_, i) => {
+          const shape = boxes[i] ?? 'square';
+          return `<div class="box" data-box="${i}"${i < boxes.length ? '' : ' hidden'}>${photoPicker(`${name}.${i}`, `Box ${i + 1}`, boxHint(shape), value?.[i] ? [value[i]] : [], ctx, { multiple: false })}
+            <label>Box ${i + 1}: which part to keep<span class="hint">If the photo is a different shape from the box: the part that shows.</span><select name="focus.${i}">${FOCUS.map((x) => `<option value="${x}"${x === (focus[i] ?? 'middle') ? ' selected' : ''}>${FOCUS_WORDS[x]}</option>`).join('')}</select></label></div>`;
+        }).join('\n');
+      }
       if (f.item === 'photo') return photoPicker(name, label, hint, value ?? [], ctx, { multiple: true, max: f.max });
       return `<label for="${id}">${esc(label)}${h}<textarea id="${id}" name="${name}" rows="6">${esc((value ?? []).join('\n'))}</textarea></label>`;
     case 'pairs': {
@@ -206,7 +254,7 @@ function photoPicker(name, label, hint, chosen, ctx, { multiple, max }) {
 // The web address goes last: most people never change it.
 export function fields(list, values, ctx) {
   const entries = Object.entries(list).sort(([a], [b]) => (a === 'slug') - (b === 'slug'));
-  return entries.map(([n, f]) => field(n, f, values?.[n], ctx)).join('\n');
+  return entries.map(([n, f]) => field(n, f, values?.[n], { ...ctx, values })).join('\n');
 }
 
 // A submitted form → values for the model. Checkboxes absent mean off; empty
@@ -218,6 +266,23 @@ export function parseForm(list, form) {
       case 'bool': out[n] = form.has(n); break;
       case 'int': { const s = String(form.get(n) ?? '').trim(); out[n] = s === '' ? null : Number(s); break; }
       case 'list':
+        if (f.item === 'focus') { out[n] ??= []; break; }
+        if (f.item === 'photo' && f.boxes) {
+          // The layout's boxes in order; an empty box is skipped, so the photos
+          // after it move up (the site then uses a layout for that many).
+          const count = COLLAGE_LAYOUTS[form.get('layout')]?.boxes.length ?? f.max;
+          const ids = []; const focus = [];
+          for (let i = 0; i < count; i++) {
+            const id = String(form.get(`${n}.${i}`) ?? '');
+            if (!id) continue;
+            ids.push(id);
+            const fx = String(form.get(`focus.${i}`) ?? '');
+            focus.push(FOCUS.includes(fx) ? fx : 'middle');
+          }
+          out[n] = ids;
+          out.focus = focus;
+          break;
+        }
         out[n] = f.item === 'photo' ? form.getAll(n).filter(Boolean) : String(form.get(n) ?? '').split('\n').map((x) => x.trim()).filter(Boolean);
         break;
       case 'pairs': {
