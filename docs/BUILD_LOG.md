@@ -1091,3 +1091,10 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   photo tagging and the cleanup's purge, now run in slices of 90 (`lib/sql.js
   chunks`). The test database (`tests/helpers/d1.js`) now refuses more than 100
   parameters, as D1 does. Test added (a 150-photo album).
+- **Tag many photos at once (2026-11-03).** An album's screen gets "Who's in these
+  photos": its photos with a tick box each, and one "Who's in them…" menu (its
+  litter's puppies first) with Tag. The Photos screen gets the same tick boxes and
+  bar, for whatever filter is showing. Both post to `/photos/tag-many`, which tags
+  the ticked photos (in slices, under D1's limit) and returns to the screen it came
+  from. Plain form controls joined by the form attribute, with the app's existing
+  styles: no app files changed. Tests added.
