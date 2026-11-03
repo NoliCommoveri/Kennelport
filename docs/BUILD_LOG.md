@@ -1008,3 +1008,8 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   her Google Photos or Shutterfly share — shown right under the album as "See more
   photos", opening in a new tab. The arrow is `.more`'s in the template CSS, not in the
   words.
+- **Each puppy's own "See more photos" link.** A puppy record carries
+  `more_photos_url` (migration 0020): any third-party address for *that* puppy's photos,
+  never its litter's, shown under its photos on its page as "See more photos". It stands
+  alone — a puppy with the link but no tagged photos (its litter never ticked Show tagged
+  photos) still gets its Photos block, with just the link in it.

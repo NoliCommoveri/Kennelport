@@ -66,6 +66,7 @@ const LABELS = {
     name: ['Name', null], collar: ['Collar', 'For example "pink collar".'],
     registration: ['Registration', 'Empty while it isn\'t settled, or when you\'d sell either way: the price shows as a range.'],
     price: ['Its own price, in dollars', 'Usually empty, to follow the litter\'s prices. Shown exactly as typed.'],
+    more_photos_url: ['More photos link', 'Where the rest of THIS puppy\'s photos live \u2014 your Google Photos or Shutterfly share for it. Shown under its photos on its page as "See more photos".'],
   },
   reviews: {
     quote: ['Review', null], rating: ['Stars', '1 to 5.'], first_name: ['Name shown', 'First name or family name only, like "The Rivera family".'],

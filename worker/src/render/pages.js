@@ -424,10 +424,14 @@ export function puppy(snap, ctx, litterSlug, slug) {
   const price = puppyPriceText(l, p);
   const reg = REG_WORDS[p.registration];
   const facts = [['Sex', p.sex === 'female' ? 'Female' : 'Male'], ['Color', p.color], ['Collar', p.collar], ['Status', status], ['Price', price], ['Registration', reg], ['Registry', p.registry], ['Parents', pairNames(snap, l)], ['Born', fmtDate(l.born_on)]].filter(([, v]) => v);
-  // Its own photos, where the litter publishes its puppies' tagged ones, then the
-  // litter's albums: its photos are usually in those too.
+  // Its own photos, where the litter publishes its puppies' tagged ones, and its own
+  // "See more photos" link where she set one (its gallery elsewhere, never the
+  // litter's). Either alone is enough for the block. Then the litter's albums: its
+  // photos are usually in those too.
   const gallery = galleryHtml(snap, p.photos ?? [], p.name);
-  const pupGallery = gallery ? `<div class="mt-26">${head('Photos', `${p.name}'s photos`)}${gallery}</div>` : '';
+  const morePup = morePhotosHtml(p);
+  const pupGallery = gallery || morePup
+    ? `<div class="mt-26">${head('Photos', `${p.name}'s photos`)}${gallery}${morePup}</div>` : '';
   return {
     title: `${p.name}, ${l.name}`, section: '/litters', description: p.bio || `${p.name}: ${status}`, image: p.photo_id,
     body: `<section class="section"><div class="wrap">

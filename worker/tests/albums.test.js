@@ -201,3 +201,29 @@ test("an album's photos read newest first, and \"See more photos\" links whereve
   await b.post('/publish', new URLSearchParams());
   assert.equal((await b.page('/albums/week-2')).includes('See more photos'), false);
 });
+
+test("a puppy's See more photos link is its own, and stands alone without tagged photos", async () => {
+  const b = await breeder();
+  b.env.DB.raw.prepare("UPDATE puppies SET more_photos_url = ? WHERE slug = 'opal'").run('https://photos.app.goo.gl/opal');
+  await b.post('/publish', new URLSearchParams());
+  // Its litter never ticked Show tagged photos, so there is no gallery: the link
+  // still gets its own Photos block.
+  const page = await b.page('/litters/gem-2026/opal');
+  assert.match(page, /<h2>Opal&#39;s photos<\/h2>/);
+  assert.match(page, /<a class="more" href="https:\/\/photos\.app\.goo\.gl\/opal" target="_blank" rel="noopener noreferrer">See more photos<\/a>/);
+  assert.equal(page.includes('data-gallery'), false, 'no gallery, just the link');
+  // A littermate with none set gets no block at all.
+  const onyx = await b.page('/litters/gem-2026/onyx');
+  assert.equal(onyx.includes('See more photos'), false);
+  assert.equal(onyx.includes('Onyx&#39;s photos'), false);
+  // With the litter's switch on, the link sits under that puppy's own photos.
+  const shot = await b.photo('Opal asleep');
+  const opal = b.env.DB.raw.prepare("SELECT id FROM puppies WHERE slug = 'opal'").get().id;
+  await b.post(`/photos/${shot}/tag`, new URLSearchParams({ subject: `puppy:${opal}` }));
+  b.env.DB.raw.prepare("UPDATE litters SET show_puppy_photos = 1 WHERE slug = 'gem-2026'").run();
+  forgetSnapshots();
+  await b.post('/publish', new URLSearchParams());
+  const both = await b.page('/litters/gem-2026/opal');
+  assert.ok(both.indexOf('See more photos') > both.lastIndexOf('gal-item'), 'under its photos');
+  assert.equal(both.includes('photos.app.goo.gl/opal'), true);
+});

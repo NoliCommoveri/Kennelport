@@ -109,6 +109,7 @@ export const PUPPY_FIELDS = {
   price: INT(0, 100000),
   bio: ML(400),
   photo_id: { type: 'photo' },
+  more_photos_url: URL_,
 };
 
 export const REVIEW_FIELDS = {
