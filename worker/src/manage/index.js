@@ -113,34 +113,40 @@ async function siteHome(env, user, site) {
   const leaving = await env.DB.prepare('SELECT COUNT(*) AS n FROM litters WHERE site_id = ? AND left_site_at IS NOT NULL').bind(site.id).first('n');
   const { results: notices } = await env.DB.prepare('SELECT id, message, created_at FROM notices WHERE site_id = ? AND read_at IS NULL ORDER BY created_at DESC LIMIT 3').bind(site.id).all();
   const day = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
+  const item = (href, label, note) => `<li class="item"><a href="/s/${esc(site.subdomain)}${href}"><b>${esc(label)}</b><span>${esc(note)}</span></a></li>`;
+  // Needs you: what came in and is waiting, shown only while something is.
+  const waiting = [
+    unread ? item('/inbox', `${unread} new message${unread === 1 ? '' : 's'}`, 'In your inbox') : '',
+    pending ? item('/reviews-queue', `${pending} review${pending === 1 ? '' : 's'} to approve`, 'From families') : '',
+    leaving ? item('/litters#leaving', `${leaving} litter${leaving === 1 ? '' : 's'} leaving your site`, 'Keep or remove') : '',
+  ].filter(Boolean);
   return page(site.kennel_name || site.subdomain, `
   ${matches ? matchesWaiting(site.subdomain, matches) : ''}
   ${notices.map((n) => `<section class="card notice-card" role="status"><p>${esc(n.message)}</p><p class="row"><a class="button" href="/s/${esc(site.subdomain)}/publish">Review and publish</a><form method="post" action="/s/${esc(site.subdomain)}/notices/${esc(n.id)}/read"><button class="link">Done</button></form></p></section>`).join('')}
   <section class="card status">
     <p><span class="dot ${site.status}"></span>${esc(STATUS_WORDS[site.status] ?? site.status)}${changed ? ' · <strong>changes not published yet</strong>' : ''}</p>
-    <p class="row"><a class="button" href="${esc(siteLink(env, site.subdomain))}">View my site</a><a class="button" href="${esc(previewLink)}">Preview changes</a></p>
+    <p class="row"><a class="button" href="${esc(siteLink(env, site.subdomain))}">View my site</a><a class="button" href="${esc(previewLink)}">Preview changes</a><a class="button" href="/s/${esc(site.subdomain)}/share">Share</a></p>
     <p><a class="button primary" href="/s/${esc(site.subdomain)}/publish">${changed ? 'Review and publish' : 'Publish'}</a></p>
   </section>
+  ${waiting.length ? `<section class="card" id="needs-you"><h2>Needs you</h2><ul class="items">${waiting.join('')}</ul></section>` : ''}
   <ul class="tiles">
     ${tile('/puppies', 'Puppies', 'Statuses at a glance')}
-    ${tile('/photos', 'Photos', 'From your camera roll')}
-    ${tile('/inbox', 'Inbox', 'Messages from your site', unread)}
-    ${tile('/reviews-queue', 'Reviews to approve', 'From families', pending)}
-    ${tile('/dogs', 'Dogs', 'Cards, health results')}
     ${tile('/litters', 'Litters', leaving ? `${leaving} leaving your site` : 'Planned, current, past', leaving)}
-    ${tile('/pages', 'Pages and wording', 'Home, about, policies, FAQ…')}
-    ${tile('/lists/extras', 'Extras', 'Packages and prices')}
-    ${tile('/lists/products', 'Recommended products', 'Referral links, codes, home badges')}
-    ${tile('/lists/albums', 'Albums', 'Photo galleries with their own link')}
-    ${kos.linked ? tile('/waitlist', 'Your waitlist', 'Not used: your website shows your KennelOS waitlist', 0, true)
-    : tile('/waitlist', 'Your waitlist', listed ? `${listed} famil${listed === 1 ? 'y' : 'ies'} waiting` : 'Families in order, offer pups', listed)}
-    ${tile('/pages/waitlist', 'Waitlist and application', kos.linked ? (kos.online ? 'Linked to KennelOS, which takes your applications' : 'Linked to KennelOS · your questions') : kos.offered ? 'Your questions, or link KennelOS' : 'Open or closed, your questions')}
-    ${tile('/payment', 'How to pay', 'Fee, deposit, scam warning')}
-    ${tile('/lists/reviews', 'Reviews', 'Add or hide')}
-    ${tile('/details', 'Kennel details', 'Name, contact, town')}
-    ${tile('/share', 'Share', 'Links and QR codes')}
-    ${tile('/kennelos', 'KennelOS', linkRow?.n ? (linkRow.at ? `Linked · last update ${day(linkRow.at)}` : 'Linked · no update yet') : 'Link your dogs and litters', matches)}
+    ${tile('/photos', 'Photos and albums', 'Camera roll, galleries')}
+    ${kos.linked ? '' : tile('/waitlist', 'Your waitlist', listed ? `${listed} famil${listed === 1 ? 'y' : 'ies'} waiting` : 'Families in order, offer pups', listed)}
+    ${tile('/inbox', 'Inbox', 'Messages from your site', unread)}
+    ${tile('/dogs', 'Dogs', 'Cards, health results')}
   </ul>
+  <section class="card" id="set-up"><h2>Set up your site</h2><p class="muted small">Set once, change now and then.</p><ul class="items">
+    ${item('/pages', 'Pages and wording', 'Home, about, policies, FAQ…')}
+    ${item('/pages/waitlist', 'Waitlist and application', kos.linked ? (kos.online ? 'Linked to KennelOS, which takes your applications' : 'Linked to KennelOS · your questions') : kos.offered ? 'Your questions, or link KennelOS' : 'Open or closed, your questions')}
+    ${item('/payment', 'How to pay', 'Fee, deposit, scam warning')}
+    ${item('/lists/extras', 'Extras', 'Packages and prices')}
+    ${item('/lists/products', 'Recommended products', 'Referral links, codes, home badges')}
+    ${item('/lists/reviews', 'Reviews', 'Add or hide')}
+    ${item('/details', 'Kennel details', 'Name, contact, town')}
+    ${item('/kennelos', 'KennelOS', linkRow?.n ? (linkRow.at ? `Linked · last update ${day(linkRow.at)}` : 'Linked · no update yet') : 'Link your dogs and litters')}
+  </ul></section>
   <p class="row"><a class="button" href="/notifications">Notifications on this device</a><a class="button" href="/s/${esc(site.subdomain)}/account">Your site: storage, copy, delete</a></p>
   <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}</p>
   <form method="post" action="/signout"><button class="link">Sign out</button></form>`);
