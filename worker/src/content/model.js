@@ -146,10 +146,10 @@ export const EXPANDER_FIELDS = {
 export const FAQ_PLACES = {
   home: 'Home page',
   dogs: 'All our dogs page',
-  dog: "Every dog's page",
+  dog: "Every dog's profile",
   litters: 'Puppies page',
   litter: "Every litter's page",
-  puppy: "Every puppy's page",
+  puppy: "Every puppy's profile",
   extras: 'Extras page',
   how_it_works: 'The steps page',
   waitlist: 'Waitlist page',

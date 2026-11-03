@@ -58,7 +58,7 @@ test('she picks the pages on the question itself, and the site follows at the ne
   const form = await (await b.get(`/lists/faq/${id}`)).text();
   assert.match(form, /<legend>Also show this question at the top of/);
   assert.match(form, /name="places" value="litter" checked> <span>Every litter&#39;s page<\/span>/);
-  assert.match(form, /name="places" value="puppy"> <span>Every puppy&#39;s page<\/span>/);
+  assert.match(form, /name="places" value="puppy"> <span>Every puppy&#39;s profile<\/span>/);
   assert.match(form, /name="places" value="home"> <span>Home page<\/span>/);
   // The list says where a question is carried, so she can see it at a glance.
   assert.match(await (await b.get('/lists/faq')).text(), /also on every litter&#39;s page/);
