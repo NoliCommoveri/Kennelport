@@ -100,7 +100,7 @@ export function menuGroups(snap, ctx) {
 // 'coming_soon' is stored, and reads "Still deciding" (plan 3.6, decision 32): she
 // may keep the puppy, place it privately or never offer it, so the site promises
 // nothing.
-export const STATUS_TEXT = { available: 'Available', reserved: 'Reserved', placed: 'Spoken for', staying: 'Staying with us', coming_soon: 'Still deciding' };
+export const STATUS_TEXT = { available: 'Available', reserved: 'Reserved', placed: 'Reserved', staying: 'Joining our program', coming_soon: 'Still deciding' };
 
 const isPast = (ymd, today) => Boolean(ymd) && ymd < today;
 
@@ -263,10 +263,12 @@ export function dogCard(snap, d, { sale = null } = {}) {
   const photo = img(snap, d.photo_id, { alt: d.call_name }) ?? '<div class="ph-photo">Photos coming soon</div>';
   const bg = img(snap, d.photo_id, { alt: '', cls: 'bg', thumb: true }) ?? '';
   const registry = d.registry ? `<li><span>Registry</span><span>${esc(d.registry)}</span></li>` : '';
-  // Health results when it has some (its registry above them, where set), else its details.
+  const weight = d.weight ? `<li><span>Weight</span><span>${esc(d.weight)}</span></li>` : '';
+  // Health results when it has some (its registry and weight above them, where
+  // set), else its details.
   const tests = d.health.length
-    ? `${registry ? `<ul class="tests">${registry}</ul>` : ''}<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${esc(h.result)}</span></li>`).join('')}</ul>`
-    : `<span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${d.sex === 'female' ? 'Female' : 'Male'}</span></li>${d.color ? `<li><span>Color</span><span>${esc(d.color)}</span></li>` : ''}${registry}</ul>`;
+    ? `${registry || weight ? `<ul class="tests">${registry}${weight}</ul>` : ''}<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${esc(h.result)}</span></li>`).join('')}</ul>`
+    : `<span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${d.sex === 'female' ? 'Female' : 'Male'}</span></li>${d.color ? `<li><span>Color</span><span>${esc(d.color)}</span></li>` : ''}${weight}${registry}</ul>`;
   const line = [snap.site.breed, d.role].filter(Boolean).join(' · ');
   return `<div class="flip" tabindex="0" role="button" aria-label="${attr(d.call_name)}: turn the card over">
     <div class="flip-in">

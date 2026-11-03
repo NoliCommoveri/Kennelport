@@ -1076,3 +1076,11 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   address is made from the new name too, while it is still the one made from the old
   (`Writer.slugFromName`); an address she typed stays. Publish's redirects keep the old
   address, and its puppies' pages, working. Tests added.
+- **Puppy wording, and a dog's weight (2026-11-03).** A placed puppy now reads
+  Reserved on the site (was Spoken for) and a staying one Joining our program (was
+  Staying with us); in the manage app the status list says "Placed (shows as
+  Reserved)" so the two Reserved choices stay apart, and the litter switch is Show
+  placed puppies. Dogs get a Weight field (migration 0022, free text like "45 lb"),
+  the website's own: not in KennelOS's OWNED list, so a bundle never touches it. It
+  shows on the dog's flip card (with its details, or above its health results) and
+  on its page. Tests added.

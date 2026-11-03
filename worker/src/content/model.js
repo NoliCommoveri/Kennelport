@@ -42,6 +42,7 @@ export const DOG_FIELDS = {
   sex: { ...ENUM('female', 'male'), required: true },
   role: S(30),
   color: S(40),
+  weight: S(20),
   date_of_birth: DATE,
   titles: S(120),
   bio: ML(600),

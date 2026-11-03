@@ -99,7 +99,7 @@ export async function buildSnapshot(env, siteId) {
         delete out[`${role}_id`];
       }
     }
-    // Spoken-for (placed) puppies stay off with the litter's Show spoken-for
+    // Placed (reads Reserved) puppies stay off with the litter's Show placed
     // puppies off (plan 3.6).
     out.puppies = puppies.filter((p) => p.litter_id === l.id && (l.show_placed || p.status !== 'placed'))
       .map((p) => {
