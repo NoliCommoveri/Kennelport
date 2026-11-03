@@ -8,7 +8,7 @@ import {
   dogGroups, depositsAhead, puppyStatus, puppyPriceText,
 } from './parts.js';
 import { embedView } from '../embeds.js';
-import { COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX } from '../content/model.js';
+import { COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk } from '../content/model.js';
 
 // A Share button (plan 5.4): the phone's own share sheet, or the link copied.
 // Shown only with the template's script.
@@ -44,13 +44,19 @@ const scriptLine = (text, script) => `${esc(text ?? '')}${script ? ` <span class
 // A referral link opens in a new tab, marked sponsored for search engines.
 const outLink = (href, inner, cls = '') => `<a${cls ? ` class="${cls}"` : ''} href="${attr(href)}" target="_blank" rel="noopener sponsored">${inner}</a>`;
 
+// A product's picture: the brand's own, from the brand (as its referral program
+// intends), else her copy.
+const productPic = (snap, x, { cls = '', lazy = true } = {}) => (x.image_url && brandImageOk(x.image_url)
+  ? `<img src="${attr(x.image_url)}" alt="${attr(x.name)}"${cls ? ` class="${cls}"` : ''}${lazy ? ' loading="lazy"' : ''}>`
+  : img(snap, x.photo_id, { alt: x.name, cls, lazy }));
+
 // Up to two logos right under the banner, side by side even on a phone, each
 // linked to its product's link when it has one.
 export function homeBadges(snap) {
-  const list = (snap.products ?? []).filter((x) => x.home_badge && snap.photos[x.photo_id]).slice(0, HOME_BADGES_MAX);
+  const list = (snap.products ?? []).filter((x) => x.home_badge && productPic(snap, x)).slice(0, HOME_BADGES_MAX);
   if (!list.length) return '';
   const one = (x) => {
-    const pic = img(snap, x.photo_id, { alt: x.name, lazy: false });
+    const pic = productPic(snap, x, { lazy: false });
     return `<li>${x.link_url ? outLink(x.link_url, pic) : pic}</li>`;
   };
   return `<section class="wrap badges" aria-label="Recommended"><ul class="badges-${list.length}">${list.map(one).join('')}</ul></section>`;
@@ -60,7 +66,7 @@ export function products(snap, ctx) {
   const p = snap.pages.products;
   const list = snap.products ?? [];
   const card = (x) => {
-    const pic = img(snap, x.photo_id, { alt: x.name, cls: 'prod-pic' });
+    const pic = productPic(snap, x, { cls: 'prod-pic' });
     const code = x.code ? `<p class="prod-code">Use code <b>${esc(x.code)}</b>${x.code_note ? ` <span class="small muted">${esc(x.code_note)}</span>` : ''}</p>` : '';
     return `<article class="pkg prod">${pic ? (x.link_url ? outLink(x.link_url, pic, 'prod-pic-link') : pic) : ''}
       ${x.grp ? `<span class="eyebrow">${esc(x.grp)}</span>` : ''}<h3>${esc(x.name)}</h3>

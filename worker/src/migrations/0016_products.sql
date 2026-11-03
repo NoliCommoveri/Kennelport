@@ -1,6 +1,8 @@
 -- Recommended products (the /recommended page): what the breeder suggests, each
 -- with an optional referral link and code. home_badge: also shown as a logo under
--- the Home banner (at most two, content/records.js). Additive only.
+-- the Home banner (at most two, content/records.js). image_url: the brand's own
+-- picture, shown from the brand's address (content/model.js BRAND_IMAGE_ORIGINS).
+-- Additive only.
 CREATE TABLE IF NOT EXISTS products (
   id           TEXT PRIMARY KEY,
   site_id      TEXT NOT NULL REFERENCES sites(id),
@@ -8,6 +10,7 @@ CREATE TABLE IF NOT EXISTS products (
   grp          TEXT,
   description  TEXT,
   photo_id     TEXT,
+  image_url    TEXT,
   link_url     TEXT,
   link_label   TEXT,
   code         TEXT,

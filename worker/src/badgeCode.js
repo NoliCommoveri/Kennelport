@@ -2,9 +2,10 @@
 // referral page hands out, like
 //   <a href="https://brand.example/r/kennel" target="_blank"><img src="https://brand.example/logo.png" alt="Brand"></a>
 // The HTML is never kept or shown. Only three things are read from it: the link,
-// the picture's address and its alt text. The picture is copied onto the site
-// (pages may only show their own pictures, site.js SITE_CSP) when it's a WebP or
-// JPEG; anything else (most logos are PNG) she downloads and chooses as the
+// the picture's address and its alt text. A picture from an approved brand
+// address (content/model.js BRAND_IMAGE_ORIGINS) is shown straight from there,
+// as the referral program intends. One from anywhere else is copied onto the site
+// when it's a WebP or JPEG; otherwise she downloads it and chooses it as the
 // picture, and the manage app converts it as it uploads.
 import { savePhoto, PhotoError } from './photos.js';
 

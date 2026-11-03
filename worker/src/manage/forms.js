@@ -77,7 +77,8 @@ const LABELS = {
   },
   products: {
     name: ['Name', 'For example "TLC Puppy Food".'], grp: ['Group', 'Optional, a small label above the name, like "Food" or "Toys".'],
-    photo_id: ['Picture', 'A logo or product photo. Pasting the embed code below copies theirs when it\'s a JPEG or WebP; otherwise download it from their page and choose it here.'],
+    photo_id: ['Picture', 'A logo or product photo of your own. Not needed when the brand\'s picture is filled in below.'],
+    image_url: ['The brand\'s picture', 'Filled in from the embed code, and shown straight from the brand, as their referral program intends. Only some brands\' addresses can be shown this way; for others, the picture is copied into Picture above. Empty it to use your own picture instead.'],
     link_url: ['Your referral link', 'Where tapping it goes, in a new tab.'], link_label: ['Button wording', 'Leave empty for "Shop now".'],
     code: ['Discount or referral code', 'For example "AKBOSTON10". Shown as "Use code …".'], code_note: ['Line after the code', 'For example "for 10% off your first order".'],
     home_badge: ['Show as a badge on my home page', 'Its picture shows right under your banner, linked to your referral link. Up to 2; they sit side by side, on phones too.'],

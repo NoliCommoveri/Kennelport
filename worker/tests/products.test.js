@@ -1,6 +1,7 @@
 // Recommended products: a page of referral links and codes, and up to two of them
 // as badges right under the Home banner. A brand's embed code is read for its link
-// and picture only; the HTML is never kept.
+// and picture only; the HTML is never kept. An approved brand's picture is shown
+// from the brand (hotlinked, as its referral program intends); any other is copied.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeEnv, call, addSite } from './helpers/env.js';
@@ -59,7 +60,7 @@ async function breeder() {
   const env = await makeEnv({
     EMBED_FETCH: async (url) => {
       fetched.push(url);
-      if (url.startsWith('https://tlcpetpro.com/')) return new Response(jpeg(400, 300));
+      if (url.startsWith('https://other.example/')) return new Response(jpeg(400, 300));
       if (url.startsWith('https://png.example/')) return new Response(png(400, 300));
       return new Response('no', { status: 404 });
     },
@@ -86,13 +87,16 @@ test('pasting the embed code fills in the product; it shows on its page and as a
   const p = b.env.DB.raw.prepare('SELECT * FROM products').get();
   assert.equal(p.name, 'TLC Pet Food Heritage Green Logo', 'named from the alt text when left empty');
   assert.equal(p.link_url, 'https://tlcpetfood.com/nutrition/akbostonterriers');
-  assert.equal(b.env.DB.raw.prepare('SELECT alt FROM photos WHERE id = ?').get(p.photo_id).alt, 'TLC Pet Food Heritage Green Logo');
+  assert.equal(p.image_url, 'https://tlcpetpro.com/api/Files/file-by-guid?guid=29e343b1-6389-40a2-bb1b-1bdba5c30981&size=2');
+  assert.equal(p.photo_id, null, 'not copied');
+  assert.deepEqual(b.fetched, [], 'nothing fetched: the brand serves it');
   assert.equal(p.home_badge, 1);
   assert.equal((await b.page('/recommended')).status, 404, 'not before publishing');
 
   await b.post('/publish');
   const home = await (await b.page('/')).text();
-  assert.match(home, new RegExp(`<section class="wrap badges" aria-label="Recommended"><ul class="badges-1"><li><a href="https://tlcpetfood.com/nutrition/akbostonterriers" target="_blank" rel="noopener sponsored"><img src="/_kp/p/${p.photo_id}"`));
+  assert.ok(home.includes('<section class="wrap badges" aria-label="Recommended"><ul class="badges-1"><li><a href="https://tlcpetfood.com/nutrition/akbostonterriers" target="_blank" rel="noopener sponsored"><img src="https://tlcpetpro.com/api/Files/file-by-guid?guid=29e343b1-6389-40a2-bb1b-1bdba5c30981&amp;size=2" alt="TLC Pet Food Heritage Green Logo">'));
+  assert.match((await b.page('/')).headers.get('content-security-policy'), /img-src 'self' https:\/\/tlcpetpro\.com;/);
   assert.ok(home.indexOf('class="banner') < 0 || home.indexOf('class="banner') < home.indexOf('class="wrap badges"'), 'under the banner');
   assert.ok(home.indexOf('class="wrap badges"') < home.indexOf('class="wrap hero'), 'above the rest of the top block');
   const page = await b.page('/recommended');
@@ -101,13 +105,23 @@ test('pasting the embed code fills in the product; it shows on its page and as a
   assert.match(html, /Use code <b>AKBOSTON<\/b> <span class="small muted">for 10% off<\/span>/);
   assert.match(html, /<a class="btn line" href="https:\/\/tlcpetfood\.com\/nutrition\/akbostonterriers" target="_blank" rel="noopener sponsored">Shop now<\/a>/);
   assert.match(html, /href="\/recommended"/, 'in the menu');
-  assert.doesNotMatch(html, /tlcpetpro\.com/, 'the picture is the site\'s own copy');
-  assert.equal((await b.page(`/_kp/p/${p.photo_id}`)).headers.get('content-type'), 'image/jpeg');
+  assert.match(html, /<img src="https:\/\/tlcpetpro\.com\/api\/Files\/file-by-guid[^"]*" alt="TLC Pet Food Heritage Green Logo" class="prod-pic" loading="lazy">/);
+});
+
+test('a picture from anywhere else is copied onto the site; a typed brand picture must be from an approved address', async () => {
+  const b = await breeder();
+  await b.post('/lists/products/new', { name: 'Other', _badge_code: '<a href="https://other.example/r"><img src="https://other.example/logo.jpg" alt="Other"></a>' });
+  const p = b.env.DB.raw.prepare('SELECT * FROM products').get();
+  assert.equal(p.image_url, null);
+  assert.equal(b.env.DB.raw.prepare('SELECT type FROM photos WHERE id = ?').get(p.photo_id).type, 'image/jpeg');
+  const bad = await (await b.post('/lists/products/new', { name: 'Sneaky', image_url: 'https://tracker.example/pixel.png' })).text();
+  assert.match(bad, /isn(&#39;|')t one your site can show from/);
+  await assert.rejects(importContent(b.env, b.site.id, { products: [{ name: 'X', image_url: 'https://tracker.example/a.png' }] }), /approved brand address/);
 });
 
 test('at most two badges, each needing a picture; a picture that can\'t be fetched says so', async () => {
   const b = await breeder();
-  const pic = '<a href="https://other.example/r"><img src="https://tlcpetpro.com/other.jpg" alt="Other"></a>';
+  const pic = '<a href="https://other.example/r"><img src="https://other.example/logo.jpg" alt="Other"></a>';
   assert.equal((await b.post('/lists/products/new', { name: 'One', home_badge: '1', _badge_code: pic })).status, 303);
   assert.equal((await b.post('/lists/products/new', { name: 'Two', home_badge: '1', _badge_code: TLC })).status, 303);
   const third = await (await b.post('/lists/products/new', { name: 'Three', home_badge: '1', _badge_code: pic })).text();
@@ -134,5 +148,5 @@ test('products go out in the content document and come back in', async () => {
   assert.deepEqual(doc.products, [{ name: 'Kong', link_url: 'https://kong.example/', code: 'AK5', home_badge: false }]);
   await importContent(b.env, b.site.id, { products: [...doc.products, { name: 'Bed' }] });
   assert.deepEqual(b.env.DB.raw.prepare('SELECT name FROM products ORDER BY sort').all().map((x) => x.name), ['Kong', 'Bed']);
-  await assert.rejects(importContent(b.env, b.site.id, { products: [{ name: 'X', home_badge: true }] }), /needs a photo_id/);
+  await assert.rejects(importContent(b.env, b.site.id, { products: [{ name: 'X', home_badge: true }] }), /needs a photo_id or image_url/);
 });

@@ -20,6 +20,7 @@ import { pageOn } from './render/parts.js';
 import { readFeed } from './feed.js';
 import { publicRows } from './waitlist.js';
 import { FRAME_ORIGINS } from './embeds.js';
+import { BRAND_IMAGE_ORIGINS } from './content/model.js';
 
 export const PREVIEW_COOKIE = 'kp_preview';
 export const PREVIEW_DAYS = 7;
@@ -27,8 +28,9 @@ export const PREVIEW_DAYS = 7;
 // The site's own pages may load only what the template serves from the site
 // itself (plan 3.3). Phase 3 adds Turnstile on form pages.
 // Videos and posts (plan 3.3) load in frames from their providers, and only when a
-// visitor taps one; nothing else may be framed.
-export const SITE_CSP = `default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; frame-src ${FRAME_ORIGINS.join(' ')}; form-action 'self'; frame-ancestors 'none'; base-uri 'none'`;
+// visitor taps one; nothing else may be framed. Recommended products' brand
+// pictures load from their brands (content/model.js BRAND_IMAGE_ORIGINS).
+export const SITE_CSP = `default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' ${BRAND_IMAGE_ORIGINS.join(' ')}; font-src 'self'; connect-src 'self'; frame-src ${FRAME_ORIGINS.join(' ')}; form-action 'self'; frame-ancestors 'none'; base-uri 'none'`;
 const SITE_HEADERS = {
   'content-security-policy': SITE_CSP,
   'x-content-type-options': 'nosniff',

@@ -17,7 +17,7 @@
 // writes go in one batch, so an import lands whole or not at all.
 import {
   SITE_FIELDS, DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS,
-  STEP_FIELDS, EXPANDER_FIELDS, EXPANDER_PAGES, EXTRA_FIELDS, PRODUCT_FIELDS, HOME_BADGES_MAX, HOME_BLOCKS, PAGES, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS,
+  STEP_FIELDS, EXPANDER_FIELDS, EXPANDER_PAGES, EXTRA_FIELDS, PRODUCT_FIELDS, HOME_BADGES_MAX, brandImageOk, HOME_BLOCKS, PAGES, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS,
   QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue,
 } from './model.js';
 import { PROVIDERS } from '../embeds.js';
@@ -148,7 +148,8 @@ export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = ne
     out.products = list(doc.products, 'products').map((x, i) => {
       const product = cleanRecord(PRODUCT_FIELDS, x, `products[${i}]`);
       photo(product.photo_id, `products[${i}].photo_id`);
-      if (product.home_badge && !product.photo_id) throw new ContentError(`products[${i}].home_badge`, 'a home page badge needs a photo_id');
+      if (product.image_url && !brandImageOk(product.image_url)) throw new ContentError(`products[${i}].image_url`, 'not from an approved brand address');
+      if (product.home_badge && !product.photo_id && !product.image_url) throw new ContentError(`products[${i}].home_badge`, 'a home page badge needs a photo_id or image_url');
       return product;
     });
     if (out.products.filter((x) => x.home_badge).length > HOME_BADGES_MAX) throw new ContentError('products', `at most ${HOME_BADGES_MAX} with home_badge`);

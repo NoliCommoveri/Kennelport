@@ -149,12 +149,23 @@ export const EXTRA_FIELDS = {
 // suggests, each with an optional referral link and code. Up to HOME_BADGES_MAX
 // with home_badge on also show as a logo right under the banner on Home, linked
 // the same way.
+//
+// image_url: the brand's own picture, shown straight from the brand (hotlinked,
+// as its referral program intends), only from these addresses; every page lets
+// browsers load pictures from them and nowhere else (site.js SITE_CSP). A
+// picture from anywhere else is copied onto the site as photo_id (badgeCode.js).
+// Adding a brand means adding its address here.
 export const HOME_BADGES_MAX = 2;
+export const BRAND_IMAGE_ORIGINS = ['https://tlcpetpro.com'];
+export const brandImageOk = (url) => {
+  try { return BRAND_IMAGE_ORIGINS.includes(new URL(url).origin); } catch { return false; }
+};
 export const PRODUCT_FIELDS = {
   name: S(80, { required: true }),
   grp: S(40),
   description: ML(600),
   photo_id: { type: 'photo' },
+  image_url: URL_,
   link_url: URL_,
   link_label: S(40),
   code: S(40),

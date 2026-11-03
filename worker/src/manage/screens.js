@@ -3,7 +3,7 @@
 // a problem comes back with what was typed and the reason.
 import { escapeHtml as esc } from '../lib/html.js';
 import { json } from '../lib/http.js';
-import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError } from '../content/model.js';
+import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk } from '../content/model.js';
 import {
   KINDS, listRecords, getRecord, saveRecord, setField, removeRecord, moveRecord,
   saveSite, getPage, savePage, getBlock, saveBlock, getPayment, savePayment,
@@ -84,7 +84,7 @@ const LISTS = {
 };
 // Under a product's fields: the brand's embed code, read for its link and picture
 // (badgeCode.js), never kept.
-const BADGE_CODE_FIELD = `<label for="f-badge_code">Or paste the embed code they gave you<span class="hint">The HTML from the brand's referral page, starting with &lt;a href=. It fills in your referral link and the picture (copied onto your site). The code itself isn't kept.</span><textarea id="f-badge_code" name="_badge_code" rows="4" autocapitalize="none" spellcheck="false" placeholder="&lt;a href=&quot;https://…&quot;&gt;&lt;img src=&quot;https://…&quot;&gt;&lt;/a&gt;"></textarea></label>`;
+const BADGE_CODE_FIELD = `<label for="f-badge_code">Or paste the embed code they gave you<span class="hint">The HTML from the brand's referral page, starting with &lt;a href=. It fills in your referral link and the picture. The code itself isn't kept.</span><textarea id="f-badge_code" name="_badge_code" rows="4" autocapitalize="none" spellcheck="false" placeholder="&lt;a href=&quot;https://…&quot;&gt;&lt;img src=&quot;https://…&quot;&gt;&lt;/a&gt;"></textarea></label>`;
 const QUESTION_WORDS = { text: 'Short answer', paragraph: 'Longer answer', choice: 'Choice', yes_no: 'Yes or no', litter: 'Which litter', phone: 'Phone', town: 'Town' };
 const FORM_KIND = { policies: 'expander', faq: 'expander', waitlist_help: 'expander' };
 // The kinds whose records a photo can be of (photoTags.js).
@@ -124,7 +124,9 @@ export function createScreens({ env, request, url, site, user, page }) {
       const { link, image, alt } = readBadgeCode(code);
       if (link) values.link_url = link;
       if (!values.name && alt) values.name = alt;
-      if (image) values.photo_id = await storeBadgeImage(env, site.id, image, alt ?? values.name ?? '');
+      // An approved brand's picture is shown from the brand; any other is copied.
+      if (image && brandImageOk(image)) { values.image_url = image; values.photo_id = null; }
+      else if (image) { values.photo_id = await storeBadgeImage(env, site.id, image, alt ?? values.name ?? ''); values.image_url = null; }
     } catch (err) {
       if (err instanceof BadgeCodeError) throw new ContentError('embed code', err.message);
       throw err;

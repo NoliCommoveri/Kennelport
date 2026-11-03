@@ -3,7 +3,7 @@
 // can't disagree about what a field may hold. Every write marks the draft as
 // changed; nothing is live until Publish.
 import {
-  DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, EXTRA_FIELDS, PRODUCT_FIELDS, HOME_BADGES_MAX,
+  DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, EXTRA_FIELDS, PRODUCT_FIELDS, HOME_BADGES_MAX, brandImageOk,
   EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue, slugify,
 } from './model.js';
 import { untagStatements } from '../photoTags.js';
@@ -130,8 +130,9 @@ export async function saveRecord(env, siteId, kind, id, input, scopeId = null) {
   const clean = cleanFields(k.fields, input, kind);
   if (kind === 'extras' && clean.price_to !== null && clean.price_from !== null && clean.price_to < clean.price_from) throw new ContentError('price_to', 'lower than the starting price');
   if (kind === 'questions') checkQuestion(clean, 'question');
+  if (kind === 'products' && clean.image_url && !brandImageOk(clean.image_url)) throw new ContentError('image_url', "that picture's address isn't one your site can show from; choose a photo instead");
   if (kind === 'products' && clean.home_badge) {
-    if (!clean.photo_id) throw new ContentError('home_badge', 'a home page badge needs a picture: choose one, or paste the embed code');
+    if (!clean.photo_id && !clean.image_url) throw new ContentError('home_badge', 'a home page badge needs a picture: choose one, or paste the embed code');
     const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM products WHERE site_id = ? AND home_badge = 1 AND id != ?').bind(siteId, id ?? '').first('n');
     if (n >= HOME_BADGES_MAX) throw new ContentError('home_badge', `the home page shows at most ${HOME_BADGES_MAX} badges: turn one off first`);
   }
