@@ -9,6 +9,8 @@
 // eagerly and would throw on the index, so preparation is deferred here too.
 import { DatabaseSync } from 'node:sqlite';
 
+export const D1_MAX_PARAMS = 100;
+
 class Stmt {
   constructor(db, sql, params = []) {
     this.db = db;
@@ -16,7 +18,10 @@ class Stmt {
     this.params = params;
   }
 
+  // D1 refuses a statement with more than 100 bound parameters ("too many SQL
+  // variables"); node:sqlite allows thousands, so the limit is enforced here.
   bind(...params) {
+    if (params.length > D1_MAX_PARAMS) throw new Error(`D1_ERROR: too many SQL variables (${params.length} bound, D1 allows ${D1_MAX_PARAMS})`);
     return new Stmt(this.db, this.sql, params);
   }
 

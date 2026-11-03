@@ -1084,3 +1084,10 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   the website's own: not in KennelOS's OWNED list, so a bundle never touches it. It
   shows on the dog's flip card (with its details, or above its health results) and
   on its page. Tests added.
+- **A big album no longer crashes the Worker (2026-11-03).** D1 takes at most 100
+  bound parameters a statement, and saving, previewing and publishing an album
+  checked or loaded all its photos (up to 300) in one `IN (…)` list: error 1101 on
+  testbostons once an album passed 99 photos. Those queries, and the same pattern in
+  photo tagging and the cleanup's purge, now run in slices of 90 (`lib/sql.js
+  chunks`). The test database (`tests/helpers/d1.js`) now refuses more than 100
+  parameters, as D1 does. Test added (a 150-photo album).

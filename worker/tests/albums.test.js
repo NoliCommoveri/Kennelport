@@ -227,3 +227,22 @@ test("a puppy's See more photos link is its own, and stands alone without tagged
   assert.ok(both.indexOf('See more photos') > both.lastIndexOf('gal-item'), 'under its photos');
   assert.equal(both.includes('photos.app.goo.gl/opal'), true);
 });
+
+// D1 takes at most 100 parameters a statement (tests/helpers/d1.js holds the test
+// database to that too). A big album crashed the Worker (error 1101) when it was
+// saved, previewed and published, from one `IN (…)` list of all its photos.
+test('an album of 150 photos saves, publishes, previews and shows them all', async () => {
+  const { makePreviewToken } = await import('../src/site.js');
+  const b = await breeder();
+  const ids = [];
+  for (let i = 0; i < 150; i++) ids.push(await b.photo(`Photo ${i}`));
+  assert.equal((await b.post('/lists/albums/new', form({ title: 'Gem week 4', litter_id: b.litter }, ids))).status, 303);
+  assert.equal((await b.get('/publish')).status, 200);
+  assert.equal((await b.post('/publish', new URLSearchParams())).status, 303);
+  const page = await b.page('/albums/gem-week-4');
+  assert.equal((page.match(/data-gallery/g) ?? []).length, 150);
+  assert.match(await b.page('/litters/gem-2026'), /150 photos/);
+  const token = await makePreviewToken(b.env, b.site.id);
+  const cookie = (await call(b.env, SITE, `/__preview?t=${encodeURIComponent(token)}`)).headers.get('set-cookie').split(';')[0];
+  assert.equal((await call(b.env, SITE, '/albums/gem-week-4', { headers: { cookie } })).status, 200);
+});

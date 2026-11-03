@@ -9,6 +9,7 @@
 //   puppies, albums and the photos nothing else uses, whose files go the same night.
 import { loadSnapshot } from './publish.js';
 import { expireLitters } from './kennelos/clock.js';
+import { chunks, placeholders } from './lib/sql.js';
 
 export const INQUIRY_DAYS = 90;
 const DAY = 86400000;
@@ -38,11 +39,18 @@ export async function runCleanup(env, now = new Date()) {
 // them are replaced or pruned. Returns how many photos' files were deleted.
 // With `ids`, just those photos, whenever they were removed.
 export async function purgeRemovedPhotos(env, cutoff, limit = PURGE_PER_RUN, ids = null) {
-  const { results: removed } = ids
-    ? await env.DB.prepare(`SELECT id, site_id, r2_key, thumb_key FROM photos WHERE removed_at IS NOT NULL AND purged_at IS NULL AND id IN (${ids.map(() => '?').join(', ')}) LIMIT ?`).bind(...ids, limit).all()
-    : await env.DB.prepare(
+  const removed = [];
+  if (ids) {
+    // In slices: D1 takes at most 100 parameters a statement.
+    for (const part of chunks(ids)) {
+      if (removed.length >= limit) break;
+      removed.push(...(await env.DB.prepare(`SELECT id, site_id, r2_key, thumb_key FROM photos WHERE removed_at IS NOT NULL AND purged_at IS NULL AND id IN (${placeholders(part)}) LIMIT ?`).bind(...part, limit - removed.length).all()).results);
+    }
+  } else {
+    removed.push(...(await env.DB.prepare(
       'SELECT id, site_id, r2_key, thumb_key FROM photos WHERE removed_at IS NOT NULL AND removed_at < ? AND purged_at IS NULL ORDER BY removed_at LIMIT ?',
-    ).bind(cutoff, limit).all();
+    ).bind(cutoff, limit).all()).results);
+  }
   if (!removed.length) return 0;
 
   const inUse = new Set();
