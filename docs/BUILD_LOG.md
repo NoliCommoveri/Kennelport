@@ -838,3 +838,21 @@ question at a time. Nothing built yet; docs only (plan 5 rewritten, 3.2, 3.6, 3.
 - **Out of phase 4:** **Request a website** and KennelPort's request form (backlog 2 and
   7; decision 2 stands), and hiding one puppy that has no health hold (backlog 6).
 
+
+## 2026-11-03: custom domains, by hand (plan 2.4)
+
+- **`custom_domains`** (migration 0014): one per site, the main hostname (normally `www.`),
+  `pending` or `active`. The router finds a site from it; the partner name (bare ↔ `www.`)
+  301s to the main one with the same path.
+- **Pending** serves the site on the domain so it can be checked; **active** makes it the
+  main address and the `kennelport.com` address 301s there (an hour's cache, so stopping it
+  takes effect soon). Form posts are never redirected; staging never redirects.
+- **Ops console → Own domain**: add, make main, stop redirecting, remove. Closing a site
+  forgets its domain.
+- **Two ways in** (Setup, "Custom domains"): a domain in KennelPort's own Cloudflare account
+  is a Workers Custom Domain listed in `wrangler.toml`; any other breeder's goes through
+  Cloudflare for SaaS with a CNAME to `sites.kennelport.com`. Same code for both.
+- Pages already build their links, share previews and sitemap from the host serving them,
+  so on the domain they all use it. Not yet: the daily check (plan 2.4), and the manage
+  app's links and QR codes naming the domain (they use the `kennelport.com` address, which
+  redirects).

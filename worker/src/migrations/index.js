@@ -21,6 +21,7 @@ import logo from './0010_logo.sql';
 import albums from './0011_albums.sql';
 import embeds from './0012_embeds.sql';
 import usage from './0013_usage.sql';
+import customDomains from './0014_custom_domains.sql';
 
 export const MIGRATIONS = [
   { id: '0001', name: 'schema', sql: schema },
@@ -36,4 +37,5 @@ export const MIGRATIONS = [
   { id: '0011', name: 'albums', sql: albums },
   { id: '0012', name: 'embeds', sql: embeds },
   { id: '0013', name: 'usage', sql: usage },
+  { id: '0014', name: 'custom_domains', sql: customDomains },
 ];

@@ -14,6 +14,7 @@ import { escapeHtml as esc, htmlPage } from './lib/html.js';
 import { serveSite } from './site.js';
 import { handleManage } from './manage/index.js';
 import { runCleanup } from './cleanup.js';
+import { findDomain } from './domains.js';
 
 const notFound = (what = 'There is no page at this address.') =>
   htmlPage('Not found', `<h1>Not found</h1><p>${esc(what)}</p>`, { status: 404 });
@@ -88,9 +89,17 @@ export default {
       case 'site':
         return serveSite(request, env, ctx, target.subdomain);
 
-      // Custom domains and their fallback host arrive in phase 1 (by hand, plan 2.4).
+      // A breeder's own domain (plan 2.4, domains.js): the www. name or the bare one.
+      case 'custom': {
+        if (!(await schemaReady(env.DB))) return htmlPage('Back soon', '<h1>Back soon</h1><p>This site is being updated. Please try again in a few minutes.</p>', { status: 503, headers: { 'retry-after': '300' } });
+        const domain = await findDomain(env, target.host);
+        if (!domain) return notFound('No KennelPort site has this address.');
+        if (domain.redirect) return new Response(null, { status: 301, headers: { location: `https://${domain.hostname}${url.pathname}${url.search}`, 'cache-control': 'public, max-age=3600' } });
+        return serveSite(request, env, ctx, domain.subdomain, { onDomain: true });
+      }
+
+      // sites.kennelport.com: only a CNAME target for custom hostnames.
       case 'fallback':
-      case 'custom':
       case 'reserved':
       case 'unknown':
       default:
