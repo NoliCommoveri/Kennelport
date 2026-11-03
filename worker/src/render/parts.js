@@ -224,10 +224,21 @@ export function parentCards(snap, l) {
   return cards.length ? `<div class="parents${cards.length === 1 ? ' one' : ''}">${cards.join('')}</div>` : '';
 }
 
-// The litter's facts on its page: its card's, less what the page shows already
-// (its birth date heads the page, and its puppies have their own cards below).
+// The litter's facts on its page: its card's (deposits, going home, prices), less
+// the birth date, which heads the page. Its puppies, which have their own cards
+// below, are counted by sex under Going home ("2 girls, 1 boy").
 export function litterFacts(l, ctx) {
-  const rows = litterRows(l, ctx).filter(([k, v]) => v && k !== 'Born' && !(k === 'Puppies' && l.puppies.length));
+  const rows = [];
+  for (const [k, v] of litterRows(l, ctx)) {
+    if (!v || k === 'Born' || k === 'Puppies') continue;
+    rows.push([k, v]);
+    if (k === 'Going home' && l.puppies.length) rows.push(['Puppies', counts(l.puppies)]);
+  }
+  // No going-home date yet: the count goes before the prices.
+  if (l.puppies.length && !rows.some(([k]) => k === 'Puppies')) {
+    const at = rows.findIndex(([k]) => k === 'Price' || k === 'Deposit');
+    rows.splice(at < 0 ? rows.length : at, 0, ['Puppies', counts(l.puppies)]);
+  }
   return rows.length ? `<div class="litter litter-facts">${kvList(rows)}</div>` : '';
 }
 

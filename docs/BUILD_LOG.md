@@ -1062,5 +1062,6 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   parents' names when they are the litter's name), a card for each parent side by side,
   Dam and Sire above them (picture, registered name, titles, colour and registry, three
   health results, View profile; an outside parent is the name she typed), then the
-  litter's facts the head doesn't give. `parentCards`, `litterFacts`, `litterRows` in
+  litter's facts the head doesn't give: deposits from, going home, its puppies counted by
+  sex ("2 girls, 1 boy") under going home, and the price ranges. `parentCards`, `litterFacts`, `litterRows` in
   `render/parts.js`; site.css. Tests added.

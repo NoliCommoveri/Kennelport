@@ -901,6 +901,13 @@ test("a litter's page: its parents' cards in one row, not its card again, and no
   const facts = html.split('litter-facts')[1].split('</div>')[0];
   assert.match(facts, /Deposits from[\s\S]*November 17, 2099/);
   assert.doesNotMatch(facts, /Born|Puppy 1/);
+  // Its puppies counted by sex, under Going home when it has one, else before the prices.
+  assert.match(facts, /<dt>Puppies<\/dt><dd>1 girl<\/dd><dt>Price<\/dt>/);
+  b.env.DB.raw.prepare("UPDATE litters SET ready_on = '2099-12-29' WHERE kennelos_id = 'l1'").run();
+  b.env.DB.raw.prepare("INSERT INTO puppies (id, site_id, litter_id, slug, name, sex, status, sort, created_at, updated_at) SELECT 'p-x', site_id, litter_id, 'boy', 'Boy', 'male', 'available', 9, created_at, updated_at FROM puppies WHERE kennelos_id = 'k1'").run();
+  await b.post('/publish');
+  const facts2 = (await b.page(`/litters/${slug}`)).split('litter-facts')[1].split('</div>')[0];
+  assert.match(facts2, /<dt>Going home<\/dt><dd>December 29, 2099<\/dd><dt>Puppies<\/dt><dd>1 girl, 1 boy<\/dd><dt>Price<\/dt>/);
 
   // A nicknamed litter keeps its parents' names under its own; an outside sire is his name, with no link.
   const gems = (await b.page(`/litters/${b.row("SELECT slug FROM litters WHERE kennelos_id = 'l2'").slug}`)).split('<main')[1];
