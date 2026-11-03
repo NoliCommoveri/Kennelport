@@ -43,6 +43,10 @@ export const DOG_FIELDS = {
   bio: ML(600),
   photo_id: { type: 'photo' },
   status: ENUM('active', 'retired', 'remembered'),
+  upcoming: BOOL,
+  for_sale: BOOL,
+  price: INT(0, 100000),
+  died_on: DATE,
   health_display: ENUM('normal_only', 'all', 'none'),
   show_on_site: BOOL,
 };
@@ -69,9 +73,21 @@ export const LITTER_FIELDS = {
   ready_on: DATE,
   expected_label: S(60),
   ready_label: S(60),
+  deposits_on: DATE,
   summary: ML(400),
+  price_female: INT(0, 100000),
+  price_male: INT(0, 100000),
+  full_reg_female: INT(0, 100000),
+  full_reg_male: INT(0, 100000),
+  deposit_female: INT(0, 100000),
+  deposit_male: INT(0, 100000),
+  price_note: S(200),
+  show_prices: BOOL,
+  show_placed: BOOL,
   show_on_site: BOOL,
 };
+// The litter's figures (plan 3.2): KennelOS's while Use my KennelOS prices is on.
+export const LITTER_PRICE_FIELDS = ['price_female', 'price_male', 'full_reg_female', 'full_reg_male', 'deposit_female', 'deposit_male'];
 
 export const PUPPY_STATUSES = ['available', 'reserved', 'placed', 'staying', 'coming_soon', 'hidden'];
 
@@ -82,6 +98,8 @@ export const PUPPY_FIELDS = {
   sex: { ...ENUM('female', 'male'), required: true },
   color: S(40),
   status: ENUM(...PUPPY_STATUSES),
+  registration: ENUM('limited', 'full'),
+  price: INT(0, 100000),
   bio: ML(400),
   photo_id: { type: 'photo' },
 };
