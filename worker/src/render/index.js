@@ -17,6 +17,7 @@ const FIXED = {
   '/litters/older': ['older', P.older],
   '/how-it-works': ['how_it_works', P.howItWorks],
   '/extras': ['extras', P.extras],
+  '/recommended': ['products', P.products],
   '/policies': ['policies', P.policies],
   '/faq': ['faq', P.faq],
   '/waitlist': ['waitlist', P.waitlist],

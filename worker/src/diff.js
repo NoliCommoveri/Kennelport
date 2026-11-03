@@ -74,6 +74,7 @@ export function changes(live, draft) {
     ['Reviews', 'reviews', '/reviews', (r) => r.first_name],
     ['How it works', 'steps', '/how-it-works', (s) => s.heading],
     ['Extras', 'extras', '/extras', (x) => x.name],
+    ['Recommended products', 'products', '/recommended', (x) => x.name],
     ['Application form', 'questions', '/waitlist', (q) => q.label],
     ['Albums', 'albums', '/albums', (a) => a.title],
   ]) {

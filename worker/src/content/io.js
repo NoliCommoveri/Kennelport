@@ -6,7 +6,7 @@
 //     home: { hero: { enabled, ... } }, dogs: [{ ..., health: [...] }],
 //     litters: [{ ..., dam: '<dog slug>', puppies: [...] }], reviews: [...],
 //     steps: [...], expanders: { policies: [...], faq: [...], waitlist_help: [...] },
-//     extras: [...], payment: { application_fee: {...}, deposit: {...}, safe_notice: {...} },
+//     extras: [...], products: [...], payment: { application_fee: {...}, deposit: {...}, safe_notice: {...} },
 //     questions: [...], albums: [{ ..., litter: '<litter slug>', photos: [ids] }],
 //     embeds: [{ place: 'home' | 'about' | 'dog:<slug>' | 'litter:<slug>' | 'album:<slug>', provider, item, title, preview_photo_id }] }
 //
@@ -17,12 +17,12 @@
 // writes go in one batch, so an import lands whole or not at all.
 import {
   SITE_FIELDS, DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS,
-  STEP_FIELDS, EXPANDER_FIELDS, EXPANDER_PAGES, EXTRA_FIELDS, HOME_BLOCKS, PAGES, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS,
+  STEP_FIELDS, EXPANDER_FIELDS, EXPANDER_PAGES, EXTRA_FIELDS, PRODUCT_FIELDS, HOME_BADGES_MAX, brandImageOk, HOME_BLOCKS, PAGES, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS,
   QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue,
 } from './model.js';
 import { PROVIDERS } from '../embeds.js';
 
-const SECTIONS = ['site', 'pages', 'home', 'dogs', 'litters', 'reviews', 'steps', 'expanders', 'extras', 'payment', 'questions', 'albums', 'embeds'];
+const SECTIONS = ['site', 'pages', 'home', 'dogs', 'litters', 'reviews', 'steps', 'expanders', 'extras', 'products', 'payment', 'questions', 'albums', 'embeds'];
 const MAX_ITEMS = 200;
 
 const now = () => new Date().toISOString();
@@ -143,6 +143,16 @@ export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = ne
       if (extra.price_to !== null && extra.price_from !== null && extra.price_to < extra.price_from) throw new ContentError(`extras[${i}].price_to`, 'lower than price_from');
       return extra;
     });
+  }
+  if ('products' in doc) {
+    out.products = list(doc.products, 'products').map((x, i) => {
+      const product = cleanRecord(PRODUCT_FIELDS, x, `products[${i}]`);
+      photo(product.photo_id, `products[${i}].photo_id`);
+      if (product.image_url && !brandImageOk(product.image_url)) throw new ContentError(`products[${i}].image_url`, 'not from an approved brand address');
+      if (product.home_badge && !product.photo_id && !product.image_url) throw new ContentError(`products[${i}].home_badge`, 'a home page badge needs a photo_id or image_url');
+      return product;
+    });
+    if (out.products.filter((x) => x.home_badge).length > HOME_BADGES_MAX) throw new ContentError('products', `at most ${HOME_BADGES_MAX} with home_badge`);
   }
   if ('payment' in doc) {
     if (!doc.payment || typeof doc.payment !== 'object' || Array.isArray(doc.payment)) throw new ContentError('payment', 'must be an object');
@@ -330,6 +340,10 @@ export async function importContent(env, siteId, doc) {
       id: uuid(), site_id: siteId, ...x, checklist: x.checklist ? JSON.stringify(x.checklist) : null, featured: x.featured ?? 0, sort: i,
     })));
   }
+  if (clean.products) {
+    s.push(db.prepare('DELETE FROM products WHERE site_id = ?').bind(siteId));
+    clean.products.forEach((x, i) => s.push(insert(db, 'products', { id: uuid(), site_id: siteId, ...x, home_badge: x.home_badge ?? 0, sort: i })));
+  }
 
   s.push(db.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(t, siteId));
   await db.batch(s);
@@ -384,6 +398,8 @@ export async function exportContent(env, siteId) {
     if (out.checklist) out.checklist = JSON.parse(out.checklist);
     return out;
   });
+  doc.products = (await all('SELECT * FROM products WHERE site_id = ? ORDER BY sort', siteId))
+    .map((x) => bools(pick(strip(x, SYSTEM), Object.keys(PRODUCT_FIELDS)), ['home_badge']));
   doc.questions = (await all("SELECT * FROM form_fields WHERE site_id = ? AND form = 'application' ORDER BY sort", siteId)).map((q) => {
     const out = bools(pick(strip(q, SYSTEM), Object.keys(QUESTION_FIELDS)), ['required']);
     if (out.options) out.options = JSON.parse(out.options);

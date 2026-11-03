@@ -12,6 +12,7 @@
 // - Unlink stops every device and turns everything that came from KennelOS into
 //   ordinary KennelPort content, exactly as it stands in the draft.
 import { hmacHex, sha256Hex, randomHex } from '../lib/crypto.js';
+import { SECTIONS } from './bundle.js';
 import { ApiError } from '../lib/http.js';
 
 export const CODE_TTL_MS = 15 * 60 * 1000;
@@ -91,7 +92,7 @@ export async function redeemCode(env, request, body) {
   if (!row || row.used_at || row.expires_at <= new Date().toISOString()) {
     throw new ApiError(400, 'invalid_code', { message: 'That code isn\'t right or has expired. In KennelPort Site Manager, open Link KennelOS for a new one.' });
   }
-  const site = await env.DB.prepare("SELECT id, subdomain, kennel_name, status FROM sites WHERE id = ? AND status != 'closed'").bind(row.site_id).first();
+  const site = await env.DB.prepare("SELECT id, subdomain, kennel_name, status, use_kennelos_prices FROM sites WHERE id = ? AND status != 'closed'").bind(row.site_id).first();
   if (!site) throw new ApiError(400, 'invalid_code', { message: 'That website is no longer on KennelPort.' });
   const other = await env.DB.prepare('SELECT kennelos_kennel_id FROM links WHERE site_id = ? AND revoked_at IS NULL AND kennelos_kennel_id != ? LIMIT 1').bind(site.id, kennel).first();
   if (other) throw new ApiError(409, 'other_kennel', { message: 'This website is already linked to another of your kennels. Each kennel links to its own website.' });
@@ -117,6 +118,11 @@ export async function siteFacts(env, site) {
     website: `${base}/`,
     extras_info_url: extras === 0 ? null : `${base}/extras`,
     waitlist_page: waitlist !== 0,
+    // Use my KennelOS prices (decision 6): KennelOS sends its prices, which it keeps
+    // private, only while this is on.
+    kennelos_prices: Boolean(site.use_kennelos_prices),
+    // The optional bundle sections this Worker takes (bundle.js SECTIONS).
+    sections: SECTIONS,
   };
 }
 
@@ -168,6 +174,7 @@ export async function unlinkSite(env, siteId) {
     db.prepare("UPDATE puppies SET status = CASE WHEN hidden_by_kennelos = 1 THEN 'hidden' ELSE status END, hidden_by_kennelos = 0, source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
     db.prepare("UPDATE health_results SET source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
     db.prepare("UPDATE extras SET source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
+    db.prepare("UPDATE products SET source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
     db.prepare("UPDATE steps SET source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
     db.prepare("UPDATE payment_info SET source = 'kennelport' WHERE site_id = ?").bind(siteId),
     db.prepare('UPDATE sites SET use_kennelos_prices = 0, draft_changed_at = ? WHERE id = ?').bind(t, siteId),

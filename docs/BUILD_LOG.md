@@ -912,3 +912,37 @@ KennelOS repo and isn't started. 166 tests with custom domains.
 - Released together with the photo-shape changes and custom domains as site template 10
   (fingerprint updated).
 
+
+## 2026-11-03: Phase 4, KennelOS's side, and what KennelPort needed for it
+
+- KennelOS's side of the link is built (its repo: the four marks, `siteExport.js`,
+  `kennelportApi.js`, Connect website and Update website, the prompts; its End-State guide
+  §35). A bundle KennelOS builds was run through `cleanBundle` here and accepted.
+- **The prices switch in each answer:** `siteFacts` now carries `kennelos_prices` (Use my
+  KennelOS prices), so KennelOS sends its prices, which it keeps private, only while the
+  switch is on. Tested.
+- **Staging answers `/v1/` on its own host:** with `ALLOW_HOST_OVERRIDE`, a `/v1/` path is
+  the link API whatever the host cookie says, since KennelOS calls with no credentials and
+  so can't send it. Production is unchanged. Tested.
+- **`KENNELOS_APP_ORIGINS` set:** `https://pro.kennelos.app` in production; staging adds
+  `http://localhost:8000` and `http://127.0.0.1:8000` for KennelOS's dev server.
+- No manage app or site template files changed: no version bump.
+- **Custom domains and KennelOS's application form:** KennelOS's cloud now takes a
+  breeder's own domain from its `WEBSITE_ORIGINS` setting, kept by hand like the domains
+  here (fewer than a dozen breeders expected). Setup's Custom domains section has the two
+  extra steps (C); `https://www.akbostonterriers.com` is listed.
+
+## 2026-11-03: Recommended products merged in, and fed from KennelOS
+
+- Merged the Recommended products branch (`ccr-ea225d60-8hfvna`) into the phase 4 branch.
+- **Site template 11** (owner's yes): the products page's `site.css`; fingerprint updated.
+- **Products from KennelOS:** the bundle takes an optional `products` section, each
+  `{ id, name, link_url, code, code_note }`, from the KennelOS Accounts she marks Show on
+  website. Matched by KennelOS id, else a hand-made product of the same name is taken over
+  with its picture. Name, link, code and code note are KennelOS's (read-only while linked);
+  picture, Home badge, button wording, group, description and order stay hers. One no longer
+  sent is removed; its picture stays in her photos. Unlink makes them hers. A bundle without
+  the section leaves products alone.
+- Migration 0016 (never applied: it isn't on `main`) gains `products.kennelos_id`.
+- Each answer lists the optional sections this Worker takes (`site.sections`), so KennelOS
+  sends `products` only where it's understood. Tests added.
