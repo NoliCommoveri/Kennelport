@@ -1,0 +1,532 @@
+// What a bundle does to the site (plan 5.3). KennelOS's Update website posts one
+// to api.kennelport.com/v1/bundle; it lands in the draft, all of it or none, and
+// the answer is a summary and the addresses of the pages already published.
+//
+// The bundle (format 1). Every key is named here; any other is refused, so nothing
+// KennelOS adds reaches the site until this list knows it (5.1's allow-list, from
+// this side). Ids are KennelOS's own. Lists are capped (MAX).
+//
+//   { format: 1, bundle_id, kennel_id, waitlist_public_id?,
+//     dogs: [{ id, call_name, registered_name, sex, date_of_birth, color,
+//              status: puppy | active_breeding | for_sale | retired_breeding | deceased,
+//              died_on, titles: [..], health: [{ id, test, result, normal, date, verify_url }] }],
+//     litters: [{ id, pairing_id, name, dam_id, sire_id, dam_name, sire_name,
+//                 expected_on, born_on, ready_on, deposits_on, prices: { price_female, … },
+//                 puppies: [{ id, name, collar, sex, color, registration,
+//                             status: available | reserved | placed | staying | undecided | hidden }] }],
+//     pairings: [{ id, dam_id, sire_id, dam_name, sire_name, planned_on, expected_on }],
+//     heats: [{ id, dam_id, dam_name, month }],
+//     extras?: [{ id, name, group, description, price_from, price_to }],
+//     steps?: [{ id, heading, body }],
+//     payment?: { application_fee?: {…}, deposit?: {…} } }
+//
+// Only records she marked Show on website are in it (dogs, litters, pairings; a
+// heat only for a dam with heats_online), with the statuses she set: KennelOS maps
+// a puppy's disposition with isPupAvailable, and does the heat-to-pairing rules,
+// so the site works nothing out (decision 30).
+//
+// Records are matched by KennelOS id, only within one table: a puppy and a dog may
+// share one, since a KennelOS puppy is a Dog. A litter's kind (litter, pairing,
+// heat) is part of its match, and a litter that names its pairing takes over the
+// website litter made from that pairing, with its photos, wording and address.
+import { ApiError } from '../lib/http.js';
+import { cleanValue, ContentError, slugify, PAYMENT_FIELDS, LITTER_PRICE_FIELDS } from '../content/model.js';
+import { PUBLIC_ID } from '../feed.js';
+import { loadSnapshot } from '../publish.js';
+import { siteAddress, siteFacts } from './link.js';
+import { litterClockStatements } from './clock.js';
+
+export const BUNDLE_FORMAT = 1;
+export const MAX_BUNDLE_BYTES = 1024 * 1024;
+export const MAX = { dogs: 200, litters: 100, puppies: 30, pairings: 50, heats: 50, health: 60, extras: 100, steps: 20, titles: 20 };
+
+// ---------- checking ----------
+
+const S = (max, req = false) => ({ type: 'text', max, required: req });
+const ML = (max) => ({ type: 'text', max, multiline: true });
+const ID = { type: 'text', max: 80, required: true };
+const REF = { type: 'text', max: 80 };
+const DATE = { type: 'date' };
+const INT = { type: 'int', min: 0, max: 100000 };
+const ENUM = (values, req = false) => ({ type: 'enum', values, required: req });
+const SEX = ENUM(['female', 'male'], true);
+
+const SHAPES = {
+  dog: { id: ID, call_name: S(40, true), registered_name: S(120), sex: SEX, date_of_birth: DATE, color: S(40),
+    status: ENUM(['puppy', 'active_breeding', 'for_sale', 'retired_breeding', 'deceased'], true), died_on: DATE,
+    titles: { type: 'list', max: MAX.titles, itemMax: 30 }, health: { list: 'health', max: MAX.health } },
+  health: { id: ID, test: S(60, true), result: S(60, true), normal: { type: 'bool' }, date: DATE, verify_url: { type: 'url' } },
+  litter: { id: ID, pairing_id: REF, name: S(80), dam_id: REF, sire_id: REF, dam_name: S(60), sire_name: S(60),
+    expected_on: DATE, born_on: DATE, ready_on: DATE, deposits_on: DATE, prices: { object: 'prices' }, puppies: { list: 'puppy', max: MAX.puppies } },
+  prices: Object.fromEntries(LITTER_PRICE_FIELDS.map((k) => [k, INT])),
+  puppy: { id: ID, name: S(40, true), collar: S(30), sex: SEX, color: S(40), registration: ENUM(['limited', 'full']),
+    status: ENUM(['available', 'reserved', 'placed', 'staying', 'undecided', 'hidden'], true) },
+  pairing: { id: ID, dam_id: REF, sire_id: REF, dam_name: S(60), sire_name: S(60), planned_on: DATE, expected_on: DATE },
+  heat: { id: ID, dam_id: REF, dam_name: S(60), month: { type: 'month', required: true } },
+  extra: { id: ID, name: S(80, true), group: S(40), description: ML(600), price_from: INT, price_to: INT },
+  step: { id: ID, heading: S(80, true), body: ML(400) },
+  pay: Object.fromEntries(Object.entries(PAYMENT_FIELDS).filter(([k]) => k !== 'show_on_site')),
+};
+
+const bad = (path, message) => new ApiError(400, 'bad_bundle', { path, message: `${path}: ${message}` });
+
+function cleanShape(shape, obj, path) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) throw bad(path, 'must be an object');
+  const fields = SHAPES[shape];
+  for (const k of Object.keys(obj)) if (!(k in fields)) throw bad(`${path}.${k}`, 'not a field KennelPort takes');
+  const out = {};
+  for (const [k, f] of Object.entries(fields)) {
+    if (f.list) out[k] = cleanList(f.list, obj[k] ?? [], `${path}.${k}`, f.max);
+    else if (f.object) out[k] = obj[k] == null ? null : cleanShape(f.object, obj[k], `${path}.${k}`);
+    else {
+      try { out[k] = cleanValue(f, obj[k], `${path}.${k}`) ?? (f.type === 'list' ? [] : null); } catch (err) {
+        if (err instanceof ContentError) throw bad(`${path}.${k}`, err.message.replace(/^[^:]*: /, ''));
+        throw err;
+      }
+    }
+  }
+  return out;
+}
+
+function cleanList(shape, v, path, max) {
+  if (!Array.isArray(v)) throw bad(path, 'must be a list');
+  if (v.length > max) throw bad(path, `at most ${max}`);
+  const rows = v.map((x, i) => cleanShape(shape, x, `${path}[${i}]`));
+  const seen = new Set();
+  for (const [i, r] of rows.entries()) {
+    if (seen.has(r.id)) throw bad(`${path}[${i}].id`, `"${r.id}" is sent twice`);
+    seen.add(r.id);
+  }
+  return rows;
+}
+
+const TOP = ['format', 'bundle_id', 'kennel_id', 'sent_at', 'waitlist_public_id', 'dogs', 'litters', 'pairings', 'heats', 'extras', 'steps', 'payment'];
+
+export function cleanBundle(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) throw bad('bundle', 'must be an object');
+  if (body.format !== BUNDLE_FORMAT) {
+    throw new ApiError(400, 'unknown_format', { message: 'This website can\'t read what KennelOS sent. Let KennelOS update itself (close and reopen it), then press Update website again.' });
+  }
+  for (const k of Object.keys(body)) if (!TOP.includes(k)) throw bad(k, 'not a section KennelPort takes');
+  const id = String(body.bundle_id ?? '');
+  if (!/^[\w-]{8,80}$/.test(id)) throw bad('bundle_id', 'missing');
+  const out = {
+    bundle_id: id,
+    kennel_id: String(body.kennel_id ?? ''),
+    waitlist_public_id: body.waitlist_public_id == null ? null : String(body.waitlist_public_id),
+    dogs: cleanList('dog', body.dogs ?? [], 'dogs', MAX.dogs),
+    litters: cleanList('litter', body.litters ?? [], 'litters', MAX.litters),
+    pairings: cleanList('pairing', body.pairings ?? [], 'pairings', MAX.pairings),
+    heats: cleanList('heat', body.heats ?? [], 'heats', MAX.heats),
+    extras: 'extras' in body ? cleanList('extra', body.extras, 'extras', MAX.extras) : null,
+    steps: 'steps' in body ? cleanList('step', body.steps, 'steps', MAX.steps) : null,
+    payment: null,
+  };
+  if (out.waitlist_public_id !== null && !PUBLIC_ID.test(out.waitlist_public_id)) throw bad('waitlist_public_id', 'not a KennelOS kennel id');
+  if ('payment' in body && body.payment != null) {
+    if (typeof body.payment !== 'object' || Array.isArray(body.payment)) throw bad('payment', 'must be an object');
+    out.payment = {};
+    for (const [k, v] of Object.entries(body.payment)) {
+      if (!['application_fee', 'deposit'].includes(k)) throw bad(`payment.${k}`, 'not a kind of payment');
+      if (v != null) out.payment[k] = cleanShape('pay', v, `payment.${k}`);
+    }
+  }
+  for (const x of out.extras ?? []) if (x.price_from != null && x.price_to != null && x.price_to < x.price_from) throw bad('extras', `${x.name}: highest price below the lowest`);
+  return out;
+}
+
+// ---------- what KennelOS owns (plan 5.3, "Who owns which field") ----------
+// Read-only in the manage app while linked, and replaced by each bundle. Stored
+// fields are KennelOS's blanks included; derived ones (titles, health results,
+// upcoming items) only overwrite when they have something.
+export const OWNED = {
+  dogs: ['call_name', 'registered_name', 'sex', 'date_of_birth', 'color', 'status', 'upcoming', 'for_sale', 'died_on', 'titles'],
+  litters: ['stage', 'dam_id', 'sire_id', 'dam_name', 'sire_name', 'born_on', 'ready_on', 'deposits_on', 'expected_label'],
+  puppies: ['name', 'collar', 'sex', 'color', 'status', 'registration'],
+  health: ['test', 'result', 'normal', 'date', 'verify_url'],
+  extras: ['name', 'grp', 'description'],
+  steps: ['heading', 'body'],
+};
+export const OWNED_PRICES = { litters: LITTER_PRICE_FIELDS, extras: ['price_from', 'price_to'] };
+
+const DOG_STATUS = {
+  puppy: { status: 'active', upcoming: 1, for_sale: 0 },
+  active_breeding: { status: 'active', upcoming: 0, for_sale: 0 },
+  for_sale: { status: 'active', upcoming: 0, for_sale: 1 },
+  retired_breeding: { status: 'retired', upcoming: 0, for_sale: 0 },
+  deceased: { status: 'remembered', upcoming: 0, for_sale: 0 },
+};
+const PUPPY_STATUS = { available: 'available', reserved: 'reserved', placed: 'placed', staying: 'staying', undecided: 'coming_soon', hidden: 'hidden' };
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const monthOf = (ymd) => (ymd ? `${MONTHS[Number(ymd.slice(5, 7)) - 1]} ${ymd.slice(0, 4)}` : null);
+
+// ---------- applying ----------
+
+const lower = (s) => String(s ?? '').trim().toLowerCase();
+const same = (a, b) => (a ?? null) === (b ?? null) || String(a ?? '') === String(b ?? '');
+
+// Everything a bundle (or a confirmed match) writes, built as statements for one
+// batch, against what the site holds now.
+export class Writer {
+  constructor(env, site, state) {
+    this.env = env;
+    this.db = env.DB;
+    this.site = site;
+    this.siteId = site.id;
+    this.t = new Date().toISOString();
+    this.s = [];
+    this.st = state;
+    this.prices = Boolean(site.use_kennelos_prices);
+    this.counts = { updated: 0, created: 0, needs_photos: 0, off: 0, back: 0, waiting: 0 };
+    this.dogSlugs = new Set(state.dogs.map((d) => d.slug));
+    this.litterSlugs = new Set(state.litters.map((l) => l.slug));
+    this.puppySlugs = new Map();
+    for (const p of state.puppies) {
+      if (!this.puppySlugs.has(p.litter_id)) this.puppySlugs.set(p.litter_id, new Set());
+      this.puppySlugs.get(p.litter_id).add(p.slug);
+    }
+    // KennelOS dog id → website dog id, for parents.
+    this.dogByKos = new Map(state.dogs.filter((d) => d.kennelos_id).map((d) => [d.kennelos_id, d.id]));
+    this.sort = { dogs: Math.max(-1, ...state.dogs.map((d) => d.sort)), litters: Math.max(-1, ...state.litters.map((l) => l.sort)) };
+  }
+
+  slug(taken, wanted) {
+    const base = slugify(wanted) || 'item';
+    for (let n = 1; n < 1000; n++) {
+      const s = n === 1 ? base : `${base.slice(0, 56)}-${n}`;
+      if (!taken.has(s)) { taken.add(s); return s; }
+    }
+    throw new ApiError(400, 'bad_bundle', { message: 'Could not find a free web address.' });
+  }
+
+  insert(table, row) {
+    const cols = Object.keys(row);
+    this.s.push(this.db.prepare(`INSERT INTO ${table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`).bind(...cols.map((c) => row[c])));
+  }
+
+  // Write only what differs. Returns whether anything did.
+  update(table, current, values) {
+    const cols = Object.keys(values).filter((c) => !same(current[c], values[c]));
+    if (!cols.length) return false;
+    const stamp = ['dogs', 'litters', 'puppies'].includes(table) ? ', updated_at = ?' : '';
+    this.s.push(this.db.prepare(`UPDATE ${table} SET ${cols.map((c) => `${c} = ?`).join(', ')}${stamp} WHERE id = ? AND site_id = ?`)
+      .bind(...cols.map((c) => values[c]), ...(stamp ? [this.t] : []), current.id, this.siteId));
+    return true;
+  }
+
+  // ----- dogs -----
+  dogValues(bd) {
+    const v = {
+      call_name: bd.call_name, registered_name: bd.registered_name, sex: bd.sex, date_of_birth: bd.date_of_birth, color: bd.color,
+      ...DOG_STATUS[bd.status], died_on: bd.status === 'deceased' ? bd.died_on : null,
+    };
+    if (bd.titles.length) v.titles = bd.titles.join(' ').slice(0, 120);
+    return v;
+  }
+
+  createDog(bd, extra = {}) {
+    const id = crypto.randomUUID();
+    this.sort.dogs += 1;
+    this.insert('dogs', {
+      id, site_id: this.siteId, slug: this.slug(this.dogSlugs, bd.call_name), ...this.dogValues(bd), health_display: 'normal_only', show_on_site: 1,
+      sort: this.sort.dogs, source: 'kennelos', kennelos_id: bd.id, hidden_by_kennelos: 0, created_at: this.t, updated_at: this.t, ...extra,
+    });
+    this.dogByKos.set(bd.id, id);
+    this.health(id, 'normal_only', bd.health);
+    return id;
+  }
+
+  // Health results as data (plan 3.7): her own (typed) results stay; KennelOS's
+  // are replaced with what it sent, when it sent any. A new one's Show on site is
+  // set once from the dog's Health results choice, and is hers from then on.
+  health(dogId, display, list, existing = []) {
+    if (!list.length) return;
+    const mine = existing.filter((h) => h.dog_id === dogId && h.source === 'kennelos');
+    const byKos = new Map(mine.map((h) => [h.kennelos_id, h]));
+    list.forEach((h, i) => {
+      const values = { test: h.test, result: h.result, normal: h.normal ?? 1, date: h.date, verify_url: h.verify_url, sort: 100 + i };
+      const cur = byKos.get(h.id);
+      if (cur) { this.update('health_results', cur, values); return; }
+      const show = display === 'all' ? 1 : display === 'normal_only' ? values.normal : 0;
+      this.insert('health_results', { id: crypto.randomUUID(), site_id: this.siteId, dog_id: dogId, ...values, show, source: 'kennelos', kennelos_id: h.id });
+    });
+    const sent = new Set(list.map((h) => h.id));
+    for (const h of mine) if (!sent.has(h.kennelos_id)) this.s.push(this.db.prepare('DELETE FROM health_results WHERE id = ?').bind(h.id));
+  }
+
+  updateDog(cur, bd, keep = []) {
+    const values = this.dogValues(bd);
+    for (const k of keep) delete values[k];
+    values.hidden_by_kennelos = 0;
+    if (cur.hidden_by_kennelos) this.counts.back++;
+    if (this.update('dogs', cur, values)) this.counts.updated++;
+    this.health(cur.id, cur.health_display, bd.health, this.st.health);
+  }
+
+  // ----- litters -----
+  parent(kosId) { return kosId ? this.dogByKos.get(kosId) ?? null : null; }
+
+  litterValues(e, kind) {
+    const planned = kind !== 'litter' || !e.born_on;
+    const v = {
+      dam_id: this.parent(e.dam_id), sire_id: this.parent(e.sire_id), dam_name: e.dam_name ?? null, sire_name: e.sire_name ?? null,
+      stage: planned ? 'planned' : 'current',
+      born_on: kind === 'litter' ? e.born_on : null, ready_on: kind === 'litter' ? e.ready_on : null, deposits_on: kind === 'litter' ? e.deposits_on : null,
+      expected_label: kind === 'heat' ? monthOf(`${e.month}-01`) : planned ? monthOf(e.expected_on ?? e.planned_on ?? null) : null,
+    };
+    if (this.prices && kind === 'litter') for (const k of LITTER_PRICE_FIELDS) v[k] = e.prices?.[k] ?? null;
+    return v;
+  }
+
+  litterName(e, kind) {
+    if (e.name) return e.name;
+    const dam = e.dam_name; const sire = e.sire_name;
+    if (kind === 'heat') return dam ? `${dam}'s next litter` : 'Our next litter';
+    return dam && sire ? `${dam} × ${sire}` : dam ? `${dam}'s litter` : 'Upcoming litter';
+  }
+
+  createLitter(e, kind) {
+    const id = crypto.randomUUID();
+    const name = this.litterName(e, kind);
+    this.sort.litters += 1;
+    this.insert('litters', {
+      id, site_id: this.siteId, slug: this.slug(this.litterSlugs, name), name, ...this.litterValues(e, kind),
+      plan_label: kind === 'heat' ? 'Upcoming heat' : kind === 'pairing' ? 'Planned pairing' : null,
+      show_on_site: 1, show_prices: 0, show_placed: 1, sort: this.sort.litters, source: 'kennelos', kennelos_id: e.id, kennelos_kind: kind,
+      hidden_by_kennelos: 0, created_at: this.t, updated_at: this.t,
+    });
+    this.puppySlugs.set(id, new Set());
+    if (kind === 'litter') this.puppies(id, e.puppies, []);
+    return id;
+  }
+
+  updateLitter(cur, e, kind, keep = []) {
+    const values = this.litterValues(e, kind);
+    for (const k of keep) delete values[k];
+    values.hidden_by_kennelos = 0;
+    values.kennelos_kind = kind;
+    values.kennelos_id = e.id;
+    if (cur.hidden_by_kennelos) this.counts.back++;
+    if (this.update('litters', cur, values)) this.counts.updated++;
+    if (kind === 'litter') this.puppies(cur.id, e.puppies, this.st.puppies.filter((p) => p.litter_id === cur.id));
+  }
+
+  // A litter's puppies come with it: matched by KennelOS id, else (one not yet
+  // linked) by name within the litter; the rest are new. Ones KennelOS no longer
+  // sends leave the site.
+  puppies(litterId, list, existing) {
+    const byKos = new Map(this.st.puppies.filter((p) => p.kennelos_id).map((p) => [p.kennelos_id, p]));
+    const free = existing.filter((p) => !p.kennelos_id);
+    const taken = this.puppySlugs.get(litterId) ?? new Set();
+    this.puppySlugs.set(litterId, taken);
+    list.forEach((bp, i) => {
+      const values = { name: bp.name, collar: bp.collar, sex: bp.sex, color: bp.color, status: PUPPY_STATUS[bp.status], registration: bp.registration };
+      let cur = byKos.get(bp.id);
+      if (cur && cur.litter_id !== litterId) cur = null;
+      if (!cur) {
+        const j = free.findIndex((p) => lower(p.name) === lower(bp.name));
+        if (j >= 0) [cur] = free.splice(j, 1);
+      }
+      if (cur) {
+        this.update('puppies', cur, { ...values, source: 'kennelos', kennelos_id: bp.id, hidden_by_kennelos: 0 });
+        return;
+      }
+      this.insert('puppies', {
+        id: crypto.randomUUID(), site_id: this.siteId, litter_id: litterId, slug: this.slug(taken, bp.name), ...values, sort: existing.length + i,
+        source: 'kennelos', kennelos_id: bp.id, hidden_by_kennelos: 0, created_at: this.t, updated_at: this.t,
+      });
+    });
+    const sent = new Set(list.map((p) => p.id));
+    for (const p of existing) {
+      if (p.source === 'kennelos' && p.kennelos_id && !sent.has(p.kennelos_id) && !p.hidden_by_kennelos) {
+        this.s.push(this.db.prepare('UPDATE puppies SET hidden_by_kennelos = 1, updated_at = ? WHERE id = ?').bind(this.t, p.id));
+      }
+    }
+  }
+}
+
+// The site's records, as a bundle needs them.
+export async function siteState(env, siteId) {
+  const all = async (sql) => (await env.DB.prepare(sql).bind(siteId).all()).results;
+  return {
+    dogs: await all('SELECT * FROM dogs WHERE site_id = ?'),
+    litters: await all('SELECT * FROM litters WHERE site_id = ?'),
+    puppies: await all('SELECT * FROM puppies WHERE site_id = ?'),
+    health: await all('SELECT * FROM health_results WHERE site_id = ?'),
+    extras: await all('SELECT * FROM extras WHERE site_id = ?'),
+    steps: await all("SELECT * FROM steps WHERE site_id = ? AND page = 'how_it_works'"),
+    declines: await all('SELECT * FROM link_declines WHERE site_id = ?'),
+  };
+}
+
+export async function applyBundle(env, device, body) {
+  const clean = cleanBundle(body);
+  if (clean.kennel_id !== device.kennelos_kennel_id) {
+    throw new ApiError(409, 'other_kennel', { message: 'This website is linked to another of your kennels. Each kennel links to its own website.' });
+  }
+  const site = await env.DB.prepare('SELECT * FROM sites WHERE id = ?').bind(device.site_id).first();
+  // A retry over a bad connection: answered with its first summary, not applied twice.
+  if (device.last_bundle_id === clean.bundle_id) {
+    return { summary: JSON.parse(device.last_bundle_summary ?? '{}'), addresses: await publishedAddresses(env, site), site: await siteFacts(env, site), repeat: true };
+  }
+
+  const st = await siteState(env, site.id);
+  const w = new Writer(env, site, st);
+  const declined = (kind, kos, kp) => st.declines.some((d) => d.kind === kind && d.kennelos_id === kos && d.kennelport_id === kp);
+  const pending = [];
+  const claimed = new Set();
+  // A KennelOS record with no match, whose name matches a website one not yet
+  // linked: wait for her to confirm or decline the pair (plan 5.2 step 4).
+  const candidate = (kind, rows, name, kos) => rows.find((r) => !r.kennelos_id && !claimed.has(r.id) && lower(r[kind === 'dogs' ? 'call_name' : 'name']) === lower(name) && !declined(kind, kos, r.id));
+
+  // Dogs.
+  const sentDogs = new Set(clean.dogs.map((d) => d.id));
+  for (const bd of clean.dogs) {
+    const cur = st.dogs.find((d) => d.kennelos_id === bd.id);
+    if (cur) { w.updateDog(cur, bd); continue; }
+    // The hand-over (5.3): a kept puppy becomes a dog, taking its photos with it at
+    // once, so the litter's deletion can't take the only pictures of her.
+    const pup = st.puppies.find((p) => p.kennelos_id === bd.id);
+    if (pup) {
+      const id = w.createDog(bd, { photo_id: pup.photo_id ?? null, bio: pup.bio ?? null });
+      w.s.push(env.DB.prepare("INSERT OR IGNORE INTO photo_tags (site_id, photo_id, subject) SELECT site_id, photo_id, ? FROM photo_tags WHERE site_id = ? AND subject = ?").bind(`dog:${id}`, site.id, `puppy:${pup.id}`));
+      w.counts.created++;
+      if (!pup.photo_id) w.counts.needs_photos++;
+      continue;
+    }
+    const match = candidate('dogs', st.dogs, bd.call_name, bd.id);
+    if (match) { claimed.add(match.id); pending.push({ kind: 'dogs', kennelos_id: bd.id, kennelport_id: match.id, data: bd }); continue; }
+    w.createDog(bd);
+    w.counts.created++;
+    w.counts.needs_photos++;
+  }
+  for (const d of st.dogs) {
+    if (d.source === 'kennelos' && d.kennelos_id && !sentDogs.has(d.kennelos_id) && !d.hidden_by_kennelos) {
+      w.s.push(env.DB.prepare('UPDATE dogs SET hidden_by_kennelos = 1, updated_at = ? WHERE id = ?').bind(w.t, d.id));
+      w.counts.off++;
+    }
+  }
+
+  // Litters, pairings and heats: all website litters, each matched within its kind.
+  const entries = [
+    ...clean.litters.map((e) => ['litter', e]),
+    ...clean.pairings.map((e) => ['pairing', e]),
+    ...clean.heats.map((e) => ['heat', e]),
+  ];
+  const kept = new Set();
+  for (const [kind, e] of entries) {
+    let cur = st.litters.find((l) => l.kennelos_kind === kind && l.kennelos_id === e.id);
+    // Pairing to litter: the website litter made from the pairing moves onto the
+    // litter's id, keeping its photos, wording and address.
+    if (!cur && kind === 'litter' && e.pairing_id) cur = st.litters.find((l) => l.kennelos_kind === 'pairing' && l.kennelos_id === e.pairing_id && !kept.has(l.id));
+    if (cur) { kept.add(cur.id); w.updateLitter(cur, e, kind); continue; }
+    const name = w.litterName(e, kind);
+    const match = candidate('litters', st.litters, name, `${kind}:${e.id}`);
+    if (match) { claimed.add(match.id); pending.push({ kind: 'litters', kennelos_id: `${kind}:${e.id}`, kennelport_id: match.id, data: { ...e, kind } }); continue; }
+    w.createLitter(e, kind);
+    w.counts.created++;
+    if (kind === 'litter') w.counts.needs_photos++;
+  }
+  for (const l of st.litters) {
+    if (l.source === 'kennelos' && l.kennelos_id && !kept.has(l.id) && !l.hidden_by_kennelos) {
+      w.s.push(env.DB.prepare('UPDATE litters SET hidden_by_kennelos = 1, updated_at = ? WHERE id = ?').bind(w.t, l.id));
+      w.counts.off++;
+    }
+  }
+
+  // Extras (3.4): names, groups and descriptions; prices with Use my KennelOS prices.
+  if (clean.extras) {
+    const byKos = new Map(st.extras.filter((x) => x.kennelos_id).map((x) => [x.kennelos_id, x]));
+    let sort = Math.max(-1, ...st.extras.map((x) => x.sort));
+    for (const x of clean.extras) {
+      const values = { name: x.name, grp: x.group, description: x.description, ...(w.prices ? { price_from: x.price_from, price_to: x.price_to } : {}) };
+      const cur = byKos.get(x.id);
+      if (cur) { if (w.update('extras', cur, values)) w.counts.updated++; continue; }
+      w.insert('extras', { id: crypto.randomUUID(), site_id: site.id, kind: 'item', ...values, featured: 0, sort: ++sort, source: 'kennelos', kennelos_id: x.id });
+      w.counts.created++;
+    }
+    const sent = new Set(clean.extras.map((x) => x.id));
+    for (const x of st.extras) if (x.source === 'kennelos' && !sent.has(x.kennelos_id)) w.s.push(env.DB.prepare('DELETE FROM extras WHERE id = ?').bind(x.id));
+  }
+
+  // The waitlist steps behind How it works (3.11): only when KennelOS sends some.
+  if (clean.steps?.length) {
+    const byKos = new Map(st.steps.filter((x) => x.kennelos_id).map((x) => [x.kennelos_id, x]));
+    clean.steps.forEach((x, i) => {
+      const cur = byKos.get(x.id);
+      const values = { heading: x.heading, body: x.body, sort: i };
+      if (cur) { w.update('steps', cur, values); return; }
+      w.insert('steps', { id: crypto.randomUUID(), site_id: site.id, page: 'how_it_works', ...values, pay_link: 0, source: 'kennelos', kennelos_id: x.id });
+    });
+    const sent = new Set(clean.steps.map((x) => x.id));
+    for (const x of st.steps) if (x.source === 'kennelos' && !sent.has(x.kennelos_id)) w.s.push(env.DB.prepare('DELETE FROM steps WHERE id = ?').bind(x.id));
+    // Her own steps follow KennelOS's.
+    st.steps.filter((x) => x.source !== 'kennelos').forEach((x, i) => w.s.push(env.DB.prepare('UPDATE steps SET sort = ? WHERE id = ?').bind(clean.steps.length + i, x.id)));
+  }
+
+  // How to pay (3.9): filled from her waitlist settings; whether it shows is hers.
+  for (const [kind, c] of Object.entries(clean.payment ?? {})) {
+    const content = Object.fromEntries(Object.entries(c).filter(([, v]) => v !== null && !(Array.isArray(v) && !v.length)));
+    if (!Object.keys(content).length) continue;
+    w.s.push(env.DB.prepare(`INSERT INTO payment_info (site_id, kind, show_on_site, content, source) VALUES (?, ?, 0, ?, 'kennelos')
+      ON CONFLICT (site_id, kind) DO UPDATE SET content = excluded.content, source = 'kennelos'`).bind(site.id, kind, JSON.stringify(content)));
+  }
+
+  // Her public list (3.8): Connect website sets the feed up, so she never pastes it.
+  if (clean.waitlist_public_id && clean.waitlist_public_id !== site.kennelos_public_id) {
+    w.s.push(env.DB.prepare('UPDATE sites SET kennelos_public_id = ? WHERE id = ?').bind(clean.waitlist_public_id, site.id));
+    w.s.push(env.DB.prepare('DELETE FROM feed_cache WHERE site_id = ?').bind(site.id));
+  }
+
+  // Waiting matches are rebuilt from each bundle.
+  w.s.push(env.DB.prepare('DELETE FROM link_pending WHERE site_id = ?').bind(site.id));
+  for (const p of pending) {
+    w.s.push(env.DB.prepare('INSERT INTO link_pending (site_id, kind, kennelos_id, kennelport_id, data, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(site.id, p.kind, p.kennelos_id, p.kennelport_id, JSON.stringify(p.data), w.t));
+  }
+  w.counts.waiting = pending.length;
+
+  const summary = { ...w.counts, text: summaryText(w.counts), at: w.t };
+  w.s.push(...litterClockStatements(env, site.id, w.t));
+  w.s.push(env.DB.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(w.t, site.id));
+  w.s.push(env.DB.prepare('UPDATE links SET last_bundle_id = ?, last_bundle_at = ?, last_bundle_summary = ? WHERE id = ?').bind(clean.bundle_id, w.t, JSON.stringify(summary), device.id));
+  w.s.push(env.DB.prepare('INSERT INTO notices (id, site_id, kind, message, created_at) VALUES (?, ?, ?, ?, ?)').bind(crypto.randomUUID(), site.id, 'bundle', summary.text, w.t));
+  await env.DB.batch(w.s);
+  return { summary, addresses: await publishedAddresses(env, site), site: await siteFacts(env, site) };
+}
+
+export function summaryText(c) {
+  const parts = [];
+  if (c.updated) parts.push(`${c.updated} updated`);
+  if (c.created) parts.push(`${c.created} new${c.needs_photos ? ` (${c.needs_photos === c.created ? '' : `${c.needs_photos} `}needs photos)` : ''}`);
+  if (c.back) parts.push(`${c.back} back on the site`);
+  if (c.off) parts.push(`${c.off} off the site`);
+  if (c.waiting) parts.push(`${c.waiting} to match`);
+  const head = parts.length ? `From KennelOS: ${parts.join(', ')}.` : 'From KennelOS: nothing new.';
+  return `${head}${c.waiting ? ' Check the matches under KennelOS.' : ''} Preview, then Publish.`;
+}
+
+// The addresses of pages the published site carries (plan 5.4), so KennelOS
+// fills dog.url and litter.photos_url only with pages that answer. A dog's own
+// page wins over its puppy page. Any address KennelOS wrote that isn't here any
+// more has left the site.
+export async function publishedAddresses(env, site) {
+  const out = { dogs: {}, litters: {} };
+  const snap = await loadSnapshot(env, site.id, site.published_snapshot_id);
+  if (!snap) return out;
+  const kos = async (table, extra = '') => new Map((await env.DB.prepare(`SELECT id, kennelos_id FROM ${table} WHERE site_id = ? AND kennelos_id IS NOT NULL${extra}`).bind(site.id).all()).results.map((r) => [r.id, r.kennelos_id]));
+  const dogs = await kos('dogs');
+  const litters = await kos('litters', " AND kennelos_kind = 'litter'");
+  const pups = await kos('puppies');
+  for (const d of snap.dogs) if (dogs.has(d.id)) out.dogs[dogs.get(d.id)] = siteAddress(env, site.subdomain, `/dogs/${d.slug}`);
+  if (snap.pages?.litters?.enabled) {
+    for (const l of snap.litters) {
+      if (litters.has(l.id)) out.litters[litters.get(l.id)] = siteAddress(env, site.subdomain, `/litters/${l.slug}`);
+      for (const p of l.puppies) {
+        const k = pups.get(p.id);
+        if (k && !out.dogs[k]) out.dogs[k] = siteAddress(env, site.subdomain, `/litters/${l.slug}/${p.slug}`);
+      }
+    }
+  }
+  return out;
+}

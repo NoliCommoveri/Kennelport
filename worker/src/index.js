@@ -14,6 +14,7 @@ import { escapeHtml as esc, htmlPage } from './lib/html.js';
 import { serveSite } from './site.js';
 import { handleManage } from './manage/index.js';
 import { runCleanup } from './cleanup.js';
+import { handleApi } from './kennelos/api.js';
 
 const notFound = (what = 'There is no page at this address.') =>
   htmlPage('Not found', `<h1>Not found</h1><p>${esc(what)}</p>`, { status: 404 });
@@ -82,6 +83,10 @@ export default {
         if (url.pathname === '/health') {
           const ready = env.DB ? await schemaReady(env.DB) : false;
           return json({ ok: ready, maintenance: !ready });
+        }
+        if (url.pathname.startsWith('/v1/')) {
+          if (!(await schemaReady(env.DB))) return json({ error: 'maintenance', message: 'KennelPort is being updated. Try again in a few minutes.' }, 503, { 'retry-after': '300' });
+          return handleApi(request, env, url);
         }
         return json({ error: 'not_found' }, 404);
 

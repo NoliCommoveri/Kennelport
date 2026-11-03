@@ -26,6 +26,10 @@ import { readFeed, parseFeedAddress, setFeed, FeedError, kennelosOrigin, kennelo
 import {
   waiting, fulfilled, getEntry, addEntry, updateEntry, setFulfilled, removeEntry, moveEntry, offerMailto, suggestWants, listNameFor, maskedNameFor, wantsPrivate, WaitlistError,
 } from '../waitlist.js';
+import { makeLinkCode, showCode, devices, stopDevice, unlinkSite, LinkError, CODE_TTL_MS } from '../kennelos/link.js';
+import { OWNED, OWNED_PRICES } from '../kennelos/bundle.js';
+import { pendingMatches, matchChanges, confirmMatch, declineMatch, MatchError } from '../kennelos/match.js';
+import { leavingLitters, keepLitter, LITTER_DAYS } from '../kennelos/clock.js';
 
 export const FRESH_SIGN_IN_MS = 15 * 60 * 1000;
 
@@ -51,7 +55,13 @@ const NOTES = {
   listsaved: 'Saved. Your website shows it now.',
   unlisted: 'Deleted from your waitlist.',
   undone: 'Undone. Visitors see the version before.',
+  kept: 'Kept. It stays as a past litter until you remove it.',
+  matched: 'Matched. It now comes from KennelOS, with your photos and wording kept.',
+  apart: 'Kept apart. KennelOS\'s one is added as new.',
+  stopped: 'That device is no longer linked.',
+  unlinked: 'Unlinked. Everything from KennelOS is now yours to edit here.',
 };
+const day = (ymd) => new Date(`${ymd}T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
 const note = (url) => (NOTES[url.searchParams.get('note')] ? `<p class="notice" role="status">${esc(NOTES[url.searchParams.get('note')])}</p>` : '');
 const errorBox = (err) => (err ? `<p class="error" role="alert">Not saved: ${esc(err)}</p>` : '');
 
@@ -102,6 +112,135 @@ export function createScreens({ env, request, url, site, user, page }) {
 
   let kosCache = null;
   const kos = async () => (kosCache ??= await kennelosState(env, site.id));
+
+  // ---------- the KennelOS link (plan 5) ----------
+  let pricesCache = null;
+  const kosPrices = async () => (pricesCache ??= Boolean(await env.DB.prepare('SELECT use_kennelos_prices FROM sites WHERE id = ?').bind(site.id).first('use_kennelos_prices')));
+  // The fields KennelOS owns on this record, while it comes from KennelOS.
+  async function lockedFor(kind, rec) {
+    if (rec?.source !== 'kennelos') return null;
+    return new Set([...(OWNED[kind] ?? []), ...((await kosPrices()) ? OWNED_PRICES[kind] ?? [] : [])]);
+  }
+
+  // Litters about to go (5.3): each with the day it's deleted, and Keep.
+  async function leavingCard() {
+    const list = await leavingLitters(env, site.id);
+    if (!list.length) return '';
+    return `<section class="card" id="leaving"><h2>Leaving your site</h2>
+      <p class="muted small">Litters off your site are deleted ${LITTER_DAYS} days after they left, with their puppies, albums and the photos nothing else uses. Keep one to have it stay as a past litter.</p>
+      <ul class="items">${list.map((l) => `<li class="item"><a href="${base}/litters/${l.id}"><b>${esc(l.name)}</b><span>Deleted on ${esc(day(l.deletes_on))}</span></a>
+        <form method="post" action="${base}/litters/${l.id}/keep"><button>Keep</button></form></li>`).join('')}</ul></section>`;
+  }
+
+  // Dogs that wait in the draft (5.3): never deleted by a clock; removing is hers.
+  async function offSiteDogsCard(rows) {
+    const off = rows.filter((d) => !d.show_on_site || d.hidden_by_kennelos);
+    if (!off.length) return '';
+    return `<section class="card" id="not-on-site"><h2>Not on your site</h2>
+      <p class="muted small">Switched off here${off.some((d) => d.hidden_by_kennelos) ? ', or unticked or archived in KennelOS' : ''}. They wait here, with their photos, until you put them back or remove them.</p>
+      <ul class="items">${off.map((d) => `<li class="item"><a href="${base}/dogs/${d.id}"><b>${esc(d.call_name)}</b><span>${d.hidden_by_kennelos ? 'Not sent by KennelOS' : 'Switched off'}</span></a>
+        <form method="post" action="${base}/dogs/${d.id}/remove"><button class="link">Remove</button></form></li>`).join('')}</ul></section>`;
+  }
+
+  async function kennelosScreen() {
+    const rest = url.pathname.slice(`${base}/kennelos`.length);
+    const post = request.method === 'POST';
+    const owner = site.role === 'owner';
+    const here = (n, hash = '') => redirect(`${base}/kennelos${n ? `?note=${n}` : ''}${hash}`);
+    if (post) {
+      let fd;
+      try { fd = await request.formData(); } catch { fd = new FormData(); }
+      if (rest === '/code') {
+        if (!owner) return null;
+        try {
+          const { code, expiresAt } = await makeLinkCode(env, site.id, user.emailHash.slice(0, 12));
+          return render({ code, expiresAt });
+        } catch (err) {
+          if (err instanceof LinkError) return render({ error: err.message });
+          throw err;
+        }
+      }
+      if (rest === '/prices') {
+        await env.DB.prepare('UPDATE sites SET use_kennelos_prices = ?, draft_changed_at = ? WHERE id = ?').bind(fd.has('on') ? 1 : 0, new Date().toISOString(), site.id).run();
+        return here('saved', '#prices');
+      }
+      if (rest === '/unlink') {
+        if (!owner) return null;
+        await unlinkSite(env, site.id);
+        return here('unlinked');
+      }
+      let m = rest.match(/^\/devices\/([0-9a-f-]{36})\/stop$/);
+      if (m) {
+        if (!owner) return null;
+        await stopDevice(env, site.id, m[1]);
+        return here('stopped');
+      }
+      if (rest === '/match') {
+        const kind = String(fd.get('kind') ?? '');
+        const kid = String(fd.get('kennelos_id') ?? '');
+        if (!['dogs', 'litters'].includes(kind)) return null;
+        try {
+          if (fd.get('answer') === 'yes') await confirmMatch(env, site.id, kind, kid, fd.getAll('keep').map(String));
+          else await declineMatch(env, site.id, kind, kid);
+        } catch (err) {
+          if (err instanceof MatchError) return render({ error: err.message });
+          throw err;
+        }
+        return here(fd.get('answer') === 'yes' ? 'matched' : 'apart', '#matches');
+      }
+      return null;
+    }
+    if (rest) return null;
+    return render({});
+
+    async function render({ code = null, expiresAt = null, error = null }) {
+      const list = await devices(env, site.id);
+      const linked = list.length > 0;
+      const prices = await kosPrices();
+      const parts = [note(url), error ? `<p class="error" role="alert">${esc(error)}</p>` : ''];
+      parts.push(`<section class="card"><h2>${linked ? 'Linked to KennelOS' : 'Link KennelOS'}</h2>
+        <p class="muted">${linked
+          ? 'When you press Update website in KennelOS, your dogs, litters, puppy statuses and health results arrive here in your draft. Nothing changes on your site until you Publish.'
+          : 'Keep your dogs and litters in KennelOS Pro? Link it, and Update website in KennelOS sends them here, so you type them only once. In KennelOS, tick Show on website on the dogs, litters and pairings you want on your site.'}</p>
+        ${code ? `<p class="notice" role="status">Your code: <strong class="code">${esc(showCode(code))}</strong><br>In KennelOS, open Settings, then Connect website, and type it in. It works once, for ${CODE_TTL_MS / 60000} minutes${expiresAt ? ` (until ${esc(when(expiresAt))})` : ''}.</p>` : ''}
+        ${owner ? `<form method="post" action="${base}/kennelos/code"><button class="${linked ? '' : 'primary'}">${linked ? 'Link another device' : 'Show a link code'}</button></form>` : '<p class="muted small">Only the site\'s owner can link KennelOS.</p>'}
+        <p class="muted small">Each phone or computer you use KennelOS on links once, with its own code.</p></section>`);
+      if (linked) {
+        parts.push(`<section class="card"><h2>Devices</h2><ul class="items">${list.map((d) => `<li class="item"><span><b>${esc(d.device_label || 'A KennelOS device')}</b><span class="muted small"> · ${d.last_bundle_at ? `last update ${esc(when(d.last_bundle_at))}` : `linked ${esc(when(d.linked_at))}, no update yet`}</span>${d.summary?.text ? `<br><span class="muted small">${esc(d.summary.text)}</span>` : ''}</span>
+          ${owner ? `<form method="post" action="${base}/kennelos/devices/${d.id}/stop"><button class="link">Stop this device</button></form>` : ''}</li>`).join('')}</ul></section>`);
+        const pending = await pendingMatches(env, site.id);
+        if (pending.length) parts.push(await matchesCard(pending));
+        parts.push(`<form method="post" action="${base}/kennelos/prices" class="card" id="prices"><h2>Prices</h2>
+          <label class="check"><input type="checkbox" name="on" value="1"${prices ? ' checked' : ''}> <span>Use my KennelOS prices<span class="hint">On: each litter's prices, deposits and full-registration amounts, and your extras' prices, come from KennelOS with the next Update website, and can't be changed here. Off: you type them here. Either way, they show only where you switch Show prices on. A puppy's own price and an adult's asking price are always typed here.</span></span></label>
+          <button>Save</button></form>`);
+        if (owner) {
+          parts.push(`<form method="post" action="${base}/kennelos/unlink" class="card danger"><h2>Unlink</h2>
+            <p class="muted small">Every device stops, and everything that came from KennelOS stays in your draft as ordinary content you can edit here. KennelOS's next Update website will say your site is no longer linked.</p>
+            <button>Unlink KennelOS</button></form>`);
+        }
+      }
+      return { title: 'KennelOS', back: base, body: parts.join('') };
+    }
+  }
+
+  // Matching what's already there (5.2 step 4): each pair, with what it changes.
+  async function matchesCard(pending) {
+    const items = [];
+    for (const p of pending) {
+      const { target, changes: diff, puppies: pups } = await matchChanges(env, site.id, p.kind, p.kennelos_id);
+      if (!target) continue;
+      const name = p.kind === 'dogs' ? target.call_name : target.name;
+      const what = p.kind === 'dogs' ? 'dog' : 'litter';
+      const rows = diff.map((c) => `<li><label class="check"><input type="checkbox" name="keep" value="${esc(c.field)}"${c.blanking ? ' checked' : ''}> <span>${esc(c.label)}: ${c.from === null ? 'empty' : `'${esc(c.from)}'`} → ${c.to === null ? 'blank' : `'${esc(c.to)}'`}<span class="hint">Tick to keep yours.</span></span></label></li>`).join('');
+      items.push(`<form method="post" action="${base}/kennelos/match" class="card">
+        <input type="hidden" name="kind" value="${esc(p.kind)}"><input type="hidden" name="kennelos_id" value="${esc(p.kennelos_id)}">
+        <p><b>Is KennelOS's ${esc(what)} "${esc(p.kind === 'dogs' ? p.data.call_name : p.data.name ?? name)}" your website's ${esc(name)}?</b></p>
+        <p class="muted small">Yes: your ${esc(name)} page keeps its address, photos and wording, and from now on comes from KennelOS.${pups ? ` Its ${pups} pupp${pups === 1 ? 'y comes' : 'ies come'} with it, matched by name.` : ''}</p>
+        ${rows ? `<ul class="plain">${rows}</ul>` : '<p class="muted small">Nothing you typed changes.</p>'}
+        <div class="row"><button class="primary" name="answer" value="yes">Yes, the same ${esc(what)}</button><button name="answer" value="no">No, keep them apart</button></div></form>`);
+    }
+    return items.length ? `<section id="matches"><h2>Already on your site?</h2><p class="muted">These came from KennelOS with the same name as one already on your website. Nothing is matched until you say so.</p>${items.join('')}</section>` : '';
+  }
 
   // ---------- videos and posts (plan 3.3) ----------
   // A card on the screen of whatever they sit on; its forms come back to `here`.
@@ -197,7 +336,9 @@ export function createScreens({ env, request, url, site, user, page }) {
 
     const form = async (rec, err, values) => {
       const action = rec ? `${path}/${rec.id}` : `${path}/new`;
-      const body = `${errorBox(err)}<form method="post" action="${esc(action)}" data-save class="card">${fields(formFields, values ?? rec ?? { ...(k.defaults ?? {}) }, await ctxFor(formKind, pickFor(rec)))}
+      const lock = rec ? await lockedFor(kind, rec) : null;
+      const from = lock ? `<p class="notice">This ${esc(L.one)} comes from KennelOS. What's marked "from KennelOS" changes there, then Update website; everything else here is yours.</p>` : '';
+      const body = `${from}${errorBox(err)}<form method="post" action="${esc(action)}" data-save class="card">${fields(formFields, values ?? rec ?? { ...(k.defaults ?? {}) }, { ...await ctxFor(formKind, pickFor(rec)), locked: lock })}
         <button class="primary">${rec ? 'Save' : `Add ${L.one}`}</button></form>
         ${rec ? `<form method="post" action="${esc(`${path}/${rec.id}/remove`)}" class="card danger"><p class="muted small">Removing takes it off your draft; it stays on the live site until you publish.</p><button>Remove this ${L.one}</button></form>` : ''}`;
       return { title: rec ? L.name(rec) : `New ${L.one}`, back: path, body };
@@ -209,7 +350,8 @@ export function createScreens({ env, request, url, site, user, page }) {
       const items = rows.map((r, i) => `<li class="item"><a href="${esc(`${path}/${r.id}`)}"><b>${esc(L.name(r))}</b><span>${esc(L.sub(r) ?? '')}</span></a>
         <span class="order">${i ? `<form method="post" action="${esc(`${path}/${r.id}/up`)}"><button aria-label="Move ${esc(L.name(r))} up">↑</button></form>` : ''}${i < rows.length - 1 ? `<form method="post" action="${esc(`${path}/${r.id}/down`)}"><button aria-label="Move ${esc(L.name(r))} down">↓</button></form>` : ''}</span></li>`).join('');
       const intro = kind === 'questions' ? `${(await kos()).online ? '<p class="error">Not used right now: KennelOS takes your applications online, so your website shows your KennelOS form. These questions come back if you turn online applications off in KennelOS or remove the link.</p>' : ''}<p class="muted">The application form on your waitlist page always asks for the family's name and email. These questions come after, in this order. With none, it asks for a few lines about their family.</p>` : '';
-      return { title: parentTitle ? `${parentTitle}: ${L.title}` : L.title, back: back ?? base, body: `${note(url)}${intro}<ul class="items">${items || `<li class="muted">None yet.</li>`}</ul><p><a class="button primary" href="${esc(`${path}/new`)}">Add ${L.one}</a></p>` };
+      const extra = kind === 'litters' ? await leavingCard() : kind === 'dogs' ? await offSiteDogsCard(rows) : '';
+      return { title: parentTitle ? `${parentTitle}: ${L.title}` : L.title, back: back ?? base, body: `${note(url)}${intro}${extra}<ul class="items">${items || `<li class="muted">None yet.</li>`}</ul><p><a class="button primary" href="${esc(`${path}/new`)}">Add ${L.one}</a></p>` };
     }
     if (rest === 'new') {
       if (!post) return form(null);
@@ -242,6 +384,8 @@ export function createScreens({ env, request, url, site, user, page }) {
     }
     const fd = await request.formData();
     const values = parseForm(formFields, fd);
+    // KennelOS's fields keep what's stored, whatever the form sent.
+    for (const f of await lockedFor(kind, rec) ?? []) values[f] = rec[f];
     try { await saveRecord(env, site.id, kind, rec.id, values, scopeId); } catch (err) {
       if (err instanceof ContentError) return form(rec, err.message, values);
       throw err;
@@ -281,6 +425,9 @@ export function createScreens({ env, request, url, site, user, page }) {
     const m = url.pathname.match(/\/puppies\/([0-9a-f-]{36})\/status$/);
     if (m && post) {
       const form = await request.formData();
+      // A puppy from KennelOS takes its status from there (plan 3.6).
+      const from = await env.DB.prepare('SELECT source FROM puppies WHERE id = ? AND site_id = ?').bind(m[1], site.id).first('source');
+      if (from === 'kennelos') return redirect(`${base}/puppies`);
       try { await setField(env, site.id, 'puppies', m[1], 'status', String(form.get('status') ?? '')); } catch (err) {
         if (!(err instanceof ContentError)) throw err;
       }
@@ -293,8 +440,8 @@ export function createScreens({ env, request, url, site, user, page }) {
       const pups = await listRecords(env, site.id, 'puppies', l.id);
       sections.push(`<section class="card"><h2>${esc(l.name)}</h2>${pups.map((p) => `<form method="post" action="${esc(`${base}/puppies/${p.id}/status`)}" class="pup" data-save>
           <a href="${esc(`${base}/litters/${l.id}/puppies/${p.id}`)}"><b>${esc(p.name)}</b><span>${esc([p.collar, p.sex === 'female' ? 'girl' : 'boy'].filter(Boolean).join(' · '))}</span></a>
-          <select name="status" aria-label="${esc(p.name)}'s status">${Object.entries({ ...STATUS_TEXT, hidden: 'Hidden' }).map(([v, t]) => `<option value="${v}"${v === p.status ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>
-          <button>Set</button></form>`).join('') || '<p class="muted">No puppies yet.</p>'}
+          ${p.source === 'kennelos' ? `<span class="muted small">${esc(p.hidden_by_kennelos ? 'Not sent by KennelOS' : STATUS_TEXT[p.status] ?? 'Hidden')} · from KennelOS</span>` : `<select name="status" aria-label="${esc(p.name)}'s status">${Object.entries({ ...STATUS_TEXT, hidden: 'Hidden' }).map(([v, t]) => `<option value="${v}"${v === p.status ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>
+          <button>Set</button>`}</form>`).join('') || '<p class="muted">No puppies yet.</p>'}
         <p><a class="button" href="${esc(`${base}/litters/${l.id}/puppies/new`)}">Add a puppy</a></p></section>`);
     }
     return { title: 'Puppies', back: base, body: `${note(url)}${sections.join('') || `<section class="card"><p class="muted">No current litters. <a href="${esc(`${base}/litters/new`)}">Add a litter</a>.</p></section>`}` };
@@ -455,6 +602,9 @@ export function createScreens({ env, request, url, site, user, page }) {
       const k = KINDS_HERE[kind];
       if (!k) return null;
       const values = parseForm(k[1], await request.formData());
+      // Filled from her KennelOS waitlist settings: only the switch is hers here.
+      const cur = kind === 'safe_notice' ? null : await getPayment(env, site.id, kind);
+      if (cur?.source === 'kennelos') for (const f of Object.keys(PAYMENT_FIELDS)) if (f !== 'show_on_site') values[f] = cur[f] ?? null;
       try { await savePayment(env, site.id, kind, values); } catch (err) {
         if (err instanceof ContentError) return render({ [kind]: [err.message, values] });
         throw err;
@@ -473,7 +623,8 @@ export function createScreens({ env, request, url, site, user, page }) {
           ? `<p class="muted small">Leave the wording empty for: "${esc(SAFE_NOTICE_TEXT)}" Where the ways to pay above are shown, it starts "We take payment only by…" and links to them.</p>`
           : `<p class="muted small">${k === 'application_fee' ? 'How a family pays the fee once you approve them.' : 'How a family pays the deposit once they choose a puppy.'} This is how to pay, not the price.</p>`;
         cards.push(`<form method="post" action="${base}/payment/${k}" id="${k}" data-save class="card"><h2>${esc(title)}</h2>${intro}${errorBox(err)}
-          ${fields(flds, current, { kind: k === 'safe_notice' ? 'safe_notice' : 'payment' })}<button class="primary">Save</button></form>`);
+          ${current.source === 'kennelos' ? '<p class="notice">Filled from your waitlist settings in KennelOS. Change the wording there, then Update website; whether it shows is up to you here.</p>' : ''}
+          ${fields(flds, current, { kind: k === 'safe_notice' ? 'safe_notice' : 'payment', locked: current.source === 'kennelos' ? new Set(Object.keys(PAYMENT_FIELDS).filter((f) => f !== 'show_on_site')) : null })}<button class="primary">Save</button></form>`);
       }
       return { title: 'How to pay', back: base, body: `${note(url)}<p class="muted">Shown on your waitlist page, so families don't have to email to ask. A How it works step can link here too: open the step and tick its How to pay box.</p>${cards.join('')}` };
     }
@@ -860,6 +1011,14 @@ export function createScreens({ env, request, url, site, user, page }) {
     else if (p === '/export.json' && request.method === 'GET') return exportManifest();
     else if (p.startsWith('/account')) view = await account();
     else if (p.startsWith('/reviews-queue')) view = await queue();
+    else if (p === '/kennelos' || p.startsWith('/kennelos/')) view = await kennelosScreen();
+    else if (/^\/notices\/[0-9a-f-]{36}\/read$/.test(p) && request.method === 'POST') {
+      await env.DB.prepare('UPDATE notices SET read_at = ? WHERE id = ? AND site_id = ?').bind(new Date().toISOString(), p.split('/')[2], site.id).run();
+      return redirect(base);
+    } else if (/^\/litters\/[0-9a-f-]{36}\/keep$/.test(p) && request.method === 'POST') {
+      await keepLitter(env, site.id, p.split('/')[2]);
+      return redirect(`${base}/litters?note=kept`);
+    }
     else if (p.startsWith('/dogs')) {
       const hm = p.match(/^\/dogs\/([0-9a-f-]{36})\/health/);
       if (hm) {

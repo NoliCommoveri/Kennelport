@@ -107,7 +107,14 @@ async function siteHome(env, user, site) {
   // while KennelOS takes applications online, neither are the site's questions.
   const kos = await kennelosState(env, site.id);
   const previewLink = siteLink(env, site.subdomain, `/__preview?t=${encodeURIComponent(await makePreviewToken(env, site.id, 1))}`);
+  // The KennelOS link (plan 5): what the last Update website brought, until read.
+  const linkRow = await env.DB.prepare('SELECT MAX(last_bundle_at) AS at, COUNT(*) AS n FROM links WHERE site_id = ? AND revoked_at IS NULL').bind(site.id).first();
+  const matches = await env.DB.prepare('SELECT COUNT(*) AS n FROM link_pending WHERE site_id = ?').bind(site.id).first('n');
+  const leaving = await env.DB.prepare('SELECT COUNT(*) AS n FROM litters WHERE site_id = ? AND left_site_at IS NOT NULL').bind(site.id).first('n');
+  const { results: notices } = await env.DB.prepare('SELECT id, message, created_at FROM notices WHERE site_id = ? AND read_at IS NULL ORDER BY created_at DESC LIMIT 3').bind(site.id).all();
+  const day = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
   return page(site.kennel_name || site.subdomain, `
+  ${notices.map((n) => `<section class="card notice-card" role="status"><p>${esc(n.message)}</p><p class="row"><a class="button" href="/s/${esc(site.subdomain)}/publish">Review and publish</a><form method="post" action="/s/${esc(site.subdomain)}/notices/${esc(n.id)}/read"><button class="link">Done</button></form></p></section>`).join('')}
   <section class="card status">
     <p><span class="dot ${site.status}"></span>${esc(STATUS_WORDS[site.status] ?? site.status)}${changed ? ' · <strong>changes not published yet</strong>' : ''}</p>
     <p class="row"><a class="button" href="${esc(siteLink(env, site.subdomain))}">View my site</a><a class="button" href="${esc(previewLink)}">Preview changes</a></p>
@@ -119,7 +126,7 @@ async function siteHome(env, user, site) {
     ${tile('/inbox', 'Inbox', 'Messages from your site', unread)}
     ${tile('/reviews-queue', 'Reviews to approve', 'From families', pending)}
     ${tile('/dogs', 'Dogs', 'Cards, health results')}
-    ${tile('/litters', 'Litters', 'Planned, current, past')}
+    ${tile('/litters', 'Litters', leaving ? `${leaving} leaving your site` : 'Planned, current, past', leaving)}
     ${tile('/pages', 'Pages and wording', 'Home, about, policies, FAQ…')}
     ${tile('/lists/extras', 'Extras', 'Packages and prices')}
     ${tile('/lists/albums', 'Albums', 'Photo galleries with their own link')}
@@ -130,6 +137,7 @@ async function siteHome(env, user, site) {
     ${tile('/lists/reviews', 'Reviews', 'Add or hide')}
     ${tile('/details', 'Kennel details', 'Name, contact, town')}
     ${tile('/share', 'Share', 'Links and QR codes')}
+    ${tile('/kennelos', 'KennelOS', linkRow?.n ? (linkRow.at ? `Linked · last update ${day(linkRow.at)}` : 'Linked · no update yet') : 'Link your dogs and litters', matches)}
   </ul>
   <p class="row"><a class="button" href="/notifications">Notifications on this device</a><a class="button" href="/s/${esc(site.subdomain)}/account">Your site: storage, copy, delete</a></p>
   <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}</p>

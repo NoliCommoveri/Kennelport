@@ -838,3 +838,56 @@ question at a time. Nothing built yet; docs only (plan 5 rewritten, 3.2, 3.6, 3.
 - **Out of phase 4:** **Request a website** and KennelPort's request form (backlog 2 and
   7; decision 2 stands), and hiding one puppy that has no health hold (backlog 6).
 
+## 2026-11-03: phase 4 built, KennelPort's side
+
+Built from plan section 5 as settled the same day. The KennelOS side (5.5) is for the
+KennelOS repo and isn't started. 162 tests.
+
+- **Migration 0014** (additive): litter prices per sex with `show_prices` (off) and
+  `show_placed` (on), `price_note` and `deposits_on`; a puppy's `registration` and own
+  `price`; a dog's `upcoming`, `for_sale`, `price` and `died_on`; a litter's
+  `left_site_at`, `kept_at` and `kennelos_kind` (litter, pairing or heat); KennelOS ids
+  on health results, extras and steps; and the tables `link_codes`, `links`,
+  `link_pending`, `link_declines` and `notices`.
+- **Linking** (`src/kennelos/link.js`): the KennelOS screen in the manage app shows an
+  eight-character code (no look-alike characters, 15 minutes, once, owners only, ten an
+  hour); KennelOS redeems it at `POST /v1/link` (limited per IP) for a `kpl_` token kept
+  only as its hash, one `links` row per device, one kennel per site. Stop one device;
+  the last one stopping, or **Unlink**, turns every KennelOS record into ordinary
+  content, a record KennelOS had taken off staying off by her own switch.
+- **The bundle** (`src/kennelos/bundle.js`): format 1, an allow-list from this side
+  too (an unknown key is refused, naming it), capped per section and at 1 MB, applied in
+  one batch or not at all, a repeated bundle id answered with its first summary. Matched
+  by KennelOS id within a table; a litter's kind is part of its match, and a litter
+  naming its pairing takes over the pairing's website litter. Stored fields follow
+  KennelOS blanks included; titles, health results and steps only when sent. New
+  health results' ticks come from the dog's choice once. Puppies come with their litter
+  (by id, else by name among unlinked ones). How to pay and the extras come filled from
+  KennelOS, whether they show staying hers; prices only with **Use my KennelOS prices**.
+  The answer carries the published pages' addresses (5.4) and the site's facts
+  (website, `extras_info_url`, whether the waitlist page wants her list).
+- **Matching** (`match.js`): a KennelOS dog or litter with no match but the name of an
+  unlinked website one waits for her; the KennelOS screen shows each field it would
+  change, a blanking ticked "keep yours" to begin with. Yes links it, keeping its page;
+  No makes a new one and remembers the pair.
+- **The hand-over**: a bundle dog whose id is a puppy's becomes a dog with that puppy's
+  photo and photo tags, so the litter's deletion can't take them.
+- **The clock** (`clock.js`): a litter off the site (switched off, gone from a bundle, or
+  Past without Keep) is listed under Litters as "Deleted on …" with **Keep**; the daily
+  cleanup deletes it 30 days on with its puppies, albums, videos and the photos nothing
+  else uses, and purges those files the same night. It starts clocks for litters already
+  off the site on the first run, so nothing goes before she has seen the list. Dogs wait
+  under **Not on your site** with **Remove**.
+- **The site**: prices as one number (3.2); **Still deciding** for what was Coming soon
+  (stored value unchanged); before its deposits date a born litter sits under Coming up
+  and its puppies read **Available on 12 December**, moving on the day; the Dogs page's
+  **Up and coming** and **Looking for a home** with **Ask about** (3.7).
+- **Read-only while linked**: the fields KennelOS owns show as text with "from KennelOS"
+  on the forms, the puppies screen and How to pay, and a save keeps what's stored.
+- **Not set:** `KENNELOS_APP_ORIGINS` (wrangler.toml), the KennelOS Pro app's origins:
+  every browser call to the API is refused until it is. Not in this build: programs
+  (no page for them yet) and the backlog items 5.3 names.
+- No manage app files (`public/_kp/m/`) changed. The site template's files are changed
+  from the photo-shape commits brought over earlier, unreleased: the owner asked not to
+  bump `ASSET_VERSION` yet, so `tests/versions.test.js` fails until it is.
+

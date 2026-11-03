@@ -4,8 +4,11 @@
 // - notification records after 8 days (push.js);
 // - rate-limit counters, expired codes and sessions, the staging outbox after a week;
 // - removed photos' files in R2, a day after removal, once no kept version of the
-//   site (the live one, or one Undo publish could go back to) uses them.
+//   site (the live one, or one Undo publish could go back to) uses them;
+// - litters 30 days after they left the site, unless kept (plan 5.3), with their
+//   puppies, albums and the photos nothing else uses, whose files go the same night.
 import { loadSnapshot } from './publish.js';
+import { expireLitters } from './kennelos/clock.js';
 
 export const INQUIRY_DAYS = 90;
 const DAY = 86400000;
@@ -24,18 +27,22 @@ export async function runCleanup(env, now = new Date()) {
     env.DB.prepare('DELETE FROM sessions WHERE expires_at < ? OR revoked_at < ?').bind(now.toISOString(), before(30)),
     env.DB.prepare('DELETE FROM dev_outbox WHERE created_at < ?').bind(before(7)),
   ]);
-  const photos = await purgeRemovedPhotos(env, before(1));
-  return { inquiries: results[0].meta.changes, photos };
+  const litters = await expireLitters(env, now);
+  const photos = await purgeRemovedPhotos(env, before(1)) + (litters.photos.length ? await purgeRemovedPhotos(env, null, PURGE_PER_RUN, litters.photos) : 0);
+  return { inquiries: results[0].meta.changes, photos, litters: litters.litters };
 }
 
 // Delete the R2 files of photos removed before `cutoff`, skipping any that a kept
 // snapshot still lists (the live site serves photos from its snapshot, and Undo
 // publish can go back to an older one). Those wait until the snapshots naming
 // them are replaced or pruned. Returns how many photos' files were deleted.
-export async function purgeRemovedPhotos(env, cutoff, limit = PURGE_PER_RUN) {
-  const { results: removed } = await env.DB.prepare(
-    'SELECT id, site_id, r2_key, thumb_key FROM photos WHERE removed_at IS NOT NULL AND removed_at < ? AND purged_at IS NULL ORDER BY removed_at LIMIT ?',
-  ).bind(cutoff, limit).all();
+// With `ids`, just those photos, whenever they were removed.
+export async function purgeRemovedPhotos(env, cutoff, limit = PURGE_PER_RUN, ids = null) {
+  const { results: removed } = ids
+    ? await env.DB.prepare(`SELECT id, site_id, r2_key, thumb_key FROM photos WHERE removed_at IS NOT NULL AND purged_at IS NULL AND id IN (${ids.map(() => '?').join(', ')}) LIMIT ?`).bind(...ids, limit).all()
+    : await env.DB.prepare(
+      'SELECT id, site_id, r2_key, thumb_key FROM photos WHERE removed_at IS NOT NULL AND removed_at < ? AND purged_at IS NULL ORDER BY removed_at LIMIT ?',
+    ).bind(cutoff, limit).all();
   if (!removed.length) return 0;
 
   const inUse = new Set();

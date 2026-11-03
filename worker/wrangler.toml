@@ -59,6 +59,11 @@ fallthrough = true
 # KENNELOS_ORIGIN: KennelOS's family host (its FAMILY_PAGES_ORIGIN), the only place
 # a waitlist feed is read from and the only host a waitlist page may send a sealed
 # application to (src/feed.js, plan 3.8).
+# KENNELOS_APP_ORIGINS: the origins of the KennelOS Pro app (comma-separated), the
+# only browser origins the link API on api.kennelport.com answers (plan 5.3,
+# src/kennelos/api.js). Unset, every browser call to /v1/ is refused. Not set yet:
+# add the staging app's origin here and the production one under
+# [env.production.vars] once they're known.
 [vars]
 ENV_NAME = "staging"
 KENNELOS_ORIGIN = "https://kennelos-api-staging.admin-kennelos.workers.dev"

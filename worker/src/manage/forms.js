@@ -173,8 +173,22 @@ const chosenLayout = (values) => values?.layout ?? collageLayout(null, (values?.
 const enumWords = (kind, name, v) => ENUM_WORDS[`${name}_${kind}`]?.[v] ?? ENUM_WORDS[name]?.[v] ?? v;
 
 // ctx: { kind, photos: [{id, alt}], photoUrl(id), photoGroups, upload: {action, tags, alt}, dogs: [{id, call_name}] }
+// A field KennelOS owns while linked (plan 5.3): shown, not editable. The save
+// keeps what's stored (screens.js), whatever the form sends.
+function lockedField(name, f, value, ctx, label) {
+  let shown;
+  if (value === null || value === undefined || value === '' || (Array.isArray(value) && !value.length)) shown = '—';
+  else if (f.type === 'bool') shown = value ? 'Yes' : 'No';
+  else if (f.type === 'dogid') shown = (ctx.dogs ?? []).find((d) => d.id === value)?.call_name ?? '—';
+  else if (f.type === 'enum') shown = enumWords(ctx.kind, name, value);
+  else if (Array.isArray(value)) shown = value.join(', ');
+  else shown = String(value);
+  return `<p class="locked"><b>${esc(label)}</b><br>${esc(shown)} <span class="muted small">· from KennelOS, change it there</span></p>`;
+}
+
 export function field(name, f, value, ctx) {
   const [label, hint] = labelFor(ctx.kind, name);
+  if (ctx.locked?.has(name)) return lockedField(name, f, value, ctx, label);
   const id = `f-${name}`;
   const h = hint ? `<span class="hint">${esc(hint)}</span>` : '';
   const req = f.required ? ' required' : '';
