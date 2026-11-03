@@ -38,7 +38,7 @@ async function breeder() {
   const row = (sql, ...a) => env.DB.raw.prepare(sql).get(...a);
   const rows = (sql, ...a) => env.DB.raw.prepare(sql).all(...a);
   const page = async (p) => (await call(env, SITE, p)).text();
-  return { env, site, get, post, row, rows, page };
+  return { env, site, get, post, row, rows, page, cookie };
 }
 
 const api = (env, path, { method = 'POST', body, token, origin = APP } = {}) => call(env, API, path, {
@@ -327,6 +327,11 @@ test('the hand-over: a kept puppy becomes a dog with its photos, and the litter 
   await send(bundle({ dogs: [DOG('d-nova', 'Nova')], litters: [{ id: 'l1', dam_id: 'd-nova', dam_name: 'Nova', born_on: '2026-01-01', puppies: [{ id: 'k1', name: 'Fern', sex: 'female', status: 'staying' }, { id: 'k2', name: 'Moss', sex: 'male', status: 'placed' }] }] }));
   const fern = b.row("SELECT * FROM puppies WHERE kennelos_id = 'k1'");
   const moss = b.row("SELECT * FROM puppies WHERE kennelos_id = 'k2'");
+  // Placed reads Spoken for: still here, not available to anyone else.
+  await b.post('/publish');
+  const card = await b.page(`/litters/${b.row("SELECT slug FROM litters WHERE kennelos_id = 'l1'").slug}`);
+  assert.match(card, /Spoken for/);
+  assert.doesNotMatch(card, /Gone to a new home|Placed/);
   const t = new Date().toISOString();
   for (const [pid, who] of [['ph-fern', fern], ['ph-moss', moss]]) {
     b.env.DB.raw.prepare("INSERT INTO photos (id, site_id, r2_key, type, bytes, created_at) VALUES (?, ?, ?, 'image/webp', 10, ?)").run(pid, b.site.id, `sites/${b.site.id}/photos/${pid}.webp`, t);
@@ -392,6 +397,78 @@ test('Use my KennelOS prices: off, KennelOS sends none here; on, they arrive rea
   assert.equal(b.row("SELECT price_from FROM extras WHERE kennelos_id = 'x1'").price_from, 90);
   const id = b.row("SELECT id FROM litters WHERE kennelos_id = 'l1'").id;
   assert.match(await (await b.get(`/litters/${id}`)).text(), /3000 <span class="muted small">· from KennelOS/);
+});
+
+test("KennelOS's link-code link opens Link KennelOS", async () => {
+  const b = await breeder();
+  const res = await call(b.env, M, '/link-kennelos', { headers: { cookie: b.cookie } });
+  assert.equal(res.status, 303);
+  assert.equal(res.headers.get('location'), '/s/akbostons/kennelos');
+  assert.equal((await call(b.env, M, '/link-kennelos')).headers.get('location'), '/', 'signed out: sign in first');
+});
+
+test('KennelOS can set Use my KennelOS prices, and nothing else', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  await api(b.env, '/v1/bundle', { token, body: bundle({ litters: [{ id: 'l1', name: 'Spring', born_on: '2026-10-01', puppies: [] }] }) });
+  const on = await api(b.env, '/v1/settings', { token, body: { kennelos_prices: true } });
+  assert.equal(on.status, 200);
+  const out = await on.json();
+  assert.equal(out.site.kennelos_prices, true);
+  assert.deepEqual(out.site.settings, ['kennelos_prices']);
+  assert.equal(b.row("SELECT show_prices FROM litters WHERE kennelos_id = 'l1'").show_prices, 1);
+  assert.match(await (await b.get('/kennelos')).text(), /name="on" value="1" checked/);
+  assert.equal((await api(b.env, '/v1/settings', { token, body: { kennelos_prices: 'yes' } })).status, 400);
+  assert.equal((await api(b.env, '/v1/settings', { token, body: { kennelos_prices: false, scheme: 'slate' } })).status, 400);
+  assert.equal((await api(b.env, '/v1/settings', { token: 'kpl_' + '0'.repeat(64), body: { kennelos_prices: false } })).status, 401);
+  assert.equal((await (await api(b.env, '/v1/settings', { token, body: { kennelos_prices: false } })).json()).site.kennelos_prices, false);
+  assert.equal(b.row('SELECT use_kennelos_prices FROM sites WHERE id = ?', b.site.id).use_kennelos_prices, 0);
+});
+
+test('Use my KennelOS prices turns Show prices on: when switched on, and for litters it brings', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (body) => api(b.env, '/v1/bundle', { body, token });
+  const litter = (id, name) => ({ id, name, born_on: '2026-10-01', prices: { price_female: 3000 }, puppies: [] });
+  const shown = (id) => b.row('SELECT show_prices FROM litters WHERE kennelos_id = ?', id).show_prices;
+  // Off: a litter from KennelOS starts with Show prices off.
+  await send(bundle({ litters: [litter('l1', 'Spring')] }));
+  assert.equal(shown('l1'), 0);
+  // Switching it on turns it on for KennelOS's litters, not her own.
+  await b.post('/kennelos/prices', { on: '1' });
+  assert.equal(shown('l1'), 1);
+  assert.equal(b.row("SELECT show_prices FROM litters WHERE slug = 'gem-2026'").show_prices, 0);
+  // A new litter while it's on starts on; one she switched off after its prices
+  // came stays off.
+  await send(bundle({ litters: [litter('l1', 'Spring')] }));
+  assert.equal(b.row("SELECT price_female FROM litters WHERE kennelos_id = 'l1'").price_female, 3000);
+  b.env.DB.raw.prepare("UPDATE litters SET show_prices = 0 WHERE kennelos_id = 'l1'").run();
+  await send(bundle({ litters: [litter('l1', 'Spring'), litter('l2', 'Summer')] }));
+  assert.equal(shown('l2'), 1);
+  assert.equal(shown('l1'), 0);
+  // Saving the switch again while on changes nothing.
+  await b.post('/kennelos/prices', { on: '1' });
+  assert.equal(shown('l1'), 0);
+});
+
+test('a parent that is one of her dogs is not typed as a name too', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  await api(b.env, '/v1/bundle', { token, body: bundle({
+    dogs: [DOG('d-nova', 'Nova')],
+    litters: [{ id: 'l1', name: 'Autumn', dam_id: 'd-nova', sire_id: 'd-out', dam_name: 'Nova', sire_name: 'Outside Stud', born_on: '2026-10-01', puppies: [] }],
+  }) });
+  const l = b.row("SELECT * FROM litters WHERE kennelos_id = 'l1'");
+  assert.equal(l.dam_id, b.row("SELECT id FROM dogs WHERE kennelos_id = 'd-nova'").id);
+  assert.equal(l.dam_name, null);
+  assert.equal(l.sire_id, null);
+  assert.equal(l.sire_name, 'Outside Stud');
+  // Switched off the site, she's still named on the litter, as plain text.
+  b.env.DB.raw.prepare("UPDATE dogs SET show_on_site = 0 WHERE kennelos_id = 'd-nova'").run();
+  await b.post('/publish');
+  const html = await b.page(`/litters/${l.slug}`);
+  assert.match(html, /Nova × Outside Stud/);
+  assert.doesNotMatch(html, /href="\/dogs\/nova"/);
 });
 
 test('prices are one number, worked out from the litter, shown only where switched on', async () => {

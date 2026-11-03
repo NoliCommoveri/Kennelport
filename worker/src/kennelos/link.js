@@ -123,7 +123,22 @@ export async function siteFacts(env, site) {
     kennelos_prices: Boolean(site.use_kennelos_prices),
     // The optional bundle sections this Worker takes (bundle.js SECTIONS).
     sections: SECTIONS,
+    // What KennelOS may set here (POST /v1/settings), so it asks only a Worker that takes it.
+    settings: ['kennelos_prices'],
   };
+}
+
+// Use my KennelOS prices, from the manage app's switch or from KennelOS (POST
+// /v1/settings). Switching it on also turns on Show prices for the litters KennelOS
+// sends, so its prices show without a trip to each litter; off leaves them as
+// they are.
+export async function setKennelosPrices(env, siteId, on) {
+  const before = await env.DB.prepare('SELECT use_kennelos_prices FROM sites WHERE id = ?').bind(siteId).first('use_kennelos_prices');
+  const t = new Date().toISOString();
+  await env.DB.batch([
+    env.DB.prepare('UPDATE sites SET use_kennelos_prices = ?, draft_changed_at = ? WHERE id = ?').bind(on ? 1 : 0, t, siteId),
+    ...(on && !before ? [env.DB.prepare("UPDATE litters SET show_prices = 1, updated_at = ? WHERE site_id = ? AND source = 'kennelos' AND kennelos_kind = 'litter' AND show_prices = 0").bind(t, siteId)] : []),
+  ]);
 }
 
 // The device a request comes from, by its bearer token. A token that isn't

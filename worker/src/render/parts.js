@@ -100,7 +100,7 @@ export function menuGroups(snap, ctx) {
 // 'coming_soon' is stored, and reads "Still deciding" (plan 3.6, decision 32): she
 // may keep the puppy, place it privately or never offer it, so the site promises
 // nothing.
-export const STATUS_TEXT = { available: 'Available', reserved: 'Reserved', placed: 'Placed', staying: 'Staying with us', coming_soon: 'Still deciding' };
+export const STATUS_TEXT = { available: 'Available', reserved: 'Reserved', placed: 'Spoken for', staying: 'Staying with us', coming_soon: 'Still deciding' };
 
 const isPast = (ymd, today) => Boolean(ymd) && ymd < today;
 
@@ -156,7 +156,8 @@ export function olderPuppies(snap, today) {
   return out;
 }
 
-export const sortPuppies = (pups) => [...pups].sort((a, b) => (a.status === 'reserved' || a.status === 'placed') - (b.status === 'reserved' || b.status === 'placed'));
+const HELD = ['reserved', 'placed'];
+export const sortPuppies = (pups) => [...pups].sort((a, b) => HELD.includes(a.status) - HELD.includes(b.status));
 
 export function parentName(snap, l, role) {
   const id = l[`${role}_id`];
@@ -224,13 +225,13 @@ export function puppyCard(snap, l, p, ctx) {
   const photo = img(snap, p.photo_id, { alt: p.name }) ?? '<div class="ph-photo">Photos coming soon</div>';
   const bg = img(snap, p.photo_id, { alt: '', cls: 'bg', thumb: true }) ?? '';
   const sex = p.sex === 'female' ? 'Female' : 'Male';
-  const held = p.status === 'reserved' || p.status === 'placed';
+  const held = HELD.includes(p.status);
   const status = puppyStatus(l, p, ctx.today);
   const price = puppyPriceText(l, p);
   const reg = [l.name, p.collar].filter(Boolean).join(' · ');
   const action = p.status === 'available'
     ? (pageOn(snap, 'waitlist', ctx) ? '<a class="more" href="/waitlist">Ask about this puppy</a>' : '<a class="more" href="/contact">Ask about this puppy</a>')
-    : held ? `<span class="small muted">${p.status === 'reserved' ? 'Reserved for a waitlist family' : 'Gone to a new home'}</span>` : '';
+    : '';
   return `<div class="flip" tabindex="0" role="button" aria-label="${attr(p.name)}: turn the card over">
     <div class="flip-in">
       <div class="face front">${held ? `<span class="ribbon">${esc(status)}</span>` : ''}${photo}<span class="turn" aria-hidden="true">↻</span>

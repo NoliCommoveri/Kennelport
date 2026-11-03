@@ -239,6 +239,9 @@ export async function handleManage(request, env, url) {
   }
   if (pathname === '/notifications') return notificationsPage(env, user);
   if (pathname === '/') return user.sites.length === 1 ? redirect(`/s/${user.sites[0].subdomain}`) : sitesPage(user);
+  // KennelOS's "get a link code" link: straight to Link KennelOS with one site,
+  // else the list of sites to pick from.
+  if (pathname === '/link-kennelos') return user.sites.length === 1 ? redirect(`/s/${user.sites[0].subdomain}/kennelos`) : sitesPage(user);
 
   const m = pathname.match(/^\/s\/([a-z0-9-]+)(\/.*)?$/);
   if (m) {

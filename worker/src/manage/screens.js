@@ -27,7 +27,7 @@ import { readFeed, parseFeedAddress, setFeed, FeedError, kennelosOrigin, kennelo
 import {
   waiting, fulfilled, getEntry, addEntry, updateEntry, setFulfilled, removeEntry, moveEntry, offerMailto, suggestWants, listNameFor, maskedNameFor, wantsPrivate, WaitlistError,
 } from '../waitlist.js';
-import { makeLinkCode, showCode, devices, stopDevice, unlinkSite, LinkError, CODE_TTL_MS } from '../kennelos/link.js';
+import { makeLinkCode, showCode, devices, stopDevice, unlinkSite, setKennelosPrices, LinkError, CODE_TTL_MS } from '../kennelos/link.js';
 import { OWNED, OWNED_PRICES } from '../kennelos/bundle.js';
 import { pendingMatches, matchChanges, confirmMatch, declineMatch, MatchError } from '../kennelos/match.js';
 import { leavingLitters, keepLitter, LITTER_DAYS } from '../kennelos/clock.js';
@@ -184,7 +184,7 @@ export function createScreens({ env, request, url, site, user, page }) {
         }
       }
       if (rest === '/prices') {
-        await env.DB.prepare('UPDATE sites SET use_kennelos_prices = ?, draft_changed_at = ? WHERE id = ?').bind(fd.has('on') ? 1 : 0, new Date().toISOString(), site.id).run();
+        await setKennelosPrices(env, site.id, fd.has('on'));
         return here('saved', '#prices');
       }
       if (rest === '/unlink') {
@@ -234,7 +234,7 @@ export function createScreens({ env, request, url, site, user, page }) {
         const pending = await pendingMatches(env, site.id);
         if (pending.length) parts.push(await matchesCard(pending));
         parts.push(`<form method="post" action="${base}/kennelos/prices" class="card" id="prices"><h2>Prices</h2>
-          <label class="check"><input type="checkbox" name="on" value="1"${prices ? ' checked' : ''}> <span>Use my KennelOS prices<span class="hint">On: each litter's prices, deposits and full-registration amounts, and your extras' prices, come from KennelOS with the next Update website, and can't be changed here. Off: you type them here. Either way, they show only where you switch Show prices on. A puppy's own price and an adult's asking price are always typed here.</span></span></label>
+          <label class="check"><input type="checkbox" name="on" value="1"${prices ? ' checked' : ''}> <span>Use my KennelOS prices<span class="hint">On: each litter's prices, deposits and full-registration amounts, and your extras' prices, come from KennelOS with the next Update website, and can't be changed here. Switching it on turns on Show prices for those litters, and for each new one KennelOS sends; you can still switch a litter's off. Off: you type them here, and they show only where you switch Show prices on. A puppy's own price and an adult's asking price are always typed here.</span></span></label>
           <button>Save</button></form>`);
         if (owner) {
           parts.push(`<form method="post" action="${base}/kennelos/unlink" class="card danger"><h2>Unlink</h2>
