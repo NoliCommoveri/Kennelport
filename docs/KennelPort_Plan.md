@@ -1,7 +1,7 @@
 # KennelPort: high-level plan (DRAFT)
 
 > Status: phases 0 to 3 are built (`worker/`), and phase 5 (albums, videos and posts, sharing) apart from its KennelOS part, which needs phase 4; section 8.1 says how phase 3 came together.
-> Phase 4 is designed and not yet built: section 5 was settled on 2026-11-03 against KennelOS's code (decisions 29 to 32).
+> Phase 4 was settled on 2026-11-03 against KennelOS's code (section 5, decisions 29 to 32). Its KennelPort side is built; its KennelOS side (5.5) isn't yet (section 8.1).
 > Section 8 says what version 1 is; section 9 lists the one decision still open. What comes after version 1 is
 > in [`KennelPort_Backlog.md`](KennelPort_Backlog.md). History of this plan lives in
 > [`BUILD_LOG.md`](BUILD_LOG.md).
@@ -1418,6 +1418,22 @@ KennelOS, the website feed read on the waitlist page with KennelOS's application
 drawn in the site's style (3.8), and the KennelOS list itself in the site's style
 (decision 21: the families' rows, the gap note and search, above the application form).
 Phase 3 is built.
+
+**Where phase 4 stands.** KennelPort's side is built (`worker/src/kennelos/`, migration
+0015): **Link KennelOS** with its one-time codes and the `links` rows per device; the API
+on `api.kennelport.com` (`POST /v1/link`, `GET` and `DELETE /v1/link`, `POST /v1/bundle`)
+with the KennelOS app origins in `KENNELOS_APP_ORIGINS`; the bundle, format 1, whose
+every key is listed at the top of `src/kennelos/bundle.js` and refused if unknown,
+applied all or none, once per bundle id, into the draft with a summary notice; matching
+by name with the field-by-field screen, and declines remembered; the hand-over; pairing
+to litter; read-only KennelOS fields; **Use my KennelOS prices**; the litter price
+fields with **Show prices** and **Show placed puppies**, a puppy's registration and own
+price, and the deposits date (3.2, 3.6); **Still deciding**; **Up and coming** and
+**Looking for a home** (3.7); the 30 days with **Keep** and **Not on your site** (5.3);
+**Unlink** and stopping one device; and the published addresses in each bundle's answer
+(5.4). Still to do: everything in 5.5, in the KennelOS repo (`siteExport.js` builds the
+bundle in the format above), and setting `KENNELOS_APP_ORIGINS` once KennelOS Pro's
+origins are known: until then every browser call to the API is refused.
 
 If the first site wants its own domain, connect it by hand (section 2.4).
 

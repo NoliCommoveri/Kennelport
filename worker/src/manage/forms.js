@@ -28,12 +28,16 @@ const LABELS = {
     contact_email: ['Email for families', null], contact_phone: ['Phone', null], facebook_url: ['Facebook page address', null],
     facebook_label: ['Facebook page name', null], instagram_url: ['Instagram address', null],
     dark_mode: ['Dark mode', 'Follow each visitor\'s phone or computer setting, or always show the light version.'],
-    show_other_prices: ['Show prices of extras', 'Off: visitors see "Contact us for pricing".'],
+    show_other_prices: ['Show prices of extras and adults', 'Extras, and dogs looking for a home. Off: visitors see "Contact us for pricing". Litter prices have their own switch on each litter.'],
   },
   dogs: {
     call_name: ['Call name', null], registered_name: ['Registered name', null], role: ['Role', 'For example Dam, Sire, or Retired.'],
     date_of_birth: ['Born', null], titles: ['Titles', 'For example CH, CGC.'],
     status: ['Where they show', 'Retired and in-memory pages come later; for now only "At home" dogs show.'],
+    upcoming: ['Up and coming', 'A young dog you\'ve kept and aren\'t breeding yet. Shown under Up and coming on your Dogs page, not with your girls and boys.'],
+    for_sale: ['Looking for a home', 'An adult you are placing. Shown under Looking for a home, with Ask about this dog.'],
+    price: ['Asking price, in dollars', 'Shown only with "Show prices of extras and adults" on under Kennel details; otherwise "Contact us for pricing".'],
+    died_on: ['Date of death', 'For a dog in memory.'],
     health_display: ['Health results shown', 'Only results you tick below ever show.'],
   },
   health: { test: ['Test', 'For example "Patellas (OFA)".'], result: ['Result', null], normal: ['This is a normal result', null], date: ['Date', null], verify_url: ['Link to check it', 'For example the OFA page for this result.'], show: ['Show on my website', null] },
@@ -43,8 +47,21 @@ const LABELS = {
     dam_id: ['Dam', null], sire_id: ['Sire', null], dam_name: ['Dam, if not one of your dogs', null], sire_name: ['Sire, if not one of your dogs', null],
     born_on: ['Born', null], ready_on: ['Ready to go home', null], expected_label: ['Expected (planned litters)', 'For example "Mid-February 2027".'],
     ready_label: ['Going home (planned litters)', null], summary: ['A line about the litter', null],
+    deposits_on: ['Deposits open', 'Until this day the litter shows under Coming up, and its Available puppies read "Available on" this date. Empty: available straight away.'],
+    price_female: ['Price for a girl, in dollars', 'With limited registration. Leave one sex empty if girls and boys cost the same.'],
+    price_male: ['Price for a boy, in dollars', null],
+    full_reg_female: ['Full registration adds, for a girl', 'Your site shows the total, never "+$300".'],
+    full_reg_male: ['Full registration adds, for a boy', null],
+    deposit_female: ['Deposit for a girl', null], deposit_male: ['Deposit for a boy', null],
+    price_note: ['A note under the prices', 'For example "Prices are our intended base prices and may change before the contract is signed."'],
+    show_prices: ['Show prices', 'Off: this litter and its puppies show "Contact us for pricing".'],
+    show_placed: ['Show placed puppies', 'Off: puppies marked Placed leave the site.'],
   },
-  puppies: { name: ['Name', null], collar: ['Collar', 'For example "pink collar".'] },
+  puppies: {
+    name: ['Name', null], collar: ['Collar', 'For example "pink collar".'],
+    registration: ['Registration', 'Empty while it isn\'t settled: the price shows as a range.'],
+    price: ['Its own price, in dollars', 'Usually empty, to follow the litter\'s prices. Shown exactly as typed.'],
+  },
   reviews: {
     quote: ['Review', null], rating: ['Stars', '1 to 5.'], first_name: ['Name shown', 'First name or family name only, like "The Rivera family".'],
     town: ['Town', null], puppy_name: ['Their puppy\'s name', null], home_month: ['Month they brought the puppy home', null],
@@ -67,7 +84,10 @@ const LABELS = {
     photos: ['Photos', null], primary_label: ['Waitlist button', null], secondary_label: ['Puppies button', null],
   },
   facts: { items: ['Facts', 'Up to 3 pairs, like "8 wks" / "Before going home".'] },
-  story: { script: ['Script word', null], text: ['Text', null], features: ['Three features', null], link_label: ['Link to your story', null] },
+  story: {
+    photo_id: ['Photo', 'A tall photo (4:5) beside your words: best at 1280 × 1600 px. "No photo" leaves it out, and your words take the whole width.'],
+    script: ['Script word', null], text: ['Text', null], features: ['Three features', null], link_label: ['Link to your story', null],
+  },
   waitlist: {
     line: ['Line', null], button_label: ['Button', null],
     closed: ['Waitlist closed', 'On: the application form is replaced by your message below, and no applications can be sent.'],
@@ -111,7 +131,8 @@ const LABELS = {
 const ENUM_WORDS = {
   sex: { female: 'Female', male: 'Male' },
   status_dogs: { active: 'At home', retired: 'Retired', remembered: 'In memory' },
-  status_puppies: { available: 'Available', reserved: 'Reserved', placed: 'Placed', staying: 'Staying with us', coming_soon: 'Coming soon', hidden: 'Hidden' },
+  status_puppies: { available: 'Available', reserved: 'Reserved', placed: 'Placed', staying: 'Staying with us', coming_soon: 'Still deciding', hidden: 'Hidden' },
+  registration: { limited: 'Limited', full: 'Full' },
   status_reviews: { approved: 'Shown', hidden: 'Hidden' },
   health_display: { normal_only: 'Normal results only', all: 'All ticked results', none: 'None' },
   stage: { planned: 'Planned', current: 'Born (current)', past: 'Past' },
@@ -152,8 +173,22 @@ const chosenLayout = (values) => values?.layout ?? collageLayout(null, (values?.
 const enumWords = (kind, name, v) => ENUM_WORDS[`${name}_${kind}`]?.[v] ?? ENUM_WORDS[name]?.[v] ?? v;
 
 // ctx: { kind, photos: [{id, alt}], photoUrl(id), photoGroups, upload: {action, tags, alt}, dogs: [{id, call_name}] }
+// A field KennelOS owns while linked (plan 5.3): shown, not editable. The save
+// keeps what's stored (screens.js), whatever the form sends.
+function lockedField(name, f, value, ctx, label) {
+  let shown;
+  if (value === null || value === undefined || value === '' || (Array.isArray(value) && !value.length)) shown = '—';
+  else if (f.type === 'bool') shown = value ? 'Yes' : 'No';
+  else if (f.type === 'dogid') shown = (ctx.dogs ?? []).find((d) => d.id === value)?.call_name ?? '—';
+  else if (f.type === 'enum') shown = enumWords(ctx.kind, name, value);
+  else if (Array.isArray(value)) shown = value.join(', ');
+  else shown = String(value);
+  return `<p class="locked"><b>${esc(label)}</b><br>${esc(shown)} <span class="muted small">· from KennelOS, change it there</span></p>`;
+}
+
 export function field(name, f, value, ctx) {
   const [label, hint] = labelFor(ctx.kind, name);
+  if (ctx.locked?.has(name)) return lockedField(name, f, value, ctx, label);
   const id = `f-${name}`;
   const h = hint ? `<span class="hint">${esc(hint)}</span>` : '';
   const req = f.required ? ' required' : '';

@@ -7,6 +7,7 @@ import {
   EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue, slugify,
 } from './model.js';
 import { untagStatements } from '../photoTags.js';
+import { litterClockStatements } from '../kennelos/clock.js';
 
 const omit = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) => !keys.includes(k)));
 
@@ -17,9 +18,9 @@ const ALBUM_RECORD_FIELDS = { ...omit(ALBUM_FIELDS, ['litter']), litter_id: { ty
 
 // kind → where it lives and what it holds. `scope` is the parent column, if any.
 export const KINDS = {
-  dogs: { table: 'dogs', fields: DOG_FIELDS, slug: 'call_name', label: 'call_name', defaults: { status: 'active', health_display: 'normal_only', show_on_site: 1 }, stamps: true },
+  dogs: { table: 'dogs', fields: DOG_FIELDS, slug: 'call_name', label: 'call_name', defaults: { status: 'active', health_display: 'normal_only', show_on_site: 1, upcoming: 0, for_sale: 0 }, stamps: true },
   health: { table: 'health_results', fields: HEALTH_FIELDS, scope: 'dog_id', label: 'test', defaults: { normal: 1, show: 0 } },
-  litters: { table: 'litters', fields: LITTER_RECORD_FIELDS, slug: 'name', label: 'name', defaults: { show_on_site: 1 }, stamps: true },
+  litters: { table: 'litters', fields: LITTER_RECORD_FIELDS, slug: 'name', label: 'name', defaults: { show_on_site: 1, show_prices: 0, show_placed: 1 }, stamps: true },
   puppies: { table: 'puppies', fields: PUPPY_FIELDS, scope: 'litter_id', slug: 'name', label: 'name', defaults: { status: 'coming_soon' }, stamps: true },
   reviews: { table: 'stories', fields: omit(REVIEW_FIELDS, []), label: 'first_name', where: "kind = 'review'", fixed: { kind: 'review', submitted_by: 'breeder' }, defaults: { status: 'approved' } },
   steps: { table: 'steps', fields: STEP_FIELDS, label: 'heading', where: "page = 'how_it_works'", fixed: { page: 'how_it_works' }, defaults: { pay_link: 0 } },
@@ -32,7 +33,10 @@ for (const page of EXPANDER_PAGES) {
 }
 
 const now = () => new Date().toISOString();
+// Every write marks the draft changed; one that touches a litter keeps its
+// 30-day clock true too (kennelos/clock.js).
 const touch = (env, siteId) => env.DB.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(now(), siteId);
+const touchAll = (env, siteId, kind) => [touch(env, siteId), ...(kind === 'litters' ? litterClockStatements(env, siteId) : [])];
 
 function kindOf(kind) {
   const k = KINDS[kind];
@@ -141,7 +145,7 @@ export async function saveRecord(env, siteId, kind, id, input, scopeId = null) {
     if (k.stamps) { cols.push('updated_at'); clean.updated_at = t; }
     await env.DB.batch([
       env.DB.prepare(`UPDATE ${k.table} SET ${cols.map((c) => `${c} = ?`).join(', ')} WHERE id = ? AND site_id = ?`).bind(...cols.map((c) => clean[c]), id, siteId),
-      touch(env, siteId),
+      ...touchAll(env, siteId, kind),
     ]);
     return getRecord(env, siteId, kind, id);
   }
@@ -154,7 +158,7 @@ export async function saveRecord(env, siteId, kind, id, input, scopeId = null) {
   const cols = Object.keys(row);
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO ${k.table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`).bind(...cols.map((c) => row[c])),
-    touch(env, siteId),
+    ...touchAll(env, siteId, kind),
   ]);
   return getRecord(env, siteId, kind, row.id);
 }
@@ -168,7 +172,7 @@ export async function setField(env, siteId, kind, id, field, value) {
   const res = await env.DB.prepare(`UPDATE ${k.table} SET ${field} = ?${k.stamps ? ', updated_at = ?' : ''} WHERE id = ? AND site_id = ?`)
     .bind(v, ...(k.stamps ? [now()] : []), id, siteId).run();
   if (!res.meta.changes) throw new ContentError(kind, 'no longer exists');
-  await touch(env, siteId).run();
+  await env.DB.batch(touchAll(env, siteId, kind));
 }
 
 export async function removeRecord(env, siteId, kind, id) {

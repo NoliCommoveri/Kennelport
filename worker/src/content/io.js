@@ -227,7 +227,7 @@ export async function importContent(env, siteId, doc) {
       const { health, ...dog } = d;
       s.push(upsert(db, 'dogs', ['site_id', 'slug'], {
         id: uuid(), site_id: siteId, ...dog, status: dog.status ?? 'active', health_display: dog.health_display ?? 'normal_only',
-        show_on_site: dog.show_on_site ?? 1, sort: i, created_at: t, updated_at: t,
+        show_on_site: dog.show_on_site ?? 1, upcoming: dog.upcoming ?? 0, for_sale: dog.for_sale ?? 0, sort: i, created_at: t, updated_at: t,
       }));
     });
     const slugs = clean.dogs.map((d) => d.slug);
@@ -250,7 +250,7 @@ export async function importContent(env, siteId, doc) {
   if (clean.litters) {
     clean.litters.forEach((l, i) => {
       const { puppies, dam, sire, ...litter } = l;
-      const row = { id: uuid(), site_id: siteId, ...litter, show_on_site: litter.show_on_site ?? 1, sort: i, created_at: t, updated_at: t };
+      const row = { id: uuid(), site_id: siteId, ...litter, show_on_site: litter.show_on_site ?? 1, show_prices: litter.show_prices ?? 0, show_placed: litter.show_placed ?? 1, sort: i, created_at: t, updated_at: t };
       const cols = Object.keys(row);
       const updates = cols.filter((c) => !['id', 'created_at', 'site_id', 'slug'].includes(c));
       s.push(db.prepare(`INSERT INTO litters (${cols.join(', ')}, dam_id, sire_id) VALUES (${cols.map(() => '?').join(', ')},
@@ -358,17 +358,17 @@ export async function exportContent(env, siteId) {
   const health = await all('SELECT * FROM health_results WHERE site_id = ? ORDER BY sort', siteId);
   const slugOf = Object.fromEntries(dogs.map((d) => [d.id, d.slug]));
   doc.dogs = dogs.map((d) => ({
-    ...bools(strip(d, [...SYSTEM]), ['show_on_site']),
-    health: health.filter((h) => h.dog_id === d.id).map((h) => bools(strip(h, [...SYSTEM, 'dog_id']), ['normal', 'show'])),
+    ...bools(pick(strip(d, SYSTEM), Object.keys(DOG_FIELDS)), ['show_on_site', 'upcoming', 'for_sale']),
+    health: health.filter((h) => h.dog_id === d.id).map((h) => bools(pick(strip(h, SYSTEM), Object.keys(HEALTH_FIELDS)), ['normal', 'show'])),
   }));
 
   const litters = await all('SELECT * FROM litters WHERE site_id = ? ORDER BY sort, name', siteId);
   const puppies = await all('SELECT * FROM puppies WHERE site_id = ? ORDER BY sort, name', siteId);
   doc.litters = litters.map((l) => {
-    const out = bools(strip(l, [...SYSTEM, 'dam_id', 'sire_id']), ['show_on_site']);
+    const out = bools(pick(strip(l, SYSTEM), Object.keys(LITTER_FIELDS)), ['show_on_site', 'show_prices', 'show_placed']);
     if (l.dam_id) out.dam = slugOf[l.dam_id];
     if (l.sire_id) out.sire = slugOf[l.sire_id];
-    out.puppies = puppies.filter((p) => p.litter_id === l.id).map((p) => strip(p, [...SYSTEM, 'litter_id']));
+    out.puppies = puppies.filter((p) => p.litter_id === l.id).map((p) => pick(strip(p, SYSTEM), Object.keys(PUPPY_FIELDS)));
     return out;
   });
 

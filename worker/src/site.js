@@ -109,7 +109,7 @@ async function servePhoto(env, site, snap, url, { preview }) {
   });
 }
 
-export async function serveSite(request, env, ctxWorker, subdomain) {
+export async function serveSite(request, env, ctxWorker, subdomain, { onDomain = false } = {}) {
   const url = new URL(request.url);
   const formPost = request.method === 'POST' && FORM_PATHS.includes(url.pathname);
   if (request.method !== 'GET' && request.method !== 'HEAD' && !formPost) return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD' } });
@@ -117,9 +117,18 @@ export async function serveSite(request, env, ctxWorker, subdomain) {
     return htmlPage('Back soon', '<h1>Back soon</h1><p>This site is being updated. Please try again in a few minutes.</p>', { status: 503, headers: { 'retry-after': '300' } });
   }
 
-  const site = await env.DB.prepare('SELECT id, subdomain, kennel_name, status, published_snapshot_id, kennelos_public_id FROM sites WHERE subdomain = ?').bind(subdomain).first();
+  const site = await env.DB.prepare(`SELECT s.id, s.subdomain, s.kennel_name, s.status, s.published_snapshot_id, s.kennelos_public_id, d.hostname AS domain
+    FROM sites s LEFT JOIN custom_domains d ON d.site_id = s.id AND d.status = 'active' WHERE s.subdomain = ?`).bind(subdomain).first();
   if (!site) return htmlPage('Not found', '<h1>Not found</h1><p>No KennelPort site has this address.</p>', { status: 404 });
   if (site.status === 'closed') return closedNotice();
+
+  // With its own domain connected (plan 2.4), the kennelport.com address sends
+  // visitors there with the same path, so old links and printed QR codes keep
+  // working. Not on staging, whose sites are reached through /__host. An hour's
+  // cache, so a domain that's disconnected stops redirecting soon after.
+  if (site.domain && !onDomain && !formPost && env.ALLOW_HOST_OVERRIDE !== '1') {
+    return new Response(null, { status: 301, headers: { location: `https://${site.domain}${url.pathname}${url.search}`, 'cache-control': 'public, max-age=3600' } });
+  }
 
   // Opening a preview link: remember it on this host, then show the page.
   if (url.pathname === '/__preview') {

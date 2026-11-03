@@ -114,6 +114,37 @@ For the forms and notifications (phase 2), on each Worker:
 - **Resend** (sign-in codes and invites): create an account, verify `kennelport.com`
   as a sending domain (it adds DNS records), make an API key and set it as
   `RESEND_API_KEY`. `MAIL_FROM` in `wrangler.toml` is the sender.
-- **Cloudflare for SaaS** (custom domains, plan 2.4): when the first site wants its own
-  domain.
+- **Cloudflare for SaaS** (custom domains, plan 2.4): when the first breeder whose
+  domain is *not* in KennelPort's Cloudflare account wants it (below).
+
+## Custom domains (plan 2.4, by hand)
+
+The Worker serves a domain once two things are true: Cloudflare sends its requests
+to the Worker, and the ops console says which site it is. Use the `www.` name as the
+main address (decision 15); the bare name redirects to it.
+
+**A. The domain is a zone in KennelPort's own Cloudflare account** (you bought or
+moved it there for the breeder):
+
+1. Add both names to `[env.production]` `routes` in `worker/wrangler.toml` as
+   Workers Custom Domains, and deploy:
+   `{ pattern = "www.theirdomain.com", custom_domain = true }` and
+   `{ pattern = "theirdomain.com", custom_domain = true }`.
+   Cloudflare makes the DNS records and certificates itself. A deploy fails if the
+   zone already has an A, AAAA or CNAME record on either name (a parking page, an old
+   host): delete those first. Leave MX and TXT records alone (email). Keep them in
+   `wrangler.toml`, not only the dashboard: a deploy sets the Worker's routes from it.
+2. Ops console → the site → **Own domain** → `www.theirdomain.com` → **Save as
+   pending**. Open `https://www.theirdomain.com` and check the site is there.
+3. **Make it the main address**: `theirsite.kennelport.com` now redirects there.
+
+**B. The domain is somewhere else** (the breeder's own registrar or Cloudflare account):
+Cloudflare for SaaS, once, on the `kennelport.com` zone: a proxied DNS record for
+`sites.kennelport.com`, set as the fallback origin, and a Worker route `*/*` on the
+zone. Then per breeder: add `www.theirdomain.com` as a custom hostname; at their
+registrar a CNAME `www` → `sites.kennelport.com` plus any TXT record Cloudflare asks
+for, and forwarding of the bare domain to `www`; when it shows active, steps 2–3 above.
+
+Removing a domain: **Remove the domain** in ops, then remove its route or custom
+hostname in Cloudflare. Closing a site forgets its domain too.
 - **Turnstile** site key (forms): phase 3.

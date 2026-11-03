@@ -19,7 +19,9 @@ const MAX_SNAPSHOT_BYTES = 8 * 1024 * 1024;
 
 const json = (text, fallback) => { try { return JSON.parse(text); } catch { return fallback; } };
 const keep = (row, drop) => Object.fromEntries(Object.entries(row).filter(([k, v]) => !drop.includes(k) && v !== null));
-const SYSTEM = ['site_id', 'sort', 'source', 'kennelos_id', 'hidden_by_kennelos', 'created_at', 'updated_at', 'show_on_site'];
+const SYSTEM = ['site_id', 'sort', 'source', 'kennelos_id', 'kennelos_kind', 'hidden_by_kennelos', 'created_at', 'updated_at', 'show_on_site', 'left_site_at', 'kept_at'];
+// A litter's figures go into the snapshot only with its Show prices on (plan 3.2).
+const LITTER_PRICES = ['price_female', 'price_male', 'full_reg_female', 'full_reg_male', 'deposit_female', 'deposit_male', 'price_note'];
 
 export const snapshotKey = (siteId, snapshotId) => `sites/${siteId}/snapshots/${snapshotId}.json`;
 
@@ -58,7 +60,9 @@ export async function buildSnapshot(env, siteId) {
   const dogsRaw = await all('SELECT * FROM dogs WHERE site_id = ? AND show_on_site = 1 AND hidden_by_kennelos = 0 ORDER BY sort, call_name');
   const health = await all('SELECT * FROM health_results WHERE site_id = ? AND show = 1 ORDER BY sort');
   const dogs = dogsRaw.map((d) => ({
-    ...keep(d, [...SYSTEM, 'health_display']),
+    // An asking price only for a dog looking for a home, with Show other prices on.
+    ...keep(d, [...SYSTEM, 'health_display', 'died_on', ...(d.for_sale && site.show_other_prices ? [] : ['price'])]),
+    upcoming: Boolean(d.upcoming), for_sale: Boolean(d.for_sale),
     health: d.health_display === 'none' ? []
       : health.filter((h) => h.dog_id === d.id && (d.health_display === 'all' || h.normal))
         .map((h) => keep(h, ['id', 'site_id', 'dog_id', 'show', 'sort', 'source'])),
@@ -68,7 +72,7 @@ export async function buildSnapshot(env, siteId) {
   const littersRaw = await all('SELECT * FROM litters WHERE site_id = ? AND show_on_site = 1 AND hidden_by_kennelos = 0 ORDER BY sort, name');
   const puppies = await all("SELECT * FROM puppies WHERE site_id = ? AND status != 'hidden' AND hidden_by_kennelos = 0 ORDER BY sort, name");
   const litters = littersRaw.map((l) => {
-    const out = keep(l, SYSTEM);
+    const out = { ...keep(l, [...SYSTEM, 'show_placed', ...(l.show_prices ? [] : LITTER_PRICES)]), show_prices: Boolean(l.show_prices) };
     // A parent that isn't shown on the site is named, never linked.
     for (const role of ['dam', 'sire']) {
       const id = l[`${role}_id`];
@@ -77,7 +81,9 @@ export async function buildSnapshot(env, siteId) {
         delete out[`${role}_id`];
       }
     }
-    out.puppies = puppies.filter((p) => p.litter_id === l.id).map((p) => keep(p, [...SYSTEM, 'litter_id']));
+    // Placed puppies stay off with the litter's Show placed puppies off (plan 3.6).
+    out.puppies = puppies.filter((p) => p.litter_id === l.id && (l.show_placed || p.status !== 'placed'))
+      .map((p) => keep(p, [...SYSTEM, 'litter_id', ...(l.show_prices ? [] : ['price'])]));
     return out;
   });
 

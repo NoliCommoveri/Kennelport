@@ -12,6 +12,7 @@ import { makePreviewToken, PREVIEW_DAYS } from '../site.js';
 import { savePhoto, PhotoError } from '../photos.js';
 import { APP_VERSION } from '../manage/version.js';
 import { inviteToSite, removeFromSite, AuthError } from '../auth.js';
+import { domainFor, setDomain, activateDomain, removeDomain, DomainError } from '../domains.js';
 
 const TITLE = 'KennelPort ops';
 // The site page loads one script of our own (photo resizing); nothing else.
@@ -35,6 +36,10 @@ const NOTES = {
   removed: 'Removed from this site.',
   closed: 'Site closed and its content deleted.',
   released: 'Subdomain released.',
+  domain_added: 'Domain saved as pending: it serves the site, and the kennelport.com address doesn\'t redirect yet. Open it to check, then make it the main address.',
+  domain_active: 'The domain is now the main address; the kennelport.com address redirects there.',
+  domain_paused: 'Back to pending: the kennelport.com address serves the site again.',
+  domain_removed: 'Domain removed. The kennelport.com address is the main one again.',
 };
 
 // Where to see a site from here. Staging can't receive real hostnames, so its
@@ -131,6 +136,19 @@ ${people.length ? `<table>${people.map((p) => `<tr><td>${esc(p.role)}</td><td cl
   <p><button>Save limits</button></p>
 </form>`;
 
+  const domain = await domainFor(env, siteId);
+  const bareOf = (h) => (h.startsWith('www.') ? h.slice(4) : `www.${h}`);
+  const domainSection = `<h2>Own domain</h2>
+${domain ? `<p><a href="https://${esc(domain.hostname)}/"><code>${esc(domain.hostname)}</code></a> · ${esc(domain.status)}${domain.connected_at ? ` · main address since ${esc(fmtTime(domain.connected_at))}` : ''}
+<br><span class="muted"><code>${esc(bareOf(domain.hostname))}</code> redirects to it when it reaches KennelPort too.</span></p>
+<form method="post" action="/ops/sites/${esc(site.id)}/domain/${domain.status === 'active' ? 'pause' : 'activate'}"><p><button>${domain.status === 'active' ? 'Stop redirecting to it' : 'Make it the main address'}</button></p></form>
+<form method="post" action="/ops/sites/${esc(site.id)}/domain/remove"><p><button>Remove the domain</button> <span class="muted">Only forgets it here; remove its route or custom hostname in Cloudflare too.</span></p></form>`
+    : `<p class="muted">None: the site's address is <code>${esc(site.subdomain)}.${esc(env.ROOT_DOMAIN)}</code>. Route the domain to the Worker in Cloudflare first (docs/KennelPort_Setup.md, "Custom domains"), then add it here.</p>`}
+<form method="post" action="/ops/sites/${esc(site.id)}/domain">
+  <p><label>${domain ? 'Replace with' : 'Domain'}<br><input name="hostname" required autocomplete="off" placeholder="www.thornfieldkennels.com"></label></p>
+  <p><button>Save as pending</button></p>
+</form>`;
+
   const lifecycle = `<h2>Suspend or close</h2>
 <form method="post" action="/ops/sites/${esc(site.id)}/${site.status === 'suspended' ? 'resume' : 'suspend'}"><p><button>${site.status === 'suspended' ? 'Turn the site back on' : 'Suspend'}</button> <span class="muted">${site.status === 'suspended' ? '' : 'Hides the site; keeps everything.'}</span></p></form>
 <form method="post" action="/ops/sites/${esc(site.id)}/close">
@@ -139,7 +157,7 @@ ${people.length ? `<table>${people.map((p) => `<tr><td>${esc(p.role)}</td><td cl
   <p><button>Close and delete everything</button></p>
 </form>`;
 
-  return page(`${top}${publishing}${peopleSection}${contentSection}${photoSection}${limitsSection}${lifecycle}`);
+  return page(`${top}${publishing}${peopleSection}${contentSection}${photoSection}${limitsSection}${domainSection}${lifecycle}`);
 }
 
 // ---------- routes ----------
@@ -237,6 +255,22 @@ export async function handleSites(request, env, url) {
         await env.DB.prepare('UPDATE sites SET storage_limit = ?, photo_limit = ? WHERE id = ?').bind(mbv === null ? null : mbv * 1024 * 1024, photos, siteId).run();
         return back('limits');
       }
+      case 'domain': {
+        const form = await request.formData();
+        try { await setDomain(env, siteId, form.get('hostname')); } catch (err) {
+          if (err instanceof DomainError) return sitePage(env, siteId, { error: err.message });
+          throw err;
+        }
+        return back('domain_added');
+      }
+      case 'domain/activate':
+      case 'domain/pause':
+        try { await activateDomain(env, siteId, action === 'domain/activate'); } catch (err) {
+          if (err instanceof DomainError) return sitePage(env, siteId, { error: err.message });
+          throw err;
+        }
+        return back(action === 'domain/activate' ? 'domain_active' : 'domain_paused');
+      case 'domain/remove': await removeDomain(env, siteId); return back('domain_removed');
       case 'people/remove': {
         const form = await request.formData();
         await removeFromSite(env, siteId, String(form.get('email_hash') ?? ''));

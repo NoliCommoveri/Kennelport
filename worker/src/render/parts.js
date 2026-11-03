@@ -2,6 +2,7 @@
 // the menu. Every value from a snapshot passes through esc() (or attr()) here.
 import { escapeHtml as esc } from '../lib/html.js';
 import { MENU_GROUPS, PAGES } from '../content/model.js';
+import { puppyPrice, litterPriceRange, depositRange } from '../content/prices.js';
 
 export { esc };
 export const attr = esc;
@@ -11,6 +12,12 @@ export function fmtDate(ymd) {
   if (!ymd) return '';
   const [y, m, d] = ymd.split('-').map(Number);
   return `${MONTHS[m - 1]} ${d}, ${y}`;
+}
+// "December 12": a date this year or next, where the year goes without saying.
+export function fmtDay(ymd) {
+  if (!ymd) return '';
+  const [, m, d] = ymd.split('-').map(Number);
+  return `${MONTHS[m - 1]} ${d}`;
 }
 export function fmtMonth(ym) {
   if (!ym) return '';
@@ -69,12 +76,13 @@ export function menuGroups(snap, ctx) {
       if (page.group !== g.key || !pageOn(snap, key, ctx)) continue;
       links.push({ key, href: page.path, text: label(snap, key) });
       // Sub-links that are places within a page.
-      if (key === 'dogs' && snap.dogs.some((d) => d.sex === 'female') && snap.dogs.some((d) => d.sex === 'male')) {
+      const breeding = dogGroups(snap).breeding;
+      if (key === 'dogs' && breeding.some((d) => d.sex === 'female') && breeding.some((d) => d.sex === 'male')) {
         links.push({ key, href: '/dogs#girls', text: 'Girls' }, { key, href: '/dogs#boys', text: 'Boys' });
       }
       if (key === 'litters') {
-        const current = snap.litters.some((l) => l.stage === 'current');
-        const planned = snap.litters.some((l) => l.stage === 'planned');
+        const current = snap.litters.some((l) => l.stage === 'current' && !depositsAhead(l, ctx.today));
+        const planned = snap.litters.some((l) => l.stage === 'planned' || depositsAhead(l, ctx.today));
         links.pop();
         if (current) links.push({ key, href: '/litters#available', text: 'Available' });
         if (planned) links.push({ key, href: '/litters#upcoming', text: 'Upcoming litters' });
@@ -88,15 +96,60 @@ export function menuGroups(snap, ctx) {
 
 // ---------- litters and puppies ----------
 
-export const STATUS_TEXT = { available: 'Available', reserved: 'Reserved', placed: 'Placed', staying: 'Staying with us', coming_soon: 'Coming soon' };
+// 'coming_soon' is stored, and reads "Still deciding" (plan 3.6, decision 32): she
+// may keep the puppy, place it privately or never offer it, so the site promises
+// nothing.
+export const STATUS_TEXT = { available: 'Available', reserved: 'Reserved', placed: 'Placed', staying: 'Staying with us', coming_soon: 'Still deciding' };
 
 const isPast = (ymd, today) => Boolean(ymd) && ymd < today;
+
+// A born litter whose deposits date is still ahead (plan 5.3): it sits under
+// Coming up, and its Available puppies read "Available on <date>". The site moves
+// it on the day, from the published snapshot.
+export const depositsAhead = (l, today) => l.stage === 'current' && Boolean(l.deposits_on) && l.deposits_on > today;
+
+// What a puppy's status says, on its card and page.
+export function puppyStatus(l, p, today) {
+  if (p.status === 'available' && depositsAhead(l, today)) return `Available on ${fmtDay(l.deposits_on)}`;
+  return STATUS_TEXT[p.status] ?? '';
+}
+
+// A puppy's price line: only an Available one, and only with the litter's Show
+// prices on (plan 3.2). Reserved, placed, staying and still-deciding puppies show
+// none.
+export function puppyPriceText(l, p) {
+  if (p.status !== 'available') return '';
+  if (!l.show_prices) return 'Contact us for pricing';
+  const r = puppyPrice(l, p);
+  return r ? priceText(r.from, r.to) : '';
+}
+
+// The litter's own price rows: a range across its sexes, and the deposit.
+export function litterPriceRows(l) {
+  if (l.stage === 'past') return [];
+  if (!l.show_prices) return [['Price', 'Contact us for pricing']];
+  const r = litterPriceRange(l);
+  const d = depositRange(l);
+  return [['Price', r && priceText(r.from, r.to)], ['Deposit', d && priceText(d.from, d.to)]];
+}
+
+// The Dogs page's groups (plan 3.7), from each dog's status: the breeding dogs
+// (girls and boys), young stock she has kept, and adults looking for a home.
+// Retired and in-memory dogs wait for their pages (backlog).
+export function dogGroups(snap) {
+  const home = snap.dogs.filter((d) => d.status === 'active');
+  return {
+    breeding: home.filter((d) => !d.upcoming && !d.for_sale),
+    upcoming: home.filter((d) => d.upcoming && !d.for_sale),
+    for_sale: home.filter((d) => d.for_sale),
+  };
+}
 
 // Available puppies past their litter's going-home date (plan 3.11).
 export function olderPuppies(snap, today) {
   const out = [];
   for (const l of snap.litters) {
-    if (l.stage !== 'current' || !isPast(l.ready_on, today)) continue;
+    if (l.stage !== 'current' || !isPast(l.ready_on, today) || depositsAhead(l, today)) continue;
     for (const p of l.puppies) if (p.status === 'available') out.push({ litter: l, puppy: p });
   }
   return out;
@@ -132,12 +185,13 @@ export function litterCard(snap, l, ctx, { link = true } = {}) {
     const name = parentName(snap, l, role);
     return (dog && img(snap, dog.photo_id, { alt: dog.call_name, thumb: true })) || `<span class="ph">${esc(name ? name.slice(0, 1) : '?')}</span>`;
   };
-  const older = l.stage === 'current' && isPast(l.ready_on, ctx.today);
-  const eyebrow = l.stage === 'planned' ? (l.plan_label || 'Planned litter') : l.stage === 'past' ? 'Past litter' : older ? 'Older puppies' : 'Current litter';
-  const rows = l.stage === 'planned'
+  const ahead = depositsAhead(l, ctx.today);
+  const older = l.stage === 'current' && !ahead && isPast(l.ready_on, ctx.today);
+  const eyebrow = l.stage === 'planned' ? (l.plan_label || 'Planned litter') : l.stage === 'past' ? 'Past litter' : ahead ? 'Coming up' : older ? 'Older puppies' : 'Current litter';
+  const rows = (l.stage === 'planned'
     ? [['Expected', l.expected_label], ['Going home', l.ready_label]]
-    : [['Born', fmtDate(l.born_on)], ['Puppies', l.puppies.length ? l.puppies.map((p) => p.name).length <= 2 ? l.puppies.map((p) => p.name).join(', ') : counts(l.puppies) : null],
-      ['Going home', older ? 'Ready now' : fmtDate(l.ready_on)]];
+    : [['Born', fmtDate(l.born_on)], ['Deposits from', ahead ? fmtDate(l.deposits_on) : null], ['Puppies', l.puppies.length ? l.puppies.map((p) => p.name).length <= 2 ? l.puppies.map((p) => p.name).join(', ') : counts(l.puppies) : null],
+      ['Going home', older ? 'Ready now' : fmtDate(l.ready_on)]]).concat(litterPriceRows(l));
   const more = !link ? '' : l.stage === 'planned'
     ? (pageOn(snap, 'waitlist', ctx) ? '<a class="more" href="/waitlist">See the waitlist</a>' : '')
     : `<a class="more" href="/litters/${attr(l.slug)}">Meet the puppies</a>`;
@@ -148,7 +202,8 @@ export function litterCard(snap, l, ctx, { link = true } = {}) {
 
 // ---------- flip cards ----------
 
-export function dogCard(snap, d) {
+// sale: { price, ask } for a dog looking for a home (plan 3.7).
+export function dogCard(snap, d, { sale = null } = {}) {
   const photo = img(snap, d.photo_id, { alt: d.call_name }) ?? '<div class="ph-photo">Photos coming soon</div>';
   const bg = img(snap, d.photo_id, { alt: '', cls: 'bg', thumb: true }) ?? '';
   const tests = d.health.length
@@ -160,7 +215,7 @@ export function dogCard(snap, d) {
       <div class="face front">${photo}<span class="turn" aria-hidden="true">↻</span>
         <div class="cap"><span class="call">${esc(d.call_name)}</span>${d.registered_name ? `<span class="reg">${esc(d.registered_name)}</span>` : ''}<span class="line1"><span>${esc(line)}</span>${d.titles ? `<span>${esc(d.titles)}</span>` : ''}</span></div></div>
       <div class="face back">${bg}<span class="call">${esc(d.call_name)}</span>${d.registered_name ? `<span class="reg">${esc(d.registered_name)}</span>` : ''}
-        ${tests}${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''}<a class="more" href="/dogs/${attr(d.slug)}">View profile</a></div>
+        ${tests}${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''}${sale ? `${sale.price ? `<p class="small">${esc(sale.price)}</p>` : ''}<a class="more" href="${attr(sale.ask)}">Ask about ${esc(d.call_name)}</a>` : ''}<a class="more" href="/dogs/${attr(d.slug)}">View profile</a></div>
     </div></div>`;
 }
 
@@ -169,7 +224,8 @@ export function puppyCard(snap, l, p, ctx) {
   const bg = img(snap, p.photo_id, { alt: '', cls: 'bg', thumb: true }) ?? '';
   const sex = p.sex === 'female' ? 'Female' : 'Male';
   const held = p.status === 'reserved' || p.status === 'placed';
-  const status = STATUS_TEXT[p.status] ?? '';
+  const status = puppyStatus(l, p, ctx.today);
+  const price = puppyPriceText(l, p);
   const reg = [l.name, p.collar].filter(Boolean).join(' · ');
   const action = p.status === 'available'
     ? (pageOn(snap, 'waitlist', ctx) ? '<a class="more" href="/waitlist">Ask about this puppy</a>' : '<a class="more" href="/contact">Ask about this puppy</a>')
@@ -179,7 +235,7 @@ export function puppyCard(snap, l, p, ctx) {
       <div class="face front">${held ? `<span class="ribbon">${esc(status)}</span>` : ''}${photo}<span class="turn" aria-hidden="true">↻</span>
         <div class="cap"><span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span><span class="line1"><span>${esc([sex, p.color].filter(Boolean).join(' · '))}</span><span class="status ${p.status === 'available' ? 'avail' : 'res'}">${esc(status)}</span></span></div></div>
       <div class="face back">${bg}<span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span>
-        <span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li></ul>
+        <span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li>${price ? `<li><span>Price</span><span>${esc(price)}</span></li>` : ''}</ul>
         ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}${action}</div>
     </div></div>`;
 }
