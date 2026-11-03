@@ -19,7 +19,7 @@ const MAX_SNAPSHOT_BYTES = 8 * 1024 * 1024;
 
 const json = (text, fallback) => { try { return JSON.parse(text); } catch { return fallback; } };
 const keep = (row, drop) => Object.fromEntries(Object.entries(row).filter(([k, v]) => !drop.includes(k) && v !== null));
-const SYSTEM = ['site_id', 'sort', 'source', 'kennelos_id', 'kennelos_kind', 'hidden_by_kennelos', 'created_at', 'updated_at', 'show_on_site', 'left_site_at', 'kept_at'];
+const SYSTEM = ['site_id', 'sort', 'source', 'kennelos_id', 'kennelos_kind', 'kennelos_name', 'hidden_by_kennelos', 'created_at', 'updated_at', 'show_on_site', 'left_site_at', 'kept_at'];
 // A litter's figures go into the snapshot only with its Show prices on (plan 3.2).
 const LITTER_PRICES = ['price_female', 'price_male', 'full_reg_female', 'full_reg_male', 'deposit_female', 'deposit_male', 'price_note'];
 
@@ -117,7 +117,12 @@ export async function buildSnapshot(env, siteId) {
     .map((s) => ({ ...keep(s, ['site_id', 'page', 'sort', 'source']), pay_link: Boolean(s.pay_link) }));
   const expRows = await all('SELECT * FROM expanders WHERE site_id = ? ORDER BY sort');
   const expanders = {};
-  for (const e of expRows) (expanders[e.page] ??= []).push({ heading: e.heading, body: e.body, start_open: Boolean(e.start_open) });
+  // A FAQ carries the pages it also shows at the top of (plan 3.9), so a page can
+  // draw it without reading the draft; the other expanders have no places.
+  for (const e of expRows) (expanders[e.page] ??= []).push({
+    heading: e.heading, body: e.body, start_open: Boolean(e.start_open),
+    ...(e.page === 'faq' ? { places: e.places ? JSON.parse(e.places) : [] } : {}),
+  });
   const extras = (await all('SELECT * FROM extras WHERE site_id = ? ORDER BY sort')).map((x) => ({
     ...keep(x, ['site_id', 'sort', 'source']), featured: Boolean(x.featured), checklist: json(x.checklist, []),
   }));

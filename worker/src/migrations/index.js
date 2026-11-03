@@ -28,6 +28,7 @@ import registration from './0017_registration.sql';
 import puppyPhotos from './0018_puppy_photos.sql';
 import albumOrder from './0019_album_order.sql';
 import puppyMorePhotos from './0020_puppy_more_photos.sql';
+import faqPlacesLitterNames from './0021_faq_places_litter_names.sql';
 
 export const MIGRATIONS = [
   { id: '0001', name: 'schema', sql: schema },
@@ -50,4 +51,5 @@ export const MIGRATIONS = [
   { id: '0018', name: 'puppy_photos', sql: puppyPhotos },
   { id: '0019', name: 'album_order', sql: albumOrder },
   { id: '0020', name: 'puppy_more_photos', sql: puppyMorePhotos },
+  { id: '0021', name: 'faq_places_litter_names', sql: faqPlacesLitterNames },
 ];

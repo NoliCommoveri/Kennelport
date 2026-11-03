@@ -1018,3 +1018,61 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   albums and the photos nothing else uses (`deleteLitter`, exactly what the clock calls),
   then marks the draft changed. Only a litter already on its way out, so it is never a way
   round the clock; the card says it can't be undone.
+
+## 2026-11-03: an undecided puppy reads Limited, and a FAQ can ride on other pages
+
+- **An undecided puppy is drawn as the limited puppy it almost certainly is**
+  (plan 3.2, decision 31 amended). KennelOS is untouched: it still sends **Undecided**
+  for a puppy with no plan set, with no registration beside it. KennelPort now shows
+  that puppy's Registration line as **Limited** (`parts.js regText`, which also keeps a
+  puppy *staying* here saying nothing, as before) and prices it as limited —
+  `puppyPrice` returns the base for its sex instead of a range from base to full. The
+  litter's own Price row follows: `litterPriceRange` is its base prices across the sexes
+  it has, so the full-registration surcharge no longer widens every litter card into a
+  range. Nothing is hidden by this: where the litter's **Families can ask about full
+  registration** tick is on, the undecided puppy still carries **Ask about full
+  registration** and the **Full Registration Surcharge** under it, which is where the
+  extra money is now stated. A puppy she has marked Full still shows the total. The
+  manage app's words for Registration and for the surcharge fields were rewritten to
+  match.
+- **A FAQ question can be shown again at the top of other pages** (plan 3.12). Her first
+  use: "What is the difference between 'limited' and 'full' registration?" at the top of
+  every litter's page, where a family meets a price. Groundwork for the rest: the places
+  are a list on the question itself (`places`, migration 0021, `FAQ_PLACES` in
+  `content/model.js`), ticked on the question's own form, and ten pages draw them —
+  Home, the Dogs page, a dog's page, the Puppies page, a litter's page, a puppy's page,
+  Extras, The steps, Waitlist and Contact. Adding another is a `FAQ_PLACES` line and one
+  `faqSection(snap, '<key>')` (or `faqBlock` inside a record page's wrap, under its
+  breadcrumb, where the block after it takes the spacing). Only the FAQ carries places;
+  Policies and the status-page help are unchanged. Keeping them on the question rather
+  than in a table of their own means an export carries them and no placement can point
+  at a question that has gone — `content/io.js` round-trips them and refuses an unknown
+  place or a place on a non-FAQ expander. The published snapshot carries them, so a page
+  draws from the snapshot as usual. The AK sample ships that question, placed on litters,
+  so a new site starts with it.
+- **Upgrades carry the name, and a litter's page shows its parents (2026-11-03).** A
+  pairing sent again as its litter kept "Claire × Bubba" though the litter had a
+  nickname: taking over only replaced the KennelOS-owned fields, and the name isn't one.
+  Now a website litter taking over (pairing to litter, and newly heat to pairing or
+  litter, through the bundle's new `heat_id` on pairings and litters, a `sections` entry)
+  becomes what a new one would be: name and planned-litter label follow the new kind
+  while still the site's own (`kennelos_name`, migration 0021; one from before counts as
+  KennelOS's while it reads like a name the site would have made). Her own name or label
+  stays. A litter's page no longer repeats its card: under the head (which drops the
+  parents' names when they are the litter's name), a card for each parent side by side,
+  Dam and Sire above them (picture, registered name, titles, colour and registry, three
+  health results, View profile; an outside parent is the name she typed), then the
+  litter's facts the head doesn't give: deposits from, going home, its puppies counted by
+  sex ("2 girls, 1 boy") under going home, and the price ranges. `parentCards`, `litterFacts`, `litterRows` in
+  `render/parts.js`; site.css. Tests added.
+- **Publish's list of changes stops calling everything edited (2026-11-03).** A snapshot
+  keeps every column of a record, blanks included, so one published before a column was
+  added (registry, registration, the puppy photo settings) lacked keys the draft has, and
+  `diff.js` called every dog, litter and puppy "edited" until the next Publish. Values are
+  now compared with blanks (null, '', false, empty lists) the same as a missing field and
+  key order ignored, so only real changes are listed. Tests added.
+- **A litter's address follows its new name (2026-11-03).** When a website litter's name
+  follows KennelOS's (a heat becoming a pairing, a pairing a litter, a nickname), its web
+  address is made from the new name too, while it is still the one made from the old
+  (`Writer.slugFromName`); an address she typed stays. Publish's redirects keep the old
+  address, and its puppies' pages, working. Tests added.

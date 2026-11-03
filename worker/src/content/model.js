@@ -138,6 +138,31 @@ export const EXPANDER_FIELDS = {
   start_open: BOOL,
 };
 
+// Where else a question from the FAQ shows (plan 3.9): the same question, drawn
+// the same way, at the top of the pages she picks, as well as on the FAQ page.
+// Her first use was "What is the difference between limited and full
+// registration?" at the top of every litter's page. The key is the page or the
+// kind of page; the words are what the manage app calls it.
+export const FAQ_PLACES = {
+  home: 'Home page',
+  dogs: 'All our dogs page',
+  dog: "Every dog's profile",
+  litters: 'Puppies page',
+  litter: "Every litter's page",
+  puppy: "Every puppy's profile",
+  extras: 'Extras page',
+  how_it_works: 'The steps page',
+  waitlist: 'Waitlist page',
+  contact: 'Contact page',
+};
+export const FAQ_PLACE_KEYS = Object.keys(FAQ_PLACES);
+// A question she has placed everywhere still fits in one list; the cap is only
+// there so a bad import can't store an endless one.
+export const FAQ_FIELDS = {
+  ...EXPANDER_FIELDS,
+  places: { type: 'list', item: 'enum', values: FAQ_PLACE_KEYS, max: FAQ_PLACE_KEYS.length },
+};
+
 export const EXTRA_FIELDS = {
   kind: { ...ENUM('item', 'homegoing'), required: true },
   grp: S(40),
@@ -406,6 +431,12 @@ export function cleanValue(f, v, path) {
       if (v.length > f.max) throw new ContentError(path, `at most ${f.max} items`);
       if (f.item === 'photo') return v.map((x, i) => cleanValue({ type: 'photo', required: true }, x, `${path}[${i}]`));
       if (f.item === 'focus') return v.map((x, i) => cleanValue({ type: 'enum', values: FOCUS, required: true }, x, `${path}[${i}]`));
+      // A list of fixed keys (a FAQ's places): each checked, duplicates dropped,
+      // kept in the order the list defines so two saves read the same.
+      if (f.item === 'enum') {
+        const seen = v.map((x, i) => cleanValue({ type: 'enum', values: f.values, required: true }, x, `${path}[${i}]`));
+        return f.values.filter((x) => seen.includes(x));
+      }
       return v.map((x, i) => cleanText(x, { max: f.itemMax }, `${path}[${i}]`)).filter(Boolean);
     }
     case 'pairs': {

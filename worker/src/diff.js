@@ -4,7 +4,17 @@
 import { PAGES, HOME_BLOCK_ORDER } from './content/model.js';
 import { STATUS_TEXT } from './render/parts.js';
 
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+// Two values the same to a visitor. A blank (null, '', false, an empty list or
+// object) is the same as a field that isn't there, and key order doesn't count: a
+// snapshot published before a column was added lacks that field, and without this
+// every dog, litter and puppy would read "edited" until the next Publish.
+const blank = (v) => v == null || v === '' || v === false || (Array.isArray(v) && !v.length) || (typeof v === 'object' && !Array.isArray(v) && !Object.keys(canon(v)).length);
+function canon(v) {
+  if (Array.isArray(v)) return v.map(canon);
+  if (v && typeof v === 'object') return Object.fromEntries(Object.keys(v).sort().filter((k) => !blank(v[k])).map((k) => [k, canon(v[k])]));
+  return v;
+}
+const same = (a, b) => (blank(a) && blank(b)) || JSON.stringify(canon(a)) === JSON.stringify(canon(b));
 const strip = (o, keys) => Object.fromEntries(Object.entries(o ?? {}).filter(([k]) => !keys.includes(k)));
 const BLOCK_NAMES = { hero: 'top of the page', facts: 'facts row', story: 'story', dogs: 'dogs row', litters: 'litters', reviews: 'reviews', waitlist: 'waitlist band' };
 const SITE_NAMES = { kennel_name: 'name', tagline: 'line under the name', blurb: 'about-you line', breed: 'breed', monogram: 'monogram', logo_photo_id: 'logo', town: 'town', region: 'region', contact_email: 'email', contact_phone: 'phone', facebook_url: 'Facebook', facebook_label: 'Facebook', instagram_url: 'Instagram', dark_mode: 'dark mode', show_other_prices: 'showing prices' };

@@ -3,7 +3,7 @@
 // a problem comes back with what was typed and the reason.
 import { escapeHtml as esc } from '../lib/html.js';
 import { json } from '../lib/http.js';
-import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk } from '../content/model.js';
+import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, FAQ_PLACES } from '../content/model.js';
 import {
   KINDS, listRecords, getRecord, saveRecord, setField, removeRecord, moveRecord,
   saveSite, getPage, savePage, getBlock, saveBlock, getPayment, savePayment,
@@ -78,7 +78,9 @@ const LISTS = {
   extras: { title: 'Extras', one: 'extra', name: (r) => r.name, sub: (r) => (r.kind === 'homegoing' ? `${r.weeks ?? ''}-week package` : r.grp ?? '') },
   products: { title: 'Recommended products', one: 'product', name: (r) => r.name, sub: (r) => [r.grp, r.code ? `code ${r.code}` : null, r.home_badge ? 'home page badge' : null].filter(Boolean).join(' · ') },
   policies: { title: 'Policies', one: 'policy', name: (r) => r.heading, sub: () => '' },
-  faq: { title: 'FAQ', one: 'question', name: (r) => r.heading, sub: () => '' },
+  // A question also placed elsewhere says so here, so she can see at a glance
+  // which ones her pages are carrying (model.js FAQ_PLACES).
+  faq: { title: 'FAQ', one: 'question', name: (r) => r.heading, sub: (r) => ((r.places ?? []).length ? `also on ${(r.places ?? []).map((x) => (FAQ_PLACES[x] ?? x).toLowerCase()).join(', ')}` : '') },
   waitlist_help: { title: 'Using your status page', one: 'section', name: (r) => r.heading, sub: () => '' },
   albums: { title: 'Albums', one: 'album', name: (r) => r.title, sub: (r) => [`${(r.photos ?? []).length} photo${(r.photos ?? []).length === 1 ? '' : 's'}`, r.show_on_site ? null : 'hidden'].filter(Boolean).join(' · ') },
   questions: { title: 'Application questions', one: 'question', name: (r) => r.label, sub: (r) => [QUESTION_WORDS[r.type], r.required ? 'must answer' : 'optional'].join(' · ') },

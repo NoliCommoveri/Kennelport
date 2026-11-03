@@ -2,7 +2,7 @@
 // the words a breeder sees (LABELS) kept here, next to the inputs. parseForm()
 // turns a submitted form back into the values the model checks.
 import { escapeHtml as esc } from '../lib/html.js';
-import { FEATURE_ICONS, COLLAGE_LAYOUTS, FOCUS, collageLayout } from '../content/model.js';
+import { FEATURE_ICONS, COLLAGE_LAYOUTS, FOCUS, collageLayout, FAQ_PLACES } from '../content/model.js';
 import { SCHEMES } from '../render/schemes.js';
 
 // [label, hint] per field name; kind-specific entries win over the shared ones.
@@ -53,7 +53,7 @@ const LABELS = {
     deposits_on: ['Deposits open', 'Until this day the litter shows under Coming up, and its Available puppies read "Available on" this date. Empty: available straight away.'],
     price_female: ['Price for a girl, in dollars', 'With limited registration. Leave one sex empty if girls and boys cost the same.'],
     price_male: ['Price for a boy, in dollars', null],
-    full_reg_female: ['Full registration adds, for a girl', 'Your site shows the total, never "+$300".'],
+    full_reg_female: ['Full registration adds, for a girl', 'A puppy you have marked Full shows the total price, never "+$300". Everywhere else your site shows the limited price, and this amount under "Ask about full registration" as the Full Registration Surcharge.'],
     full_reg_male: ['Full registration adds, for a boy', null],
     deposit_female: ['Deposit for a girl', null], deposit_male: ['Deposit for a boy', null],
     price_note: ['A note under the prices', 'For example "Prices are our intended base prices and may change before the contract is signed."'],
@@ -64,7 +64,7 @@ const LABELS = {
   },
   puppies: {
     name: ['Name', null], collar: ['Collar', 'For example "pink collar".'],
-    registration: ['Registration', 'Empty while it isn\'t settled, or when you\'d sell either way: the price shows as a range.'],
+    registration: ['Registration', 'Leave it empty while it isn\'t settled, or when you\'d sell either way: your site then reads Limited and shows the limited price, and families can still ask about full registration if the litter\'s tick below allows it.'],
     price: ['Its own price, in dollars', 'Usually empty, to follow the litter\'s prices. Shown exactly as typed.'],
     more_photos_url: ['More photos link', 'Where the rest of THIS puppy\'s photos live \u2014 your Google Photos or Shutterfly share for it. Shown under its photos on its page as "See more photos".'],
   },
@@ -75,7 +75,10 @@ const LABELS = {
     status: ['Shown', null],
   },
   steps: { heading: ['Step', null], body: ['Short text', null], detail: ['More detail (opens on tap)', null], pay_link: ['Link to "How to pay" under this step', null] },
-  expander: { heading: ['Heading', null], body: ['Text', null], start_open: ['Open when the page loads', null] },
+  expander: {
+    heading: ['Heading', null], body: ['Text', null], start_open: ['Open when the page loads', null],
+    places: ['Also show this question at the top of', 'It stays on your FAQ page as well. Use it for a question families need where they meet it \u2014 "limited or full registration?" at the top of every litter\'s page, say.'],
+  },
   extras: {
     kind: ['Kind', null], grp: ['Group', null], price_from: ['Price (or lowest price), in dollars', null], price_to: ['Highest price, for a range', null],
     weeks: ['Weeks (homegoing packages)', null], lead_in: ['Line above the checklist', 'For example "Your puppy will continue receiving:".'],
@@ -247,6 +250,12 @@ export function field(name, f, value, ctx) {
     }
     case 'list':
       if (f.item === 'focus') return '';
+      // A list of fixed keys (a FAQ's places): one tick box each, in the model's
+      // order, with the words the manage app calls those pages.
+      if (f.item === 'enum') {
+        const on = new Set(value ?? []);
+        return `<fieldset><legend>${esc(label)}${h}</legend>${f.values.map((x) => `<label class="check"><input type="checkbox" name="${name}" value="${esc(x)}"${on.has(x) ? ' checked' : ''}> <span>${esc(FAQ_PLACES[x] ?? x)}</span></label>`).join('')}</fieldset>`;
+      }
       if (f.item === 'photo' && f.boxes) {
         // One photo per box, in box order, each with which part to keep. Boxes the
         // layout doesn't have are hidden (app.js shows them when the layout changes).
@@ -335,6 +344,7 @@ export function parseForm(list, form) {
       case 'int': { const s = String(form.get(n) ?? '').trim(); out[n] = s === '' ? null : Number(s); break; }
       case 'list':
         if (f.item === 'focus') { out[n] ??= []; break; }
+        if (f.item === 'enum') { out[n] = form.getAll(n).filter(Boolean); break; }
         if (f.item === 'photo' && f.boxes) {
           // The layout's boxes in order; an empty box is skipped, so the photos
           // after it move up (the site then uses a layout for that many).

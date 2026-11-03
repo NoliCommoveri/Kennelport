@@ -28,6 +28,14 @@ not to bump. After a yes: bump the number by one, run
 `node worker/scripts/fingerprint.mjs` from the repo root, and paste the matching
 fingerprint (`APP_FILES` or `TEMPLATE_FILES`) beside the number.
 
+## Migrations: one per merge
+
+A branch adds at most one migration file. Before adding one, check what the branch
+already adds beyond `main` (`git diff --stat origin/main -- worker/src/migrations`);
+if it has one, add your statements to that file (and its comment) instead of a new
+one, and keep its one line in `migrations/index.js`. Never change a migration that is
+on `main`: it has been applied.
+
 ## Tests
 
 `node --test` from the repo root (Node 22 or later).

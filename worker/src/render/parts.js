@@ -180,26 +180,80 @@ function counts(pups) {
   return [part(g, 'girl', 'girls'), part(b, 'boy', 'boys')].filter(Boolean).join(', ') || 'Expected';
 }
 
-export function litterCard(snap, l, ctx, { link = true } = {}) {
-  const parent = (role) => {
-    const id = l[`${role}_id`];
-    const dog = id && snap.dogs.find((d) => d.id === id);
-    const name = parentName(snap, l, role);
-    return (dog && img(snap, dog.photo_id, { alt: dog.call_name, thumb: true })) || `<span class="ph">${esc(name ? name.slice(0, 1) : '?')}</span>`;
-  };
+// A parent's picture, or its initial in a circle.
+function parentPhoto(snap, l, role) {
+  const id = l[`${role}_id`];
+  const dog = id && snap.dogs.find((d) => d.id === id);
+  const name = parentName(snap, l, role);
+  return (dog && img(snap, dog.photo_id, { alt: dog.call_name, thumb: true })) || `<span class="ph">${esc(name ? name.slice(0, 1) : '?')}</span>`;
+}
+
+// A litter's facts, as its card lists them: [label, value] rows, blanks included.
+export function litterRows(l, ctx) {
   const ahead = depositsAhead(l, ctx.today);
   const older = l.stage === 'current' && !ahead && isPast(l.ready_on, ctx.today);
-  const eyebrow = l.stage === 'planned' ? (l.plan_label || 'Planned litter') : l.stage === 'past' ? 'Past litter' : ahead ? 'Coming up' : older ? 'Older puppies' : 'Current litter';
-  const rows = (l.stage === 'planned'
+  return (l.stage === 'planned'
     ? [['Expected', l.expected_label], ['Going home', l.ready_label]]
     : [['Born', fmtDate(l.born_on)], ['Deposits from', ahead ? fmtDate(l.deposits_on) : null], ['Puppies', l.puppies.length ? l.puppies.map((p) => p.name).length <= 2 ? l.puppies.map((p) => p.name).join(', ') : counts(l.puppies) : null],
       ['Going home', older ? 'Ready now' : fmtDate(l.ready_on)]]).concat(litterPriceRows(l));
+}
+
+const kvList = (rows) => `<dl class="kv">${rows.filter(([, v]) => v).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`;
+
+// A litter's page doesn't repeat its card: the page's head already names the litter
+// and its parents. Under it, a small card for each parent in one row (Dam over the
+// mother, Sire over the father) says something about them: picture, registered
+// name, titles, colour and registry, a few health results, and a link to the
+// dog's page. A parent that isn't one of her dogs on the site (an outside stud)
+// shows the name she typed. Then the litter's facts the head doesn't give.
+export function parentCards(snap, l) {
+  const card = (role) => {
+    const id = l[`${role}_id`];
+    const d = id && snap.dogs.find((x) => x.id === id);
+    const name = parentName(snap, l, role);
+    if (!name) return '';
+    const line = d ? [d.color, d.registry].filter(Boolean).join(' · ') : '';
+    const health = d?.health ?? [];
+    const tests = health.length
+      ? `<ul class="tests">${health.slice(0, 3).map((h) => `<li><span>${esc(h.test)}</span><span>${esc(h.result)}</span></li>`).join('')}</ul>${health.length > 3 ? `<span class="small muted">and ${health.length - 3} more health result${health.length - 3 === 1 ? '' : 's'}</span>` : ''}`
+      : '';
+    return `<div class="parent"><span class="eyebrow">${role === 'dam' ? 'Dam' : 'Sire'}</span>
+      <article class="parent-card">${parentPhoto(snap, l, role)}<b class="call">${esc(name)}</b>${d?.registered_name ? `<span class="reg">${esc(d.registered_name)}</span>` : ''}${d?.titles ? `<span class="small">${esc(d.titles)}</span>` : ''}${line ? `<span class="small muted">${esc(line)}</span>` : ''}${tests}${d ? `<a class="more" href="/dogs/${attr(d.slug)}">View profile</a>` : ''}</article></div>`;
+  };
+  const cards = [card('dam'), card('sire')].filter(Boolean);
+  return cards.length ? `<div class="parents${cards.length === 1 ? ' one' : ''}">${cards.join('')}</div>` : '';
+}
+
+// The litter's facts on its page: its card's (deposits, going home, prices), less
+// the birth date, which heads the page. Its puppies, which have their own cards
+// below, are counted by sex under Going home ("2 girls, 1 boy").
+export function litterFacts(l, ctx) {
+  const rows = [];
+  for (const [k, v] of litterRows(l, ctx)) {
+    if (!v || k === 'Born' || k === 'Puppies') continue;
+    rows.push([k, v]);
+    if (k === 'Going home' && l.puppies.length) rows.push(['Puppies', counts(l.puppies)]);
+  }
+  // No going-home date yet: the count goes before the prices.
+  if (l.puppies.length && !rows.some(([k]) => k === 'Puppies')) {
+    const at = rows.findIndex(([k]) => k === 'Price' || k === 'Deposit');
+    rows.splice(at < 0 ? rows.length : at, 0, ['Puppies', counts(l.puppies)]);
+  }
+  return rows.length ? `<div class="litter litter-facts">${kvList(rows)}</div>` : '';
+}
+
+export function litterCard(snap, l, ctx, { link = true } = {}) {
+  const parent = (role) => parentPhoto(snap, l, role);
+  const ahead = depositsAhead(l, ctx.today);
+  const older = l.stage === 'current' && !ahead && isPast(l.ready_on, ctx.today);
+  const eyebrow = l.stage === 'planned' ? (l.plan_label || 'Planned litter') : l.stage === 'past' ? 'Past litter' : ahead ? 'Coming up' : older ? 'Older puppies' : 'Current litter';
+  const rows = litterRows(l, ctx);
   const more = !link ? '' : l.stage === 'planned'
     ? (pageOn(snap, 'waitlist', ctx) ? '<a class="more" href="/waitlist">See the waitlist</a>' : '')
     : `<a class="more" href="/litters/${attr(l.slug)}">Meet the puppies</a>`;
   return `<article class="litter"><span class="eyebrow">${esc(eyebrow)}</span>
     <div class="pair">${parent('dam')}<span class="x">×</span>${parent('sire')}<div class="names"><b>${esc(l.name)}</b><span class="small muted">${esc(pairNames(snap, l))}</span></div></div>
-    <dl class="kv">${rows.filter(([, v]) => v).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>${l.summary && l.stage === 'planned' ? `<p class="small muted">${esc(l.summary)}</p>` : ''}${more}</article>`;
+    ${kvList(rows)}${l.summary && l.stage === 'planned' ? `<p class="small muted">${esc(l.summary)}</p>` : ''}${more}</article>`;
 }
 
 // ---------- flip cards ----------
@@ -230,6 +284,14 @@ export const REG_WORDS = { limited: 'Limited', full: 'Full' };
 // links to the contact form with it filled in, and so does the litter while it has
 // one. Never for a puppy staying here, and only while the contact page is on.
 const undecided = (p) => !p.registration && p.status !== 'staying';
+
+// What a puppy's Registration line says. A puppy she hasn't settled reads
+// **Limited**, like the limited puppy it will almost certainly be, and is priced
+// that way (content/prices.js): a blank line told a family nothing, and a range
+// to full read as a higher price they might have to pay. She can still be asked
+// about full registration, where the litter's tick allows it, and the surcharge
+// shows under that link. A puppy staying here is for no one, so it says nothing.
+export const regText = (p) => (p.registration ? REG_WORDS[p.registration] : (undecided(p) ? REG_WORDS.limited : null));
 export function fullRegHref(snap, l, p, ctx) {
   if (!l.ask_full_reg || !pageOn(snap, 'contact', ctx)) return null;
   if (p ? !undecided(p) : !l.puppies.some(undecided)) return null;
@@ -279,7 +341,7 @@ export function puppyCard(snap, l, p, ctx) {
   const status = puppyStatus(l, p, ctx.today);
   const price = puppyPriceText(l, p);
   const reg = [l.name, p.collar].filter(Boolean).join(' · ');
-  const regWord = REG_WORDS[p.registration];
+  const regWord = regText(p);
   const action = (p.status === 'available'
     ? (pageOn(snap, 'waitlist', ctx) ? '<a class="more" href="/waitlist">Ask about this puppy</a>' : '<a class="more" href="/contact">Ask about this puppy</a>')
     : '') + fullRegLink(snap, l, p, ctx, 'more') + fullRegSurchargeRow(snap, l, p, ctx);
@@ -338,6 +400,18 @@ export function reviewCard(snap, r) {
 }
 
 export const expanders = (rows) => rows.map((e) => `<details class="x"${e.start_open ? ' open' : ''}><summary>${esc(e.heading)}</summary><div class="body">${paras(e.body)}</div></details>`).join('');
+
+// A question from the FAQ she has also put on this kind of page (plan 3.9, 3.12):
+// the same question, drawn the same way, at the top of the page. Her first use was
+// the difference between limited and full registration, at the top of every
+// litter's page, where a family meets a price. The FAQ page keeps showing all of
+// them, and a placed question shows whether or not that page is on, since it is
+// the question she wants read here, not a link to somewhere else.
+export const placedFaqs = (snap, place) => (snap.expanders?.faq ?? []).filter((e) => (e.places ?? []).includes(place));
+export function faqBlock(snap, place) {
+  const rows = placedFaqs(snap, place);
+  return rows.length ? `<div class="acc">${expanders(rows)}</div>` : '';
+}
 
 export function pagehead(page, fallback, { ornament = true } = {}) {
   const heading = page?.heading || fallback.heading;
