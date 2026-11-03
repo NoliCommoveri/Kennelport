@@ -145,6 +145,17 @@ zone. Then per breeder: add `www.theirdomain.com` as a custom hostname; at their
 registrar a CNAME `www` → `sites.kennelport.com` plus any TXT record Cloudflare asks
 for, and forwarding of the bare domain to `www`; when it shows active, steps 2–3 above.
 
-Removing a domain: **Remove the domain** in ops, then remove its route or custom
+**C. If the breeder takes applications online in KennelOS** (her waitlist page shows
+KennelOS's application form), two more steps, for either A or B. Without them the form
+on her own domain fails, while the rest of the site works:
+
+4. In the **KennelOS** repo, add `https://www.theirdomain.com` to `WEBSITE_ORIGINS` under
+   `[env.production.vars]` in `cloud/wrangler.toml` (comma-separated, exactly as
+   families see it: https, the `www.` name, no slash), and deploy the KennelOS cloud.
+5. Cloudflare dashboard → **Turnstile** → KennelOS's widget → **Hostnames**: add
+   `theirdomain.com`.
+
+Removing a domain: **Remove the domain** in ops, then take it out of `WEBSITE_ORIGINS`
+and Turnstile too, then remove its route or custom
 hostname in Cloudflare. Closing a site forgets its domain too.
 - **Turnstile** site key (forms): phase 3.

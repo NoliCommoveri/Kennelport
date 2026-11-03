@@ -1438,9 +1438,10 @@ staging the API answers `/v1/` on the workers.dev host, since KennelOS calls wit
 KennelOS's side (5.5) is built too: the four marks, `siteExport.js` (format 1, checked
 against `cleanBundle`), `kennelportApi.js`, Connect website and Update website on Settings
 and as a Kels task, filling `dog.url`, `photos_url`, the kennel's website, `extras_info_url`
-and the feed, and the prompts at Active breeding, past Expected, and Sold or Closed. Not
-built from 5.5: a custom domain in KennelOS's `isWebsiteOrigin` (KennelOS's cloud doesn't
-know her domain yet), and the deposit's How to pay (KennelOS keeps no deposit
+and the feed, and the prompts at Active breeding, past Expected, and Sold or Closed. A custom
+domain joins KennelOS's `isWebsiteOrigin` by hand, in its cloud's `WEBSITE_ORIGINS`
+(Setup, Custom domains, step C), like the domain itself. Not built from 5.5: the
+deposit's How to pay (KennelOS keeps no deposit
 instructions). Next: try the link end to end on staging.
 
 If the first site wants its own domain, connect it by hand (section 2.4).

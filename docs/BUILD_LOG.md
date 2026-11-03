@@ -927,3 +927,7 @@ KennelOS repo and isn't started. 166 tests with custom domains.
 - **`KENNELOS_APP_ORIGINS` set:** `https://pro.kennelos.app` in production; staging adds
   `http://localhost:8000` and `http://127.0.0.1:8000` for KennelOS's dev server.
 - No manage app or site template files changed: no version bump.
+- **Custom domains and KennelOS's application form:** KennelOS's cloud now takes a
+  breeder's own domain from its `WEBSITE_ORIGINS` setting, kept by hand like the domains
+  here (fewer than a dozen breeders expected). Setup's Custom domains section has the two
+  extra steps (C); `https://www.akbostonterriers.com` is listed.
