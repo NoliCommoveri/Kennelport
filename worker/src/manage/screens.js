@@ -30,7 +30,7 @@ import {
 import { makeLinkCode, showCode, devices, stopDevice, unlinkSite, setKennelosPrices, LinkError, CODE_TTL_MS } from '../kennelos/link.js';
 import { OWNED, OWNED_PRICES } from '../kennelos/bundle.js';
 import { pendingMatches, matchChanges, confirmMatch, declineMatch, MatchError } from '../kennelos/match.js';
-import { leavingLitters, keepLitter, LITTER_DAYS } from '../kennelos/clock.js';
+import { leavingLitters, keepLitter, deleteLitter, LITTER_DAYS } from '../kennelos/clock.js';
 
 export const FRESH_SIGN_IN_MS = 15 * 60 * 1000;
 
@@ -57,6 +57,7 @@ const NOTES = {
   unlisted: 'Deleted from your waitlist.',
   undone: 'Undone. Visitors see the version before.',
   kept: 'Kept. It stays as a past litter until you remove it.',
+  litterremoved: 'Removed, with its puppies, albums and the photos nothing else uses.',
   matched: 'Matched. It now comes from KennelOS, with your photos and wording kept.',
   apart: 'Kept apart. KennelOS\'s one is added as new.',
   stopped: 'That device is no longer linked.',
@@ -152,14 +153,16 @@ export function createScreens({ env, request, url, site, user, page }) {
     return new Set([...(OWNED[kind] ?? []), ...((await kosPrices()) ? OWNED_PRICES[kind] ?? [] : [])]);
   }
 
-  // Litters about to go (5.3): each with the day it's deleted, and Keep.
+  // Litters about to go (5.3): each with the day it's deleted, Keep, and Remove now
+  // for when she doesn't want to wait out the 30 days.
   async function leavingCard() {
     const list = await leavingLitters(env, site.id);
     if (!list.length) return '';
     return `<section class="card" id="leaving"><h2>Leaving your site</h2>
-      <p class="muted small">Litters off your site are deleted ${LITTER_DAYS} days after they left, with their puppies, albums and the photos nothing else uses. Keep one to have it stay as a past litter.</p>
+      <p class="muted small">Litters off your site are deleted ${LITTER_DAYS} days after they left, with their puppies, albums and the photos nothing else uses. Keep one to have it stay as a past litter, or Remove now to delete it today instead of waiting. Removing can't be undone.</p>
       <ul class="items">${list.map((l) => `<li class="item"><a href="${base}/litters/${l.id}"><b>${esc(l.name)}</b><span>Deleted on ${esc(day(l.deletes_on))}</span></a>
-        <form method="post" action="${base}/litters/${l.id}/keep"><button>Keep</button></form></li>`).join('')}</ul></section>`;
+        <form method="post" action="${base}/litters/${l.id}/keep"><button>Keep</button></form>
+        <form method="post" action="${base}/litters/${l.id}/remove-now"><button class="link">Remove now</button></form></li>`).join('')}</ul></section>`;
   }
 
   // Dogs that wait in the draft (5.3): never deleted by a clock; removing is hers.
@@ -1053,6 +1056,15 @@ export function createScreens({ env, request, url, site, user, page }) {
     } else if (/^\/litters\/[0-9a-f-]{36}\/keep$/.test(p) && request.method === 'POST') {
       await keepLitter(env, site.id, p.split('/')[2]);
       return redirect(`${base}/litters?note=kept`);
+    } else if (/^\/litters\/[0-9a-f-]{36}\/remove-now$/.test(p) && request.method === 'POST') {
+      // Remove now (5.3): the same deletion the 30-day clock would do, today. Only a
+      // litter already on its way out, so this is never a way round the clock.
+      const id = p.split('/')[2];
+      const leaving = await leavingLitters(env, site.id);
+      if (!leaving.some((l) => l.id === id)) return redirect(`${base}/litters`);
+      await deleteLitter(env, site.id, id);
+      await env.DB.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(new Date().toISOString(), site.id).run();
+      return redirect(`${base}/litters?note=litterremoved`);
     }
     else if (p.startsWith('/dogs')) {
       const hm = p.match(/^\/dogs\/([0-9a-f-]{36})\/health/);

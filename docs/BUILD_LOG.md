@@ -1013,3 +1013,8 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   never its litter's, shown under its photos on its page as "See more photos". It stands
   alone — a puppy with the link but no tagged photos (its litter never ticked Show tagged
   photos) still gets its Photos block, with just the link in it.
+- **Remove now, beside Keep.** A litter under "Leaving your site" waits 30 days before
+  the cleanup deletes it. **Remove now** does that same deletion today — its puppies,
+  albums and the photos nothing else uses (`deleteLitter`, exactly what the clock calls),
+  then marks the draft changed. Only a litter already on its way out, so it is never a way
+  round the clock; the card says it can't be undone.

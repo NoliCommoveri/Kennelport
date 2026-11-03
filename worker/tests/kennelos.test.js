@@ -759,3 +759,26 @@ test('registry: from KennelOS on dogs and puppies, shown where set, read-only wh
   const willow = b.row("SELECT id FROM dogs WHERE slug = 'willow'").id;
   assert.match(await (await b.get(`/dogs/${willow}`)).text(), /name="registry"/);
 });
+
+test("Remove now: a leaving litter goes today instead of waiting the 30 days", async () => {
+  const b = await breeder();
+  const gem = b.row("SELECT id FROM litters WHERE slug = 'gem-2026'").id;
+  await b.post(`/litters/${gem}`, { name: 'The Gem litter', stage: 'current', slug: 'gem-2026' }); // Show on my website unticked
+  assert.ok(b.row('SELECT left_site_at FROM litters WHERE id = ?', gem).left_site_at);
+  // Both buttons are offered, beside each other.
+  const page = await (await b.get('/litters')).text();
+  assert.match(page, /<button>Keep<\/button>[\s\S]*?remove-now"><button class="link">Remove now<\/button>/);
+  const pups = b.row('SELECT COUNT(*) AS n FROM puppies WHERE litter_id = ?', gem).n;
+  assert.ok(pups > 0);
+
+  assert.equal((await b.post(`/litters/${gem}/remove-now`)).status, 303);
+  assert.equal(b.row('SELECT COUNT(*) AS n FROM litters WHERE id = ?', gem).n, 0, 'gone now, not in 30 days');
+  assert.equal(b.row('SELECT COUNT(*) AS n FROM puppies WHERE litter_id = ?', gem).n, 0, 'its puppies with it');
+  assert.equal((await (await b.get('/litters')).text()).includes('Leaving your site'), false);
+
+  // Only a litter already on its way out: a live one can't be removed this way.
+  const ziva = b.row("SELECT id FROM litters WHERE slug = 'ziva-boone-2026'").id;
+  assert.equal(b.row('SELECT left_site_at FROM litters WHERE id = ?', ziva).left_site_at, null);
+  await b.post(`/litters/${ziva}/remove-now`);
+  assert.equal(b.row('SELECT COUNT(*) AS n FROM litters WHERE id = ?', ziva).n, 1, 'left alone');
+});
