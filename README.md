@@ -25,7 +25,9 @@ rules wait until KennelPort is offered (9). See
 [`docs/KennelPort_Site_Directory.md`](docs/KennelPort_Site_Directory.md); what they look like:
 [`docs/KennelPort_Visual_Survey.md`](docs/KennelPort_Visual_Survey.md); design preferences:
 [`docs/KennelPort_Design_Direction.md`](docs/KennelPort_Design_Direction.md); Cloudflare setup:
-[`docs/KennelPort_Setup.md`](docs/KennelPort_Setup.md). History: [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md).
+[`docs/KennelPort_Setup.md`](docs/KennelPort_Setup.md); the version-1 code review, run over
+several sessions: [`docs/KennelPort_Review_Plan.md`](docs/KennelPort_Review_Plan.md) (findings
+in [`docs/review/`](docs/review/)). History: [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md).
 
 Layout: [`worker/`](worker/) is the Worker (its README says how to run it); `docs/` holds the
 plan and its companions. Test: `node --test` from the root (Node 22 or later).
