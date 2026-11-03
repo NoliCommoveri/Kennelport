@@ -593,7 +593,7 @@ test('Recommended products from KennelOS: name, link, code and note are KennelOS
   const token = await linked(b);
   const send = async (body) => (await api(b.env, '/v1/bundle', { body, token })).json();
   // Answers say which optional sections this Worker takes.
-  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products', 'registry']);
+  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products', 'registry', 'heat_id']);
   // One she made by hand, with a picture and a Home badge.
   const site = b.site.id;
   const MINE = '00000000-0000-4000-8000-0000000000aa';
@@ -820,4 +820,92 @@ test("Remove now: a leaving litter goes today instead of waiting the 30 days", a
   assert.equal(b.row('SELECT left_site_at FROM litters WHERE id = ?', ziva).left_site_at, null);
   await b.post(`/litters/${ziva}/remove-now`);
   assert.equal(b.row('SELECT COUNT(*) AS n FROM litters WHERE id = ?', ziva).n, 1, 'left alone');
+});
+
+test('a heat becoming a pairing, and a pairing a litter, become what a new one would be, keeping what she changed', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (body) => api(b.env, '/v1/bundle', { body, token });
+  const dogs = [DOG('d-claire', 'Claire'), DOG('d-bubba', 'Bubba', { sex: 'male' })];
+  await send(bundle({ dogs, heats: [{ id: 'h1', dam_id: 'd-claire', dam_name: 'Claire', month: '2099-09' }] }));
+  const heat = b.row("SELECT * FROM litters WHERE kennelos_kind = 'heat'");
+  assert.equal(heat.name, "Claire's next litter");
+  assert.equal(heat.plan_label, 'Upcoming heat');
+  b.env.DB.raw.prepare("UPDATE litters SET summary = 'Her words' WHERE id = ?").run(heat.id);
+
+  // The pairing names the heat it uses: it takes over the heat's website litter.
+  await send(bundle({ dogs, pairings: [{ id: 'p1', heat_id: 'h1', dam_id: 'd-claire', sire_id: 'd-bubba', dam_name: 'Claire', sire_name: 'Bubba', expected_on: '2099-11-10' }] }));
+  const pairing = b.row('SELECT * FROM litters WHERE id = ?', heat.id);
+  assert.equal(pairing.kennelos_kind, 'pairing');
+  assert.equal(pairing.name, 'Claire × Bubba');
+  assert.equal(pairing.plan_label, 'Planned pairing');
+  assert.equal(pairing.expected_label, 'November 2099');
+  assert.equal(pairing.summary, 'Her words');
+  assert.equal(pairing.slug, heat.slug);
+  assert.equal(pairing.hidden_by_kennelos, 0);
+  assert.equal(b.row("SELECT COUNT(*) AS n FROM litters WHERE kennelos_kind = 'pairing'").n, 1);
+
+  // Whelped, with a nickname: the litter takes its nickname, and drops the label.
+  const litter = { id: 'l1', pairing_id: 'p1', name: 'The Gem Litter', dam_id: 'd-claire', sire_id: 'd-bubba', dam_name: 'Claire', sire_name: 'Bubba', born_on: '2026-11-03' };
+  await send(bundle({ dogs, litters: [litter] }));
+  let l = b.row('SELECT * FROM litters WHERE id = ?', heat.id);
+  assert.equal(l.kennelos_kind, 'litter');
+  assert.equal(l.name, 'The Gem Litter');
+  assert.equal(l.plan_label, null);
+  assert.equal(l.stage, 'current');
+
+  // A new nickname follows; once she renames it on the website, hers stays.
+  await send(bundle({ dogs, litters: [{ ...litter, name: 'The Jewels' }] }));
+  assert.equal(b.row('SELECT name FROM litters WHERE id = ?', heat.id).name, 'The Jewels');
+  b.env.DB.raw.prepare("UPDATE litters SET name = 'Her name', plan_label = 'Her label' WHERE id = ?").run(heat.id);
+  await send(bundle({ dogs, litters: [{ ...litter, name: 'The Stones' }] }));
+  l = b.row('SELECT * FROM litters WHERE id = ?', heat.id);
+  assert.equal(l.name, 'Her name');
+  assert.equal(l.plan_label, 'Her label');
+});
+
+test('a pairing made before names were kept takes its litter\'s nickname', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (body) => api(b.env, '/v1/bundle', { body, token });
+  const dogs = [DOG('d-claire', 'Claire'), DOG('d-bubba', 'Bubba', { sex: 'male' })];
+  await send(bundle({ dogs, pairings: [{ id: 'p1', dam_id: 'd-claire', sire_id: 'd-bubba', dam_name: 'Claire', sire_name: 'Bubba' }] }));
+  const p = b.row("SELECT * FROM litters WHERE kennelos_kind = 'pairing'");
+  b.env.DB.raw.prepare('UPDATE litters SET kennelos_name = NULL WHERE id = ?').run(p.id);
+  await send(bundle({ dogs, litters: [{ id: 'l1', pairing_id: 'p1', name: 'The Gem Litter', dam_id: 'd-claire', sire_id: 'd-bubba', dam_name: 'Claire', sire_name: 'Bubba', born_on: '2026-11-03' }] }));
+  const l = b.row('SELECT * FROM litters WHERE id = ?', p.id);
+  assert.equal(l.name, 'The Gem Litter');
+  assert.equal(l.kennelos_name, 'The Gem Litter');
+});
+
+test("a litter's page: its parents' cards in one row, not its card again, and no name said twice", async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (body) => api(b.env, '/v1/bundle', { body, token });
+  const health = [1, 2, 3, 4].map((i) => ({ id: `t${i}`, test: `Test ${i}`, result: 'Clear' }));
+  await send(bundle({
+    dogs: [DOG('d-claire', 'Claire', { registered_name: 'AK Claire de Lune', color: 'Brindle', titles: ['CH'], health }), DOG('d-bubba', 'Bubba', { sex: 'male' })],
+    litters: [{ id: 'l1', dam_id: 'd-claire', sire_id: 'd-bubba', dam_name: 'Claire', sire_name: 'Bubba', born_on: '2026-11-03', deposits_on: '2099-11-17',
+      puppies: [{ id: 'k1', name: 'Puppy 1', sex: 'female', status: 'available' }] },
+    { id: 'l2', dam_id: 'd-claire', dam_name: 'Claire', sire_name: 'Outside Stud', name: 'The Gems', born_on: '2026-10-01' }],
+  }));
+  await b.post('/publish');
+  const slug = b.row("SELECT slug FROM litters WHERE kennelos_id = 'l1'").slug;
+  const html = (await b.page(`/litters/${slug}`)).split('<main')[1];
+  assert.doesNotMatch(html, /<article class="litter">/);
+  assert.equal(html.split('class="parents"')[0].match(/Claire × Bubba/g).length, 1); // the heading only: no lede repeating it
+  const parents = html.split('class="parents"')[1].split('class="litter litter-facts"')[0];
+  assert.match(parents, /<span class="eyebrow">Dam<\/span>[\s\S]*Claire[\s\S]*AK Claire de Lune[\s\S]*CH[\s\S]*Brindle[\s\S]*Test 1[\s\S]*Test 3[\s\S]*and 1 more health result<[\s\S]*href="\/dogs\/claire"[\s\S]*<span class="eyebrow">Sire<\/span>[\s\S]*Bubba[\s\S]*href="\/dogs\/bubba"/);
+  assert.doesNotMatch(parents, /Test 4/);
+  // The facts the head doesn't give: deposits, not the birth date or the puppies' names.
+  const facts = html.split('litter-facts')[1].split('</div>')[0];
+  assert.match(facts, /Deposits from[\s\S]*November 17, 2099/);
+  assert.doesNotMatch(facts, /Born|Puppy 1/);
+
+  // A nicknamed litter keeps its parents' names under its own; an outside sire is his name, with no link.
+  const gems = (await b.page(`/litters/${b.row("SELECT slug FROM litters WHERE kennelos_id = 'l2'").slug}`)).split('<main')[1];
+  assert.match(gems, /The Gems[\s\S]*Claire × Outside Stud/);
+  const sire = gems.split('<span class="eyebrow">Sire</span>')[1].split('</article>')[0];
+  assert.match(sire, /Outside Stud/);
+  assert.doesNotMatch(sire, /href=/);
 });

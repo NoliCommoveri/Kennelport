@@ -10,11 +10,11 @@
 //     dogs: [{ id, call_name, registered_name, registry, sex, date_of_birth, color,
 //              status: puppy | active_breeding | for_sale | retired_breeding | deceased,
 //              died_on, titles: [..], health: [{ id, test, result, normal, date, verify_url }] }],
-//     litters: [{ id, pairing_id, name, dam_id, sire_id, dam_name, sire_name,
+//     litters: [{ id, pairing_id, heat_id, name, dam_id, sire_id, dam_name, sire_name,
 //                 expected_on, born_on, ready_on, deposits_on, prices: { price_female, … },
 //                 puppies: [{ id, name, collar, sex, color, registration, registry,
 //                             status: available | reserved | placed | staying | undecided | hidden }] }],
-//     pairings: [{ id, dam_id, sire_id, dam_name, sire_name, planned_on, expected_on }],
+//     pairings: [{ id, heat_id, dam_id, sire_id, dam_name, sire_name, planned_on, expected_on }],
 //     heats: [{ id, dam_id, dam_name, month }],
 //     extras?: [{ id, name, group, description, price_from, price_to }],
 //     products?: [{ id, name, link_url, code, code_note }],
@@ -28,8 +28,11 @@
 //
 // Records are matched by KennelOS id, only within one table: a puppy and a dog may
 // share one, since a KennelOS puppy is a Dog. A litter's kind (litter, pairing,
-// heat) is part of its match, and a litter that names its pairing takes over the
-// website litter made from that pairing, with its photos, wording and address.
+// heat) is part of its match, and a litter that names its pairing (or a pairing or
+// litter that names the heat it uses) takes over the website litter made from
+// that one, with its photos, wording and address. Taking over, it becomes what a
+// new one of its kind would be: the name and planned-litter label follow the new
+// kind, unless she has changed them on the website.
 import { ApiError } from '../lib/http.js';
 import { cleanValue, ContentError, slugify, PAYMENT_FIELDS, LITTER_PRICE_FIELDS } from '../content/model.js';
 import { PUBLIC_ID } from '../feed.js';
@@ -44,7 +47,8 @@ export const MAX = { dogs: 200, litters: 100, puppies: 30, pairings: 50, heats: 
 // The optional sections this Worker takes. Each answer lists them (siteFacts), so
 // KennelOS sends a new section only to a Worker that knows it, instead of having
 // the whole bundle refused.
-export const SECTIONS = ['products', 'registry'];
+// 'heat_id': a pairing's and a litter's heat_id, the heat it uses.
+export const SECTIONS = ['products', 'registry', 'heat_id'];
 
 // ---------- checking ----------
 
@@ -62,12 +66,12 @@ const SHAPES = {
     status: ENUM(['puppy', 'active_breeding', 'for_sale', 'retired_breeding', 'deceased'], true), died_on: DATE,
     titles: { type: 'list', max: MAX.titles, itemMax: 30 }, health: { list: 'health', max: MAX.health } },
   health: { id: ID, test: S(60, true), result: S(60, true), normal: { type: 'bool' }, date: DATE, verify_url: { type: 'url' } },
-  litter: { id: ID, pairing_id: REF, name: S(80), dam_id: REF, sire_id: REF, dam_name: S(60), sire_name: S(60),
+  litter: { id: ID, pairing_id: REF, heat_id: REF, name: S(80), dam_id: REF, sire_id: REF, dam_name: S(60), sire_name: S(60),
     expected_on: DATE, born_on: DATE, ready_on: DATE, deposits_on: DATE, prices: { object: 'prices' }, puppies: { list: 'puppy', max: MAX.puppies } },
   prices: Object.fromEntries(LITTER_PRICE_FIELDS.map((k) => [k, INT])),
   puppy: { id: ID, name: S(40, true), collar: S(30), sex: SEX, color: S(40), registration: ENUM(['limited', 'full']), registry: S(30),
     status: ENUM(['available', 'reserved', 'placed', 'staying', 'undecided', 'hidden'], true) },
-  pairing: { id: ID, dam_id: REF, sire_id: REF, dam_name: S(60), sire_name: S(60), planned_on: DATE, expected_on: DATE },
+  pairing: { id: ID, heat_id: REF, dam_id: REF, sire_id: REF, dam_name: S(60), sire_name: S(60), planned_on: DATE, expected_on: DATE },
   heat: { id: ID, dam_id: REF, dam_name: S(60), month: { type: 'month', required: true } },
   extra: { id: ID, name: S(80, true), group: S(40), description: ML(600), price_from: INT, price_to: INT },
   step: { id: ID, heading: S(80, true), body: ML(400) },
@@ -167,6 +171,8 @@ const DOG_STATUS = {
   retired_breeding: { status: 'retired', upcoming: 0, for_sale: 0 },
   deceased: { status: 'remembered', upcoming: 0, for_sale: 0 },
 };
+// A new website litter's label for a planned litter, by its KennelOS kind.
+const PLAN_LABEL = { heat: 'Upcoming heat', pairing: 'Planned pairing', litter: null };
 const PUPPY_STATUS = { available: 'available', reserved: 'reserved', placed: 'placed', staying: 'staying', undecided: 'coming_soon', hidden: 'hidden' };
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const monthOf = (ymd) => (ymd ? `${MONTHS[Number(ymd.slice(5, 7)) - 1]} ${ymd.slice(0, 4)}` : null);
@@ -305,13 +311,23 @@ export class Writer {
     return dam && sire ? `${dam} × ${sire}` : dam ? `${dam}'s litter` : 'Upcoming litter';
   }
 
+  // A litter's name as KennelOS gave it, and whether the website one is still
+  // that (not changed by her). One made before kennelos_name was kept counts as
+  // KennelOS's while it reads like a name the site would have made for it.
+  namedByKennelos(cur, e) {
+    if (cur.kennelos_name != null) return cur.name === cur.kennelos_name;
+    if (cur.source !== 'kennelos') return false;
+    const plain = { ...e, name: null };
+    return ['heat', 'pairing', 'litter'].some((k) => cur.name === this.litterName(plain, k));
+  }
+
   createLitter(e, kind) {
     const id = crypto.randomUUID();
     const name = this.litterName(e, kind);
     this.sort.litters += 1;
     this.insert('litters', {
-      id, site_id: this.siteId, slug: this.slug(this.litterSlugs, name), name, ...this.litterValues(e, kind),
-      plan_label: kind === 'heat' ? 'Upcoming heat' : kind === 'pairing' ? 'Planned pairing' : null,
+      id, site_id: this.siteId, slug: this.slug(this.litterSlugs, name), name, kennelos_name: name, ...this.litterValues(e, kind),
+      plan_label: PLAN_LABEL[kind],
       show_on_site: 1, show_prices: this.prices && kind === 'litter' ? 1 : 0, show_placed: 1, sort: this.sort.litters, source: 'kennelos', kennelos_id: e.id, kennelos_kind: kind,
       hidden_by_kennelos: 0, created_at: this.t, updated_at: this.t,
     });
@@ -326,6 +342,15 @@ export class Writer {
     values.hidden_by_kennelos = 0;
     values.kennelos_kind = kind;
     values.kennelos_id = e.id;
+    // Its name follows KennelOS's (a nickname set, or a heat becoming a pairing)
+    // while it is still the one KennelOS gave; and its label for a planned litter
+    // follows its kind while it is still one the site gave. Her own wording stays.
+    // (A matched one already has KennelOS's name: matching goes by it.)
+    const named = this.namedByKennelos(cur, e);
+    const name = this.litterName(e, kind);
+    if (named) values.name = name;
+    values.kennelos_name = named ? name : cur.kennelos_name ?? name;
+    if (cur.plan_label == null || Object.values(PLAN_LABEL).includes(cur.plan_label)) values.plan_label = PLAN_LABEL[kind];
     // With Use my KennelOS prices, Show prices starts on the first time a litter's
     // prices arrive; from then on the switch is hers.
     if (this.prices && kind === 'litter' && !cur.show_prices && LITTER_PRICE_FIELDS.every((k) => cur[k] == null) && LITTER_PRICE_FIELDS.some((k) => values[k] != null)) values.show_prices = 1;
@@ -442,6 +467,9 @@ export async function applyBundle(env, device, body) {
     // Pairing to litter: the website litter made from the pairing moves onto the
     // litter's id, keeping its photos, wording and address.
     if (!cur && kind === 'litter' && e.pairing_id) cur = st.litters.find((l) => l.kennelos_kind === 'pairing' && l.kennelos_id === e.pairing_id && !kept.has(l.id));
+    // Heat to pairing (or to litter, when the pairing never showed): the one made
+    // from the heat it uses, likewise.
+    if (!cur && kind !== 'heat' && e.heat_id) cur = st.litters.find((l) => l.kennelos_kind === 'heat' && l.kennelos_id === e.heat_id && !kept.has(l.id));
     if (cur) { kept.add(cur.id); w.updateLitter(cur, e, kind); continue; }
     const name = w.litterName(e, kind);
     const match = candidate('litters', st.litters, name, `${kind}:${e.id}`);

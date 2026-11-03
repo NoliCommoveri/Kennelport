@@ -1154,11 +1154,13 @@ the same way Older puppies appears by itself once a litter's going-home date pas
     so the page can't drop off the site at whelping. Nothing is hidden or created.
   - *Heats:* a planned heat is a `heat_cycle` event she logged with a future date (her
     estimate; the site shows its month only), for a dam whose `heats_online` is on.
-    KennelOS doesn't link a pairing to a heat, so the bundle pairs them by date: a pairing
+    KennelOS doesn't link a pairing to a heat, so its bundle pairs them by date: a pairing
     of the same dam (not failed or cancelled) **uses** a heat when its `planned_date`
     (else when it was entered) falls from 30 days before to 60 days after the heat's date.
     Each pairing uses at most one heat, the nearest. A used heat leaves the bundle and the
-    pairing's entry takes over; nothing carries over (a heat is only a month). A heat no
+    pairing's entry takes over: the pairing (and later its litter) names it as `heat_id`
+    (the `heat_id` section), and KennelPort moves the website litter made from the heat
+    onto the pairing, as for pairing to litter. A heat no
     pairing uses stays until 60 days after its date (she may have skipped it, or the
     estimate was off: moving the date in KennelOS keeps it up), then leaves. Older
     pairings and litters never use a future heat, so a dam can show a litter on the
@@ -1167,6 +1169,13 @@ the same way Older puppies appears by itself once a litter's going-home date pas
     is `siteExport.js`'s own work: KennelOS's public list keeps only future heats of
     active breeding dams (`plannedHeats()`), and the 60-day tail and the pairing match are
     the website's rules, not the list's.
+  - *Taking over* (heat to pairing, pairing to litter), the website litter becomes what a
+    new one of its kind would be: its name follows KennelOS's (the litter's nickname,
+    else "Dam × Sire") while it is still the name KennelOS last gave (`kennelos_name`,
+    migration 0022), and its planned-litter label follows the kind while it is still one
+    the site gave ("Upcoming heat", "Planned pairing", none for a litter). A name or label
+    she changed on the website stays hers. A nickname set or changed later follows the
+    same way. Its address stays.
 - **Updated:** for a matched record, the KennelOS-owned fields (list below) are replaced
   with the bundle's values. KennelPort-only fields (bio, photos, albums, order, embeds, a
   dog's role, a litter's summary, a puppy's own price) are never touched.

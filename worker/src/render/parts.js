@@ -180,26 +180,69 @@ function counts(pups) {
   return [part(g, 'girl', 'girls'), part(b, 'boy', 'boys')].filter(Boolean).join(', ') || 'Expected';
 }
 
-export function litterCard(snap, l, ctx, { link = true } = {}) {
-  const parent = (role) => {
-    const id = l[`${role}_id`];
-    const dog = id && snap.dogs.find((d) => d.id === id);
-    const name = parentName(snap, l, role);
-    return (dog && img(snap, dog.photo_id, { alt: dog.call_name, thumb: true })) || `<span class="ph">${esc(name ? name.slice(0, 1) : '?')}</span>`;
-  };
+// A parent's picture, or its initial in a circle.
+function parentPhoto(snap, l, role) {
+  const id = l[`${role}_id`];
+  const dog = id && snap.dogs.find((d) => d.id === id);
+  const name = parentName(snap, l, role);
+  return (dog && img(snap, dog.photo_id, { alt: dog.call_name, thumb: true })) || `<span class="ph">${esc(name ? name.slice(0, 1) : '?')}</span>`;
+}
+
+// A litter's facts, as its card lists them: [label, value] rows, blanks included.
+export function litterRows(l, ctx) {
   const ahead = depositsAhead(l, ctx.today);
   const older = l.stage === 'current' && !ahead && isPast(l.ready_on, ctx.today);
-  const eyebrow = l.stage === 'planned' ? (l.plan_label || 'Planned litter') : l.stage === 'past' ? 'Past litter' : ahead ? 'Coming up' : older ? 'Older puppies' : 'Current litter';
-  const rows = (l.stage === 'planned'
+  return (l.stage === 'planned'
     ? [['Expected', l.expected_label], ['Going home', l.ready_label]]
     : [['Born', fmtDate(l.born_on)], ['Deposits from', ahead ? fmtDate(l.deposits_on) : null], ['Puppies', l.puppies.length ? l.puppies.map((p) => p.name).length <= 2 ? l.puppies.map((p) => p.name).join(', ') : counts(l.puppies) : null],
       ['Going home', older ? 'Ready now' : fmtDate(l.ready_on)]]).concat(litterPriceRows(l));
+}
+
+const kvList = (rows) => `<dl class="kv">${rows.filter(([, v]) => v).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`;
+
+// A litter's page doesn't repeat its card: the page's head already names the litter
+// and its parents. Under it, a small card for each parent in one row (Dam over the
+// mother, Sire over the father) says something about them: picture, registered
+// name, titles, colour and registry, a few health results, and a link to the
+// dog's page. A parent that isn't one of her dogs on the site (an outside stud)
+// shows the name she typed. Then the litter's facts the head doesn't give.
+export function parentCards(snap, l) {
+  const card = (role) => {
+    const id = l[`${role}_id`];
+    const d = id && snap.dogs.find((x) => x.id === id);
+    const name = parentName(snap, l, role);
+    if (!name) return '';
+    const line = d ? [d.color, d.registry].filter(Boolean).join(' · ') : '';
+    const health = d?.health ?? [];
+    const tests = health.length
+      ? `<ul class="tests">${health.slice(0, 3).map((h) => `<li><span>${esc(h.test)}</span><span>${esc(h.result)}</span></li>`).join('')}</ul>${health.length > 3 ? `<span class="small muted">and ${health.length - 3} more health result${health.length - 3 === 1 ? '' : 's'}</span>` : ''}`
+      : '';
+    return `<div class="parent"><span class="eyebrow">${role === 'dam' ? 'Dam' : 'Sire'}</span>
+      <article class="parent-card">${parentPhoto(snap, l, role)}<b class="call">${esc(name)}</b>${d?.registered_name ? `<span class="reg">${esc(d.registered_name)}</span>` : ''}${d?.titles ? `<span class="small">${esc(d.titles)}</span>` : ''}${line ? `<span class="small muted">${esc(line)}</span>` : ''}${tests}${d ? `<a class="more" href="/dogs/${attr(d.slug)}">View profile</a>` : ''}</article></div>`;
+  };
+  const cards = [card('dam'), card('sire')].filter(Boolean);
+  return cards.length ? `<div class="parents${cards.length === 1 ? ' one' : ''}">${cards.join('')}</div>` : '';
+}
+
+// The litter's facts on its page: its card's, less what the page shows already
+// (its birth date heads the page, and its puppies have their own cards below).
+export function litterFacts(l, ctx) {
+  const rows = litterRows(l, ctx).filter(([k, v]) => v && k !== 'Born' && !(k === 'Puppies' && l.puppies.length));
+  return rows.length ? `<div class="litter litter-facts">${kvList(rows)}</div>` : '';
+}
+
+export function litterCard(snap, l, ctx, { link = true } = {}) {
+  const parent = (role) => parentPhoto(snap, l, role);
+  const ahead = depositsAhead(l, ctx.today);
+  const older = l.stage === 'current' && !ahead && isPast(l.ready_on, ctx.today);
+  const eyebrow = l.stage === 'planned' ? (l.plan_label || 'Planned litter') : l.stage === 'past' ? 'Past litter' : ahead ? 'Coming up' : older ? 'Older puppies' : 'Current litter';
+  const rows = litterRows(l, ctx);
   const more = !link ? '' : l.stage === 'planned'
     ? (pageOn(snap, 'waitlist', ctx) ? '<a class="more" href="/waitlist">See the waitlist</a>' : '')
     : `<a class="more" href="/litters/${attr(l.slug)}">Meet the puppies</a>`;
   return `<article class="litter"><span class="eyebrow">${esc(eyebrow)}</span>
     <div class="pair">${parent('dam')}<span class="x">×</span>${parent('sire')}<div class="names"><b>${esc(l.name)}</b><span class="small muted">${esc(pairNames(snap, l))}</span></div></div>
-    <dl class="kv">${rows.filter(([, v]) => v).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>${l.summary && l.stage === 'planned' ? `<p class="small muted">${esc(l.summary)}</p>` : ''}${more}</article>`;
+    ${kvList(rows)}${l.summary && l.stage === 'planned' ? `<p class="small muted">${esc(l.summary)}</p>` : ''}${more}</article>`;
 }
 
 // ---------- flip cards ----------

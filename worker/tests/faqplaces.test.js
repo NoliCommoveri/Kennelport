@@ -39,7 +39,7 @@ test('the registration question rides at the top of every litter page, and only 
   const litter = await b.page('/litters/gem-2026');
   assert.ok(litter.includes(`<div class="acc"><details class="x"><summary>${REG_FAQ}</summary>`), 'the question, drawn like the FAQ page draws it');
   // Above the litter, under its breadcrumb, with the card pushed down.
-  assert.match(litter, /breadcrumb[\s\S]{0,400}<div class="acc">[\s\S]{0,900}<div class="litters mt-26">/);
+  assert.match(litter, /breadcrumb[\s\S]{0,400}<div class="acc">[\s\S]{0,900}<div class="mt-26"><div class="parents/);
   assert.match(litter, /Almost every puppy goes home on limited registration/);
   // Still on the FAQ page, where every question lives.
   assert.ok((await b.page('/faq')).includes(REG_FAQ));

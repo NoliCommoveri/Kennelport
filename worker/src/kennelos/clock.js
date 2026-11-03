@@ -45,7 +45,7 @@ export async function keepLitter(env, siteId, litterId) {
   const t = new Date().toISOString();
   const res = await env.DB.batch([
     env.DB.prepare(`UPDATE litters SET kept_at = ?, stage = 'past', show_on_site = 1, hidden_by_kennelos = 0, left_site_at = NULL,
-      source = 'kennelport', kennelos_id = NULL, kennelos_kind = NULL, updated_at = ? WHERE id = ? AND site_id = ?`).bind(t, t, litterId, siteId),
+      source = 'kennelport', kennelos_id = NULL, kennelos_kind = NULL, kennelos_name = NULL, updated_at = ? WHERE id = ? AND site_id = ?`).bind(t, t, litterId, siteId),
     env.DB.prepare(`UPDATE puppies SET status = CASE WHEN hidden_by_kennelos = 1 THEN 'hidden' ELSE status END, hidden_by_kennelos = 0,
       source = 'kennelport', kennelos_id = NULL WHERE litter_id = ? AND site_id = ?`).bind(litterId, siteId),
     env.DB.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(t, siteId),

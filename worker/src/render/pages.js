@@ -3,7 +3,7 @@
 // "no such page".
 import {
   esc, attr, fmtDate, priceText, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, parentName,
-  litterCard, dogCard, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
+  litterCard, parentCards, litterFacts, dogCard, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
   paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
   dogGroups, depositsAhead, puppyStatus, puppyPriceText, regText, fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
   faqBlock,
@@ -374,7 +374,9 @@ export function litter(snap, ctx, slug) {
   const l = snap.litters.find((x) => x.slug === slug);
   if (!l) return null;
   const pups = sortPuppies(l.puppies);
-  const lede = [pairNames(snap, l), l.summary].filter(Boolean).join('. ');
+  // The parents' names under the litter's own, unless they are its name.
+  const pair = pairNames(snap, l);
+  const lede = [pair !== l.name ? pair : null, l.summary].filter(Boolean).join('. ');
   const note = l.show_prices && l.price_note ? `<p class="small muted center mt-20">${esc(l.price_note)}</p>` : '';
   const faqs = faqBlock(snap, 'litter');
   return {
@@ -383,7 +385,7 @@ export function litter(snap, ctx, slug) {
       <section class="section tight"><div class="wrap">
         <p class="breadcrumb center"><a href="/litters">${esc(label(snap, 'litters'))}</a></p>
         ${faqs}
-        <div class="litters${faqs ? ' mt-26' : ''}">${litterCard(snap, l, ctx, { link: false })}</div>${note}
+        ${[parentCards(snap, l), litterFacts(l, ctx)].filter(Boolean).map((x, i) => (i || faqs ? `<div class="mt-26">${x}</div>` : x)).join('\n        ')}${note}
         ${fullRegLink(snap, l, null, ctx, 'btn line') ? `<div class="litters mt-20" id="full-registration"><div><p class="btn-row">${fullRegLink(snap, l, null, ctx, 'btn line')}</p>${fullRegSurchargeRow(snap, l, null, ctx) ? `<div class="mt-20">${fullRegSurchargeRow(snap, l, null, ctx)}</div>` : ''}</div></div>` : ''}${shareRow(true)}
         ${pups.length ? `<div class="mt-26 grid">${pups.map((pup) => puppyCard(snap, l, pup, ctx)).join('')}</div>` : ''}
         ${embedsBlock(snap, `litter:${l.id}`, { inWrap: true })}

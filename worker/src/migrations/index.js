@@ -29,6 +29,7 @@ import puppyPhotos from './0018_puppy_photos.sql';
 import albumOrder from './0019_album_order.sql';
 import puppyMorePhotos from './0020_puppy_more_photos.sql';
 import faqPlaces from './0021_faq_places.sql';
+import litterKennelosName from './0022_litter_kennelos_name.sql';
 
 export const MIGRATIONS = [
   { id: '0001', name: 'schema', sql: schema },
@@ -52,4 +53,5 @@ export const MIGRATIONS = [
   { id: '0019', name: 'album_order', sql: albumOrder },
   { id: '0020', name: 'puppy_more_photos', sql: puppyMorePhotos },
   { id: '0021', name: 'faq_places', sql: faqPlaces },
+  { id: '0022', name: 'litter_kennelos_name', sql: litterKennelosName },
 ];

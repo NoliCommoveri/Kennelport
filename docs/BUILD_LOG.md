@@ -1050,3 +1050,17 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   place or a place on a non-FAQ expander. The published snapshot carries them, so a page
   draws from the snapshot as usual. The AK sample ships that question, placed on litters,
   so a new site starts with it.
+- **Upgrades carry the name, and a litter's page shows its parents (2026-11-03).** A
+  pairing sent again as its litter kept "Claire × Bubba" though the litter had a
+  nickname: taking over only replaced the KennelOS-owned fields, and the name isn't one.
+  Now a website litter taking over (pairing to litter, and newly heat to pairing or
+  litter, through the bundle's new `heat_id` on pairings and litters, a `sections` entry)
+  becomes what a new one would be: name and planned-litter label follow the new kind
+  while still the site's own (`kennelos_name`, migration 0022; one from before counts as
+  KennelOS's while it reads like a name the site would have made). Her own name or label
+  stays. A litter's page no longer repeats its card: under the head (which drops the
+  parents' names when they are the litter's name), a card for each parent side by side,
+  Dam and Sire above them (picture, registered name, titles, colour and registry, three
+  health results, View profile; an outside parent is the name she typed), then the
+  litter's facts the head doesn't give. `parentCards`, `litterFacts`, `litterRows` in
+  `render/parts.js`; site.css. Tests added.

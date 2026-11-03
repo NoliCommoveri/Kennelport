@@ -185,7 +185,7 @@ export async function unlinkSite(env, siteId) {
     db.prepare('DELETE FROM link_pending WHERE site_id = ?').bind(siteId),
     db.prepare('DELETE FROM link_declines WHERE site_id = ?').bind(siteId),
     db.prepare("UPDATE dogs SET show_on_site = CASE WHEN hidden_by_kennelos = 1 THEN 0 ELSE show_on_site END, hidden_by_kennelos = 0, source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
-    db.prepare("UPDATE litters SET show_on_site = CASE WHEN hidden_by_kennelos = 1 THEN 0 ELSE show_on_site END, hidden_by_kennelos = 0, source = 'kennelport', kennelos_id = NULL, kennelos_kind = NULL WHERE site_id = ?").bind(siteId),
+    db.prepare("UPDATE litters SET show_on_site = CASE WHEN hidden_by_kennelos = 1 THEN 0 ELSE show_on_site END, hidden_by_kennelos = 0, source = 'kennelport', kennelos_id = NULL, kennelos_kind = NULL, kennelos_name = NULL WHERE site_id = ?").bind(siteId),
     db.prepare("UPDATE puppies SET status = CASE WHEN hidden_by_kennelos = 1 THEN 'hidden' ELSE status END, hidden_by_kennelos = 0, source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
     db.prepare("UPDATE health_results SET source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
     db.prepare("UPDATE extras SET source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
