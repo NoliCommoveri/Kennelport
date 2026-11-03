@@ -224,12 +224,13 @@ export function dogCard(snap, d, { sale = null } = {}) {
 export const REG_WORDS = { limited: 'Limited', full: 'Full' };
 
 // A litter with "Families can ask about full registration" on (its own setting):
-// the litter, and each of its puppies planned for Limited, link to the contact
-// form with them filled in. Never for a puppy staying here, and only while the
-// contact page is on.
+// each of its undecided puppies (no registration set: she'd sell it either way)
+// links to the contact form with it filled in, and so does the litter while it has
+// one. Never for a puppy staying here, and only while the contact page is on.
+const undecided = (p) => !p.registration && p.status !== 'staying';
 export function fullRegHref(snap, l, p, ctx) {
   if (!l.ask_full_reg || !pageOn(snap, 'contact', ctx)) return null;
-  if (p && (p.registration !== 'limited' || p.status === 'staying')) return null;
+  if (p ? !undecided(p) : !l.puppies.some(undecided)) return null;
   return `/contact?full-reg=${encodeURIComponent(l.slug)}${p ? `&puppy=${encodeURIComponent(p.slug)}` : ''}#message`;
 }
 // The litter's full-registration surcharge, shown under those links while its Show

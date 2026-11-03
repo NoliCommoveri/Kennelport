@@ -660,16 +660,17 @@ test('a new dog or litter starts on "Choose…", not on the first sex or stage',
   assert.doesNotMatch(await (await b.get(`/dogs/${willow}`)).text(), /Choose…/);
 });
 
-test('registration on the puppy card, and a litter\'s Ask about full registration', async () => {
+test('registration on the puppy card; Ask about full registration on undecided puppies, with the litter\'s tick on and off', async () => {
   const b = await breeder();
   const gem = b.row("SELECT id FROM litters WHERE slug = 'gem-2026'").id;
-  b.env.DB.raw.prepare("UPDATE puppies SET registration = 'limited' WHERE slug IN ('opal', 'onyx')").run();
+  // Opal undecided (no registration: either way), Onyx Limited, Diamond Full.
+  b.env.DB.raw.prepare("UPDATE puppies SET registration = 'limited' WHERE slug = 'onyx'").run();
   b.env.DB.raw.prepare("UPDATE puppies SET registration = 'full' WHERE slug = 'diamond'").run();
   await b.post('/publish');
   let html = await b.page('/litters/gem-2026');
   assert.match(html, /<li><span>Registration<\/span><span>Limited<\/span><\/li>/);
   assert.match(html, /<li><span>Registration<\/span><span>Full<\/span><\/li>/);
-  assert.doesNotMatch(html, /Ask about full registration/, 'off by default');
+  assert.doesNotMatch(html, /Ask about full registration/, 'tick off: no ask anywhere');
 
   const form = await (await b.get(`/litters/${gem}`)).text();
   assert.match(form, /name="ask_full_reg" value="1"> <span>Families can ask about full registration/);
@@ -677,38 +678,54 @@ test('registration on the puppy card, and a litter\'s Ask about full registratio
   await b.post('/publish');
   html = await b.page('/litters/gem-2026');
   assert.match(html, /<div class="litters mt-20" id="full-registration"><div><p class="btn-row"><a class="btn line" href="\/contact\?full-reg=gem-2026#message">Ask about full registration<\/a>/);
-  assert.match(html, /href="\/contact\?full-reg=gem-2026&amp;puppy=opal#message"/);
-  assert.match(html, /href="\/contact\?full-reg=gem-2026&amp;puppy=onyx#message"/);
-  assert.doesNotMatch(html, /puppy=diamond/, 'already full: no link');
-  assert.match(await b.page('/litters/gem-2026/opal'), /<dt>Registration<\/dt><dd>Limited<\/dd>[\s\S]*href="\/contact\?full-reg=gem-2026&amp;puppy=opal#message">Ask about full registration/);
+  assert.match(html, /href="\/contact\?full-reg=gem-2026&amp;puppy=opal#message"/, 'undecided: asks');
+  assert.doesNotMatch(html, /puppy=onyx/, 'Limited: no ask');
+  assert.doesNotMatch(html, /puppy=diamond/, 'Full: no ask');
+  assert.match(await b.page('/litters/gem-2026/opal'), /href="\/contact\?full-reg=gem-2026&amp;puppy=opal#message">Ask about full registration/);
+  assert.doesNotMatch(await b.page('/litters/gem-2026/onyx'), /Ask about full registration/);
 
   // The contact form, with the litter and puppy filled in from the site's own records.
-  const contact = await b.page('/contact?full-reg=gem-2026&puppy=opal');
-  assert.match(contact, /name="topic" maxlength="80" placeholder="[^"]*" value="Full registration: Opal, The Gem litter"/);
-  assert.match(await b.page('/contact?full-reg=gem-2026'), /value="Full registration: The Gem litter"/);
-  assert.match(await b.page('/contact?full-reg=gem-2026&puppy=diamond'), /name="topic" maxlength="80" placeholder="[^"]*" value=""/);
-  assert.match(await b.page('/contact?full-reg=%3Cscript%3E'), /name="topic" maxlength="80" placeholder="[^"]*" value=""/);
-  assert.match(await b.page('/contact'), /name="topic" maxlength="80" placeholder="[^"]*" value=""/);
+  const topic = (h) => h.match(/name="topic" maxlength="80" placeholder="[^"]*" value="([^"]*)"/)[1];
+  assert.equal(topic(await b.page('/contact?full-reg=gem-2026&puppy=opal')), 'Full registration: Opal, The Gem litter');
+  assert.equal(topic(await b.page('/contact?full-reg=gem-2026')), 'Full registration: The Gem litter');
+  assert.equal(topic(await b.page('/contact?full-reg=gem-2026&puppy=onyx')), '', 'not an undecided puppy');
+  assert.equal(topic(await b.page('/contact?full-reg=%3Cscript%3E')), '');
+  assert.equal(topic(await b.page('/contact')), '');
+
+  // No undecided puppy left: no litter button either.
+  b.env.DB.raw.prepare("UPDATE puppies SET registration = 'limited' WHERE slug = 'opal'").run();
+  await b.post('/publish');
+  assert.doesNotMatch(await b.page('/litters/gem-2026'), /Ask about full registration/);
+  assert.equal(topic(await b.page('/contact?full-reg=gem-2026')), '');
 });
 
-test('the Full Registration Surcharge: under the ask links, only with the litter\'s Show prices on', async () => {
+test('the Full Registration Surcharge: under the ask links, with Show prices on and off', async () => {
   const b = await breeder();
   const gem = b.row("SELECT id FROM litters WHERE slug = 'gem-2026'").id;
-  b.env.DB.raw.prepare("UPDATE puppies SET registration = 'limited' WHERE slug IN ('opal', 'diamond')").run();
+  b.env.DB.raw.prepare("UPDATE puppies SET registration = 'limited' WHERE slug = 'onyx'").run(); // Opal and Diamond undecided
   b.env.DB.raw.prepare('UPDATE litters SET ask_full_reg = 1, show_prices = 0, price_female = 3000, full_reg_female = 700, full_reg_male = 500 WHERE id = ?').run(gem);
   await b.post('/publish');
-  assert.doesNotMatch(await b.page('/litters/gem-2026'), /Full Registration Surcharge/, 'prices off: not shown');
+  let html = await b.page('/litters/gem-2026');
+  assert.match(html, /Ask about full registration/);
+  assert.doesNotMatch(html, /Full Registration Surcharge/, 'prices off: not shown');
 
   b.env.DB.raw.prepare('UPDATE litters SET show_prices = 1 WHERE id = ?').run(gem);
   await b.post('/publish');
-  const html = await b.page('/litters/gem-2026');
+  html = await b.page('/litters/gem-2026');
   assert.match(html, /Ask about full registration<\/a><\/p><div class="mt-20"><ul class="tests"><li><span>Full Registration Surcharge<\/span><span>males \$500, females \$700<\/span><\/li><\/ul><\/div><\/div><\/div>/);
-  // Each Limited puppy: its own, under its ask link.
+  // Each undecided puppy: its own, under its ask link; the Limited one has neither.
   assert.match(html, /puppy=opal#message">Ask about full registration<\/a><ul class="tests"><li><span>Full Registration Surcharge<\/span><span>\$700<\/span>/);
   assert.match(html, /puppy=diamond#message">Ask about full registration<\/a><ul class="tests"><li><span>Full Registration Surcharge<\/span><span>\$500<\/span>/);
+  assert.equal((html.match(/Full Registration Surcharge/g) || []).length, 3, 'the litter, Opal and Diamond; not Onyx');
   assert.match(await b.page('/litters/gem-2026/opal'), /Ask about full registration<\/a><\/p><dl class="kv"><dt>Full Registration Surcharge<\/dt><dd>\$700<\/dd><\/dl>/);
   // The same for both: one figure.
   b.env.DB.raw.prepare('UPDATE litters SET full_reg_male = NULL WHERE id = ?').run(gem);
   await b.post('/publish');
   assert.match(await b.page('/litters/gem-2026'), /<span>Full Registration Surcharge<\/span><span>\$700<\/span><\/li><\/ul><\/div><\/div><\/div>/);
+  // The litter's tick off: neither, prices on or not.
+  b.env.DB.raw.prepare('UPDATE litters SET ask_full_reg = 0 WHERE id = ?').run(gem);
+  await b.post('/publish');
+  html = await b.page('/litters/gem-2026');
+  assert.doesNotMatch(html, /Full Registration Surcharge|Ask about full registration/);
 });
+

@@ -965,10 +965,11 @@ KennelOS repo and isn't started. 166 tests with custom domains.
 ## 2026-11-03: full-registration asks, Choose… for sex, matches and health fixes
 
 - A litter's **Families can ask about full registration** (`litters.ask_full_reg`, off;
-  migration 0017). On, the litter page and each puppy planned for Limited (card and
-  page, never one staying) link to `/contact?full-reg=<litter>&puppy=<puppy>`, whose
-  About line is filled in from the snapshot (never from the address's words) and isn't
-  cached. A puppy card's back shows its Registration.
+  migration 0017). On, each undecided puppy (no registration set: she'd sell it either
+  way; never one staying) links from its card and page to
+  `/contact?full-reg=<litter>&puppy=<puppy>`, and the litter page has the button while it
+  has one. The About line is filled in from the snapshot (never from the address's words)
+  and isn't cached. A puppy card's back shows its Registration.
 - The manage app's required choices with no default (a dog's or puppy's sex, a litter's
   stage) start on **Choose…**, so a new dog isn't saved as Female by accident.
 - Matches waiting for her yes sit at the top of Home and Publish, saying the site keeps
@@ -977,6 +978,6 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   Normal results only kept off for not being normal shows once it is.
 - **Full Registration Surcharge**: with a litter's Ask about full registration and its
   Show prices both on, a detail row under the ask link: the litter's ("$500", or
-  "males $500, females $700"), and each Limited puppy's own by its sex. Off with Show
+  "males $500, females $700"), and each undecided puppy's own by its sex. Off with Show
   prices off. The surcharge reaches KennelPort from KennelOS only with Use my KennelOS
   prices, as before.
