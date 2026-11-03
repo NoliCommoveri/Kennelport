@@ -4,6 +4,7 @@
 //   GET    /v1/link    (Bearer)  → { linked: true, site, last_bundle_at }
 //   DELETE /v1/link    (Bearer)  → this device stops; the last one is an Unlink
 //   POST   /v1/bundle  (Bearer, the bundle as JSON) → { summary, addresses, site }
+//   POST   /v1/settings (Bearer) { kennelos_prices: true | false } → { site }
 //
 // KennelOS Pro is a static app on its own origin, so a browser call comes with an
 // Origin that must be one of KENNELOS_APP_ORIGINS (comma-separated), and gets the
@@ -13,7 +14,7 @@
 // Every refusal is { error, message } with a line KennelOS can show as it is.
 // Never logged: a code, a token or a body.
 import { ApiError, json, readJson } from '../lib/http.js';
-import { redeemCode, deviceFor, siteFacts, stopDevice } from './link.js';
+import { redeemCode, deviceFor, siteFacts, stopDevice, setKennelosPrices } from './link.js';
 import { applyBundle, MAX_BUNDLE_BYTES } from './bundle.js';
 
 export const appOrigins = (env) => String(env.KENNELOS_APP_ORIGINS ?? '').split(',').map((s) => s.trim().replace(/\/+$/, '')).filter(Boolean);
@@ -62,6 +63,20 @@ export async function handleApi(request, env, url) {
       const device = await deviceFor(env, request);
       const body = await readJson(request, MAX_BUNDLE_BYTES);
       return reply(await applyBundle(env, device, body));
+    }
+    // Her settings here that KennelOS may change for her (Kels's Update my website):
+    // only those named; anything else is refused.
+    if (url.pathname === '/v1/settings') {
+      if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
+      const device = await deviceFor(env, request);
+      const body = await readJson(request, 1024);
+      const keys = body && typeof body === 'object' && !Array.isArray(body) ? Object.keys(body) : null;
+      if (!keys?.length || keys.some((k) => k !== 'kennelos_prices') || typeof body.kennelos_prices !== 'boolean') {
+        return reply({ error: 'bad_settings', message: 'KennelPort couldn\'t take that setting.' }, 400);
+      }
+      await setKennelosPrices(env, device.site_id, body.kennelos_prices);
+      const site = await env.DB.prepare('SELECT * FROM sites WHERE id = ?').bind(device.site_id).first();
+      return reply({ site: await siteFacts(env, site) });
     }
     return reply({ error: 'not_found' }, 404);
   } catch (err) {

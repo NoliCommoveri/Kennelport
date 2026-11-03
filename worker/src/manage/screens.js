@@ -27,7 +27,7 @@ import { readFeed, parseFeedAddress, setFeed, FeedError, kennelosOrigin, kennelo
 import {
   waiting, fulfilled, getEntry, addEntry, updateEntry, setFulfilled, removeEntry, moveEntry, offerMailto, suggestWants, listNameFor, maskedNameFor, wantsPrivate, WaitlistError,
 } from '../waitlist.js';
-import { makeLinkCode, showCode, devices, stopDevice, unlinkSite, LinkError, CODE_TTL_MS } from '../kennelos/link.js';
+import { makeLinkCode, showCode, devices, stopDevice, unlinkSite, setKennelosPrices, LinkError, CODE_TTL_MS } from '../kennelos/link.js';
 import { OWNED, OWNED_PRICES } from '../kennelos/bundle.js';
 import { pendingMatches, matchChanges, confirmMatch, declineMatch, MatchError } from '../kennelos/match.js';
 import { leavingLitters, keepLitter, LITTER_DAYS } from '../kennelos/clock.js';
@@ -184,13 +184,7 @@ export function createScreens({ env, request, url, site, user, page }) {
         }
       }
       if (rest === '/prices') {
-        const t = new Date().toISOString();
-        // Switching it on also turns on Show prices for the litters KennelOS sends,
-        // so its prices show without a trip to each litter. Off leaves them as they are.
-        await env.DB.batch([
-          env.DB.prepare('UPDATE sites SET use_kennelos_prices = ?, draft_changed_at = ? WHERE id = ?').bind(fd.has('on') ? 1 : 0, t, site.id),
-          ...(fd.has('on') && !(await kosPrices()) ? [env.DB.prepare("UPDATE litters SET show_prices = 1, updated_at = ? WHERE site_id = ? AND source = 'kennelos' AND kennelos_kind = 'litter' AND show_prices = 0").bind(t, site.id)] : []),
-        ]);
+        await setKennelosPrices(env, site.id, fd.has('on'));
         return here('saved', '#prices');
       }
       if (rest === '/unlink') {

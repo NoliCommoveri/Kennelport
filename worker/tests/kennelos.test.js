@@ -399,6 +399,24 @@ test('Use my KennelOS prices: off, KennelOS sends none here; on, they arrive rea
   assert.match(await (await b.get(`/litters/${id}`)).text(), /3000 <span class="muted small">· from KennelOS/);
 });
 
+test('KennelOS can set Use my KennelOS prices, and nothing else', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  await api(b.env, '/v1/bundle', { token, body: bundle({ litters: [{ id: 'l1', name: 'Spring', born_on: '2026-10-01', puppies: [] }] }) });
+  const on = await api(b.env, '/v1/settings', { token, body: { kennelos_prices: true } });
+  assert.equal(on.status, 200);
+  const out = await on.json();
+  assert.equal(out.site.kennelos_prices, true);
+  assert.deepEqual(out.site.settings, ['kennelos_prices']);
+  assert.equal(b.row("SELECT show_prices FROM litters WHERE kennelos_id = 'l1'").show_prices, 1);
+  assert.match(await (await b.get('/kennelos')).text(), /name="on" value="1" checked/);
+  assert.equal((await api(b.env, '/v1/settings', { token, body: { kennelos_prices: 'yes' } })).status, 400);
+  assert.equal((await api(b.env, '/v1/settings', { token, body: { kennelos_prices: false, scheme: 'slate' } })).status, 400);
+  assert.equal((await api(b.env, '/v1/settings', { token: 'kpl_' + '0'.repeat(64), body: { kennelos_prices: false } })).status, 401);
+  assert.equal((await (await api(b.env, '/v1/settings', { token, body: { kennelos_prices: false } })).json()).site.kennelos_prices, false);
+  assert.equal(b.row('SELECT use_kennelos_prices FROM sites WHERE id = ?', b.site.id).use_kennelos_prices, 0);
+});
+
 test('Use my KennelOS prices turns Show prices on: when switched on, and for litters it brings', async () => {
   const b = await breeder();
   const token = await linked(b);
