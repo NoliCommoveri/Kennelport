@@ -773,3 +773,68 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - Checked in Chromium at phone and computer widths, light and dark. 140 tests; template
   and manage app files changed.
 - Released as site template 9 and manage app 11 (fingerprints updated).
+
+## 2026-11-03: phase 4 designed — what the KennelOS link actually does
+
+Section 5 read against KennelOS's code before building, and settled with the owner one
+question at a time. Nothing built yet; docs only (plan 5 rewritten, 3.2, 3.6, 3.7, 3.9,
+3.11, 3.12, 6, 8.1, decisions and risks, and the backlog).
+
+- **Two principles** (plan 5.1, decisions 29 and 30). A waitlist setting may fill a field
+  but never gate a website section: `show_upcoming` and `parent_tests` both default to
+  off, so as the website's gate they would have left a breeder who doesn't publish a
+  public list with no upcoming litters and no health results, and nothing to explain why.
+  And the site never works a status out for her — inference leans on data hygiene and
+  fails invisibly, while a mark she set wrong is on her own site and one tap to fix.
+- **Four marks in KennelOS** decide what is offered: `show_on_website` on Dog, Litter and
+  Pairing, plus `heats_online` on a dam (a heat is a routine log entry twice a year, so
+  the choice belongs to the dam, not to each event). A litter carries its own puppies —
+  she never ticks eight at a time.
+- **Her dates place a litter** (5.3): `accept_deposits_date`, which KennelOS already shows
+  to families and already reads as the day deposits open (`depositsDueLitters()`), decides
+  when Available means available. Before it, a litter sits under Coming up and its puppies
+  read **Available on 12 December**; the site moves them on the day from the published
+  snapshot, as Older puppies already does. Puppies are marked Available the day they're
+  born, but nobody takes a deposit on a three-day-old puppy.
+- **"Still deciding"** replaces "Coming soon" (3.6, decision 32): the old label promised a
+  sale she may never make.
+- **Prices are one number** (3.2, decision 31): limited shows the base for that sex, full
+  shows base plus surcharge as a total, never "+$300"; ranges are worked out from sex and
+  registration, never typed. Litter prices, deposits and surcharges per sex are not built
+  yet — phase 4 adds them, with a puppy's own optional override and a per-litter **Show
+  prices** switch.
+- **Health results arrive as data**, and her KennelPort settings decide what shows (3.7):
+  each dog's **Health results** choice and each result's tick, set once from that choice
+  and hers afterwards. Abnormal results travel with their flag; vault certificates never.
+- **Dogs are never deleted by a clock** (5.3, decision 28 narrowed): the 30 days with
+  **Keep** is for litters. Archiving a dog in KennelOS is ordinary housekeeping, most
+  reasons to hide one are temporary, and her dog photos exist on KennelPort and nowhere
+  else — a clock there would destroy the only copy. A hidden dog waits in the draft under
+  "Not on your site" until she removes it.
+- **New groups on the Dogs page** (3.7): **Up and coming** (`dogs.upcoming`) for young
+  stock she has kept, and **Looking for a home** for a dog with KennelOS status
+  `for_sale`, with its price and **Ask about this dog** — a dog she can't breed is a dog
+  she needs to place, which is what the site is for.
+- **The hand-over** when a kept puppy becomes a dog: one KennelOS record, two KennelPort
+  tables, matched only within a table. At the moment the litter leaves the site KennelOS
+  asks whether to keep her, and on yes KennelPort moves her puppy photos to the new dog
+  at once, so the litter's deletion can't take the only pictures of her as a puppy.
+- **What a blank means** (5.3): stored fields are KennelOS's, blanks included; derived
+  ones (titles from `title_earned` events, health results, upcoming items) only overwrite
+  when they have something, and the matching screen shows every blanking before she
+  confirms.
+- **Mechanics settled** (5.2, 5.3, 5.4): the bundle posts to `api.kennelport.com` (already
+  a routed host) with a bearer token, no cookie, and an allow-list of KennelOS app
+  origins, which are not the family host in `KENNELOS_ORIGIN`; one-time link codes; one
+  `links` row per device with the kennel it belongs to; a bundle id so a retry is safe and
+  a format version; all-or-nothing application; **Unlink** from either side; and addresses
+  sent back only once the published snapshot carries them, with KennelPort free to replace
+  an address it wrote itself but never one she typed.
+- **Contradictions fixed:** 5.1's "KennelPort never reads anything from KennelOS" now
+  excepts the public waitlist feed, which it has read since phase 3; How to pay is filled
+  from her waitlist settings (3.9, as `0006_payment.sql` already assumed) rather than
+  being KennelPort-only in 5.3; and the three-generation pedigree, which is in no schema
+  and no sample, moves to the backlog with KennelOS's `parent_pedigree` noted.
+- **Out of phase 4:** **Request a website** and KennelPort's request form (backlog 2 and
+  7; decision 2 stands), and hiding one puppy that has no health hold (backlog 6).
+

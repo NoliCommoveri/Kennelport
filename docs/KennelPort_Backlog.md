@@ -13,7 +13,7 @@ Rough order of likely need; any item can go first.
 | Item | Delivers |
 |---|---|
 | **The rest of section 3.9** | Pickup page (3.5), waitlist page with outside forms (3.8), announcement banner, families' stories, past litters, news, adults, stud dogs, going home, the breed, downloads, events |
-| **Survey pages (3.11)** | Programs, how we raise puppies, how to pay safely as a page, retired and in-memory dogs, show results, litter diary, planned-litter status (no pick counts, plan decision 18) |
+| **Survey pages (3.11)** | Programs, how we raise puppies, how to pay safely as a page, retired and in-memory dogs, show results, litter diary, planned-litter status (no pick counts, plan decision 18), the three-generation pedigree |
 | **Requests** | Public request form on `kennelport.com`, email alert, ops inbox; KennelOS's **Request a website** button |
 | **Guided custom domains** | **Your own domain** with registrar detection, guided steps and automatic checks (section 3) |
 | **Later** | More templates, visitor stats |
@@ -129,6 +129,14 @@ breeding dogs with their stories, and dogs who have died, with dates and a tribu
 - *With KennelOS linked:* status `retired_breeding` or `deceased` (with `date_of_death`)
   moves it, only if ticked **Show on website**. In memory is off by default.
 
+**Pedigree** (on each dog page, plan section 3.9): three generations, each ancestor with
+its titles.
+- *On its own:* typed per dog, with nothing required.
+- *With KennelOS linked:* its own ancestors, `pedigree_only` ones included, the same
+  parents the waitlist pages already draw (`parentView`, with KennelOS's
+  `waitlist_config.parent_pedigree` deciding only what KennelOS's own pages show, plan
+  5.1). Needs its own fields: the plan's data model has none, which is why it waits.
+
 **Show results** (`/shows`): show wins and titles by dog and by date ("brags").
 - *On its own:* results the breeder types (show, date, award).
 - *With KennelOS linked:* logged show results and earned titles.
@@ -145,7 +153,13 @@ birth) shows the sire and dam cards with health results, the expected month, whe
 should go home, a write-up of the pairing, **Apply for this litter**, and "Last updated".
 - **Status in plain words:** Planned, Bred (awaiting confirmation), Confirmed. *With
   KennelOS linked:* from the pairing's status (`planned`, `bred`, `confirmed_pregnant`),
-  per the Coming up switches.
+  for a pairing she has marked **Show on website** (plan 5.3).
+
+**Hiding one puppy** (plan section 3.6): a puppy she would rather not show at all, with no
+health hold to say it. Her litter's mark carries all of its puppies, and a puppy's status
+comes from KennelOS while linked, so this needs a word of its own in KennelOS — a small
+`website_status` on a puppy-Dog, `shown` or `hidden` — rather than a KennelPort switch the
+next bundle would overwrite.
 
 ## 7. Data these add (plan section 6)
 
