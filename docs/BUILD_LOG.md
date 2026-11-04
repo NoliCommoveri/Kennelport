@@ -1156,3 +1156,45 @@ Left for later chunks: deleting a family is final for now (the 30-day undo, eras
 retention come with chunk 4, as do bounces from Resend's webhook); her wording for the
 emails (plan section 4); the KennelOS feed and handoff (chunk 3).
 
+
+## 2026-11-04: Puppy parent portal, build chunk 2 (checklist, timeline and programs)
+
+- **Migration 0024** (`portal_steps`): `portal_checklist_items` and `portal_timeline_tasks`
+  (her templates, `placement_id` null; or a step she added for one family),
+  `portal_placement_progress` (one family's tick, who ticked it, a step hidden from them, a
+  task moved to another day), `portal_placements_programs` (each family's status in each
+  program: Not started, Clicked, Done; and their own code), the food on `portal_settings`
+  (`food_name`, `food_bag`, `food_how`, `food_note`) and `products.portal_per_family`.
+- **Her templates** (Puppy families → Go-home checklist / First-weeks timeline): start from a
+  suggested list (linked to her shown programs of each kind), then add, edit, reorder or
+  remove steps. Removing a template step takes it off every family's list. A task counts
+  from birth or pickup, so many days before or after; `{name}` is the puppy, `{food}` her
+  food. A few steps tick themselves: the vet booking ("I've booked it"), the pickup, the vet
+  record (dated by the real deadline).
+- **When a task is due** (`src/portal/steps.js`, pure, tested): from the litter's birthday
+  or the pickup day (the real one, else the booked one, else planned go-home), in her time
+  zone. A birth-dated task due by go-home is hers ("AK does this", then "Done by AK"). An
+  unticked task of theirs reads Overdue (red) for 14 days, then Past. Never booked but
+  already home: the booking task goes quiet; the vet visit task carries it.
+- **Family side:** a Timeline tab (Before go-home, The first week, The first two months,
+  Later), each task with its day, status word, program link and Mark done. Home: the
+  go-home checklist from two weeks before go-home (ticks are forms, so no script needed);
+  "Coming up" in the vet window; after it, **What's next** as numbered steps, the next task
+  in the calendar block and the action bar; the dark green food band with the exact food
+  and a round **Order Opal's food** button to her food program. Programs show the family's
+  status, their own code where she gives one each, and **I've done this** for a program
+  with a step. A click through the portal marks the program Clicked; a done task linked to
+  a program marks it Done. Clicks now record the checklist, timeline and food band as
+  places.
+- **Her side**, on each family's screen: the checklist and timeline as they have them
+  (tick or untick, hide a template step from them, add one for them alone, move a task's
+  day), and Programs (status and their code). Every tick, hide and move is in History.
+  Portal settings gains the food and "Each family gets its own code". Built on the Site
+  Manager's existing styles: no Site Manager version bump.
+- Deleting a family or closing the site removes their steps, ticks and statuses.
+  Portal CSS: the checklist, task rows, status words, the food band and the round button.
+
+Left for later: reminder emails for timeline tasks such as the insurance trial's deadline
+(plan section 11; with her email wording, plan section 4); which pages each program shows on
+(`portal_link_spots`) and the handbook's links come with the handbook in phase 2; a litter's
+own food (from KennelOS's feeding schedule) with chunk 3.

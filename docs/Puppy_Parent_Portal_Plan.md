@@ -5,7 +5,8 @@
 > (Nov 3, 2026) after review: it now reuses KennelPort's stack, takes starting data from
 > KennelOS without depending on it, and adds data retention. Built so far: the Site
 > Manager's new look and its sectioned forms (section 7.3, Site Manager version 12), and
-> phase 1's first build chunk (section 6: the core, typed in by her; build log, Nov 4).
+> phase 1's first two build chunks (section 6: the core, typed in by her; the checklist,
+> timeline and programs; build log, Nov 4).
 
 ## 1. Purpose and scope
 
@@ -397,7 +398,7 @@ its own:
    it**, proof upload, acceptance and the reminder log; the programs on Home with click
    tracking and the disclosure; her and her vet's contacts, one tap from Home for the
    first weeks; history on placements; the portal switched on per site from /ops.
-2. **Checklist, timeline and programs:** her templates, each family's ticks and program
+2. **Checklist, timeline and programs** (built): her templates, each family's ticks and program
    status, the food band.
 3. **KennelOS:** the feed's new rows, the handoff, the one-tap link, the facts that go
    back.

@@ -10,10 +10,14 @@ import { escapeHtml as esc } from '../lib/html.js';
 import {
   getSettings, saveSettings, listFamilies, getFamily, familyEmails, createFamily, updateFamily, deleteFamily,
   placementFor, createPlacement, updatePlacement, markPickedUp, confirmPickup, pickupNotYet, acceptProof, setLifeStatus,
-  addHealthRecord, removeHealthRecord, healthRecords, saveFile, getFile, fileResponse, emailLog, history, placeablePuppies,
+  addHealthRecord, removeHealthRecord, healthRecords, saveFile, getFile, fileResponse, emailLog, history, placeablePuppies, puppyFor,
   PortalError, RECORD_TYPES, MAX_FILE_BYTES, DEFAULT_DISCLOSURE,
 } from './store.js';
 import { sendInvites, portalBase } from './auth.js';
+import {
+  listItems, saveItem, removeItem, moveItem, addSuggested, stepsFor, programsFor, setDone, setHidden, setDueOn, setProgramStatus, setProgramCode,
+  CHECK_AUTO, TASK_AUTO, PROGRAM_WORDS,
+} from './steps.js';
 import { sendDueFor } from './reminders.js';
 import { vetStatus, formatAt, formatDay, localParts, timeLeft, clockRunning, VET_RULES } from './vet.js';
 import { MailError } from '../mail.js';
@@ -32,6 +36,10 @@ const NOTES = {
   removed: 'Record removed.',
   contract: 'Contract added. The family can see it under Records.',
   deleted: 'Family deleted.',
+  suggested: 'Suggested steps added. Change, reorder or remove any of them.',
+  stepadded: 'Step added.',
+  stepremoved: 'Step removed.',
+  step: 'Saved. The family sees it.',
 };
 const note = (url) => (NOTES[url.searchParams.get('note')] ? `<p class="notice" role="status">${esc(NOTES[url.searchParams.get('note')])}</p>` : '');
 const errorBox = (err) => (err ? `<p class="error" role="alert">Not saved: ${esc(err)}</p>` : '');
@@ -98,7 +106,9 @@ function familiesScreen(site, families, s, url, now = new Date()) {
     <p><a class="button primary" href="${base}/new">Add a family</a></p>
     ${rows ? `<ul class="items">${rows}</ul>` : '<p class="muted">No families yet.</p>'}
   </section>
-  <ul class="items"><li class="item"><a href="${base}/settings"><b>Portal settings and programs</b><span>Vet visit rule, time zone, which programs families see</span></a></li></ul>`;
+  <ul class="items"><li class="item"><a href="${base}/settings"><b>Portal settings and programs</b><span>Vet visit rule, contacts, the food, which programs families see</span></a></li>
+    <li class="item"><a href="${base}/checklist"><b>Go-home checklist</b><span>What every family has ready before go-home</span></a></li>
+    <li class="item"><a href="${base}/timeline"><b>First-weeks timeline</b><span>Tasks dated from birth or pickup, with program links</span></a></li></ul>`;
 }
 
 function puppyOptions(puppies, current) {
@@ -175,6 +185,41 @@ async function familyScreen(env, site, familyId, url, { error } = {}, now = new 
       ${proof && !p.proof_accepted_at ? form('accept', '<button class="primary">Accept the vet record</button>') : ''}
     </section>`);
 
+
+    // The checklist, the timeline and the programs, as this family has them.
+    const steps = await stepsFor(env, site.id, p, await puppyFor(env, site.id, p.puppy_id), s, { now, all: true, name });
+    const op = (kind, x, what, label, cls = 'link') => form(`step/${kind}/${esc(x.id)}/${what}`, `<button class="${cls}">${label}</button>`, 'inline');
+    const stepOps = (kind, x) => [
+      !x.auto && !(x.hers) ? op(kind, x, x.done ? 'undo' : 'done', x.done ? 'Untick' : 'Tick') : '',
+      x.mine ? op(kind, x, 'remove', 'Remove') : op(kind, x, x.hidden ? 'show' : 'hide', x.hidden ? 'Show to them' : 'Hide for them'),
+    ].filter(Boolean).join(' · ');
+    const who = (x) => (x.done ? `Done${x.by === 'breeder' ? (x.hers ? ' (yours)' : ' by you') : x.by === 'family' && !x.auto ? ' by them' : ''}${x.done_at ? ` ${formatAt(x.done_at, s.time_zone, { weekday: false })}` : ''}` : 'Not yet');
+    const steps1 = steps.checklist.filter((x) => !x.hidden);
+    const home = Boolean(p.picked_up_at);
+    const checklistPart = steps.checklist.length ? `<details${home ? '' : ' open'}><summary><b>Go-home checklist: ${steps1.filter((x) => x.done).length} of ${steps1.length} ready</b></summary>
+      <dl class="kv">${steps.checklist.map((x) => `<dt>${x.hidden ? '<span class="muted">Hidden</span>' : esc(who(x))}</dt><dd>${x.hidden ? `<span class="muted">${esc(x.title)}</span>` : `<b>${esc(x.title)}</b>`}${x.mine ? ' <span class="hint">(theirs alone)</span>' : ''}<br>${stepOps('checklist', x)}</dd>`).join('')}</dl></details>`
+      : `<p class="muted">No go-home checklist yet. <a href="/s/${esc(site.subdomain)}/portal/checklist">Set it up</a>.</p>`;
+    const TWORD = (t) => (t.hidden ? 'Hidden' : t.done ? who(t) : t.hers ? 'Yours, before go-home' : t.overdue ? 'Overdue' : t.past ? 'Past' : t.next ? 'Next' : 'Later');
+    const timelinePart = steps.tasks.length ? `<details${home ? ' open' : ''}><summary><b>Timeline: ${steps.tasks.filter((t) => t.overdue && !t.hidden).length ? `${steps.tasks.filter((t) => t.overdue && !t.hidden).length} overdue` : `${steps.tasks.filter((t) => t.done && !t.hidden).length} of ${steps.tasks.filter((t) => !t.hidden).length} done`}</b></summary>
+      <dl class="kv">${steps.tasks.map((t) => `<dt>${t.due ? esc(formatDay(t.due)) : 'No date yet'}</dt><dd>${t.hidden ? `<span class="muted">${esc(t.title)}</span>` : `<b>${esc(t.title)}</b>`} <span${t.overdue && !t.hidden ? ' class="error"' : ' class="hint"'}>${esc(TWORD(t))}</span>${t.moved ? ' <span class="hint">(moved for them)</span>' : ''}${t.mine ? ' <span class="hint">(theirs alone)</span>' : ''}<br>${stepOps('task', t)}
+        <details><summary class="hint">Move to another day</summary>${form(`step/task/${esc(t.id)}/day`, `<div class="row"><label>Day<input type="date" name="day" value="${esc(t.moved ?? '')}"></label></div><p><button>Save</button> <span class="hint">Blank: back to ${esc(whenWords(t.raw).toLowerCase())}.</span></p>`)}</details></dd>`).join('')}</dl></details>`
+      : `<p class="muted">No timeline yet. <a href="/s/${esc(site.subdomain)}/portal/timeline">Set it up</a>.</p>`;
+    const prods = await products(env, site.id);
+    parts.push(`<section class="card" id="steps"><h2>Checklist and timeline</h2>${checklistPart}
+      <details><summary>Add a checklist item for ${esc(f.name)} alone</summary>${form('steps/new/checklist', `<div class="fgrid">${itemFields('checklist', null, prods)}<p><button>Add</button></p></div>`)}</details>
+      ${timelinePart}
+      <details><summary>Add a timeline task for ${esc(f.name)} alone</summary>${form('steps/new/task', `<div class="fgrid">${itemFields('task', null, prods)}<p><button>Add</button></p></div>`)}</details>
+    </section>`);
+
+    const progs = await programsFor(env, site.id, p);
+    if (progs.length) {
+      parts.push(`<section class="card" id="programs"><h2>Programs</h2><p class="hint">Clicked: they opened the link from the portal. Done: they or you marked it. Sign-ups themselves come from each program's own report.</p>
+        ${progs.map((x) => form(`program/${esc(x.id)}`, `<div class="box"><b>${esc(x.name)}</b>${x.status_at ? ` <span class="hint">${esc(PROGRAM_WORDS[x.status])} ${esc(formatAt(x.status_at, s.time_zone, { weekday: false }))}${x.status_by === 'family' ? ', by them' : x.status_by === 'breeder' ? ', by you' : ''}</span>` : ''}
+          <div class="row"><label>Status<select name="status">${Object.entries(PROGRAM_WORDS).map(([k, l]) => `<option value="${k}"${x.status === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+          ${x.portal_per_family ? `<label>Their code or certificate<input name="code" value="${esc(x.family_code ?? '')}" maxlength="80"></label>` : ''}</div>
+          <p><button>Save</button></p></div>`)).join('')}</section>`);
+    }
+
     const records = await healthRecords(env, site.id, p.id);
     parts.push(`<section class="card"><h2>Shots, deworming and vet visits</h2>
       ${records.length ? `<dl class="kv">${records.map((r) => `<dt>${esc(formatDay(r.given_on))}</dt><dd><b>${esc(r.name)}</b> · ${esc(RECORD_TYPES[r.type])}${r.notes ? ` · ${esc(r.notes)}` : ''} ${form(`record/${esc(r.id)}/remove`, '<button class="link">Remove</button>')}</dd>`).join('')}</dl>` : '<p class="muted">None yet. The family sees these under Records.</p>'}
@@ -204,12 +249,13 @@ async function familyScreen(env, site, familyId, url, { error } = {}, now = new 
         return `<dt>${esc(formatAt(r.sent_at, s.time_zone, { weekday: false }))}</dt><dd><b>${esc(KINDS[r.kind] ?? r.kind)}</b>: <span${['failed', 'bounced'].includes(r.result) ? ' class="error"' : ''}>${esc(WORDS[r.result] ?? r.result)}</span> to ${esc(addr)}${r.basis && r.kind !== 'invite' ? `<br><span class="hint">Counted from ${esc(r.basis.includes('T') ? `the deadline ${formatAt(r.basis, s.time_zone, { weekday: false })}` : `go-home ${formatDay(r.basis)}`)}</span>` : ''}</dd>`;
       }).join('')}</dl>` : '<p class="muted">Nothing sent yet.</p>'}</section>`);
 
-    const FIELD = { picked_up_at: 'Picked up', pickup_state: 'Pickup', vet_deadline_at: 'Vet deadline', pickup_booked_at: 'Pickup booked', go_home_on: 'Go-home', puppy_id: 'Puppy', puppy_name: 'Puppy', call_name: 'Name', microchip: 'Microchip', registration_no: 'Registration number', vet_booked_for: 'Vet booked for', vet_clinic: 'Clinic', vet_booked_at: 'Vet booking recorded', proof_file_id: 'Vet record', proof_uploaded_at: 'Vet record uploaded', proof_accepted_at: 'Vet record accepted', contract_file_id: 'Contract', life_status: 'Life status', life_status_on: 'Since', health_record: 'Health record' };
+    const FIELD = { picked_up_at: 'Picked up', pickup_state: 'Pickup', vet_deadline_at: 'Vet deadline', pickup_booked_at: 'Pickup booked', go_home_on: 'Go-home', puppy_id: 'Puppy', puppy_name: 'Puppy', call_name: 'Name', microchip: 'Microchip', registration_no: 'Registration number', vet_booked_for: 'Vet booked for', vet_clinic: 'Clinic', vet_booked_at: 'Vet booking recorded', proof_file_id: 'Vet record', proof_uploaded_at: 'Vet record uploaded', proof_accepted_at: 'Vet record accepted', contract_file_id: 'Contract', life_status: 'Life status', life_status_on: 'Since', health_record: 'Health record', checklist: 'Checklist ticked', task: 'Task done', step_hidden: 'Step hidden for them', step_shown: 'Step shown again', task_day: 'Task moved', program: 'Program', program_code: 'Their program code' };
+    const UNDONE = { checklist: 'Checklist unticked', task: 'Task undone', program_code: 'Their program code removed' };
     const BY = { breeder: 'you', family: 'the family', kennelos: 'KennelOS', portal: 'the portal' };
     const isTime = (v) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(v ?? '');
     const val = (v) => (v === null ? '—' : isTime(v) ? formatAt(v, s.time_zone, { weekday: false }) : /_file_id$/.test(v) ? 'a file' : v);
     const hist = (await history(env, site.id, 'portal_placements', p.id)).filter((h) => !['puppy_id', 'proof_file_id', 'contract_file_id'].includes(h.field));
-    parts.push(`<details class="card"><summary>History</summary><dl class="kv">${hist.map((h) => `<dt>${esc(formatAt(h.changed_at, s.time_zone, { weekday: false }))}</dt><dd><b>${esc(FIELD[h.field] ?? h.field)}: ${esc(val(h.new_value))}</b> <span class="hint">by ${esc(BY[h.changed_by])}${h.old_value !== null ? `, was ${esc(val(h.old_value))}` : ''}</span></dd>`).join('')}</dl></details>`);
+    parts.push(`<details class="card"><summary>History</summary><dl class="kv">${hist.map((h) => `<dt>${esc(formatAt(h.changed_at, s.time_zone, { weekday: false }))}</dt><dd><b>${esc(h.new_value === null && UNDONE[h.field] ? `${UNDONE[h.field]}: ${val(h.old_value)}` : `${FIELD[h.field] ?? h.field}: ${val(h.new_value)}`)}</b> <span class="hint">by ${esc(BY[h.changed_by])}${h.old_value !== null && !(h.new_value === null && UNDONE[h.field]) ? `, was ${esc(val(h.old_value))}` : ''}</span></dd>`).join('')}</dl></details>`);
   }
 
   parts.push(form('family', `<details class="card"><summary>Change name or emails</summary><div class="fgrid">
@@ -244,13 +290,85 @@ function settingsScreen(site, s, products, { error } = {}, url) {
       <label>A note for families<input name="vet_note" value="${esc(s.vet_note ?? '')}" maxlength="400" placeholder="Dr. Lee has seen every puppy since birth and is happy to take your questions."></label>
       <label>On Home for this many weeks after pickup<input name="help_weeks" inputmode="numeric" value="${esc(s.help_weeks ?? 8)}" maxlength="2"></label>
     </div></section>
+    <section class="fgroup"><h2>What the puppies eat now</h2><div class="fgrid">
+      <p class="hint">The food band on each family's Home: the exact food, so they buy the same. Its button opens your food program, if you show one.</p>
+      <label>The food<input name="food_name" value="${esc(s.food_name ?? '')}" maxlength="160" placeholder="Small-breed puppy formula, chicken and rice"><span class="hint">Brand and formula. Blank: no food band.</span></label>
+      <div class="row"><label>Bag<input name="food_bag" value="${esc(s.food_bag ?? '')}" maxlength="80" placeholder="4 lb bag"></label>
+      <label>How much and how often<input name="food_how" value="${esc(s.food_how ?? '')}" maxlength="160" placeholder="⅓ cup, three times a day"></label></div>
+      <label>A note<input name="food_note" value="${esc(s.food_note ?? '')}" maxlength="300" placeholder="Soak it in warm water for the first week."></label>
+    </div></section>
     <section class="fgroup"><h2>Programs families see</h2><div class="fgrid">
       ${products.length ? products.map((x) => `<div class="fgrid box"><b>${esc(x.name)}</b>
         <div class="row"><label>Show as<select name="type.${esc(x.id)}">${Object.entries(TYPES).map(([k, l]) => `<option value="${k}"${(x.portal_show ? x.portal_type ?? 'other' : '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
-        <label>What the family does<input name="action.${esc(x.id)}" value="${esc(x.family_action ?? '')}" maxlength="200" placeholder="${x.portal_type === 'insurance' ? 'Activate the free trial within 5 days of pickup' : 'Use the code at checkout'}"></label></div></div>`).join('') : '<p class="muted">Add your programs under Recommended products first; their links and codes are used here too.</p>'}
+        <label>What the family does<input name="action.${esc(x.id)}" value="${esc(x.family_action ?? '')}" maxlength="200" placeholder="${x.portal_type === 'insurance' ? 'Activate the free trial within 5 days of pickup' : 'Use the code at checkout'}"></label></div>
+        <label class="check"><input type="checkbox" name="own.${esc(x.id)}" value="1"${x.portal_per_family ? ' checked' : ''}> <span>Each family gets its own code or certificate <span class="hint">You type it on their screen; they see theirs instead of the program's code.</span></span></label></div>`).join('') : '<p class="muted">Add your programs under Recommended products first; their links and codes are used here too.</p>'}
       <label>Disclosure line<input name="disclosure" value="${esc(s.disclosure ?? '')}" maxlength="400" placeholder="${esc(DEFAULT_DISCLOSURE)}"><span class="hint">At the foot of every page with program links.</span></label>
     </div></section>
-    <p><button class="primary">Save</button></p></form>`;
+    <p><button class="primary">Save</button></p></form>
+  <ul class="items"><li class="item"><a href="/s/${esc(site.subdomain)}/portal/checklist"><b>Go-home checklist</b><span>Your list for every family</span></a></li>
+    <li class="item"><a href="/s/${esc(site.subdomain)}/portal/timeline"><b>First-weeks timeline</b><span>Tasks dated from birth or pickup</span></a></li></ul>`;
+}
+
+
+// ---------- the checklist and timeline templates ----------
+
+const products = async (env, siteId) => (await env.DB.prepare('SELECT id, name, portal_show, portal_type, family_action, portal_per_family FROM products WHERE site_id = ? ORDER BY sort, name').bind(siteId).all()).results;
+
+const KIND_WORDS = {
+  checklist: { title: 'Go-home checklist', one: 'item', hint: 'What to have ready before the puppy comes home. Every family gets this list from two weeks before go-home; you can hide an item or add one for a family on their screen.' },
+  task: { title: 'First-weeks timeline', one: 'task', hint: 'Each task is dated from the puppy\'s birth or from pickup. A task counted from birth that falls by go-home is yours: families see it as done by you. Write {name} for the puppy\'s name.' },
+};
+
+function programSelect(products, current) {
+  const shown = products.filter((x) => x.portal_show || x.id === current);
+  return `<label>Links to<select name="product_id"><option value="">No program</option>${shown.map((x) => `<option value="${esc(x.id)}"${x.id === current ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select><span class="hint">A program families see (Portal settings). Its link and code go with the step.</span></label>`;
+}
+
+function itemFields(kind, x, products) {
+  const auto = kind === 'checklist' ? CHECK_AUTO : TASK_AUTO;
+  const autoField = `<label>Ticks itself<select name="auto"><option value="">No: the family ticks it</option>${Object.entries(auto).map(([k, l]) => `<option value="${k}"${x?.auto === k ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
+  if (kind === 'checklist') {
+    return `<label>Item<input name="title" value="${esc(x?.title ?? '')}" required maxlength="160" placeholder="A crate with a divider"><span class="hint">Write {food} for the food in Portal settings.</span></label>
+      ${programSelect(products, x?.product_id)}${autoField}`;
+  }
+  const days = x ? Math.abs(x.offset_days) : '';
+  const when = x ? (x.offset_days < 0 ? 'before' : 'after') : 'after';
+  return `<label>Task<input name="title" value="${esc(x?.title ?? '')}" required maxlength="160" placeholder="Register {name}"></label>
+    <label>What to do<input name="body" value="${esc(x?.body ?? '')}" maxlength="600" placeholder="Your registration paper is in the go-home folder."></label>
+    <div class="row"><label>Days<input name="days" inputmode="numeric" value="${esc(days)}" maxlength="4" required></label>
+      <label>&nbsp;<select name="when"><option value="after"${when === 'after' ? ' selected' : ''}>after</option><option value="before"${when === 'before' ? ' selected' : ''}>before</option></select></label>
+      <label>&nbsp;<select name="count_from"><option value="pickup"${x?.count_from !== 'birth' ? ' selected' : ''}>pickup</option><option value="birth"${x?.count_from === 'birth' ? ' selected' : ''}>birth</option></select></label></div>
+    ${programSelect(products, x?.product_id)}
+    <label>Button words<input name="button_label" value="${esc(x?.button_label ?? '')}" maxlength="60" placeholder="Activate the trial"><span class="hint">On the program's link. Blank: the program's own.</span></label>
+    ${autoField}`;
+}
+
+// "5 days after pickup", "70 days from birth".
+const whenWords = (t) => (t.count_from === 'birth' ? `${t.offset_days} days from birth` : t.offset_days === 0 ? 'Pickup day' : `${Math.abs(t.offset_days)} day${Math.abs(t.offset_days) === 1 ? '' : 's'} ${t.offset_days < 0 ? 'before' : 'after'} pickup`);
+
+// The form's "days" and "when" as one signed number.
+export const formOffset = (values) => ({ ...values, offset_days: values.days === undefined ? values.offset_days : `${values.when === 'before' ? '-' : ''}${String(values.days ?? '').trim().replace(/^-/, '')}` });
+
+function itemMeta(kind, x, products) {
+  const bits = [];
+  if (kind === 'task') bits.push(whenWords(x));
+  const prod = products.find((y) => y.id === x.product_id);
+  if (prod) bits.push(`${prod.name}${prod.portal_show ? '' : ' (not shown)'}`);
+  if (x.auto) bits.push(kind === 'checklist' ? 'ticks itself' : 'done by itself');
+  return bits.join(' · ');
+}
+
+function templateScreen(site, kind, items, products, url, { error } = {}) {
+  const w = KIND_WORDS[kind];
+  const base = `/s/${esc(site.subdomain)}/portal/${kind === 'checklist' ? 'checklist' : 'timeline'}`;
+  const rows = items.map((x, i) => `<details class="card"><summary><b>${esc(x.title)}</b><br><span class="hint">${esc(itemMeta(kind, x, products))}</span></summary>
+    <form method="post" action="${base}/${esc(x.id)}"><div class="fgrid">${itemFields(kind, x, products)}<p><button class="primary">Save</button></p></div></form>
+    <div class="row">${i ? `<form method="post" action="${base}/${esc(x.id)}/up"><button>Move up</button></form>` : ''}${i < items.length - 1 ? `<form method="post" action="${base}/${esc(x.id)}/down"><button>Move down</button></form>` : ''}
+    <form method="post" action="${base}/${esc(x.id)}/remove"><button class="link">Remove from every family's list</button></form></div></details>`).join('');
+  return `${note(url)}${errorBox(error)}<section class="card"><h1>${esc(w.title)}</h1><p class="hint">${esc(w.hint)}</p>
+    ${items.length ? '' : `<form method="post" action="${base}/suggested"><p><button class="primary">Start with the suggested ${kind === 'checklist' ? 'list' : 'timeline'}</button></p><p class="hint">${kind === 'checklist' ? 'Crate, bed, food, bowls, collar and leash, pads, chews, the vet booking and a carrier.' : 'The vet booking, pickup, the vet visit, insurance, food, registration, deworming and vaccines.'} Each links to your programs of that kind. Change anything after.</p></form>`}</section>
+    ${rows}
+    <form method="post" action="${base}/new" class="card"><h2>Add ${kind === 'checklist' ? 'an item' : 'a task'}</h2><div class="fgrid">${itemFields(kind, null, products)}<p><button>Add</button></p></div></form>`;
 }
 
 // ---------- routes ----------
@@ -273,27 +391,47 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
 
   if (!rest && !post) return page('Puppy families', familiesScreen(site, await listFamilies(env, site.id), s, url), { back });
 
-  const products = async () => (await env.DB.prepare('SELECT id, name, portal_show, portal_type, family_action FROM products WHERE site_id = ? ORDER BY sort, name').bind(site.id).all()).results;
   if (rest === '/settings') {
-    if (!post) return page('Portal settings', settingsScreen(site, s, await products(), {}, url), { back: home });
+    if (!post) return page('Portal settings', settingsScreen(site, s, await products(env, site.id), {}, url), { back: home });
     const form = await request.formData();
     const input = Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
     try {
       await saveSettings(env, site.id, input);
     } catch (err) {
-      if (err instanceof PortalError) return page('Portal settings', settingsScreen(site, { ...s, ...input }, await products(), { error: err.message }), { back: home, status: 400 });
+      if (err instanceof PortalError) return page('Portal settings', settingsScreen(site, { ...s, ...input }, await products(env, site.id), { error: err.message }), { back: home, status: 400 });
       throw err;
     }
     const TYPES = ['food', 'insurance', 'registration', 'product', 'other'];
-    const list = await products();
+    const list = await products(env, site.id);
     if (list.length) {
       await env.DB.batch(list.map((x) => {
         const type = input[`type.${x.id}`] ?? '';
-        return env.DB.prepare('UPDATE products SET portal_show = ?, portal_type = ?, family_action = ? WHERE id = ? AND site_id = ?')
-          .bind(TYPES.includes(type) ? 1 : 0, TYPES.includes(type) ? type : x.portal_type, String(input[`action.${x.id}`] ?? '').trim().slice(0, 200) || null, x.id, site.id);
+        return env.DB.prepare('UPDATE products SET portal_show = ?, portal_type = ?, family_action = ?, portal_per_family = ? WHERE id = ? AND site_id = ?')
+          .bind(TYPES.includes(type) ? 1 : 0, TYPES.includes(type) ? type : x.portal_type, String(input[`action.${x.id}`] ?? '').trim().slice(0, 200) || null, input[`own.${x.id}`] ? 1 : 0, x.id, site.id);
       }));
     }
     return redirect(`${home}/settings?note=saved`);
+  }
+
+  // Her checklist and timeline templates.
+  const tm = rest.match(/^\/(checklist|timeline)(?:\/(suggested|new|[0-9a-f-]{36})(?:\/(up|down|remove))?)?$/);
+  if (tm) {
+    const kind = tm[1] === 'checklist' ? 'checklist' : 'task';
+    const here = `${home}/${tm[1]}`;
+    const show = async (opts = {}) => page(KIND_WORDS[kind].title, templateScreen(site, kind, await listItems(env, site.id, kind), await products(env, site.id), url, opts), { back: `${home}/settings`, status: opts.error ? 400 : 200 });
+    if (!post) return tm[2] ? null : show();
+    try {
+      if (tm[2] === 'suggested') { await addSuggested(env, site.id, kind); return redirect(`${here}?note=suggested`); }
+      if (tm[3] === 'remove') { await removeItem(env, site.id, kind, tm[2]); return redirect(`${here}?note=stepremoved`); }
+      if (tm[3]) { await moveItem(env, site.id, kind, tm[2], tm[3]); return redirect(here); }
+      const form = await request.formData();
+      const values = formOffset(Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)])));
+      await saveItem(env, site.id, kind, tm[2] === 'new' ? null : tm[2], values);
+      return redirect(`${here}?note=${tm[2] === 'new' ? 'stepadded' : 'saved'}`);
+    } catch (err) {
+      if (err instanceof PortalError) return show({ error: err.message });
+      throw err;
+    }
   }
 
   let fm = rest.match(/^\/file\/([0-9a-f-]{36})$/);
@@ -374,6 +512,28 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
       default: {
         const rm = action?.match(/^record\/([0-9a-f-]{36})\/remove$/);
         if (rm) { await removeHealthRecord(env, site.id, needP().id, rm[1]); return to('removed'); }
+        const sm = action?.match(/^step\/(checklist|task)\/([0-9a-f-]{36})\/(done|undo|hide|show|remove|day)$/);
+        if (sm) {
+          const [, kind, id, what] = sm;
+          const pl = needP();
+          if (what === 'done' || what === 'undo') await setDone(env, site.id, pl, kind, id, what === 'done', 'breeder');
+          else if (what === 'hide' || what === 'show') await setHidden(env, site.id, pl, kind, id, what === 'hide');
+          else if (what === 'remove') await removeItem(env, site.id, kind, id, pl.id);
+          else if (kind === 'task') await setDueOn(env, site.id, pl, id, get('day'));
+          return redirect(`${home}/f/${familyId}?note=step#steps`);
+        }
+        const nm = action?.match(/^steps\/new\/(checklist|task)$/);
+        if (nm) {
+          await saveItem(env, site.id, nm[1], null, formOffset(values), needP().id);
+          return redirect(`${home}/f/${familyId}?note=stepadded#steps`);
+        }
+        const pm = action?.match(/^program\/([\w-]{1,64})$/);
+        if (pm) {
+          const pl = needP();
+          await setProgramStatus(env, site.id, pl, pm[1], get('status'), 'breeder');
+          if (form.has('code')) await setProgramCode(env, site.id, pl, pm[1], get('code'));
+          return redirect(`${home}/f/${familyId}?note=saved#programs`);
+        }
         return null;
       }
     }

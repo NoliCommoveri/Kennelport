@@ -26,7 +26,7 @@ export async function setSuspended(env, siteId, suspended) {
 }
 
 // Every table that holds a site's content, children before parents.
-const SITE_TABLES = ['portal_sessions', 'portal_codes', 'portal_clicks', 'portal_history', 'portal_email_log', 'portal_health_records', 'portal_files', 'portal_placements', 'portal_emails', 'portal_families', 'portal_settings', 'link_codes', 'links', 'link_pending', 'link_declines', 'notices', 'health_results', 'puppies', 'litters', 'dogs', 'stories', 'steps', 'expanders', 'extras', 'products', 'home_blocks', 'site_pages', 'snapshots', 'redirects', 'photo_tags', 'photos', 'inquiries', 'notify_items', 'site_users', 'payment_info', 'form_fields', 'feed_cache', 'waitlist_entries', 'albums', 'embeds', 'custom_domains'];
+const SITE_TABLES = ['portal_placement_progress', 'portal_placements_programs', 'portal_checklist_items', 'portal_timeline_tasks', 'portal_sessions', 'portal_codes', 'portal_clicks', 'portal_history', 'portal_email_log', 'portal_health_records', 'portal_files', 'portal_placements', 'portal_emails', 'portal_families', 'portal_settings', 'link_codes', 'links', 'link_pending', 'link_declines', 'notices', 'health_results', 'puppies', 'litters', 'dogs', 'stories', 'steps', 'expanders', 'extras', 'products', 'home_blocks', 'site_pages', 'snapshots', 'redirects', 'photo_tags', 'photos', 'inquiries', 'notify_items', 'site_users', 'payment_info', 'form_fields', 'feed_cache', 'waitlist_entries', 'albums', 'embeds', 'custom_domains'];
 
 // Close a site (plan 4.3): delete everything now, keep only the marker row.
 export async function closeSite(env, siteId, confirmSubdomain) {

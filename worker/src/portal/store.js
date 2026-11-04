@@ -27,6 +27,7 @@ export async function portalOn(env, siteId) {
 const SETTINGS_DEFAULTS = {
   time_zone: 'America/New_York', vet_rule: 'hours72', proof_note: null, disclosure: null,
   her_phone: null, her_email: null, vet_clinic: null, vet_doctor: null, vet_phone: null, vet_address: null, vet_note: null, help_weeks: 8,
+  food_name: null, food_bag: null, food_how: null, food_note: null,
 };
 
 export async function getSettings(env, siteId) {
@@ -59,6 +60,7 @@ export async function saveSettings(env, siteId, input) {
     her_phone: cleanPhone(input.her_phone, 'Your phone for families'), her_email: herEmail,
     vet_clinic: clean(input.vet_clinic, 120), vet_doctor: clean(input.vet_doctor, 120), vet_phone: cleanPhone(input.vet_phone, 'Your vet\'s phone'),
     vet_address: clean(input.vet_address, 200), vet_note: clean(input.vet_note, 400), help_weeks: Number(weeks),
+    food_name: clean(input.food_name, 160), food_bag: clean(input.food_bag, 80), food_how: clean(input.food_how, 160), food_note: clean(input.food_note, 300),
   };
   const cols = Object.keys(v);
   await env.DB.prepare(`INSERT INTO portal_settings (site_id, ${cols.join(', ')}, updated_at) VALUES (?, ${cols.map(() => '?').join(', ')}, ?)
@@ -205,6 +207,10 @@ export async function deleteFamily(env, siteId, familyId) {
   await env.DB.batch([
     env.DB.prepare(`DELETE FROM portal_files WHERE placement_id IN (${inPlacements})`).bind(familyId),
     env.DB.prepare(`DELETE FROM portal_health_records WHERE placement_id IN (${inPlacements})`).bind(familyId),
+    env.DB.prepare(`DELETE FROM portal_placement_progress WHERE placement_id IN (${inPlacements})`).bind(familyId),
+    env.DB.prepare(`DELETE FROM portal_placements_programs WHERE placement_id IN (${inPlacements})`).bind(familyId),
+    env.DB.prepare(`DELETE FROM portal_checklist_items WHERE placement_id IN (${inPlacements})`).bind(familyId),
+    env.DB.prepare(`DELETE FROM portal_timeline_tasks WHERE placement_id IN (${inPlacements})`).bind(familyId),
     env.DB.prepare(`DELETE FROM portal_history WHERE site_id = ? AND tbl = 'portal_placements' AND row_id IN (${inPlacements})`).bind(siteId, familyId),
     env.DB.prepare("DELETE FROM portal_history WHERE site_id = ? AND tbl = 'portal_families' AND row_id = ?").bind(siteId, familyId),
     env.DB.prepare('UPDATE portal_email_log SET family_id = NULL WHERE family_id = ?').bind(familyId),
