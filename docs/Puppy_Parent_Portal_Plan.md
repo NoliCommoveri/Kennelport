@@ -359,6 +359,19 @@ The screens:
 - **Portal:** handbook chapters (order, on/off, edit), programs and where each appears,
   checklist and timeline templates, email wording.
 - **Setup progress** shows only while something is unfinished.
+- **Her screens get the family pages' variety** (same tiles, bands, pup cards, calendar
+  blocks, rings and photo rows), and **every long form is sectioned:**
+  - fields under titled sections that match how she thinks (The litter, Parents, Dates,
+    Prices; About, Photo and story, Where they show);
+  - short fields two to a row (girl and boy prices, born and ready, dam and sire), with
+    hints under the input so neighbours line up;
+  - every on/off setting together at the end under **On your website**, as switches, not
+    checkboxes scattered between inputs;
+  - wording for one case folded away unless it applies (planned-litter labels on a born
+    litter), and the web address folded at the bottom;
+  - smaller inputs, buttons and hints throughout.
+  Built in the Site Manager (`worker/src/manage/forms.js` GROUPS and `app.css`); a field
+  no section names shows under More, so nothing is lost when fields are added.
 - **No free-form email to all families** in phase 1. If it is added, it is commercial
   email and carries the unsubscribe link and mailing address (section 11).
 

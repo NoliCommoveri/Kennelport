@@ -308,6 +308,34 @@ dialog .in { padding: 1.1rem; display: grid; gap: .8rem; }
 .lvlpick { display: grid; grid-template-columns: minmax(0, 1fr) 9.5rem; gap: .4rem .7rem; align-items: center; }
 .lvlpick select { min-height: 2.3rem; padding: .3rem .5rem; }
 @media (max-width: 440px) { .lvlpick { grid-template-columns: 1fr; } }
+.fgroup { display: grid; gap: .6rem; }
+.fgroup + .fgroup { border-top: 1px solid var(--line); padding-top: .9rem; }
+.fgroup > h2, .fgroup > summary { font: 600 1rem/1.2 var(--f-display); display: flex; align-items: center; gap: .5rem; }
+.fgroup > h2::before { content: ""; width: 5px; height: 1.1rem; border-radius: 3px; background: var(--accent); }
+.fgroup > summary { cursor: pointer; color: var(--accent); list-style: none; min-height: 2.4rem; }
+.fgroup > summary::before { content: "+"; font-weight: 800; }
+.fgroup[open] > summary::before { content: "\2013"; }
+.fgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; align-items: start; }
+.fgrid > * { grid-column: 1 / -1; min-width: 0; }
+.fgrid > .half { grid-column: auto; }
+.fgrid .hint { font-size: .74rem; font-weight: 400; color: var(--muted); }
+.switches { background: var(--bg); border-radius: 12px; padding: 0 .8rem; }
+.switches label.check { flex-direction: row-reverse; justify-content: space-between; align-items: center; gap: .8rem; padding: .7rem 0; border-bottom: 1px solid var(--line); }
+.switches label.check:last-child { border-bottom: 0; }
+.switches label.check input { appearance: none; -webkit-appearance: none; width: 2.8rem; height: 1.65rem; border-radius: 1rem; background: var(--line); position: relative; cursor: pointer; margin: 0; }
+.switches label.check input::after { content: ""; position: absolute; top: 3px; left: 3px; width: calc(1.65rem - 6px); height: calc(1.65rem - 6px); border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.3); transition: transform .2s; }
+.switches label.check input:checked { background: var(--accent); }
+.switches label.check input:checked::after { transform: translateX(1.15rem); }
+.chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+.chips label { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; font-weight: 700; border: 1.5px solid var(--line); border-radius: 20px; padding: .35rem .7rem; cursor: pointer; }
+.chips label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.chips input { width: 1rem; height: 1rem; min-height: 0; margin: 0; accent-color: var(--accent); }
+.thumbs { display: flex; gap: .4rem; overflow-x: auto; }
+.thumbs label { flex: none; width: 4.6rem; height: 4.6rem; border-radius: 10px; overflow: hidden; position: relative; border: 2.5px solid transparent; cursor: pointer; }
+.thumbs label:has(input:checked) { border-color: var(--accent); }
+.thumbs input { position: absolute; top: 4px; left: 4px; z-index: 2; width: 1rem; height: 1rem; min-height: 0; margin: 0; }
+.thumbs .ph { width: 100%; height: 100%; border-radius: 0; }
+.tile.dark .eyebrow, .sec.deep h1 { color: inherit; }
 @media (prefers-reduced-motion: no-preference) { .qtile, .tile, .need { transition: box-shadow .2s, border-color .2s; } }
 
 /* Section types, each used once or twice a page, so a scroll never repeats itself
@@ -965,12 +993,11 @@ function admToday() {
   if (c.drafts) needs.push(need('#a-dogs', c.drafts, 'KennelOS drafts', 'draft'));
   if (c.due.length) needs.push(need('#a-families', c.due.length, 'Due for deletion in 30 days', 'people', 'warn'));
   const isToday = (p) => calDays(S.now, p.goHome) === 0;
-  const goHome = c.pickSoon.length ? `<section class="pick"><span class="eyebrow">Going home ${long(c.pickSoon[0].goHome)}</span>
-      <h2>${isToday(c.pickSoon[0]) ? 'Mark each puppy as they leave' : `Going home in ${calDays(S.now, c.pickSoon[0].goHome)} days`}</h2>
-      <p class="small muted">${isToday(c.pickSoon[0]) ? 'Starts the 72-hour vet clock. You can correct the time afterwards.' : 'On the day, Mark picked up starts the 72-hour vet clock. Families got their “book your vet visit” email this morning.'}</p>
-      <ul class="list">${c.pickSoon.map((p) => `<li>${photo(p.img, p.name, 'round')}<span class="grow"><b>${p.name}</b> · ${FAMILIES[p.family].name}${S.booked[p.id] ? ' · <span class="st">Vet booked</span>' : ''}</span><button class="btn ${isToday(p) ? 'solid' : 'line'} small" data-act="pickup" data-id="${p.id}">Mark picked up</button></li>`).join('')}</ul></section>` : '';
-  return `<div><span class="eyebrow">${KENNEL}</span><h1>Today</h1><p class="muted">${long(S.now)}</p></div>
-    ${goHome}
+  const pupCard = (p) => `<div class="tile pup">${photo(p.img, p.name, 'round')}<span class="pname" style="font-size:1.7rem">${p.name}${sexMark(p)}</span><span class="small muted">${FAMILIES[p.family].name}</span>
+    <div class="calrow" style="justify-content:center">${calPage(p.goHome)}<span class="small">${time(p.goHome)}${S.booked[p.id] ? '<br><span class="st ok">Vet booked</span>' : '<br><span class="st warn">Vet not booked</span>'}</span></div>
+    <button class="btn ${isToday(p) ? 'solid' : 'line'} small" data-act="pickup" data-id="${p.id}">Mark picked up</button></div>`;
+  return `<section class="sec deep bleed"><span class="eyebrow">${KENNEL}</span><h1 style="font-size:1.9rem">Today</h1><p class="small" style="opacity:.85">${long(S.now)}${c.pickSoon.length ? ` · ${c.pickSoon.length} going home ${isToday(c.pickSoon[0]) ? 'today' : 'in ' + calDays(S.now, c.pickSoon[0].goHome) + ' days'}` : ''}</p></section>
+    ${c.pickSoon.length ? `<div class="bento">${c.pickSoon.map(pupCard).join('')}</div><p class="small muted">Mark picked up starts the 72-hour vet clock. You can correct the time afterwards.</p>` : ''}
     ${S.site.changes.length ? `<section class="card"><div class="between"><p><span class="st warn">Website</span> ${S.site.changes.length} change${S.site.changes.length === 1 ? '' : 's'} not published yet</p><a class="btn line small" href="#a-website">Review and publish</a></div></section>` : ''}
     ${needs.length ? `<section><h2 style="margin-bottom:10px">Needs you</h2><div class="needs">${needs.join('')}</div></section>` : `<section class="card band"><p><span class="st ok">All caught up</span> Nothing needs you today.</p></section>`}
     <div class="cols">
@@ -1057,23 +1084,46 @@ function writeUpdateForm(p) {
 }
 function admDogs() {
   const label = { available: 'Available', reserved: 'Reserved', placed: 'Placed', staying: 'Staying' };
-  const stays = PUPS.filter((p) => p.stay), pk = PUPS.filter((p) => S.media[p.id]);
-  return `<span class="eyebrow">${KENNEL}</span><h1>Dogs and litters</h1><p class="muted">One record for each dog, litter and puppy, used by your website and the portal.</p>
-    <section class="card"><div class="between"><h2>The Gem litter</h2><span class="small muted">Willow × Boone · born ${short(BORN)}</span></div>
-      <ul class="list">${PUPS.map((p) => `<li>${photo(p.img, p.name, 'round')}<span class="grow"><b>${p.name}</b> <span class="small muted">· ${p.collar} collar · ${p.sex.toLowerCase()}</span><br><a class="small" href="#a-fam-${p.family}">${FAMILIES[p.family].name}</a> <span class="small muted">· ${S.pickup[p.id] ? 'home ' + short(S.pickup[p.id]) : 'goes home ' + short(p.goHome)}</span><br>${p.extras.map((x) => `<span class="tag">${EXTRAS[x].name}</span>`).join('')}</span>
-        <label class="sr" for="ps-${p.id}">${p.name} on your website</label><select id="ps-${p.id}" data-act="pupstatus" data-id="${p.id}" style="width:auto">${Object.entries(label).map(([k, l]) => `<option value="${k}" ${S.pupStatus[p.id] === k ? 'selected' : ''}>${l}</option>`).join('')}</select></li>`).join('')}</ul>
-      <p class="small muted">The status shows on your website (a change waits for Publish). Families, pickups and extras belong to the portal.</p></section>
-    ${stays.map((p) => { const d = stayDue().find((x) => x.p.id === p.id), ups = updatesFor(p);
-      return `<section class="card" id="stay-${p.id}"><div class="between"><h2>${icon('star')} ${p.name}’s extended stay</h2>${S.pickup[p.id] ? '<span class="st ok">Home</span>' : S.now < STAY_START ? `<span class="st">Starts ${short(STAY_START)}</span>` : `<span class="st ${d && d.soon ? 'warn' : 'next'}">Week ${stayWeek(p)} of ${stayWeeks(p)}</span>`}</div>
-        <p class="small muted">${EXTRAS[p.stay].name} · ${short(STAY_START)} to ${short(p.goHome)} · ${ups.length} update${ups.length === 1 ? '' : 's'} sent${d ? ` · next due ${short(d.due)}` : ''}</p>
-        ${S.writing === p.id ? writeUpdateForm(p) : (!S.pickup[p.id] && S.now >= STAY_START ? `<div class="row"><button class="btn ${d && d.soon ? 'solid' : 'line'}" data-act="writeupdate" data-id="${p.id}">${icon('draft')}Write this week’s update</button></div>` : '')}</section>`; }).join('')}
-    ${pk.map((p) => { const m = S.media[p.id];
-      return `<section class="card"><div class="between"><h2>${icon('camera')} ${p.name}’s photo &amp; video package</h2><span class="small muted">${FAMILIES[p.family].name}</span></div>${pipeline(m.status)}
-        <div class="row"><label for="ms-${p.id}" style="flex:1 1 160px">Status<select id="ms-${p.id}" data-act="mediastatus" data-id="${p.id}">${['booked', 'shooting', 'editing', 'delivered'].map((x) => `<option value="${x}" ${m.status === x ? 'selected' : ''}>${x[0].toUpperCase() + x.slice(1)}</option>`).join('')}</select></label>
-          <label class="btn line small" style="flex:0 0 auto">${icon('up')}Upload full-size files<input class="sr" type="file" multiple accept="image/*,video/*" data-act="mediafiles" data-id="${p.id}"></label></div>
-        <p class="small muted">${m.photos} photos, ${m.videos} videos uploaded · session ${short(m.session)} · due ${short(m.due)}. Full size, never resized; videos upload in parts and resume if the connection drops. Marking it Delivered emails the family.</p></section>`; }).join('')}
-    <section class="card"><h2>Our Bostons</h2><ul class="list">${[['Willow', 'Dam · Gem litter', 'img/willow.jpg'], ['Ziva', 'Dam', 'img/ziva.jpg'], ['Peaches', 'Dam', 'img/peaches.jpg']].map(([n, r, im]) => `<li>${photo(im, n, 'round')}<span class="grow"><b>${n}</b><br><span class="small muted">${r}</span></span><span class="st ok">On site</span></li>`).join('')}</ul></section>
-    <section class="card">${admDrafts(true)}</section>`;
+  const card = (p) => `<div class="tile pup">${photo(p.img, p.name, 'round')}<span class="pname" style="font-size:1.6rem">${p.name}${sexMark(p)}</span>
+    <a class="small" href="#a-fam-${p.family}">${FAMILIES[p.family].name}</a><span class="small muted">${S.pickup[p.id] ? 'Home ' + short(S.pickup[p.id]) : 'Goes home ' + short(p.goHome)}</span>
+    ${p.extras.length ? `<span>${p.extras.map((x) => `<span class="tag">${EXTRAS[x].type === 'stay' ? EXTRAS[x].weeks + '-week stay' : 'Photo package'}</span>`).join('')}</span>` : ''}
+    <label class="sr" for="ps-${p.id}">${p.name} on your website</label><select id="ps-${p.id}" data-act="pupstatus" data-id="${p.id}" style="min-height:2.2rem;padding:.25rem .5rem">${Object.entries(label).map(([k, l]) => `<option value="${k}" ${S.pupStatus[p.id] === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <a class="btn text small" href="#a-edit-${p.id}">Edit ${p.name} →</a></div>`;
+  const stays = PUPS.filter((p) => p.stay).map((p) => { const d = stayDue().find((x) => x.p.id === p.id), ups = updatesFor(p), w = stayWeek(p), n = stayWeeks(p);
+    return `<div class="tile dark s2" id="stay-${p.id}"><div class="between"><span class="eyebrow">${EXTRAS[p.stay].name}</span>${d && d.soon ? '<span class="st warn" style="color:#E9C77E">Update due</span>' : ''}</div>
+      <div class="calrow">${ring(S.pickup[p.id] ? n : S.now < STAY_START ? 0 : w - 1 + (ups.length >= w ? 1 : 0), n, 'Weeks done')}<div><p class="bigline">${p.name}’s stay</p><p class="small">${S.pickup[p.id] ? 'Home' : S.now < STAY_START ? 'Starts ' + short(STAY_START) : `Week ${w} of ${n}`} · ${ups.length} update${ups.length === 1 ? '' : 's'} sent${d ? ' · next due ' + short(d.due) : ''}</p></div></div>
+      ${S.writing === p.id ? `<div class="tile" style="color:var(--ink)">${writeUpdateForm(p)}</div>` : (!S.pickup[p.id] && S.now >= STAY_START ? `<button class="pill light" data-act="writeupdate" data-id="${p.id}" style="justify-self:start">${icon('draft')}Write this week’s update</button>` : '')}</div>`; }).join('');
+  const pkgs = PUPS.filter((p) => S.media[p.id]).map((p) => { const m = S.media[p.id];
+    return `<div class="tile band s2"><div class="between"><h2>${p.name}’s photo &amp; video package</h2><span class="small muted">${FAMILIES[p.family].name}</span></div>
+      <div class="collage" style="grid-template-columns:repeat(4,1fr)">${GALLERY.slice(0, m.photos ? 4 : 0).map((g) => photo(g, '')).join('') || '<p class="small muted" style="grid-column:1/-1">No files yet.</p>'}</div>${pipeline(m.status)}
+      <div class="row"><label for="ms-${p.id}" style="flex:1 1 9rem">Status<select id="ms-${p.id}" data-act="mediastatus" data-id="${p.id}">${['booked', 'shooting', 'editing', 'delivered'].map((x) => `<option value="${x}" ${m.status === x ? 'selected' : ''}>${cap1(x)}</option>`).join('')}</select></label>
+        <label class="btn line small" style="flex:0 0 auto;align-self:end">${icon('up')}Upload full-size files<input class="sr" type="file" multiple accept="image/*,video/*" data-act="mediafiles" data-id="${p.id}"></label></div>
+      <p class="small muted">${m.photos} photos, ${m.videos} videos · session ${short(m.session)} · due ${short(m.due)}. Delivered emails the family.</p></div>`; }).join('');
+  return `<section class="sec sand bleed"><span class="eyebrow">${KENNEL}</span><h1 style="font-size:1.9rem">Dogs and litters</h1><p class="small muted">One record for each dog, litter and puppy, for your website and the portal.</p></section>
+    <div class="between"><h2>The Gem litter</h2><span class="small muted">Willow × Boone · born ${short(BORN)}</span></div>
+    <div class="bento">${PUPS.map(card).join('')}${stays}${pkgs}</div>
+    <p class="small muted">The status shows on your website (a change waits for Publish). Families, pickups and extras belong to the portal.</p>
+    <section class="stack" style="gap:.5rem"><h2>Our Bostons</h2><div class="prows">${[['Willow', 'Dam · Gem litter', 'img/willow.jpg'], ['Ziva', 'Dam', 'img/ziva.jpg'], ['Peaches', 'Dam', 'img/peaches.jpg']].map(([n, r, im]) => `<a class="prow" href="#" data-act="toast" data-msg="${n}: the dog’s own screen">${photo(im, n)}<span class="lab"><span>${n}<br><span class="small" style="font-family:var(--f-body);opacity:.8">${r}</span></span><span class="chev">${icon('chev')}</span></span></a>`).join('')}</div></section>
+    <section class="sec mint bleed">${admDrafts(true)}</section>`;
+}
+function admEdit(id) {
+  const p = PUPS.find((x) => x.id === id); if (!p) return admDogs();
+  const sel = (lab, opts, cur, half = true) => `<label class="${half ? 'half' : ''}">${lab}<select>${opts.map((o) => `<option ${o === cur ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`;
+  const inp = (lab, val, half = true, hint = '') => `<label class="${half ? 'half' : ''}">${lab}<input value="${esc(val)}">${hint ? `<span class="hint">${hint}</span>` : ''}</label>`;
+  const sw = (lab, on, hint) => `<label class="check"><input type="checkbox" ${on ? 'checked' : ''}><span>${lab}${hint ? `<br><span class="hint">${hint}</span>` : ''}</span></label>`;
+  return `<p class="crumb"><a href="#a-dogs">Dogs</a> ›</p>
+    <div class="bento"><div class="tile pup">${photo(p.img, p.name, 'round')}<span class="pname" style="font-size:1.7rem">${p.name}${sexMark(p)}</span><span class="small muted">Gem litter · ${p.collar} collar</span></div>
+      <div class="tile green"><span class="eyebrow">Goes home</span><div class="calrow">${calPage(p.goHome)}<div><p class="bigline">${short(p.goHome)}</p><p class="small">${p.stay ? EXTRAS[p.stay].weeks + '-week stay' : '8 weeks'}</p></div></div></div></div>
+    <form class="tile stack" data-act="savepup" style="gap:.9rem">
+      <section class="fgroup"><h2>The puppy</h2><div class="fgrid">${inp('Name', p.name)}${inp('Collar', p.collar + ' collar')}${sel('Sex', ['Female', 'Male'], p.sex)}${inp('Colour', 'Black & white')}${sel('Status', ['Available', 'Reserved', 'Placed', 'Staying'], { reserved: 'Reserved', placed: 'Placed' }[S.pupStatus[p.id]] || 'Available')}${sel('Registration', ['Not settled', 'Limited', 'Full'], 'Limited')}${inp('Registry', 'AKC')}${inp('Its own price', '', true, 'Empty: the litter’s price.')}</div></section>
+      <section class="fgroup"><h2>Photo and story</h2><div class="fgrid"><div class="thumbs">${['img/opal.jpg', 'img/onyx.jpg', 'img/contessa.jpg', 'img/willow.jpg'].map((g, i) => `<label>${photo(g, '')}<input type="radio" name="ph" ${g === p.img ? 'checked' : ''} aria-label="Photo ${i + 1}"></label>`).join('')}</div>
+        <label>About<textarea>${esc(p.id === 'onyx' ? 'The darkest of the three, with a little white snip.' : 'Loudest at feeding time and first to find the warm spot.')}</textarea></label>${inp('More photos link', '', false, 'A Google Photos or Shutterfly share for this puppy.')}</div></section>
+      <section class="fgroup"><h2>Family and extras</h2><div class="fgrid">${sel('Family', Object.values(FAMILIES).map((f) => f.name), FAMILIES[p.family].name, false)}
+        <label class="half">Picked up<input type="datetime-local" value="${S.pickup[p.id] ? toLocalInput(S.pickup[p.id]) : ''}"></label><label class="half">Microchip<input value="985 ••• ${p.id === 'opal' ? '4471' : '4472'}"></label>
+        <div><span class="small" style="font-weight:700">Extras</span><div class="chips">${Object.entries(EXTRAS).map(([k, e]) => `<label><input type="checkbox" ${p.extras.includes(k) ? 'checked' : ''}>${e.name}</label>`).join('')}</div></div></div></section>
+      <section class="fgroup"><h2>On your website</h2><div class="switches">${sw('Show on my website', true)}${sw('Show tagged photos on its page', false, 'Publishes the photos you’ve tagged as this puppy.')}${sw('Families can ask about full registration', true)}</div></section>
+      <details class="fgroup"><summary>Web address</summary><div class="fgrid">${inp('Web address', p.id, false, 'Old addresses keep working if you change it.')}</div></details>
+      <div class="row"><button class="btn solid">Save</button><a class="btn text small" href="#a-dogs">Cancel</a></div></form>`;
 }
 function admDrafts(embedded) {
   return `${embedded ? '<h2 id="drafts">Baby book drafts from KennelOS</h2>' : '<h1>Baby book drafts</h1>'}
@@ -1121,9 +1171,9 @@ function admPortal() {
 function admPage(route) {
   const [r, arg] = route.split('-');
   const c = counts(), unread = S.site.messages.filter((m) => !m.read).length;
-  const pages = { today: admToday, vet: admVet, families: admFamilies, fam: () => admFamily(arg), dogs: admDogs, website: admWebsite, portal: admPortal };
+  const pages = { today: admToday, vet: admVet, families: admFamilies, fam: () => admFamily(arg), dogs: admDogs, edit: () => admEdit(arg), website: admWebsite, portal: admPortal };
   const nav = [['today', 'Today', 'today', c.proofs.length + c.bounced.length + c.stays.length || ''], ['families', 'Families', 'people', ''], ['dogs', 'Dogs', 'paw', c.drafts + c.stays.length || ''], ['website', 'Website', 'globe', unread + S.site.reviews.length || ''], ['portal', 'Portal', 'heart', '']];
-  const cur = r === 'fam' ? 'families' : r === 'vet' ? 'today' : (pages[r] ? r : 'today');
+  const cur = r === 'fam' ? 'families' : r === 'vet' ? 'today' : r === 'edit' ? 'dogs' : (pages[r] ? r : 'today');
   return `<div class="adm">${header('Site Manager', 'globe')}<div class="shell">
     <aside aria-label="Site Manager">${nav.map(([k, l, ic, n]) => `<a href="#a-${k}" ${k === cur ? 'aria-current="page"' : ''}>${icon(ic)}${l}${n ? `<span class="cnt">${n}</span>` : ''}</a>`).join('')}</aside>
     <main id="main">${(pages[r] || admToday)()}</main></div>
@@ -1214,6 +1264,7 @@ document.addEventListener('submit', (e) => {
   if (a === 'booksave') { S.booked[P().id] = fromLocalInput(fd.get('at')); dlg.close(); render(true); toast('Booking saved. Thank you!'); }
   if (a === 'addentry') { const [y, m, d] = String(fd.get('date')).split('-').map(Number); S.familyEntries.push({ id: 'f' + Date.now(), pup: P().id, date: D(y, m, d), title: fd.get('title'), body: fd.get('body'), vis: fd.get('vis'), img: null }); S.bookOpen = false; S.bookFilter = 'all'; render(true); toast('Added to the baby book'); }
   if (a === 'publishdraft') { const d = S.drafts.find((x) => x.id === f.dataset.id); S.breederEntries.push({ id: 'b' + Date.now(), pup: d.pup === 'Gem litter' ? '*' : 'opal', date: d.date, title: fd.get('title'), body: fd.get('body'), img: null }); S.drafts = S.drafts.filter((x) => x.id !== d.id); S.editing = null; render(true); toast('Added to the baby book. Families see it now.'); }
+  if (a === 'savepup') { location.hash = '#a-dogs'; toast('Saved to your draft. Publish when you’re ready.'); return; }
   if (a === 'sendupdate') { const p = PUPS.find((x) => x.id === f.dataset.id), x = EXTRAS[p.stay];
     S.updates = S.updates.filter((u) => !(u.pup === p.id && u.date > S.now));
     S.updates.push({ id: 'u' + Date.now(), pup: p.id, date: new Date(S.now), week: stayWeek(p), note: fd.get('note'), weight: fd.get('weight') || '—', levels: x.skills.map((_, i) => +fd.get('sk' + i)), img: p.img, video: null, book: !!fd.get('book') });
