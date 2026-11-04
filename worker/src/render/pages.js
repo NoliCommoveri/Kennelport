@@ -548,10 +548,10 @@ export function familyLogin(snap, ctx) {
   const card = (h, text, href, button, external) => `<div class="pay-card"><h3>${esc(h)}</h3><p class="pay-when">${esc(text)}</p><p><a class="btn solid" href="${attr(href)}"${external ? ' rel="noopener noreferrer" target="_blank"' : ''}>${esc(button)}</a></p></div>`;
   return {
     title: 'Family login', section: null, noindex: true,
-    body: `${pagehead(null, { eyebrow: 'Families', heading: 'Family login', lede: 'Where would you like to go?' })}
+    body: `${pagehead(null, { heading: 'Family login' })}
       <section class="section tight"><div class="wrap"><div class="pay"><div class="pay-grid">
-        ${card('Waitlist Status Page', 'Your place on the list, choosing your puppy, booking pickup and messages to us.', snap.site.family_login, 'Open', true)}
-        ${card('A-K Puppy Families', "Once your contract is signed: your puppy's records, the vet visit and the first weeks at home.", '/family', 'Open', false)}
+        ${card('Waitlist Status Page', 'for families waiting for their turn to bring home a Boston baby', snap.site.family_login, 'Open', true)}
+        ${card('A-K Puppy Families', 'For families with a current A-K Boston pup; a lifetime of support beyond the sale', '/family', 'Open', false)}
       </div></div></div></section>`,
   };
 }
