@@ -273,6 +273,8 @@ dialog .in { padding: 1.1rem; display: grid; gap: .8rem; }
 .adm main { padding: var(--gut) max(var(--gut), env(safe-area-inset-right, 0px)) 6rem max(var(--gut), env(safe-area-inset-left, 0px)); display: grid; gap: .7rem; align-content: start; max-width: 1040px; width: 100%; }
 .adm aside { display: none; }
 .adm header.app .in, .adm nav.tabs .in { max-width: none; }
+.adm nav.tabs .in { grid-template-columns: repeat(6, 1fr); }
+.adm nav.tabs a { font-size: .62rem; }
 @media (min-width: 900px) {
   .adm .shell { grid-template-columns: 14rem 1fr; }
   .adm aside { display: grid; align-content: start; gap: 2px; background: var(--head); padding: .9rem .6rem; }
@@ -336,6 +338,33 @@ dialog .in { padding: 1.1rem; display: grid; gap: .8rem; }
 .thumbs input { position: absolute; top: 4px; left: 4px; z-index: 2; width: 1rem; height: 1rem; min-height: 0; margin: 0; }
 .thumbs .ph { width: 100%; height: 100%; border-radius: 0; }
 .tile.dark .eyebrow, .sec.deep h1 { color: inherit; }
+/* Reports: thin marks, rounded data ends, labels in text colours, a quiet grid. */
+:root { --mark: var(--accent); --mark-before: #B4AC9D; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --mark-before: #6A655B; } }
+:root[data-theme="dark"] { --mark-before: #6A655B; }
+.chart { width: 100%; height: auto; display: block; overflow: visible; }
+.chart text { fill: var(--muted); font: 600 11px var(--f-body); }
+.chart text.v { fill: var(--ink); font-weight: 700; }
+.chart text.h { fill: var(--ink); font: 700 12px var(--f-body); }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .base { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.chart .m { fill: var(--mark); }
+.chart .m.before { fill: var(--mark-before); }
+.chart [data-tip] { cursor: default; }
+.chart .hit { fill: transparent; }
+.chart .hit:hover + .m, .chart g:hover .m { opacity: .85; }
+.legend { display: flex; flex-wrap: wrap; gap: .3rem 1rem; font-size: .8rem; font-weight: 700; color: var(--ink); }
+.legend span { display: inline-flex; align-items: center; gap: .4rem; }
+.legend i { width: .85rem; height: .85rem; border-radius: 3px; background: var(--mark); }
+.legend i.before { background: var(--mark-before); }
+.legend i.base { height: 0; border-radius: 0; border-top: 2px dashed var(--ink); background: none; }
+.stat b { font: 600 1.9rem/1 var(--f-display); display: block; }
+.stat .vs { font-size: .78rem; color: var(--muted); }
+.stat .vs b { display: inline; font: 800 .78rem var(--f-body); color: var(--ok); }
+#tip { position: fixed; z-index: 60; pointer-events: none; background: var(--ink); color: var(--bg); font-size: .78rem; font-weight: 700; padding: .35rem .55rem; border-radius: 6px; max-width: 16rem; box-shadow: var(--shadow); }
+.mini { display: grid; gap: .3rem; }
+.mini + .mini { border-top: 1px solid var(--line); padding-top: .7rem; }
+@media (min-width: 720px) { .minis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; } .mini + .mini { border-top: 0; padding-top: 0; } }
 @media (prefers-reduced-motion: no-preference) { .qtile, .tile, .need { transition: box-shadow .2s, border-color .2s; } }
 
 /* Section types, each used once or twice a page, so a scroll never repeats itself
@@ -444,6 +473,7 @@ dialog .in { padding: 1.1rem; display: grid; gap: .8rem; }
   <symbol id="i-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M4 9.5c3 1.5 13 1.5 16 0M4 14.5c3-1.5 13-1.5 16 0"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2.5h6"/></symbol>
   <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V4M4 20h16"/><path d="M8 16v-5M12 16V8M16 16v-3M20 16V6"/></symbol>
   <symbol id="i-vet" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></symbol>
 </svg>
 
@@ -622,6 +652,8 @@ function reset() {
     { id: 'w3', name: 'The Brooks family', wants: 'Male · any litter', since: D(2026, 11, 20) },
   ];
   S.pupStatus = { opal: S.stage === 'before' ? 'reserved' : 'placed', onyx: S.stage === 'later' ? 'placed' : 'reserved', diamond: S.stage === 'before' ? 'reserved' : 'placed' };
+  S.demo = { reed: { found: 'A past family', state: 'GA', first: 'Yes', home: ['Kids'], repeat: 'No' }, hale: { found: 'Facebook', state: 'TN', first: 'No', home: ['Other dogs'], repeat: 'No' }, ortega: { found: 'Website or Google', state: 'GA', first: 'Yes', home: ['Kids', 'Cats'], repeat: 'No' } };
+  S.demoFields = DEMO_FIELDS0.map((x) => ({ ...x })); S.results = {}; S.earn = {}; S.repTable = false;
   S.famTab = 'puppy'; S.bookOpen = false; S.bookFilter = 'all'; S.q = ''; S.editing = null; S.writing = null; S.lightbox = null;
 }
 
@@ -1067,6 +1099,7 @@ function admFamily(k) {
     </div><div class="stack" style="gap:16px">
     <section class="card"><h2>Family</h2><dl class="kv"><dt>Emails</dt><dd>${f.emails.map(esc).join('<br>')}</dd><dt>Signed in</dt><dd>${S.signedIn[k] ? 'Yes' : 'Not yet'}</dd><dt>Last active</dt><dd>${S.lastActive[k] ? withYear(S.lastActive[k]) : '—'}</dd></dl>
       <div class="row">${S.signedIn[k] ? '' : '<button class="btn line small" data-act="toast" data-msg="Invite sent again">Resend invite</button>'}<button class="btn line small" data-act="toast" data-msg="Edit family (not in the prototype)">Edit</button></div></section>
+    ${demoSection(k)}
     <section class="card"><h2>Keeping their data</h2><label class="check"><input type="checkbox" data-act="keep" data-id="${k}" ${S.keep[k] ? 'checked' : ''}>Keep this family (pauses deletion for inactivity)</label>
       <p class="small muted">Without Keep: deleted 12 months after last activity, with warnings at 30 and 7 days. A delivered photo package is kept at least 2 years.</p>
       <div class="row"><button class="btn line small danger" data-act="del" data-id="${k}">Delete (undo for 30 days)</button><button class="btn text small" data-act="toast" data-msg="Erase: final, for a family’s request. Asks to confirm.">Erase on request</button></div></section>
@@ -1155,6 +1188,9 @@ function admPortal() {
     <section class="card"><h2>Extras the portal delivers</h2><div class="tablewrap"><table><thead><tr><th>Extra</th><th>Delivers as</th><th>Details</th></tr></thead><tbody>
       ${Object.values(EXTRAS).map((e) => `<tr><td><b>${e.name}</b></td><td>${e.type === 'stay' ? 'Extended stay' : e.type === 'media' ? 'Photo &amp; video' : 'Listed only'}</td><td class="small">${e.type === 'stay' ? `Go-home at ${e.weeks} weeks · update every ${e.every} days · skills from What’s included` : e.type === 'media' ? esc(e.includes) : 'Shows on the family’s placement'}</td></tr>`).join('')}</tbody></table></div>
       <p class="small muted">The same extras as your website’s Extras page and KennelOS’s price list. Payments stay in KennelOS.</p></section>
+    <section class="card"><div class="between"><h2>Buyer details you track</h2><button class="btn line small" data-act="adddemo">Add a field</button></div>
+      <div class="switches">${S.demoFields.map((x, i) => `<label class="check"><input type="checkbox" data-act="demoon" data-i="${i}" ${x.on ? 'checked' : ''}><span>${esc(x.label)}<br><span class="hint">${{ choice: 'A choice: ' + (x.options || []).join(', '), text: 'Short text', yesno: 'Yes or no', multi: 'Tick any: ' + (x.options || []).join(', ') }[x.type]}${x.custom ? ' · yours' : ''}</span></span></label>`).join('')}</div>
+      <p class="small muted">Filled in by you on each family’s screen, never asked of families. Only you see them, in Reports and on each family’s screen. Leave out anything sensitive (health, religion, ethnicity, income).</p></section>
     <section class="card"><div class="between"><h2>Handbook chapters</h2><button class="btn line small" data-act="toast" data-msg="New chapter editor (not in the prototype)">Add chapter</button></div>
       <ul class="list">${S.chapters.map((c, i) => `<li><span class="grow"><b>${esc(c.t)}</b>${c.prog ? `<br><span class="small muted">Links: ${S.programs.find((p) => p.id === c.prog).name}</span>` : ''}</span>
         <button class="btn text small" data-act="up" data-i="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Move ${esc(c.t)} up">↑</button><button class="btn text small" data-act="down" data-i="${i}" ${i === S.chapters.length - 1 ? 'disabled' : ''} aria-label="Move ${esc(c.t)} down">↓</button>
@@ -1168,11 +1204,102 @@ function admPortal() {
       <li><span class="grow"><b>First-year timeline</b><br><span class="small muted">${TASKS.length} tasks, each dated from birth or pickup</span></span><button class="btn line small" data-act="toast" data-msg="Timeline editor (not in the prototype)">Edit</button></li>
       <li><span class="grow"><b>Email wording</b><br><span class="small muted">Vet reminders, stay updates, package ready, birthdays, retention warnings</span></span><button class="btn line small" data-act="toast" data-msg="Email editor (not in the prototype)">Edit</button></li></ul></section>`;
 }
+// ---------- Reports (plan section 9): made-up figures for two litters before the portal and the Gem litter with it ----------
+const LITS = [{ id: 's25', name: 'Spring 2025', portal: false, fams: 6 }, { id: 'f25', name: 'Fall 2025', portal: false, fams: 5 }, { id: 'gem', name: 'Gem litter', portal: true, fams: 3 }];
+const PROGS = [{ id: 'food', name: 'Puppy food program', short: 'Food' }, { id: 'ins', name: 'Pet insurance trial', short: 'Insurance' }, { id: 'akc', name: 'AKC registration', short: 'AKC' }];
+const SIGN0 = { s25: { food: 2, ins: 3, akc: 4 }, f25: { food: 2, ins: 2, akc: 3 } };
+const GEM_SIGN = { before: { food: 0, ins: 0, akc: 0 }, vet: { food: 2, ins: 1, akc: 0 }, weeks: { food: 3, ins: 3, akc: 1 }, later: { food: 3, ins: 3, akc: 3 } };
+const EARN0 = { s25: 185, f25: 140 }, GEM_EARN = { before: 0, vet: 40, weeks: 150, later: 260 };
+const CLICKS = { before: [6, 9, 2, 1, 4, 2], vet: [12, 10, 7, 4, 5, 4], weeks: [16, 10, 9, 8, 7, 6], later: [21, 10, 9, 12, 9, 11] };
+const PLACES = ['Home: food band', 'Go-home checklist', 'Insurance tile', 'Timeline tasks', 'Handbook chapters', 'Emails'];
+const FOUND = ['Facebook', 'A past family', 'Website or Google', 'A show or event', 'Other'];
+// Every family she's placed with: how they found her and whether they used the insurance trial (made up).
+const PAST = [['Facebook', 1], ['Facebook', 0], ['Facebook', 1], ['Facebook', 0], ['Facebook', 1], ['A past family', 1], ['A past family', 1], ['A past family', 0], ['A past family', 1], ['Website or Google', 0], ['Website or Google', 1], ['Website or Google', 0], ['A show or event', 1], ['A show or event', 0]];
+const DEMO_FIELDS0 = [
+  { id: 'found', label: 'How they found you', type: 'choice', options: FOUND, on: true },
+  { id: 'state', label: 'State', type: 'text', on: true },
+  { id: 'first', label: 'First Boston', type: 'yesno', on: true },
+  { id: 'home', label: 'At home', type: 'multi', options: ['Kids', 'Other dogs', 'Cats', 'Neither'], on: true },
+  { id: 'repeat', label: 'Repeat family', type: 'yesno', on: true },
+  { id: 'show', label: 'Interested in showing', type: 'yesno', on: false, custom: true },
+];
+function signups() {
+  const out = JSON.parse(JSON.stringify(SIGN0)); out.gem = { ...GEM_SIGN[S.stage] };
+  Object.entries(S.results || {}).forEach(([k, v]) => { const [l, pr] = k.split(':'); out[l][pr] = v; });
+  return out;
+}
+const earnings = () => ({ ...EARN0, gem: GEM_EARN[S.stage], ...(S.earn || {}) });
+const pct = (n, d) => (d ? Math.round(n / d * 100) : 0);
+// One mini horizontal bar chart per program: a row per litter, the before-portal average as a dashed line.
+function miniBars(pr, sg) {
+  const W = 300, rowH = 26, top = 18, left = 78, right = 72, plot = W - left - right, H = top + LITS.length * rowH + 4;
+  const before = LITS.filter((l) => !l.portal), base = pct(before.reduce((a, l) => a + sg[l.id][pr.id], 0), before.reduce((a, l) => a + l.fams, 0));
+  const x = (v) => left + plot * v / 100;
+  return `<div class="mini"><div class="between"><h3>${pr.name}</h3><span class="small muted">before the portal ${base}%</span></div>
+    <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${pr.name}: share of families who signed up, by litter">
+      ${[0, 50, 100].map((t) => `<line class="grid" x1="${x(t)}" x2="${x(t)}" y1="${top - 4}" y2="${H - 2}"/><text x="${x(t)}" y="10" text-anchor="middle">${t}%</text>`).join('')}
+      ${LITS.map((l, i) => { const n = sg[l.id][pr.id], v = pct(n, l.fams), y = top + i * rowH + 6, w = Math.max(plot * v / 100, v ? 4 : 0);
+        return `<g data-tip="${l.name}: ${n} of ${l.fams} families (${v}%)${l.portal ? '' : ' · before the portal'}"><rect class="hit" x="0" y="${y - 6}" width="${W}" height="${rowH}"/><text x="${left - 6}" y="${y + 10}" text-anchor="end"${l.portal ? ' class="h"' : ''}>${l.name}</text>${w ? `<path class="m${l.portal ? '' : ' before'}" d="M${left} ${y}h${w - 4}a4 4 0 0 1 4 4v6a4 4 0 0 1-4 4h-${w - 4}z"/>` : ''}<text class="v" x="${left + w + 6}" y="${y + 10}">${v}% · ${n}/${l.fams}</text></g>`; }).join('')}
+      <line class="base" x1="${x(base)}" x2="${x(base)}" y1="${top - 4}" y2="${H - 2}"/>
+    </svg></div>`;
+}
+function hbars(rows, { fmt = (v) => v, cls = () => '', tip = (r) => `${r[0]}: ${r[1]}` } = {}) {
+  const W = 300, rowH = 24, left = 118, right = 46, plot = W - left - right, H = rows.length * rowH + 4, max = Math.max(1, ...rows.map((r) => r[1]));
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(rows.map((r) => r[0] + ' ' + fmt(r[1])).join(', '))}">${rows.map((r, i) => { const y = i * rowH + 6, w = Math.max(plot * r[1] / max, r[1] ? 4 : 0);
+    return `<g data-tip="${esc(tip(r))}"><rect class="hit" x="0" y="${y - 6}" width="${W}" height="${rowH}"/><text x="${left - 6}" y="${y + 10}" text-anchor="end">${esc(r[0])}</text>${w ? `<path class="m ${cls(r)}" d="M${left} ${y}h${w - 4}a4 4 0 0 1 4 4v6a4 4 0 0 1-4 4h-${w - 4}z"/>` : ''}<text class="v" x="${left + w + 6}" y="${y + 10}">${fmt(r[1])}</text></g>`; }).join('')}</svg>`;
+}
+function admReports() {
+  const sg = signups(), er = earnings(), gem = LITS[2];
+  const before = LITS.filter((l) => !l.portal), fb = before.reduce((a, l) => a + l.fams, 0);
+  const anyNow = pct(Math.max(...PROGS.map((pr) => sg.gem[pr.id])), gem.fams), anyBefore = 45;
+  const tiles = PROGS.map((pr) => { const n = sg.gem[pr.id], v = pct(n, gem.fams), b = pct(before.reduce((a, l) => a + sg[l.id][pr.id], 0), fb);
+    return `<div class="tile stat"><span class="eyebrow">${pr.short} · Gem litter</span><b>${v}%</b><span class="small">${n} of ${gem.fams} families</span><span class="vs">before the portal ${b}%${v > b ? ` · <b>+${v - b} pts</b>` : ''}</span></div>`; }).join('');
+  const clicks = CLICKS[S.stage].map((n, i) => [PLACES[i], n]).sort((a, b) => b[1] - a[1]);
+  const totalClicks = clicks.reduce((a, r) => a + r[1], 0);
+  const found = FOUND.map((f) => [f, PAST.filter((x) => x[0] === f).length + Object.values(S.demo).filter((d) => d.found === f).length]).filter((r) => r[1]);
+  const byFound = FOUND.map((f) => { const fams = PAST.filter((x) => x[0] === f); return [f, fams.length, fams.filter((x) => x[1]).length]; }).filter((r) => r[1]);
+  const table = S.repTable;
+  return `<section class="sec deep bleed"><span class="eyebrow">Programs and referrals</span><h1 style="font-size:1.9rem">Reports</h1>
+      <p class="small" style="opacity:.85">With the portal, ${anyNow}% of Gem litter families used at least one program so far. Before it: about ${anyBefore}%. Sign-ups come from each program’s own report; clicks show interest.</p></section>
+    <div class="row"><div class="seg" role="group" aria-label="Show" style="flex:1 1 14rem">${[['charts', 'Charts'], ['table', 'Table']].map(([k, l]) => `<button data-act="reptab" data-f="${k}" aria-pressed="${(table ? 'table' : 'charts') === k}">${l}</button>`).join('')}</div><button class="btn line small" data-act="toast" data-msg="Downloads every figure as a spreadsheet (CSV)">${icon('down')}Export</button></div>
+    <div class="bento">${tiles}<div class="tile green stat"><span class="eyebrow">Earned · Gem litter</span><b>$${er.gem}</b><span class="small">commissions and credit</span><span class="small" style="opacity:.85">Spring 2025: $${er.s25} · Fall 2025: $${er.f25}</span></div></div>
+    ${table ? `<div class="tile full"><h2>Sign-ups by litter</h2><div class="tablewrap"><table><thead><tr><th>Litter</th><th>Families</th>${PROGS.map((pr) => `<th>${pr.short}</th>`).join('')}<th>Earned</th></tr></thead><tbody>${LITS.map((l) => `<tr><td>${l.name}${l.portal ? '' : ' <span class="small muted">(before)</span>'}</td><td>${l.fams}</td>${PROGS.map((pr) => `<td>${sg[l.id][pr.id]} (${pct(sg[l.id][pr.id], l.fams)}%)</td>`).join('')}<td>$${er[l.id]}</td></tr>`).join('')}</tbody></table></div></div>
+      <div class="tile full"><h2>Clicks by place · Gem litter</h2><div class="tablewrap"><table><thead><tr><th>Place</th><th>Clicks</th></tr></thead><tbody>${clicks.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')}</tbody></table></div></div>`
+    : `<section class="sec mint bleed"><div class="between"><h2 class="big-h">Sign-ups by litter</h2></div>
+        <div class="legend"><span><i class="before"></i>Before the portal</span><span><i></i>With the portal</span><span><i class="base"></i>Before-portal average</span></div>
+        <div class="minis">${PROGS.map((pr) => miniBars(pr, sg)).join('')}</div>
+        <p class="small muted">Share of each litter’s families who signed up, from the program’s own report. Three families is a small litter: read a big change, not a few points.</p></section>
+      <div class="bento"><div class="tile s2"><div class="between"><h2>Where families click</h2><span class="small muted">Gem litter · ${totalClicks} clicks</span></div>${hbars(clicks, { tip: (r) => `${r[0]}: ${r[1]} clicks (${pct(r[1], totalClicks)}%)` })}<p class="small muted">Keep what gets clicked; move or drop what doesn’t.</p></div>
+        <div class="tile s2"><div class="between"><h2>Earned per litter</h2><span class="small muted">From program reports</span></div>${hbars(LITS.map((l) => [l.name, er[l.id], l.portal]), { fmt: (v) => '$' + v, cls: (r) => (r[2] ? '' : 'before'), tip: (r) => `${r[0]}: $${r[1]}${r[2] ? '' : ' (before the portal)'}` })}<div class="legend"><span><i class="before"></i>Before the portal</span><span><i></i>With the portal</span></div></div></div>`}
+    <section class="sec sand bleed"><span class="eyebrow">Your families</span><h2 class="big-h">Who your buyers are</h2>
+      <div class="bento"><div class="tile s2"><div class="between"><h3>How they found you</h3><span class="small muted">All ${PAST.length + Object.keys(S.demo).length} families</span></div>${hbars(found, { tip: (r) => `${r[0]}: ${r[1]} families` })}</div>
+      <div class="tile s2"><h3>Insurance trial, by how they found you</h3><div class="tablewrap"><table><thead><tr><th>Found you via</th><th>Families</th><th>Used the trial</th></tr></thead><tbody>${byFound.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]} (${pct(r[2], r[1])}%)${r[1] < 3 ? ' <span class="small muted">· small group</span>' : ''}</td></tr>`).join('')}</tbody></table></div><p class="small muted">Every count shows. With only a few families in a group, read it as a hint, not a trend.</p></div></div>
+      <p class="small muted">From the details you add on each family’s screen. Only you see them; they’re deleted with the family.</p></section>
+    <form class="tile stack" data-act="saveresult"><h2>Add a program’s report</h2><p class="small muted">Once a month, copy each program’s sign-ups and earnings from its dashboard. Most programs don’t send them to the portal on their own.</p>
+      <div class="fgrid"><label class="half" for="rr-l">Litter<select id="rr-l" name="l">${LITS.map((l) => `<option value="${l.id}" ${l.portal ? 'selected' : ''}>${l.name}</option>`).join('')}</select></label>
+        <label class="half" for="rr-p">Program<select id="rr-p" name="p">${PROGS.map((pr) => `<option value="${pr.id}">${pr.name}</option>`).join('')}</select></label>
+        <label class="half" for="rr-n">Families signed up<input id="rr-n" name="n" type="number" min="0" max="12" required></label>
+        <label class="half" for="rr-e">Earned or credited ($)<input id="rr-e" name="e" type="number" min="0"></label></div>
+      <div class="row"><button class="btn solid small">Add to reports</button><span class="small muted">Or upload the program’s CSV export (a later step).</span></div></form>`;
+}
+function demoSection(k) {
+  const d = S.demo[k] || {}, f = (id) => S.demoFields.find((x) => x.id === id);
+  const on = S.demoFields.filter((x) => x.on);
+  const ctl = (x) => {
+    if (x.type === 'choice') return `<label class="half" for="dm-${x.id}">${x.label}<select id="dm-${x.id}" name="${x.id}"><option value="">—</option>${x.options.map((o) => `<option ${d[x.id] === o ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`;
+    if (x.type === 'text') return `<label class="half" for="dm-${x.id}">${x.label}<input id="dm-${x.id}" name="${x.id}" value="${esc(d[x.id] || '')}" maxlength="40"></label>`;
+    if (x.type === 'yesno') return `<label class="half" for="dm-${x.id}">${x.label}<select id="dm-${x.id}" name="${x.id}"><option value="">—</option>${['Yes', 'No'].map((o) => `<option ${d[x.id] === o ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`;
+    return `<div><span class="small" style="font-weight:700">${x.label}</span><div class="chips">${x.options.map((o) => `<label><input type="checkbox" name="${x.id}" value="${o}" ${(d[x.id] || []).includes(o) ? 'checked' : ''}>${o}</label>`).join('')}</div></div>`;
+  };
+  return `<form class="card" data-act="savedemo" data-id="${k}"><div class="between"><h2>About this family</h2><span class="small muted">Only you see this</span></div>
+    <div class="fgrid">${on.map(ctl).join('')}<label for="dm-note">Notes<textarea id="dm-note" name="note" placeholder="Anything you want to remember">${esc(d.note || '')}</textarea></label></div>
+    <div class="row"><button class="btn line small">Save</button><a class="btn text small" href="#a-portal">Change these fields →</a></div></form>`;
+}
 function admPage(route) {
   const [r, arg] = route.split('-');
   const c = counts(), unread = S.site.messages.filter((m) => !m.read).length;
-  const pages = { today: admToday, vet: admVet, families: admFamilies, fam: () => admFamily(arg), dogs: admDogs, edit: () => admEdit(arg), website: admWebsite, portal: admPortal };
-  const nav = [['today', 'Today', 'today', c.proofs.length + c.bounced.length + c.stays.length || ''], ['families', 'Families', 'people', ''], ['dogs', 'Dogs', 'paw', c.drafts + c.stays.length || ''], ['website', 'Website', 'globe', unread + S.site.reviews.length || ''], ['portal', 'Portal', 'heart', '']];
+  const pages = { today: admToday, vet: admVet, families: admFamilies, fam: () => admFamily(arg), dogs: admDogs, edit: () => admEdit(arg), website: admWebsite, portal: admPortal, reports: admReports };
+  const nav = [['today', 'Today', 'today', c.proofs.length + c.bounced.length + c.stays.length || ''], ['families', 'Families', 'people', ''], ['dogs', 'Dogs', 'paw', c.drafts + c.stays.length || ''], ['website', 'Website', 'globe', unread + S.site.reviews.length || ''], ['portal', 'Portal', 'heart', ''], ['reports', 'Reports', 'chart', '']];
   const cur = r === 'fam' ? 'families' : r === 'vet' ? 'today' : r === 'edit' ? 'dogs' : (pages[r] ? r : 'today');
   return `<div class="adm">${header('Site Manager', 'globe')}<div class="shell">
     <aside aria-label="Site Manager">${nav.map(([k, l, ic, n]) => `<a href="#a-${k}" ${k === cur ? 'aria-current="page"' : ''}>${icon(ic)}${l}${n ? `<span class="cnt">${n}</span>` : ''}</a>`).join('')}</aside>
@@ -1193,6 +1320,9 @@ function render(keepScroll) {
   document.querySelectorAll('#pt button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.theme === S.theme));
   if (keepScroll) window.scrollTo(0, y);
 }
+// Chart tooltips: any mark with data-tip.
+const tip = document.createElement('div'); tip.id = 'tip'; tip.hidden = true; document.body.appendChild(tip);
+document.addEventListener('pointermove', (e) => { const t = e.target.closest && e.target.closest('[data-tip]'); if (!t) { tip.hidden = true; return; } tip.textContent = t.dataset.tip; tip.hidden = false; const x = Math.min(e.clientX + 12, innerWidth - tip.offsetWidth - 8); tip.style.left = x + 'px'; tip.style.top = (e.clientY - tip.offsetHeight - 10) + 'px'; });
 // A missing photo (the file opened outside its artifact) falls back to the drawn placeholder.
 document.addEventListener('error', (e) => { if (e.target.tagName === 'IMG') e.target.classList.add('gone'); }, true);
 let toastT;
@@ -1227,6 +1357,8 @@ document.addEventListener('click', (e) => {
   if (a === 'openbook') { S.bookOpen = !!S.pickup[P().id]; if (route().r !== 'book') location.hash = '#f-book'; else render(true); e.preventDefault(); return; }
   if (a === 'closebook') { S.bookOpen = false; render(true); return; }
   if (a === 'filter') { S.bookFilter = el.dataset.f; render(true); return; }
+  if (a === 'reptab') { S.repTable = el.dataset.f === 'table'; render(true); return; }
+  if (a === 'adddemo') { S.demoFields.push({ id: 'c' + Date.now(), label: 'Wants a second puppy', type: 'yesno', on: true, custom: true }); render(true); toast('Field added. It shows on every family’s screen.'); return; }
   if (a === 'famtab') { S.famTab = el.dataset.f; render(true); return; }
   if (a === 'pickup') { S.pickup[id] = new Date(S.now); render(true); toast(`${PUPS.find((p) => p.id === id).name} picked up. The vet clock is running; reminder sent.`); return; }
   if (a === 'accept') { S.proof[id].ok = true; render(true); toast('Accepted. The family sees it on their page.'); return; }
@@ -1249,6 +1381,7 @@ document.addEventListener('change', (e) => {
   if (a === 'keep') { S.keep[id] = el.checked; render(true); }
   if (a === 'pickuptime' && el.value) { S.pickup[id] = fromLocalInput(el.value); render(true); toast('Pickup time corrected. Deadline and reminders moved with it.'); }
   if (a === 'chon') { S.chapters[+el.dataset.i].on = el.checked; render(true); }
+  if (a === 'demoon') { S.demoFields[+el.dataset.i].on = el.checked; render(true); }
   if (a === 'progon') { S.programs[+el.dataset.i].on = el.checked; }
   if (a === 'pupstatus') { const p = PUPS.find((x) => x.id === id); S.pupStatus[id] = el.value; S.site.changes.push(`${p.name}: status changed`); render(true); toast('Saved to your draft. Publish when you’re ready.'); }
   if (a === 'mediastatus') { const m = S.media[id]; m.status = el.value; if (el.value === 'delivered') { m.delivered = new Date(S.now); if (!m.photos) m.photos = GALLERY.length; if (!m.videos) m.videos = VIDEOS.length; } render(true); toast(el.value === 'delivered' ? 'Delivered. The family got an email and a notification.' : 'Status saved. The family’s page shows it.'); }
@@ -1264,6 +1397,10 @@ document.addEventListener('submit', (e) => {
   if (a === 'booksave') { S.booked[P().id] = fromLocalInput(fd.get('at')); dlg.close(); render(true); toast('Booking saved. Thank you!'); }
   if (a === 'addentry') { const [y, m, d] = String(fd.get('date')).split('-').map(Number); S.familyEntries.push({ id: 'f' + Date.now(), pup: P().id, date: D(y, m, d), title: fd.get('title'), body: fd.get('body'), vis: fd.get('vis'), img: null }); S.bookOpen = false; S.bookFilter = 'all'; render(true); toast('Added to the baby book'); }
   if (a === 'publishdraft') { const d = S.drafts.find((x) => x.id === f.dataset.id); S.breederEntries.push({ id: 'b' + Date.now(), pup: d.pup === 'Gem litter' ? '*' : 'opal', date: d.date, title: fd.get('title'), body: fd.get('body'), img: null }); S.drafts = S.drafts.filter((x) => x.id !== d.id); S.editing = null; render(true); toast('Added to the baby book. Families see it now.'); }
+  if (a === 'saveresult') { const l = fd.get('l'), pr = fd.get('p'), n = +fd.get('n'), e2 = fd.get('e'); const lit = LITS.find((x) => x.id === l);
+    if (n > lit.fams) { toast(`${lit.name} has ${lit.fams} families. Check the number.`); return; }
+    S.results[`${l}:${pr}`] = n; if (e2 !== '') S.earn[l] = (S.earn[l] ?? earnings()[l]) + +e2; render(true); toast('Added. The charts include it now.'); return; }
+  if (a === 'savedemo') { const k = f.dataset.id, d = {}; S.demoFields.forEach((x) => { d[x.id] = x.type === 'multi' ? fd.getAll(x.id) : fd.get(x.id) || ''; }); d.note = fd.get('note') || ''; S.demo[k] = d; render(true); toast('Saved. Only you see these.'); return; }
   if (a === 'savepup') { location.hash = '#a-dogs'; toast('Saved to your draft. Publish when you’re ready.'); return; }
   if (a === 'sendupdate') { const p = PUPS.find((x) => x.id === f.dataset.id), x = EXTRAS[p.stay];
     S.updates = S.updates.filter((u) => !(u.pup === p.id && u.date > S.now));

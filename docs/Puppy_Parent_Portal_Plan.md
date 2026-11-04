@@ -515,6 +515,9 @@ New tables, all with `site_id` like the rest of KennelPort. Imported tables also
 | `portal_email_log` | family, kind, sent at, address hash, provider ID, result | Reminder evidence, deliverability |
 | `portal_clicks` | family (nullable), product, page, at | Referral tracking. Family cleared at deletion |
 | `portal_tombstones` | kennelos_id, type, deleted at | Stops a deleted record being imported again |
+| `portal_program_results` | litter, product, families signed up, amount earned, period, entered at, source (typed / CSV) | What each program's own report says, per litter (section 12.1) |
+| `portal_detail_fields` | label, type (choice / yes-no / text / tick-any), options, order, on/off | The buyer details she tracks (section 12.2) |
+| `portal_family_details` | family, field, value | Her answers for each family. Deleted with the family |
 | `extras` (existing) | adds delivery type (stay / media / none), update cadence in days (stay), what the package includes and a delivery note (media) | The website's catalog, also the portal's list of what it delivers |
 | `portal_placement_extras` | placement, extra, `kennelos_id`, status (stay: booked / staying / home; media: booked / shooting / editing / delivered), due date, delivered at | Which family has which extra |
 | `portal_stay_skills` | placement extra, skill, order, from the package (yes/no) | The stay's skills list, copied from the package's checklist so she can add her own |
@@ -621,6 +624,47 @@ listed in its header comment with the others.
   sign-ups.
 - 3–4 litters is roughly 20–30 families, so only large changes will be clear. Keep
   measuring for the full first year.
+
+### 12.1 The Reports page (her side)
+
+A tab of its own in the Site Manager. Everything on it is hers alone.
+
+- **This litter at a glance:** one tile per program (share of the litter's families who
+  signed up, and the change from her before-portal average), plus what she earned.
+- **Sign-ups by litter:** one small bar chart per program, a row per litter, the
+  before-portal litters in grey and the portal litters in green, with the before-portal
+  average as a dashed line. Small multiples, never two scales on one chart.
+- **Where families click:** clicks by place (food band, checklist, insurance tile,
+  timeline, handbook chapter, each email), so she keeps the placements that work.
+- **Earned per litter:** commissions and credit, from the programs' reports.
+- **Charts or Table** for every figure, hover for exact numbers, and **Export** to a
+  spreadsheet (CSV).
+- **Add a program's report:** once a month she copies each program's sign-ups and earnings
+  per litter from its dashboard (litter, program, families signed up, amount). Most
+  programs send nothing back to the portal, so this is the source of truth; clicks and
+  each family's "done" ticks only show interest and who to nudge. A program's CSV export
+  can be uploaded later instead of typed. A number larger than the litter is refused.
+- **Before-portal litters:** her baseline (section 12, before launch) is entered as the
+  first rows, so the charts start with a comparison.
+
+### 12.2 Buyer details she records
+
+- **She fills them in on each family's screen** ("About this family"), never asking
+  families to. Starting fields: how they found her, state, first Boston, who's at home
+  (kids, other dogs, cats), repeat family, and notes. She turns fields on or off and adds
+  her own (a choice, yes/no, short text, or tick-any) under Portal, **Buyer details you
+  track**.
+- **Reports use them:** "How they found you" across all her families, and each program's
+  sign-ups by how families found her, so she sees which sources bring the families who
+  use the programs.
+- **Every count shows,** including small groups, marked "small group". These are her own
+  buyers in her own reports; hiding small groups would only hide her numbers from her.
+- **Private to her:** never shown to families or anyone else, never sent to a program, and
+  not part of the families' download.
+- **Nothing sensitive:** the field editor says to leave out health, religion, ethnicity
+  and income.
+- **Retention:** deleted with the family's account (section 10); the litter totals in
+  Reports stay, without the family.
 
 ## 13. Risks and safeguards
 
