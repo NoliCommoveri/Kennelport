@@ -43,7 +43,7 @@ art in Android's middle 80%.
 **`portal-prototype.html`** is a clickable prototype of the Puppy Parent Portal
 ([`../Puppy_Parent_Portal_Plan.md`](../Puppy_Parent_Portal_Plan.md) section 7): the family
 pages and her Site Manager as one app for her website and the portal (Today, Families with the
-waitlist, Dogs, Website, Portal), in the AK sample's Lawn scheme, light and dark. A bar at
+waitlist, Dogs, Website, Portal, Reports), in the AK sample's Lawn scheme, light and dark. A bar at
 the top switches between the Family and Breeder views and four dates (before go-home, the
 vet window, weeks 1–8, the first birthday); everything is in memory and resets when
 the date changes. Like the AK sample it has no `<html>`/`<head>` wrapper (artifacts add one); it is published at the link in this file's list above.
@@ -54,3 +54,8 @@ the date changes. Like the AK sample it has no `<html>`/`<head>` wrapper (artifa
   times, the microchip, the food, the programs and their wording, the discount code,
   health records, the weights and the baby book text. Photos are placeholders (this
   repository is public).
+- **Not shown:** the KennelOS status page and the handoff to the portal (plan section 3.4:
+  the prototype starts with the family already in the portal, and its **Ask about this**
+  and booking buttons don't link out); portal messages; littermates' birthdays; a
+  family's program status on her side; life status. Its Dogs screen offers **Staying**,
+  KennelPort's word for a puppy she keeps, never an extended stay (plan section 7.3).

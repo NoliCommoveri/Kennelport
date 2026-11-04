@@ -3,7 +3,9 @@
 > A sign-in-only portal for one breeder's puppy families, built as a module of the
 > KennelPort Worker and switched on for her site alone. Revised from the first roadmap
 > (Nov 3, 2026) after review: it now reuses KennelPort's stack, takes starting data from
-> KennelOS without depending on it, and adds data retention. Nothing here is built yet.
+> KennelOS without depending on it, and adds data retention. The portal itself isn't built
+> yet. Built so far: the Site Manager's new look and its sectioned forms (section 7.3,
+> Site Manager version 12).
 
 ## 1. Purpose and scope
 
@@ -15,6 +17,17 @@ shared baby book.
 
 Secondary returns: fewer repeated questions, reliable 3-day vet visits, and more repeat
 and referred buyers.
+
+**Where it sits in her families' journey:**
+
+| When | Where the family goes |
+|---|---|
+| Applying, on the waitlist, waiting for a pick | Her KennelOS family status page, as today |
+| **From the pick to pickup** | Both. The status page keeps everything it does today: booking the pickup, asking for extras, transport, backing out, and messages to her. The portal opens alongside it (the invite goes out at the pick) for the countdown, checklist, vet booking, handbook, programs and, for a stay, the weekly updates. Portal messaging is off; the portal links to the status page for anything it handles |
+| **From pickup on** | The portal only. The status page shows a link to the portal and nothing else for that family; portal messaging turns on |
+
+KennelOS's Companion links and the Furever app are not used for her families: KennelOS
+turns them off for her kennel (section 3.4). Every other breeder keeps KennelOS as it is.
 
 **In scope:** one breeder, about 10 litters and 60–80 families a year.
 
@@ -66,6 +79,11 @@ on whether her public site is a KennelPort site (open question 1).
   addresses. Store them encrypted at rest, with the key a Worker secret, and keep
   the hash for sign-in lookups. Never log them (`wrangler.toml` already forbids it).
 - **Family-facing pages** in her site's style, using the KennelPort template's scheme.
+- **Messages to her, from pickup on.** Before pickup families message her from the
+  status page, as today, and the portal's message button says so and links there. From
+  pickup the portal's own messages take over: they land on the family's screen and on her
+  Today, with an email or push if she has those on.
+- **A family feed from KennelOS** (section 3.4), separate from the website's.
 
 **Change to the KennelPort plan:** decision 20 says "no KennelPort portal". It needs
 rewording to "no portal for every breeder; a family portal module for one site
@@ -98,17 +116,31 @@ section 9.)
 
 ### 3.2 What KennelOS feeds in
 
-| From KennelOS | Becomes |
-|---|---|
-| Litters, puppies (name, sex, colour, status, registration) | The site's records, as KennelPort already imports them |
-| Microchip | A suggested value on the placement |
-| Families and their emails, which puppy | Family and placement records (she confirms before an invite goes out) |
-| Go-home date, pickup date | A suggested pickup time; she confirms it (section 5) |
-| Accounts marked **Show on website**: referral links, codes, code notes | `products` rows, as KennelPort already does |
-| Health records (vaccines, deworming) | Health records on the puppy |
-| Milestones and weights | Baby book **drafts** (section 3.3) |
+Two feeds. The **website feed** is the one KennelPort already takes when she presses
+Update website (`siteExport.js` in KennelOS). It is built from allow-lists and, by design,
+never carries a buyer, contact, note, contract or sale, so it can't carry any family data.
+Everything about a family comes through a new **family feed** (section 3.4).
+
+| From KennelOS | Through | Becomes |
+|---|---|---|
+| Litters, puppies (name, sex, colour, status, registration) | Website feed (built) | The site's records, as KennelPort already imports them |
+| Accounts marked **Show on website**: referral links, codes, code notes | Website feed (built) | `products` rows, as KennelPort already does. The account's KennelOS type (insurance, registry, supplier) suggests the portal's product type |
+| The family (contact name and emails), the puppy they picked | Family feed | Family and placement records. She confirms before the invite goes out |
+| The pickup: the `placement` event's date, time, place and method, from her own entry or the family's approved booking on the status page | Family feed | A suggested pickup time; she confirms it (section 5) |
+| Microchip (`Dog.microchip_id`), registration type on the sale | Family feed | Suggested values on the placement |
+| Vaccination, preventative (deworming) and vet visit events on the puppy | Family feed | Health records on the puppy |
+| Milestone and weight check events | Family feed | Baby book **drafts** (section 3.3) |
+| Extras on the sale (`Sale.extra_charges`); a training package's `boarding` stay (reason Training, tied to the sale and the extra) | Family feed | The placement's extras (section 8.1); a stay's go-home date and weeks (section 8.2) |
+| Her feeding schedule (`breedFeedingScheduleRepo`: brand, amounts by weight and age, notes; a litter's own override) | Family feed | A suggested **What she's eating now** (section 7.2) and the handbook's Feeding chapter |
+| How the buyer found her (`Sale.lead_source`), who referred them (`Sale.referred_by_contact_id`), earlier sales to the same buyer, deposit and balance dates against their due dates, her waitlist application's answers | Family feed | Suggested buyer details (section 12.2) |
+| Extras income per litter (sales' extra charges, KennelOS's income figures) | Family feed | The Reports page's extras income (section 12.1) |
+| The dog marked deceased; a sale returned, or ended with pup died or health problem | Family feed | A suggested life status on the placement (section 9) |
 
 Never from KennelOS: page text, handbook, email wording, layout, photo choice, visibility.
+Never from KennelOS either, because it doesn't record them: who used a program's link or
+code (no program reports that, `referralShare.js`), so program sign-ups come from the
+programs' own reports (section 12.1); and the go-home bag (section 8.4), which is the
+portal's own.
 
 ### 3.3 Milestones: data in, story out
 
@@ -125,6 +157,40 @@ its order and who can see it. So there are two layers:
 
 Editing an entry never changes KennelOS, and a later KennelOS change to the milestone
 never changes her entry. At most it shows "KennelOS changed this milestone" on the draft.
+
+### 3.4 The family feed and the handoff
+
+**The family feed** is new work in KennelOS, built the way its other family exports are
+(`companionExport.js`, `fureverSeedExport.js`): field by field from an allow-list, checked
+before it leaves, so a new KennelOS field never reaches the portal until it's added on
+purpose. It carries only the rows in section 3.2, only for her kennel, and only for a family
+from their pick on. It goes to the portal, never to her public website. Sending sale and
+contact details to a server is a change to KennelOS's rule that they stay on her device
+(KennelOS Waitlist Spec 5.3), made for her kennel alone, so it needs the owner's sign-off
+in KennelOS's own plans as well as here.
+
+**The handoff, step by step:**
+
+1. **The pick.** When a family's pick is recorded in KennelOS (an accepted offer with a
+   chosen puppy, or a sale made on the Sale page), the family feed sends the family and
+   their puppy. Her Today shows **Invite the Reed family**; the invite goes out when she
+   confirms.
+2. **From the pick to pickup.** The family uses both. The status page keeps booking the
+   pickup, asking for extras, transport, backing out and messages; each approved change
+   reaches the portal through the feed (a new pickup time, an added extra, a back-out,
+   which closes the placement and stops its reminders). In the portal, the buttons for
+   those link to the status page ("Book your pickup on your status page"), and portal
+   messaging is off.
+3. **Pickup.** She marks the puppy picked up in the Site Manager, which starts the vet
+   clock (section 5). The portal tells KennelOS through the feed's reply, and from then
+   the status page shows that family only **Your puppy portal**, a link. KennelOS also
+   switches over on its own once its pickup date has passed or the sale is Delivered,
+   whichever comes first, so a missed tap doesn't leave a family on both.
+4. **From pickup on.** The portal only, with its messages on.
+
+**What KennelOS changes for her kennel:** the family feed; the status page's handoff
+(steps 2 and 3); and Companion and Furever off (no Companion link request on her status
+page, no Send to Furever for her pups). Nothing changes for other breeders.
 
 ## 4. What she can change
 
@@ -168,7 +234,8 @@ The highest-stakes feature: missing the visit voids her curable-conditions guara
   after it:
   - **Before pickup** (from the planned go-home date, about 5 days ahead): "Book your vet
     appointment now." Vets are often booked days out. This is also on the go-home
-    checklist.
+    checklist. The family records the booking with **I've booked it** (date, time and,
+    if they like, the clinic), which shows as Booked on her side and stops this reminder.
   - **At pickup:** the deadline, in her time zone and theirs.
   - **About 24 hours before the deadline.**
   - **The morning of the deadline day**, only if no proof has been uploaded.
@@ -203,6 +270,13 @@ The revenue placements and the vet countdown, and nothing else:
 - Retention basics: invite expiry, the activity date, erase on request (section 10)
 - Extended stays: the package on the placement, its go-home date, the timeline split
   between her and the family, and weekly updates with skills and photos (section 8.2)
+- The KennelOS family feed and the handoff (section 3.4); portal messages from pickup
+- Her Site Manager as one app for the website and the portal (section 7.3): Today with
+  both sides, Families with the waitlist, Dogs shared, the Portal tab
+- The go-home bag: her template, what each family was sent, and **What came home in
+  Opal's bag** on Records (section 8.4)
+- Buyer details she records on each family's screen, pre-filled from KennelOS
+  (section 12.2)
 
 **Gate:** one litter run from invite to the vet visit with no fixes by hand.
 
@@ -217,6 +291,11 @@ The revenue placements and the vet countdown, and nothing else:
 - Retention in full: warning emails, Keep, download everything, daily deletion
 - Photo and video packages: full-resolution uploads, video in parts, playback, delivery
   status, download all (section 8.3); video in stay updates
+- The Reports page: sign-ups by litter, where families click, earnings, extras income,
+  the go-home bag against sign-ups, the families who've brought her the most, and who her
+  buyers are (section 12.1). Its before-portal baseline is typed in before launch
+  (section 12), and the program reports from phase 1's litters are typed in as they come,
+  so the page opens with real figures
 
 **Gate:** a litter's families have used the baby book for a month, and the first
 retention warning has gone out correctly (send one to a test family first).
@@ -229,7 +308,8 @@ retention warning has gone out correctly (send one to a test family first).
 - Text reminders for the vet visit, if email proves unreliable
 
 **Fallback:** if a litter goes home before phase 1 is done, ship sign-in, My Puppy, the
-vet countdown and the program links on the go-home page alone.
+vet countdown and the program links on the go-home page alone, with families and pickups
+typed in by her rather than fed from KennelOS.
 
 ## 7. Look and screens
 
@@ -248,9 +328,13 @@ clickable prototype, which follows this, is
   her kennel photos fill the top of Home; galleries, update cards and baby book entries
   are photo-first. Icons from one set mark every tile, tab and status box, inside a
   soft tinted square.
-- **Softly rounded, not pill-shaped:** cards and photos 8px, icon tiles 10px, buttons and
-  inputs 4px, the puppy's photo and the header logo round. Buttons stay rectangles: one
-  solid button for the main action on a screen, outlined or text-with-arrow for the rest.
+- **Softly rounded:** cards, tiles and section bands 14px; buttons, inputs and small
+  photos 8px; icon squares 12px; the puppy's photo and the header logo round (the values
+  the Site Manager already uses, `--r` and `--rc` in `app.css`). Buttons are rounded
+  rectangles: one solid button for the main action on a screen, outlined or
+  text-with-arrow for the rest. The fully round exceptions are few and named: the round
+  button on the dark food band and on the stay's **Write this week's update**, the
+  Everything / From A-K / From us and Charts / Table toggles, and filter chips.
 - **Status is a word with a small mark** (Done, Next, Booked, Overdue), not a coloured
   lozenge. Red means trouble (overdue, bounced, no proof near the deadline), never
   "coming up".
@@ -287,19 +371,31 @@ One page, four states, worked out from the go-home date, pickup time and today:
 
 | Stage | Top of the page | Below it |
 |---|---|---|
-| **Before go-home** | "Opal comes home in 5 days", the pickup day and time | **Book your vet visit now** (with the deadline it will have), the go-home checklist, **What she's eating now** |
+| **Before go-home** (from the pick) | "Opal comes home in 5 days", the pickup day and time, or **Book your pickup on your status page** while none is booked | **Book your vet visit now** (with the deadline it will have), the go-home checklist, **What she's eating now** |
 | **Pickup to vet deadline** | The vet visit: hours left, the deadline's date and time, booked or not, **Upload vet record** (the page's one solid button) | Insurance activation and its deadline, the food, the next timeline tasks |
 | **Weeks 1–8 and on** | The next task or two ("Register Opal with AKC by Jan 22"), each with its link | A prompt to add to the baby book, the vet visit shown as done |
 | **Later** | Birthdays (littermates by call name, with permission), "a year ago today" from the baby book | Monthly milestone, the printable book (phase 3) |
 
-- **Layout, top to bottom:** a photo with the stage's greeting ("Welcome home · Opal is
-  home"); the profile card (round photo, name, litter, born, go-home, any stay) with a
-  tinted box beside it for what's due now (comes home in N days, hours left for the
-  vet visit with **Upload vet record**, week 3 of 4 of the stay); the stage's own cards;
-  food and insurance as picture tiles; the timeline as a row of steps with the next
-  tasks under it; **Quick links** as six icon tiles; the disclosure. The photo is kept
-  short on a phone (about 210px) so the profile card and what's due still show without
-  much scrolling.
+- **Layout, top to bottom** (as the prototype has it; each section type once, section
+  7.1):
+  1. a full-width photo with the stage's greeting ("Welcome home · Opal is home"), kept
+     short on a phone (about 180px) so what's below still shows without much scrolling;
+  2. the pup card (round photo, script name, gender sign, born, go-home, any stay) beside
+     the green calendar block for what's due now (comes home in N days, hours left for
+     the vet visit with **Upload record**, week 3 of 4 of the stay, the next task);
+  3. the stage's own band of big numbered steps (how the stay works, the vet visit's
+     book / see / upload, what's next), or the stay's skill rings;
+  4. the go-home checklist, from two weeks before go-home;
+  5. the photo package (its progress, or its photos once delivered), or before go-home,
+     for families without one, the offer;
+  6. the dark green food band;
+  7. the baby book's side-scrolling cards (from go-home on, and through a stay);
+  8. **Included with Opal**: the insurance trial, AKC registration and A-K's picks as an
+     icon-led list;
+  9. **Read next**: three handbook chapters as photo rows;
+  10. **Quick links**; the disclosure.
+
+  The pinned action bar sits above the tabs (section 7.1).
 - **Quick links:** Puppy handbook, Photo album (Photo package if bought), the puppy's
   records, Baby book, Timeline (Stay updates during a stay), and **A-K's picks**, her
   recommended products in one place with the disclosure. One picks tile replaces the
@@ -312,25 +408,35 @@ One page, four states, worked out from the go-home date, pickup time and today:
   never "Get a quote" or "peace of mind".
 - **The affiliate disclosure** sits at the foot of every page with program links.
 - **Bottom navigation: five tabs** on a dark green bar, each with its own icon, the
-  current one highlighted: Home, Timeline (Stay during a stay), Photos, Baby book,
-  Records. The handbook and picks are in Quick links. Account (email choices, download
-  everything, sign out) opens from the header.
+  current one highlighted: Home, Timeline (Stay from the pick until a stay ends), Photos,
+  Baby book, Records. The handbook and picks are in Quick links.
+- **Account** opens from the header: the family's emails; email choices (vet and go-home
+  reminders, and stay updates while a stay runs, are always on; birthday and, from phase
+  3, monthly tips can be turned off); **Download everything**; sign out; and **Delete our
+  account**, which is the erase of section 10 asked for by the family themselves, after a
+  confirmation, keeping her sale records.
+- **Messages:** before pickup a **Message A-K** button links to the status page; from
+  pickup on it opens the portal's own messages (section 2).
+- **Smaller pieces the prototype shows:** a search box on the handbook; the puppy's
+  pedigree with the contract and health guarantee under Records; family baby book entries
+  only once the puppy is home.
 
 ### 7.3 Her screens: one app for the website and the portal
 
 The portal's admin is not a second app or a separate section: the Site Manager she
 already has becomes one app for her website and her families, in the look of section
-7.1 (already applied to the existing screens: Fraunces and Mulish, square corners,
-the teal header that matches the app icon). Five places, a sidebar on a computer and
-tabs on a phone:
+7.1 (already applied to the existing screens: Fraunces and Mulish, the softly rounded
+corners, the teal header that matches the app icon). Six places, a sidebar on a computer
+and tabs on a phone:
 
 | Tab | Holds |
 |---|---|
 | **Today** | Everything that needs her, from both sides (below), plus "N website changes not published" with **Review and publish** |
-| **Families** | **Puppy families** (the portal) and the **Waitlist** (the website's list), so a family moves from one to the other when they take a puppy and gets their invite then |
-| **Dogs** | Dogs, litters and puppies: one record each, used by both. A puppy's website status (Available, Reserved, Placed) sits beside its family and pickup. KennelOS baby book drafts are here too |
+| **Families** | **Puppy families** (the portal) and the **Waitlist** (the website's list), so a family moves from one to the other at their pick and gets their invite then (section 3.4) |
+| **Dogs** | Dogs, litters and puppies: one record each, used by both. A puppy's website status sits beside its family and pickup. Stay puppies' weekly updates and photo packages are here, and KennelOS baby book drafts |
 | **Website** | Publish, view, preview, share; the inbox and reviews to approve; photos and albums; pages and wording, waitlist and application, how to pay, extras, recommended products, kennel details, KennelOS (today's Site Manager screens) |
-| **Portal** | What families see: handbook chapters, programs, checklist and timeline templates, email wording |
+| **Portal** | What families see: the extras it delivers (each one's delivery type, skills, cadence, package contents), the go-home bag template, buyer details she tracks, handbook chapters, programs and where each shows, checklist and timeline templates, email wording |
+| **Reports** | Programs, earnings, extras and her buyers (section 12.1) |
 
 **Shared, not copied:** photos and albums feed both the website and baby books, and
 the website's Recommended products are the portal's programs: one list, one place to
@@ -339,30 +445,48 @@ change a link or code.
 The screens:
 
 - **Today** leads with what needs her, from the website and the portal, and shows only the items that are there:
-  - **Mark picked up** on any puppy going home today: the main action on the screen;
+  - puppies going home in the next 7 days, each with its pickup time and whether the vet
+    visit is booked, and **Mark picked up** (the solid, main action on the day itself);
+  - families to invite, newly picked in KennelOS (section 3.4);
   - vet proof to review, with **Accept**;
+  - vet visits not booked as pickup nears;
   - emails that bounced (so she can text the family);
+  - stay updates due, and photo packages with a session or due date coming up;
   - invites not accepted;
   - KennelOS drafts to review;
   - families due for deletion in the next 30 days;
-  - new messages from the website and reviews to approve.
+  - new messages: from families (from pickup on), from the website, and reviews to approve.
   
   Totals such as "62 families" are not on Today.
 - **Vet visits** list each placement with its status in words: Not booked, Booked, Record
-  uploaded, Accepted, and time left. Only the ones in trouble are red.
+  uploaded, Accepted, Missed, and time left. Only the ones in trouble are red (Missed, and
+  Not booked with under 48 hours left).
 - **Activity** shows actions (completed the checklist, uploaded a record, shared
   photos), not page views. If page views are ever shown, the privacy page says so.
 - **Families:** each family's emails, puppy, pickup time (editable; the deadline
-  moves with it), vet proof, reminder log, program status, **Keep**, resend invite,
-  delete (undoable for 30 days) and erase.
-- **Dogs:** KennelOS milestones to turn into baby book entries, or dismiss, beside the litters and puppies they belong to.
-- **Portal:** handbook chapters (order, on/off, edit), programs and where each appears,
-  checklist and timeline templates, email wording.
+  moves with it), vet proof, reminder log, program status, their messages, **Extras**
+  (each with its status and whether KennelOS sent it, section 8.5), **Sent home with**
+  (section 8.4), **About this family** (section 12.2), **Keep**, resend invite, delete
+  (undoable for 30 days) and erase. The Waitlist side lists the families waiting, in
+  order; offering a puppy stays in KennelOS.
+- **Dogs:** each puppy's card with its family, go-home, extras and website status
+  (KennelPort's own: Available, Reserved, Placed, Staying, which on the site reads
+  "Joining our program" for a puppy she keeps, so an extended stay is never shown as
+  Staying; a stay is an extra on the placement, section 8.2). **Write this week's
+  update** for each stay puppy; each photo package's status and uploads; KennelOS
+  milestones to turn into baby book entries, or dismiss.
+- **Portal:** the extras it delivers and how (section 8.5), the go-home bag template
+  (section 8.4), **Buyer details you track** (section 12.2), handbook chapters (order,
+  on/off, edit), programs and where each appears, checklist and timeline templates, email
+  wording, and whether the weight chart shows on puppies' baby books (section 3.3).
+- **Reports:** section 12.1.
 - **Setup progress** shows only while something is unfinished.
 - **Her screens get the family pages' variety** (same tiles, bands, pup cards, calendar
   blocks, rings and photo rows), and **every long form is sectioned:**
   - fields under titled sections that match how she thinks (The litter, Parents, Dates,
-    Prices; About, Photo and story, Where they show);
+    Prices; About, Photo and story, Where they show; for a puppy, The puppy, Photo and
+    story, and, once the portal is on, Family and extras: family, picked up, microchip,
+    extras);
   - short fields two to a row (girl and boy prices, born and ready, dam and sire), with
     hints under the input so neighbours line up;
   - every on/off setting together at the end under **On your website**, as switches, not
@@ -399,8 +523,9 @@ The same extra appears in three places, each with its own job. Nothing is typed 
   today). The portal records only *that* a placement has the extra.
 - **Who bought what:** with KennelOS linked, a family's extra arrives as a suggestion on
   their placement ("The Reed family bought the 12-week stay"), which she confirms
-  (section 3.1). Without KennelOS, or to correct it, she adds or removes it on the
-  family's screen.
+  (section 3.1). Families ask for extras on their status page, before pickup, and she
+  approves them in KennelOS as today; the approved extra then arrives the same way.
+  Without KennelOS, or to correct it, she adds or removes it on the family's screen.
 - **Each extra in the catalog gets a delivery type:** *stay*, *media*, or none (an ordinary
   extra, like a puppy pack, that the portal only lists on the placement).
 
@@ -409,7 +534,9 @@ The same extra appears in three places, each with its own job. Nothing is typed 
 **What changes for the family.** The stay moves everything that hangs on pickup:
 
 - **Go-home date** = birth date + the package's weeks (16 weeks for the Premier package),
-  set on the placement and editable.
+  set on the placement and editable. With KennelOS, the training package's boarding stay
+  (KennelOS Family Requests plan section 6) sets it, and the pickup the family books on
+  the status page falls after the stay.
 - **Home page, before go-home** (section 7.2) becomes a stay page for those weeks: "Opal
   comes home in 3 weeks · week 5 of 8 of her extended stay", the latest update, and
   progress on each skill.
@@ -460,9 +587,10 @@ once a week (the cadence is set on the package):
   puts on her website or baby book entries is copied there, so deleting the package
   later doesn't remove it from her site.
 - **Offering it.** Families who haven't bought a package can see it on their home page
-  before go-home, with **Ask about this**, which sends her a message through the site's
-  inbox. It's her own product and counts as an offer, not an affiliate link, and it
-  never shows to families who already have it.
+  before go-home, with **Ask about this**, which opens their status page's extras request
+  (the request and her approval stay in KennelOS, section 3.4). It's her own product and
+  counts as an offer, not an affiliate link, and it never shows to families who already
+  have it.
 
 **Video: what's new to build.** KennelPort only embeds videos from YouTube and similar
 services today. Hosting them means:
@@ -508,7 +636,7 @@ revenue tool.
 | Her side (Site Manager, section 7.3) | The family's side |
 |---|---|
 | **Today:** stay updates due, packages due or ready to deliver | **Home:** the stay page during the stay; "Your photo package is ready" when delivered |
-| **Dogs:** each puppy shows its extras; **Write this week's update**; upload to a package, set its status | **Stay** (a tab while the stay runs, in place of Timeline): updates, skills, countdown to go-home |
+| **Dogs:** each puppy shows its extras; **Write this week's update**; upload to a package, set its status | **Stay** (a tab from the pick until the stay ends, in place of Timeline): updates, skills, countdown to go-home |
 | **Families:** each placement's extras, add or remove, KennelOS suggestions to confirm | **Photos:** the package gallery (view, play, download), beside the baby book |
 | **Portal:** each extra's delivery type, skills list, update cadence, package contents and delivery note | **Records:** vaccines and deworming she gave during the stay |
 | **Website:** the `/extras` catalog, as built | |
@@ -521,14 +649,17 @@ New tables, all with `site_id` like the rest of KennelPort. Imported tables also
 | Table | Key fields | Purpose |
 |---|---|---|
 | `portal_families` | name, emails (encrypted) and their hashes, email preferences, default sharing level, invited at, first signed in, last activity at, keep, warned at, status (active / erased) | One per family. Several emails each, so two partners can both sign in |
-| `portal_placements` | family, puppy, the name the family gave, microchip, planned go-home (8 weeks, or the stay package's weeks), picked-up at, vet deadline, vet proof file, proof accepted at, life status (with family / deceased / rehomed / returned) and its date | One per puppy a family takes home. A repeat buyer gets a second placement, not a second family. Everything family-facing about the puppy lives here, so it is always hers to edit |
+| `portal_placements` | family, puppy, the name the family gave, microchip, planned go-home (8 weeks, or the stay package's weeks), picked-up at, handed off at (the status page stops, section 3.4), vet booked for (date and time) and clinic, as the family entered them, vet deadline, vet proof file, proof accepted at, life status (with family / deceased / rehomed / returned) and its date | One per puppy a family takes home. A repeat buyer gets a second placement, not a second family. Everything family-facing about the puppy lives here, so it is always hers to edit |
 | `litters`, `puppies`, `dogs` (existing) | as they are | The portal points at the site's own records instead of copying them, so she adds a litter once. Their public-site status (`placed`, `remembered`) stays separate from a placement's life status. While the site is linked, KennelOS owns some of their fields (plan 5.3); unlinking makes them all editable (plan 5.2), so rule 1 still holds |
 | `products` (existing) | adds type (food / insurance / registration / product / other), what the family must do, family-specific (yes/no) | Every program and product link, stored once |
 | `portal_placements_programs` | placement, product, status (not started / clicked / done), family-specific code or certificate | Which families still need each step |
 | `portal_link_spots` | product, page or chapter or checklist item, order | Where each link appears |
 | `portal_health_records` | puppy, type (vaccine / deworming / vet visit / other), date, notes, file | Shot record and vet proof |
 | `portal_checklist_items`, `portal_timeline_tasks` | her templates (each task counts from birth or from pickup), plus per-placement additions, removals and dates | Go-home checklist and first-weeks timeline |
+| `portal_placement_progress` | placement, checklist item or timeline task, done at, by (family / breeder) | The family's ticks and **Mark done**, so a done step's reminders stop and her Activity shows it |
+| `portal_messages` | family, from (family / breeder), body, attachments, sent at, read at | Messages from pickup on (section 2). With the family's account |
 | `portal_chapters` | title, order, body, on/off | Handbook |
+| `portal_settings` | weight chart on puppies' baby books (on/off), and other portal-wide choices | One row for her site |
 | `portal_entries` | puppy or litter, author (breeder / family), date shown, title, body, photos, visibility, draft (yes/no), from KennelOS milestone(s) | Baby book |
 | `portal_photo_consents` | entry or photo, family, level (private / shared with her / OK to post), given at | Consent record, kept as long as she uses the photo |
 | `portal_email_log` | family, kind, sent at, address hash, provider ID, result | Reminder evidence, deliverability |
@@ -553,12 +684,17 @@ dogs already have `remembered` and `died_on`), and
 **Migrations:** following `CLAUDE.md`, the branch that builds phase 1 adds one migration
 for all of this.
 
+The feed's work on the KennelOS side (the family feed, the status page handoff, Companion
+and Furever off for her kennel, section 3.4) is built in the KennelOS repository and follows
+its own rules.
+
 ## 10. Retention and deletion
 
 Two kinds of data, kept on different clocks:
 
-- **The family's portal account:** sign-in, sessions, emails, preferences, and the
-  family's own baby book entries and uploads. Deleted for inactivity.
+- **The family's portal account:** sign-in, sessions, emails, preferences, messages, and
+  the family's own baby book entries and uploads. Deleted for inactivity, or at once when
+  the family deletes it themselves from Account (an erase, section 10.4).
 - **Her records of the sale:** placement, puppy, pickup time, contract, vet proof and the
   reminder log. She needs these for any health guarantee claim, so they are kept for
   the guarantee period, not deleted with the account.
@@ -568,10 +704,12 @@ Two kinds of data, kept on different clocks:
 | What | When it goes |
 |---|---|
 | Unused invite link | Expires 30 days after sending. Nothing is deleted; she can resend |
-| Family that never signed in | Account deleted 90 days after **pickup** (not after the invite, which may go out at deposit, months earlier), with warnings |
+| Family that never signed in | Account deleted 90 days after **pickup** (not after the invite, which goes out at the pick, often weeks or months earlier), with warnings |
 | Inactive family | Account deleted 12 months after last activity, with warnings at 30 and 7 days |
 | Photo and video package files | Kept at least 2 years after delivery whatever the activity, then deleted with 60 and 14 days' warning, each with **Download all** |
 | Stay updates | With the family's account; any update turned into a baby book entry goes with the baby book |
+| Messages | With the family's account |
+| A family who backs out before pickup | Their portal account goes with the closed placement, 30 days after the back-out (undoable until then); her sale records stay in KennelOS |
 | Her buyer details, go-home bag records, program results | Kept with her sale records until she deletes them; not removed with the family's portal account |
 | Sale record, contract, vet proof, reminder log | Kept until the end of her longest health guarantee plus 6 months, then deleted |
 | Clicks and program status | Family removed from the rows at account deletion; the counts stay for her stats |
@@ -664,7 +802,8 @@ A tab of its own in the Site Manager. Everything on it is hers alone.
 - **Go-home bag and sign-ups:** for each bag item tied to a program, the program's
   sign-up rate among families who got it and those who didn't.
 - **Families who've brought you the most:** extras, program credit and referrals per
-  family, sorted. Her list for asking for referrals and reviews, and for offering the
+  family, sorted. Extras and referrals come from KennelOS's sales; program credit from the
+  programs' reports. Her list for asking for referrals and reviews, and for offering the
   next litter first.
 - **Charts or Table** for every figure, hover for exact numbers, and **Export** to a
   spreadsheet (CSV).
@@ -686,6 +825,13 @@ and sources bring her the most.
   families they've referred, social reach, likely to buy again, budget, how they paid,
   and notes. She turns fields on or off and adds her own (a choice, yes/no, short text,
   or tick-any) under Portal, **Buyer details you track**.
+- **KennelOS fills in what it already knows** (section 3.2), as suggestions she can
+  change: how they found her (the sale's lead source), referred by, families they've
+  referred (sales that name them as referrer), repeat family (an earlier sale to the same
+  buyer), how they paid (deposit and balance dates against when they were due), and any
+  answer from her waitlist application she maps to a field (state, first Boston, who's at
+  home). Her application's question types are the same four as these fields, so a
+  question maps to a field once and every family after fills itself in.
 - **Reports use them:** how families found her, each program's sign-ups by source, and
   the families who've brought her the most. Every count shows, however small the group.
 - **Families don't see them.** They're her business records, not part of the family's
@@ -724,11 +870,16 @@ and sources bring her the most.
 - [ ] Get her health guarantee periods (sets the sale record's retention)
 - [ ] Collect the handbook and current food details
 - [ ] Pull baseline program sign-up rates from recent litters
-- [ ] Check which KennelOS data the bundle API already sends (plan 5.3) and what the
-      portal needs added (families, emails, pickup dates, health records)
+- [x] Check which KennelOS data the bundle API already sends (plan 5.3): no family data
+      at all, by design (section 3.2). The portal needs a new family feed
+- [ ] Agree the family feed in KennelOS's own plans: its allow-list (section 3.2), sending
+      sale and contact details to the server for her kennel only, the status page
+      handoff, and Companion and Furever off for her kennel (section 3.4)
+- [ ] Map her waitlist application's questions to buyer detail fields (section 12.2)
 - [ ] Reword KennelPort plan decision 20 (section 2)
-- [ ] Check what KennelOS records for a family's extras (requested, bought, paid) and
-      whether the bundle can send it
+- [x] Check what KennelOS records for a family's extras: the sale's extra charges, the
+      family's requests on the status page, and a training package's boarding stay
+      (KennelOS Family Requests plan sections 3 and 6). The family feed sends them
 - [ ] Get her photo and video package contents, file counts, how she shoots video, and
       her package terms (her own use of the photos, how long she keeps them)
 - [ ] Check R2 multipart upload limits, the Worker request limit and R2 pricing; try
@@ -755,3 +906,9 @@ and sources bring her the most.
 12. Photo and video packages: what's in each, how soon after go-home is it delivered, and
     may she use package photos on her own site?
 13. Should families be able to share their package gallery with relatives?
+14. The handoff at pickup: is "her Mark picked up, or else KennelOS's pickup date passed
+    or the sale Delivered" the right switch for the status page (section 3.4)?
+15. After pickup, a family wants another extra (a second photo session, say): a portal
+    message she handles by hand, or a request in the portal that reaches KennelOS?
+16. The look's few fully round controls (section 7.1): keep them, or square them off to
+    match the buttons?
