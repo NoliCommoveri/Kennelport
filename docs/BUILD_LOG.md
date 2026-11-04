@@ -1104,4 +1104,5 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   some family has one; an unknown icon draws nothing), and tapping it shows her
   description in the same bubble as the date added. The drawings are copied from
   KennelOS's `shared/assets/programIcons.js`. Template CSS: the column, the bubble
-  opening below, and the phone grid with the extra column. Test added.
+  opening below, and the phone grid with the extra column. Test added. Template
+  `ASSET_VERSION` 14.
