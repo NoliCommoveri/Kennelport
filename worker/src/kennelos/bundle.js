@@ -9,7 +9,8 @@
 //   { format: 1, bundle_id, kennel_id, waitlist_public_id?,
 //     dogs: [{ id, call_name, registered_name, registry, sex, date_of_birth, color,
 //              status: puppy | active_breeding | for_sale | retired_breeding | deceased,
-//              died_on, titles: [..], health: [{ id, test, result, normal, date, verify_url }] }],
+//              died_on, titles: [..], health: [{ id, test, result, normal, date, verify_url }],
+//              co_owned?, lives_away?, lives_with_kennel_id?, co_owner_kennel_ids?: [..] }],
 //     litters: [{ id, pairing_id, heat_id, name, dam_id, sire_id, dam_name, sire_name,
 //                 expected_on, born_on, ready_on, deposits_on, prices: { price_female, … },
 //                 puppies: [{ id, name, collar, sex, color, registration, registry,
@@ -19,12 +20,18 @@
 //     extras?: [{ id, name, group, description, price_from, price_to }],
 //     products?: [{ id, name, link_url, code, code_note }],
 //     steps?: [{ id, heading, body }],
+//     partner_kennels?: [{ id, name, website }],
 //     payment?: { application_fee?: {…}, deposit?: {…} } }
 //
 // Only records she marked Show on website are in it (dogs, litters, pairings; a
 // heat only for a dam with heats_online), with the statuses she set: KennelOS maps
 // a puppy's disposition with isPupAvailable, and does the heat-to-pairing rules,
 // so the site works nothing out (decision 30).
+//
+// Co-owned dogs (docs/Co_Owned_Dogs_Plan.md) come with partner_kennels: the
+// kennels of a dog's co-owners that she ticked Name this kennel on my website in
+// KennelOS, by public name and website only. A dog's four co-owned fields count
+// only in a bundle that has the section; one without leaves them as they are.
 //
 // Records are matched by KennelOS id, only within one table: a puppy and a dog may
 // share one, since a KennelOS puppy is a Dog. A litter's kind (litter, pairing,
@@ -39,16 +46,18 @@ import { PUBLIC_ID } from '../feed.js';
 import { loadSnapshot } from '../publish.js';
 import { siteBase, siteFacts } from './link.js';
 import { litterClockStatements } from './clock.js';
+import { coOwnedRules } from '../content/records.js';
 
 export const BUNDLE_FORMAT = 1;
 export const MAX_BUNDLE_BYTES = 1024 * 1024;
-export const MAX = { dogs: 200, litters: 100, puppies: 30, pairings: 50, heats: 50, health: 60, extras: 100, products: 50, steps: 20, titles: 20 };
+export const MAX = { dogs: 200, litters: 100, puppies: 30, pairings: 50, heats: 50, health: 60, extras: 100, products: 50, steps: 20, titles: 20, partner_kennels: 50, co_owner_kennels: 10 };
 
 // The optional sections this Worker takes. Each answer lists them (siteFacts), so
 // KennelOS sends a new section only to a Worker that knows it, instead of having
 // the whole bundle refused.
 // 'heat_id': a pairing's and a litter's heat_id, the heat it uses.
-export const SECTIONS = ['products', 'registry', 'heat_id'];
+// 'partner_kennels': the list, and the co-owned fields on each dog.
+export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels'];
 
 // ---------- checking ----------
 
@@ -64,7 +73,10 @@ const SEX = ENUM(['female', 'male'], true);
 const SHAPES = {
   dog: { id: ID, call_name: S(40, true), registered_name: S(120), registry: S(30), sex: SEX, date_of_birth: DATE, color: S(40),
     status: ENUM(['puppy', 'active_breeding', 'for_sale', 'retired_breeding', 'deceased'], true), died_on: DATE,
-    titles: { type: 'list', max: MAX.titles, itemMax: 30 }, health: { list: 'health', max: MAX.health } },
+    titles: { type: 'list', max: MAX.titles, itemMax: 30 }, health: { list: 'health', max: MAX.health },
+    co_owned: { type: 'bool' }, lives_away: { type: 'bool' }, lives_with_kennel_id: REF, co_owner_kennel_ids: { type: 'list', max: MAX.co_owner_kennels, itemMax: 80 } },
+  // A partner kennel: its public name and website, never a person.
+  partner_kennel: { id: ID, name: S(80, true), website: { type: 'url' } },
   health: { id: ID, test: S(60, true), result: S(60, true), normal: { type: 'bool' }, date: DATE, verify_url: { type: 'url' } },
   litter: { id: ID, pairing_id: REF, heat_id: REF, name: S(80), dam_id: REF, sire_id: REF, dam_name: S(60), sire_name: S(60),
     expected_on: DATE, born_on: DATE, ready_on: DATE, deposits_on: DATE, prices: { object: 'prices' }, puppies: { list: 'puppy', max: MAX.puppies } },
@@ -113,7 +125,7 @@ function cleanList(shape, v, path, max) {
   return rows;
 }
 
-const TOP = ['format', 'bundle_id', 'kennel_id', 'sent_at', 'waitlist_public_id', 'dogs', 'litters', 'pairings', 'heats', 'extras', 'products', 'steps', 'payment'];
+const TOP = ['format', 'bundle_id', 'kennel_id', 'sent_at', 'waitlist_public_id', 'dogs', 'litters', 'pairings', 'heats', 'extras', 'products', 'steps', 'payment', 'partner_kennels'];
 
 export function cleanBundle(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw bad('bundle', 'must be an object');
@@ -134,8 +146,18 @@ export function cleanBundle(body) {
     extras: 'extras' in body ? cleanList('extra', body.extras, 'extras', MAX.extras) : null,
     products: 'products' in body ? cleanList('product', body.products, 'products', MAX.products) : null,
     steps: 'steps' in body ? cleanList('step', body.steps, 'steps', MAX.steps) : null,
+    partner_kennels: 'partner_kennels' in body ? cleanList('partner_kennel', body.partner_kennels, 'partner_kennels', MAX.partner_kennels) : null,
     payment: null,
   };
+  // A dog names only kennels this bundle sends.
+  if (out.partner_kennels) {
+    const sent = new Set(out.partner_kennels.map((x) => x.id));
+    out.dogs.forEach((d, i) => {
+      for (const id of [d.lives_with_kennel_id, ...d.co_owner_kennel_ids].filter(Boolean)) {
+        if (!sent.has(id)) throw bad(`dogs[${i}]`, `names kennel "${id}", which partner_kennels doesn't send`);
+      }
+    });
+  }
   if (out.waitlist_public_id !== null && !PUBLIC_ID.test(out.waitlist_public_id)) throw bad('waitlist_public_id', 'not a KennelOS kennel id');
   if ('payment' in body && body.payment != null) {
     if (typeof body.payment !== 'object' || Array.isArray(body.payment)) throw bad('payment', 'must be an object');
@@ -154,7 +176,8 @@ export function cleanBundle(body) {
 // fields are KennelOS's blanks included; derived ones (titles, health results,
 // upcoming items) only overwrite when they have something.
 export const OWNED = {
-  dogs: ['call_name', 'registered_name', 'registry', 'sex', 'date_of_birth', 'color', 'status', 'upcoming', 'for_sale', 'died_on', 'titles'],
+  dogs: ['call_name', 'registered_name', 'registry', 'sex', 'date_of_birth', 'color', 'status', 'upcoming', 'for_sale', 'died_on', 'titles', 'co_owned', 'lives_away', 'lives_with_kennel_id', 'co_owned_with_ids'],
+  partners: ['name', 'url'],
   litters: ['stage', 'dam_id', 'sire_id', 'dam_name', 'sire_name', 'born_on', 'ready_on', 'deposits_on', 'expected_label'],
   puppies: ['name', 'collar', 'sex', 'color', 'status', 'registration', 'registry'],
   health: ['test', 'result', 'normal', 'date', 'verify_url'],
@@ -238,7 +261,52 @@ export class Writer {
       ...DOG_STATUS[bd.status], died_on: bd.status === 'deceased' ? bd.died_on : null,
     };
     if (bd.titles.length) v.titles = bd.titles.join(' ').slice(0, 120);
+    // Co-owned, only from a bundle with partner_kennels (this.partnerByKos).
+    if (this.partnerByKos) {
+      const kennel = (kos) => (kos ? this.partnerByKos.get(kos) ?? null : null);
+      const c = coOwnedRules({
+        co_owned: bd.co_owned ? 1 : 0, lives_away: bd.lives_away ? 1 : 0, lives_with_kennel_id: kennel(bd.lives_with_kennel_id),
+        co_owned_with_ids: bd.co_owner_kennel_ids.map(kennel).filter(Boolean),
+      });
+      Object.assign(v, c, { co_owned_with_ids: c.co_owned_with_ids.length ? JSON.stringify(c.co_owned_with_ids) : null });
+    }
     return v;
+  }
+
+  // ----- partner kennels -----
+  // Matched by KennelOS id, else one she made by hand with the same name (taken
+  // over, keeping its logo); the rest are new. One no longer sent is hidden, not
+  // deleted: its logo lives only here. Name and website are KennelOS's.
+  partners(list, existing) {
+    this.partnerByKos = new Map();
+    const byKos = new Map(existing.filter((x) => x.kennelos_id).map((x) => [x.kennelos_id, x]));
+    const free = existing.filter((x) => !x.kennelos_id);
+    let sort = Math.max(-1, ...existing.map((x) => x.sort));
+    for (const x of list) {
+      const values = { name: x.name, url: x.website, source: 'kennelos', kennelos_id: x.id, hidden_by_kennelos: 0 };
+      let cur = byKos.get(x.id);
+      if (!cur) {
+        const j = free.findIndex((r) => lower(r.name) === lower(x.name));
+        if (j >= 0) [cur] = free.splice(j, 1);
+      }
+      if (cur) {
+        if (cur.hidden_by_kennelos) this.counts.back++;
+        if (this.update('partner_kennels', cur, values)) this.counts.updated++;
+        this.partnerByKos.set(x.id, cur.id);
+        continue;
+      }
+      const id = crypto.randomUUID();
+      this.insert('partner_kennels', { id, site_id: this.siteId, ...values, sort: ++sort, created_at: this.t });
+      this.partnerByKos.set(x.id, id);
+      this.counts.created++;
+    }
+    const sent = new Set(list.map((x) => x.id));
+    for (const x of existing) {
+      if (x.source === 'kennelos' && x.kennelos_id && !sent.has(x.kennelos_id) && !x.hidden_by_kennelos) {
+        this.s.push(this.db.prepare('UPDATE partner_kennels SET hidden_by_kennelos = 1 WHERE id = ?').bind(x.id));
+        this.counts.off++;
+      }
+    }
   }
 
   createDog(bd, extra = {}) {
@@ -416,6 +484,7 @@ export async function siteState(env, siteId) {
     extras: await all('SELECT * FROM extras WHERE site_id = ?'),
     steps: await all("SELECT * FROM steps WHERE site_id = ? AND page = 'how_it_works'"),
     declines: await all('SELECT * FROM link_declines WHERE site_id = ?'),
+    partners: await all('SELECT * FROM partner_kennels WHERE site_id = ?'),
   };
 }
 
@@ -438,6 +507,9 @@ export async function applyBundle(env, device, body) {
   // A KennelOS record with no match, whose name matches a website one not yet
   // linked: wait for her to confirm or decline the pair (plan 5.2 step 4).
   const candidate = (kind, rows, name, kos) => rows.find((r) => !r.kennelos_id && !claimed.has(r.id) && lower(r[kind === 'dogs' ? 'call_name' : 'name']) === lower(name) && !declined(kind, kos, r.id));
+
+  // Partner kennels first: dogs name them.
+  if (clean.partner_kennels) w.partners(clean.partner_kennels, st.partners);
 
   // Dogs.
   const sentDogs = new Set(clean.dogs.map((d) => d.id));

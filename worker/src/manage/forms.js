@@ -42,6 +42,17 @@ const LABELS = {
     price: ['Asking price, in dollars', 'Shown only with "Show prices of extras and adults" on under Kennel details; otherwise "Contact us for pricing".'],
     died_on: ['Date of death', 'For a dog in memory.'],
     health_display: ['Health results shown', 'Only results you tick below ever show.'],
+    co_owned: ['Co-owned', 'Owned with another breeder. Its page says "Co-owned with" each of the kennels below.'],
+    lives_away: ['Lives with a co-owner', 'On: it shows only under Co-owned on your Dogs page, not with your own dogs or on Home. Off: it lives with you and shows like your own dogs.'],
+    lives_with_kennel_id: ['Lives with', 'The co-owner\'s kennel it lives with now.'],
+    co_owned_with_ids: ['Co-owned with', 'Its co-owners\' kennels. Add them under Partner kennels.'],
+    co_owned_heading: ['Co-owned section heading', 'Leave empty for "Shared with friends". The section lists co-owned dogs living with a co-owner.'],
+    co_owned_lede: ['Line under the Co-owned heading', 'Leave empty for "Dogs we co-own, living with partner kennels."'],
+  },
+  partners: {
+    name: ['Kennel name', null],
+    url: ['Their website', 'Their name and logo link here.'],
+    photo_id: ['Their logo', 'Shown small beside their name. A square logo works best.'],
   },
   health: { test: ['Test', 'For example "Patellas (OFA)".'], result: ['Result', null], normal: ['This is a normal result', null], date: ['Date', null], verify_url: ['Link to check it', 'For example the OFA page for this result.'], show: ['Show on my website', null] },
   litters: {
@@ -209,6 +220,8 @@ function lockedField(name, f, value, ctx, label) {
   if (value === null || value === undefined || value === '' || (Array.isArray(value) && !value.length)) shown = '—';
   else if (f.type === 'bool') shown = value ? 'Yes' : 'No';
   else if (f.type === 'dogid') shown = (ctx.dogs ?? []).find((d) => d.id === value)?.call_name ?? '—';
+  else if (f.type === 'kennelid') shown = (ctx.partners ?? []).find((k) => k.id === value)?.name ?? '—';
+  else if (f.type === 'list' && f.item === 'kennel') shown = value.map((id) => (ctx.partners ?? []).find((k) => k.id === id)?.name).filter(Boolean).join(', ') || '—';
   else if (f.type === 'enum') shown = enumWords(ctx.kind, name, value);
   else if (Array.isArray(value)) shown = value.join(', ');
   else shown = String(value);
@@ -238,6 +251,10 @@ export function field(name, f, value, ctx) {
       const litters = ctx.litters ?? [];
       return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"><option value="">None</option>${litters.map((l) => `<option value="${esc(l.id)}"${l.id === value ? ' selected' : ''}>${esc(l.name)}</option>`).join('')}</select></label>`;
     }
+    case 'kennelid': {
+      const partners = ctx.partners ?? [];
+      return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"><option value="">—</option>${partners.map((k) => `<option value="${esc(k.id)}"${k.id === value ? ' selected' : ''}>${esc(k.name)}</option>`).join('')}</select></label>`;
+    }
     case 'dogid': {
       const dogs = ctx.dogs ?? [];
       return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"><option value="">—</option>${dogs.map((d) => `<option value="${esc(d.id)}"${d.id === value ? ' selected' : ''}>${esc(d.call_name)}</option>`).join('')}</select></label>`;
@@ -250,6 +267,12 @@ export function field(name, f, value, ctx) {
     }
     case 'list':
       if (f.item === 'focus') return '';
+      // Partner kennels: one tick box each, from her list.
+      if (f.item === 'kennel') {
+        const on = new Set(value ?? []);
+        const partners = ctx.partners ?? [];
+        return `<fieldset><legend>${esc(label)}${h}</legend>${partners.length ? partners.map((k) => `<label class="check"><input type="checkbox" name="${name}" value="${esc(k.id)}"${on.has(k.id) ? ' checked' : ''}> <span>${esc(k.name)}</span></label>`).join('') : '<p class="muted small">No partner kennels yet.</p>'}</fieldset>`;
+      }
       // A list of fixed keys (a FAQ's places): one tick box each, in the model's
       // order, with the words the manage app calls those pages.
       if (f.item === 'enum') {
@@ -334,7 +357,8 @@ function photoPicker(name, label, hint, chosen, ctx, { multiple, max }) {
 // name still shows, under More, so a new field is never lost. Kinds without groups keep
 // the one plain list.
 const GROUPS = {
-  dogs: [['About', ['call_name', 'sex', 'registered_name', 'date_of_birth', 'color', 'weight', 'role', 'registry', 'titles']], ['Photo and story', ['photo_id', 'bio']], ['Where they show', ['status', 'health_display', 'price', 'died_on']]],
+  dogs: [['About', ['call_name', 'sex', 'registered_name', 'date_of_birth', 'color', 'weight', 'role', 'registry', 'titles']], ['Photo and story', ['photo_id', 'bio']], ['Where they show', ['status', 'health_display', 'price', 'died_on']], ['Co-owned', ['lives_with_kennel_id', 'co_owned_with_ids'], (v) => Boolean(v?.co_owned)]],
+  partners: [['The kennel', ['name', 'url', 'photo_id']]],
   litters: [['The litter', ['name', 'stage', 'summary']], ['Parents', ['dam_id', 'sire_id', 'dam', 'sire', 'dam_name', 'sire_name']], ['Dates', ['born_on', 'ready_on', 'deposits_on']], ['For a planned litter', ['plan_label', 'expected_label', 'ready_label'], (v) => v?.stage === 'planned'], ['Prices', ['price_female', 'price_male', 'full_reg_female', 'full_reg_male', 'deposit_female', 'deposit_male', 'price_note']]],
   puppies: [['The puppy', ['name', 'collar', 'sex', 'color', 'status', 'registration', 'registry', 'price']], ['Photo and story', ['photo_id', 'bio', 'more_photos_url']]],
   site: [['Your kennel', ['kennel_name', 'breed', 'tagline', 'monogram', 'blurb', 'logo_photo_id']], ['Where families find you', ['town', 'region', 'contact_email', 'contact_phone', 'facebook_url', 'facebook_label', 'instagram_url']], ['Look', ['scheme', 'dark_mode']]],
@@ -346,7 +370,7 @@ const GROUPS = {
 };
 const SWITCHES_TITLE = { site: 'Prices', health: 'This result' };
 // Two to a row: numbers, dates, choices, and one-line text of 80 characters or fewer.
-const half = (f) => !f.ui && (['int', 'date', 'month', 'enum', 'dogid', 'dogref', 'litterid', 'litterref'].includes(f.type) || (f.type === 'text' && !f.multiline && (f.max ?? 999) <= 80));
+const half = (f) => !f.ui && (['int', 'date', 'month', 'enum', 'dogid', 'dogref', 'litterid', 'litterref', 'kennelid'].includes(f.type) || (f.type === 'text' && !f.multiline && (f.max ?? 999) <= 80));
 const group = (title, inner, cls = '') => `<section class="fgroup${cls}"><h2>${esc(title)}</h2><div class="fgrid">${inner}</div></section>`;
 
 // The web address goes last, folded away: most people never change it.
@@ -386,7 +410,7 @@ export function parseForm(list, form) {
       case 'int': { const s = String(form.get(n) ?? '').trim(); out[n] = s === '' ? null : Number(s); break; }
       case 'list':
         if (f.item === 'focus') { out[n] ??= []; break; }
-        if (f.item === 'enum') { out[n] = form.getAll(n).filter(Boolean); break; }
+        if (f.item === 'enum' || f.item === 'kennel') { out[n] = form.getAll(n).filter(Boolean); break; }
         if (f.item === 'photo' && f.boxes) {
           // The layout's boxes in order; an empty box is skipped, so the photos
           // after it move up (the site then uses a layout for that many).

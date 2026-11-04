@@ -58,12 +58,21 @@ export async function buildSnapshot(env, siteId) {
     home[key] = { enabled: row ? Boolean(row.enabled) : true, ...json(row?.content, {}) };
   }
 
+  // Partner kennels (co-owned dogs): the ones KennelOS still sends, or hers.
+  const partners = (await all('SELECT * FROM partner_kennels WHERE site_id = ? AND hidden_by_kennelos = 0 ORDER BY sort, name'))
+    .map((x) => ({ id: x.id, name: x.name, url: x.url ?? null, photo_id: x.photo_id ?? null }));
+  const partnerIds = new Set(partners.map((x) => x.id));
+
   const dogsRaw = await all('SELECT * FROM dogs WHERE site_id = ? AND show_on_site = 1 AND hidden_by_kennelos = 0 ORDER BY sort, call_name');
   const health = await all('SELECT * FROM health_results WHERE site_id = ? AND show = 1 ORDER BY sort');
   const dogs = dogsRaw.map((d) => ({
     // An asking price only for a dog looking for a home, with Show other prices on.
     ...keep(d, [...SYSTEM, 'health_display', 'died_on', ...(d.for_sale && site.show_other_prices ? [] : ['price'])]),
     upcoming: Boolean(d.upcoming), for_sale: Boolean(d.for_sale),
+    // A co-owned dog living with a co-owner, and the kennels it may name.
+    co_owned: Boolean(d.co_owned), lives_away: Boolean(d.co_owned && d.lives_away),
+    lives_with_kennel_id: d.co_owned && d.lives_away && partnerIds.has(d.lives_with_kennel_id) ? d.lives_with_kennel_id : null,
+    co_owned_with_ids: d.co_owned ? (json(d.co_owned_with_ids, []) ?? []).filter((id) => partnerIds.has(id)) : [],
     health: d.health_display === 'none' ? []
       : health.filter((h) => h.dog_id === d.id && (d.health_display === 'all' || h.normal))
         .map((h) => keep(h, ['id', 'site_id', 'dog_id', 'show', 'sort', 'source'])),
@@ -174,6 +183,7 @@ export async function buildSnapshot(env, siteId) {
   reviews.forEach((r) => use(r.photo_id));
   extras.forEach((x) => use(x.photo_id));
   products.forEach((x) => use(x.photo_id));
+  partners.forEach((x) => use(x.photo_id));
   (home.hero.photos ?? []).forEach(use);
   use(home.hero.banner_photo_id);
   use(home.story.photo_id);
@@ -202,7 +212,7 @@ export async function buildSnapshot(env, siteId) {
       // the menu's and the status-page help's Family login link.
       family_login: kennelosOrigin(env) && site.kennelos_public_id ? `${kennelosOrigin(env)}/list/${encodeURIComponent(site.kennelos_public_id)}#signin` : null,
     },
-    pages, home, dogs, litters, reviews, steps, expanders, extras, products, payment, questions, albums, embeds, photos,
+    pages, home, dogs, litters, reviews, steps, expanders, extras, products, partners, payment, questions, albums, embeds, photos,
   };
 }
 

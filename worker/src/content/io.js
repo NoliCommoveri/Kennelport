@@ -4,9 +4,10 @@
 //
 //   { site: {...}, pages: { about: { enabled, menu_label, ...wording } },
 //     home: { hero: { enabled, ... } }, dogs: [{ ..., health: [...] }],
+//     (a co-owned dog names its partner kennels: lives_with: '<name>', co_owned_with: ['<name>'])
 //     litters: [{ ..., dam: '<dog slug>', puppies: [...] }], reviews: [...],
 //     steps: [...], expanders: { policies: [...], faq: [...], waitlist_help: [...] },
-//     extras: [...], products: [...], payment: { application_fee: {...}, deposit: {...}, safe_notice: {...} },
+//     extras: [...], products: [...], partners: [{ name, url, photo_id }], payment: { application_fee: {...}, deposit: {...}, safe_notice: {...} },
 //     questions: [...], albums: [{ ..., litter: '<litter slug>', photos: [ids] }],
 //     embeds: [{ place: 'home' | 'about' | 'dog:<slug>' | 'litter:<slug>' | 'album:<slug>', provider, item, title, preview_photo_id }] }
 //
@@ -17,12 +18,13 @@
 // writes go in one batch, so an import lands whole or not at all.
 import {
   SITE_FIELDS, DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS,
-  STEP_FIELDS, EXPANDER_FIELDS, EXPANDER_PAGES, EXTRA_FIELDS, PRODUCT_FIELDS, HOME_BADGES_MAX, brandImageOk, HOME_BLOCKS, PAGES, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS,
+  STEP_FIELDS, EXPANDER_FIELDS, EXPANDER_PAGES, EXTRA_FIELDS, PRODUCT_FIELDS, PARTNER_FIELDS, PARTNERS_MAX, HOME_BADGES_MAX, brandImageOk, HOME_BLOCKS, PAGES, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS,
   QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue, FAQ_FIELDS,
 } from './model.js';
 import { PROVIDERS } from '../embeds.js';
+import { coOwnedRules, unlinkPartnerStatements } from './records.js';
 
-const SECTIONS = ['site', 'pages', 'home', 'dogs', 'litters', 'reviews', 'steps', 'expanders', 'extras', 'products', 'payment', 'questions', 'albums', 'embeds'];
+const SECTIONS = ['site', 'pages', 'home', 'dogs', 'litters', 'reviews', 'steps', 'expanders', 'extras', 'products', 'partners', 'payment', 'questions', 'albums', 'embeds'];
 const MAX_ITEMS = 200;
 
 const now = () => new Date().toISOString();
@@ -46,7 +48,7 @@ const pick = (obj, keys) => Object.fromEntries(keys.filter((k) => k in obj).map(
 const omit = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) => !keys.includes(k)));
 
 // Check a whole document. Returns the cleaned sections; throws ContentError.
-export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = new Set(), existingLitterSlugs = new Set() } = {}) {
+export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = new Set(), existingLitterSlugs = new Set(), existingPartnerNames = new Set() } = {}) {
   if (!doc || typeof doc !== 'object' || Array.isArray(doc)) throw new ContentError('content', 'must be a JSON object');
   for (const k of Object.keys(doc)) if (!SECTIONS.includes(k)) throw new ContentError(k, `not a section (sections: ${SECTIONS.join(', ')})`);
   const out = {};
@@ -90,11 +92,30 @@ export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = ne
     }
   }
 
+  // Partner kennels (co-owned dogs): matched by name, which is how dogs name them.
+  if ('partners' in doc) {
+    out.partners = list(doc.partners, 'partners').map((x, i) => {
+      const partner = cleanRecord(PARTNER_FIELDS, x, `partners[${i}]`);
+      photo(partner.photo_id, `partners[${i}].photo_id`);
+      return partner;
+    });
+    if (out.partners.length > PARTNERS_MAX) throw new ContentError('partners', `at most ${PARTNERS_MAX}`);
+    const seen = new Set();
+    for (const [i, x] of out.partners.entries()) {
+      if (seen.has(x.name.toLowerCase())) throw new ContentError(`partners[${i}].name`, `"${x.name}" is used twice`);
+      seen.add(x.name.toLowerCase());
+    }
+  }
+  const partnerNames = out.partners ? new Set(out.partners.map((x) => x.name.toLowerCase())) : new Set([...existingPartnerNames].map((x) => x.toLowerCase()));
+
   if ('dogs' in doc) {
     out.dogs = list(doc.dogs, 'dogs').map((d, i) => {
       const path = `dogs[${i}]`;
       const dog = cleanRecord(DOG_FIELDS, omit(d, ['health']), path);
       photo(dog.photo_id, `${path}.photo_id`);
+      for (const name of [dog.lives_with, ...(dog.co_owned_with ?? [])].filter(Boolean)) {
+        if (!partnerNames.has(name.toLowerCase())) throw new ContentError(`${path}.co_owned_with`, `no partner kennel called "${name}"`);
+      }
       const health = list(d.health ?? [], `${path}.health`).map((h, j) => cleanRecord(HEALTH_FIELDS, h, `${path}.health[${j}]`));
       return { ...dog, health };
     });
@@ -216,7 +237,11 @@ export async function importContent(env, siteId, doc) {
   const { results: photos } = await db.prepare('SELECT id FROM photos WHERE site_id = ? AND removed_at IS NULL').bind(siteId).all();
   const { results: existing } = await db.prepare('SELECT slug FROM dogs WHERE site_id = ?').bind(siteId).all();
   const { results: existingLitters } = await db.prepare('SELECT slug FROM litters WHERE site_id = ?').bind(siteId).all();
-  const clean = cleanDocument(doc, { photoIds: new Set(photos.map((p) => p.id)), existingDogSlugs: new Set(existing.map((d) => d.slug)), existingLitterSlugs: new Set(existingLitters.map((l) => l.slug)) });
+  const { results: partnerRows } = await db.prepare('SELECT id, name FROM partner_kennels WHERE site_id = ?').bind(siteId).all();
+  const clean = cleanDocument(doc, {
+    photoIds: new Set(photos.map((p) => p.id)), existingDogSlugs: new Set(existing.map((d) => d.slug)), existingLitterSlugs: new Set(existingLitters.map((l) => l.slug)),
+    existingPartnerNames: new Set(partnerRows.map((x) => x.name)),
+  });
   const t = now();
   const s = [];
   const dogId = (slug) => (slug ? db.prepare('SELECT id FROM dogs WHERE site_id = ? AND slug = ?').bind(siteId, slug) : null);
@@ -233,12 +258,37 @@ export async function importContent(env, siteId, doc) {
     s.push(upsert(db, 'home_blocks', ['site_id', 'block'], { site_id: siteId, block, enabled: v.enabled, content: JSON.stringify(v.content) }));
   }
 
+  // Partner kennels keep their ids (dogs point at them): one with the same name is
+  // updated, the rest are new, and ones not in the list go, off their dogs first.
+  const partnerId = new Map(partnerRows.map((x) => [x.name.toLowerCase(), x.id]));
+  if (clean.partners) {
+    const keep = new Set();
+    clean.partners.forEach((x, i) => {
+      const known = partnerId.get(x.name.toLowerCase());
+      const id = known ?? uuid();
+      keep.add(id);
+      partnerId.set(x.name.toLowerCase(), id);
+      s.push(known
+        ? db.prepare('UPDATE partner_kennels SET name = ?, url = ?, photo_id = ?, sort = ? WHERE id = ? AND site_id = ?').bind(x.name, x.url, x.photo_id, i, id, siteId)
+        : insert(db, 'partner_kennels', { id, site_id: siteId, ...x, sort: i, created_at: t }));
+    });
+    for (const x of partnerRows.filter((r) => !keep.has(r.id))) {
+      s.push(...await unlinkPartnerStatements(env, siteId, x.id), db.prepare('DELETE FROM partner_kennels WHERE id = ? AND site_id = ?').bind(x.id, siteId));
+    }
+  }
+
   if (clean.dogs) {
     clean.dogs.forEach((d, i) => {
-      const { health, ...dog } = d;
+      const { health, lives_with, co_owned_with, ...dog } = d;
+      const kennels = coOwnedRules({
+        co_owned: dog.co_owned ?? 0, lives_away: dog.lives_away ?? 0,
+        lives_with_kennel_id: lives_with ? partnerId.get(lives_with.toLowerCase()) : null,
+        co_owned_with_ids: (co_owned_with ?? []).map((n) => partnerId.get(n.toLowerCase())),
+      });
       s.push(upsert(db, 'dogs', ['site_id', 'slug'], {
         id: uuid(), site_id: siteId, ...dog, status: dog.status ?? 'active', health_display: dog.health_display ?? 'normal_only',
         show_on_site: dog.show_on_site ?? 1, upcoming: dog.upcoming ?? 0, for_sale: dog.for_sale ?? 0, sort: i, created_at: t, updated_at: t,
+        ...kennels, co_owned_with_ids: kennels.co_owned_with_ids.length ? JSON.stringify(kennels.co_owned_with_ids) : null,
       }));
     });
     const slugs = clean.dogs.map((d) => d.slug);
@@ -375,8 +425,19 @@ export async function exportContent(env, siteId) {
   const dogs = await all('SELECT * FROM dogs WHERE site_id = ? ORDER BY sort, call_name', siteId);
   const health = await all('SELECT * FROM health_results WHERE site_id = ? ORDER BY sort', siteId);
   const slugOf = Object.fromEntries(dogs.map((d) => [d.id, d.slug]));
+  const partners = await all('SELECT * FROM partner_kennels WHERE site_id = ? ORDER BY sort, name', siteId);
+  const partnerName = Object.fromEntries(partners.map((x) => [x.id, x.name]));
+  doc.partners = partners.map((x) => pick(strip(x, SYSTEM), Object.keys(PARTNER_FIELDS)));
+  const kennelNames = (d) => {
+    const out = {};
+    if (d.lives_with_kennel_id && partnerName[d.lives_with_kennel_id]) out.lives_with = partnerName[d.lives_with_kennel_id];
+    const names = (d.co_owned_with_ids ? JSON.parse(d.co_owned_with_ids) : []).map((id) => partnerName[id]).filter(Boolean);
+    if (names.length) out.co_owned_with = names;
+    return out;
+  };
   doc.dogs = dogs.map((d) => ({
-    ...bools(pick(strip(d, SYSTEM), Object.keys(DOG_FIELDS)), ['show_on_site', 'upcoming', 'for_sale']),
+    ...bools(pick(strip(d, SYSTEM), Object.keys(DOG_FIELDS)), ['show_on_site', 'upcoming', 'for_sale', 'co_owned', 'lives_away']),
+    ...kennelNames(d),
     health: health.filter((h) => h.dog_id === d.id).map((h) => bools(pick(strip(h, SYSTEM), Object.keys(HEALTH_FIELDS)), ['normal', 'show'])),
   }));
 

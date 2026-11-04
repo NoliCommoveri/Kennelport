@@ -136,15 +136,31 @@ export function litterPriceRows(l) {
 
 // The Dogs page's groups (plan 3.7), from each dog's status: the breeding dogs
 // (girls and boys), young stock she has kept, and adults looking for a home.
-// Retired and in-memory dogs wait for their pages (backlog).
+// Retired and in-memory dogs wait for their pages (backlog). A co-owned dog
+// living with one of its co-owners is in none of them, only in `away`, the Co-owned
+// section (docs/Co_Owned_Dogs_Plan.md); one living with her is grouped like her own.
 export function dogGroups(snap) {
-  const home = snap.dogs.filter((d) => d.status === 'active');
+  const active = snap.dogs.filter((d) => d.status === 'active');
+  const home = active.filter((d) => !d.lives_away);
   return {
     breeding: home.filter((d) => !d.upcoming && !d.for_sale),
     upcoming: home.filter((d) => d.upcoming && !d.for_sale),
     for_sale: home.filter((d) => d.for_sale),
+    away: active.filter((d) => d.lives_away),
   };
 }
+
+// A dog's partner kennels, as the site may name them: the one it lives with, and
+// the kennels of its co-owners. Older snapshots have none.
+export const partnerOf = (snap, id) => (id ? (snap.partners ?? []).find((x) => x.id === id) ?? null : null);
+export const coOwnedWith = (snap, d) => (d.co_owned_with_ids ?? []).map((id) => partnerOf(snap, id)).filter(Boolean);
+
+// A partner kennel's logo, small, when it has one.
+export function partnerLogo(snap, k, cls = 'plogo') {
+  return k?.photo_id ? img(snap, k.photo_id, { alt: '', cls, thumb: true }) ?? '' : '';
+}
+// Its name, linked to its website when it has one.
+export const partnerLink = (k) => (k.url ? `<a href="${attr(k.url)}" rel="noopener">${esc(k.name)}</a>` : esc(k.name));
 
 // Available puppies past their litter's going-home date (plan 3.11).
 export function olderPuppies(snap, today) {
@@ -277,6 +293,16 @@ export function dogCard(snap, d, { sale = null } = {}) {
       <div class="face back">${bg}<span class="call">${esc(d.call_name)}</span>${d.registered_name ? `<span class="reg">${esc(d.registered_name)}</span>` : ''}
         ${tests}${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''}${sale ? `${sale.price ? `<p class="small">${esc(sale.price)}</p>` : ''}<a class="more" href="${attr(sale.ask)}">Ask about ${esc(d.call_name)}</a>` : ''}<a class="more" href="/dogs/${attr(d.slug)}">View profile</a></div>
     </div></div>`;
+}
+
+// A co-owned dog living with a co-owner (docs/Co_Owned_Dogs_Plan.md): a light
+// card, no flip, for the Co-owned section's slider. It opens the dog's page.
+export function coCard(snap, d) {
+  const photo = img(snap, d.photo_id, { alt: d.call_name, thumb: true }) ?? '<div class="ph-photo">Photo coming soon</div>';
+  const k = partnerOf(snap, d.lives_with_kennel_id);
+  const line = [d.sex === 'female' ? 'Female' : 'Male', d.role].filter(Boolean).join(' · ');
+  return `<a class="cocard" href="/dogs/${attr(d.slug)}">${photo}<span class="cobody"><span class="call">${esc(d.call_name)}</span><span class="small muted">${esc(line)}</span>
+    <span class="cowith">${k ? `${partnerLogo(snap, k)}<span>with ${esc(k.name)}</span>` : '<span>Lives with a partner kennel</span>'}</span></span></a>`;
 }
 
 export const REG_WORDS = { limited: 'Limited', full: 'Full' };

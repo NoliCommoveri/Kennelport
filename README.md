@@ -29,7 +29,7 @@ rules wait until KennelPort is offered (9). See
 several sessions: [`docs/KennelPort_Review_Plan.md`](docs/KennelPort_Review_Plan.md) (findings
 in [`docs/review/`](docs/review/)). The family portal for one breeder (planned, not built):
 [`docs/Puppy_Parent_Portal_Plan.md`](docs/Puppy_Parent_Portal_Plan.md). Co-owned dogs, with
-KennelOS (planned, not built): [`docs/Co_Owned_Dogs_Plan.md`](docs/Co_Owned_Dogs_Plan.md). History: [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md).
+KennelOS: [`docs/Co_Owned_Dogs_Plan.md`](docs/Co_Owned_Dogs_Plan.md). History: [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md).
 
 Layout: [`worker/`](worker/) is the Worker (its README says how to run it); `docs/` holds the
 plan and its companions. Test: `node --test` from the root (Node 22 or later).

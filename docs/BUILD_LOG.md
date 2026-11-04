@@ -1354,3 +1354,37 @@ Phase 1 is built on KennelPort's side. Before the gate (one litter from signed c
 the vet visit with no fixes by hand, plan section 6): KennelOS's side of the feed, the
 `RESEND_WEBHOOK_SECRET` secret, and her answers to the open questions that set wording
 (plan 15: the vet rule, programs, retention numbers).
+
+## 2026-11-04: Co-owned dogs (KennelPort's half)
+
+From `docs/Co_Owned_Dogs_Plan.md`. Migration `0025_co_owned`.
+
+- **Partner kennels** (`partner_kennels`): name, website and logo, from the Dogs screen's
+  **Partner kennels** button (`/s/<sub>/lists/partners`). The logo is a photo, uploaded or
+  copied from the kennel's pasted badge code (`badgeCode.js`, which also fills in its
+  website and name). Names are unique on a site. Removing one takes it off its dogs; a dog
+  that lived there still lives away, with no kennel named.
+- **On a dog:** Co-owned, Lives with a co-owner, Lives with (one kennel) and Co-owned with
+  (its co-owners' kennels). `coOwnedRules` (`records.js`) keeps them agreeing: only a
+  co-owned dog lives away or has kennels, and the one it lives with is one of them.
+- **The website:** a dog living with a co-owner is in none of her groups and not on Home,
+  only in the Dogs page's new **Co-owned** section: light cards (no flip, about five
+  across on a computer) in the slider, then the logos of the kennels they live with,
+  greyscale until hovered, linked to their sites. Heading and line are hers (Dogs page
+  wording). A co-owned dog living with her is grouped like her own. Every co-owned dog's
+  page lists **Co-owned with** its named kennels, and **Lives with** when away. A kennel
+  KennelOS no longer sends is hidden: dogs show "Lives with a partner kennel".
+- **KennelOS** (bundle section `partner_kennels`, listed in SECTIONS): the kennels she
+  ticked, by `name` and `website` only, and on each dog `co_owned`, `lives_away`,
+  `lives_with_kennel_id`, `co_owner_kennel_ids`. A dog naming a kennel the bundle doesn't
+  send is refused, as is any other key. Kennels are matched by KennelOS id, else a
+  hand-made one by name (taken over with its logo); one no longer sent is hidden, never
+  deleted. A bundle without the section leaves the co-owned fields alone. Name and website
+  and the dog's four fields are KennelOS's (read-only while linked); the logo is hers.
+- Export and import carry `partners` and name them from dogs (`lives_with`,
+  `co_owned_with`); kennels keep their ids across an import. Partner logos count as used
+  photos in the litter cleanup; the publish summary lists partner kennel changes; closing
+  a site deletes them.
+- `docs/KennelPort_Site_Directory.md`: co-owners' personal details still never come from
+  KennelOS; a kennel name she ticks may.
+- **Version:** `site.css` changed, so `ASSET_VERSION` needs a bump; asked for, not done.
