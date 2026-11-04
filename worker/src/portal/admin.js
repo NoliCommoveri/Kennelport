@@ -98,12 +98,11 @@ export async function portalNeedsYou(env, siteId, now = new Date()) {
     if (f.proof_uploaded_at && !f.proof_accepted_at) out.push({ href, label: `Vet record to review: ${name}`, note: f.name });
     const v = vetStatus(f, now);
     if (clockRunning(f) && v.trouble) out.push({ href, label: `${name}: vet visit ${v.word.toLowerCase()}`, note: v.word === 'Missed' ? `Deadline was ${formatAt(f.vet_deadline_at, s.time_zone)}` : `${timeLeft(f.vet_deadline_at, now)} left` });
-    if (!f.picked_up_at && f.pickup_state !== 'not_yet') {
+    // Going home in the next 7 days has its own card on Today (manage/hub.js goingHome);
+    // here only what that card doesn't say: not invited yet.
+    if (!f.picked_up_at && f.pickup_state !== 'not_yet' && !f.invited_at && !f.kennelos_id) {
       const at = f.pickup_booked_at ? Date.parse(f.pickup_booked_at) : f.go_home_on ? Date.parse(`${f.go_home_on}T12:00:00Z`) : null;
-      if (at && at - t < 7 * 86400000) {
-        const when = f.pickup_booked_at ? formatAt(f.pickup_booked_at, s.time_zone) : formatDay(f.go_home_on);
-        out.push({ href, label: `${name} goes home ${when}`, note: `${f.name} · vet visit ${f.vet_booked_at ? 'booked' : 'not booked yet'}${f.invited_at ? '' : ' · not invited yet'}` });
-      }
+      if (at && at - t < 7 * 86400000) out.push({ href, label: `${name} goes home soon: ${f.name} not invited yet`, note: 'Send their invite so they see the countdown and vet visit' });
     }
   }
   // From the KennelOS feed (plan 3.4): new families to invite, sales voided, records
@@ -182,9 +181,7 @@ function familiesScreen(site, families, s, url, { deleted = [], erased = [] } = 
     <p><a class="button primary" href="${base}/new">Add a family</a></p>
     ${rows ? `<ul class="items">${rows}</ul>` : '<p class="muted">No families yet.</p>'}
   </section>
-  <ul class="items"><li class="item"><a href="${base}/settings"><b>Portal settings and programs</b><span>Vet visit rule, contacts, the food, which programs families see</span></a></li>
-    <li class="item"><a href="${base}/checklist"><b>Go-home checklist</b><span>What every family has ready before go-home</span></a></li>
-    <li class="item"><a href="${base}/timeline"><b>First-weeks timeline</b><span>Tasks dated from birth or pickup, with program links</span></a></li></ul>
+
   ${deleted.length ? `<section class="card" id="deleted"><h2>Recently deleted</h2><p class="hint">Their portal is closed. Each is deleted for good ${UNDO_DAYS} days after, unless you undo it.</p>
     <dl class="kv">${deleted.map((f) => `<dt>${esc(formatDay(new Date(Date.parse(f.deleted_at) + UNDO_DAYS * 86400000).toISOString().slice(0, 10)))}</dt><dd><b>${esc(f.name)}</b>${f.pup ? ` · ${esc(f.pup)}` : ''}${f.delete_reason === 'backed_out' ? ' <span class="hint">backed out (KennelOS)</span>' : ''}
       <form method="post" action="${base}/undo/${esc(f.id)}" class="inline"><button class="link">Undo</button></form></dd>`).join('')}</dl></section>` : ''}
@@ -465,7 +462,7 @@ function settingsScreen(site, s, products, { error, waiting = [], extras = [] } 
       ${extras.map((x) => `<div class="row"><label>${esc(x.name)}<select name="delivery.${esc(x.id)}"><option value="">Listed only</option><option value="stay"${x.portal_delivery === 'stay' ? ' selected' : ''}>An extended stay, with updates</option></select></label>
         <label>Update every (days)<input name="every.${esc(x.id)}" inputmode="numeric" maxlength="2" value="${esc(x.portal_every_days ?? 7)}"></label></div>`).join('')}
     </div></section>` : ''}
-    <section class="fgroup"><h2>Programs families see</h2><div class="fgrid">
+    <section class="fgroup" id="programs"><h2>Programs families see</h2><div class="fgrid">
       ${products.length ? products.map((x) => `<div class="fgrid box"><b>${esc(x.name)}</b>
         <div class="row"><label>Show as<select name="type.${esc(x.id)}">${Object.entries(TYPES).map(([k, l]) => `<option value="${k}"${(x.portal_show ? x.portal_type ?? 'other' : '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
         <label>What the family does<input name="action.${esc(x.id)}" value="${esc(x.family_action ?? '')}" maxlength="200" placeholder="${x.portal_type === 'insurance' ? 'Activate the free trial within 5 days of pickup' : 'Use the code at checkout'}"></label></div>
@@ -540,6 +537,54 @@ function templateScreen(site, kind, items, products, url, { error } = {}) {
     <form method="post" action="${base}/new" class="card"><h2>Add ${kind === 'checklist' ? 'an item' : 'a task'}</h2><div class="fgrid">${itemFields(kind, null, products)}<p><button>Add</button></p></div></form>`;
 }
 
+// ---------- the Families and Portal tabs (plan 7.3, build chunk 6) ----------
+
+// Vet visits: each placement's status in words and time left; red only in trouble.
+function vetVisits(site, families, s, now = new Date()) {
+  const rows = families.filter((f) => f.placement_id && f.status === 'open' && f.life_status === 'with_family');
+  if (!rows.length) return '';
+  return `<section class="card" id="vet-visits"><h2>Vet visits</h2><dl class="kv">${rows.map((f) => {
+    const v = vetStatus(f, now);
+    const left = f.vet_deadline_at && clockRunning(f) && Date.parse(f.vet_deadline_at) > now.getTime() && !f.proof_uploaded_at ? ` · ${timeLeft(f.vet_deadline_at, now)} left` : '';
+    return `<dt><a href="/s/${esc(site.subdomain)}/portal/f/${esc(f.id)}">${esc(pupName(f))}</a></dt><dd><span${v.trouble ? ' class="error"' : ''}>${esc(v.word)}</span>${esc(left)} <span class="hint">${esc(f.name)}</span></dd>`;
+  }).join('')}</dl></section>`;
+}
+
+// Activity: what families did (ticks, uploads, bookings, programs), not page views.
+const ACTIVITY = { checklist: 'ticked', task: 'marked done', vet_booked_at: 'booked the vet visit', vet_booked_for: null, vet_clinic: null, proof_uploaded_at: 'uploaded the vet record', proof_file_id: null, program: 'program', account_erased: 'erased their account' };
+async function activity(env, site, s, now = new Date()) {
+  const { results } = await env.DB.prepare(`SELECT h.field, h.new_value, h.changed_at, f.id AS family_id, f.name FROM portal_history h
+    JOIN portal_placements p ON p.id = h.row_id AND h.tbl = 'portal_placements' JOIN portal_families f ON f.id = p.family_id
+    WHERE h.site_id = ? AND h.changed_by = 'family' AND h.changed_at > ? AND h.new_value IS NOT NULL AND f.status = 'active' AND f.deleted_at IS NULL
+    ORDER BY h.id DESC LIMIT 60`).bind(site.id, new Date(now.getTime() - 14 * 86400000).toISOString()).all();
+  const rows = results.filter((h) => ACTIVITY[h.field]).slice(0, 15);
+  if (!rows.length) return '';
+  const what = (h) => (h.field === 'checklist' || h.field === 'task' ? `${ACTIVITY[h.field]} ${h.new_value}` : h.field === 'program' ? h.new_value : ACTIVITY[h.field]);
+  return `<section class="card" id="activity"><h2>Activity</h2><p class="hint">What families did in the last two weeks.</p><dl class="kv">${rows.map((h) => `<dt>${esc(formatAt(h.changed_at, s.time_zone, { weekday: false }))}</dt><dd><a href="/s/${esc(site.subdomain)}/portal/f/${esc(h.family_id)}">${esc(h.name)}</a> ${esc(what(h))}</dd>`).join('')}</dl></section>`;
+}
+
+// The Waitlist side of Families: the website's list, in order (offering a puppy stays in KennelOS).
+async function waitlistPart(env, site) {
+  const linked = await env.DB.prepare('SELECT 1 FROM links WHERE site_id = ? AND revoked_at IS NULL LIMIT 1').bind(site.id).first();
+  const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM waitlist_entries WHERE site_id = ? AND status = 'waiting'").bind(site.id).first('n');
+  return `<section class="card" id="waitlist"><h2>Waitlist</h2>${linked
+    ? '<p class="muted small">Your waitlist is in KennelOS. When a family\'s contract is signed there, they arrive here to invite.</p>'
+    : `<p class="muted small">${n ? `${n} famil${n === 1 ? 'y' : 'ies'} waiting.` : 'No families waiting.'} When one signs their contract, add them as a puppy family.</p><p><a class="button" href="/s/${esc(site.subdomain)}/waitlist">Your waitlist</a></p>`}</section>`;
+}
+
+function setupScreen(site, s) {
+  const b = `/s/${esc(site.subdomain)}/portal`;
+  const item = (href, label, note) => `<li class="item"><a href="${href}"><b>${esc(label)}</b><span>${esc(note)}</span></a></li>`;
+  return `<section class="card"><h1>What families see</h1><p class="muted small">Families sign in at <strong>${esc(site.portalUrl)}</strong>.</p></section>
+    <ul class="items">
+      ${item(`${b}/settings`, 'Portal settings', `Vet visit (${VET_RULES[s.vet_rule].toLowerCase()}), contacts, the food, programs, extras`)}
+      ${item(`${b}/checklist`, 'Go-home checklist', 'What every family has ready')}
+      ${item(`${b}/timeline`, 'First-weeks timeline', 'Tasks dated from birth or pickup')}
+      ${item(`${b}/settings#programs`, 'Programs and where they show', 'Your recommended products, as families see them')}
+      ${item(`/s/${esc(site.subdomain)}/lists/extras`, 'Extras', 'The catalog; how the portal delivers each is in Portal settings')}
+    </ul>`;
+}
+
 // ---------- routes ----------
 
 export async function handlePortalAdmin({ env, request, url, site: signedInSite, page }) {
@@ -558,7 +603,14 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   const back = `/s/${site.subdomain}`;
   const s = await getSettings(env, site.id);
 
-  if (!rest && !post) return page('Puppy families', familiesScreen(site, await listFamilies(env, site.id), s, url, { deleted: await recentlyDeleted(env, site.id), erased: await erasedRecords(env, site.id) }), { back });
+  const tabs = (tab) => ({ nav: { sub: site.subdomain, tab } });
+  if (!rest && !post) {
+    const families = await listFamilies(env, site.id);
+    return page('Families', familiesScreen(site, families, s, url, { deleted: await recentlyDeleted(env, site.id), erased: await erasedRecords(env, site.id) })
+      + vetVisits(site, families, s) + await activity(env, site, s) + await waitlistPart(env, site), tabs('families'));
+  }
+  // The Portal tab (plan 7.3): what families see, in one place.
+  if (rest === '/setup' && !post) return page('Portal', setupScreen(site, s), tabs('portal'));
   const um = rest.match(/^\/undo\/([0-9a-f-]{36})$/);
   if (um && post) {
     try { await undoDelete(env, site.id, um[1]); } catch (err) { if (!(err instanceof PortalError)) throw err; }
@@ -574,7 +626,7 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   }
   if (rest === '/settings') {
     const waiting = await suggestionsFor(env, site.id, 'portal_settings', site.id);
-    if (!post) return page('Portal settings', settingsScreen(site, s, await products(env, site.id), { waiting, extras: await catalog(env, site.id) }, url), { back: home });
+    if (!post) return page('Portal settings', settingsScreen(site, s, await products(env, site.id), { waiting, extras: await catalog(env, site.id) }, url), { back: `${home}/setup` });
     const form = await request.formData();
     const input = Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
     try {

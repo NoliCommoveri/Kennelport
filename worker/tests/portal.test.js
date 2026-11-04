@@ -57,10 +57,10 @@ test('the portal is off until /ops switches it on, for that site alone', async (
   const { env, site, ops, her } = await setup({ on: false });
   assert.equal((await call(env, H, '/family')).status, 404);
   assert.equal((await her('/portal')).status, 404);
-  assert.doesNotMatch(await (await her('')).text(), /Puppy families/);
+  assert.doesNotMatch(await (await her('')).text(), /class="apptabs"/);
   await call(env, M, `/ops/sites/${site.id}/portal/on`, { method: 'POST', headers: { cookie: ops } });
   assert.match(await (await call(env, H, '/family')).text(), /Welcome to AK Boston Terriers's puppy portal/);
-  assert.match(await (await her('')).text(), /Puppy families/);
+  assert.match(await (await her('')).text(), /<a href="\/s\/akbostons\/portal"><svg[^>]*><use href="#i-people"\/><\/svg><span>Families<\/span>/);
   const other = await addSite(env, 'thornfield');
   assert.equal((await call(env, 'thornfield.kennelport.com', '/family')).status, 404, other.id);
   await call(env, M, `/ops/sites/${site.id}/portal/off`, { method: 'POST', headers: { cookie: ops } });

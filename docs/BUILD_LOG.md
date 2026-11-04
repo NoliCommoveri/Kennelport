@@ -1321,3 +1321,36 @@ Its tables joined the branch's one migration, **0024**, with chunks 2 to 4.
 Left for later: a stay update into the baby book (phase 2, with the baby book), video in
 updates and photo and video packages (phase 2), and her Dogs tab as the place to write
 updates (chunk 6).
+
+## 2026-11-04: Puppy parent portal, build chunk 6 (her Site Manager as one app)
+
+The last of phase 1's six chunks. No migration.
+
+- **Five tabs** (plan 7.3) on sites with the portal on, and only there: along the bottom on
+  a phone, down the side on a computer (`src/manage/hub.js`; Reports comes with phase 2).
+  Sub-screens keep their Back button. Other breeders' Site Manager is unchanged.
+  - **Today** (`/s/<sub>`): website changes not published with **Review and publish**;
+    **Going home this week**, each puppy with its pickup time and whether the vet visit is
+    booked, and **Mark picked up** on the day itself; **Needs you** from both sides (portal
+    items, inbox, reviews, litters leaving); Last from KennelOS. No totals.
+  - **Families** (`/s/<sub>/portal`): Puppy families, **Vet visits** in words with time left
+    (red only Missed, and Not booked under 48 hours), **Activity** (what families did in the
+    last two weeks: ticks, bookings, uploads, programs; never page views), recently
+    deleted and erased, and the **Waitlist** (the website's list, or a line saying it's in
+    KennelOS).
+  - **Dogs** (`/s/<sub>/kennel`): each litter's puppies with their website status, family,
+    go-home and extras, and **Write this week's update** for a stay puppy that's due; links
+    to the Dogs, Litters and Puppies screens.
+  - **Website** (`/s/<sub>/website`): the home screen it was (publish, view, preview,
+    share, the tiles, Set up your site).
+  - **Portal** (`/s/<sub>/portal/setup`): Portal settings, the checklist, the timeline,
+    programs, extras.
+- Today's "goes home" item in Needs you is now the Going home card (only "not invited
+  yet" stays an item).
+- **Versions:** Site Manager `APP_VERSION` 13 (the tabs in `app.css`), family portal
+  `PORTAL_VERSION` 2 (every chunk's portal CSS on this branch), with the owner's yes.
+
+Phase 1 is built on KennelPort's side. Before the gate (one litter from signed contract to
+the vet visit with no fixes by hand, plan section 6): KennelOS's side of the feed, the
+`RESEND_WEBHOOK_SECRET` secret, and her answers to the open questions that set wording
+(plan 15: the vet rule, programs, retention numbers).

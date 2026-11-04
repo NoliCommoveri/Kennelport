@@ -184,3 +184,18 @@ details.fgroup.advanced[open] > summary::before, details.fgroup.fold[open] > sum
 /* In a section, a field's hint sits under its input, so inputs side by side line up. */
 .fgrid label:not(.check) { display: flex; flex-direction: column; gap: 4px; }
 .fgrid label:not(.check) > .hint { order: 2; }
+
+/* One app for the website and the puppy portal (portal plan 7.3): five tabs along
+   the bottom on a phone, down the side on a computer. Only on sites with the portal. */
+.apptabs { position: fixed; z-index: 6; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-around; background: var(--head); padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px)); }
+.apptabs a { flex: 1; max-width: 120px; display: grid; justify-items: center; gap: 2px; padding: 6px 2px; border-radius: var(--r); color: var(--head-muted); text-decoration: none; font-size: .72rem; font-weight: 700; }
+.apptabs a[aria-current] { background: var(--head-ink); color: var(--head); }
+.apptabs svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+body.tabbed { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+.item.going { flex-wrap: wrap; }
+.item.going form { flex: 0 0 auto; align-self: center; }
+@media (min-width: 900px) {
+  .apptabs { top: 0; right: auto; bottom: 0; width: 180px; flex-direction: column; justify-content: flex-start; gap: 4px; padding: 76px 10px 16px; }
+  .apptabs a { flex: 0 0 auto; max-width: none; grid-template-columns: 24px 1fr; justify-items: start; align-items: center; gap: 10px; padding: 10px 12px; font-size: .9rem; }
+  body.tabbed { padding-bottom: 0; padding-left: 180px; }
+}

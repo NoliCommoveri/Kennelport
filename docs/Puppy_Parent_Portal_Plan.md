@@ -5,9 +5,8 @@
 > (Nov 3, 2026) after review: it now reuses KennelPort's stack, takes starting data from
 > KennelOS without depending on it, and adds data retention. Built so far: the Site
 > Manager's new look and its sectioned forms (section 7.3, Site Manager version 12), and
-> phase 1's first five build chunks (section 6: the core, typed in by her; the checklist,
-> timeline and programs; KennelPort's end of the KennelOS feed; messages, the loss page,
-> bounces, delete and erase; extended stays and weekly updates; build log, Nov 4).
+> all six of phase 1's build chunks (section 6; build log, Nov 4). KennelOS's side of the
+> feed (section 3.4) is its own work, in the KennelOS repository. Phase 1's gate is next.
 
 ## 1. Purpose and scope
 
@@ -405,7 +404,7 @@ its own:
    the handoff, the one-tap link, the facts that go back.
 4. **Messages from pickup, the loss page, bounces, erase and retention basics, push** (built).
 5. **Extended stays** and weekly updates (built).
-6. **Her Site Manager as one app** (section 7.3): Today, Families, Dogs, Portal tabs.
+6. **Her Site Manager as one app** (section 7.3; built): Today, Families, Dogs, Portal tabs.
 
 **Fallback:** if a litter goes home before phase 1 is done, ship sign-in, My Puppy, the
 vet countdown and the program links on the go-home page alone, with families and pickups

@@ -17,6 +17,7 @@ import { siteLink } from '../ops/sites.js';
 import { createScreens, matchesWaiting } from './screens.js';
 import { kennelosState } from '../feed.js';
 import { handlePortalAdmin, portalNeedsYou } from '../portal/admin.js';
+import { nav, goingHome, dogsTab, lastFromKennelos } from './hub.js';
 import { vapidConfig, subscribe, unsubscribe, testPush, pendingPush, subscriptionFor } from '../push.js';
 
 export const MANAGE_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
@@ -51,7 +52,8 @@ const SPRITE = `<svg class="sprite" width="0" height="0" aria-hidden="true">${Ob
 }).map(([k, d]) => `<symbol id="i-${k}" viewBox="0 0 24 24">${d}</symbol>`).join('')}</svg>`;
 const ic = (n) => `<span class="ic" aria-hidden="true"><svg class="i"><use href="#i-${n}"/></svg></span>`;
 
-function page(title, body, { status = 200, back = null, headers = {} } = {}) {
+// nav: { sub, tab } puts her tabs on the page (sites with the puppy portal, plan 7.3).
+function page(title, body, { status = 200, back = null, headers = {}, nav: tabs = null } = {}) {
   return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
@@ -64,8 +66,9 @@ function page(title, body, { status = 200, back = null, headers = {} } = {}) {
 <link rel="stylesheet" href="/_kp/m/app.css?v=${APP_VERSION}">
 <script src="/_kp/m/app.js?v=${APP_VERSION}" defer></script>
 <script src="/_kp/m/photos.js?v=${APP_VERSION}" defer></script>
-</head><body>
+</head><body${tabs ? ' class="tabbed"' : ''}>
 ${SPRITE}
+${tabs ? nav(tabs.sub, tabs.tab) : ''}
 <header class="top">${back ? `<a class="back" href="${esc(back)}" aria-label="Back">‹</a>` : '<img class="mark" src="/_kp/m/icon-64.png" alt="" width="32" height="32">'}<span class="title"><small>Site Manager</small><b>${esc(title)}</b></span></header>
 <main>${body}</main>
 <p class="offline-note" id="offline-note" hidden role="status">You're offline. You can look around, but saving needs a connection.</p>
@@ -113,7 +116,7 @@ function sitesPage(user) {
 
 const STATUS_WORDS = { draft: 'Not published yet', live: 'Live', suspended: 'Switched off by KennelPort' };
 
-async function siteHome(env, user, site) {
+async function siteHome(env, user, site, view = 'today') {
   const snaps = await listSnapshots(env, site.id);
   const full = await env.DB.prepare('SELECT draft_changed_at, published_snapshot_id FROM sites WHERE id = ?').bind(site.id).first();
   const live = snaps.find((x) => x.id === full.published_snapshot_id);
@@ -145,17 +148,32 @@ async function siteHome(env, user, site) {
     pending ? item('/reviews-queue', `${pending} review${pending === 1 ? '' : 's'} to approve`, 'From families') : '',
     leaving ? item('/litters#leaving', `${leaving} litter${leaving === 1 ? '' : 's'} leaving your site`, 'Keep or remove') : '',
   ].filter(Boolean);
-  return page(site.kennel_name || site.subdomain, `
-  ${matches ? matchesWaiting(site.subdomain, matches) : ''}
+  const sub = esc(site.subdomain);
+  const notesHtml = `${matches ? matchesWaiting(site.subdomain, matches) : ''}
+  ${notices.map((n) => `<section class="card notice-card" role="status"><p>${esc(n.message)}</p><p class="row"><a class="button" href="/s/${sub}/publish">Review and publish</a><form method="post" action="/s/${sub}/notices/${esc(n.id)}/read"><button class="link">Done</button></form></p></section>`).join('')}`;
+  // With the puppy portal, the app is one app for the website and the families
+  // (plan 7.3): Today holds what needs her from both; the website's screens are
+  // under Website.
+  if (portalOn && view === 'today') {
+    const home = await goingHome(env, site);
+    return page('Today', `${notesHtml}
+      ${changed ? `<section class="card status"><p><strong>Website changes not published</strong></p><p><a class="button primary" href="/s/${sub}/publish">Review and publish</a></p></section>` : ''}
+      ${home}
+      ${waiting.length ? `<section class="card" id="needs-you"><h2>Needs you</h2><ul class="items">${waiting.join('')}</ul></section>` : ''}
+      ${!changed && !home && !waiting.length && !notices.length ? '<section class="card"><h2>Nothing needs you right now</h2><p class="muted small">Pickups this week, vet records, messages and anything else waiting will show here.</p></section>' : ''}
+      ${await lastFromKennelos(env, site)}
+      <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}</p>`, { nav: { sub: site.subdomain, tab: 'today' } });
+  }
+  return page(portalOn ? 'Website' : site.kennel_name || site.subdomain, `
+  ${portalOn ? '' : notesHtml}
   ${notices.map((n) => `<section class="card notice-card" role="status"><p>${esc(n.message)}</p><p class="row"><a class="button" href="/s/${esc(site.subdomain)}/publish">Review and publish</a><form method="post" action="/s/${esc(site.subdomain)}/notices/${esc(n.id)}/read"><button class="link">Done</button></form></p></section>`).join('')}
   <section class="card status">
     <p><span class="dot ${site.status}"></span>${esc(STATUS_WORDS[site.status] ?? site.status)}${changed ? ' · <strong>changes not published yet</strong>' : ''}</p>
     <p class="row"><a class="button" href="${esc(siteLink(env, site.subdomain))}">View my site</a><a class="button" href="${esc(previewLink)}">Preview changes</a><a class="button" href="/s/${esc(site.subdomain)}/share">Share</a></p>
     <p><a class="button primary" href="/s/${esc(site.subdomain)}/publish">${changed ? 'Review and publish' : 'Publish'}</a></p>
   </section>
-  ${waiting.length ? `<section class="card" id="needs-you"><h2>Needs you</h2><ul class="items">${waiting.join('')}</ul></section>` : ''}
+  ${waiting.length && !portalOn ? `<section class="card" id="needs-you"><h2>Needs you</h2><ul class="items">${waiting.join('')}</ul></section>` : ''}
   <ul class="tiles">
-    ${portalOn ? tile('/portal', 'Puppy families', 'Their portal, pickups, vet visits', portal.length) : ''}
     ${tile('/puppies', 'Puppies', 'Statuses at a glance')}
     ${tile('/litters', 'Litters', leaving ? `${leaving} leaving your site` : 'Planned, current, past', leaving)}
     ${tile('/photos', 'Photos and albums', 'Camera roll, galleries')}
@@ -175,7 +193,7 @@ async function siteHome(env, user, site) {
   </ul></section>
   <p class="row"><a class="button" href="/notifications">Notifications on this device</a><a class="button" href="/s/${esc(site.subdomain)}/account">Your site: storage, copy, delete</a></p>
   <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}</p>
-  <form method="post" action="/signout"><button class="link">Sign out</button></form>`);
+  <form method="post" action="/signout"><button class="link">Sign out</button></form>`, portalOn ? { nav: { sub: site.subdomain, tab: 'website' } } : {});
 }
 
 function notificationsPage(env, user) {
@@ -281,6 +299,10 @@ export async function handleManage(request, env, url) {
     const site = user.sites.find((s) => s.subdomain === m[1]);
     if (!site) return page('Not found', '<section class="card"><p>You don\'t manage a site at this address.</p><p><a href="/">Your sites</a></p></section>', { status: 404 });
     if (!m[2] && !post) return siteHome(env, user, site);
+    // Her tabs, with the puppy portal on (plan 7.3).
+    const portalOn = await env.DB.prepare('SELECT portal_on FROM sites WHERE id = ?').bind(site.id).first('portal_on');
+    if (portalOn && !post && m[2] === '/website') return siteHome(env, user, site, 'website');
+    if (portalOn && !post && m[2] === '/kennel') return page('Dogs', await dogsTab(env, site), { nav: { sub: site.subdomain, tab: 'dogs' } });
     if (m[2]?.startsWith('/portal')) {
       const res = await handlePortalAdmin({ env, request, url, site, page });
       if (res) return res;
