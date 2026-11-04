@@ -2,7 +2,7 @@
 
 Planned, not built. Two halves: KennelOS says which dogs are co-owned and where each
 lives; KennelPort shows the ones living with a co-owner in their own section of
-the Dogs page, with the partner kennel's logo, badge, videos and posts.
+the Dogs page, with the partner kennel's logo.
 
 ## Decisions (the breeder's, 2026-11-04)
 
@@ -24,8 +24,10 @@ the Dogs page, with the partner kennel's logo, badge, videos and posts.
    dog still goes where (2) says, and reads "Lives with a partner kennel", with no
    name, logo or link.
 6. **The logo is uploaded on the website**, not sent from KennelOS (the bundle's 1 MB
-   limit, and every photo on the site is added there). The kennel's badge code and
-   its videos and posts are also added on the website.
+   limit, and every photo on the site is added there). **Logos only:** no videos
+   or posts for a partner kennel. She uploads the logo, or pastes the badge code the
+   kennel hands out (a link and a picture; the HTML is never kept), whichever she
+   has.
 
 ## What never goes to the website
 
@@ -87,8 +89,6 @@ Changes:
   DEFAULT 0`, `lives_with_kennel_id TEXT`.
 - `dog_partner_kennels`: `dog_id, partner_kennel_id, sort`, its co-owners' kennels
   for "Co-owned with".
-- Embeds take a new place, `kennel:<id>` (`embedStore.js` RECORD_PLACES and
-  checkPlace); the embeds table is unchanged.
 
 ### KennelOS bundle (`kennelos/bundle.js`)
 
@@ -96,7 +96,7 @@ Changes:
   `partner_kennels` list, capped (MAX 50).
 - `OWNED.dogs` adds `co_owned`, `lives_away`, `lives_with_kennel_id`, and the
   bundle replaces the dog's `dog_partner_kennels` rows;
-  `OWNED.partner_kennels` is `name`, `url`. Logo, badge, embeds and sort are hers.
+  `OWNED.partner_kennels` is `name`, `url`. Logo, badge and sort are hers.
 - Kennels are matched by KennelOS id. One no longer sent is hidden, never deleted
   (its logo is the only copy), and waits under "Not on your site" with Remove, like
   a dog. Its dogs keep the link while hidden but show as unnamed.
@@ -119,19 +119,17 @@ Changes:
   - **Partner strip** under it: each named kennel's logo (greyscale until hover)
     linking to its website (`rel="noopener"`), or its badge when it has one.
 - Dog page, any co-owned dog with a named kennel: "Co-owned with" in the facts, each
-  kennel with its logo and link. For a dog living there, an "At [Kennel]" block with the
-  kennel's videos and posts, after the dog's own.
+  kennel with its logo and link.
 - Litters naming an away dog as dam or sire keep working; it is still her dog.
 
 ### Site Manager
 
 - **Partner kennels** screen, from Dogs: name and website (read-only on a linked
   site), logo upload (the same upload as her own logo), "Paste their badge code"
-  (`badgeCode.js`), and Videos and posts (`kennel:<id>`).
+  (`badgeCode.js`) as the other way to give its logo.
 - Dog form: Co-owned, Co-owned with, Lives away and Lives with are read-only while
   linked; an unlinked site sets them here, with "Add a kennel…".
-- Removing a kennel unlinks its dogs, deletes its embeds (`embedsOfStatement`) and
-  releases its logo to `cleanup.js`. Export and import (`content/io.js`) carry
+- Removing a kennel unlinks its dogs, and releases its logo to `cleanup.js`. Export and import (`content/io.js`) carry
   `partner_kennels` and the new dog fields.
 
 ### Tests
@@ -142,7 +140,7 @@ Changes:
   group; "Co-owned with" on both kinds; an unticked kennel unnamed;
 - bundle: kennels created and linked; a later bundle keeps her logo; a kennel no
   longer sent is hidden; unknown keys (anything like income or a contact) refused;
-- embeds: the `kennel:` place; removing a kennel; io round trip.
+- removing a kennel; io round trip.
 
 ### Versions
 
