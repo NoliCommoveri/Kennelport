@@ -77,7 +77,7 @@ KennelPort's own rule for linked sites (plan 5.3) makes KennelOS fields read-onl
 site is linked. **The portal's own tables use the opposite rule.** Every portal record is
 the portal's own; KennelOS only suggests. (The site's litters, puppies and dogs, which
 the portal points at, keep KennelPort's rule; nothing family-facing is stored on them,
-section 8.)
+section 9.)
 
 ### 3.1 How imported data behaves
 
@@ -143,7 +143,7 @@ Everything families see is content she edits in the manage app:
   added by the template and can't be removed.
 - **Kennel info, FAQ, upcoming litters.**
 - **Baby book:** her entries, photos and order; which family entries she reposts (with
-  their permission, section 8).
+  their permission, section 9).
 - **Families:** add, edit, resend invite, Keep (pauses retention deletion), delete.
 
 **Deleting is undoable** for 30 days (the same pattern as KennelPort's litters and
@@ -200,7 +200,9 @@ The revenue placements and the vet countdown, and nothing else:
   first-weeks timeline (AKC registration, insurance activation, vaccines, deworming),
   with each family's program status
 - Click tracking and the affiliate disclosure
-- Retention basics: invite expiry, the activity date, erase on request (section 9)
+- Retention basics: invite expiry, the activity date, erase on request (section 10)
+- Extended stays: the package on the placement, its go-home date, the timeline split
+  between her and the family, and weekly updates with skills and photos (section 8.2)
 
 **Gate:** one litter run from invite to the vet visit with no fixes by hand.
 
@@ -213,6 +215,8 @@ The revenue placements and the vet countdown, and nothing else:
 - Birthday emails with unsubscribe; birthday banner
 - Kennel info, FAQ, upcoming litters
 - Retention in full: warning emails, Keep, download everything, daily deletion
+- Photo and video packages: full-resolution uploads, video in parts, playback, delivery
+  status, download all (section 8.3); video in stay updates
 
 **Gate:** a litter's families have used the baby book for a month, and the first
 retention warning has gone out correctly (send one to a test family first).
@@ -318,9 +322,128 @@ The screens:
   checklist and timeline templates, email wording.
 - **Setup progress** shows only while something is unfinished.
 - **No free-form email to all families** in phase 1. If it is added, it is commercial
-  email and carries the unsubscribe link and mailing address (section 10).
+  email and carries the unsubscribe link and mailing address (section 11).
 
-## 8. Data model
+## 8. Extras: extended stays and photo and video packages
+
+She sells two kinds of extra that the portal delivers, not just lists:
+
+- **Extended stays** (the 10-, 12- and 16-week homegoing packages): the puppy stays with
+  her 2–10 weeks past 8 weeks for socialization, crate and potty training and handling.
+  The family has paid and is waiting, so the portal is where they watch the progress.
+- **Photo and video packages:** she shoots them, and today she would need an outside
+  hosting service to deliver them. The portal keeps and delivers the files instead.
+
+### 8.1 One extra, three jobs
+
+The same extra appears in three places, each with its own job. Nothing is typed twice:
+
+| Where | Its job | Holds |
+|---|---|---|
+| **KennelOS Extras** | Income: price list, which family requested or bought what, what's been paid | Name, amount, group, the family's request and payment |
+| **KennelPort `extras`** (built) | The website's catalog on `/extras` | Name, weeks, price, description, "What's included" checklist, photo. Already linked to KennelOS by `kennelos_id` (plan 3.4) |
+| **The portal** (new) | Delivery to the family who bought it | Which placement has it, its status, the stay's updates and skills, the package's files |
+
+- **The portal never handles money.** Payment stays in KennelOS (or however she takes it
+  today). The portal records only *that* a placement has the extra.
+- **Who bought what:** with KennelOS linked, a family's extra arrives as a suggestion on
+  their placement ("The Reed family bought the 12-week stay"), which she confirms
+  (section 3.1). Without KennelOS, or to correct it, she adds or removes it on the
+  family's screen.
+- **Each extra in the catalog gets a delivery type:** *stay*, *media*, or none (an ordinary
+  extra, like a puppy pack, that the portal only lists on the placement).
+
+### 8.2 Extended stays
+
+**What changes for the family.** The stay moves everything that hangs on pickup:
+
+- **Go-home date** = birth date + the package's weeks (16 weeks for the Premier package),
+  set on the placement and editable.
+- **Home page, before go-home** (section 7.2) becomes a stay page for those weeks: "Opal
+  comes home in 3 weeks · week 5 of 8 of her extended stay", the latest update, and
+  progress on each skill.
+- **The vet countdown** starts at the real pickup, as for every puppy (section 5).
+- **The timeline:** tasks dated from pickup (vet visit, insurance trial, food change)
+  move with it automatically. Tasks dated from birth that fall during the stay (the
+  10-week deworming, the 12- and 16-week vaccines) become *hers*: they show as "Done by
+  A-K during Opal's stay" once she logs them, and land in the puppy's health records.
+  Each timeline template says whether it counts from birth or pickup, so this needs no
+  per-package copy.
+
+**Weekly updates (the progress tracking).** Each stay puppy gets an update, by default
+once a week (the cadence is set on the package):
+
+- **Skills:** the package's "What's included" checklist becomes its skills list
+  (Crate-training foundations, Potty training, Handling & grooming…). She can add
+  skills only she tracks. Each update rates each skill on one scale: **Not started ·
+  Introduced · Practicing · Reliable**, with a line of notes where she wants one.
+- **The update itself:** a note, photos and short videos (section 8.3 for video), and
+  optionally a weight. Families see the updates newest first, with a skills summary
+  showing how far each skill has come since the first week.
+- **Her side:** on the puppy's screen (Dogs), **Write this week's update** opens a form
+  built for her phone, with the skills pre-filled from last week so she changes only
+  what moved. Saving sends the family an email and a push notification.
+- **Today** lists stay updates due ("Opal: weekly update due, last one 8 days ago").
+- **Into the baby book:** each update can also become a baby book entry with one tick,
+  so the stay weeks aren't missing from the keepsake.
+- **KennelOS:** stay weights and milestones from KennelOS arrive as drafts, like any
+  other (section 3.3).
+
+### 8.3 Photo and video packages
+
+**Delivery, not just storage.** Each package on a placement gets a private gallery:
+
+- **Status:** Booked · Shooting · Editing · **Delivered**, with a due date. Delivered
+  sends the family an email and a push notification, and their home page shows
+  "Your photo package is ready".
+- **Files kept as she uploads them,** at full resolution. Package photos skip the
+  website's resizing (2400px, 3 MB, `photos.js`), because full resolution is what the
+  family paid for. A small preview copy is made for viewing on screen.
+- **Families can view, play, download one file, or download all.** Download all is a zip,
+  in parts if it's large. It's the only copy they get from her, so the page says how
+  long she keeps the files (section 10).
+- **Private.** Signed in only, served through the Worker after a check, like every
+  KennelPort file. Sharing with grandparents (a view-only link) is a later option, not
+  phase 2.
+- **Her own use of the photos** follows her package terms (open question). Any photo she
+  puts on her website or baby book entries is copied there, so deleting the package
+  later doesn't remove it from her site.
+- **Offering it.** Families who haven't bought a package can see it on their home page
+  before go-home, with **Ask about this**, which sends her a message through the site's
+  inbox. It's her own product and counts as an offer, not an affiliate link, and it
+  never shows to families who already have it.
+
+**Video: what's new to build.** KennelPort only embeds videos from YouTube and similar
+services today. Hosting them means:
+
+- **Uploads over 100 MB** (the Worker's request limit on Free and Pro plans) go to R2 in
+  parts through the Worker (R2 multipart upload), so a long video uploads from her
+  phone and picks up where it left off after a dropped connection.
+- **Playback** through the Worker with range requests, so a video starts playing at once
+  and can be skipped through without downloading all of it. A poster image is taken
+  from the first frame on her phone at upload.
+- **Format caveat:** iPhones record HEVC (.mov) by default. Safari plays it; some
+  browsers on Windows and Android may not. Families can always download the file. For
+  smooth playback everywhere she can set the camera to **Most Compatible** (H.264) for
+  package videos, or KennelPort can add Cloudflare Stream later if needed (paid per
+  minute stored). Check both before building.
+- **Storage and cost.** At about 2 GB per package (40 full-size photos and five short
+  videos) and 20 packages a year, that's about 40 GB a year. Kept for two years, it peaks
+  around 80 GB, roughly a dollar a month at R2's current list price ($0.015 per GB-month,
+  10 GB free, no download fees). Check the price before building. Package files count
+  against a separate, larger allowance on her site, not the website's photo limit.
+
+### 8.4 On her screens and theirs
+
+| Her side (Site Manager, section 7.3) | The family's side |
+|---|---|
+| **Today:** stay updates due, packages due or ready to deliver | **Home:** the stay page during the stay; "Your photo package is ready" when delivered |
+| **Dogs:** each puppy shows its extras; **Write this week's update**; upload to a package, set its status | **Stay** (a tab while the stay runs, in place of Timeline): updates, skills, countdown to go-home |
+| **Families:** each placement's extras, add or remove, KennelOS suggestions to confirm | **Photos:** the package gallery (view, play, download), beside the baby book |
+| **Portal:** each extra's delivery type, skills list, update cadence, package contents and delivery note | **Records:** vaccines and deworming she gave during the stay |
+| **Website:** the `/extras` catalog, as built | |
+
+## 9. Data model
 
 New tables, all with `site_id` like the rest of KennelPort. Imported tables also carry
 `source`, `kennelos_id` and `edited_fields` (section 3.1).
@@ -328,19 +451,24 @@ New tables, all with `site_id` like the rest of KennelPort. Imported tables also
 | Table | Key fields | Purpose |
 |---|---|---|
 | `portal_families` | name, emails (encrypted) and their hashes, email preferences, default sharing level, invited at, first signed in, last activity at, keep, warned at, status (active / erased) | One per family. Several emails each, so two partners can both sign in |
-| `portal_placements` | family, puppy, the name the family gave, microchip, planned go-home, picked-up at, vet deadline, vet proof file, proof accepted at, life status (with family / deceased / rehomed / returned) and its date | One per puppy a family takes home. A repeat buyer gets a second placement, not a second family. Everything family-facing about the puppy lives here, so it is always hers to edit |
+| `portal_placements` | family, puppy, the name the family gave, microchip, planned go-home (8 weeks, or the stay package's weeks), picked-up at, vet deadline, vet proof file, proof accepted at, life status (with family / deceased / rehomed / returned) and its date | One per puppy a family takes home. A repeat buyer gets a second placement, not a second family. Everything family-facing about the puppy lives here, so it is always hers to edit |
 | `litters`, `puppies`, `dogs` (existing) | as they are | The portal points at the site's own records instead of copying them, so she adds a litter once. Their public-site status (`placed`, `remembered`) stays separate from a placement's life status. While the site is linked, KennelOS owns some of their fields (plan 5.3); unlinking makes them all editable (plan 5.2), so rule 1 still holds |
 | `products` (existing) | adds type (food / insurance / registration / product / other), what the family must do, family-specific (yes/no) | Every program and product link, stored once |
 | `portal_placements_programs` | placement, product, status (not started / clicked / done), family-specific code or certificate | Which families still need each step |
 | `portal_link_spots` | product, page or chapter or checklist item, order | Where each link appears |
 | `portal_health_records` | puppy, type (vaccine / deworming / vet visit / other), date, notes, file | Shot record and vet proof |
-| `portal_checklist_items`, `portal_timeline_tasks` | her templates, plus per-placement additions, removals and dates | Go-home checklist and first-weeks timeline |
+| `portal_checklist_items`, `portal_timeline_tasks` | her templates (each task counts from birth or from pickup), plus per-placement additions, removals and dates | Go-home checklist and first-weeks timeline |
 | `portal_chapters` | title, order, body, on/off | Handbook |
 | `portal_entries` | puppy or litter, author (breeder / family), date shown, title, body, photos, visibility, draft (yes/no), from KennelOS milestone(s) | Baby book |
 | `portal_photo_consents` | entry or photo, family, level (private / shared with her / OK to post), given at | Consent record, kept as long as she uses the photo |
 | `portal_email_log` | family, kind, sent at, address hash, provider ID, result | Reminder evidence, deliverability |
 | `portal_clicks` | family (nullable), product, page, at | Referral tracking. Family cleared at deletion |
 | `portal_tombstones` | kennelos_id, type, deleted at | Stops a deleted record being imported again |
+| `extras` (existing) | adds delivery type (stay / media / none), update cadence in days (stay), what the package includes and a delivery note (media) | The website's catalog, also the portal's list of what it delivers |
+| `portal_placement_extras` | placement, extra, `kennelos_id`, status (stay: booked / staying / home; media: booked / shooting / editing / delivered), due date, delivered at | Which family has which extra |
+| `portal_stay_skills` | placement extra, skill, order, from the package (yes/no) | The stay's skills list, copied from the package's checklist so she can add her own |
+| `portal_stay_updates` | placement extra, date, week, note, weight, skill levels (skill → not started / introduced / practicing / reliable, with a note), photos, videos, sent at, baby book entry (nullable) | Weekly progress |
+| `portal_media` | placement extra or stay update, R2 key, kind (photo / video), original name, bytes, width, height, duration, preview and poster keys, uploaded at | Package and update files, kept at full size |
 
 **Build first, not later:** the pickup time (it starts the vet clock), the placement's
 life status (it stops birthday emails for a dog that has died or been rehomed; her own
@@ -350,7 +478,7 @@ dogs already have `remembered` and `died_on`), and
 **Migrations:** following `CLAUDE.md`, the branch that builds phase 1 adds one migration
 for all of this.
 
-## 9. Retention and deletion
+## 10. Retention and deletion
 
 Two kinds of data, kept on different clocks:
 
@@ -360,13 +488,15 @@ Two kinds of data, kept on different clocks:
   reminder log. She needs these for any health guarantee claim, so they are kept for
   the guarantee period, not deleted with the account.
 
-### 9.1 The rules
+### 10.1 The rules
 
 | What | When it goes |
 |---|---|
 | Unused invite link | Expires 30 days after sending. Nothing is deleted; she can resend |
 | Family that never signed in | Account deleted 90 days after **pickup** (not after the invite, which may go out at deposit, months earlier), with warnings |
 | Inactive family | Account deleted 12 months after last activity, with warnings at 30 and 7 days |
+| Photo and video package files | Kept at least 2 years after delivery whatever the activity, then deleted with 60 and 14 days' warning, each with **Download all** |
+| Stay updates | With the family's account; any update turned into a baby book entry goes with the baby book |
 | Sale record, contract, vet proof, reminder log | Kept until the end of her longest health guarantee plus 6 months, then deleted |
 | Clicks and program status | Family removed from the rows at account deletion; the counts stay for her stats |
 | Anything | Paused while she has **Keep** on; erased at once when the family asks |
@@ -374,7 +504,7 @@ Two kinds of data, kept on different clocks:
 
 These numbers are a starting proposal for her to confirm (open question 9).
 
-### 9.2 What counts as activity
+### 10.2 What counts as activity
 
 `last_activity_at` updates on any portal visit by a signed-in family, any click on a
 link in a portal email, any upload, and **Keep my account**. It does not update when an
@@ -384,7 +514,7 @@ Note: a family that ignores a year of emails, birthday emails included, is delet
 the birthday emails stop with it. That is the intended trade: less data kept on families
 who have moved on.
 
-### 9.3 Before deleting
+### 10.3 Before deleting
 
 - **Warnings** at 30 and 7 days, each with:
   - **Keep my account**, which counts as activity;
@@ -396,7 +526,7 @@ who have moved on.
   automatically. She is asked in the manage app first and can Keep the family, or send
   gentler wording.
 
-### 9.4 What deletion does
+### 10.4 What deletion does
 
 - Deletes the family row's emails, preferences and sessions, and their entries,
   uploads and the R2 files behind them (through the existing photo purge, which waits
@@ -406,13 +536,13 @@ who have moved on.
   record stays as long as she uses the photo.
 - Sets `family` to null on clicks and program status rows.
 - Leaves the placement, health records, contract and email log until their own date
-  (9.1), with the family reduced to a name she can read.
+  (10.1), with the family reduced to a name she can read.
 - If the family came from KennelOS, writes a tombstone with the KennelOS ID only.
 
 The rules run in the existing daily cleanup (`cleanup.js`), each with a test, and are
 listed in its header comment with the others.
 
-## 10. Program rules, disclosure and email
+## 11. Program rules, disclosure and email
 
 - **Read each program's terms before building the placements.** Some restrict where
   links may appear. Amazon Associates, for example, bans affiliate links in emails and
@@ -431,7 +561,7 @@ listed in its header comment with the others.
 - **Deliverability:** Resend with her domain verified (SPF, DKIM, DMARC), already set up
   for KennelPort's sign-in codes.
 
-## 11. Measuring it
+## 12. Measuring it
 
 - **Before launch:** from her program dashboards, record what share of families enrolled
   in each program for her recent litters.
@@ -441,24 +571,27 @@ listed in its header comment with the others.
 - 3–4 litters is roughly 20–30 families, so only large changes will be clear. Keep
   measuring for the full first year.
 
-## 12. Risks and safeguards
+## 13. Risks and safeguards
 
 | Risk | Safeguard |
 |---|---|
 | A family misses the vet visit and says the portal never told them | Contract states the requirement; deadline counted exactly as the contract words it; booking reminder before pickup; reminder log with delivery results; bounce alerts (section 5) |
-| Birthday email to a family whose dog has died | Life status on every placement, `remembered` on her dogs; families can tell her from the portal; a status change stops all birthday emails at once; retention warnings held for deceased dogs (9.3) |
+| Birthday email to a family whose dog has died | Life status on every placement, `remembered` on her dogs; families can tell her from the portal; a status change stops all birthday emails at once; retention warnings held for deceased dogs (10.3) |
 | A KennelOS sync overwrites her edits or brings back something she deleted | Edited fields never overwritten; tombstones; tests for both (section 3.1) |
-| Deleting a family loses guarantee evidence | Sale records and reminder log on their own retention clock (section 9) |
-| Deleting a family loses photos she has reposted | Shared photos copied to her albums; consent records kept (9.4) |
+| Deleting a family loses guarantee evidence | Sale records and reminder log on their own retention clock (section 10) |
+| Deleting a family loses photos she has reposted | Shared photos copied to her albums; consent records kept (10.4) |
 | Family emails exposed | Encrypted at rest, never logged, deleted with the account |
 | The portal reads as an ad funnel and costs her trust | Handbook and records lead; links sit where they answer a need; no standalone shop page |
-| A program's link rules broken | Terms checked before building; direct links where redirects are banned (section 10) |
+| A program's link rules broken | Terms checked before building; direct links where redirects are banned (section 11) |
 | Reposting families' photos without permission | Explicit "OK to post" level, asked per photo, recorded |
+| A family loses the package they paid for | Two years' minimum keep after delivery; warnings with **Download all** before deletion; the time is stated on the gallery page |
+| Video that won't play on a family's phone or computer | Download always offered; Most Compatible recording; Cloudflare Stream as a fallback (section 8.3) |
+| A stay family feels out of touch | Updates due show on her Today screen; the family's page says when the next update is due |
 | Other families' details in banners | Call names only, with permission; never owner names or contact details |
 | Admin work falls on her | Every screen usable on her phone; adding a litter takes a few minutes; KennelOS import saves retyping |
 | Sign-in emails land in spam | Resend with her domain verified; the code works across devices and in-app email browsers |
 
-## 13. Before building
+## 14. Before building
 
 - [ ] Confirm whether her public site is (or will be) a KennelPort site; decides the
       address (section 2)
@@ -471,8 +604,14 @@ listed in its header comment with the others.
 - [ ] Check which KennelOS data the bundle API already sends (plan 5.3) and what the
       portal needs added (families, emails, pickup dates, health records)
 - [ ] Reword KennelPort plan decision 20 (section 2)
+- [ ] Check what KennelOS records for a family's extras (requested, bought, paid) and
+      whether the bundle can send it
+- [ ] Get her photo and video package contents, file counts, how she shoots video, and
+      her package terms (her own use of the photos, how long she keeps them)
+- [ ] Check R2 multipart upload limits, the Worker request limit and R2 pricing; try
+      HEVC playback on Chrome for Windows and Android
 
-## 14. Open questions
+## 15. Open questions
 
 1. Is her public site a KennelPort site? A path on it or a subdomain?
 2. Which programs does she use, and do any give family-specific codes or certificates?
@@ -486,3 +625,10 @@ listed in its header comment with the others.
    or is each family's view private to them?
 9. Retention: are 30 days (invite), 90 days after pickup (never signed in), 12 months
    (inactive) and guarantee plus 6 months (sale records) the right numbers?
+10. Extended stays: is the skills list the package's website checklist, or does she track
+    more? Weekly updates, or a different rhythm per package?
+11. During a stay, does she give the 10-, 12- and 16-week shots herself, or take the
+    puppy to her vet? (Decides how they're logged.)
+12. Photo and video packages: what's in each, how soon after go-home is it delivered, and
+    may she use package photos on her own site?
+13. Should families be able to share their package gallery with relatives?
