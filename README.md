@@ -27,7 +27,7 @@ rules wait until KennelPort is offered (9). See
 [`docs/KennelPort_Design_Direction.md`](docs/KennelPort_Design_Direction.md); Cloudflare setup:
 [`docs/KennelPort_Setup.md`](docs/KennelPort_Setup.md); the version-1 code review, run over
 several sessions: [`docs/KennelPort_Review_Plan.md`](docs/KennelPort_Review_Plan.md) (findings
-in [`docs/review/`](docs/review/)). The family portal for one breeder (planned, not built):
+in [`docs/review/`](docs/review/)). The family portal for one breeder (phase 1 built, with KennelOS's side of the feed; its gate is next):
 [`docs/Puppy_Parent_Portal_Plan.md`](docs/Puppy_Parent_Portal_Plan.md). Co-owned dogs, with
 KennelOS: [`docs/Co_Owned_Dogs_Plan.md`](docs/Co_Owned_Dogs_Plan.md). History: [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md).
 

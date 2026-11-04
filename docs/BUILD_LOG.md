@@ -1388,3 +1388,32 @@ From `docs/Co_Owned_Dogs_Plan.md`. Migration `0025_co_owned`.
 - `docs/KennelPort_Site_Directory.md`: co-owners' personal details still never come from
   KennelOS; a kennel name she ticks may.
 - **Version:** site template `ASSET_VERSION` 15 (`site.css`), with the owner's yes.
+
+## 2026-11-04: Puppy parent portal, KennelOS's side of the feed
+
+Built in the KennelOS repository (its End-State guide §35.1; KennelOS PR #160). No change
+here: the notes below say what KennelPort now receives.
+
+- **The feed** (`POST /v1/portal`, format 1) goes from each of her devices linked to the
+  site, only while the link facts say `portal_feed: 1`: when KennelOS opens (at most
+  hourly, after re-reading the facts, sent even unchanged so Last from KennelOS stays
+  fresh) and 20 seconds after a change that alters it. Families from their signed contract
+  on (a Sale contract marked Signed with its date); the family's id is their KennelOS
+  contact. Placements stop being sent 60 days after go-home or their last edit, and are not
+  marked `removed` for that. `removed` is sent only for something deleted, or a contract
+  set back from Signed.
+- **Her vet** (plan 3.2, **Modified**): the Vet contact she names most on her own dogs' vet
+  visits and surgeries, else her only Vet contact; `doctor` is not sent.
+- **The facts back** are applied once each on her device: the pickup event moved to the
+  real time in her time zone (or made) and the sale marked Delivered; the microchip; a death
+  after pickup; `portal_only`. A later change in KennelOS isn't undone by the portal.
+- **The one-tap link**: KennelOS keeps `portal.handoff_key` on her kennel record (cloud) and
+  in her waitlist projection's server-only part; its server's `POST /f/portal` signs the
+  token in the format `redeemHandoff` reads, at most 10 minutes, only for a family signed in
+  on the status page. Their page shows **Open your puppy portal**, then only **Your puppy
+  portal** once handed over, Delivered, or past the pickup day (switched on the server).
+  Companion's link request and Furever are off for her families.
+
+Before the gate (plan section 6): a KennelOS Worker deploy, then one litter from signed
+contract to the vet visit against staging, the `RESEND_WEBHOOK_SECRET` secret, and her
+answers to plan 15.
