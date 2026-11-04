@@ -271,3 +271,37 @@ test('the hourly cron runs the portal job; the daily one runs the cleanup', asyn
   await Promise.all(waits);
   assert.equal(env.DB.raw.prepare('SELECT pickup_state FROM portal_placements').get().pickup_state, 'assumed');
 });
+
+test('her and her vet\'s contacts: one tap from Home for the first weeks after pickup, always on Records', async () => {
+  const { env, site, her, fam } = await setup();
+  env.DB.raw.prepare("UPDATE sites SET contact_phone = '(555) 010-2000', contact_email = 'hello@akbostons.example' WHERE id = ?").run(site.id);
+  const base = { vet_rule: 'hours72', time_zone: 'America/New_York' };
+  const bad = await her('/portal/settings', { ...base, vet_phone: 'call me' });
+  assert.equal(bad.status, 400);
+  assert.match(await bad.text(), /doesn&#39;t look like a phone number/);
+  assert.equal((await her('/portal/settings', { ...base, vet_clinic: 'Maple Street Animal Hospital', vet_doctor: 'Dr. Lee', vet_phone: '+1 (555) 010-3000', vet_address: '12 Maple St, Springfield', vet_note: 'Dr. Lee has seen every puppy since birth.', help_weeks: '6' })).status, 303);
+  assert.match(await (await her('/portal/settings')).text(), /value="Dr\. Lee"/);
+
+  const id = await addFamily(her, { name: 'The Reed family', emails: 'sam@example.com', puppy_id: 'pup1' });
+  const reed = fam(await familySignIn(env, 'sam@example.com'));
+  // Before pickup: not on Home, but on Records.
+  assert.doesNotMatch(await (await reed('/family')).text(), /Questions about Opal/);
+  const records = await (await reed('/family/records')).text();
+  assert.match(records, /href="tel:\+15550103000">.*Call the vet/s);
+  assert.match(records, /Maple Street Animal Hospital · Dr\. Lee/);
+
+  await her(`/portal/f/${id}/picked-up`, {});
+  const home = await (await reed('/family')).text();
+  assert.match(home, /Questions about Opal\? One tap/);
+  // Blank in her settings: the website's number and address.
+  assert.match(home, /href="tel:5550102000"/);
+  assert.match(home, /href="sms:5550102000"/);
+  assert.match(home, /href="mailto:hello@akbostons\.example\?subject=Question%20about%20Opal"/);
+  assert.match(home, /Opal's vet since birth/);
+  assert.match(home, /google\.com\/maps\/search\/\?api=1&amp;query=12%20Maple%20St%2C%20Springfield/);
+
+  // After her six weeks it leaves Home; Records keeps it.
+  env.DB.raw.prepare('UPDATE portal_placements SET picked_up_at = ?').run(new Date(Date.now() - 43 * DAY).toISOString());
+  assert.doesNotMatch(await (await reed('/family')).text(), /Questions about Opal/);
+  assert.match(await (await reed('/family/records')).text(), /Call the vet/);
+});

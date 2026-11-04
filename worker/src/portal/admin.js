@@ -233,6 +233,17 @@ function settingsScreen(site, s, products, { error } = {}, url) {
       <label>Your time zone<select name="time_zone">${zones.map((z) => `<option value="${esc(z)}"${z === s.time_zone ? ' selected' : ''}>${esc(ZONE_NAMES[z] ?? z)}</option>`).join('')}</select></label>
       <label>What counts as proof<input name="proof_note" value="${esc(s.proof_note ?? '')}" maxlength="400" placeholder="The vet's exam record or receipt, showing the date and Opal's microchip"><span class="hint">Shown on the vet page and in reminders.</span></label>
     </div></section>
+    <section class="fgroup"><h2>Contacts for families, once the puppy is home</h2><div class="fgrid">
+      <p class="hint">From pickup, each family's Home leads with these as one-tap buttons for the first weeks, so a question goes to you or your vet, who already knows the puppy. They stay under Records after that.</p>
+      <div class="row"><label>Your phone for families<input name="her_phone" type="tel" value="${esc(s.her_phone ?? '')}" maxlength="40" placeholder="${esc(site.contactPhone ?? '')}"><span class="hint">Call and text.${site.contactPhone ? ' Blank: your website\'s number.' : ''}</span></label>
+      <label>Your email for families<input name="her_email" type="email" value="${esc(s.her_email ?? '')}" maxlength="254" placeholder="${esc(site.contactEmail ?? '')}"><span class="hint">${site.contactEmail ? 'Blank: your website\'s address.' : 'Optional.'}</span></label></div>
+      <div class="row"><label>Your vet's clinic<input name="vet_clinic" value="${esc(s.vet_clinic ?? '')}" maxlength="120" placeholder="Maple Street Animal Hospital"></label>
+      <label>Vet's name<input name="vet_doctor" value="${esc(s.vet_doctor ?? '')}" maxlength="120" placeholder="Dr. Lee"></label></div>
+      <div class="row"><label>Vet's phone<input name="vet_phone" type="tel" value="${esc(s.vet_phone ?? '')}" maxlength="40"></label>
+      <label>Vet's address<input name="vet_address" value="${esc(s.vet_address ?? '')}" maxlength="200"><span class="hint">Opens in maps.</span></label></div>
+      <label>A note for families<input name="vet_note" value="${esc(s.vet_note ?? '')}" maxlength="400" placeholder="Dr. Lee has seen every puppy since birth and is happy to take your questions."></label>
+      <label>On Home for this many weeks after pickup<input name="help_weeks" inputmode="numeric" value="${esc(s.help_weeks ?? 8)}" maxlength="2"></label>
+    </div></section>
     <section class="fgroup"><h2>Programs families see</h2><div class="fgrid">
       ${products.length ? products.map((x) => `<div class="fgrid box"><b>${esc(x.name)}</b>
         <div class="row"><label>Show as<select name="type.${esc(x.id)}">${Object.entries(TYPES).map(([k, l]) => `<option value="${k}"${(x.portal_show ? x.portal_type ?? 'other' : '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
@@ -253,9 +264,9 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   const rest = m[1] ?? '';
   const post = request.method === 'POST';
   // With its own domain, for links in emails and the address shown to her.
-  const full = await env.DB.prepare(`SELECT s.id, s.subdomain, s.kennel_name, d.hostname AS domain FROM sites s
+  const full = await env.DB.prepare(`SELECT s.id, s.subdomain, s.kennel_name, s.contact_phone, s.contact_email, d.hostname AS domain FROM sites s
     LEFT JOIN custom_domains d ON d.site_id = s.id AND d.status = 'active' WHERE s.id = ?`).bind(site.id).first();
-  site = { ...site, domain: full.domain, kennel_name: full.kennel_name, portalUrl: `${portalBase(env, full).replace(/^https:\/\//, '')}/family` };
+  site = { ...site, domain: full.domain, kennel_name: full.kennel_name, contactPhone: full.contact_phone, contactEmail: full.contact_email, portalUrl: `${portalBase(env, full).replace(/^https:\/\//, '')}/family` };
   const home = `/s/${site.subdomain}/portal`;
   const back = `/s/${site.subdomain}`;
   const s = await getSettings(env, site.id);

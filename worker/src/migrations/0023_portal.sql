@@ -1,5 +1,6 @@
 -- The Puppy Parent Portal, build chunk 1 (docs/Puppy_Parent_Portal_Plan.md sections
--- 2, 5, 9 and 10): families and their sign-in, placements with the pickup and the
+-- 2, 5, 9 and 10): families and their sign-in, her and her vet's contacts for
+-- families, placements with the pickup and the
 -- vet clock, health records, files, the reminder log, history, clicks and her
 -- portal settings. Switched on per site (sites.portal_on, from /ops). Additive only.
 --
@@ -18,13 +19,25 @@ ALTER TABLE products ADD COLUMN family_action TEXT;
 -- One row per site with the portal on. vet_rule is how her contract counts the
 -- vet visit (plan section 5): 72 hours from pickup, or by the end of the third
 -- calendar day after the pickup day, in her time zone.
+-- Contacts for families once the puppy is home: her own phone and email for
+-- families (blank: the website's contact details), and her vet, who knows the
+-- puppy, for questions in the first weeks. help_weeks: how long after pickup
+-- they lead the family's Home; they stay under Records after that.
 CREATE TABLE IF NOT EXISTS portal_settings (
-  site_id     TEXT PRIMARY KEY REFERENCES sites(id),
-  time_zone   TEXT NOT NULL DEFAULT 'America/New_York',
-  vet_rule    TEXT NOT NULL DEFAULT 'hours72' CHECK (vet_rule IN ('hours72', 'days3')),
-  proof_note  TEXT,
-  disclosure  TEXT,
-  updated_at  TEXT
+  site_id        TEXT PRIMARY KEY REFERENCES sites(id),
+  time_zone      TEXT NOT NULL DEFAULT 'America/New_York',
+  vet_rule       TEXT NOT NULL DEFAULT 'hours72' CHECK (vet_rule IN ('hours72', 'days3')),
+  proof_note     TEXT,
+  disclosure     TEXT,
+  her_phone      TEXT,
+  her_email      TEXT,
+  vet_clinic     TEXT,
+  vet_doctor     TEXT,
+  vet_phone      TEXT,
+  vet_address    TEXT,
+  vet_note       TEXT,
+  help_weeks     INTEGER NOT NULL DEFAULT 8,
+  updated_at     TEXT
 );
 
 CREATE TABLE IF NOT EXISTS portal_families (

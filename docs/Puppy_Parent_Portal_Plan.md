@@ -270,6 +270,11 @@ Everything families see is content she edits in the manage app:
 - **Email wording:** vet reminders, birthday, milestone and retention warning emails,
   each with a preview. The legal parts (unsubscribe link, mailing address, deadline) are
   added by the template and can't be removed.
+- **Contacts for families once the puppy is home:** her phone and email for families
+  (the website's by default) and her vet, who has known the puppy since birth: clinic,
+  vet's name, phone, address and a note. From pickup they lead the family's Home as
+  one-tap Call, Text, Email and Call the vet buttons for the weeks she sets (8 by
+  default), then stay under Records.
 - **Kennel info, FAQ, upcoming litters.**
 - **Baby book:** her entries, photos and order; which family entries she reposts (with
   their permission, section 9).
@@ -388,8 +393,8 @@ its own:
    invites at `/family`; families, placements, pickup, health records and the contract
    on her side; My Puppy and Records; the vet countdown with its reminders, **I've booked
    it**, proof upload, acceptance and the reminder log; the programs on Home with click
-   tracking and the disclosure; history on placements; the portal switched on per site
-   from /ops.
+   tracking and the disclosure; her and her vet's contacts, one tap from Home for the
+   first weeks; history on placements; the portal switched on per site from /ops.
 2. **Checklist, timeline and programs:** her templates, each family's ticks and program
    status, the food band.
 3. **KennelOS:** the feed's new rows, the handoff, the one-tap link, the facts that go

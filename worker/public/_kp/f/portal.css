@@ -113,6 +113,11 @@ html[data-zoom="3"] .tiles { grid-template-columns: 1fr; }
 .tile { display: grid; gap: .2rem; padding: .9rem; border-radius: var(--rc); background: var(--surface); box-shadow: var(--shadow); color: var(--ink); text-decoration: none; }
 .tile svg.i { width: 2.4rem; height: 2.4rem; padding: .5rem; border-radius: 12px; background: var(--accent-soft); color: var(--accent); margin-bottom: .3rem; }
 .tile span { color: var(--muted); font-size: .84rem; }
+.contacts { display: grid; gap: .9rem; }
+.contacts h2 { margin-bottom: 0; }
+.contact { display: grid; gap: .45rem; padding-top: .8rem; border-top: 1px solid var(--line); }
+.contact p { margin: 0; }
+.contact .row .btn { flex: 1 1 7rem; }
 .disclosure { color: var(--muted); font-size: .78rem; text-align: center; padding: 0 1rem; }
 
 .facts { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem 1rem; margin: 0; }

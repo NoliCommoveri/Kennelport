@@ -13,7 +13,7 @@ import {
 } from './auth.js';
 import {
   getSettings, placementFor, puppyFor, healthRecords, recordVetBooking, saveFile, getFile, fileResponse, familyEmails,
-  PortalError, RECORD_TYPES, MAX_FILE_BYTES, DEFAULT_DISCLOSURE,
+  PortalError, RECORD_TYPES, MAX_FILE_BYTES, DEFAULT_DISCLOSURE, dialable,
 } from './store.js';
 import { stage, vetDeadline, formatAt, formatDay, timeLeft, localParts, VET_RULES } from './vet.js';
 import { PORTAL_VERSION } from './version.js';
@@ -46,6 +46,10 @@ const ICONS = {
   tag: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
   arrow: '<path d="M7 17 17 7M9 7h8v8"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  phone: '<path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2"/>',
+  message: '<path d="M4 5h16v11H9l-5 4z"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+  pin: '<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
 };
 const TYPE_ICON = { food: 'bowl', insurance: 'shield', registration: 'award', product: 'tag', other: 'tag' };
 const SPRITE = `<svg width="0" height="0" class="sprite" aria-hidden="true">${Object.entries(ICONS).map(([k, d]) => `<symbol id="i-${k}" viewBox="0 0 24 24">${d}</symbol>`).join('')}</svg>`;
@@ -170,6 +174,31 @@ function noPlacement(site, fam) {
     <p class="muted">${esc(site.kennel_name || site.subdomain)} hasn't added your puppy here yet. Check back soon.</p></section>`, { fam, tab: '/family' });
 }
 
+// Her and her vet's contacts for the family (her portal settings), as one-tap
+// buttons: call or text her, email her, call the vet who knows the puppy.
+function contactsCard(site, s, name, { lead = false } = {}) {
+  const kennel = site.kennel_name || site.subdomain;
+  const phone = s.her_phone || site.contact_phone;
+  const email = s.her_email || site.contact_email;
+  const vet = s.vet_clinic || s.vet_doctor || s.vet_phone;
+  if (!phone && !email && !vet) return '';
+  const her = phone || email ? `<div class="contact"><p class="eyebrow">${esc(kennel)}</p><div class="row">
+      ${phone ? `<a class="btn line" href="tel:${esc(dialable(phone))}">${ic('phone')} Call</a><a class="btn line" href="sms:${esc(dialable(phone))}">${ic('message')} Text</a>` : ''}
+      ${email ? `<a class="btn line" href="mailto:${esc(email)}?subject=${encodeURIComponent(`Question about ${name}`)}">${ic('mail')} Email</a>` : ''}</div>
+      ${phone ? `<p class="small muted">${esc(phone)}</p>` : ''}</div>` : '';
+  const vetBlock = vet ? `<div class="contact"><p class="eyebrow">${esc(name)}'s vet since birth</p>
+      <p><b>${esc([s.vet_clinic, s.vet_doctor].filter(Boolean).join(' · '))}</b></p>
+      ${s.vet_note ? `<p class="small">${esc(s.vet_note)}</p>` : ''}
+      <div class="row">${s.vet_phone ? `<a class="btn line" href="tel:${esc(dialable(s.vet_phone))}">${ic('phone')} Call the vet</a>` : ''}
+      ${s.vet_address ? `<a class="go" href="https://www.google.com/maps/search/?api=1&amp;query=${encodeURIComponent(s.vet_address)}">${ic('pin')} ${esc(s.vet_address)} ${ic('arrow')}</a>` : ''}</div>
+      ${s.vet_phone ? `<p class="small muted">${esc(s.vet_phone)}</p>` : ''}</div>` : '';
+  return `<section class="card contacts" id="contacts">${lead ? `<p class="eyebrow">The first weeks at home</p><h2>Questions about ${esc(name)}? One tap</h2>` : '<h2>Contacts</h2>'}${her}${vetBlock}</section>`;
+}
+
+// From pickup, for her chosen number of weeks, the contacts lead Home.
+const contactsLead = (p, s, now) => Boolean(p.picked_up_at && p.status === 'open' && p.life_status === 'with_family'
+  && new Date(now).getTime() - Date.parse(p.picked_up_at) < (s.help_weeks ?? 8) * 7 * 86400000);
+
 async function homePage(env, site, fam, now = new Date()) {
   const { p, s, pup, main } = await loadContext(env, site, fam);
   if (!p) return noPlacement(site, fam);
@@ -220,6 +249,7 @@ async function homePage(env, site, fam, now = new Date()) {
     ${calendar}
   </section>
   ${band}
+  ${contactsLead(p, s, now) ? contactsCard(site, s, name, { lead: true }) : ''}
   ${list.length ? `<section class="card"><h2>Included with ${esc(name)}</h2>${programList(list, 'home')}</section>` : ''}
   <section class="tiles">
     <a class="tile" href="/family/records">${ic('file')}<b>${esc(name)}'s records</b><span>Shots, deworming, contract</span></a>
@@ -283,6 +313,7 @@ async function recordsPage(env, site, fam) {
     ${contract ? `<li><a href="/family/file/${esc(contract.id)}">${ic('file')} Your contract</a></li>` : '<li class="muted">Your contract will be here once it\'s added.</li>'}
     ${p.proof_file_id ? `<li><a href="/family/file/${esc(p.proof_file_id)}">${ic('stethoscope')} Vet visit record</a></li>` : ''}
   </ul></section>
+  ${contactsCard(site, s, name)}
   <section class="card" id="photos"><h2>Photos of ${esc(name)}</h2>
     ${photos.length ? `<ul class="gallery">${photos.map((ph) => `<li><a href="/family/photo/${esc(ph.id)}"><img src="/family/photo/${esc(ph.id)}?s=t" alt="${esc(ph.alt ?? '')}" loading="lazy"></a></li>`).join('')}</ul>` : '<p class="muted">Photos will appear here.</p>'}</section>`;
   return frame(site, 'Records', body, { fam, tab: '/family/records' });
@@ -338,7 +369,7 @@ function sameOrigin(request, url) {
 export async function servePortal(request, env, ctx, subdomain, { onDomain = false } = {}) {
   const url = new URL(request.url);
   if (!(await schemaReady(env.DB))) return htmlPage('Back soon', '<h1>Back soon</h1><p>Please try again in a few minutes.</p>', { status: 503, headers: { 'retry-after': '300' } });
-  const site = await env.DB.prepare(`SELECT s.id, s.subdomain, s.kennel_name, s.status, s.portal_on, d.hostname AS domain
+  const site = await env.DB.prepare(`SELECT s.id, s.subdomain, s.kennel_name, s.status, s.portal_on, s.contact_phone, s.contact_email, d.hostname AS domain
     FROM sites s LEFT JOIN custom_domains d ON d.site_id = s.id AND d.status = 'active' WHERE s.subdomain = ?`).bind(subdomain).first();
   if (!site || !site.portal_on || site.status === 'closed' || site.status === 'suspended') return htmlPage('Not found', '<h1>Not found</h1><p>There is no page at this address.</p>', { status: 404 });
   if (site.domain && !onDomain && env.ALLOW_HOST_OVERRIDE !== '1') {

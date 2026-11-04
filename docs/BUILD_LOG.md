@@ -1143,6 +1143,11 @@ typed in by her and no KennelOS feed yet.
   details, life status, reminder log with each send's result and the deadline it was
   counted from, history), Portal settings and programs, and the portal's items in
   Needs you. Built on the app's existing styles, so no Site Manager version bump.
+- **Contacts for the first weeks** (asked for after the first push): in Portal
+  settings, her phone and email for families (blank: the website's) and her vet's
+  clinic, name, phone, address and a note. From pickup, the family's Home leads with
+  "Questions about Opal? One tap": Call, Text and Email her, Call the vet, the address
+  opening in maps, for 8 weeks by default (her setting); Records keeps them after.
 - **Kept safe:** a litter with an open placement is never expired by the 30-day litter
   clock; closing a site deletes the portal's rows and files; `sendMail` now returns
   Resend's message id for the log, and sends portal mail under the kennel's name.

@@ -24,18 +24,46 @@ export async function portalOn(env, siteId) {
   return Boolean(await env.DB.prepare('SELECT portal_on FROM sites WHERE id = ?').bind(siteId).first('portal_on'));
 }
 
+const SETTINGS_DEFAULTS = {
+  time_zone: 'America/New_York', vet_rule: 'hours72', proof_note: null, disclosure: null,
+  her_phone: null, her_email: null, vet_clinic: null, vet_doctor: null, vet_phone: null, vet_address: null, vet_note: null, help_weeks: 8,
+};
+
 export async function getSettings(env, siteId) {
   const row = await env.DB.prepare('SELECT * FROM portal_settings WHERE site_id = ?').bind(siteId).first();
-  return row ?? { site_id: siteId, time_zone: 'America/New_York', vet_rule: 'hours72', proof_note: null, disclosure: null };
+  return row ?? { site_id: siteId, ...SETTINGS_DEFAULTS };
 }
+
+// A phone number as typed, kept if it has 7 to 15 digits (an optional leading +).
+export function cleanPhone(v, what) {
+  const s = clean(v, 40);
+  if (!s) return null;
+  const digits = s.replace(/\D/g, '');
+  if (digits.length < 7 || digits.length > 15 || /[^\d\s()+.\-]/.test(s.replace(/\s*(ext\.?|x)\s*\d+$/i, ''))) throw new PortalError(`${what} doesn't look like a phone number.`);
+  return s;
+}
+
+// For a tel: or sms: link: digits, and a leading + if typed.
+export const dialable = (phone) => (String(phone).trim().startsWith('+') ? '+' : '') + String(phone).replace(/\s*(ext\.?|x)\s*\d+$/i, '').replace(/\D/g, '');
 
 export async function saveSettings(env, siteId, input) {
   const tz = String(input.time_zone ?? '').trim();
   if (!validTimeZone(tz)) throw new PortalError('Choose a time zone from the list.');
   if (!VET_RULES[input.vet_rule]) throw new PortalError('Choose how your contract counts the vet visit.');
-  await env.DB.prepare(`INSERT INTO portal_settings (site_id, time_zone, vet_rule, proof_note, disclosure, updated_at) VALUES (?, ?, ?, ?, ?, ?)
-    ON CONFLICT (site_id) DO UPDATE SET time_zone = excluded.time_zone, vet_rule = excluded.vet_rule, proof_note = excluded.proof_note, disclosure = excluded.disclosure, updated_at = excluded.updated_at`)
-    .bind(siteId, tz, input.vet_rule, clean(input.proof_note, 400), clean(input.disclosure, 400), now()).run();
+  const herEmail = clean(input.her_email, 254);
+  if (herEmail && !normalizeEmail(herEmail)) throw new PortalError('Your email for families isn\'t an email address.');
+  const weeks = clean(input.help_weeks, 3) ?? '8';
+  if (!/^\d{1,2}$/.test(weeks) || Number(weeks) < 1 || Number(weeks) > 52) throw new PortalError('Weeks on Home is a number from 1 to 52.');
+  const v = {
+    time_zone: tz, vet_rule: input.vet_rule, proof_note: clean(input.proof_note, 400), disclosure: clean(input.disclosure, 400),
+    her_phone: cleanPhone(input.her_phone, 'Your phone for families'), her_email: herEmail,
+    vet_clinic: clean(input.vet_clinic, 120), vet_doctor: clean(input.vet_doctor, 120), vet_phone: cleanPhone(input.vet_phone, 'Your vet\'s phone'),
+    vet_address: clean(input.vet_address, 200), vet_note: clean(input.vet_note, 400), help_weeks: Number(weeks),
+  };
+  const cols = Object.keys(v);
+  await env.DB.prepare(`INSERT INTO portal_settings (site_id, ${cols.join(', ')}, updated_at) VALUES (?, ${cols.map(() => '?').join(', ')}, ?)
+    ON CONFLICT (site_id) DO UPDATE SET ${cols.map((c) => `${c} = excluded.${c}`).join(', ')}, updated_at = excluded.updated_at`)
+    .bind(siteId, ...Object.values(v), now()).run();
 }
 
 export async function setPortalOn(env, siteId, on) {
