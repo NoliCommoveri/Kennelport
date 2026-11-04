@@ -42,6 +42,7 @@ import { hmacHex, sha256Hex, timingSafeEqual, randomHex } from '../lib/crypto.js
 import { emailHash, normalizeEmail } from '../auth.js';
 import { encryptEmail, applyChanges, getSettings, PLACEMENT_FIELDS } from './store.js';
 import { siteBase } from '../kennelos/link.js';
+import { scheduleDelete } from './account.js';
 
 export const FEED_FORMAT = 1;
 export const MAX_FEED_BYTES = 512 * 1024;
@@ -191,10 +192,13 @@ async function addEmails(env, siteId, familyId, emails, counts) {
 async function upsertFamily(env, siteId, bf, at, counts) {
   if (await tombstoned(env, siteId, 'family', bf.id)) { counts.skipped_deleted++; return null; }
   let fam = await env.DB.prepare("SELECT * FROM portal_families WHERE site_id = ? AND kennelos_id = ? AND status = 'active'").bind(siteId, bf.id).first();
+  // Deleted by her (undoable for 30 days) or erased: KennelOS doesn't bring them back.
+  if (fam?.deleted_at) { counts.skipped_deleted++; return null; }
+  if (!fam && await env.DB.prepare("SELECT 1 FROM portal_families WHERE site_id = ? AND kennelos_id = ? AND status = 'erased'").bind(siteId, bf.id).first()) { counts.skipped_deleted++; return null; }
   if (!fam) {
     for (const email of bf.emails) {
       const hit = await env.DB.prepare(`SELECT f.* FROM portal_emails e JOIN portal_families f ON f.id = e.family_id
-        WHERE e.site_id = ? AND e.email_hash = ? AND f.status = 'active' AND f.kennelos_id IS NULL`).bind(siteId, await emailHash(env, email)).first();
+        WHERE e.site_id = ? AND e.email_hash = ? AND f.status = 'active' AND f.deleted_at IS NULL AND f.kennelos_id IS NULL`).bind(siteId, await emailHash(env, email)).first();
       if (hit) { fam = { ...hit, edited_fields: JSON.stringify([...new Set([...edited(hit), 'name'])]) }; break; }
     }
     if (fam) {
@@ -300,6 +304,12 @@ async function upsertPlacement(env, siteId, fam, bp, at, counts) {
     await applyChanges(env, siteId, p, apply, 'kennelos');
     counts.placements_updated++;
   }
+  // Backed out with nothing else open: their portal account goes in 30 days,
+  // undoable until then (plan 10.1); her sale records stay in KennelOS.
+  if (apply.closed_reason === 'backed_out' && !(await env.DB.prepare("SELECT 1 FROM portal_placements WHERE family_id = ? AND status = 'open'").bind(fam.id).first())) {
+    await scheduleDelete(env, siteId, fam.id, 'backed_out');
+    counts.families_leaving++;
+  }
   await upsertHealth(env, siteId, { ...p, ...apply }, bp.health, at, counts);
 }
 
@@ -354,7 +364,7 @@ async function markGone(env, siteId, r, at, counts) {
 export async function factsFor(env, siteId) {
   const { results } = await env.DB.prepare(`SELECT p.kennelos_id, p.picked_up_at, p.pickup_state, p.microchip, p.edited_fields, p.life_status, p.life_status_on, f.kennelos_id AS family_kennelos_id
     FROM portal_placements p JOIN portal_families f ON f.id = p.family_id
-    WHERE p.site_id = ? AND p.kennelos_id IS NOT NULL AND f.status = 'active'`).bind(siteId).all();
+    WHERE p.site_id = ? AND p.kennelos_id IS NOT NULL AND f.status = 'active' AND f.deleted_at IS NULL`).bind(siteId).all();
   return results.map((p) => {
     const out = { id: p.kennelos_id, family_id: p.family_kennelos_id };
     const home = p.pickup_state === 'confirmed' && p.picked_up_at;
@@ -399,7 +409,7 @@ export async function redeemHandoff(env, site, token) {
   const used = await env.DB.prepare('INSERT INTO portal_handoffs (nonce_hash, site_id, used_at) VALUES (?, ?, ?) ON CONFLICT (nonce_hash) DO NOTHING')
     .bind(await sha256Hex(`${site.id}:${body.n}`), site.id, now()).run();
   if (used.meta.changes !== 1) return null;
-  return env.DB.prepare("SELECT id FROM portal_families WHERE site_id = ? AND kennelos_id = ? AND status = 'active'").bind(site.id, body.f).first('id');
+  return env.DB.prepare("SELECT id FROM portal_families WHERE site_id = ? AND kennelos_id = ? AND status = 'active' AND deleted_at IS NULL").bind(site.id, body.f).first('id');
 }
 
 // ---------- the endpoint ----------
@@ -412,7 +422,7 @@ export async function applyFeed(env, device, body) {
   const at = now();
   const counts = {
     families_new: 0, families_linked: 0, families_updated: 0, emails_added: 0, email_conflicts: 0, placements_new: 0, placements_linked: 0,
-    placements_updated: 0, placements_closed: 0, puppy_conflicts: 0, health_new: 0, health_updated: 0, suggestions: 0, vet_filled: 0, gone: 0, skipped_deleted: 0,
+    placements_updated: 0, placements_closed: 0, families_leaving: 0, puppy_conflicts: 0, health_new: 0, health_updated: 0, suggestions: 0, vet_filled: 0, gone: 0, skipped_deleted: 0,
   };
   for (const bf of feed.families) {
     const fam = await upsertFamily(env, site.id, bf, at, counts);

@@ -1245,3 +1245,43 @@ Chunk 3's tables went into the branch's one migration, **0024**, with chunk 2's.
 Left for later: the contract document itself (only its date comes now), the puppy's own vet
 when it differs from hers, extras and stays (chunk 5), feeding schedule, buyer details and
 baby book drafts (phase 2).
+
+## 2026-11-04: Puppy parent portal, build chunk 4 (messages, the loss page, bounces, delete and erase)
+
+Its tables joined the branch's one migration, **0024**, with chunks 2 and 3.
+
+- **Messages from pickup** (plan 2; `portal_messages`). Before pickup the family's
+  Messages page points to their status page (or her email) and posting is refused; from
+  pickup they write to her there. Each message lands on her Today ("New message from the
+  Reed family") and on their screen, and wakes her devices (push, as a `notice` with a
+  `portal-message:` ref, since the notification kinds are fixed by migration 0004). Her reply
+  shows in their portal and goes to every address by email, logged like every portal email.
+  An unread count sits on the family's header.
+- **The loss page** (plan 7.4). A puppy who died or failed a health check before pickup,
+  from KennelOS's voided sale or recorded by her on the family's screen: their Home is one
+  quiet page (the photo, "We're so sorry about Opal" or "About Opal", her note, the way back
+  through their status page), the tabs shrink to Home and Photos, and nothing that sells
+  shows. Today asks her to **Write to the Reed family**; her note starts from a draft with
+  [brackets] she must replace, shows on their page when saved, and is emailed only if she
+  ticks it. No reminder names the puppy again. A new Photos page keeps every puppy's photos.
+- **Bounces** (plan 5): `POST api.kennelport.com/v1/resend`, Resend's webhook, signed the
+  Svix way with `RESEND_WEBHOOK_SECRET` (set it in Resend and as a Worker secret). Delivered
+  and bounced (complaints count as bounced) update the reminder log by message id; a bounce
+  wakes her devices and shows on Today. A delivered event never undoes a bounce.
+- **Delete, undoable for 30 days** (plan 4): her delete closes the family's portal at once
+  (signed out, can't sign in) and lists them under **Recently deleted** with Undo; the daily
+  cleanup finishes it after 30 days, with KennelOS tombstones. A sale voided because the
+  family backed out, with nothing else open, schedules the same (plan 10.1); Today says when
+  their account goes.
+- **Erase** (plan 10.4): **Delete our account** on the family's Account page, or "They asked
+  for their data to go" on hers. Sign-in, addresses, sessions, messages, ticks, waiting
+  suggestions and the account's history go at once; the placement, health records,
+  contract, vet record and reminder log stay under the family's name, listed under **Erased
+  at the family's request** for her guarantee. From KennelOS: a tombstone.
+- **The daily cleanup** also removes used one-tap links after a day and expired family
+  codes and sessions.
+- Portal CSS: the message thread, the unread count, text areas, the loss page.
+
+Left for phase 2 (plan 10): the warnings at 30 and 7 days with Keep my account, deletion
+for inactivity and of families who never signed in, the sale records' own clock, and
+Download everything. Push to families' own devices isn't planned for phase 1: they get email.

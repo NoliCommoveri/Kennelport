@@ -135,3 +135,36 @@ CREATE TABLE IF NOT EXISTS portal_handoffs (
   site_id     TEXT NOT NULL REFERENCES sites(id),
   used_at     TEXT NOT NULL
 );
+
+-- ---------- chunk 4: messages, the loss page, bounces, delete and erase ----------
+
+-- Messages between the family and her, from pickup on (plan 2). With the family's
+-- account: an erase or a final delete takes them.
+CREATE TABLE IF NOT EXISTS portal_messages (
+  id            TEXT PRIMARY KEY,
+  site_id       TEXT NOT NULL REFERENCES sites(id),
+  family_id     TEXT NOT NULL REFERENCES portal_families(id),
+  sender        TEXT NOT NULL CHECK (sender IN ('family', 'breeder')),
+  body          TEXT NOT NULL,
+  sent_at       TEXT NOT NULL,
+  read_at       TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_portal_messages_family ON portal_messages (family_id, sent_at);
+CREATE INDEX IF NOT EXISTS idx_portal_messages_unread ON portal_messages (site_id, sender, read_at);
+
+-- When a puppy dies or fails a health check before pickup (plan 7.4): her own
+-- note for the family, when she saved it, and when (if) she emailed it.
+ALTER TABLE portal_placements ADD COLUMN loss_note TEXT;
+ALTER TABLE portal_placements ADD COLUMN loss_note_at TEXT;
+ALTER TABLE portal_placements ADD COLUMN loss_sent_at TEXT;
+
+-- deleted_at: she deleted the family (or they backed out), undoable until the
+-- daily cleanup finishes it 30 days later. delete_reason: 'breeder' or
+-- 'backed_out'. erased_at: the family asked for their data to go (status
+-- 'erased'); their sale records stay, the account doesn't.
+ALTER TABLE portal_families ADD COLUMN deleted_at TEXT;
+ALTER TABLE portal_families ADD COLUMN delete_reason TEXT CHECK (delete_reason IN ('breeder', 'backed_out'));
+ALTER TABLE portal_families ADD COLUMN erased_at TEXT;
+
+-- Resend's webhook matches its events to the log by message id.
+CREATE INDEX IF NOT EXISTS idx_portal_email_log_provider ON portal_email_log (provider_id);

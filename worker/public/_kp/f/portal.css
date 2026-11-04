@@ -186,3 +186,16 @@ a.tick:not(.on) { border-style: dashed; }
 html[data-zoom="3"] .trio { grid-template-columns: 1fr; }
 .pill { justify-self: start; display: inline-flex; align-items: center; gap: .4rem; min-height: 2.8rem; padding: .6rem 1.3rem; border-radius: 40px; background: #FFF8EC; color: #1F3A2A; font: 700 .92rem/1 var(--f-body); text-decoration: none; }
 .pill svg.i { width: 1rem; height: 1rem; }
+
+/* Build chunk 4: messages, the loss page, Account's delete. */
+textarea { font: 400 1rem/1.45 var(--f-body); color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--r); padding: .55rem .65rem; width: 100%; resize: vertical; }
+textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.acct { position: relative; }
+.acct b { position: absolute; top: .15rem; right: .1rem; min-width: 1.1rem; height: 1.1rem; padding: 0 .25rem; border-radius: .6rem; background: #E9C77E; color: var(--head); font: 700 .7rem/1.1rem var(--f-body); text-align: center; }
+.thread { list-style: none; padding: 0; margin: 0 0 .9rem; display: grid; gap: .6rem; }
+.thread li { max-width: 34rem; padding: .6rem .8rem; border-radius: var(--rc); background: var(--band); }
+.thread li.mine { justify-self: end; background: var(--accent-soft); }
+.thread li p { margin: 0 0 .35rem; } .thread li p:last-child { margin: 0; }
+.loss { display: grid; gap: .6rem; justify-items: start; }
+.loss .round { width: 5.5rem; height: 5.5rem; }
+details.card > summary { cursor: pointer; }

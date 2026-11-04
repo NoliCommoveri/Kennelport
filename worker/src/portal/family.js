@@ -22,6 +22,7 @@ import { stepsFor, openTasks, programsFor, noteClick, setDone, setProgramStatus 
 import { PORTAL_VERSION } from './version.js';
 import { CODE_TTL_MS } from '../auth.js';
 import { redeemHandoff } from './feed.js';
+import { messagesOpen, thread, unreadFrom, markRead, familyWrites, isLoss, eraseFamily, MAX_MESSAGE } from './account.js';
 
 export const PORTAL_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
 const HEADERS = {
@@ -62,9 +63,13 @@ const ic = (n, cls = 'i') => `<svg class="${cls}" aria-hidden="true"><use href="
 
 // ---------- the page frame ----------
 
+// After a loss before pickup the tabs shrink to Home and Photos (plan 7.4).
+const TABS = [['/family', 'home', 'Home'], ['/family/timeline', 'calendar', 'Timeline'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records']];
+const LOSS_TABS = [['/family', 'home', 'Home'], ['/family/photos', 'paw', 'Photos']];
+
 function frame(site, title, body, { status = 200, fam = null, tab = null, action = '', headers = {} } = {}) {
   const kennel = site.kennel_name || site.subdomain;
-  const tabs = fam ? `<nav class="tabs" aria-label="Portal">${[['/family', 'home', 'Home'], ['/family/timeline', 'calendar', 'Timeline'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records']]
+  const tabs = fam ? `<nav class="tabs" aria-label="Portal">${(fam.loss ? LOSS_TABS : TABS)
     .map(([href, icon, label]) => `<a href="${href}"${tab === href ? ' aria-current="page"' : ''}>${ic(icon)}<span>${label}</span></a>`).join('')}</nav>` : '';
   return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -75,7 +80,7 @@ function frame(site, title, body, { status = 200, fam = null, tab = null, action
 </head><body class="${fam ? 'in' : 'out'}">
 ${SPRITE}
 <header class="top"><a class="brand" href="/family">${ic('paw', 'i mark')}<span>${esc(kennel)}</span></a>
-<span class="top-end"><button type="button" class="aa" id="aa" aria-label="Text size">Aa</button>${fam ? `<a class="acct" href="/family/account" aria-label="Account">${ic('user')}</a>` : ''}</span></header>
+<span class="top-end"><button type="button" class="aa" id="aa" aria-label="Text size">Aa</button>${fam && !fam.loss ? `<a class="acct" href="/family/messages" aria-label="${fam.unread ? `Messages, ${fam.unread} new` : 'Messages'}">${ic('message')}${fam.unread ? `<b class="small">${fam.unread}</b>` : ''}</a>` : ''}${fam ? `<a class="acct" href="/family/account" aria-label="Account">${ic('user')}</a>` : ''}</span></header>
 <main>${body}</main>
 ${action}${tabs}
 </body></html>`, { status, headers: { ...HEADERS, ...headers } });
@@ -279,9 +284,26 @@ function contactsCard(site, s, name, { lead = false } = {}) {
 const contactsLead = (p, s, now) => Boolean(p.picked_up_at && p.status === 'open' && p.life_status === 'with_family'
   && new Date(now).getTime() - Date.parse(p.picked_up_at) < (s.help_weeks ?? 8) * 7 * 86400000);
 
+// Lost before pickup (plan 7.4): one quiet page. Her note in her words, the way
+// back through the status page, and nothing that sells anything.
+function lossPage(site, fam, p, main) {
+  const kennel = site.kennel_name || site.subdomain;
+  const name = pupName(p);
+  const statusUrl = /^https:\/\//i.test(fam.statusUrl ?? '') ? fam.statusUrl : null;
+  const body = `<section class="card narrow loss">${photoTag(main ? `${main}?s=t` : null, name, 'round')}
+    <h1>${p.closed_reason === 'died' ? `We're so sorry about ${esc(name)}` : `About ${esc(name)}`}</h1>
+    ${p.loss_note ? p.loss_note.split(/\n{2,}/).map((x) => `<p>${esc(x).replace(/\n/g, '<br>')}</p>`).join('') : `<p class="muted">${esc(kennel)} will write to you here soon.</p>`}
+    ${statusUrl ? `<p>You're back on ${esc(kennel)}'s list at your original place. When you're ready, your status page is where you choose your next puppy.</p>
+    <p><a class="btn solid" href="${esc(statusUrl)}">Go to your status page</a></p>
+    <p><a class="go" href="${esc(statusUrl)}">Message ${esc(kennel)} ${ic('arrow')}</a></p>` : ''}
+    <p class="small"><a href="/family/photos">${esc(name)}'s photos</a> stay here for you.</p></section>`;
+  return frame(site, 'Home', body, { fam, tab: '/family' });
+}
+
 async function homePage(env, site, fam, now = new Date()) {
   const { p, s, pup, main } = await loadContext(env, site, fam);
   if (!p) return noPlacement(site, fam);
+  if (isLoss(p)) return lossPage(site, fam, p, main);
   const name = pupName(p);
   const st = stage(p, now);
   const days = daysUntil(p, s, now);
@@ -445,21 +467,56 @@ async function recordsPage(env, site, fam) {
   return frame(site, 'Records', body, { fam, tab: '/family/records' });
 }
 
-async function accountPage(env, site, fam) {
+// Every puppy of theirs, with her photos (a lost puppy's stay, under its name).
+async function photosPage(env, site, fam) {
+  const { results: ps } = await env.DB.prepare('SELECT puppy_id, puppy_name, call_name FROM portal_placements WHERE site_id = ? AND family_id = ? ORDER BY created_at DESC').bind(site.id, fam.familyId).all();
+  const parts = [];
+  for (const p of ps) {
+    const photos = await puppyPhotos(env, site.id, p.puppy_id);
+    parts.push(`<section class="card"><h2>Photos of ${esc(pupName(p))}</h2>${photos.length ? `<ul class="gallery">${photos.map((ph) => `<li><a href="/family/photo/${esc(ph.id)}"><img src="/family/photo/${esc(ph.id)}?s=t" alt="${esc(ph.alt ?? '')}" loading="lazy"></a></li>`).join('')}</ul>` : '<p class="muted">No photos yet.</p>'}</section>`);
+  }
+  return frame(site, 'Photos', parts.join('') || '<section class="card"><p class="muted">Photos will appear here.</p></section>', { fam, tab: '/family/photos' });
+}
+
+// Messages with her, from pickup on (plan 2); before that, the status page.
+async function messagesPage(env, site, fam, { error, draft = '' } = {}) {
+  const kennel = site.kennel_name || site.subdomain;
+  const s = await getSettings(env, site.id);
+  if (!(await messagesOpen(env, site.id, fam.familyId))) {
+    const statusUrl = /^https:\/\//i.test(fam.statusUrl ?? '') ? fam.statusUrl : null;
+    const email = s.her_email || site.contact_email;
+    return frame(site, 'Messages', `<section class="card"><h1>Messages</h1>
+      <p>Until your puppy comes home, ${statusUrl ? `message ${esc(kennel)} from your status page.` : `contact ${esc(kennel)} directly.`} Messages here open on pickup day.</p>
+      ${statusUrl ? `<p><a class="btn solid" href="${esc(statusUrl)}">Message ${esc(kennel)} ${ic('arrow')}</a></p>` : email ? `<p><a class="btn line" href="mailto:${esc(email)}">${ic('mail')} Email ${esc(kennel)}</a></p>` : ''}</section>`, { fam, status: error ? 400 : 200 });
+  }
+  const list = await thread(env, site.id, fam.familyId);
+  await markRead(env, site.id, fam.familyId, 'breeder');
+  const body = `${errorBox(error)}<section class="card" id="messages"><h1>Messages with ${esc(kennel)}</h1>
+    ${list.length ? `<ol class="thread">${list.map((m) => `<li class="${m.sender === 'family' ? 'mine' : 'theirs'}"><p class="small muted">${m.sender === 'family' ? 'You' : esc(kennel)} · ${esc(formatAt(m.sent_at, s.time_zone, { weekday: false }))}</p>${m.body.split(/\n{2,}/).map((x) => `<p>${esc(x).replace(/\n/g, '<br>')}</p>`).join('')}</li>`).join('')}</ol>` : `<p class="muted">Questions about your puppy go to ${esc(kennel)} here. You'll get an email when they answer.</p>`}
+    <form method="post" action="/family/messages" class="stack"><label>Your message<textarea name="body" rows="4" maxlength="${MAX_MESSAGE}" required>${esc(draft)}</textarea></label><button class="btn solid">Send</button></form>
+    <p class="small muted">For an emergency, call your vet.</p></section>`;
+  return frame(site, 'Messages', body, { fam, status: error ? 400 : 200 });
+}
+
+async function accountPage(env, site, fam, { error } = {}) {
   const emails = await familyEmails(env, fam.familyId);
   const kennel = site.kennel_name || site.subdomain;
   return frame(site, 'Account', `<section class="card"><h1>${esc(fam.name)}</h1>
     <h2>Email addresses</h2><ul class="links">${emails.map((e) => `<li>${esc(e.email)}</li>`).join('')}</ul>
     <p class="muted small">Any of these can sign in. To add or change one, ask ${esc(kennel)}.</p>
     <p class="muted small">Vet visit reminders always go to every address: they're part of your contract.</p>
-    <form method="post" action="/family/signout"><button class="btn line">Sign out</button></form></section>`, { fam });
+    <form method="post" action="/family/signout"><button class="btn line">Sign out</button></form></section>
+    ${errorBox(error)}<details class="card"><summary><b>Delete our account</b></summary>
+    <p>This deletes your sign-in, email addresses and messages here, now and for good. ${esc(kennel)} keeps the record of your puppy's sale, vet visit and contract, as your contract needs.</p>
+    <form method="post" action="/family/account/delete" class="stack"><label>Type <strong>delete</strong> to confirm<input name="confirm" autocomplete="off" required></label><button class="btn line">Delete our account</button></form></details>`, { fam, status: error ? 400 : 200 });
 }
 
 // ---------- files and photos ----------
 
 async function servePhoto(env, site, fam, id, thumb) {
-  const p = await placementFor(env, site.id, fam.familyId);
-  const mine = p ? (await puppyPhotos(env, site.id, p.puppy_id)).some((ph) => ph.id === id) : false;
+  const { results: ps } = await env.DB.prepare('SELECT puppy_id FROM portal_placements WHERE site_id = ? AND family_id = ?').bind(site.id, fam.familyId).all();
+  let mine = false;
+  for (const p of ps) if (!mine) mine = (await puppyPhotos(env, site.id, p.puppy_id)).some((ph) => ph.id === id);
   const row = mine ? await env.DB.prepare('SELECT r2_key, thumb_key, type FROM photos WHERE id = ? AND site_id = ?').bind(id, site.id).first() : null;
   const obj = row && await env.FILES.get(thumb && row.thumb_key ? row.thumb_key : row.r2_key);
   if (!obj) return new Response('Not found', { status: 404, headers: { 'cache-control': 'no-store' } });
@@ -546,12 +603,19 @@ export async function servePortal(request, env, ctx, subdomain, { onDomain = fal
     return redirect('/family', { 'set-cookie': familyCookie('', 0) });
   }
   if (!fam) return path === '/family' ? signInPage(site) : redirect('/family');
+  const current = await placementFor(env, site.id, fam.familyId);
+  fam.loss = isLoss(current);
+  // On Messages itself they're read as the page shows them.
+  fam.unread = fam.loss || path === '/family/messages' ? 0 : await unreadFrom(env, site.id, fam.familyId, 'breeder');
 
   if (!post) {
     if (path === '/family') return homePage(env, site, fam);
     if (path === '/family/vet') return vetPage(env, site, fam, { note: url.searchParams.get('note') === 'booked' ? 'Saved. Thank you!' : url.searchParams.get('note') === 'uploaded' ? 'Uploaded. Thank you!' : null });
     if (path === '/family/records') return recordsPage(env, site, fam);
+    if (fam.loss && ['/family/timeline', '/family/vet', '/family/records', '/family/messages'].includes(path)) return redirect('/family');
     if (path === '/family/timeline') return timelinePage(env, site, fam);
+    if (path === '/family/photos') return photosPage(env, site, fam);
+    if (path === '/family/messages') return messagesPage(env, site, fam);
     if (path === '/family/account') return accountPage(env, site, fam);
     let m = path.match(/^\/family\/photo\/([0-9a-f-]{36})$/);
     if (m) return servePhoto(env, site, fam, m[1], url.searchParams.get('s') === 't');
@@ -562,7 +626,23 @@ export async function servePortal(request, env, ctx, subdomain, { onDomain = fal
     return frame(site, 'Not found', '<section class="card"><p>There\'s nothing here.</p><p><a href="/family">Home</a></p></section>', { status: 404, fam });
   }
 
-  const p = await placementFor(env, site.id, fam.familyId);
+  if (path === '/family/messages') {
+    const form = await request.formData();
+    try {
+      await familyWrites(env, site, fam, form.get('body'));
+    } catch (err) {
+      if (err instanceof PortalError) return messagesPage(env, site, fam, { error: err.message, draft: String(form.get('body') ?? '') });
+      throw err;
+    }
+    return redirect('/family/messages#messages');
+  }
+  if (path === '/family/account/delete') {
+    const form = await request.formData();
+    if (String(form.get('confirm') ?? '').trim().toLowerCase() !== 'delete') return accountPage(env, site, fam, { error: 'Type delete to confirm.' });
+    await eraseFamily(env, site.id, fam.familyId, 'family');
+    return new Response(frame(site, 'Account deleted', `<section class="card narrow"><h1>Your account is deleted</h1><p>Your sign-in, addresses and messages are gone. Thank you for being a ${esc(site.kennel_name || site.subdomain)} family.</p></section>`).body, { status: 200, headers: { ...HEADERS, 'set-cookie': familyCookie('', 0) } });
+  }
+  const p = current;
   if (!p) return redirect('/family');
   // Ticks and "I've done this": back to the page they came from.
   if (path === '/family/step' || path === '/family/program') {

@@ -21,7 +21,10 @@ import {
 import { sendDueFor } from './reminders.js';
 import { vetStatus, formatAt, formatDay, localParts, timeLeft, clockRunning, VET_RULES } from './vet.js';
 import { MailError } from '../mail.js';
-import { suggestionsFor, takeSuggestion, ignoreSuggestion, tombstoneStatements, QUIET_MS } from './feed.js';
+import { suggestionsFor, takeSuggestion, ignoreSuggestion, QUIET_MS } from './feed.js';
+import {
+  thread, markRead, breederWrites, markLoss, isLoss, lossDraft, saveLossNote, scheduleDelete, undoDelete, recentlyDeleted, eraseFamily, erasedRecords, MAX_MESSAGE, UNDO_DAYS,
+} from './account.js';
 
 // "2 hours ago", for Last from KennelOS.
 export function ago(at, now = new Date()) {
@@ -49,7 +52,13 @@ const NOTES = {
   record: 'Record added.',
   removed: 'Record removed.',
   contract: 'Contract added. The family can see it under Records.',
-  deleted: 'Family deleted.',
+  deleted: `Family deleted. Their portal is closed now; you can undo this for ${30} days.`,
+  undone: 'Family brought back. They can sign in again.',
+  erased: 'Their account is erased. Their sale records stay, under the name you know them by.',
+  sent: 'Sent. They see it in the portal and by email.',
+  lossnote: 'Saved. The family sees your note now.',
+  losssent: 'Saved and emailed to the family.',
+  loss: 'Recorded. Their portal is now the quiet page; write your note to them below.',
   suggested: 'Suggested steps added. Change, reorder or remove any of them.',
   stepadded: 'Step added.',
   stepremoved: 'Step removed.',
@@ -94,7 +103,7 @@ export async function portalNeedsYou(env, siteId, now = new Date()) {
   // no longer in KennelOS, newer values waiting, and a feed gone quiet.
   const { results: kos } = await env.DB.prepare(`SELECT f.id, f.name, f.invited_at, f.kennelos_gone_at,
       (SELECT COUNT(*) FROM portal_suggestions g WHERE g.ignored = 0 AND ((g.tbl = 'portal_families' AND g.row_id = f.id) OR (g.tbl = 'portal_placements' AND g.row_id IN (SELECT id FROM portal_placements WHERE family_id = f.id)))) AS waiting
-    FROM portal_families f WHERE f.site_id = ? AND f.status = 'active' AND f.kennelos_id IS NOT NULL`).bind(siteId).all();
+    FROM portal_families f WHERE f.site_id = ? AND f.status = 'active' AND f.deleted_at IS NULL AND f.kennelos_id IS NOT NULL`).bind(siteId).all();
   for (const f of kos) {
     const href = `/portal/f/${f.id}`;
     if (!f.invited_at) out.push({ href, label: `Invite ${f.name}`, note: 'Their contract is signed in KennelOS. Check their details, then send the invite.' });
@@ -107,6 +116,17 @@ export async function portalNeedsYou(env, siteId, now = new Date()) {
     out.push(p.kennelos_gone_at && !p.closed_reason
       ? { href: `/portal/f/${p.family_id}`, label: `${p.call_name || p.puppy_name}: no longer in KennelOS`, note: 'The placement is still open here. Decide what it means.' }
       : { href: `/portal/f/${p.family_id}`, label: `${p.call_name || p.puppy_name}'s placement closed`, note: `From KennelOS: ${CLOSED[p.closed_reason]}. Reminders have stopped.` });
+  }
+  // Messages from families, a loss to write about, a back-out on its way out.
+  const { results: unread } = await env.DB.prepare(`SELECT f.id, f.name, COUNT(*) AS n FROM portal_messages m JOIN portal_families f ON f.id = m.family_id
+    WHERE m.site_id = ? AND m.sender = 'family' AND m.read_at IS NULL AND f.status = 'active' AND f.deleted_at IS NULL GROUP BY f.id`).bind(siteId).all();
+  for (const f of unread) out.unshift({ href: `/portal/f/${f.id}#messages`, label: `New message${f.n === 1 ? '' : `s (${f.n})`} from ${f.name}`, note: 'From their puppy portal' });
+  const { results: losses } = await env.DB.prepare(`SELECT f.id, f.name FROM portal_placements p JOIN portal_families f ON f.id = p.family_id
+    WHERE p.site_id = ? AND p.status = 'closed' AND p.closed_reason IN ('died', 'failed_health') AND p.picked_up_at IS NULL AND p.loss_note IS NULL AND f.status = 'active' AND f.deleted_at IS NULL
+      AND NOT EXISTS (SELECT 1 FROM portal_placements o WHERE o.family_id = f.id AND o.status = 'open')`).bind(siteId).all();
+  for (const f of losses) out.unshift({ href: `/portal/f/${f.id}#loss`, label: `Write to ${f.name}`, note: 'Their portal shows a quiet page; your note goes on it' });
+  for (const f of await recentlyDeleted(env, siteId)) {
+    if (f.delete_reason === 'backed_out') out.push({ href: '/portal#deleted', label: `${f.name} backed out`, note: `Their portal account goes ${formatDay(new Date(Date.parse(f.deleted_at) + UNDO_DAYS * 86400000).toISOString().slice(0, 10))}. Undo on Puppy families.` });
   }
   const vetWaiting = await env.DB.prepare("SELECT COUNT(*) AS n FROM portal_suggestions WHERE site_id = ? AND tbl = 'portal_settings' AND ignored = 0").bind(siteId).first('n');
   if (vetWaiting) out.push({ href: '/portal/settings', label: 'KennelOS has your vet\'s details', note: 'Use them for families or ignore them' });
@@ -124,7 +144,7 @@ export async function portalNeedsYou(env, siteId, now = new Date()) {
 
 // ---------- screens ----------
 
-function familiesScreen(site, families, s, url, now = new Date()) {
+function familiesScreen(site, families, s, url, { deleted = [], erased = [] } = {}, now = new Date()) {
   // site.portalUrl: set by handlePortalAdmin.
   const base = `/s/${esc(site.subdomain)}/portal`;
   const rows = families.map((f) => {
@@ -150,7 +170,12 @@ function familiesScreen(site, families, s, url, now = new Date()) {
   </section>
   <ul class="items"><li class="item"><a href="${base}/settings"><b>Portal settings and programs</b><span>Vet visit rule, contacts, the food, which programs families see</span></a></li>
     <li class="item"><a href="${base}/checklist"><b>Go-home checklist</b><span>What every family has ready before go-home</span></a></li>
-    <li class="item"><a href="${base}/timeline"><b>First-weeks timeline</b><span>Tasks dated from birth or pickup, with program links</span></a></li></ul>`;
+    <li class="item"><a href="${base}/timeline"><b>First-weeks timeline</b><span>Tasks dated from birth or pickup, with program links</span></a></li></ul>
+  ${deleted.length ? `<section class="card" id="deleted"><h2>Recently deleted</h2><p class="hint">Their portal is closed. Each is deleted for good ${UNDO_DAYS} days after, unless you undo it.</p>
+    <dl class="kv">${deleted.map((f) => `<dt>${esc(formatDay(new Date(Date.parse(f.deleted_at) + UNDO_DAYS * 86400000).toISOString().slice(0, 10)))}</dt><dd><b>${esc(f.name)}</b>${f.pup ? ` · ${esc(f.pup)}` : ''}${f.delete_reason === 'backed_out' ? ' <span class="hint">backed out (KennelOS)</span>' : ''}
+      <form method="post" action="${base}/undo/${esc(f.id)}" class="inline"><button class="link">Undo</button></form></dd>`).join('')}</dl></section>` : ''}
+  ${erased.length ? `<details class="card"><summary>Erased at the family's request (${erased.length})</summary><p class="hint">Their accounts are gone; the sale records stay for your guarantee.</p>
+    <dl class="kv">${erased.map((r) => `<dt>${esc(r.name)}</dt><dd><b>${esc(r.call_name || r.puppy_name)}</b>${r.picked_up_at ? ` · went home ${esc(formatAt(r.picked_up_at, s.time_zone, { weekday: false }))}` : ''}${r.proof_file_id ? ` · <a href="${base}/file/${esc(r.proof_file_id)}">vet record</a>${r.proof_accepted_at ? ' (accepted)' : ''}` : ''}${r.contract_file_id ? ` · <a href="${base}/file/${esc(r.contract_file_id)}">contract</a>` : ''} <span class="hint">erased ${esc(formatAt(r.erased_at, s.time_zone, { weekday: false }))}</span></dd>`).join('')}</dl></details>` : ''}`;
 }
 
 function puppyOptions(puppies, current) {
@@ -233,6 +258,14 @@ async function familyScreen(env, site, familyId, url, { error } = {}, now = new 
       ${form('picked-up', `<div class="row"><label>Day<input type="date" name="day" value="${esc(local?.ymd ?? '')}" required></label><label>Time<input type="time" name="time" value="${esc(local?.hm ?? '')}" required></label></div><p><button>Save pickup time</button> <span class="hint">The deadline and reminders move with it; the old time stays in History.</span></p>`)}</details>`;
     parts.push(`<section class="card"><h2>${esc(name)} · pickup</h2>${pickup}</section>`);
 
+    // Lost before pickup (plan 7.4): her note, from a draft she rewrites; email only if she chooses.
+    if (isLoss(p)) {
+      parts.push(`<section class="card" id="loss"><h2>${p.closed_reason === 'died' ? `${esc(name)} died before pickup` : `${esc(name)} failed a health check before pickup`}</h2>
+        <p class="hint">Their portal is one quiet page now: ${esc(name)}'s photo, your note, and the way back through their status page. Every reminder has stopped.</p>
+        ${form('loss-note', `<label>Your note to ${esc(f.name)}<textarea name="note" rows="9" maxlength="4000" required>${esc(p.loss_note ?? lossDraft(p, site.kennel_name || site.subdomain, f.name))}</textarea>
+          <span class="hint">${p.loss_note ? `Saved ${esc(formatAt(p.loss_note_at, s.time_zone, { weekday: false }))}${p.loss_sent_at ? `, emailed ${esc(formatAt(p.loss_sent_at, s.time_zone, { weekday: false }))}` : ''}.` : 'A starting draft: put it in your own words. Nothing is sent for you.'}</span></label>
+          <label class="check"><input type="checkbox" name="send" value="1"> <span>Also email it to them</span></label><p><button class="primary">Save note</button></p>`)}</section>`);
+    }
     const proof = p.proof_file_id ? await getFile(env, site.id, p.proof_file_id) : null;
     parts.push(`<section class="card"><h2>Vet visit: <span${v.trouble ? ' class="error"' : ''}>${esc(v.word)}</span></h2>
       <dl class="kv">
@@ -297,6 +330,12 @@ async function familyScreen(env, site, familyId, url, { error } = {}, now = new 
 
     parts.push(form('life', `<section class="card"><h2>Life status</h2><div class="row"><label>Status<select name="life_status">${[['with_family', 'With the family'], ['deceased', 'Died'], ['rehomed', 'Rehomed'], ['returned', 'Returned to you']].map(([k, l]) => `<option value="${k}"${p.life_status === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label><label>Since<input type="date" name="on" value="${esc(p.life_status_on ?? '')}"></label></div>
       <p class="hint">Anything but "With the family" stops every reminder at once.</p><p><button>Save</button></p></section>`));
+    if (p.status === 'open' && !p.picked_up_at) {
+      parts.push(form('loss', `<details class="card"><summary>${esc(name)} died or failed a health check before pickup</summary>
+        <p class="hint">Closes this placement and stops every reminder; the family's portal becomes a quiet page with your note. With KennelOS, voiding the sale there does the same.</p>
+        <div class="row"><label>What happened<select name="reason"><option value="died">${esc(name)} died</option><option value="failed_health">Failed a health check</option></select></label><label>On<input type="date" name="on"></label></div>
+        <p><button>Record it</button></p></details>`));
+    }
 
     const log = await emailLog(env, site.id, p.id);
     const KINDS = { invite: 'Invite', vet_book: 'Book the vet visit', vet_pickup: 'Pickup: the deadline', vet_day_before: 'About a day left', vet_morning: 'Deadline day morning' };
@@ -316,13 +355,25 @@ async function familyScreen(env, site, familyId, url, { error } = {}, now = new 
     parts.push(`<details class="card"><summary>History</summary><dl class="kv">${hist.map((h) => `<dt>${esc(formatAt(h.changed_at, s.time_zone, { weekday: false }))}</dt><dd><b>${esc(h.new_value === null && UNDONE[h.field] ? `${UNDONE[h.field]}: ${val(h.old_value)}` : `${FIELD[h.field] ?? h.field}: ${val(h.new_value)}`)}</b> <span class="hint">by ${esc(BY[h.changed_by])}${h.old_value !== null && !(h.new_value === null && UNDONE[h.field]) ? `, was ${esc(val(h.old_value))}` : ''}</span></dd>`).join('')}</dl></details>`);
   }
 
+  // Messages, from pickup on (plan 2).
+  const msgs = await thread(env, site.id, f.id);
+  if (msgs.length || (p?.picked_up_at)) {
+    await markRead(env, site.id, f.id, 'family');
+    parts.push(`<section class="card" id="messages"><h2>Messages</h2>
+      ${msgs.length ? `<dl class="kv">${msgs.map((m) => `<dt>${m.sender === 'family' ? esc(f.name) : 'You'}<br><span class="hint">${esc(formatAt(m.sent_at, s.time_zone, { weekday: false }))}</span></dt><dd>${esc(m.body).replace(/\n/g, '<br>')}</dd>`).join('')}</dl>` : '<p class="muted">None yet. They can write to you from their portal now that the puppy is home.</p>'}
+      ${form('message', `<label>Reply<textarea name="body" rows="4" maxlength="${MAX_MESSAGE}" required></textarea><span class="hint">They see it in their portal and get it by email.</span></label><p><button class="primary">Send</button></p>`)}</section>`);
+  }
+
   parts.push(form('family', `<details class="card"><summary>Change name or emails</summary><div class="fgrid">
     <label>Family name<input name="name" value="${esc(f.name)}" required maxlength="120"></label>
     <label>Email addresses<input name="emails" value="${esc(emails.map((e) => e.email).join(', '))}" required><span class="hint">Removing an address stops it signing in and getting reminders.</span></label>
     <p><button>Save</button></p></div></details>`));
   parts.push(form('delete', `<details class="card danger"><summary>Delete this family</summary>
-    <p>Deletes their account, emails, puppy records here, files and history now. Nothing is deleted from your website or from KennelOS${f.kennelos_id ? ', and KennelOS won\'t send them again' : ''}.</p>
+    <p>Closes their portal now, and deletes their account, emails, puppy records here, files and history for good after ${UNDO_DAYS} days. Until then you can undo it under Puppy families. Nothing is deleted from your website or from KennelOS${f.kennelos_id ? ', and KennelOS won\'t send them again' : ''}.</p>
     <label>Type <strong>delete</strong> to confirm<input name="confirm" autocomplete="off" required></label><p><button>Delete the family</button></p></details>`));
+  parts.push(form('erase', `<details class="card danger"><summary>They asked for their data to go</summary>
+    <p>Erases their account now, for good: sign-in, email addresses, messages and their ticks. Your records of the sale (the placement, health records, contract, vet record and reminder log) stay, under the name ${esc(f.name)}, for your guarantee. A family can also do this themselves from their Account page.</p>
+    <label>Type <strong>erase</strong> to confirm<input name="confirm" autocomplete="off" required></label><p><button>Erase their account</button></p></details>`));
   return parts.join('\n');
 }
 
@@ -450,7 +501,12 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   const back = `/s/${site.subdomain}`;
   const s = await getSettings(env, site.id);
 
-  if (!rest && !post) return page('Puppy families', familiesScreen(site, await listFamilies(env, site.id), s, url), { back });
+  if (!rest && !post) return page('Puppy families', familiesScreen(site, await listFamilies(env, site.id), s, url, { deleted: await recentlyDeleted(env, site.id), erased: await erasedRecords(env, site.id) }), { back });
+  const um = rest.match(/^\/undo\/([0-9a-f-]{36})$/);
+  if (um && post) {
+    try { await undoDelete(env, site.id, um[1]); } catch (err) { if (!(err instanceof PortalError)) throw err; }
+    return redirect(`${home}/f/${um[1]}?note=undone`);
+  }
 
   if (rest === '/settings/suggestion' && post) {
     const form = await request.formData();
@@ -582,10 +638,19 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
         else await ignoreSuggestion(env, site.id, tbl, rowId, get('field'));
         return to('saved');
       }
+      case 'message': await breederWrites(env, site, familyId, get('body')); return redirect(`${home}/f/${familyId}?note=sent#messages`);
+      case 'loss': await markLoss(env, site.id, needP().id, get('reason'), get('on')); return redirect(`${home}/f/${familyId}?note=loss#loss`);
+      case 'loss-note': {
+        const r = await saveLossNote(env, site, needP().id, get('note'), { send: get('send') === '1' });
+        return redirect(`${home}/f/${familyId}?note=${r?.sent ? 'losssent' : 'lossnote'}#loss`);
+      }
+      case 'erase':
+        if (get('confirm').trim().toLowerCase() !== 'erase') throw new PortalError('Type erase to confirm.');
+        await eraseFamily(env, site.id, familyId, 'breeder');
+        return redirect(`${home}?note=erased`);
       case 'delete':
         if (get('confirm').trim().toLowerCase() !== 'delete') throw new PortalError('Type delete to confirm.');
-        await env.DB.batch(await tombstoneStatements(env, site.id, familyId));
-        await deleteFamily(env, site.id, familyId);
+        await scheduleDelete(env, site.id, familyId, 'breeder');
         return redirect(`${home}?note=deleted`);
       default: {
         const rm = action?.match(/^record\/([0-9a-f-]{36})\/remove$/);

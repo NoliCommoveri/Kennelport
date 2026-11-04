@@ -18,6 +18,7 @@ import { ApiError, json, readJson } from '../lib/http.js';
 import { redeemCode, deviceFor, siteFacts, stopDevice, setKennelosPrices } from './link.js';
 import { applyBundle, MAX_BUNDLE_BYTES } from './bundle.js';
 import { applyFeed, MAX_FEED_BYTES } from '../portal/feed.js';
+import { handleResendEvent } from '../portal/bounces.js';
 
 export const appOrigins = (env) => String(env.KENNELOS_APP_ORIGINS ?? '').split(',').map((s) => s.trim().replace(/\/+$/, '')).filter(Boolean);
 
@@ -38,6 +39,8 @@ function cors(env, request) {
 }
 
 export async function handleApi(request, env, url) {
+  // Resend's delivery events (portal/bounces.js): server to server, signed, no CORS.
+  if (url.pathname === '/v1/resend') return handleResendEvent(request, env);
   const c = cors(env, request);
   if (!c.ok) return json({ error: 'origin_not_allowed', message: 'KennelPort only takes this from the KennelOS app.' }, 403);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: c.headers });

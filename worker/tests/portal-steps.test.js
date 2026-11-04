@@ -14,6 +14,7 @@ const DAY = 86400000;
 
 const { taskDue, taskState, basesFor, OVERDUE_DAYS } = await import('../src/portal/steps.js');
 const { closeSite } = await import('../src/sites.js');
+const { runPortalDaily } = await import('../src/portal/account.js');
 
 async function setup() {
   const env = await makeEnv({ PORTAL_EMAIL_KEY: 'portal-test-key' });
@@ -283,6 +284,8 @@ test('a family deleted or a site closed takes their steps, ticks and statuses wi
   assert.equal(count('portal_placement_progress'), 1);
   assert.equal(count('portal_placements_programs'), 1);
   await her(`/portal/f/${reed}/delete`, { confirm: 'delete' });
+  assert.equal(count('portal_placement_progress'), 1); // undoable for 30 days
+  await runPortalDaily(env, new Date(Date.now() + 31 * DAY));
   assert.equal(count('portal_placement_progress'), 0);
   assert.equal(count('portal_placements_programs'), 0);
   assert.equal(count('portal_checklist_items'), 9); // her template stays

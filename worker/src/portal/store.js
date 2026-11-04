@@ -182,7 +182,7 @@ export async function updateFamily(env, siteId, familyId, input) {
 }
 
 export async function getFamily(env, siteId, familyId) {
-  return env.DB.prepare("SELECT * FROM portal_families WHERE id = ? AND site_id = ? AND status = 'active'").bind(familyId, siteId).first();
+  return env.DB.prepare("SELECT * FROM portal_families WHERE id = ? AND site_id = ? AND status = 'active' AND deleted_at IS NULL").bind(familyId, siteId).first();
 }
 
 // The family's addresses, readable. Only for sending and for her screens.
@@ -196,7 +196,7 @@ export async function listFamilies(env, siteId) {
       p.id AS placement_id, p.puppy_name, p.call_name, p.go_home_on, p.pickup_booked_at, p.picked_up_at, p.pickup_state, p.vet_deadline_at,
       p.vet_booked_at, p.proof_uploaded_at, p.proof_accepted_at, p.status, p.life_status
     FROM portal_families f LEFT JOIN portal_placements p ON p.family_id = f.id AND p.status = 'open'
-    WHERE f.site_id = ? AND f.status = 'active' ORDER BY COALESCE(p.go_home_on, '9999'), f.name`).bind(siteId).all();
+    WHERE f.site_id = ? AND f.status = 'active' AND f.deleted_at IS NULL ORDER BY COALESCE(p.go_home_on, '9999'), f.name`).bind(siteId).all();
   return results;
 }
 
@@ -217,6 +217,7 @@ export async function deleteFamily(env, siteId, familyId) {
     env.DB.prepare("DELETE FROM portal_history WHERE site_id = ? AND tbl = 'portal_families' AND row_id = ?").bind(siteId, familyId),
     env.DB.prepare('UPDATE portal_email_log SET family_id = NULL WHERE family_id = ?').bind(familyId),
     env.DB.prepare('UPDATE portal_clicks SET family_id = NULL WHERE family_id = ?').bind(familyId),
+    env.DB.prepare('DELETE FROM portal_messages WHERE family_id = ?').bind(familyId),
     env.DB.prepare('DELETE FROM portal_placements WHERE family_id = ?').bind(familyId),
     env.DB.prepare('DELETE FROM portal_sessions WHERE family_id = ?').bind(familyId),
     env.DB.prepare('DELETE FROM portal_emails WHERE family_id = ?').bind(familyId),

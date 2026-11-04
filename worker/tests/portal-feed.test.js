@@ -16,6 +16,7 @@ const DAY = 86400000;
 const { makeHandoffToken } = await import('../src/portal/feed.js');
 const { hmacHex } = await import('../src/lib/crypto.js');
 const { runPortalHourly } = await import('../src/portal/reminders.js');
+const { runPortalDaily } = await import('../src/portal/account.js');
 
 async function setup({ on = true } = {}) {
   const env = await makeEnv({ PORTAL_EMAIL_KEY: 'portal-test-key' });
@@ -163,7 +164,7 @@ test('a sale voided because the pup died closes the placement and stops its remi
 });
 
 test('gone from KennelOS is marked, not removed; deleted here stays deleted', async () => {
-  const { her, feed, row } = await setup();
+  const { env, her, feed, row } = await setup();
   await feed({ families: [REED()] });
   const fam = row("SELECT id FROM portal_families WHERE kennelos_id = 'fam-reed'");
   await feed({ removed: [{ type: 'family', id: 'fam-reed' }] });
@@ -179,7 +180,10 @@ test('gone from KennelOS is marked, not removed; deleted here stays deleted', as
   await her(`/portal/f/${fam.id}/delete`, { confirm: 'delete' });
   const out = await (await feed({ families: [REED()] })).json();
   assert.equal(out.summary.skipped_deleted, 1);
+  // Gone for good after 30 days; still not brought back.
+  await runPortalDaily(env, new Date(Date.now() + 31 * DAY));
   assert.equal(row('SELECT COUNT(*) AS n FROM portal_families').n, 0);
+  assert.equal((await (await feed({ families: [REED()] })).json()).summary.skipped_deleted, 1);
   // The tombstone holds no name or address.
   assert.doesNotMatch(JSON.stringify(row('SELECT * FROM portal_tombstones')), /Reed|example/);
 });
