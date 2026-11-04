@@ -3,6 +3,7 @@
 Published copies (claude.ai artifacts, with the photos):
 - The AK sample, shared with the first breeder: https://claude.ai/artifact/CP9T5ouidYfr1KfLvTY18D
 - The scheme lab (private): https://claude.ai/artifact/XzWppS7x8epbNHA1uicRDh
+- The portal prototype: https://claude.ai/artifact/ELrT2DnhfmSbPe72SwVG28
 
 To change either, update the file here and republish it to the same link (pass the link
 as the artifact's `url`) so the shared address keeps working.
@@ -45,7 +46,7 @@ pages and her Site Manager as one app for her website and the portal (Today, Fam
 waitlist, Dogs, Website, Portal), in the AK sample's Lawn scheme, light and dark. A bar at
 the top switches between the Family and Breeder views and four dates (before go-home, the
 vet window, weeks 1–8, the first birthday); everything is in memory and resets when
-the date changes. Open it straight from the file; it has its own `<html>` wrapper.
+the date changes. Like the AK sample it has no `<html>`/`<head>` wrapper (artifacts add one); it is published at the link in this file's list above.
 
 - **Real:** the kennel name, the Gem litter, its birth date and go-home date, Willow, and
   the puppies Opal, Onyx and Diamond.

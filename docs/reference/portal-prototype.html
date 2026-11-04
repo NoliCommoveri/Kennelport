@@ -1,8 +1,3 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Puppy Parent Portal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -101,7 +96,7 @@ details.ch .body { padding: 0 0 16px; display: grid; gap: 10px; }
 .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: var(--r); font-size: .9rem; z-index: 50; max-width: calc(100vw - 32px); }
 
 /* Prototype bar: not part of the design */
-.proto { position: sticky; top: 0; z-index: 30; background: #2B2A27; color: #EDE9DF; font: 600 .8rem/1.2 var(--f-body); padding: 8px 16px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.proto { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: #2B2A27; color: #EDE9DF; font: 600 .8rem/1.2 var(--f-body); padding: 8px 16px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
 .proto b { font-weight: 800; letter-spacing: .1em; text-transform: uppercase; font-size: .68rem; color: #CFAE66; }
 .proto .grp { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
 .proto button { font: inherit; background: transparent; color: inherit; border: 1px solid #5A574F; border-radius: 3px; padding: 5px 9px; cursor: pointer; }
@@ -186,8 +181,6 @@ dialog .in { padding: 20px; display: grid; gap: 14px; }
 .crumb { font-size: .88rem; }
 .pick { display: grid; gap: 10px; padding: 14px; border: 1.5px solid var(--accent); border-radius: var(--r); background: var(--surface); }
 </style>
-</head>
-<body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="sprig" viewBox="0 0 120 60"><g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M4 50 C 34 44, 64 32, 116 8"/><path d="M28 44 c-4-10 2-18 10-20 c2 9-3 17-10 20z"/><path d="M28 44 c10 4 18 0 22-7 c-9-3-17 0-22 7z"/><path d="M58 33 c-3-10 3-18 11-19 c1 9-4 16-11 19z"/><path d="M58 33 c10 3 18-1 21-9 c-9-2-17 1-21 9z"/><path d="M88 20 c-2-8 3-14 9-15 c1 7-3 12-9 15z"/><path d="M88 20 c8 2 14-2 16-8 c-7-1-13 2-16 8z"/></g></symbol>
   <symbol id="mono" viewBox="0 0 48 48"><g fill="none" stroke="currentColor"><rect x="9" y="9" width="30" height="30" transform="rotate(45 24 24)" stroke-width="1.4"/><rect x="12.5" y="12.5" width="23" height="23" transform="rotate(45 24 24)" stroke-width=".7"/></g><text x="24" y="29.5" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="15" font-style="italic" fill="currentColor">AK</text></symbol>
@@ -277,7 +270,7 @@ const CHECKLIST = [
 ];
 const TASKS = [
   { id: 't-book', due: D(2026, 12, 20), doneAt: D(2026, 12, 19), title: 'Book the 3-day vet visit', body: 'Vets fill up around Christmas. Book now for a visit before the deadline.', grp: 'Before go-home', vet: 'book' },
-  { id: 't-supplies', due: D(2026, 12, 22), doneAt: D(2026, 12, 21), title: 'Go-home supplies ready', body: 'Everything on the checklist, with links to what we use.', grp: 'Before go-home', link: '#f/home' },
+  { id: 't-supplies', due: D(2026, 12, 22), doneAt: D(2026, 12, 21), title: 'Go-home supplies ready', body: 'Everything on the checklist, with links to what we use.', grp: 'Before go-home', link: '#f-home' },
   { id: 't-pickup', due: D(2026, 12, 23, 11), doneAt: D(2026, 12, 23, 11), title: 'Pickup day', body: 'At A-K, 11:00 am. Bring the carrier and a towel.', grp: 'First week' },
   { id: 't-vet', due: null, doneAt: D(2026, 12, 24, 18), title: '3-day vet visit, and upload the record', body: 'Your contract asks for it within 72 hours of pickup.', grp: 'First week', vet: 'visit' },
   { id: 't-ins', due: D(2026, 12, 28), doneAt: D(2026, 12, 27), title: 'Activate Opal’s insurance trial', body: 'Free trial from A-K’s program. It has to be activated within 5 days of pickup.', grp: 'First week', prog: 'ins', btn: 'Activate the trial' },
@@ -382,7 +375,7 @@ const disclosure = `<p class="disclose">${KENNEL} may earn a commission or produ
 
 function header(sub) {
   return `<header class="app"><div class="in">
-    <a class="brand" href="${S.view === 'family' ? '#f/home' : '#a/today'}"><svg aria-hidden="true"><use href="#mono"/></svg><div><b>${KENNEL}</b><span>${sub}</span></div></a>
+    <a class="brand" href="${S.view === 'family' ? '#f-home' : '#a-today'}"><svg aria-hidden="true"><use href="#mono"/></svg><div><b>${KENNEL}</b><span>${sub}</span></div></a>
     ${S.view === 'family' ? `<button class="acct" data-act="account" aria-label="Your account">${icon('user')}</button>` : `<button class="acct" data-act="account-admin" aria-label="Manage app menu">${icon('user')}</button>`}
   </div></header>`;
 }
@@ -430,13 +423,13 @@ function famHome() {
     const days = Math.floor((now - o.pickup) / DAY);
     parts.push(`<section class="hello"><span class="script">Hello, Reed family</span><h1>Opal has been home ${Math.round(days / 7)} weeks</h1><p class="muted">She’s ${Math.floor((now - LITTER.born) / DAY / 7)} weeks old today.</p></section>`);
     parts.push(nextCard(2, false, true));
-    parts.push(`<section class="card band"><h2>Add to Opal’s baby book</h2><p>Her first weeks with you: a photo, a weight, the first time she found the stairs.</p><div class="row"><a class="btn line" href="#f/book" data-act="openbook">Add an entry</a></div></section>`);
+    parts.push(`<section class="card band"><h2>Add to Opal’s baby book</h2><p>Her first weeks with you: a photo, a weight, the first time she found the stairs.</p><div class="row"><a class="btn line" href="#f-book" data-act="openbook">Add an entry</a></div></section>`);
     parts.push(`<section class="card"><div class="between"><h3>3-day vet visit</h3><span class="st ok">Done</span></div><p class="small muted">Accepted by A-K on Dec 24. Thank you.</p></section>`);
     parts.push(foodCard(false, true));
   } else {
     parts.push(`<section class="banner"><svg class="sprig" aria-hidden="true"><use href="#sprig"/></svg><span class="script">Happy birthday</span><h1>Opal is one today</h1><p class="muted">And so are Onyx and Diamond, her Gem litter brothers.</p></section>`);
     const b = S.breederEntries[0];
-    parts.push(`<section class="card"><span class="eyebrow">A year ago today</span><div class="entry"><div class="photo">${esc(b.title)}</div><div class="stack"><h2>${esc(b.title)}</h2><p>${esc(b.body)}</p><a class="btn text small" href="#f/book">Open the baby book →</a></div></div></section>`);
+    parts.push(`<section class="card"><span class="eyebrow">A year ago today</span><div class="entry"><div class="photo">${esc(b.title)}</div><div class="stack"><h2>${esc(b.title)}</h2><p>${esc(b.body)}</p><a class="btn text small" href="#f-book">Open the baby book →</a></div></div></section>`);
     parts.push(nextCard(1, false, true));
     parts.push(`<section class="card band"><h2>Print Opal’s first year</h2><p>Everything in her baby book, from A-K’s first photos to yours, as a printed book or a PDF.</p><div class="row"><button class="btn line" data-act="toast" data-msg="Printable book: phase 3">Make the book</button></div></section>`);
   }
@@ -453,14 +446,14 @@ function foodCard(before, small) {
 function nextCard(n, compact, withButtons) {
   const list = nextTasks(n);
   if (!list.length) return '';
-  return `<section class="card"><div class="between"><h2>${compact ? 'Coming up' : 'Next up'}</h2><a class="btn text small" href="#f/timeline">Full timeline →</a></div>
+  return `<section class="card"><div class="between"><h2>${compact ? 'Coming up' : 'Next up'}</h2><a class="btn text small" href="#f-timeline">Full timeline →</a></div>
     <div>${list.map(({ t, s }) => taskRow(t, s, withButtons)).join('')}</div></section>`;
 }
 function taskRow(t, s, withButtons = true) {
   const st = s.done ? '<span class="st ok">Done</span>' : s.overdue ? '<span class="st bad">Overdue</span>' : (nextTasks(1)[0]?.t.id === t.id ? '<span class="st next">Next</span>' : '<span class="st">Later</span>');
   const due = s.due;
   const act = !s.done && withButtons && !t.vet ? `<div class="row">${t.prog ? `<a class="btn line small ext" href="#" data-act="go" data-prog="${t.prog}" data-task="${t.id}">${esc(t.btn)}</a>` : ''}<button class="btn text small" data-act="done" data-id="${t.id}">Mark done</button></div>`
-    : (!s.done && t.vet === 'visit' && S.stage !== 'before' ? `<a class="btn text small" href="#f/home">Go to the vet visit →</a>` : '');
+    : (!s.done && t.vet === 'visit' && S.stage !== 'before' ? `<a class="btn text small" href="#f-home">Go to the vet visit →</a>` : '');
   return `<div class="task ${s.done ? 'done' : ''}"><div class="d">${MON[due.getMonth()]}<b>${due.getDate()}</b></div><div class="stack" style="gap:6px"><div class="between"><h3>${esc(t.title)}</h3>${st}</div><p class="small">${esc(t.body)}</p>${act}</div></div>`;
 }
 function famTimeline() {
@@ -537,7 +530,7 @@ function famPage(route) {
   const tabs = [['home', 'Home', 'home'], ['timeline', 'Timeline', 'cal'], ['records', 'Records', 'file'], ['book', 'Baby book', 'heart'], ['handbook', 'Handbook', 'book']];
   const r = pages[route] ? route : 'home';
   return `<div class="fam">${header('Puppy Parent Portal')}<main id="main">${pages[r]()}</main>
-    <nav class="tabs" aria-label="Portal"><div class="in">${tabs.map(([k, l, ic]) => `<a href="#f/${k}" ${k === r ? 'aria-current="page"' : ''}>${icon(ic)}${l}</a>`).join('')}</div></nav></div>`;
+    <nav class="tabs" aria-label="Portal"><div class="in">${tabs.map(([k, l, ic]) => `<a href="#f-${k}" ${k === r ? 'aria-current="page"' : ''}>${icon(ic)}${l}</a>`).join('')}</div></nav></div>`;
 }
 
 // ---------- Her screens (manage app) ----------
@@ -565,17 +558,17 @@ function counts() {
 function admToday() {
   const c = counts(), vr = vetRows();
   const needs = [];
-  if (c.proofs.length) needs.push(`<a class="need" href="#a/vet"><b>${c.proofs.length}</b><span>Vet record to review</span></a>`);
-  if (c.bounced.length) needs.push(`<a class="need bad" href="#a/fam/${c.bounced[0]}"><b>${c.bounced.length}</b><span>Email bounced: text them</span></a>`);
+  if (c.proofs.length) needs.push(`<a class="need" href="#a-vet"><b>${c.proofs.length}</b><span>Vet record to review</span></a>`);
+  if (c.bounced.length) needs.push(`<a class="need bad" href="#a-fam-${c.bounced[0]}"><b>${c.bounced.length}</b><span>Email bounced: text them</span></a>`);
   vr.filter((r) => !r.booked && !r.proof && r.left > 0).forEach(() => {});
   const unbooked = vr.filter((r) => !r.booked && !r.proof && r.left > 0).length;
-  if (unbooked) needs.push(`<a class="need warn" href="#a/vet"><b>${unbooked}</b><span>Vet visit not booked</span></a>`);
-  if (c.invites.length) needs.push(`<a class="need" href="#a/families"><b>${c.invites.length}</b><span>Invite not accepted</span></a>`);
-  if (c.drafts) needs.push(`<a class="need" href="#a/dogs"><b>${c.drafts}</b><span>KennelOS drafts</span></a>`);
+  if (unbooked) needs.push(`<a class="need warn" href="#a-vet"><b>${unbooked}</b><span>Vet visit not booked</span></a>`);
+  if (c.invites.length) needs.push(`<a class="need" href="#a-families"><b>${c.invites.length}</b><span>Invite not accepted</span></a>`);
+  if (c.drafts) needs.push(`<a class="need" href="#a-dogs"><b>${c.drafts}</b><span>KennelOS drafts</span></a>`);
   const unread = S.site.messages.filter((m) => !m.read).length;
-  if (unread) needs.push(`<a class="need" href="#a/website"><b>${unread}</b><span>New message from your website</span></a>`);
-  if (S.site.reviews.length) needs.push(`<a class="need" href="#a/website"><b>${S.site.reviews.length}</b><span>Review to approve</span></a>`);
-  if (c.due.length) needs.push(`<a class="need warn" href="#a/families"><b>${c.due.length}</b><span>Due for deletion in 30 days</span></a>`);
+  if (unread) needs.push(`<a class="need" href="#a-website"><b>${unread}</b><span>New message from your website</span></a>`);
+  if (S.site.reviews.length) needs.push(`<a class="need" href="#a-website"><b>${S.site.reviews.length}</b><span>Review to approve</span></a>`);
+  if (c.due.length) needs.push(`<a class="need warn" href="#a-families"><b>${c.due.length}</b><span>Due for deletion in 30 days</span></a>`);
   const isToday = calDays(S.now, LITTER.goHome) === 0;
   const goHomeSoon = c.pickToday.length ? `<section class="pick"><span class="eyebrow">Gem litter goes home ${long(LITTER.goHome)}</span>
       <h2>${isToday ? 'Mark each puppy as they leave' : `Going home in ${calDays(S.now, LITTER.goHome)} days`}</h2>
@@ -583,17 +576,17 @@ function admToday() {
       <ul class="list">${c.pickToday.map((p) => `<li><span class="grow"><b>${p.name}</b> · ${FAMILIES[p.family].name}${S.booked[p.id] ? ' · <span class="st">Vet booked</span>' : ''}</span><button class="btn ${isToday ? 'solid' : 'line'} small" data-act="pickup" data-id="${p.id}">Mark picked up</button></li>`).join('')}</ul></section>` : '';
   return `<div class="between"><div><span class="eyebrow">${KENNEL}</span><h1>Today</h1><p class="muted">${long(S.now)}</p></div></div>
     ${goHomeSoon}
-    ${S.site.changes.length ? `<section class="card"><div class="between"><p><span class="st warn">Website</span> ${S.site.changes.length} change${S.site.changes.length === 1 ? '' : 's'} not published yet</p><a class="btn line small" href="#a/website">Review and publish</a></div></section>` : ''}
+    ${S.site.changes.length ? `<section class="card"><div class="between"><p><span class="st warn">Website</span> ${S.site.changes.length} change${S.site.changes.length === 1 ? '' : 's'} not published yet</p><a class="btn line small" href="#a-website">Review and publish</a></div></section>` : ''}
     ${needs.length ? `<section><h2 style="margin-bottom:10px">Needs you</h2><div class="needs">${needs.join('')}</div></section>` : `<section class="card band"><p><span class="st ok">All caught up</span> Nothing needs you today.</p></section>`}
     <div class="cols">
-      ${vr.length ? `<section class="card"><div class="between"><h2>Vet visits</h2><a class="btn text small" href="#a/vet">All →</a></div>${vetList(vr)}</section>` : `<section class="card"><h2>Vet visits</h2><p class="muted">None running. The clock starts when you mark a puppy picked up.</p></section>`}
+      ${vr.length ? `<section class="card"><div class="between"><h2>Vet visits</h2><a class="btn text small" href="#a-vet">All →</a></div>${vetList(vr)}</section>` : `<section class="card"><h2>Vet visits</h2><p class="muted">None running. The clock starts when you mark a puppy picked up.</p></section>`}
       <section class="card"><h2>Recent activity</h2><ul class="list">${activity().map((a) => `<li><span class="grow"><b>${a[0]}</b><br><span class="small">${a[1]}</span></span><span class="small muted">${a[2]}</span></li>`).join('')}</ul></section>
     </div>
     <details class="card"><summary style="cursor:pointer"><b>Portal setup</b> <span class="st ok" style="margin-left:8px">All done</span></summary>
       <ul class="list"><li>Handbook: ${S.chapters.filter((c) => c.on).length} chapters on</li><li>Programs: ${S.programs.filter((p) => p.on).length} on</li><li>Checklist and timeline templates</li><li>Reminder emails: wording checked</li></ul></details>`;
 }
 function vetList(vr) {
-  return `<ul class="list">${vr.map((r) => `<li><span class="grow"><a class="rowlink" href="#a/fam/${r.p.family}"><b>${r.p.name}</b></a> · <span class="small">${FAMILIES[r.p.family].name}</span><br>
+  return `<ul class="list">${vr.map((r) => `<li><span class="grow"><a class="rowlink" href="#a-fam-${r.p.family}"><b>${r.p.name}</b></a> · <span class="small">${FAMILIES[r.p.family].name}</span><br>
     <span class="small muted">Due ${short(r.dl)}, ${time(r.dl)}${r.left > 0 && !(r.proof && r.proof.ok) ? ` · ${Math.round(r.left)} h left` : ''}${r.booked && !r.proof ? ` · booked ${short(r.booked)} ${time(r.booked)}` : ''}</span></span>
     ${r.st}${r.proof && !r.proof.ok ? `<button class="btn solid small" data-act="accept" data-id="${r.p.id}">Accept record</button>` : ''}</li>`).join('')}</ul>`;
 }
@@ -608,7 +601,7 @@ function activity() {
 }
 function admVet() {
   const vr = vetRows();
-  return `<p class="crumb"><a href="#a/today">Today</a> ›</p><h1>Vet visits</h1>
+  return `<p class="crumb"><a href="#a-today">Today</a> ›</p><h1>Vet visits</h1>
     <p class="muted">Counted as 72 hours from pickup (placeholder until the contract wording is confirmed). Reminders count back from each deadline.</p>
     <section class="card">${vr.length ? vetList(vr) : '<p class="muted">None running.</p>'}</section>`;
 }
@@ -624,13 +617,13 @@ function admFamilies() {
       const last = S.lastActive[k];
       const dueDel = last && (S.now - last) > 335 * DAY && !S.keep[k];
       const st = !S.signedIn[k] ? '<span class="st warn">Invite not accepted</span>' : dueDel ? '<span class="st warn">Deletion due</span>' : S.keep[k] ? '<span class="st">Kept</span>' : '<span class="st ok">Active</span>';
-      return `<li><span class="grow"><a class="rowlink" href="#a/fam/${k}"><b>${f.name}</b></a><br><span class="small muted">${p ? `${p.name} · Gem litter` : esc(f.note)} · ${last ? `last active ${short(last)}${last.getFullYear() !== S.now.getFullYear() ? ' ' + last.getFullYear() : ''}` : 'never signed in'}</span></span>${st}</li>`;
+      return `<li><span class="grow"><a class="rowlink" href="#a-fam-${k}"><b>${f.name}</b></a><br><span class="small muted">${p ? `${p.name} · Gem litter` : esc(f.note)} · ${last ? `last active ${short(last)}${last.getFullYear() !== S.now.getFullYear() ? ' ' + last.getFullYear() : ''}` : 'never signed in'}</span></span>${st}</li>`;
     }).join('')}</ul></section>
     <p class="small muted">Accounts are deleted after 12 months with no activity (or 90 days after pickup if never used), with warnings at 30 and 7 days. Sale records and reminder logs are kept for the guarantee period.</p>`;
 }
 function admFamily(k) {
   const f = FAMILIES[k];
-  if (!f || S.deleted[k]) return `<p class="crumb"><a href="#a/families">Families</a> ›</p><h1>Gone</h1><p class="muted">This family was deleted. <button class="btn text small" data-act="undel" data-id="${k}">Undo</button></p>`;
+  if (!f || S.deleted[k]) return `<p class="crumb"><a href="#a-families">Families</a> ›</p><h1>Gone</h1><p class="muted">This family was deleted. <button class="btn text small" data-act="undel" data-id="${k}">Undo</button></p>`;
   const p = PUPS.find((x) => x.id === f.pup);
   const pick = p && S.pickup[p.id];
   const dl = pick && vetDeadline(pick);
@@ -641,7 +634,7 @@ function admFamily(k) {
     if (S.now > new Date(dl - 24 * HOUR)) log.push([new Date(dl - 24 * HOUR), '24 hours left', S.bounced[k] ? 'Bounced' : 'Delivered']);
   } else if (p) log.push([D(2026, 12, 18, 9), 'Book your vet visit', 'Delivered']);
   const pr = p && S.proof[p.id];
-  return `<p class="crumb"><a href="#a/families">Families</a> ›</p><div class="between"><h1>${f.name}</h1>${S.bounced[k] ? '<span class="st bad">Email bounced</span>' : ''}</div>
+  return `<p class="crumb"><a href="#a-families">Families</a> ›</p><div class="between"><h1>${f.name}</h1>${S.bounced[k] ? '<span class="st bad">Email bounced</span>' : ''}</div>
     ${S.bounced[k] ? `<section class="card" style="border-color:var(--bad)"><p><b>Reminder emails aren’t reaching them.</b> ${esc(S.bounced[k])}. Text or call them, and check the address.</p></section>` : ''}
     <div class="cols"><div class="stack" style="gap:16px">
     ${p ? `<section class="card"><h2>${p.name} · Gem litter, ${p.collar} collar</h2>
@@ -707,7 +700,7 @@ function admWebsite() {
       ['Waitlist and application', 'Open or closed, your questions'],
       ['How to pay', 'Fee, deposit, scam warning'],
       ['Extras', 'Packages and prices'],
-      ['Recommended products', 'One list with the portal’s programs', '#a/portal'],
+      ['Recommended products', 'One list with the portal’s programs', '#a-portal'],
       ['Kennel details', 'Name, contact, town'],
       ['KennelOS', 'Linked · last update Dec 22'],
     ].map(([t, sub, href]) => `<li><a class="rowlink grow" href="${href || '#'}" ${href ? '' : `data-act="toast" data-msg="${t}: the existing Site Manager screen"`}><b>${t}</b><br><span class="small muted">${sub}</span></a><span aria-hidden="true" style="color:var(--accent);font-size:1.3rem">›</span></li>`).join('')}</ul></section>`;
@@ -717,14 +710,14 @@ function admDogs() {
   return `<span class="eyebrow">${KENNEL}</span><h1>Dogs and litters</h1>
     <p class="muted">One record for each dog, litter and puppy, used by your website and the portal.</p>
     <section class="card"><div class="between"><h2>The Gem litter</h2><span class="small muted">Willow × Boone · born Oct 28 · home ${short(LITTER.goHome)}</span></div>
-      <ul class="list">${PUPS.map((p) => `<li><span class="grow"><b>${p.name}</b> <span class="small muted">· ${p.collar} collar · ${p.sex.toLowerCase()}</span><br><a class="small" href="#a/fam/${p.family}">${FAMILIES[p.family].name}</a> <span class="small muted">· ${S.pickup[p.id] ? 'home ' + short(S.pickup[p.id]) : 'not picked up'}</span></span>
+      <ul class="list">${PUPS.map((p) => `<li><span class="grow"><b>${p.name}</b> <span class="small muted">· ${p.collar} collar · ${p.sex.toLowerCase()}</span><br><a class="small" href="#a-fam-${p.family}">${FAMILIES[p.family].name}</a> <span class="small muted">· ${S.pickup[p.id] ? 'home ' + short(S.pickup[p.id]) : 'not picked up'}</span></span>
         <label class="sr" for="ps-${p.id}">${p.name} on your website</label><select id="ps-${p.id}" data-act="pupstatus" data-id="${p.id}" style="width:auto">${Object.entries(label).map(([k, l]) => `<option value="${k}" ${S.pupStatus[p.id] === k ? 'selected' : ''}>${l}</option>`).join('')}</select></li>`).join('')}</ul>
       <p class="small muted">The status shows on your website (a change waits for Publish). The family and pickup belong to the portal.</p></section>
     <section class="card"><h2>Our Bostons</h2><ul class="list">${[['Willow', 'Dam · Gem litter'], ['Ziva', 'Dam'], ['Peaches', 'Dam']].map(([n, r]) => `<li><span class="grow"><b>${n}</b><br><span class="small muted">${r}</span></span><span class="st ok">On site</span></li>`).join('')}</ul></section>
     <section class="card">${admDrafts(true)}</section>`;
 }
 function admPage(route) {
-  const [r, arg] = route.split('/');
+  const [r, arg] = route.split('-');
   const c = counts();
   const pages = { today: admToday, vet: admVet, families: admFamilies, fam: () => admFamily(arg), dogs: admDogs, drafts: admDogs, website: admWebsite, portal: admContent, content: admContent };
   const unread = S.site.messages.filter((m) => !m.read).length;
@@ -732,14 +725,14 @@ function admPage(route) {
   const cur = r === 'fam' ? 'families' : r === 'vet' ? 'today' : r === 'drafts' ? 'dogs' : r === 'content' ? 'portal' : (pages[r] ? r : 'today');
   const body = (pages[r] || admToday)();
   return `<div class="adm">${header('Site Manager')}<div class="shell">
-    <aside aria-label="Site Manager">${nav.map(([k, l, ic, n]) => `<a href="#a/${k}" ${k === cur ? 'aria-current="page"' : ''}>${icon(ic)}${l}${n ? `<span class="cnt">${n}</span>` : ''}</a>`).join('')}</aside>
+    <aside aria-label="Site Manager">${nav.map(([k, l, ic, n]) => `<a href="#a-${k}" ${k === cur ? 'aria-current="page"' : ''}>${icon(ic)}${l}${n ? `<span class="cnt">${n}</span>` : ''}</a>`).join('')}</aside>
     <main id="main">${body}</main></div>
-    <nav class="tabs" aria-label="Site Manager"><div class="in">${nav.map(([k, l, ic]) => `<a href="#a/${k}" ${k === cur ? 'aria-current="page"' : ''}>${icon(ic)}${l}</a>`).join('')}</div></nav></div>`;
+    <nav class="tabs" aria-label="Site Manager"><div class="in">${nav.map(([k, l, ic]) => `<a href="#a-${k}" ${k === cur ? 'aria-current="page"' : ''}>${icon(ic)}${l}</a>`).join('')}</div></nav></div>`;
 }
 
 // ---------- Render and events ----------
 const app = document.getElementById('app');
-function route() { const h = location.hash.slice(1); const [v, ...rest] = h.split('/'); return { v: v === 'a' ? 'admin' : 'family', r: rest.join('/') || (v === 'a' ? 'today' : 'home') }; }
+function route() { const h = location.hash.slice(1); const [v, ...rest] = h.split('-'); return { v: v === 'a' ? 'admin' : 'family', r: rest.join('-') || (v === 'a' ? 'today' : 'home') }; }
 function render(keepScroll) {
   const { v, r } = route();
   S.view = v;
@@ -757,7 +750,7 @@ function openDialog(html) { dlgIn.innerHTML = html; dlg.showModal(); }
 
 document.querySelector('.proto').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.view) { location.hash = b.dataset.view === 'admin' ? '#a/today' : '#f/home'; return; }
+  if (b.dataset.view) { location.hash = b.dataset.view === 'admin' ? '#a-today' : '#f-home'; return; }
   if (b.dataset.stage) { S.stage = b.dataset.stage; reset(); render(); window.scrollTo(0, 0); }
   if (b.dataset.theme) { S.theme = b.dataset.theme; if (S.theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = S.theme; render(true); }
 });
@@ -775,12 +768,12 @@ document.addEventListener('click', (e) => {
       <div class="stack"><button class="btn line" data-act="toast" data-msg="A zip of your photos and entries is on its way">Download everything</button><button class="btn line" data-act="toast" data-msg="Signed out">Sign out</button><button class="btn text small" data-act="toast" data-msg="Asks to confirm, then deletes your account (A-K keeps the sale records the contract needs)">Delete our account</button></div>
       <p class="small muted">Accounts with no activity for 12 months are deleted, after two warning emails with a download link.</p><button class="btn text small" data-act="closedlg">Close</button>`); return; }
   if (a === 'account-admin') { toast('The manage app’s own menu'); return; }
-  if (a === 'openbook') { S.bookOpen = true; if (route().r !== 'book') { location.hash = '#f/book'; } else render(true); e.preventDefault(); return; }
+  if (a === 'openbook') { S.bookOpen = true; if (route().r !== 'book') { location.hash = '#f-book'; } else render(true); e.preventDefault(); return; }
   if (a === 'closebook') { S.bookOpen = false; render(true); return; }
   if (a === 'filter') { S.bookFilter = el.dataset.f; render(true); return; }
   if (a === 'pickup') { S.pickup[id] = new Date(Math.max(S.now, LITTER.goHome - 0)); if (S.stage === 'before') S.pickup[id] = new Date(S.now); render(true); toast(`${PUPS.find((p) => p.id === id).name} picked up. The vet clock is running; reminder sent.`); return; }
   if (a === 'accept') { S.proof[id].ok = true; render(true); toast('Accepted. The family sees it on their page.'); return; }
-  if (a === 'del') { S.deleted[id] = true; location.hash = '#a/fam/' + id; render(); toast('Deleted. Undo for 30 days.'); return; }
+  if (a === 'del') { S.deleted[id] = true; location.hash = '#a-fam-' + id; render(); toast('Deleted. Undo for 30 days.'); return; }
   if (a === 'undel') { delete S.deleted[id]; render(); return; }
   if (a === 'editdraft') { S.editing = id; render(true); return; }
   if (a === 'canceldraft') { S.editing = null; render(true); return; }
@@ -814,9 +807,7 @@ document.addEventListener('submit', (e) => {
 });
 window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
 reset();
-if (!location.hash) history.replaceState(null, '', '#f/home');
+if (!location.hash) history.replaceState(null, '', '#f-home');
 render();
 })();
 </script>
-</body>
-</html>
