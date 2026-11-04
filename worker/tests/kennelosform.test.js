@@ -249,6 +249,19 @@ const LIST = {
     { id: 'u2', kind: 'planned_pairing', label: 'Peaches × Boone', dam: { name: 'Peaches', titles: [] }, sire: { name: 'Boone', titles: [] } }],
 };
 
+test('a family\'s program icon from KennelOS sits left of the number and opens her description', async () => {
+  const withIcons = { ...LIST, rows: [
+    { position: 1, name: 'Ben A.', pref_sex: 'any', added: '2026-07-27', program: { icon: 'star', about: 'Paid a deposit "early" & first' } },
+    { position: 2, name: 'Megan R.', pref_sex: 'any', added: '2026-02-10', program: { icon: 'rocket', about: 'x' } },
+  ] };
+  const b = await breeder(kennelos(withIcons));
+  await b.post('/pages/waitlist/kennelos', { feed: FEED_URL });
+  const html = await (await b.waitlist()).text();
+  assert.match(html, /<table class="list marks"><thead><tr><th class="mark"><span class="sr-only">Program<\/span><\/th><th>#<\/th>/);
+  assert.match(html, /<td class="mark"><button type="button" class="added-tip program-tip" aria-label="Paid a deposit &quot;early&quot; &amp; first" data-tip="Paid a deposit &quot;early&quot; &amp; first"><svg[^]*?<\/svg><\/button><\/td><td class="num">#1<\/td>/);
+  assert.match(html, /<td class="mark"><\/td><td class="num">#2<\/td>/, 'an unknown icon draws nothing');
+});
+
 test('the KennelOS list is drawn on the waitlist page in the site\'s style', async () => {
   const b = await breeder(kennelos(LIST));
   await b.post('/pages/waitlist/kennelos', { feed: FEED_URL });
