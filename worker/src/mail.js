@@ -19,25 +19,38 @@ export function mailMode(env) {
   return null;
 }
 
-export async function sendMail(env, { to, emailHash, kind, subject, text }) {
+// Returns { id } (Resend's message id, null from the outbox), which the portal's
+// reminder log keeps. fromName: shown as the sender's name (the kennel's, for the
+// portal's emails), on MAIL_FROM's address.
+export async function sendMail(env, { to, emailHash, kind, subject, text, fromName }) {
   const mode = mailMode(env);
   if (mode === 'outbox') {
     await env.DB.prepare('INSERT INTO dev_outbox (email_hash, kind, subject, body, created_at) VALUES (?, ?, ?, ?, ?)')
       .bind(emailHash, kind, subject, text, new Date().toISOString()).run();
     await countMail(env, kind);
-    return;
+    return { id: null, outbox: true };
   }
   if (mode !== 'resend') throw new MailError('Email isn\'t set up yet (RESEND_API_KEY).');
   const res = await fetch(RESEND_URL, {
     method: 'POST',
     headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ from: env.MAIL_FROM || 'KennelPort <signin@kennelport.com>', to: [to], subject, text }),
+    body: JSON.stringify({ from: senderFor(env, fromName), to: [to], subject, text }),
   });
   if (!res.ok) {
     console.error(`mail: resend answered ${res.status}`);
     throw new MailError('The email could not be sent. Try again in a minute.');
   }
   await countMail(env, kind);
+  let id = null;
+  try { id = (await res.json())?.id ?? null; } catch { /* no body */ }
+  return { id };
+}
+
+export function senderFor(env, fromName) {
+  const from = env.MAIL_FROM || 'KennelPort <signin@kennelport.com>';
+  if (!fromName) return from;
+  const address = from.match(/<([^>]+)>/)?.[1] ?? from;
+  return `${String(fromName).replace(/["<>\r\n]/g, '').slice(0, 60)} <${address}>`;
 }
 
 // One more email of this kind today (/ops's usage table). Never stops a send.

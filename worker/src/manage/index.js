@@ -16,6 +16,7 @@ import { listSnapshots } from '../publish.js';
 import { siteLink } from '../ops/sites.js';
 import { createScreens, matchesWaiting } from './screens.js';
 import { kennelosState } from '../feed.js';
+import { handlePortalAdmin, portalNeedsYou } from '../portal/admin.js';
 import { vapidConfig, subscribe, unsubscribe, testPush, pendingPush, subscriptionFor } from '../push.js';
 
 export const MANAGE_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
@@ -120,7 +121,7 @@ async function siteHome(env, user, site) {
   const unread = await env.DB.prepare('SELECT COUNT(*) AS n FROM inquiries WHERE site_id = ? AND read_at IS NULL').bind(site.id).first('n');
   const pending = await env.DB.prepare("SELECT COUNT(*) AS n FROM stories WHERE site_id = ? AND status = 'pending'").bind(site.id).first('n');
   const listed = await env.DB.prepare("SELECT COUNT(*) AS n FROM waitlist_entries WHERE site_id = ? AND status = 'waiting'").bind(site.id).first('n');
-  const TILE_ICONS = { '/puppies': 'paw', '/litters': 'heart', '/photos': 'camera', '/waitlist': 'list', '/inbox': 'mail', '/dogs': 'star' };
+  const TILE_ICONS = { '/portal': 'people', '/puppies': 'paw', '/litters': 'heart', '/photos': 'camera', '/waitlist': 'list', '/inbox': 'mail', '/dogs': 'star' };
   const tile = (href, label, note, count, off = false) => `<li><a class="tile${off ? ' off' : ''}" href="/s/${esc(site.subdomain)}${href}"><b>${esc(label)}</b><span>${esc(note)}</span>${count ? `<span class="count">${count}</span>` : ''}${ic(TILE_ICONS[href] ?? 'star')}</a></li>`;
   // Linked to a KennelOS waitlist (plan 3.8): the simple waitlist isn't used, and
   // while KennelOS takes applications online, neither are the site's questions.
@@ -133,9 +134,13 @@ async function siteHome(env, user, site) {
   const { results: notices } = await env.DB.prepare('SELECT id, message, created_at FROM notices WHERE site_id = ? AND read_at IS NULL ORDER BY created_at DESC LIMIT 3').bind(site.id).all();
   const day = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
   const ITEM_ICONS = { '/inbox': 'mail', '/reviews-queue': 'star', '/litters#leaving': 'heart', '/pages': 'pages', '/pages/waitlist': 'list', '/payment': 'card', '/lists/extras': 'gift', '/lists/products': 'tag', '/lists/reviews': 'star', '/details': 'home', '/kennelos': 'link' };
-  const item = (href, label, note) => `<li class="item"><a href="/s/${esc(site.subdomain)}${href}">${ic(ITEM_ICONS[href] ?? 'pages')}<b>${esc(label)}</b><span>${esc(note)}</span></a></li>`;
+  const item = (href, label, note) => `<li class="item"><a href="/s/${esc(site.subdomain)}${href}">${ic(ITEM_ICONS[href] ?? (href.startsWith('/portal') ? 'paw' : 'pages'))}<b>${esc(label)}</b><span>${esc(note)}</span></a></li>`;
+  // The puppy portal, on sites that have it: what its families need from her.
+  const portalOn = await env.DB.prepare('SELECT portal_on FROM sites WHERE id = ?').bind(site.id).first('portal_on');
+  const portal = portalOn ? await portalNeedsYou(env, site.id) : [];
   // Needs you: what came in and is waiting, shown only while something is.
   const waiting = [
+    ...portal.map((x) => item(x.href, x.label, x.note)),
     unread ? item('/inbox', `${unread} new message${unread === 1 ? '' : 's'}`, 'In your inbox') : '',
     pending ? item('/reviews-queue', `${pending} review${pending === 1 ? '' : 's'} to approve`, 'From families') : '',
     leaving ? item('/litters#leaving', `${leaving} litter${leaving === 1 ? '' : 's'} leaving your site`, 'Keep or remove') : '',
@@ -150,6 +155,7 @@ async function siteHome(env, user, site) {
   </section>
   ${waiting.length ? `<section class="card" id="needs-you"><h2>Needs you</h2><ul class="items">${waiting.join('')}</ul></section>` : ''}
   <ul class="tiles">
+    ${portalOn ? tile('/portal', 'Puppy families', 'Their portal, pickups, vet visits', portal.length) : ''}
     ${tile('/puppies', 'Puppies', 'Statuses at a glance')}
     ${tile('/litters', 'Litters', leaving ? `${leaving} leaving your site` : 'Planned, current, past', leaving)}
     ${tile('/photos', 'Photos and albums', 'Camera roll, galleries')}
@@ -275,7 +281,10 @@ export async function handleManage(request, env, url) {
     const site = user.sites.find((s) => s.subdomain === m[1]);
     if (!site) return page('Not found', '<section class="card"><p>You don\'t manage a site at this address.</p><p><a href="/">Your sites</a></p></section>', { status: 404 });
     if (!m[2] && !post) return siteHome(env, user, site);
-    if (m[2]) {
+    if (m[2]?.startsWith('/portal')) {
+      const res = await handlePortalAdmin({ env, request, url, site, page });
+      if (res) return res;
+    } else if (m[2]) {
       const res = await createScreens({ env, request, url, site, user, page })();
       if (res) return res;
     }

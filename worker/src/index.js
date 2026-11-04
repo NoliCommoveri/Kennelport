@@ -16,6 +16,10 @@ import { handleManage } from './manage/index.js';
 import { runCleanup } from './cleanup.js';
 import { findDomain } from './domains.js';
 import { handleApi } from './kennelos/api.js';
+import { runPortalHourly } from './portal/reminders.js';
+
+export const DAILY_CRON = '23 4 * * *';
+export const HOURLY_CRON = '7 * * * *';
 
 const notFound = (what = 'There is no page at this address.') =>
   htmlPage('Not found', `<h1>Not found</h1><p>${esc(what)}</p>`, { status: 404 });
@@ -53,9 +57,11 @@ async function serveAsset(request, env) {
 }
 
 export default {
-  // The daily cleanup (wrangler.toml crons).
+  // The daily cleanup, and the portal's hourly vet clocks and reminders
+  // (wrangler.toml crons).
   async scheduled(event, env, ctx) {
-    if (await schemaReady(env.DB)) ctx.waitUntil(runCleanup(env));
+    if (!(await schemaReady(env.DB))) return;
+    ctx.waitUntil(event.cron === HOURLY_CRON ? runPortalHourly(env) : runCleanup(env));
   },
 
   async fetch(request, env, ctx) {

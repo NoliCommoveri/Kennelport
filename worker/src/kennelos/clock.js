@@ -108,13 +108,16 @@ export async function deleteLitter(env, siteId, litterId) {
   return photos;
 }
 
-// The daily cleanup's part: start clocks, then delete litters past their 30 days.
+// The daily cleanup's part: start clocks, then delete litters past their 30 days,
+// except a litter whose puppy has an open placement in the family portal.
 // Returns the ids of the photos removed with them, so their files go tonight.
 export async function expireLitters(env, now = new Date(), limit = 50) {
   await env.DB.batch(litterClockStatements(env, null, now.toISOString()));
   const cutoff = new Date(now.getTime() - LITTER_DAYS * DAY).toISOString();
   const { results } = await env.DB.prepare(`SELECT l.id, l.site_id FROM litters l JOIN sites s ON s.id = l.site_id
-    WHERE l.left_site_at IS NOT NULL AND l.left_site_at < ? AND l.kept_at IS NULL AND s.status != 'closed' ORDER BY l.left_site_at LIMIT ?`).bind(cutoff, limit).all();
+    WHERE l.left_site_at IS NOT NULL AND l.left_site_at < ? AND l.kept_at IS NULL AND s.status != 'closed'
+      AND NOT EXISTS (SELECT 1 FROM portal_placements pp JOIN puppies p ON p.id = pp.puppy_id WHERE p.litter_id = l.id AND pp.status = 'open')
+    ORDER BY l.left_site_at LIMIT ?`).bind(cutoff, limit).all();
   const photos = [];
   for (const l of results) photos.push(...await deleteLitter(env, l.site_id, l.id));
   return { litters: results.length, photos };

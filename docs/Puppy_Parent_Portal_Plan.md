@@ -3,9 +3,9 @@
 > A sign-in-only portal for one breeder's puppy families, built as a module of the
 > KennelPort Worker and switched on for her site alone. Revised from the first roadmap
 > (Nov 3, 2026) after review: it now reuses KennelPort's stack, takes starting data from
-> KennelOS without depending on it, and adds data retention. The portal itself isn't built
-> yet. Built so far: the Site Manager's new look and its sectioned forms (section 7.3,
-> Site Manager version 12).
+> KennelOS without depending on it, and adds data retention. Built so far: the Site
+> Manager's new look and its sectioned forms (section 7.3, Site Manager version 12), and
+> phase 1's first build chunk (section 6: the core, typed in by her; build log, Nov 4).
 
 ## 1. Purpose and scope
 
@@ -380,6 +380,23 @@ retention warning has gone out correctly (send one to a test family first).
 - Printable baby book export (PDF or photo book)
 - Optional passkey sign-in, never required
 - Text reminders for the vet visit, if email proves unreliable
+
+**Phase 1, in build chunks.** Each chunk is one branch and one migration, usable on
+its own:
+
+1. **The core, typed in by her** (built; the fallback below, made whole): family sign-in and
+   invites at `/family`; families, placements, pickup, health records and the contract
+   on her side; My Puppy and Records; the vet countdown with its reminders, **I've booked
+   it**, proof upload, acceptance and the reminder log; the programs on Home with click
+   tracking and the disclosure; history on placements; the portal switched on per site
+   from /ops.
+2. **Checklist, timeline and programs:** her templates, each family's ticks and program
+   status, the food band.
+3. **KennelOS:** the feed's new rows, the handoff, the one-tap link, the facts that go
+   back.
+4. **Messages from pickup, the loss page, bounces, erase and retention basics, push.**
+5. **Extended stays** and weekly updates.
+6. **Her Site Manager as one app** (section 7.3): Today, Families, Dogs, Portal tabs.
 
 **Fallback:** if a litter goes home before phase 1 is done, ship sign-in, My Puppy, the
 vet countdown and the program links on the go-home page alone, with families and pickups
