@@ -1387,4 +1387,4 @@ From `docs/Co_Owned_Dogs_Plan.md`. Migration `0025_co_owned`.
   a site deletes them.
 - `docs/KennelPort_Site_Directory.md`: co-owners' personal details still never come from
   KennelOS; a kennel name she ticks may.
-- **Version:** `site.css` changed, so `ASSET_VERSION` needs a bump; asked for, not done.
+- **Version:** site template `ASSET_VERSION` 15 (`site.css`), with the owner's yes.
