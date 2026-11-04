@@ -146,6 +146,7 @@ pages: it lands in the portal's own tables, signed-in only.
 | The signed contract (its signed date, and its document if one is stored) | New | The invite (section 3.4); the contract under Records |
 | A sale voided with the reason pup died or failed health check, and the family put back in line | New | The placement closed and the portal's loss page (section 7.4) |
 | Vaccination, preventative (deworming) and vet visit events on the puppy | New | Health records on the puppy |
+| Her vet: the KennelOS Account (or contact) she uses as her vet, with clinic, vet's name, phone and address; and the clinic on each puppy's vet visit events | New | Suggested **Contacts for families** in her portal settings (section 4), and, where a puppy's vet visits name a different clinic, that clinic as the puppy's own "vet since birth" on its placement. Which KennelOS record holds her vet is to be checked in KennelOS |
 | Milestone and weight check events | New | Baby book **drafts** (section 3.3) |
 | Extras on the sale (`Sale.extra_charges`); a training package's `boarding` stay (reason Training, tied to the sale and the extra) | New | The placement's extras (section 8.1); a stay's go-home date and weeks (section 8.2) |
 | Her feeding schedule (`breedFeedingScheduleRepo`: brand, amounts by weight and age, notes; a litter's own override) | New | A suggested **What she's eating now** (section 7.2) and the handbook's Feeding chapter |
@@ -274,7 +275,8 @@ Everything families see is content she edits in the manage app:
   (the website's by default) and her vet, who has known the puppy since birth: clinic,
   vet's name, phone, address and a note. From pickup they lead the family's Home as
   one-tap Call, Text, Email and Call the vet buttons for the weeks she sets (8 by
-  default), then stay under Records.
+  default), then stay under Records. With KennelOS linked, her vet arrives from it as
+  suggested values (section 3.2); her own edits win (section 3.1).
 - **Kennel info, FAQ, upcoming litters.**
 - **Baby book:** her entries, photos and order; which family entries she reposts (with
   their permission, section 9).
