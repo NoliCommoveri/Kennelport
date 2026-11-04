@@ -13,10 +13,12 @@ the Dogs page, with the partner kennel's logo, badge, videos and posts.
      and coming or Looking for a home as usual, and on the home page slider.
    - Lives with the other owner: only in the new **Co-owned** section of the Dogs
      page, never in the main grid and **never on the home page slider**.
-3. **A co-owned dog lives with exactly one other kennel.** No dog has two partner
-   kennels.
-4. **Every co-owned dog's page says "Co-owned with [kennel]"**, wherever it lives,
-   when that kennel may be named (5).
+3. **A dog can have several co-owners, from different kennels, but lives in one
+   place at a time:** with her, or with one of its co-owners. KennelOS keeps only
+   where it is now, no history. She changes it there, and the website follows at her
+   next Update website.
+4. **Every co-owned dog's page says "Co-owned with [kennels]"**, wherever it lives,
+   naming each of its co-owners' kennels that may be named (5).
 5. **A kennel is named on the website only when she ticks it**, on the kennel's
    record in KennelOS ("Name this kennel on my website", default off). Unticked, the
    dog still goes where (2) says, and reads "Lives with a partner kennel", with no
@@ -45,30 +47,34 @@ contact. Nothing records where a dog lives (a Boarding event is a stay, not a ho
 
 Changes:
 
-- **`Dog.lives_with_co_owner`** (boolean, default false). Plain field, so no
-  `db.version` block; optional, so older backups load. Only meaningful when
-  `ownership_type` is `co_owned`. `dogRepo` clears it on any other ownership.
-  Sync registry: `cloud`, like `co_owner_contact_ids` (a display choice read by
-  whichever device presses Update website); regenerate `cloudFields.js`.
-- **Dog form:** with ownership Co-owned, a "Lives with" choice: *Me* / *The
-  co-owner*.
-- **The partner kennel is derived, not stored:** the one outside Kennel that the
-  dog's co-owners belong to (their contacts' `kennel_id`). Several co-owners from one
-  kennel (a couple) are fine. None, or two different kennels, means no kennel is
-  sent, and Update website's gaps list says so ("Juno: her co-owners have no kennel
-  to show", "Juno: co-owners from two kennels").
+- **`Dog.lives_with_contact_id`**: empty means the dog lives with her; otherwise the
+  co-owner it lives with now, who must be one of its `co_owner_contact_ids`. One
+  current value, no history: she changes it when the dog moves. Plain field, so no
+  `db.version` block; optional, so older backups load. `dogRepo` refuses a contact
+  who isn't a co-owner, and clears it when that co-owner is taken off the dog or the
+  ownership stops being `co_owned`. New foreign key: added to
+  `referenceRegistry.js`. Sync registry: `cloud`, like `co_owner_contact_ids`;
+  regenerate `cloudFields.js`.
+- **Dog form:** with ownership Co-owned, "Lives with": *Me* or one of its
+  co-owners by name.
+- **Kennels are derived, not stored:** a co-owner's kennel is their contact's
+  `kennel_id`, when that is an outside kennel. The kennel it lives with is the
+  lives-with contact's. A lives-with contact with no kennel is sent as "lives away,
+  kennel not named", and the gaps list says so ("Juno lives with Ann Lee, who has
+  no kennel to show").
 - **`Kennel.name_on_website`** (boolean, default false) on outside kennels: "Name
   this kennel on my website". Sync registry: `cloud`.
 - **`siteExport.js`**, only to a Worker whose answer lists the `partner_kennels`
   section (the `registry`/`heat_id` handshake):
-  - each dog adds `co_owned` (true for `co_owned`), `lives_with_co_owner`, and
-    `partner_kennel_id` (the derived kennel, only when ticked; else null);
+  - each dog adds `co_owned` (true for `co_owned`), `lives_away` (a lives-with
+    contact is set), `lives_with_kennel_id` (that contact's kennel, only when
+    ticked; else null), and `co_owner_kennel_ids` (its co-owners' ticked kennels,
+    for "Co-owned with");
   - a top-level `partner_kennels: [{ id, name, website }]`, only kennels some sent
     dog names, cut to KennelPort's lengths, through `assertOnlyKeys`;
   - `bundleChanges` words: "Juno: now living with Oakridge", "Juno: now living with
     you".
-- End-State guide and editions docs updated; `referenceRegistry.js` needs nothing
-  new (no new foreign key). Tests in its siteExport tests. Service-worker cache bump
+- End-State guide and editions docs updated. Tests in its siteExport tests. Service-worker cache bump
   asked for at the end, per its CLAUDE.md.
 
 ## KennelPort
@@ -78,15 +84,18 @@ Changes:
 - `partner_kennels`: `id, site_id, name, url, logo_photo_id, badge_link,
   badge_image, sort, source, kennelos_id, hidden_by_kennelos, created_at`.
 - `dogs` adds `co_owned INTEGER NOT NULL DEFAULT 0`, `lives_away INTEGER NOT NULL
-  DEFAULT 0`, `partner_kennel_id TEXT`.
+  DEFAULT 0`, `lives_with_kennel_id TEXT`.
+- `dog_partner_kennels`: `dog_id, partner_kennel_id, sort`, its co-owners' kennels
+  for "Co-owned with".
 - Embeds take a new place, `kennel:<id>` (`embedStore.js` RECORD_PLACES and
   checkPlace); the embeds table is unchanged.
 
 ### KennelOS bundle (`kennelos/bundle.js`)
 
-- `SECTIONS` adds `partner_kennels`; the dog shape adds the three fields; a top-level
+- `SECTIONS` adds `partner_kennels`; the dog shape adds the four fields; a top-level
   `partner_kennels` list, capped (MAX 50).
-- `OWNED.dogs` adds `co_owned`, `lives_away`, `partner_kennel_id`;
+- `OWNED.dogs` adds `co_owned`, `lives_away`, `lives_with_kennel_id`, and the
+  bundle replaces the dog's `dog_partner_kennels` rows;
   `OWNED.partner_kennels` is `name`, `url`. Logo, badge, embeds and sort are hers.
 - Kennels are matched by KennelOS id. One no longer sent is hidden, never deleted
   (its logo is the only copy), and waits under "Not on your site" with Remove, like
@@ -109,8 +118,8 @@ Changes:
     on a tablet, 60% on a phone; a thin border instead of the full card.
   - **Partner strip** under it: each named kennel's logo (greyscale until hover)
     linking to its website (`rel="noopener"`), or its badge when it has one.
-- Dog page, any co-owned dog with a named kennel: "Co-owned with" in the facts, with
-  the logo and link. For a dog living there, an "At [Kennel]" block with the
+- Dog page, any co-owned dog with a named kennel: "Co-owned with" in the facts, each
+  kennel with its logo and link. For a dog living there, an "At [Kennel]" block with the
   kennel's videos and posts, after the dog's own.
 - Litters naming an away dog as dam or sire keep working; it is still her dog.
 
@@ -119,15 +128,16 @@ Changes:
 - **Partner kennels** screen, from Dogs: name and website (read-only on a linked
   site), logo upload (the same upload as her own logo), "Paste their badge code"
   (`badgeCode.js`), and Videos and posts (`kennel:<id>`).
-- Dog form: Co-owned, Lives with the co-owner and Kept by are read-only while linked;
-  an unlinked site sets them here, with "Add a kennel…".
+- Dog form: Co-owned, Co-owned with, Lives away and Lives with are read-only while
+  linked; an unlinked site sets them here, with "Add a kennel…".
 - Removing a kennel unlinks its dogs, deletes its embeds (`embedsOfStatement`) and
   releases its logo to `cleanup.js`. Export and import (`content/io.js`) carry
   `partner_kennels` and the new dog fields.
 
 ### Tests
 
-- render: section order and hiding; light cards; logo strip and badge; an away dog
+- render: a dog moving (a bundle changing `lives_away`) changes section and comes
+  off or back on the home slider; section order and hiding; light cards; logo strip and badge; an away dog
   in no other group and not on the home slider; a co-owned dog at home in its usual
   group; "Co-owned with" on both kinds; an unticked kennel unnamed;
 - bundle: kennels created and linked; a later bundle keeps her logo; a kennel no
