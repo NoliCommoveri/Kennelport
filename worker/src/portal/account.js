@@ -9,7 +9,7 @@
 // stay with an erase, the family reduced to the name she can read. A final delete
 // (her own choice) takes both, as it did before. The full retention clocks, with
 // their warnings, come with phase 2.
-import { PortalError, deleteFamily, getFamily, getPlacement, applyChanges, familyEmails } from './store.js';
+import { PortalError, deleteFamily, getFamily, getPlacement, applyChanges, familyEmails, stayDeletes } from './store.js';
 import { tombstoneStatements } from './feed.js';
 import { sendMail, MailError } from '../mail.js';
 import { notify } from '../push.js';
@@ -186,7 +186,11 @@ export async function eraseFamily(env, siteId, familyId, by) {
   const t = now();
   const { results: hashes } = await env.DB.prepare('SELECT email_hash FROM portal_emails WHERE family_id = ?').bind(familyId).all();
   const inPlacements = 'SELECT id FROM portal_placements WHERE family_id = ?';
+  // Stay updates and their photos go with the account (plan 10.1); that a stay was bought stays.
+  const { results: media } = await env.DB.prepare(`SELECT r2_key FROM portal_media WHERE placement_id IN (${inPlacements})`).bind(familyId).all();
+  if (media.length) await env.FILES.delete(media.map((m) => m.r2_key));
   await env.DB.batch([
+    ...stayDeletes(env, familyId, { keepExtras: true }),
     ...(fam.kennelos_id ? [env.DB.prepare('INSERT OR IGNORE INTO portal_tombstones (site_id, type, kennelos_id, deleted_at) VALUES (?, \'family\', ?, ?)').bind(siteId, fam.kennelos_id, t)] : []),
     ...hashes.map((h) => env.DB.prepare('DELETE FROM portal_codes WHERE site_id = ? AND email_hash = ?').bind(siteId, h.email_hash)),
     env.DB.prepare('DELETE FROM portal_sessions WHERE family_id = ?').bind(familyId),

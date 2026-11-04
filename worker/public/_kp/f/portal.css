@@ -199,3 +199,16 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .loss { display: grid; gap: .6rem; justify-items: start; }
 .loss .round { width: 5.5rem; height: 5.5rem; }
 details.card > summary { cursor: pointer; }
+
+/* Build chunk 5: the extended stay (skills, updates). */
+.skills { list-style: none; padding: 0; margin: .4rem 0 .6rem; display: grid; gap: .5rem; }
+.skills li { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: .15rem .6rem; }
+.skills li > span:first-child { font-weight: 700; font-size: .92rem; }
+.skills li > b { grid-column: 2; text-align: right; color: var(--accent); }
+.skills li > .meter { grid-column: 1; grid-row: 2; }
+.skills li > .muted { grid-column: 1 / -1; }
+.meter { display: inline-grid; grid-template-columns: repeat(3, 2.2rem); gap: 3px; }
+.meter i { height: 6px; border-radius: 3px; background: var(--line); }
+.meter i.on { background: var(--accent); }
+.update .gallery { margin: .6rem 0; }
+.update ul.small { padding-left: 1.1rem; margin: .4rem 0 0; }

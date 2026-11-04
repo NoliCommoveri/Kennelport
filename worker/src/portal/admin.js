@@ -21,6 +21,10 @@ import {
 import { sendDueFor } from './reminders.js';
 import { vetStatus, formatAt, formatDay, localParts, timeLeft, clockRunning, VET_RULES } from './vet.js';
 import { MailError } from '../mail.js';
+import {
+  catalog, saveDelivery, extrasFor, addExtra, confirmExtra, removeExtra, setStayStart, skillsFor, addSkill, removeSkill, updatesFor, writeUpdate, removeUpdate,
+  updatesDue, stayWeeks, updateDue, LEVELS, MAX_PHOTOS,
+} from './stays.js';
 import { suggestionsFor, takeSuggestion, ignoreSuggestion, QUIET_MS } from './feed.js';
 import {
   thread, markRead, breederWrites, markLoss, isLoss, lossDraft, saveLossNote, scheduleDelete, undoDelete, recentlyDeleted, eraseFamily, erasedRecords, MAX_MESSAGE, UNDO_DAYS,
@@ -58,6 +62,9 @@ const NOTES = {
   sent: 'Sent. They see it in the portal and by email.',
   lossnote: 'Saved. The family sees your note now.',
   losssent: 'Saved and emailed to the family.',
+  extra: 'Extra added.',
+  extraremoved: 'Extra removed.',
+  update: 'Update saved and emailed to the family.',
   loss: 'Recorded. Their portal is now the quiet page; write your note to them below.',
   suggested: 'Suggested steps added. Change, reorder or remove any of them.',
   stepadded: 'Step added.',
@@ -128,6 +135,13 @@ export async function portalNeedsYou(env, siteId, now = new Date()) {
   for (const f of await recentlyDeleted(env, siteId)) {
     if (f.delete_reason === 'backed_out') out.push({ href: '/portal#deleted', label: `${f.name} backed out`, note: `Their portal account goes ${formatDay(new Date(Date.parse(f.deleted_at) + UNDO_DAYS * 86400000).toISOString().slice(0, 10))}. Undo on Puppy families.` });
   }
+  // Extended stays: updates due, and extras KennelOS says they bought, to confirm.
+  for (const x of await updatesDue(env, siteId, s.time_zone, now)) {
+    out.push({ href: `/portal/f/${x.family_id}#stay`, label: `${x.name}: ${x.every_days === 7 ? 'weekly ' : ''}update due`, note: x.ago === null ? 'No update yet this stay' : `Last one ${x.ago} day${x.ago === 1 ? '' : 's'} ago` });
+  }
+  const { results: unconfirmed } = await env.DB.prepare(`SELECT pe.name, p.family_id, f.name AS family FROM portal_placement_extras pe JOIN portal_placements p ON p.id = pe.placement_id JOIN portal_families f ON f.id = p.family_id
+    WHERE pe.site_id = ? AND pe.confirmed_at IS NULL AND p.status = 'open' AND f.status = 'active' AND f.deleted_at IS NULL`).bind(siteId).all();
+  for (const x of unconfirmed) out.push({ href: `/portal/f/${x.family_id}#extras`, label: `${x.family} bought ${x.name}`, note: 'From KennelOS. Confirm it on their screen' });
   const vetWaiting = await env.DB.prepare("SELECT COUNT(*) AS n FROM portal_suggestions WHERE site_id = ? AND tbl = 'portal_settings' AND ignored = 0").bind(siteId).first('n');
   if (vetWaiting) out.push({ href: '/portal/settings', label: 'KennelOS has your vet\'s details', note: 'Use them for families or ignore them' });
   const feedAt = await env.DB.prepare('SELECT portal_feed_at FROM sites WHERE id = ?').bind(siteId).first('portal_feed_at');
@@ -311,6 +325,44 @@ async function familyScreen(env, site, familyId, url, { error } = {}, now = new 
           <p><button>Save</button></p></div>`)).join('')}</section>`);
     }
 
+
+    // Extras (plan 8.1): what they bought, and for a stay its skills and weekly updates.
+    const cat = await catalog(env, site.id);
+    const pex = await extrasFor(env, site.id, p.id);
+    const today = localParts(now, s.time_zone).ymd;
+    const exParts = [];
+    for (const x of pex) {
+      if (!x.confirmed_at) {
+        exParts.push(`<div class="box"><p><b>KennelOS says they bought ${esc(x.name)}</b></p><div class="row">${form(`extra/${esc(x.id)}/confirm`, '<button class="primary">Confirm</button>')}${form(`extra/${esc(x.id)}/remove`, '<button>Not right</button>')}</div></div>`);
+        continue;
+      }
+      if (x.delivery !== 'stay') { exParts.push(`<div class="box"><p><b>${esc(x.name)}</b> ${form(`extra/${esc(x.id)}/remove`, '<button class="link">Remove</button>', 'inline')}</p></div>`); continue; }
+      const skills = await skillsFor(env, site.id, x.id);
+      const ups = await updatesFor(env, site.id, x.id);
+      const w = stayWeeks(x.starts_on, p.go_home_on, today);
+      const due = !p.picked_up_at && updateDue(x.starts_on, ups[0]?.written_on ?? null, x.every_days, today);
+      const last = new Map((ups[0]?.levels ?? []).map((l) => [l.skill_id, l]));
+      exParts.push(`<div class="box" id="stay"><p><b>${esc(x.name)}</b>${x.weeks ? ` <span class="hint">home at ${x.weeks} weeks</span>` : ''}</p>
+        <p class="hint">${x.starts_on ? `From ${esc(formatDay(x.starts_on))}` : 'Starts at 8 weeks (add the litter\'s birthday to set it)'}${p.go_home_on ? ` to go-home ${esc(formatDay(p.go_home_on))}` : ''}${w.state === 'staying' ? ` · week ${w.week} of ${w.total}` : ''} · an update every ${x.every_days} days${due ? ' · <b>update due</b>' : ''}</p>
+        <details${due ? ' open' : ''}><summary><b>Write this ${x.every_days === 7 ? 'week\'s' : ''} update</b></summary>
+          <form method="post" action="${base}/extra/${esc(x.id)}/update" enctype="multipart/form-data"><div class="fgrid">
+            <label>Note<textarea name="note" rows="4" maxlength="3000" placeholder="This week ${esc(name)}…"></textarea></label>
+            <label>Weight<input name="weight" maxlength="30" placeholder="6 lb 2 oz"></label>
+            ${skills.map((sk) => `<div class="row"><label>${esc(sk.name)}<select name="level.${esc(sk.id)}">${Object.entries(LEVELS).map(([k, l]) => `<option value="${k}"${(last.get(sk.id)?.level ?? 'not_started') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+              <label>Note<input name="note.${esc(sk.id)}" maxlength="200" value="${esc(last.get(sk.id)?.note ?? '')}"></label></div>`).join('')}
+            <label>Photos<input type="file" name="photos" accept="image/jpeg,image/png,image/webp" multiple><span class="hint">Up to ${MAX_PHOTOS}, 10 MB each.</span></label>
+            <p><button class="primary">Save and send</button> <span class="hint">Last week's levels are filled in: change only what moved.</span></p></div></form></details>
+        ${ups.length ? `<details><summary>${ups.length} update${ups.length === 1 ? '' : 's'} sent</summary><dl class="kv">${ups.map((u) => `<dt>Week ${u.week}<br><span class="hint">${esc(formatDay(u.written_on))}</span></dt><dd>${esc((u.note ?? '').slice(0, 140))}${u.photos.length ? ` <span class="hint">${u.photos.length} photo${u.photos.length === 1 ? '' : 's'}</span>` : ''} ${form(`extra/${esc(x.id)}/update/${esc(u.id)}/remove`, '<button class="link">Remove</button>', 'inline')}</dd>`).join('')}</dl></details>` : ''}
+        <details><summary>Skills and the first day</summary>
+          ${skills.length ? `<ul>${skills.map((sk) => `<li>${esc(sk.name)}${sk.from_package ? '' : ' <span class="hint">(yours)</span>'} ${form(`extra/${esc(x.id)}/skill/${esc(sk.id)}/remove`, '<button class="link">Remove</button>', 'inline')}</li>`).join('')}</ul>` : '<p class="muted">No skills yet.</p>'}
+          ${form(`extra/${esc(x.id)}/skill`, '<div class="row"><label>Add a skill<input name="name" maxlength="120" required placeholder="Recall"></label></div><p><button>Add</button></p>')}
+          ${form(`extra/${esc(x.id)}/start`, `<div class="row"><label>The stay's first day<input type="date" name="day" value="${esc(x.starts_on ?? '')}" required></label></div><p><button>Save</button></p>`)}
+          ${form(`extra/${esc(x.id)}/remove`, '<p><button class="link">Remove this stay, with its updates</button></p>')}</details></div>`);
+    }
+    const addable = cat.filter((c) => !pex.some((x) => x.extra_id === c.id));
+    parts.push(`<section class="card" id="extras"><h2>Extras</h2>${exParts.join('') || '<p class="muted">None.</p>'}
+      ${addable.length ? form('extra', `<div class="row"><label>Add an extra they bought<select name="extra_id">${addable.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}${c.portal_delivery === 'stay' ? ' (a stay, with updates)' : ''}</option>`).join('')}</select></label></div><p><button>Add</button> <span class="hint">A stay sets go-home to the package's weeks. Payment stays in KennelOS or however you take it.</span></p>`) : cat.length ? '' : '<p class="hint">Your extras are on the website\'s Extras page.</p>'}</section>`);
+
     const records = await healthRecords(env, site.id, p.id);
     parts.push(`<section class="card"><h2>Shots, deworming and vet visits</h2>
       ${records.length ? `<dl class="kv">${records.map((r) => `<dt>${esc(formatDay(r.given_on))}</dt><dd><b>${esc(r.name)}</b> · ${esc(RECORD_TYPES[r.type])}${r.notes ? ` · ${esc(r.notes)}` : ''} ${form(`record/${esc(r.id)}/remove`, '<button class="link">Remove</button>')}</dd>`).join('')}</dl>` : '<p class="muted">None yet. The family sees these under Records.</p>'}
@@ -346,12 +398,12 @@ async function familyScreen(env, site, familyId, url, { error } = {}, now = new 
         return `<dt>${esc(formatAt(r.sent_at, s.time_zone, { weekday: false }))}</dt><dd><b>${esc(KINDS[r.kind] ?? r.kind)}</b>: <span${['failed', 'bounced'].includes(r.result) ? ' class="error"' : ''}>${esc(WORDS[r.result] ?? r.result)}</span> to ${esc(addr)}${r.basis && r.kind !== 'invite' ? `<br><span class="hint">Counted from ${esc(r.basis.includes('T') ? `the deadline ${formatAt(r.basis, s.time_zone, { weekday: false })}` : `go-home ${formatDay(r.basis)}`)}</span>` : ''}</dd>`;
       }).join('')}</dl>` : '<p class="muted">Nothing sent yet.</p>'}</section>`);
 
-    const FIELD = { picked_up_at: 'Picked up', pickup_state: 'Pickup', vet_deadline_at: 'Vet deadline', pickup_booked_at: 'Pickup booked', go_home_on: 'Go-home', puppy_id: 'Puppy', puppy_name: 'Puppy', call_name: 'Name', microchip: 'Microchip', registration_no: 'Registration number', vet_booked_for: 'Vet booked for', vet_clinic: 'Clinic', vet_booked_at: 'Vet booking recorded', proof_file_id: 'Vet record', proof_uploaded_at: 'Vet record uploaded', proof_accepted_at: 'Vet record accepted', contract_file_id: 'Contract', life_status: 'Life status', life_status_on: 'Since', health_record: 'Health record', checklist: 'Checklist ticked', task: 'Task done', step_hidden: 'Step hidden for them', step_shown: 'Step shown again', task_day: 'Task moved', program: 'Program', program_code: 'Their program code' };
+    const FIELD = { picked_up_at: 'Picked up', pickup_state: 'Pickup', vet_deadline_at: 'Vet deadline', pickup_booked_at: 'Pickup booked', go_home_on: 'Go-home', puppy_id: 'Puppy', puppy_name: 'Puppy', call_name: 'Name', microchip: 'Microchip', registration_no: 'Registration number', vet_booked_for: 'Vet booked for', vet_clinic: 'Clinic', vet_booked_at: 'Vet booking recorded', proof_file_id: 'Vet record', proof_uploaded_at: 'Vet record uploaded', proof_accepted_at: 'Vet record accepted', contract_file_id: 'Contract', life_status: 'Life status', life_status_on: 'Since', health_record: 'Health record', extra: 'Extra', extra_suggested: 'Extra from KennelOS, to confirm', extra_declined: 'KennelOS extra turned down', stay_update: 'Stay update sent', account_erased: 'Account erased', checklist: 'Checklist ticked', task: 'Task done', step_hidden: 'Step hidden for them', step_shown: 'Step shown again', task_day: 'Task moved', program: 'Program', program_code: 'Their program code' };
     const UNDONE = { checklist: 'Checklist unticked', task: 'Task undone', program_code: 'Their program code removed' };
     const BY = { breeder: 'you', family: 'the family', kennelos: 'KennelOS', portal: 'the portal' };
     const isTime = (v) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(v ?? '');
     const val = (v) => (v === null ? '—' : isTime(v) ? formatAt(v, s.time_zone, { weekday: false }) : /_file_id$/.test(v) ? 'a file' : v);
-    const hist = (await history(env, site.id, 'portal_placements', p.id)).filter((h) => !['puppy_id', 'proof_file_id', 'contract_file_id'].includes(h.field));
+    const hist = (await history(env, site.id, 'portal_placements', p.id)).filter((h) => !['puppy_id', 'proof_file_id', 'contract_file_id', 'extra_declined'].includes(h.field));
     parts.push(`<details class="card"><summary>History</summary><dl class="kv">${hist.map((h) => `<dt>${esc(formatAt(h.changed_at, s.time_zone, { weekday: false }))}</dt><dd><b>${esc(h.new_value === null && UNDONE[h.field] ? `${UNDONE[h.field]}: ${val(h.old_value)}` : `${FIELD[h.field] ?? h.field}: ${val(h.new_value)}`)}</b> <span class="hint">by ${esc(BY[h.changed_by])}${h.old_value !== null && !(h.new_value === null && UNDONE[h.field]) ? `, was ${esc(val(h.old_value))}` : ''}</span></dd>`).join('')}</dl></details>`);
   }
 
@@ -377,7 +429,7 @@ async function familyScreen(env, site, familyId, url, { error } = {}, now = new 
   return parts.join('\n');
 }
 
-function settingsScreen(site, s, products, { error, waiting = [] } = {}, url) {
+function settingsScreen(site, s, products, { error, waiting = [], extras = [] } = {}, url) {
   const zones = ZONES.includes(s.time_zone) ? ZONES : [s.time_zone, ...ZONES];
   const TYPES = { '': 'Not shown', food: 'Food', insurance: 'Insurance', registration: 'Registration', product: 'Product', other: 'Other' };
   return `${url ? note(url) : ''}${errorBox(error)}<form method="post" action="/s/${esc(site.subdomain)}/portal/settings" class="card">
@@ -408,6 +460,11 @@ function settingsScreen(site, s, products, { error, waiting = [] } = {}, url) {
       <label>How much and how often<input name="food_how" value="${esc(s.food_how ?? '')}" maxlength="160" placeholder="⅓ cup, three times a day"></label></div>
       <label>A note<input name="food_note" value="${esc(s.food_note ?? '')}" maxlength="300" placeholder="Soak it in warm water for the first week."></label>
     </div></section>
+    ${extras.length ? `<section class="fgroup"><h2>Extras the portal delivers</h2><div class="fgrid">
+      <p class="hint">An extended stay gets a Stay page for the family, its "What's included" list as skills, and your updates on a rhythm you set.</p>
+      ${extras.map((x) => `<div class="row"><label>${esc(x.name)}<select name="delivery.${esc(x.id)}"><option value="">Listed only</option><option value="stay"${x.portal_delivery === 'stay' ? ' selected' : ''}>An extended stay, with updates</option></select></label>
+        <label>Update every (days)<input name="every.${esc(x.id)}" inputmode="numeric" maxlength="2" value="${esc(x.portal_every_days ?? 7)}"></label></div>`).join('')}
+    </div></section>` : ''}
     <section class="fgroup"><h2>Programs families see</h2><div class="fgrid">
       ${products.length ? products.map((x) => `<div class="fgrid box"><b>${esc(x.name)}</b>
         <div class="row"><label>Show as<select name="type.${esc(x.id)}">${Object.entries(TYPES).map(([k, l]) => `<option value="${k}"${(x.portal_show ? x.portal_type ?? 'other' : '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
@@ -517,7 +574,7 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   }
   if (rest === '/settings') {
     const waiting = await suggestionsFor(env, site.id, 'portal_settings', site.id);
-    if (!post) return page('Portal settings', settingsScreen(site, s, await products(env, site.id), { waiting }, url), { back: home });
+    if (!post) return page('Portal settings', settingsScreen(site, s, await products(env, site.id), { waiting, extras: await catalog(env, site.id) }, url), { back: home });
     const form = await request.formData();
     const input = Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
     try {
@@ -526,6 +583,7 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
       if (err instanceof PortalError) return page('Portal settings', settingsScreen(site, { ...s, ...input }, await products(env, site.id), { error: err.message }), { back: home, status: 400 });
       throw err;
     }
+    await saveDelivery(env, site.id, input);
     const TYPES = ['food', 'insurance', 'registration', 'product', 'other'];
     const list = await products(env, site.id);
     if (list.length) {
@@ -597,8 +655,9 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   const p = await placementFor(env, site.id, familyId);
   const to = (n) => redirect(`${home}/f/${familyId}?note=${n}`);
   try {
-    const isFile = action === 'contract';
-    if (isFile && Number(request.headers.get('content-length') ?? 0) > MAX_FILE_BYTES + 64 * 1024) throw new PortalError('That file is over 10 MB.');
+    const isFile = action === 'contract' || /\/update$/.test(action ?? '');
+    if (action === 'contract' && Number(request.headers.get('content-length') ?? 0) > MAX_FILE_BYTES + 64 * 1024) throw new PortalError('That file is over 10 MB.');
+    if (isFile && Number(request.headers.get('content-length') ?? 0) > (MAX_PHOTOS + 1) * MAX_FILE_BYTES) throw new PortalError('Those photos are too large together.');
     const form = await request.formData();
     const get = (k) => String(form.get(k) ?? '');
     const values = Object.fromEntries([...form.entries()].filter(([, v]) => typeof v === 'string'));
@@ -664,6 +723,23 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
           else if (what === 'remove') await removeItem(env, site.id, kind, id, pl.id);
           else if (kind === 'task') await setDueOn(env, site.id, pl, id, get('day'));
           return redirect(`${home}/f/${familyId}?note=step#steps`);
+        }
+        if (action === 'extra') { await addExtra(env, site.id, needP().id, get('extra_id')); return redirect(`${home}/f/${familyId}?note=extra#extras`); }
+        const xm = action?.match(/^extra\/([0-9a-f-]{36})\/(confirm|remove|start|skill|update)(?:\/([0-9a-f-]{36})\/remove|\/remove)?$/);
+        if (xm) {
+          const [, peId, what, sub] = xm;
+          const pl = needP();
+          const back = (n) => redirect(`${home}/f/${familyId}?note=${n}#extras`);
+          if (what === 'confirm') { await confirmExtra(env, site.id, pl.id, peId); return back('saved'); }
+          if (what === 'remove') { await removeExtra(env, site.id, pl.id, peId); return back('extraremoved'); }
+          if (what === 'start') { await setStayStart(env, site.id, pl.id, peId, get('day')); return back('saved'); }
+          if (what === 'skill' && action.endsWith('/remove')) { await removeSkill(env, site.id, peId, sub); return back('saved'); }
+          if (what === 'skill') { await addSkill(env, site.id, peId, get('name')); return back('saved'); }
+          if (what === 'update' && action.endsWith('/remove')) { await removeUpdate(env, site.id, pl.id, sub); return back('saved'); }
+          const photos = [];
+          for (const f of form.getAll('photos')) if (f && typeof f !== 'string' && f.size) photos.push(new Uint8Array(await f.arrayBuffer()));
+          await writeUpdate(env, site, s, pl.id, peId, values, photos);
+          return back('update');
         }
         const nm = action?.match(/^steps\/new\/(checklist|task)$/);
         if (nm) {

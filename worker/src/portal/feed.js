@@ -15,7 +15,8 @@
 //         go_home_on?, pickup_at? (ISO: the placement event, hers or the family's approved booking),
 //         microchip?, registration_no?,
 //         voided?: { reason: died | failed_health | backed_out | other, on },
-//         health?: [{ id, type: vaccine | deworming | vet_visit | other, given_on, name, notes? }] }] }],
+//         health?: [{ id, type: vaccine | deworming | vet_visit | other, given_on, name, notes? }],
+//         extras?: [{ id (the sale's extra charge), extra_id (the extra, as the website bundle sends it) }] }] }],
 //     vet?: { clinic?, doctor?, phone?, address? },
 //     removed?: [{ type: family | placement | health, id }] }
 //
@@ -43,6 +44,7 @@ import { emailHash, normalizeEmail } from '../auth.js';
 import { encryptEmail, applyChanges, getSettings, PLACEMENT_FIELDS } from './store.js';
 import { siteBase } from '../kennelos/link.js';
 import { scheduleDelete } from './account.js';
+import { addExtra } from './stays.js';
 
 export const FEED_FORMAT = 1;
 export const MAX_FEED_BYTES = 512 * 1024;
@@ -67,7 +69,9 @@ const SHAPES = {
   placement: {
     id: F.id, puppy_id: F.ref, puppy_name: F.text(60, true), contract_signed_on: F.date(true), go_home_on: F.date(), pickup_at: F.at,
     microchip: F.text(40), registration_no: F.text(40), voided: { object: 'voided' }, health: { list: 'health', max: MAX.health },
+    extras: { list: 'extra', max: 10 },
   },
+  extra: { id: F.id, extra_id: F.id },
   voided: { reason: F.enumOf(['died', 'failed_health', 'backed_out', 'other'], true), on: F.date(true) },
   health: { id: F.id, type: F.enumOf(['vaccine', 'deworming', 'vet_visit', 'other'], true), given_on: F.date(true), name: F.text(120, true), notes: F.text(400) },
   vet: { clinic: F.text(120), doctor: F.text(120), phone: F.text(40), address: F.text(200) },
@@ -272,6 +276,7 @@ async function upsertPlacement(env, siteId, fam, bp, at, counts) {
       counts.placements_new++;
       p = await env.DB.prepare('SELECT * FROM portal_placements WHERE id = ?').bind(id).first();
       await upsertHealth(env, siteId, p, bp.health, at, counts);
+      await upsertExtras(env, siteId, p, bp.extras, counts);
       return;
     }
   }
@@ -311,6 +316,20 @@ async function upsertPlacement(env, siteId, fam, bp, at, counts) {
     counts.families_leaving++;
   }
   await upsertHealth(env, siteId, { ...p, ...apply }, bp.health, at, counts);
+  if (p.status === 'open' && !bp.voided) await upsertExtras(env, siteId, p, bp.extras, counts);
+}
+
+// An extra on the sale (plan 8.1): on the placement, unconfirmed until she confirms
+// it. One she removed or turned down isn't offered again (its history says so).
+async function upsertExtras(env, siteId, p, rows, counts) {
+  for (const x of rows ?? []) {
+    if (await env.DB.prepare('SELECT 1 FROM portal_placement_extras WHERE placement_id = ? AND kennelos_id = ?').bind(p.id, x.id).first()) continue;
+    if (await env.DB.prepare("SELECT 1 FROM portal_history WHERE tbl = 'portal_placements' AND row_id = ? AND field = 'extra_declined' AND new_value = ?").bind(p.id, x.id).first()) continue;
+    const extra = await env.DB.prepare('SELECT id FROM extras WHERE site_id = ? AND kennelos_id = ?').bind(siteId, x.extra_id).first('id');
+    if (!extra || await env.DB.prepare('SELECT 1 FROM portal_placement_extras WHERE placement_id = ? AND extra_id = ?').bind(p.id, extra).first()) continue;
+    await addExtra(env, siteId, p.id, extra, { by: 'kennelos', kennelosId: x.id });
+    counts.extras_new++;
+  }
 }
 
 async function upsertHealth(env, siteId, p, rows, at, counts) {
@@ -422,7 +441,7 @@ export async function applyFeed(env, device, body) {
   const at = now();
   const counts = {
     families_new: 0, families_linked: 0, families_updated: 0, emails_added: 0, email_conflicts: 0, placements_new: 0, placements_linked: 0,
-    placements_updated: 0, placements_closed: 0, families_leaving: 0, puppy_conflicts: 0, health_new: 0, health_updated: 0, suggestions: 0, vet_filled: 0, gone: 0, skipped_deleted: 0,
+    placements_updated: 0, placements_closed: 0, families_leaving: 0, extras_new: 0, puppy_conflicts: 0, health_new: 0, health_updated: 0, suggestions: 0, vet_filled: 0, gone: 0, skipped_deleted: 0,
   };
   for (const bf of feed.families) {
     const fam = await upsertFamily(env, site.id, bf, at, counts);

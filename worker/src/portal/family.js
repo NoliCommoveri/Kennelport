@@ -22,6 +22,7 @@ import { stepsFor, openTasks, programsFor, noteClick, setDone, setProgramStatus 
 import { PORTAL_VERSION } from './version.js';
 import { CODE_TTL_MS } from '../auth.js';
 import { redeemHandoff } from './feed.js';
+import { stayFor, skillsFor, updatesFor, skillProgress, stayWeeks, mediaFor, mediaResponse, LEVELS, LEVEL_ORDER } from './stays.js';
 import { messagesOpen, thread, unreadFrom, markRead, familyWrites, isLoss, eraseFamily, MAX_MESSAGE } from './account.js';
 
 export const PORTAL_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
@@ -66,10 +67,12 @@ const ic = (n, cls = 'i') => `<svg class="${cls}" aria-hidden="true"><use href="
 // After a loss before pickup the tabs shrink to Home and Photos (plan 7.4).
 const TABS = [['/family', 'home', 'Home'], ['/family/timeline', 'calendar', 'Timeline'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records']];
 const LOSS_TABS = [['/family', 'home', 'Home'], ['/family/photos', 'paw', 'Photos']];
+// During an extended stay, Stay takes Timeline's place (plan 8.5).
+const STAY_TABS = [['/family', 'home', 'Home'], ['/family/stay', 'award', 'Stay'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records']];
 
 function frame(site, title, body, { status = 200, fam = null, tab = null, action = '', headers = {} } = {}) {
   const kennel = site.kennel_name || site.subdomain;
-  const tabs = fam ? `<nav class="tabs" aria-label="Portal">${(fam.loss ? LOSS_TABS : TABS)
+  const tabs = fam ? `<nav class="tabs" aria-label="Portal">${(fam.loss ? LOSS_TABS : fam.stay ? STAY_TABS : TABS)
     .map(([href, icon, label]) => `<a href="${href}"${tab === href ? ' aria-current="page"' : ''}>${ic(icon)}<span>${label}</span></a>`).join('')}</nav>` : '';
   return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -240,6 +243,38 @@ function nextBand(tasks, name, kennel) {
     <p><a class="go" href="/family/timeline">The whole timeline ${ic('arrow')}</a></p></section>`;
 }
 
+
+// ---------- the extended stay ----------
+
+// A skill's level as four marks, filled to where it is.
+const meter = (level) => {
+  const n = level ? LEVEL_ORDER.indexOf(level) : -1;
+  return `<span class="meter" aria-label="${esc(level ? LEVELS[level] : 'Not started')}">${LEVEL_ORDER.slice(1).map((_, i) => `<i${i < n ? ' class="on"' : ''}></i>`).join('')}</span>`;
+};
+
+function skillsList(progress, { compact = false } = {}) {
+  if (!progress.length) return '';
+  return `<ul class="skills">${progress.map((sk) => `<li><span>${esc(sk.name)}</span>${meter(sk.now)}<b class="small">${esc(sk.now ? LEVELS[sk.now] : 'Not started')}</b>${!compact && sk.first && sk.first !== sk.now ? `<span class="small muted">from ${esc(LEVELS[sk.first].toLowerCase())} in the first update</span>` : ''}${!compact && sk.note ? `<span class="small muted">${esc(sk.note)}</span>` : ''}</li>`).join('')}</ul>`;
+}
+
+function updateCard(u, skills, name) {
+  const named = new Map(skills.map((sk) => [sk.id, sk.name]));
+  return `<article class="card update"><p class="eyebrow">Week ${u.week} · ${esc(formatDay(u.written_on))}</p>
+    ${u.note ? u.note.split(/\n{2,}/).map((x) => `<p>${esc(x).replace(/\n/g, '<br>')}</p>`).join('') : ''}
+    ${u.weight ? `<p class="small"><b>Weight:</b> ${esc(u.weight)}</p>` : ''}
+    ${u.photos.length ? `<ul class="gallery">${u.photos.map((id) => `<li><a href="/family/media/${esc(id)}"><img src="/family/media/${esc(id)}" alt="${esc(name)}, week ${u.week}" loading="lazy"></a></li>`).join('')}</ul>` : ''}
+    ${u.levels.some((l) => l.note) ? `<ul class="small muted">${u.levels.filter((l) => l.note).map((l) => `<li>${esc(named.get(l.skill_id) ?? '')}: ${esc(l.note)}</li>`).join('')}</ul>` : ''}</article>`;
+}
+
+async function stayContext(env, site, p, s, now) {
+  const pe = await stayFor(env, site.id, p.id);
+  if (!pe) return null;
+  const skills = await skillsFor(env, site.id, pe.id);
+  const updates = await updatesFor(env, site.id, pe.id);
+  const w = stayWeeks(pe.starts_on, p.go_home_on, localParts(now, s.time_zone).ymd);
+  return { pe, skills, updates, progress: skillProgress(skills, updates), ...w };
+}
+
 // ---------- signed in ----------
 
 async function loadContext(env, site, fam) {
@@ -347,6 +382,16 @@ async function homePage(env, site, fam, now = new Date()) {
       : `<div class="cal">${ic('check')}<p class="eyebrow">${esc(done)}</p><p>${p.proof_uploaded_at ? 'Thank you.' : `Upload the vet's record on the <a href="/family/vet">Vet visit</a> page.`}</p></div>`;
     band = nextBand(steps.tasks, name, kennel);
     action = next ? `<a href="/family/timeline#t-${esc(next.id)}">${ic('list')}<span>${esc(next.title)}${next.due ? `, by ${esc(formatDay(next.due))}` : ''}</span><b>See it</b></a>` : '';
+  }
+  // During an extended stay (plan 8.2): the week of the stay, the latest update, the skills.
+  const stay = st === 'before' && live ? await stayContext(env, site, p, s, now) : null;
+  if (stay) {
+    const latest = stay.updates[0];
+    calendar = `<div class="cal">${ic('award')}<p class="eyebrow">${esc(stay.pe.name)}</p>${stay.state === 'staying' ? `<p class="big">Week ${stay.week} of ${stay.total}</p>` : stay.state === 'booked' ? `<p class="big">Starts ${esc(formatDay(stay.pe.starts_on))}</p>` : '<p class="big">Last days of the stay</p>'}<p class="small">${goHomeWords(p, s) ? `Home ${esc(goHomeWords(p, s))}` : ''}</p></div>`;
+    band = `<section class="band"><p class="eyebrow">${latest ? `As of week ${latest.week}` : 'The stay plan'}</p><h2>How ${esc(name)} is doing</h2>
+      ${skillsList(stay.progress, { compact: true })}
+      ${latest ? `<p class="small">${esc((latest.note ?? '').slice(0, 220))}${(latest.note ?? '').length > 220 ? '…' : ''}</p>` : `<p class="small">${esc(kennel)} writes an update every ${stay.pe.every_days === 7 ? 'week' : `${stay.pe.every_days} days`}: photos, and how each skill is coming along.</p>`}
+      <p><a class="go" href="/family/stay">${latest ? `All ${stay.updates.length} update${stay.updates.length === 1 ? '' : 's'}` : 'The stay'} ${ic('arrow')}</a></p></section>` + band;
   }
   // The checklist from two weeks before go-home (or while there's no date yet).
   const checklist = st === 'before' && (days === null || days <= 14) ? checklistCard(steps.checklist) : '';
@@ -465,6 +510,22 @@ async function recordsPage(env, site, fam) {
   <section class="card" id="photos"><h2>Photos of ${esc(name)}</h2>
     ${photos.length ? `<ul class="gallery">${photos.map((ph) => `<li><a href="/family/photo/${esc(ph.id)}"><img src="/family/photo/${esc(ph.id)}?s=t" alt="${esc(ph.alt ?? '')}" loading="lazy"></a></li>`).join('')}</ul>` : '<p class="muted">Photos will appear here.</p>'}</section>`;
   return frame(site, 'Records', body, { fam, tab: '/family/records' });
+}
+
+// The stay (plan 8.5): the countdown, every skill's progress, the updates newest first.
+async function stayPage(env, site, fam, now = new Date()) {
+  const { p, s } = await loadContext(env, site, fam);
+  const stay = p && active(p) ? await stayContext(env, site, p, s, now) : null;
+  if (!stay) return redirect('/family');
+  const name = pupName(p);
+  const kennel = site.kennel_name || site.subdomain;
+  const days = daysUntil(p, s, now);
+  const body = `<section class="band"><p class="eyebrow">${esc(stay.pe.name)}</p><h1>${esc(name)}'s stay</h1>
+    <p>${stay.state === 'staying' ? `Week ${stay.week} of ${stay.total}. ` : stay.state === 'booked' ? `Starts ${esc(formatDay(stay.pe.starts_on))}. ` : ''}${days !== null && days > 0 ? `${esc(name)} comes home in ${days} day${days === 1 ? '' : 's'}${goHomeWords(p, s) ? `, ${esc(goHomeWords(p, s))}` : ''}.` : ''}</p></section>
+    ${stay.progress.length ? `<section class="card"><h2>Skills</h2>${skillsList(stay.progress)}</section>` : ''}
+    ${stay.updates.length ? stay.updates.map((u) => updateCard(u, stay.skills, name)).join('') : `<section class="card"><p class="muted">${esc(kennel)}'s first update will be here${stay.pe.starts_on ? ` in the stay's first week` : ''}.</p></section>`}
+    <p class="small"><a class="go" href="/family/timeline">${esc(name)}'s timeline ${ic('arrow')}</a></p>`;
+  return frame(site, 'Stay', body, { fam, tab: '/family/stay' });
 }
 
 // Every puppy of theirs, with her photos (a lost puppy's stay, under its name).
@@ -605,6 +666,7 @@ export async function servePortal(request, env, ctx, subdomain, { onDomain = fal
   if (!fam) return path === '/family' ? signInPage(site) : redirect('/family');
   const current = await placementFor(env, site.id, fam.familyId);
   fam.loss = isLoss(current);
+  fam.stay = Boolean(!fam.loss && current && active(current) && !current.picked_up_at && await stayFor(env, site.id, current.id));
   // On Messages itself they're read as the page shows them.
   fam.unread = fam.loss || path === '/family/messages' ? 0 : await unreadFrom(env, site.id, fam.familyId, 'breeder');
 
@@ -615,6 +677,9 @@ export async function servePortal(request, env, ctx, subdomain, { onDomain = fal
     if (fam.loss && ['/family/timeline', '/family/vet', '/family/records', '/family/messages'].includes(path)) return redirect('/family');
     if (path === '/family/timeline') return timelinePage(env, site, fam);
     if (path === '/family/photos') return photosPage(env, site, fam);
+    if (path === '/family/stay') return stayPage(env, site, fam);
+    const mm = path.match(/^\/family\/media\/([0-9a-f-]{36})$/);
+    if (mm) return mediaResponse(env, await mediaFor(env, site.id, fam.familyId, mm[1]));
     if (path === '/family/messages') return messagesPage(env, site, fam);
     if (path === '/family/account') return accountPage(env, site, fam);
     let m = path.match(/^\/family\/photo\/([0-9a-f-]{36})$/);

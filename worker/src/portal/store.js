@@ -203,10 +203,12 @@ export async function listFamilies(env, siteId) {
 // Delete a family and everything of theirs. Phase 1's delete is final; the 30-day
 // undo and the erase/retention split (plan section 10) come with build chunk 4.
 export async function deleteFamily(env, siteId, familyId) {
-  const { results: files } = await env.DB.prepare('SELECT f.r2_key FROM portal_files f JOIN portal_placements p ON p.id = f.placement_id WHERE p.family_id = ? AND f.site_id = ?').bind(familyId, siteId).all();
+  const { results: files } = await env.DB.prepare(`SELECT f.r2_key FROM portal_files f JOIN portal_placements p ON p.id = f.placement_id WHERE p.family_id = ? AND f.site_id = ?
+    UNION ALL SELECT m.r2_key FROM portal_media m JOIN portal_placements p ON p.id = m.placement_id WHERE p.family_id = ? AND m.site_id = ?`).bind(familyId, siteId, familyId, siteId).all();
   if (files.length) await env.FILES.delete(files.map((f) => f.r2_key));
   const inPlacements = 'SELECT id FROM portal_placements WHERE family_id = ?';
   await env.DB.batch([
+    ...stayDeletes(env, familyId, { keepExtras: false }),
     env.DB.prepare(`DELETE FROM portal_files WHERE placement_id IN (${inPlacements})`).bind(familyId),
     env.DB.prepare(`DELETE FROM portal_health_records WHERE placement_id IN (${inPlacements})`).bind(familyId),
     env.DB.prepare(`DELETE FROM portal_placement_progress WHERE placement_id IN (${inPlacements})`).bind(familyId),
@@ -223,6 +225,22 @@ export async function deleteFamily(env, siteId, familyId) {
     env.DB.prepare('DELETE FROM portal_emails WHERE family_id = ?').bind(familyId),
     env.DB.prepare('DELETE FROM portal_families WHERE id = ? AND site_id = ?').bind(familyId, siteId),
   ]);
+}
+
+// A family's stay updates and their photos' rows (and, unless keepExtras, the
+// extras and skills themselves). The R2 files are the caller's to delete.
+export function stayDeletes(env, familyId, { keepExtras }) {
+  const pe = 'SELECT id FROM portal_placement_extras WHERE placement_id IN (SELECT id FROM portal_placements WHERE family_id = ?)';
+  const ups = `SELECT id FROM portal_stay_updates WHERE placement_extra_id IN (${pe})`;
+  return [
+    env.DB.prepare('DELETE FROM portal_media WHERE placement_id IN (SELECT id FROM portal_placements WHERE family_id = ?)').bind(familyId),
+    env.DB.prepare(`DELETE FROM portal_update_skills WHERE update_id IN (${ups})`).bind(familyId),
+    env.DB.prepare(`DELETE FROM portal_stay_updates WHERE placement_extra_id IN (${pe})`).bind(familyId),
+    ...(keepExtras ? [] : [
+      env.DB.prepare(`DELETE FROM portal_stay_skills WHERE placement_extra_id IN (${pe})`).bind(familyId),
+      env.DB.prepare('DELETE FROM portal_placement_extras WHERE placement_id IN (SELECT id FROM portal_placements WHERE family_id = ?)').bind(familyId),
+    ]),
+  ];
 }
 
 // ---------- placements ----------

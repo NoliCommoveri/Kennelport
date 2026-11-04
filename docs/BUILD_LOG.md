@@ -1285,3 +1285,39 @@ Its tables joined the branch's one migration, **0024**, with chunks 2 and 3.
 Left for phase 2 (plan 10): the warnings at 30 and 7 days with Keep my account, deletion
 for inactivity and of families who never signed in, the sale records' own clock, and
 Download everything. Push to families' own devices isn't planned for phase 1: they get email.
+
+## 2026-11-04: Puppy parent portal, build chunk 5 (extended stays and weekly updates)
+
+Its tables joined the branch's one migration, **0024**, with chunks 2 to 4.
+
+- **Delivery type on her extras** (plan 8.1): Portal settings, **Extras the portal
+  delivers**: each extra in her website catalog is "Listed only" or "An extended stay, with
+  updates", with how often she writes (7 days by default). `extras.portal_delivery`,
+  `portal_every_days`. Photo and video packages (`media`) are phase 2.
+- **Extras on a placement** (`portal_placement_extras`), on the family's screen: add one
+  they bought, remove one. The name, weeks and cadence are copied, so the record survives
+  the catalog changing. Payment stays in KennelOS. From the KennelOS feed, a placement's
+  `extras: [{ id, extra_id }]` (the extra by its website-bundle id) arrives **unconfirmed**:
+  Today says "The Reed family bought the 12-Week Development Package", and she confirms it
+  or says Not right (then that charge isn't offered again).
+- **A stay** (plan 8.2): go-home becomes birth + the package's weeks (she can still change
+  it); the stay starts at 8 weeks old (editable); the package's "What's included" list
+  becomes its skills, and she can add her own. Birth-dated tasks during the stay are
+  already hers and pickup-dated ones move with the later go-home (chunk 2), so no
+  per-package timeline. The vet clock starts at the real pickup, as for every puppy.
+- **Her weekly update**, on the family's screen: a note, a weight, each skill on Not
+  started · Introduced · Practicing · Reliable with a line of notes, pre-filled from last
+  week, and up to 6 photos (JPEG, PNG or WebP, 10 MB each, checked by their bytes, in R2).
+  Saving emails every address (logged as `stay_update`). Today lists stays whose update is
+  due ("Opal: weekly update due, last one 8 days ago").
+- **The family's side** (plan 8.5): during the stay a **Stay** tab takes Timeline's place.
+  Home shows the week of the stay and how each skill is doing; the Stay page has the
+  countdown, each skill's progress since the first update, and the updates newest first
+  with photos (`/family/media/<id>`, only their own).
+- Stay updates and their photos go with the family's account (an erase, or the final
+  delete); the record that a stay was bought stays with her sale records.
+- Portal CSS: the skills meter and the update cards.
+
+Left for later: a stay update into the baby book (phase 2, with the baby book), video in
+updates and photo and video packages (phase 2), and her Dogs tab as the place to write
+updates (chunk 6).
