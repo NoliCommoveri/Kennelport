@@ -47,7 +47,7 @@ function page(title, body, { status = 200, back = null, headers = {} } = {}) {
 <script src="/_kp/m/app.js?v=${APP_VERSION}" defer></script>
 <script src="/_kp/m/photos.js?v=${APP_VERSION}" defer></script>
 </head><body>
-<header class="top">${back ? `<a class="back" href="${esc(back)}" aria-label="Back">‹</a>` : '<img class="mark" src="/_kp/m/icon-64.png" alt="" width="32" height="32">'}<span class="title">${esc(title)}</span></header>
+<header class="top">${back ? `<a class="back" href="${esc(back)}" aria-label="Back">‹</a>` : '<img class="mark" src="/_kp/m/icon-64.png" alt="" width="32" height="32">'}<span class="title"><small>Site Manager</small><b>${esc(title)}</b></span></header>
 <main>${body}</main>
 <p class="offline-note" id="offline-note" hidden role="status">You're offline. You can look around, but saving needs a connection.</p>
 </body></html>`, { status, headers: { ...HEADERS, ...headers } });
@@ -171,7 +171,7 @@ function notificationsPage(env, user) {
 function manifest() {
   return new Response(JSON.stringify({
     name: 'KennelPort Site Manager', short_name: 'Site Manager', start_url: '/', scope: '/', display: 'standalone',
-    background_color: '#FCF4E9', theme_color: '#034655', description: 'Manage your KennelPort website.',
+    background_color: '#F5F2EA', theme_color: '#034655', description: 'Manage your KennelPort website.',
     icons: [
       { src: '/_kp/m/icon-192.png', sizes: '192x192', type: 'image/png' },
       { src: '/_kp/m/icon-512.png', sizes: '512x512', type: 'image/png' },
