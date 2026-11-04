@@ -109,8 +109,8 @@ Changes:
 - `dogGroups`: a dog with `lives_away` goes only to a new `away` group; every other
   dog, co-owned or not, is grouped as now. The home page slider leaves `away` dogs
   out.
-- Dogs page: a **Co-owned** section (`id="co-owned"`) after Girls and boys and Up
-  and coming, before Looking for a home. Heading and intro editable on the Dogs
+- Dogs page: a **Co-owned** section (`id="co-owned"`) at the bottom, beneath all her
+  resident dogs (Girls and boys, Up and coming, Looking for a home). Heading and intro editable on the Dogs
   page (`co_owned_heading`, `co_owned_lede`; defaults "Shared with friends", "Dogs
   we co-own, living with partner kennels."). Hidden when empty.
   - **Light scroll cards:** `slider(…, { cls: 'light' })` with a new `coCard()`: no

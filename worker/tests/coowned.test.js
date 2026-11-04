@@ -108,6 +108,12 @@ test('the Dogs page: a dog living with a co-owner is only under Co-owned, in a l
   assert.doesNotMatch(co, /Ziva|Pinehill/, 'a dog at home is not here, and only the kennels they live with are in the strip');
   assert.doesNotMatch(section(html, 'all-dogs'), /Willow/);
   assert.match(section(html, 'all-dogs'), /Ziva/);
+  // At the bottom, beneath every group of her own dogs.
+  b.run("UPDATE dogs SET for_sale = 1 WHERE slug = 'peaches'");
+  await b.post('/publish');
+  const order = await b.page('/dogs');
+  assert.ok(order.indexOf('id="looking-for-a-home"') > 0 && order.indexOf('id="co-owned"') > order.indexOf('id="looking-for-a-home"'));
+  assert.doesNotMatch(order.slice(order.indexOf('id="co-owned"')).split('</main>')[0], /<section class="section[^"]*" id="(?!co-owned)/, 'nothing after it');
   // Never on Home.
   const home = await b.page('/');
   assert.doesNotMatch(home.match(/Meet our Bostons[\s\S]*?<\/section>/)[0], /Willow/);
