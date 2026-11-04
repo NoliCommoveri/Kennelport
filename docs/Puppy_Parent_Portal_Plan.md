@@ -235,25 +235,34 @@ vet countdown and the program links on the go-home page alone.
 
 The look follows her site: the Lawn scheme of the AK sample (ivory ground, tuxedo ink,
 lawn-green accent, brass labels; Fraunces, Mulish and Pinyon Script) and the design
-direction's rules (`KennelPort_Design_Direction.md`). Mockups from Nov 4, 2026 set the
-starting point; the clickable prototype is
+direction's rules (`KennelPort_Design_Direction.md`), with one thing decided by the breeder
+herself: **the family pages are photo-led and use icons**, as in the first mockups. She
+liked the photo across the top, the round puppy photo beside what's due, and the quick
+links as icon tiles, and said a flatter, text-led version lost that (Nov 4, 2026). The
+clickable prototype, which follows this, is
 [`reference/portal-prototype.html`](reference/portal-prototype.html).
 
 ### 7.1 Style rules
 
-- **Corners square or barely rounded** (2–4px) on cards, photos, buttons and inputs.
-  Buttons are rectangles: one solid button for the main action on a screen, outlined or
-  text-with-arrow for the rest. No pills.
+- **Photos and icons lead.** Every page that's about a puppy shows that puppy's photo;
+  her kennel photos fill the top of Home; galleries, update cards and baby book entries
+  are photo-first. Icons from one set mark every tile, tab and status box, inside a
+  soft tinted square.
+- **Softly rounded, not pill-shaped:** cards and photos 8px, icon tiles 10px, buttons and
+  inputs 4px, the puppy's photo and the header logo round. Buttons stay rectangles: one
+  solid button for the main action on a screen, outlined or text-with-arrow for the rest.
 - **Status is a word with a small mark** (Done, Next, Booked, Overdue), not a coloured
   lozenge. Red means trouble (overdue, bounced, no proof near the deadline), never
   "coming up".
-- **Script lettering once a page at most.** The kennel name in the header is set in the
-  display serif.
+- **Script lettering twice a page at most:** the greeting at the top and the puppy's name
+  on the profile card. The kennel name in the header is set in the display serif beside
+  her logo.
 - **Links look like text or the accent colour**, with a small arrow when they leave the
   portal. No raw addresses.
 - **Light and dark**, following the device, like her site.
 - **Icons from one free set** (Lucide or Tabler), served from the site.
-- **Real photos** from her albums, one set per puppy. No stock photos.
+- **Real photos** from her albums, one set per puppy. No stock photos. A missing photo
+  shows a drawn paw placeholder, never a broken image.
 
 ### 7.2 Family home: it changes with the puppy's stage
 
@@ -266,17 +275,29 @@ One page, four states, worked out from the go-home date, pickup time and today:
 | **Weeks 1–8 and on** | The next task or two ("Register Opal with AKC by Jan 22"), each with its link | A prompt to add to the baby book, the vet visit shown as done |
 | **Later** | Birthdays (littermates by call name, with permission), "a year ago today" from the baby book | Monthly milestone, the printable book (phase 3) |
 
-- **No generic welcome banner** pushing the puppy below the fold on a phone.
-- **No "Referral program" or "Affiliate deals" tiles,** and no shop page. Links sit inside
-  the checklist, timeline, food card and handbook.
+- **Layout, top to bottom:** a photo with the stage's greeting ("Welcome home · Opal is
+  home"); the profile card (round photo, name, litter, born, go-home, any stay) with a
+  tinted box beside it for what's due now (comes home in N days, hours left for the
+  vet visit with **Upload vet record**, week 3 of 4 of the stay); the stage's own cards;
+  food and insurance as picture tiles; the timeline as a row of steps with the next
+  tasks under it; **Quick links** as six icon tiles; the disclosure. The photo is kept
+  short on a phone (about 210px) so the profile card and what's due still show without
+  much scrolling.
+- **Quick links:** Puppy handbook, Photo album (Photo package if bought), the puppy's
+  records, Baby book, Timeline (Stay updates during a stay), and **A-K's picks**, her
+  recommended products in one place with the disclosure. One picks tile replaces the
+  mockups' separate "Referral program" and "Affiliate deals" tiles, so the row doesn't
+  read as an ad funnel. Program links also sit inside the checklist, timeline, food
+  tile and handbook.
 - **The food card names the exact food** (brand, formula, bag size, how much and how
   often), not "the same food we send home".
 - **Insurance wording comes from the program** ("Activate Opal's free trial by Dec 28"),
   never "Get a quote" or "peace of mind".
 - **The affiliate disclosure** sits at the foot of every page with program links.
-- **Bottom navigation: five tabs,** each with its own icon: Home, Timeline, Records, Baby
-  book, Handbook. Account (email choices, download everything, sign out) opens from the
-  header.
+- **Bottom navigation: five tabs** on a dark green bar, each with its own icon, the
+  current one highlighted: Home, Timeline (Stay during a stay), Photos, Baby book,
+  Records. The handbook and picks are in Quick links. Account (email choices, download
+  everything, sign out) opens from the header.
 
 ### 7.3 Her screens: one app for the website and the portal
 
