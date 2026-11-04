@@ -3,8 +3,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Mulish:wght@400;600;700;800&family=Pinyon+Script&display=swap">
 <style>
-/* Prototype of the Puppy Parent Portal (docs/Puppy_Parent_Portal_Plan.md sections 7 and 8):
-   the family pages and her Site Manager, in the AK sample's Lawn scheme.
+/* Prototype of the Puppy Parent Portal (docs/Puppy_Parent_Portal_Plan.md sections 1, 3.4, 7, 8
+   and 12): the family pages, her Site Manager, and the KennelOS status page they hand off from,
+   in the AK sample's Lawn scheme.
    Layout: a dense tile grid, two columns even on a phone, four on a computer, with tiles of
    different kinds (photo, pup card, green calendar block, tinted, dark) so the page never
    reads as a stack of identical cards. Text size: three steps (the Aa button); the largest
@@ -442,6 +443,46 @@ dialog .in { padding: 1.1rem; display: grid; gap: .8rem; }
 .actionbar p b { display: block; font: 600 .98rem/1.15 var(--f-display); }
 .fam.has-bar main { padding-bottom: 10rem; }
 .fam.has-bar ~ .toast, .toast { bottom: calc(8.6rem + env(safe-area-inset-bottom, 0px)); }
+
+/* KennelOS's family status page (plan 3.4): her families' page until pickup, drawn in
+   KennelOS's own plainer look so the two read as two places. */
+:root { --kos-bg: #EDF0F3; --kos-surface: #FFFFFF; --kos-ink: #1C2330; --kos-muted: #586373; --kos-line: #D3DAE2; --kos-accent: #2E5B87; --kos-accent-ink: #FFFFFF; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --kos-bg: #12161C; --kos-surface: #1B2129; --kos-ink: #E3E8EE; --kos-muted: #9AA6B4; --kos-line: #2E3743; --kos-accent: #8DB4DC; --kos-accent-ink: #0E1620; } }
+:root[data-theme="dark"] { --kos-bg: #12161C; --kos-surface: #1B2129; --kos-ink: #E3E8EE; --kos-muted: #9AA6B4; --kos-line: #2E3743; --kos-accent: #8DB4DC; --kos-accent-ink: #0E1620; }
+.kos { background: var(--kos-bg); color: var(--kos-ink); min-height: calc(100vh - 2.5rem); font-family: var(--f-body); }
+.kos .top { background: var(--kos-surface); border-bottom: 1px solid var(--kos-line); }
+.kos .top .in, .kos main { max-width: 40rem; margin: 0 auto; padding-left: max(var(--gut), env(safe-area-inset-left, 0px)); padding-right: max(var(--gut), env(safe-area-inset-right, 0px)); }
+.kos .top .in { display: flex; justify-content: space-between; align-items: center; gap: .6rem; padding-block: .75rem; }
+.kos .top b { font-weight: 800; }
+.kos .top span { font-size: .72rem; color: var(--kos-muted); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.kos main { display: grid; gap: .7rem; padding-block: 1rem 3rem; }
+.kos h1, .kos h2 { font-family: var(--f-body); font-weight: 800; }
+.kos h1 { font-size: 1.35rem; }
+.kos .box { background: var(--kos-surface); border: 1px solid var(--kos-line); border-radius: 6px; padding: .9rem; display: grid; gap: .55rem; min-width: 0; }
+.kos .box.portal { border: 2px solid var(--accent); background: var(--accent-soft); color: var(--ink); }
+.kos .kmuted { color: var(--kos-muted); font-size: .86rem; }
+.kos .kbtn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.6rem; padding: .5rem 1rem; border-radius: 6px; font: 700 .88rem/1.1 var(--f-body); border: 1.5px solid var(--kos-accent); background: var(--kos-accent); color: var(--kos-accent-ink); text-decoration: none; cursor: pointer; justify-self: start; }
+.kos .kbtn.line { background: transparent; color: var(--kos-accent); }
+.kos .kbtn.portal { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.kos dl.kv dt { color: var(--kos-muted); }
+.kos textarea { background: var(--kos-bg); border-color: var(--kos-line); color: var(--kos-ink); border-radius: 6px; min-height: 4.5rem; }
+/* The quiet page after a puppy is lost before pickup (plan 7.4) */
+.lost { max-width: 34rem; width: 100%; margin: 1rem auto 0; display: grid; gap: 1rem; justify-items: center; text-align: center; }
+.lost .ph.round { width: 6.5rem; height: 6.5rem; border: 3px solid var(--surface); box-shadow: 0 0 0 2px var(--line); }
+.lost .note { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--rc); padding: 1rem 1.1rem; display: grid; gap: .5rem; width: 100%; }
+.lost .next { text-align: left; background: var(--band); border-radius: var(--rc); padding: 1rem 1.1rem; display: grid; gap: .6rem; width: 100%; }
+/* Messages, from pickup on (plan 2) */
+.msgs { display: grid; gap: .5rem; }
+.msgs .m { max-width: 85%; padding: .6rem .8rem; border-radius: var(--rc); background: var(--band); display: grid; gap: .2rem; font-size: .92rem; }
+.msgs .m.me { justify-self: end; background: var(--accent-soft); }
+.msgs .m small { font-size: .7rem; font-weight: 700; color: var(--muted); }
+.feedline { display: inline-flex; align-items: center; gap: .35rem; font-size: .78rem; opacity: .85; }
+.feedline svg.i { width: .95rem; height: .95rem; }
+details.hist summary { cursor: pointer; font-size: .8rem; font-weight: 700; color: var(--accent); }
+details.hist ul { list-style: none; margin: .4rem 0 0; padding: 0; display: grid; gap: .3rem; font-size: .8rem; }
+details.hist li { display: grid; grid-template-columns: 6.6rem 1fr; gap: .5rem; }
+details.hist li b { font-weight: 700; color: var(--muted); }
+.ask { border: 1.5px solid var(--warn); }
 </style>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="sprig" viewBox="0 0 120 60"><g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M4 50 C 34 44, 64 32, 116 8"/><path d="M28 44 c-4-10 2-18 10-20 c2 9-3 17-10 20z"/><path d="M28 44 c10 4 18 0 22-7 c-9-3-17 0-22 7z"/><path d="M58 33 c-3-10 3-18 11-19 c1 9-4 16-11 19z"/><path d="M58 33 c10 3 18-1 21-9 c-9-2-17 1-21 9z"/><path d="M88 20 c-2-8 3-14 9-15 c1 7-3 12-9 15z"/><path d="M88 20 c8 2 14-2 16-8 c-7-1-13 2-16 8z"/></g></symbol>
@@ -479,9 +520,10 @@ dialog .in { padding: 1.1rem; display: grid; gap: .8rem; }
 
 <div class="proto" role="region" aria-label="Prototype controls">
   <b>Prototype</b>
-  <div class="grp" id="pv"><button data-view="family">Family</button><button data-view="admin">Breeder</button></div>
+  <div class="grp" id="pv"><button data-view="status">Status page</button><button data-view="family">Portal</button><button data-view="admin">Breeder</button></div>
   <div class="grp" id="pf"><span class="note">Family:</span><button data-fam="reed">Reeds · Opal</button><button data-fam="hale">Hales · Onyx, 12-week stay + photos</button></div>
   <div class="grp" id="ps"><span class="note">Today is:</span><button data-stage="before">Dec 18</button><button data-stage="vet">Dec 24</button><button data-stage="weeks">Jan 12</button><button data-stage="later">Oct 28, a year on</button></div>
+  <div class="grp" id="pl"><span class="note">Opal, before pickup:</span><button data-lost="">Going home</button><button data-lost="died">Dies</button><button data-lost="health">Fails a health check</button></div>
   <div class="grp" id="pt"><button data-theme="auto">Auto</button><button data-theme="light">Light</button><button data-theme="dark">Dark</button></div>
   <span class="note">Sample families and details; photos from A-K's website.</span>
 </div>
@@ -589,7 +631,7 @@ const GALLERY = ['img/onyx.jpg', 'img/contessa.jpg', 'img/willow.jpg', 'img/ziva
 const VIDEOS = [{ poster: 'img/contessa.jpg', len: '0:48', t: 'First bath' }, { poster: 'img/onyx.jpg', len: '1:12', t: 'Zoomies in the yard' }, { poster: 'img/peaches.jpg', len: '0:35', t: 'Meeting Peaches' }];
 
 // ---------- State ----------
-const S = { view: 'family', fam: 'reed', stage: 'vet', theme: 'auto', zoom: 1 };
+const S = { view: 'family', fam: 'reed', stage: 'vet', theme: 'auto', zoom: 1, lostChoice: '' };
 // Text size, remembered on this device only.
 try { const z = +localStorage.getItem('portal-zoom'); if (z >= 1 && z <= 3) S.zoom = z; } catch (e) { /* storage blocked */ }
 document.documentElement.dataset.zoom = S.zoom;
@@ -636,6 +678,21 @@ function reset() {
   S.keep = {}; S.deleted = {};
   S.bounced = S.stage === 'vet' ? { hale: 'm.hale@example.com · Dec 23, 11:04 am · mailbox full' } : {};
   S.signedIn = { reed: true, hale: true, ortega: late, park: true };
+  // The invite goes out once the contract is signed in KennelOS and she confirms (plan 3.4).
+  S.signed = { reed: D(2026, 11, 2), hale: D(2026, 11, 6), ortega: D(2026, 12, 17) };
+  S.invited = { reed: true, hale: true, ortega: S.stage !== 'before', park: true };
+  S.kosAgo = { before: '40 minutes ago', vet: '2 hours ago', weeks: '5 hours ago', later: 'yesterday' }[S.stage];
+  // Diamond's pickup (Dec 23, 2:30 pm) passed without Mark picked up: the clock started from
+  // the booked time and Today asks her to confirm it (plan 5).
+  S.unconfirmed = { diamond: S.stage === 'vet' };
+  S.histExtra = {};
+  const fam = (at, text, read = true) => ({ from: 'fam', at, text, read }), ak = (at, text) => ({ from: 'ak', at, text, read: true });
+  S.msgs = { reed: late ? [fam(D(2027, 1, 10, 20, 15), 'Opal has started scratching at the crate at 5 am. Is it OK to let her out then, or should we wait?'), ak(D(2027, 1, 10, 21, 2), 'Totally fine. Out, potty, straight back in, no play. She’ll stretch it to 6 within a week or two.'), fam(D(2027, 1, 12, 8, 40), 'Thank you! Which size harness do you use at this age?', S.stage === 'later')] : [], hale: [], ortega: [] };
+  // A puppy lost before pickup (plan 7.4): only Opal, only before go-home.
+  S.loss = S.lostChoice ? { pup: 'opal', kind: S.lostChoice, at: D(2026, 12, 16, 7, 30), note: S.lostChoice === 'died'
+    ? 'Opal passed away early this morning. She was bright and eating well at her check last week, and our vet believes it was her heart. We know how much you were looking forward to her, and we’re heartbroken too. Take whatever time you need. We’re here whenever you want to talk.'
+    : 'At her 7-week check our vet found a heart murmur in Opal, and we won’t place a puppy with a murmur in a family home. She’ll stay here with us and be loved. We’re so sorry to change your plans, and we want to make this right.' } : null;
+  if (S.loss) { S.pickup.opal = null; S.booked.opal = null; }
   S.lastActive = { reed: now, hale: new Date(now - 2 * DAY), ortega: late ? new Date(now - 40 * DAY) : null, park: D(2026, 11, 20) };
   S.site = {
     changes: S.stage === 'before' ? ['Opal: Reserved → Placed', 'Gem litter: new photos (6)', 'Home: holiday hours'] : S.stage === 'vet' ? ['Gem litter: “Opal and Diamond are home”'] : [],
@@ -691,6 +748,16 @@ function taskState(p, t) {
   return { done, due: d, by, overdue: !done && by === 'family' && addDays(d, 1) < S.now };
 }
 const openTasks = (p, n) => TASKS.map((t) => ({ t, s: taskState(p, t) })).filter((x) => !x.s.done && x.s.by === 'family').sort((a, b) => a.s.due - b.s.due).slice(0, n);
+const lostPup = (p) => !!(S.loss && S.loss.pup === p.id);
+const homeYet = (p) => !!S.pickup[p.id];
+// The one-tap link between the status page and the portal (plan 3.4): signs in, no code.
+const toStatus = (label, cls = 'btn line small') => `<a class="${cls}" href="#s-status" data-act="tostatus">${label}</a>`;
+function histFor(p) {
+  const F = FAMILIES[p.family], h = [[addDays(dayOf(p.goHome), -21), 'KennelOS', `Pickup planned ${short(p.goHome)}`], [addDays(dayOf(p.goHome), -12), `${F.short}, status page`, `Booked ${short(p.goHome)}, ${time(p.goHome)}`]];
+  if (S.pickup[p.id]) h.push([S.pickup[p.id], S.unconfirmed[p.id] ? 'The portal' : 'You', S.unconfirmed[p.id] ? `Booked time passed: vet clock started from ${time(S.pickup[p.id])}` : `Picked up ${short(S.pickup[p.id])}, ${time(S.pickup[p.id])}`]);
+  (S.histExtra[p.id] || []).forEach((x) => h.push(x));
+  return `<details class="hist"><summary>History (${h.length})</summary><ul>${h.map(([d, by, t]) => `<li><b>${short(d)} · ${esc(by)}</b><span>${esc(t)}</span></li>`).join('')}</ul></details>`;
+}
 const disclosure = `<p class="disclose">${KENNEL} may earn a commission or product credit when you use some links on this page. We only link to what we use for our own Bostons.</p>`;
 
 // ---------- Family view ----------
@@ -702,6 +769,7 @@ function header(sub, subIcon) {
   const fam = S.view === 'family';
   return `<header class="app"><div class="in">
     <a class="brand" href="${fam ? '#f-home' : '#a-today'}"><span class="logo">${fam ? '<img src="img/ak-logo.jpg" alt="">' : '<img src="img/kp-icon.png" alt="">'}<svg aria-hidden="true"><use href="#mono"/></svg></span><div><b>${KENNEL}</b><span class="sub">${icon(subIcon)}${sub}</span></div></a>
+    ${fam ? `<button class="hb" data-act="messages" aria-label="Messages with A-K">${icon('mail')}</button>` : ''}
     <button class="hb" data-act="zoom" aria-label="Text size: ${['normal', 'large', 'larger'][S.zoom - 1]}. Change">Aa</button>
     <button class="hb" data-act="${fam ? 'account' : 'account-admin'}" aria-label="Your account">${icon('user')}</button>
   </div></header>`;
@@ -788,7 +856,7 @@ function packageTile(p) {
   if (m.status === 'delivered') return `<a class="tile" href="#f-photos"><span class="eyebrow">Ready ${short(m.delivered)}</span><div class="collage">${GALLERY.slice(0, 4).map((g) => photo(g, '')).join('')}</div><h3>Your photo package</h3><span class="small muted">${m.photos} photos · ${m.videos} videos</span></a>`;
   return `<a class="tile band" href="#f-photos"><span class="ico big">${icon('camera')}</span><span class="eyebrow">Photo &amp; video package</span><h3>${m.status === 'booked' ? 'Session ' + short(m.session) : 'Ready by ' + short(m.due)}</h3>${pipeline(m.status)}</a>`;
 }
-const offerTile = (p) => `<div class="tile photo">${photo('img/willow.jpg', 'Willow, the Gem litter’s mother')}<div class="cap"><span class="eyebrow" style="color:#F2DFAE">From A-K</span><h2>Keep ${p.name}’s puppy days</h2><p class="small">Our photo &amp; video package, delivered here.</p><button class="btn small" data-act="toast" data-msg="Sends A-K a message about the photo package">Ask about this</button></div></div>`;
+const offerTile = (p) => `<div class="tile photo">${photo('img/willow.jpg', 'Willow, the Gem litter’s mother')}<div class="cap"><span class="eyebrow" style="color:#F2DFAE">From A-K</span><h2>Keep ${p.name}’s puppy days</h2><p class="small">Our photo &amp; video package, delivered here.</p><a class="btn small" href="#s-status" data-act="tostatus">Ask about this</a><span class="small" style="opacity:.85">On your status page</span></div></div>`;
 const videoTile = (v) => `<button class="ph" data-act="playvideo" data-t="${esc(v.t)}" aria-label="Play video: ${esc(v.t)}"><img src="${v.poster}" alt="" loading="lazy"><span class="play"><span>${icon('play')}</span></span><span class="vlen">${v.len}</span></button>`;
 function pipeline(status) {
   const st = ['booked', 'shooting', 'editing', 'delivered'], i = st.indexOf(status);
@@ -848,8 +916,33 @@ function actionBar(p, ph) {
   else return '';
   return `<div class="actionbar" role="region" aria-label="Do this now"><div class="in"><span class="ico">${icon(ic)}</span><p><b>${esc(t)}</b>${esc(sub)}</p>${btn}</div></div>`;
 }
+// Before pickup, the status page still handles pickup, extras and messages (plan 3.4).
+function statusBand(p) {
+  const b = p.goHome;
+  return `<section class="sec paper bleed"><span class="eyebrow">On your status page, until pickup</span><h2>Pickup, extras and messages</h2>
+    <ul class="hl"><li><div><span class="badge">${icon('cal')}</span><span><b>Pickup ${short(b)}, ${time(b)}</b><span class="small muted">Change the time or place there</span></span><span></span></div></li>
+    <li><div><span class="badge">${icon('gift')}</span><span><b>Ask for an extra</b><span class="small muted">A photo package, a longer stay</span></span><span></span></div></li>
+    <li><div><span class="badge">${icon('mail')}</span><span><b>Message A-K</b><span class="small muted">Messages move here once ${p.name} is home</span></span><span></span></div></li></ul>
+    ${toStatus('Open your status page', 'btn solid')}<p class="small muted">Opens signed in. No code needed.</p></section>`;
+}
+function famLost(p) {
+  const L = S.loss, died = L.kind === 'died';
+  return `<div class="lost">${photo(p.img, p.name, 'round')}
+    <h1>${died ? `We’re so sorry about ${p.name}` : `${p.name} won’t be going home`}</h1>
+    <div class="note"><span class="eyebrow">From A-K · ${long(L.at)}</span>${L.note ? `<p>${esc(L.note)}</p>` : '<p class="muted">A note from A-K will be here.</p>'}</div>
+    <div class="next"><h2>What happens next</h2><p>You’re back on our list at your original place, and the $500 you paid goes toward your next puppy. Your status page shows what’s coming and lets you pick when it’s your turn.</p>
+      ${toStatus('Go to your status page', 'btn solid')}<p class="small muted">To talk to us, message A-K from your status page. Your photos of ${p.name} stay here under Photos.</p></div></div>`;
+}
+function famMessages() {
+  const p = P(), list = S.msgs[S.fam] || [];
+  if (!homeYet(p)) return `<div class="bento">${pageHead('Messages', 'Messages with A-K', `Until ${p.name} comes home, messages go through your status page.`)}<div class="tile full">${toStatus('Open your status page', 'btn solid')}</div></div>`;
+  return `<div class="bento">${pageHead('Messages', 'Messages with A-K', 'A-K usually answers the same day.')}
+    <div class="tile full"><div class="msgs">${list.length ? list.map((m) => `<div class="m ${m.from === 'fam' ? 'me' : ''}"><small>${m.from === 'fam' ? 'You' : 'A-K'} · ${short(m.at)}, ${time(m.at)}</small>${esc(m.text)}</div>`).join('') : '<p class="muted">No messages yet. Ask anything about ' + p.name + '.</p>'}</div>
+    <form class="stack" data-act="sendmsg"><label for="m-new" class="sr">Your message</label><textarea id="m-new" name="text" required placeholder="Ask A-K anything about ${p.name}"></textarea><button class="btn solid" style="justify-self:start">Send</button></form></div></div>`;
+}
 function famHome() {
   const p = P(), ph = phase(p), out = [];
+  if (lostPup(p)) return famLost(p);
   const soon = calDays(S.now, p.goHome) <= 14 && !S.pickup[p.id];
   out.push(heroTile(p, ph).replace('class="tile photo hero s2"', 'class="tile photo hero bleed"'));
   out.push(`<div class="bento">${pupTile(p)}${statusTile(p, ph)}</div>`);
@@ -871,6 +964,7 @@ function famHome() {
     out.push(`<section class="sec mint bleed"><span class="eyebrow">${p.name}’s first months</span><h2 class="big-h">What’s next</h2>${numSteps(nx.map(({ t, s }) => ({ h: esc(nm(t.title, p)), p: `By ${long(s.due)}. ${esc(t.body)}`, act: t.prog ? `<a class="btn line small ext" href="#" data-act="go" data-prog="${t.prog}" style="margin-top:.4rem">${esc(nm(t.btn, p))}</a>` : '' })))}<a class="btn text small" href="#f-timeline">The whole timeline →</a></section>`); }
   if (ph === 'birthday') { const b = S.breederEntries.find((e) => e.pup === p.id); out.push(`<div class="bento"><a class="tile photo" href="#f-book">${photo(b.img, b.title)}<div class="cap"><span class="eyebrow" style="color:#F2DFAE">A year ago today</span><h2>${esc(b.title)}</h2></div></a><button class="tile tint" data-act="toast" data-msg="Printable baby book: phase 3"><span class="ico big">${icon('heart')}</span><span class="eyebrow">Keepsake</span><h3>Print ${p.name}’s first year</h3><span class="small muted">The whole baby book as a photo book.</span></button></div>`); }
   if ((ph === 'pre' || ph === 'stay') && soon) out.push(checklistTile(p).replace('class="tile full"', 'class="tile"'));
+  if (!homeYet(p)) out.push(statusBand(p));
   if (p.extras.includes('xphoto')) { const m = S.media[p.id]; out.push(m.status === 'delivered'
       ? `<section class="stack" style="gap:.5rem"><div class="between"><h2>Your photo package</h2><a class="btn text small" href="#f-photos">All ${m.photos + m.videos} →</a></div><div class="carousel">${VIDEOS.slice(0, 1).map((v) => `<div class="tile pcard">${videoTile(v).replace('class="ph"', 'class="ph" style="aspect-ratio:4/3;border-radius:0"')}<span class="body"><span class="eyebrow">Video · ${v.len}</span><h3>${v.t}</h3></span></div>`).join('')}${GALLERY.slice(0, 5).map((g, i) => `<a class="tile pcard" href="#f-photos">${photo(g, '')}<span class="body"><span class="eyebrow">Photo ${i + 1}</span></span></a>`).join('')}</div></section>`
       : `<div class="bento">${packageTile(p)}<div class="tile band"><span class="eyebrow">What you’ll get</span><h3>25+ photos, 3 videos</h3><span class="small muted">Full size, delivered here, kept at least two years.</span></div></div>`); }
@@ -913,7 +1007,7 @@ function famStay() {
 function famPhotos() {
   const p = P(), m = S.media[p.id];
   const album = `<div class="tile full"><div class="between"><h2>From A-K’s albums</h2><span class="small muted">Gem litter</span></div><div class="gallery">${['img/opal.jpg', 'img/onyx.jpg', 'img/willow.jpg', 'img/contessa.jpg', 'img/ziva.jpg', 'img/peaches.jpg'].map((g) => photo(g, 'Gem litter photo')).join('')}</div></div>`;
-  if (!m) return `<div class="bento">${pageHead('Photos', `${p.name}’s photos`)}${album}${phase(p) === 'pre' ? offerTile(p) : ''}</div>`;
+  if (!m) return `<div class="bento">${pageHead('Photos', `${p.name}’s photos`)}${album}${phase(p) === 'pre' && !lostPup(p) ? offerTile(p) : ''}</div>`;
   if (m.status !== 'delivered') return `<div class="bento">${pageHead(EXTRAS.xphoto.name, `${p.name}’s photo package`, EXTRAS.xphoto.includes + '.')}
     <div class="tile green"><span class="eyebrow">${m.status === 'booked' ? 'Photo session' : 'Ready by'}</span><div class="calrow">${calPage(m.status === 'booked' ? m.session : m.due)}<div><p class="bigline">${m.status === 'booked' ? 'Booked' : 'Editing'}</p><p class="small">You’ll get an email when it’s ready.</p></div></div></div>
     <div class="tile">${pipeline(m.status)}<p class="small">${m.status === 'booked' ? 'At A-K, before go-home.' : `${m.photos} photos in so far.`}</p></div>${album}</div>`;
@@ -976,18 +1070,37 @@ function famPicks() {
 }
 function famPage(route) {
   const p = P(), ph = phase(p);
-  const pages = { home: famHome, timeline: famTimeline, stay: famStay, records: famRecords, book: famBook, handbook: famHandbook, photos: famPhotos, picks: famPicks };
+  const pages = { home: famHome, timeline: famTimeline, stay: famStay, records: famRecords, book: famBook, handbook: famHandbook, photos: famPhotos, picks: famPicks, messages: famMessages };
   const second = p.stay && (ph === 'stay' || ph === 'pre') ? ['stay', 'Stay', 'star'] : ['timeline', 'Timeline', 'cal'];
-  const tabs = [['home', 'Home', 'home'], second, ['photos', 'Photos', 'camera'], ['book', 'Baby book', 'heart'], ['records', 'Records', 'file']];
-  const r = pages[route] ? route : 'home';
-  const bar = r === 'home' ? actionBar(p, ph) : '';
+  const lost = lostPup(p);
+  const tabs = lost ? [['home', 'Home', 'home'], ['photos', 'Photos', 'camera']] : [['home', 'Home', 'home'], second, ['photos', 'Photos', 'camera'], ['book', 'Baby book', 'heart'], ['records', 'Records', 'file']];
+  const r = pages[route] && (!lost || route === 'photos') ? route : 'home';
+  const bar = r === 'home' && !lost ? actionBar(p, ph) : '';
   return `<div class="fam ${bar ? 'has-bar' : ''}">${header('Puppy Parent Portal', 'paw')}<main id="main">${pages[r]()}</main>${bar}
-    <nav class="tabs" aria-label="Portal"><div class="in">${tabs.map(([k, l, ic]) => `<a href="#f-${k}" ${k === r ? 'aria-current="page"' : ''}>${icon(ic)}${l}</a>`).join('')}</div></nav></div>`;
+    <nav class="tabs" aria-label="Portal"><div class="in" style="grid-template-columns:repeat(${tabs.length},1fr)">${tabs.map(([k, l, ic]) => `<a href="#f-${k}" ${k === r ? 'aria-current="page"' : ''}>${icon(ic)}${l}</a>`).join('')}</div></nav></div>`;
+}
+
+// ---------- KennelOS's family status page (plan 3.4), as her families see it ----------
+function kosPage() {
+  const p = P(), F = FAMILIES[S.fam], home = homeYet(p), lost = lostPup(p);
+  const top = `<div class="top"><div class="in"><b>${KENNEL}</b><span>Family status page · KennelOS</span></div></div>`;
+  const msgBox = `<div class="box"><h2>Message A-K</h2><label for="k-msg" class="sr">Your message</label><textarea id="k-msg" placeholder="Ask anything"></textarea><button class="kbtn" data-act="toast" data-msg="Sent to A-K, as status page messages are today">Send</button></div>`;
+  let body;
+  if (lost) body = `<div class="box"><h1>You’re #2 on our list</h1><p>Your place is kept, and the $500 you paid is carried to your next puppy.</p><p class="kmuted">When your turn comes, you’ll pick here, sign the contract, and your puppy portal opens again for your new puppy.</p></div>
+      <div class="box"><h2>Coming up</h2><p>Spring 2027 litter · Ziva × Boone · expected April</p><button class="kbtn line" data-act="toast" data-msg="The waitlist's own choices, as today">Your choices for this litter</button></div>${msgBox}`;
+  else if (home) body = `<div class="box portal" style="justify-items:center;text-align:center;padding:1.6rem 1rem"><span class="eyebrow">${p.name} is home</span><h1 style="font-family:var(--f-display);font-weight:500">Everything for ${p.name} is in your puppy portal now</h1>
+      <a class="kbtn portal" href="#f-home" data-act="toportal" style="justify-self:center">Open your puppy portal</a><p class="small muted">Opens signed in. This page has nothing else for you now.</p></div>`;
+  else body = `<div class="box portal"><span class="eyebrow">Your puppy portal is open</span><h2 style="font-family:var(--f-display);font-weight:500;font-size:1.25rem">${p.name}’s countdown, checklist, vet booking and handbook</h2>
+      <a class="kbtn portal" href="#f-home" data-act="toportal">Open your puppy portal</a><p class="small muted">Opens signed in. No code needed.</p></div>
+      <div class="box"><h1>${p.name} is yours</h1><dl class="kv"><dt>Puppy</dt><dd>${p.name}, ${p.collar} collar · Gem litter</dd><dt>Contract</dt><dd>Signed ${short(S.signed[S.fam])}</dd><dt>Pickup</dt><dd>${long(p.goHome)}, ${time(p.goHome)} · at A-K</dd>${p.stay ? `<dt>Stay</dt><dd>${EXTRAS[p.stay].name}</dd>` : ''}</dl>
+        <div class="row"><button class="kbtn line" data-act="toast" data-msg="Asks A-K for another time (KennelOS Family Requests). The portal updates when she approves">Change pickup</button><button class="kbtn line" data-act="toast" data-msg="Asks A-K for an extra. It reaches the portal when she approves">Ask for an extra</button><button class="kbtn line" data-act="toast" data-msg="Her transport options, as today">Transport</button></div>
+        <button class="btn text small" style="color:var(--kos-muted);justify-self:start" data-act="toast" data-msg="Tells A-K you’re backing out. She decides what happens to the deposit">I need to back out</button></div>${msgBox}`;
+  return `<div class="kos">${top}<main id="main"><p class="kmuted">Signed in as ${esc(F.emails[0])}</p>${body}</main></div>`;
 }
 
 // ---------- Her Site Manager ----------
 function vetRows() {
-  return PUPS.filter((p) => S.pickup[p.id]).map((p) => {
+  return PUPS.filter((p) => S.pickup[p.id] && !lostPup(p)).map((p) => {
     const dl = vetDeadline(S.pickup[p.id]), proof = S.proof[p.id], booked = S.booked[p.id], left = (dl - S.now) / HOUR;
     let st;
     if (proof && proof.ok) st = '<span class="st ok">Accepted</span>';
@@ -1006,18 +1119,23 @@ function stayDue() {
   });
 }
 function counts() {
-  const pickSoon = PUPS.filter((p) => !S.pickup[p.id] && calDays(S.now, p.goHome) >= 0 && calDays(S.now, p.goHome) <= 7);
+  const pickSoon = PUPS.filter((p) => !S.pickup[p.id] && !lostPup(p) && calDays(S.now, p.goHome) >= 0 && calDays(S.now, p.goHome) <= 7);
   const proofs = PUPS.filter((p) => S.proof[p.id] && !S.proof[p.id].ok);
-  const invites = Object.keys(FAMILIES).filter((k) => !S.signedIn[k] && !S.deleted[k]);
+  const invites = Object.keys(FAMILIES).filter((k) => S.invited[k] && !S.signedIn[k] && !S.deleted[k]);
+  const toSend = Object.keys(FAMILIES).filter((k) => !S.invited[k] && !S.deleted[k]);
+  const msgs = Object.keys(S.msgs).filter((k) => S.msgs[k].some((m) => m.from === 'fam' && !m.read));
   const due = Object.keys(FAMILIES).filter((k) => !S.deleted[k] && !S.keep[k] && S.lastActive[k] && (S.now - S.lastActive[k]) > 335 * DAY);
   const stays = stayDue().filter((x) => x.soon);
   const pkgs = Object.entries(S.media).filter(([, m]) => m.status !== 'delivered');
-  return { pickSoon, proofs, invites, bounced: Object.keys(S.bounced), drafts: S.drafts.length, due, stays, pkgs };
+  return { pickSoon, proofs, invites, toSend, msgs, bounced: Object.keys(S.bounced), drafts: S.drafts.length, due, stays, pkgs };
 }
 const need = (href, n, label, ic, tone = '') => `<a class="need ${tone}" href="${href}"><span class="ic">${icon(ic)}</span><b>${n}</b><span>${label}</span></a>`;
 function admToday() {
   const c = counts(), vr = vetRows(), unread = S.site.messages.filter((m) => !m.read).length;
   const needs = [];
+  if (S.loss && !S.loss.written) needs.push(need('#a-fam-reed', 1, 'Write to the Reed family', 'heart', 'bad'));
+  if (c.toSend.length) needs.push(need('#a-fam-' + c.toSend[0], c.toSend.length, 'Contract signed: send the invite', 'mail'));
+  if (c.msgs.length) needs.push(need('#a-fam-' + c.msgs[0], c.msgs.length, 'Message from a family', 'mail'));
   if (c.proofs.length) needs.push(need('#a-vet', c.proofs.length, 'Vet record to review', 'vet'));
   if (c.bounced.length) needs.push(need('#a-fam-' + c.bounced[0], c.bounced.length, 'Email bounced: text them', 'mail', 'bad'));
   const unbooked = vr.filter((r) => !r.booked && !r.proof && r.left > 0).length;
@@ -1033,7 +1151,10 @@ function admToday() {
   const pupCard = (p) => `<div class="tile pup">${photo(p.img, p.name, 'round')}<span class="pname" style="font-size:1.7rem">${p.name}${sexMark(p)}</span><span class="small muted">${FAMILIES[p.family].name}</span>
     <div class="calrow" style="justify-content:center">${calPage(p.goHome)}<span class="small">${time(p.goHome)}${S.booked[p.id] ? '<br><span class="st ok">Vet booked</span>' : '<br><span class="st warn">Vet not booked</span>'}</span></div>
     <button class="btn ${isToday(p) ? 'solid' : 'line'} small" data-act="pickup" data-id="${p.id}">Mark picked up</button></div>`;
-  return `<section class="sec deep bleed"><span class="eyebrow">${KENNEL}</span><h1 style="font-size:1.9rem">Today</h1><p class="small" style="opacity:.85">${long(S.now)}${c.pickSoon.length ? ` · ${c.pickSoon.length} going home ${isToday(c.pickSoon[0]) ? 'today' : 'in ' + calDays(S.now, c.pickSoon[0].goHome) + ' days'}` : ''}</p></section>
+  const ask = PUPS.filter((p) => S.unconfirmed[p.id]).map((p) => `<section class="card ask"><div class="pf">${photo(p.img, p.name, 'round')}<div><h2>Did ${p.name} go home at ${time(p.goHome)}?</h2><p class="small muted">You didn’t mark the pickup, so the vet clock started from the booked time and the reminders went on time.</p></div></div>
+      <div class="row"><button class="btn solid small" data-act="confirmpick" data-id="${p.id}">Yes</button><a class="btn line small" href="#a-fam-${p.family}">Change the time</a><button class="btn text small" data-act="notyet" data-id="${p.id}">Not yet</button></div></section>`).join('');
+  return `<section class="sec deep bleed"><span class="eyebrow">${KENNEL}</span><h1 style="font-size:1.9rem">Today</h1><p class="small" style="opacity:.85">${long(S.now)}${c.pickSoon.length ? ` · ${c.pickSoon.length} going home ${isToday(c.pickSoon[0]) ? 'today' : 'in ' + calDays(S.now, c.pickSoon[0].goHome) + ' days'}` : ''}</p><span class="feedline">${icon('globe')}Last from KennelOS: ${S.kosAgo}</span></section>
+    ${ask}
     ${c.pickSoon.length ? `<div class="bento">${c.pickSoon.map(pupCard).join('')}</div><p class="small muted">Mark picked up starts the 72-hour vet clock. You can correct the time afterwards.</p>` : ''}
     ${S.site.changes.length ? `<section class="card"><div class="between"><p><span class="st warn">Website</span> ${S.site.changes.length} change${S.site.changes.length === 1 ? '' : 's'} not published yet</p><a class="btn line small" href="#a-website">Review and publish</a></div></section>` : ''}
     ${needs.length ? `<section><h2 style="margin-bottom:10px">Needs you</h2><div class="needs">${needs.join('')}</div></section>` : `<section class="card band"><p><span class="st ok">All caught up</span> Nothing needs you today.</p></section>`}
@@ -1070,7 +1191,7 @@ function admFamilies() {
     <section class="card"><ul class="list">${keys.map((k) => {
       const f = FAMILIES[k], p = PUPS.find((x) => x.id === f.pup), last = S.lastActive[k];
       const dueDel = last && (S.now - last) > 335 * DAY && !S.keep[k];
-      const st = !S.signedIn[k] ? '<span class="st warn">Invite not accepted</span>' : dueDel ? '<span class="st warn">Deletion due</span>' : S.keep[k] ? '<span class="st">Kept</span>' : '<span class="st ok">Active</span>';
+      const st = !S.invited[k] ? '<span class="st next">Invite to send</span>' : lostPup(p || {}) ? '<span class="st bad">Puppy lost</span>' : !S.signedIn[k] ? '<span class="st warn">Invite not accepted</span>' : dueDel ? '<span class="st warn">Deletion due</span>' : S.keep[k] ? '<span class="st">Kept</span>' : '<span class="st ok">Active</span>';
       return `<li>${photo(p ? p.img : null, p ? p.name : f.name, 'round')}<span class="grow"><a class="rowlink" href="#a-fam-${k}"><b>${f.name}</b></a><br><span class="small muted">${p ? `${p.name} · Gem litter` : esc(f.note)} · ${last ? `last active ${short(last)}${last.getFullYear() !== S.now.getFullYear() ? ' ' + last.getFullYear() : ''}` : 'never signed in'}</span>${p ? `<br>${p.extras.map((x) => `<span class="tag">${EXTRAS[x].name}</span>`).join('')}` : ''}</span>${st}</li>`;
     }).join('')}</ul></section>
     <p class="small muted">Accounts are deleted after 12 months with no activity (or 90 days after pickup if never used), with warnings at 30 and 7 days. Sale records, reminder logs and delivered packages have their own clocks.</p>`;
@@ -1090,9 +1211,14 @@ function admFamily(k) {
   log.sort((a, b) => a[0] - b[0]);
   return `<p class="crumb"><a href="#a-families">Families</a> ›</p><div class="between"><h1>${f.name}</h1>${S.bounced[k] ? '<span class="st bad">Email bounced</span>' : ''}</div>
     ${S.bounced[k] ? `<section class="card" style="border-color:var(--bad)"><p><b>Emails aren’t reaching them.</b> ${esc(S.bounced[k])}. Text or call them, and check the address.</p></section>` : ''}
+    ${p && lostPup(p) ? `<form class="card" style="border-color:var(--bad)" data-act="savenote"><span class="eyebrow">${S.loss.kind === 'died' ? 'Died' : 'Failed a health check'} before pickup · ${short(S.loss.at)} · from KennelOS</span><h2>Your note to the ${f.short}</h2>
+      <p class="small muted">Their portal now shows only this note and the way back to their status page, where they’re back in line. Every reminder and offer has stopped. Nothing is emailed unless you send it.</p>
+      <label for="ln" class="sr">Your note</label><textarea id="ln" name="note">${esc(S.loss.note)}</textarea>
+      <div class="row"><button class="btn solid small">Save</button><button type="button" class="btn line small" data-act="toast" data-msg="Emailed to the ${f.short}, with your note as the text">Also email it to them</button></div></form>` : ''}
+    ${!S.invited[k] ? `<section class="card"><p><span class="st next">Contract signed ${short(S.signed[k])}</span> in KennelOS. Their status page keeps pickup, extras and messages until pickup.</p><div class="row"><button class="btn solid small" data-act="invite" data-id="${k}">Send the portal invite</button></div></section>` : ''}
     <div class="cols"><div class="stack" style="gap:16px">
-    ${p ? `<section class="card"><div class="pf">${photo(p.img, p.name, 'round')}<h2>${p.name} · Gem litter, ${p.collar} collar</h2></div>
-      <label for="pt-${p.id}">Picked up<input id="pt-${p.id}" type="datetime-local" value="${pick ? toLocalInput(pick) : ''}" data-act="pickuptime" data-id="${p.id}"></label>
+    ${p && !lostPup(p) ? `<section class="card"><div class="pf">${photo(p.img, p.name, 'round')}<h2>${p.name} · Gem litter, ${p.collar} collar</h2></div>
+      <label for="pt-${p.id}">Picked up<input id="pt-${p.id}" type="datetime-local" value="${pick ? toLocalInput(pick) : ''}" data-act="pickuptime" data-id="${p.id}"></label>${histFor(p)}
       ${pick ? `<p>Vet deadline: <b>${long(dl)}, ${time(dl)}</b></p>` : `<p class="muted">Goes home ${long(p.goHome)}. <button class="btn line small" data-act="pickup" data-id="${p.id}">Mark picked up now</button></p>`}
       <p>Vet record: ${pr ? `${esc(pr.file)} · ${pr.ok ? '<span class="st ok">Accepted</span>' : `<button class="btn solid small" data-act="accept" data-id="${p.id}">Accept record</button>`}` : '<span class="muted">none yet</span>'}</p></section>
     <section class="card"><h2>Extras</h2>${p.extras.length ? `<ul class="list">${p.extras.map((x) => { const e = EXTRAS[x], m = S.media[p.id];
@@ -1100,9 +1226,11 @@ function admFamily(k) {
         return `<li><span class="grow"><b>${e.name}</b><br><span class="small muted">${e.type === 'stay' ? `Go-home moved to ${short(p.goHome)} · from KennelOS, confirmed` : `Due ${short(m.due)} · from KennelOS, confirmed`}</span></span>${st}</li>`; }).join('')}</ul>` : '<p class="muted small">None. Add one if KennelOS hasn’t sent it.</p>'}
       <div class="row"><button class="btn line small" data-act="toast" data-msg="Choose an extra from your list">Add an extra</button></div></section>
     <section class="card"><h2>Email log</h2>${log.length ? `<div class="tablewrap"><table><thead><tr><th>Sent</th><th>Email</th><th>Result</th></tr></thead><tbody>${log.map((l) => `<tr><td>${short(l[0])}, ${time(l[0])}</td><td>${l[1]}</td><td>${result === 'Bounced' ? '<span class="st bad">Bounced</span>' : '<span class="st ok">Delivered</span>'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted small">Nothing sent yet.</p>'}</section>`
-    : `<section class="card"><p class="muted">${esc(f.note)}. Puppy records from before the portal aren’t shown in this prototype.</p></section>`}
+    : !p ? `<section class="card"><p class="muted">${esc(f.note)}. Puppy records from before the portal aren’t shown in this prototype.</p></section>` : ''}
+    ${p && homeYet(p) ? `<section class="card"><h2>Messages</h2><div class="msgs">${(S.msgs[k] || []).length ? S.msgs[k].map((m) => `<div class="m ${m.from === 'ak' ? 'me' : ''}"><small>${m.from === 'ak' ? 'You' : f.short} · ${short(m.at)}, ${time(m.at)}</small>${esc(m.text)}</div>`).join('') : '<p class="muted small">None yet.</p>'}</div>
+      <form class="stack" data-act="replymsg" data-id="${k}"><label for="r-${k}" class="sr">Reply</label><textarea id="r-${k}" name="text" required placeholder="Reply to the ${f.short}"></textarea><button class="btn line small" style="justify-self:start">Send</button></form></section>` : p ? `<section class="card band"><p class="small">Until pickup, the ${f.short} message you from their status page, as today.</p></section>` : ''}
     </div><div class="stack" style="gap:16px">
-    <section class="card"><h2>Family</h2><dl class="kv"><dt>Emails</dt><dd>${f.emails.map(esc).join('<br>')}</dd><dt>Signed in</dt><dd>${S.signedIn[k] ? 'Yes' : 'Not yet'}</dd><dt>Last active</dt><dd>${S.lastActive[k] ? withYear(S.lastActive[k]) : '—'}</dd></dl>
+    <section class="card"><h2>Family</h2><dl class="kv"><dt>Emails</dt><dd>${f.emails.map(esc).join('<br>')}</dd>${S.signed[k] ? `<dt>Contract</dt><dd>Signed ${short(S.signed[k])}</dd>` : ''}<dt>Signed in</dt><dd>${S.signedIn[k] ? 'Yes' : 'Not yet'}</dd><dt>Last active</dt><dd>${S.lastActive[k] ? withYear(S.lastActive[k]) : '—'}</dd></dl>
       <div class="row">${S.signedIn[k] ? '' : '<button class="btn line small" data-act="toast" data-msg="Invite sent again">Resend invite</button>'}<button class="btn line small" data-act="toast" data-msg="Edit family (not in the prototype)">Edit</button></div></section>
     ${f.pup ? `<form class="card" data-act="savebag" data-id="${k}"><div class="between"><h2>Sent home with</h2><span class="small muted">${(S.bag[k] || []).length + (S.bagExtra[k] || []).length} items · $${S.bagItems.filter((x) => (S.bag[k] || []).includes(x.id)).reduce((a, x) => a + x.cost, 0)} to you</span></div>
       <div class="chips">${S.bagItems.map((x) => `<label><input type="checkbox" name="bag" value="${x.id}" ${(S.bag[k] || []).includes(x.id) ? 'checked' : ''}>${esc(x.name)}</label>`).join('')}${(S.bagExtra[k] || []).map((x) => `<label><input type="checkbox" name="extra" value="${esc(x)}" checked>${esc(x)}</label>`).join('')}</div>
@@ -1215,7 +1343,7 @@ function admPortal() {
       <li><span class="grow"><b>First-year timeline</b><br><span class="small muted">${TASKS.length} tasks, each dated from birth or pickup</span></span><button class="btn line small" data-act="toast" data-msg="Timeline editor (not in the prototype)">Edit</button></li>
       <li><span class="grow"><b>Email wording</b><br><span class="small muted">Vet reminders, stay updates, package ready, birthdays, retention warnings</span></span><button class="btn line small" data-act="toast" data-msg="Email editor (not in the prototype)">Edit</button></li></ul></section>`;
 }
-// ---------- Reports (plan section 9): made-up figures for two litters before the portal and the Gem litter with it ----------
+// ---------- Reports (plan section 12.1): made-up figures for two litters before the portal and the Gem litter with it ----------
 const LITS = [{ id: 's25', name: 'Spring 2025', portal: false, fams: 6 }, { id: 'f25', name: 'Fall 2025', portal: false, fams: 5 }, { id: 'gem', name: 'Gem litter', portal: true, fams: 3 }];
 const PROGS = [{ id: 'food', name: 'Puppy food program', short: 'Food' }, { id: 'ins', name: 'Pet insurance trial', short: 'Insurance' }, { id: 'akc', name: 'AKC registration', short: 'AKC' }];
 const SIGN0 = { s25: { food: 2, ins: 3, akc: 4 }, f25: { food: 2, ins: 2, akc: 3 } };
@@ -1333,7 +1461,7 @@ function admPage(route) {
   const [r, arg] = route.split('-');
   const c = counts(), unread = S.site.messages.filter((m) => !m.read).length;
   const pages = { today: admToday, vet: admVet, families: admFamilies, fam: () => admFamily(arg), dogs: admDogs, edit: () => admEdit(arg), website: admWebsite, portal: admPortal, reports: admReports };
-  const nav = [['today', 'Today', 'today', c.proofs.length + c.bounced.length + c.stays.length || ''], ['families', 'Families', 'people', ''], ['dogs', 'Dogs', 'paw', c.drafts + c.stays.length || ''], ['website', 'Website', 'globe', unread + S.site.reviews.length || ''], ['portal', 'Portal', 'heart', ''], ['reports', 'Reports', 'chart', '']];
+  const nav = [['today', 'Today', 'today', c.proofs.length + c.bounced.length + c.stays.length || ''], ['families', 'Families', 'people', c.toSend.length + c.msgs.length || ''], ['dogs', 'Dogs', 'paw', c.drafts + c.stays.length || ''], ['website', 'Website', 'globe', unread + S.site.reviews.length || ''], ['portal', 'Portal', 'heart', ''], ['reports', 'Reports', 'chart', '']];
   const cur = r === 'fam' ? 'families' : r === 'vet' ? 'today' : r === 'edit' ? 'dogs' : (pages[r] ? r : 'today');
   return `<div class="adm">${header('Site Manager', 'globe')}<div class="shell">
     <aside aria-label="Site Manager">${nav.map(([k, l, ic, n]) => `<a href="#a-${k}" ${k === cur ? 'aria-current="page"' : ''}>${icon(ic)}${l}${n ? `<span class="cnt">${n}</span>` : ''}</a>`).join('')}</aside>
@@ -1343,13 +1471,14 @@ function admPage(route) {
 
 // ---------- Render and events ----------
 const app = document.getElementById('app');
-function route() { const h = location.hash.slice(1); const [v, ...rest] = h.split('-'); return { v: v === 'a' ? 'admin' : 'family', r: rest.join('-') || (v === 'a' ? 'today' : 'home') }; }
+function route() { const h = location.hash.slice(1); const [v, ...rest] = h.split('-'); return { v: v === 'a' ? 'admin' : v === 's' ? 'status' : 'family', r: rest.join('-') || (v === 'a' ? 'today' : 'home') }; }
 function render(keepScroll) {
   const { v, r } = route(), y = window.scrollY;
   S.view = v;
-  app.innerHTML = v === 'admin' ? admPage(r) : famPage(r);
+  app.innerHTML = v === 'admin' ? admPage(r) : v === 'status' ? kosPage() : famPage(r);
   document.querySelectorAll('#pv button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.view === S.view));
   document.querySelectorAll('#pf button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.fam === S.fam));
+  document.querySelectorAll('#pl button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.lost === S.lostChoice));
   document.querySelectorAll('#ps button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.stage === S.stage));
   document.querySelectorAll('#pt button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.theme === S.theme));
   if (keepScroll) window.scrollTo(0, y);
@@ -1366,7 +1495,8 @@ function openDialog(html) { dlgIn.innerHTML = html; dlg.showModal(); }
 
 document.querySelector('.proto').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.view) { location.hash = b.dataset.view === 'admin' ? '#a-today' : '#f-home'; return; }
+  if (b.dataset.view) { location.hash = { admin: '#a-today', status: '#s-status', family: '#f-home' }[b.dataset.view]; return; }
+  if (b.dataset.lost !== undefined) { S.lostChoice = b.dataset.lost; S.fam = 'reed'; if (S.lostChoice) S.stage = 'before'; reset(); render(); window.scrollTo(0, 0); return; }
   if (b.dataset.fam) { S.fam = b.dataset.fam; if (S.view !== 'family') location.hash = '#f-home'; else render(); window.scrollTo(0, 0); }
   if (b.dataset.stage) { S.stage = b.dataset.stage; reset(); render(); window.scrollTo(0, 0); }
   if (b.dataset.theme) { S.theme = b.dataset.theme; if (S.theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = S.theme; render(true); }
@@ -1395,7 +1525,13 @@ document.addEventListener('click', (e) => {
   if (a === 'addbag') { S.bagItems.push({ id: 'g' + Date.now(), name: 'Treat sampler', cost: 5 }); render(true); toast('Added to your go-home bag.'); return; }
   if (a === 'adddemo') { S.demoFields.push({ id: 'c' + Date.now(), label: 'Wants a second puppy', type: 'yesno', on: true, custom: true }); render(true); toast('Field added. It shows on every family’s screen.'); return; }
   if (a === 'famtab') { S.famTab = el.dataset.f; render(true); return; }
-  if (a === 'pickup') { S.pickup[id] = new Date(S.now); render(true); toast(`${PUPS.find((p) => p.id === id).name} picked up. The vet clock is running; reminder sent.`); return; }
+  if (a === 'pickup') { S.pickup[id] = new Date(S.now); render(true); toast(`${PUPS.find((p) => p.id === id).name} picked up. Vet clock running, reminder sent. KennelOS gets the time and marks the sale Delivered; the status page now shows only the portal link.`); return; }
+  if (a === 'tostatus') { toast('Opened your status page, signed in with a one-time link'); return; }
+  if (a === 'toportal') { toast('Opened your puppy portal, signed in with a one-time link'); return; }
+  if (a === 'messages') { if (lostPup(P())) { toast('Opened your status page, signed in with a one-time link'); location.hash = '#s-status'; } else location.hash = '#f-messages'; return; }
+  if (a === 'invite') { S.invited[id] = true; render(true); toast(`Invite sent to the ${FAMILIES[id].short}. Their status page now shows Open your puppy portal.`); return; }
+  if (a === 'confirmpick') { S.unconfirmed[id] = false; (S.histExtra[id] = S.histExtra[id] || []).push([new Date(S.now), 'You', 'Confirmed the booked pickup time']); render(true); toast('Confirmed. KennelOS gets the time and marks the sale Delivered.'); return; }
+  if (a === 'notyet') { S.unconfirmed[id] = false; S.pickup[id] = null; (S.histExtra[id] = S.histExtra[id] || []).push([new Date(S.now), 'You', 'Not picked up yet: vet clock stopped']); render(true); toast('Vet clock and its reminders stopped until you mark the real pickup.'); return; }
   if (a === 'accept') { S.proof[id].ok = true; render(true); toast('Accepted. The family sees it on their page.'); return; }
   if (a === 'del') { S.deleted[id] = true; location.hash = '#a-fam-' + id; render(); toast('Deleted. Undo for 30 days.'); return; }
   if (a === 'undel') { delete S.deleted[id]; render(); return; }
@@ -1414,7 +1550,7 @@ document.addEventListener('change', (e) => {
   if (a === 'check') { S.check[id] = el.checked; render(true); }
   if (a === 'proof' && el.files[0]) { S.proof[P().id] = { file: el.files[0].name, at: new Date(S.now), ok: false }; render(true); toast('Uploaded. A-K will check it; see the Breeder view.'); }
   if (a === 'keep') { S.keep[id] = el.checked; render(true); }
-  if (a === 'pickuptime' && el.value) { S.pickup[id] = fromLocalInput(el.value); render(true); toast('Pickup time corrected. Deadline and reminders moved with it.'); }
+  if (a === 'pickuptime' && el.value) { const was = S.pickup[id]; S.pickup[id] = fromLocalInput(el.value); S.unconfirmed[id] = false; (S.histExtra[id] = S.histExtra[id] || []).push([new Date(S.now), 'You', `Pickup time ${was ? 'changed from ' + time(was) + ' to' : 'set to'} ${time(S.pickup[id])}`]); render(true); toast('Pickup time corrected. Deadline and reminders moved with it.'); }
   if (a === 'chon') { S.chapters[+el.dataset.i].on = el.checked; render(true); }
   if (a === 'demoon') { S.demoFields[+el.dataset.i].on = el.checked; render(true); }
   if (a === 'progon') { S.programs[+el.dataset.i].on = el.checked; }
@@ -1429,6 +1565,9 @@ document.addEventListener('submit', (e) => {
   const f = e.target, a = f.dataset.act; if (!a) return;
   e.preventDefault();
   const fd = new FormData(f);
+  if (a === 'sendmsg') { (S.msgs[S.fam] = S.msgs[S.fam] || []).push({ from: 'fam', at: new Date(S.now), text: fd.get('text'), read: false }); render(true); toast('Sent to A-K'); return; }
+  if (a === 'replymsg') { const k = f.dataset.id; S.msgs[k].forEach((m) => { m.read = true; }); S.msgs[k].push({ from: 'ak', at: new Date(S.now), text: fd.get('text'), read: true }); render(true); toast(`Sent. The ${FAMILIES[k].short} get an email and a notification.`); return; }
+  if (a === 'savenote') { S.loss.note = fd.get('note'); S.loss.written = true; render(true); toast('Saved. Their portal shows it now. Nothing was emailed.'); return; }
   if (a === 'booksave') { S.booked[P().id] = fromLocalInput(fd.get('at')); dlg.close(); render(true); toast('Booking saved. Thank you!'); }
   if (a === 'addentry') { const [y, m, d] = String(fd.get('date')).split('-').map(Number); S.familyEntries.push({ id: 'f' + Date.now(), pup: P().id, date: D(y, m, d), title: fd.get('title'), body: fd.get('body'), vis: fd.get('vis'), img: null }); S.bookOpen = false; S.bookFilter = 'all'; render(true); toast('Added to the baby book'); }
   if (a === 'publishdraft') { const d = S.drafts.find((x) => x.id === f.dataset.id); S.breederEntries.push({ id: 'b' + Date.now(), pup: d.pup === 'Gem litter' ? '*' : 'opal', date: d.date, title: fd.get('title'), body: fd.get('body'), img: null }); S.drafts = S.drafts.filter((x) => x.id !== d.id); S.editing = null; render(true); toast('Added to the baby book. Families see it now.'); }
