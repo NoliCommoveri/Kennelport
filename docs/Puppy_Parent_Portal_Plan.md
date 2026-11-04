@@ -261,6 +261,23 @@ clickable prototype, which follows this, is
   portal. No raw addresses.
 - **Light and dark**, following the device, like her site.
 - **Icons from one free set** (Lucide or Tabler), served from the site.
+- **Variety down the page, not a stack of identical cards** (her feedback, after pointing
+  to the Hill's, Farmer's Dog and Chewy sites, Nov 4, 2026). Each home page mixes section
+  types, each used about once: a full-width photo with the greeting over it; the pup card
+  (round photo, script name, a coloured gender sign) beside a green calendar block for
+  what's due; tinted bands with big headlines; ring gauges with icons for stay skills;
+  big numbered steps joined by a line; a dark green band for the food with a row of
+  three checkmarks and a round button; side-scrolling photo cards for the baby book and
+  photo package; an icon-led highlight list for the included programs; photo-on-the-left
+  rows with a round arrow for handbook chapters; the icon tiles for quick links.
+- **A pinned action bar** above the tabs on Home holds the one thing to do now (hours left
+  and **Upload** in the vet window, **I've booked it** before go-home, the week's stay
+  update, the next task).
+- **Two columns on a phone.** Small edges (10px), compact type (14px base on a phone,
+  15px on a computer) and a tile grid that's two columns on a phone and four on a
+  computer.
+- **Text size:** an **Aa** button in the header steps through three sizes, remembered on
+  that device. The largest takes a phone back to one column.
 - **Real photos** from her albums, one set per puppy. No stock photos. A missing photo
   shows a drawn paw placeholder, never a broken image.
 
