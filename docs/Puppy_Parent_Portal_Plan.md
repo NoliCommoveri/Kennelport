@@ -5,8 +5,9 @@
 > (Nov 3, 2026) after review: it now reuses KennelPort's stack, takes starting data from
 > KennelOS without depending on it, and adds data retention. Built so far: the Site
 > Manager's new look and its sectioned forms (section 7.3, Site Manager version 12), and
-> all six of phase 1's build chunks (section 6; build log, Nov 4). KennelOS's side of the
-> feed (section 3.4) is its own work, in the KennelOS repository. Phase 1's gate is next.
+> all six of phase 1's build chunks (section 6; build log, Nov 4), and KennelOS's side of
+> the feed (section 3.4; KennelOS's End-State guide §35.1, its PR #160). Phase 1's gate is
+> next.
 
 ## 1. Purpose and scope
 
@@ -147,7 +148,7 @@ pages: it lands in the portal's own tables, signed-in only.
 | The signed contract (its signed date, and its document if one is stored) | New | The invite (section 3.4); the contract under Records |
 | A sale voided with the reason pup died or failed health check, and the family put back in line | New | The placement closed and the portal's loss page (section 7.4) |
 | Vaccination, preventative (deworming) and vet visit events on the puppy | New | Health records on the puppy |
-| Her vet: the KennelOS Account (or contact) she uses as her vet, with clinic, vet's name, phone and address; and the clinic on each puppy's vet visit events | New | Suggested **Contacts for families** in her portal settings (section 4), and, where a puppy's vet visits name a different clinic, that clinic as the puppy's own "vet since birth" on its placement. Which KennelOS record holds her vet is to be checked in KennelOS |
+| Her vet: the KennelOS Account (or contact) she uses as her vet, with clinic, vet's name, phone and address; and the clinic on each puppy's vet visit events | New | Suggested **Contacts for families** in her portal settings (section 4), and, where a puppy's vet visits name a different clinic, that clinic as the puppy's own "vet since birth" on its placement. **Modified:** KennelOS has no vet field; her vet is the Vet contact she names most on her own dogs' vet visits and surgeries, else her only Vet contact, sent as clinic (its name), phone and address. The puppy's own clinic isn't sent yet |
 | Milestone and weight check events | New | Baby book **drafts** (section 3.3) |
 | Extras on the sale (`Sale.extra_charges`); a training package's `boarding` stay (reason Training, tied to the sale and the extra) | New | The placement's extras (section 8.1); a stay's go-home date and weeks (section 8.2) |
 | Her feeding schedule (`breedFeedingScheduleRepo`: brand, amounts by weight and age, notes; a litter's own override) | New | A suggested **What she's eating now** (section 7.2) and the handbook's Feeding chapter |
@@ -400,7 +401,7 @@ its own:
    first weeks; history on placements; the portal switched on per site from /ops.
 2. **Checklist, timeline and programs** (built): her templates, each family's ticks and program
    status, the food band.
-3. **KennelOS** (KennelPort's end built; KennelOS's side is its own work): the feed's new rows,
+3. **KennelOS** (built on both sides; KennelOS's in its own repository): the feed's new rows,
    the handoff, the one-tap link, the facts that go back.
 4. **Messages from pickup, the loss page, bounces, erase and retention basics, push** (built).
 5. **Extended stays** and weekly updates (built).
