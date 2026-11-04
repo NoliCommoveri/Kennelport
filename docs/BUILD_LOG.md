@@ -1098,3 +1098,10 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   the ticked photos (in slices, under D1's limit) and returns to the screen it came
   from. Plain form controls joined by the form attribute, with the app's existing
   styles: no app files changed. Tests added.
+- **KennelOS program icons on the waitlist page (2026-11-04).** KennelOS's feed rows can
+  carry `program: { icon, about }` (her setting "Show program icons on the public list").
+  The KennelOS list now draws the icon in its own column left of the number (only when
+  some family has one; an unknown icon draws nothing), and tapping it shows her
+  description in the same bubble as the date added. The drawings are copied from
+  KennelOS's `shared/assets/programIcons.js`. Template CSS: the column, the bubble
+  opening below, and the phone grid with the extra column. Test added.
