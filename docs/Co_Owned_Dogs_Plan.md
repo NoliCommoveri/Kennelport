@@ -1,7 +1,7 @@
 # Co-owned dogs: plan
 
 Planned, not built. Two halves: KennelOS says which dogs are co-owned and where each
-lives; KennelPort shows the ones living with the other owner in their own section of
+lives; KennelPort shows the ones living with a co-owner in their own section of
 the Dogs page, with the partner kennel's logo, badge, videos and posts.
 
 ## Decisions (the breeder's, 2026-11-04)
@@ -11,7 +11,7 @@ the Dogs page, with the partner kennel's logo, badge, videos and posts.
 2. **Where a co-owned dog lands depends on where it lives.**
    - Lives with her: treated exactly like her own dogs. It goes in Girls and boys, Up
      and coming or Looking for a home as usual, and on the home page slider.
-   - Lives with the other owner: only in the new **Co-owned** section of the Dogs
+   - Lives with one of its co-owners: only in the new **Co-owned** section of the Dogs
      page, never in the main grid and **never on the home page slider**.
 3. **A dog can have several co-owners, from different kennels, but lives in one
    place at a time:** with her, or with one of its co-owners. KennelOS keeps only
