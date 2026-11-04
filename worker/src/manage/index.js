@@ -33,6 +33,23 @@ export function sameOrigin(request) {
   return site === 'same-origin' || site === 'none';
 }
 
+const SPRITE = `<svg class="sprite" width="0" height="0" aria-hidden="true">${Object.entries({
+  paw: '<circle cx="6" cy="10" r="2"/><circle cx="10" cy="6" r="2"/><circle cx="14" cy="6" r="2"/><circle cx="18" cy="10" r="2"/><path d="M12 12c-3 0-6 4-6 6.5 0 1.5 1.5 2 3 1.6 1.2-.3 2-.6 3-.6s1.8.3 3 .6c1.5.4 3-.1 3-1.6C18 16 15 12 12 12z"/>',
+  heart: '<path d="M12 20s-7-4.4-7-9.5A4 4 0 0 1 12 8a4 4 0 0 1 7 2.5C19 15.6 12 20 12 20z"/>',
+  camera: '<path d="M3 8h4l2-3h6l2 3h4v12H3z"/><circle cx="12" cy="13.5" r="3.5"/>',
+  people: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.5-5 6.5-5s5.5 1.5 6.5 5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 15c2 .6 3.2 2.2 3.8 5"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+  star: '<path d="m12 3 2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 16.8l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"/>',
+  pages: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+  card: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/>',
+  gift: '<rect x="3" y="8" width="18" height="5" rx="1"/><path d="M5 13v8h14v-8M12 8v13"/><path d="M12 8c-1.5-3-5-4-5-1.5S10 8 12 8zM12 8c1.5-3 5-4 5-1.5S14 8 12 8z"/>',
+  tag: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
+  home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
+}).map(([k, d]) => `<symbol id="i-${k}" viewBox="0 0 24 24">${d}</symbol>`).join('')}</svg>`;
+const ic = (n) => `<span class="ic" aria-hidden="true"><svg class="i"><use href="#i-${n}"/></svg></span>`;
+
 function page(title, body, { status = 200, back = null, headers = {} } = {}) {
   return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -47,7 +64,8 @@ function page(title, body, { status = 200, back = null, headers = {} } = {}) {
 <script src="/_kp/m/app.js?v=${APP_VERSION}" defer></script>
 <script src="/_kp/m/photos.js?v=${APP_VERSION}" defer></script>
 </head><body>
-<header class="top">${back ? `<a class="back" href="${esc(back)}" aria-label="Back">‹</a>` : '<img class="mark" src="/_kp/m/icon-64.png" alt="" width="32" height="32">'}<span class="title">${esc(title)}</span></header>
+${SPRITE}
+<header class="top">${back ? `<a class="back" href="${esc(back)}" aria-label="Back">‹</a>` : '<img class="mark" src="/_kp/m/icon-64.png" alt="" width="32" height="32">'}<span class="title"><small>Site Manager</small><b>${esc(title)}</b></span></header>
 <main>${body}</main>
 <p class="offline-note" id="offline-note" hidden role="status">You're offline. You can look around, but saving needs a connection.</p>
 </body></html>`, { status, headers: { ...HEADERS, ...headers } });
@@ -102,7 +120,8 @@ async function siteHome(env, user, site) {
   const unread = await env.DB.prepare('SELECT COUNT(*) AS n FROM inquiries WHERE site_id = ? AND read_at IS NULL').bind(site.id).first('n');
   const pending = await env.DB.prepare("SELECT COUNT(*) AS n FROM stories WHERE site_id = ? AND status = 'pending'").bind(site.id).first('n');
   const listed = await env.DB.prepare("SELECT COUNT(*) AS n FROM waitlist_entries WHERE site_id = ? AND status = 'waiting'").bind(site.id).first('n');
-  const tile = (href, label, note, count, off = false) => `<li><a class="tile${off ? ' off' : ''}" href="/s/${esc(site.subdomain)}${href}"><b>${esc(label)}</b><span>${esc(note)}</span>${count ? `<span class="count">${count}</span>` : ''}</a></li>`;
+  const TILE_ICONS = { '/puppies': 'paw', '/litters': 'heart', '/photos': 'camera', '/waitlist': 'list', '/inbox': 'mail', '/dogs': 'star' };
+  const tile = (href, label, note, count, off = false) => `<li><a class="tile${off ? ' off' : ''}" href="/s/${esc(site.subdomain)}${href}"><b>${esc(label)}</b><span>${esc(note)}</span>${count ? `<span class="count">${count}</span>` : ''}${ic(TILE_ICONS[href] ?? 'star')}</a></li>`;
   // Linked to a KennelOS waitlist (plan 3.8): the simple waitlist isn't used, and
   // while KennelOS takes applications online, neither are the site's questions.
   const kos = await kennelosState(env, site.id);
@@ -113,7 +132,8 @@ async function siteHome(env, user, site) {
   const leaving = await env.DB.prepare('SELECT COUNT(*) AS n FROM litters WHERE site_id = ? AND left_site_at IS NOT NULL').bind(site.id).first('n');
   const { results: notices } = await env.DB.prepare('SELECT id, message, created_at FROM notices WHERE site_id = ? AND read_at IS NULL ORDER BY created_at DESC LIMIT 3').bind(site.id).all();
   const day = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
-  const item = (href, label, note) => `<li class="item"><a href="/s/${esc(site.subdomain)}${href}"><b>${esc(label)}</b><span>${esc(note)}</span></a></li>`;
+  const ITEM_ICONS = { '/inbox': 'mail', '/reviews-queue': 'star', '/litters#leaving': 'heart', '/pages': 'pages', '/pages/waitlist': 'list', '/payment': 'card', '/lists/extras': 'gift', '/lists/products': 'tag', '/lists/reviews': 'star', '/details': 'home', '/kennelos': 'link' };
+  const item = (href, label, note) => `<li class="item"><a href="/s/${esc(site.subdomain)}${href}">${ic(ITEM_ICONS[href] ?? 'pages')}<b>${esc(label)}</b><span>${esc(note)}</span></a></li>`;
   // Needs you: what came in and is waiting, shown only while something is.
   const waiting = [
     unread ? item('/inbox', `${unread} new message${unread === 1 ? '' : 's'}`, 'In your inbox') : '',
@@ -171,7 +191,7 @@ function notificationsPage(env, user) {
 function manifest() {
   return new Response(JSON.stringify({
     name: 'KennelPort Site Manager', short_name: 'Site Manager', start_url: '/', scope: '/', display: 'standalone',
-    background_color: '#FCF4E9', theme_color: '#034655', description: 'Manage your KennelPort website.',
+    background_color: '#F5F2EA', theme_color: '#034655', description: 'Manage your KennelPort website.',
     icons: [
       { src: '/_kp/m/icon-192.png', sizes: '192x192', type: 'image/png' },
       { src: '/_kp/m/icon-512.png', sizes: '512x512', type: 'image/png' },

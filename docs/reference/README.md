@@ -3,6 +3,7 @@
 Published copies (claude.ai artifacts, with the photos):
 - The AK sample, shared with the first breeder: https://claude.ai/artifact/CP9T5ouidYfr1KfLvTY18D
 - The scheme lab (private): https://claude.ai/artifact/XzWppS7x8epbNHA1uicRDh
+- The portal prototype: https://claude.ai/artifact/ELrT2DnhfmSbPe72SwVG28
 
 To change either, update the file here and republish it to the same link (pass the link
 as the artifact's `url`) so the shared address keeps working.
@@ -38,3 +39,18 @@ In `ak-sample.html`:
 artwork with its outer border removed (phones round icons themselves). The app's icon
 sizes in `worker/public/_kp/m/icon-*.png` are made from it; the maskable one keeps the
 art in Android's middle 80%.
+
+**`portal-prototype.html`** is a clickable prototype of the Puppy Parent Portal
+([`../Puppy_Parent_Portal_Plan.md`](../Puppy_Parent_Portal_Plan.md) section 7): the family
+pages and her Site Manager as one app for her website and the portal (Today, Families with the
+waitlist, Dogs, Website, Portal), in the AK sample's Lawn scheme, light and dark. A bar at
+the top switches between the Family and Breeder views and four dates (before go-home, the
+vet window, weeks 1–8, the first birthday); everything is in memory and resets when
+the date changes. Like the AK sample it has no `<html>`/`<head>` wrapper (artifacts add one); it is published at the link in this file's list above.
+
+- **Real:** the kennel name, the Gem litter, its birth date and go-home date, Willow, and
+  the puppies Opal, Onyx and Diamond.
+- **Made up:** every family and email, the website's messages, review, waitlist and unpublished changes, Boone (as in the AK sample), pickup and booking
+  times, the microchip, the food, the programs and their wording, the discount code,
+  health records, the weights and the baby book text. Photos are placeholders (this
+  repository is public).

@@ -1,0 +1,1451 @@
+<title>Puppy Parent Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Mulish:wght@400;600;700;800&family=Pinyon+Script&display=swap">
+<style>
+/* Prototype of the Puppy Parent Portal (docs/Puppy_Parent_Portal_Plan.md sections 7 and 8):
+   the family pages and her Site Manager, in the AK sample's Lawn scheme.
+   Layout: a dense tile grid, two columns even on a phone, four on a computer, with tiles of
+   different kinds (photo, pup card, green calendar block, tinted, dark) so the page never
+   reads as a stack of identical cards. Text size: three steps (the Aa button); the largest
+   drops a phone to one column. Photos come from the AK sample (img/, published alongside;
+   not in this public repository, so opened from the file they fall back to a drawn paw). */
+:root {
+  --bg: #F5F2EA; --surface: #FFFDF8; --ink: #1E1D1A; --muted: #625C51; --line: #DED7C8;
+  --accent: #34523C; --accent-ink: #FFFFFF; --accent-soft: #E3EADF; --brass: #8A6B2C; --band: #ECE6D8;
+  --head: #1F3A2A; --head-ink: #F5F2EA; --head-muted: #B9C8BC; --tab-on: #CFE3C4; --tab-on-ink: #1F3A2A;
+  --ok: #3E7A4B; --warn: #8A5A1E; --bad: #A3261E; --warn-soft: #F3E6D3; --bad-soft: #F6DEDB;
+  --cal: #B5462F; --girl: #A8456F; --girl-soft: #F6E1EA; --boy: #2F6690; --boy-soft: #DDEAF5;
+  --shadow: 0 1px 2px rgba(30,29,26,.06), 0 6px 18px rgba(30,29,26,.08);
+  --f-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --f-body: "Mulish", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-script: "Pinyon Script", "Snell Roundhand", "Apple Chancery", cursive;
+  --r: 8px; --rc: 14px; --gut: 10px; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141412; --surface: #1D1C19; --ink: #ECE7DC; --muted: #A9A294; --line: #35332D;
+  --accent: #8FB998; --accent-ink: #0F1A12; --accent-soft: #233127; --brass: #CFAE66; --band: #24221E;
+  --head: #10201A; --head-ink: #ECE7DC; --head-muted: #8FA596; --tab-on: #2E4A36; --tab-on-ink: #ECE7DC;
+  --ok: #86C495; --warn: #E0A65A; --bad: #F08A80; --warn-soft: #33281A; --bad-soft: #3A2220;
+  --cal: #C9583F; --girl: #E79BBB; --girl-soft: #3A2430; --boy: #8DB8DE; --boy-soft: #1F2C3A;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #141412; --surface: #1D1C19; --ink: #ECE7DC; --muted: #A9A294; --line: #35332D;
+  --accent: #8FB998; --accent-ink: #0F1A12; --accent-soft: #233127; --brass: #CFAE66; --band: #24221E;
+  --head: #10201A; --head-ink: #ECE7DC; --head-muted: #8FA596; --tab-on: #2E4A36; --tab-on-ink: #ECE7DC;
+  --ok: #86C495; --warn: #E0A65A; --bad: #F08A80; --warn-soft: #33281A; --bad-soft: #3A2220;
+  --cal: #C9583F; --girl: #E79BBB; --girl-soft: #3A2430; --boy: #8DB8DE; --boy-soft: #1F2C3A;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35); color-scheme: dark; }
+
+/* Text size: everything is in rem, so the Aa steps scale the whole page. */
+html { font-size: 14px; -webkit-text-size-adjust: 100%; }
+html[data-zoom="2"] { font-size: 16.5px; }
+html[data-zoom="3"] { font-size: 19px; }
+@media (min-width: 720px) { html { font-size: 15px; } html[data-zoom="2"] { font-size: 17.5px; } html[data-zoom="3"] { font-size: 20px; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 1rem/1.45 var(--f-body); }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 500; line-height: 1.15; margin: 0; text-wrap: balance; }
+h1 { font-size: 1.6rem; }
+h2 { font-size: 1.15rem; }
+h3 { font-size: 1rem; }
+p { margin: 0; }
+a { color: var(--accent); }
+img { max-width: 100%; }
+img.gone { display: none; }
+svg.i { width: 1.3rem; height: 1.3rem; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.eyebrow { font-size: .68rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--brass); }
+.script { font-family: var(--f-script); font-size: 2rem; line-height: 1; font-weight: 400; }
+.muted { color: var(--muted); }
+.small { font-size: .84rem; }
+.stack { display: grid; gap: .6rem; }
+.row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.between { display: flex; justify-content: space-between; align-items: baseline; gap: .6rem; flex-wrap: wrap; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.6rem; padding: .5rem 1rem; border-radius: var(--r); font: 700 .86rem/1.1 var(--f-body); letter-spacing: .02em; border: 1.5px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; text-decoration: none; text-align: center; }
+.btn.solid { background: var(--accent); color: var(--accent-ink); }
+.btn.solid:hover { filter: brightness(1.08); }
+.btn.line:hover { background: var(--accent); color: var(--accent-ink); }
+.btn.text { border: 0; padding: 0; min-height: 2rem; }
+.btn.text:hover { text-decoration: underline; }
+.btn.small { min-height: 2.2rem; padding: .35rem .7rem; font-size: .78rem; }
+.btn.danger { border-color: var(--bad); color: var(--bad); }
+.btn.onfill { background: var(--accent-ink); color: var(--accent); border-color: var(--accent-ink); }
+.btn svg.i { width: 1.1rem; height: 1.1rem; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, label:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.st { display: inline-flex; align-items: center; gap: .35rem; font-size: .7rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.st::before { content: ""; width: .45rem; height: .45rem; border-radius: 50%; background: currentColor; }
+.st.ok { color: var(--ok); } .st.warn { color: var(--warn); } .st.bad { color: var(--bad); } .st.next { color: var(--accent); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--rc); padding: .9rem; display: grid; gap: .6rem; min-width: 0; }
+.card.feature { border-color: var(--accent); border-width: 1.5px; box-shadow: var(--shadow); }
+.card.band { background: var(--band); border-color: transparent; }
+.disclose { font-size: .76rem; color: var(--muted); padding: .2rem .2rem 0; }
+.ext::after { content: " \2197"; }
+input, select, textarea { font: inherit; color: var(--ink); background: var(--bg); border: 1.5px solid var(--line); border-radius: var(--r); padding: .55rem .7rem; min-height: 2.6rem; width: 100%; }
+textarea { min-height: 6rem; resize: vertical; }
+label { display: grid; gap: .3rem; font-weight: 700; font-size: .84rem; }
+label.check { display: flex; align-items: flex-start; gap: .55rem; font-weight: 600; font-size: .9rem; cursor: pointer; }
+label.check input { width: 1.2rem; height: 1.2rem; min-height: 0; margin: .1rem 0 0; flex: none; accent-color: var(--accent); }
+dl.kv { display: grid; grid-template-columns: max-content 1fr; gap: .3rem .9rem; margin: 0; }
+dl.kv dt { color: var(--muted); font-size: .84rem; }
+dl.kv dd { margin: 0; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+th { text-align: left; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 800; padding: .35rem .5rem .35rem 0; border-bottom: 1px solid var(--line); }
+td { padding: .5rem .5rem .5rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.tablewrap { overflow-x: auto; }
+details.ch { border-bottom: 1px solid var(--line); }
+details.ch summary { list-style: none; cursor: pointer; padding: .75rem 0; display: flex; justify-content: space-between; gap: .6rem; font-family: var(--f-display); font-size: 1.02rem; }
+details.ch summary::-webkit-details-marker { display: none; }
+details.ch summary::after { content: "+"; font-family: var(--f-body); color: var(--accent); font-weight: 700; }
+details.ch[open] summary::after { content: "\2013"; }
+details.ch .body { padding: 0 0 .9rem; display: grid; gap: .5rem; }
+.sprig { width: 5rem; height: 2.5rem; color: var(--brass); opacity: .55; }
+.toast { position: fixed; left: 50%; bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: .6rem 1rem; border-radius: var(--r); font-size: .86rem; z-index: 50; max-width: calc(100vw - 32px); }
+
+.ph { position: relative; display: block; overflow: hidden; background: var(--band); border-radius: var(--r); }
+.ph::before { content: ""; position: absolute; inset: 0; background: center / 42% no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239C7A34' stroke-width='1.2' stroke-linecap='round'%3E%3Ccircle cx='6' cy='10' r='2'/%3E%3Ccircle cx='10' cy='6' r='2'/%3E%3Ccircle cx='14' cy='6' r='2'/%3E%3Ccircle cx='18' cy='10' r='2'/%3E%3Cpath d='M12 12c-3 0-6 4-6 6.5 0 1.5 1.5 2 3 1.6 1.2-.3 2-.6 3-.6s1.8.3 3 .6c1.5.4 3-.1 3-1.6C18 16 15 12 12 12z'/%3E%3C/svg%3E"); opacity: .5; }
+.ph img { position: relative; display: block; width: 100%; height: 100%; object-fit: cover; }
+.ph.round { border-radius: 50%; }
+
+.proto { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: #2B2A27; color: #EDE9DF; font: 600 .72rem/1.2 var(--f-body); padding: .4rem var(--gut); display: flex; flex-wrap: wrap; gap: .35rem .7rem; align-items: center; }
+.proto b { font-weight: 800; letter-spacing: .1em; text-transform: uppercase; font-size: .64rem; color: #CFAE66; }
+.proto .grp { display: flex; gap: 3px; flex-wrap: wrap; align-items: center; }
+.proto button { font: inherit; background: transparent; color: inherit; border: 1px solid #5A574F; border-radius: 3px; padding: 4px 7px; cursor: pointer; }
+.proto button[aria-pressed="true"] { background: #EDE9DF; color: #2B2A27; border-color: #EDE9DF; }
+.proto .note { color: #A9A294; font-weight: 400; }
+
+header.app { background: var(--head); color: var(--head-ink); }
+header.app .in { max-width: 1080px; margin: 0 auto; display: flex; align-items: center; gap: .6rem; padding: .5rem max(var(--gut), env(safe-area-inset-right, 0px)) .5rem max(var(--gut), env(safe-area-inset-left, 0px)); }
+header.app .brand { display: flex; align-items: center; gap: .6rem; color: inherit; text-decoration: none; min-width: 0; margin-right: auto; }
+header.app .logo { width: 2.7rem; height: 2.7rem; border-radius: 50%; background: #fff; flex: none; overflow: hidden; display: grid; place-items: center; }
+header.app .logo img { width: 100%; height: 100%; object-fit: cover; }
+header.app .logo svg { width: 1.9rem; height: 1.9rem; color: #1E1D1A; }
+header.app .logo img:not(.gone) + svg { display: none; }
+header.app .brand b { font: 500 1.05rem/1.1 var(--f-display); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+header.app .sub { display: flex; align-items: center; gap: .3rem; font-size: .64rem; letter-spacing: .13em; text-transform: uppercase; color: var(--head-muted); font-weight: 700; margin-top: 2px; }
+header.app .sub svg.i { width: .9rem; height: .9rem; }
+header.app .hb { flex: none; background: none; border: 1px solid transparent; color: inherit; min-width: 2.6rem; height: 2.6rem; display: grid; place-items: center; border-radius: 50%; cursor: pointer; font: 700 1rem var(--f-display); }
+header.app .hb:hover { border-color: var(--head-muted); }
+header.app .hb svg.i { width: 1.6rem; height: 1.6rem; }
+
+.fam main { max-width: 1080px; margin: 0 auto; padding: var(--gut) max(var(--gut), env(safe-area-inset-right, 0px)) 6rem max(var(--gut), env(safe-area-inset-left, 0px)); display: grid; gap: .55rem; }
+nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--head); padding-bottom: env(safe-area-inset-bottom, 0px); }
+nav.tabs .in { max-width: 1080px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; padding: .35rem max(var(--gut), env(safe-area-inset-right, 0px)) .35rem max(var(--gut), env(safe-area-inset-left, 0px)); }
+nav.tabs a { display: grid; justify-items: center; gap: 2px; padding: .4rem 2px .45rem; color: var(--head-muted); text-decoration: none; font-size: .68rem; font-weight: 700; border-radius: var(--r); }
+nav.tabs a[aria-current="page"] { color: var(--tab-on-ink); background: var(--tab-on); }
+nav.tabs svg.i { width: 1.4rem; height: 1.4rem; }
+
+/* The tile grid */
+.bento { --cols: 2; display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: .55rem; grid-auto-flow: row dense; }
+@media (min-width: 720px) { .bento { --cols: 4; gap: .7rem; } }
+.s2 { grid-column: span 2; }
+.full { grid-column: 1 / -1; }
+html[data-zoom="3"] .bento { --cols: 1; }
+html[data-zoom="3"] .bento > .s2 { grid-column: 1 / -1; }
+@media (min-width: 720px) { html[data-zoom="3"] .bento { --cols: 2; } html[data-zoom="3"] .bento > .s2 { grid-column: span 2; } }
+.tile { min-width: 0; border-radius: var(--rc); padding: .8rem; display: grid; gap: .45rem; align-content: start; background: var(--surface); border: 1px solid var(--line); color: var(--ink); text-decoration: none; position: relative; overflow: hidden; }
+a.tile:hover, button.tile:hover { box-shadow: var(--shadow); }
+button.tile { font: inherit; text-align: left; cursor: pointer; }
+.tile.green { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.tile.green .eyebrow, .tile.dark .eyebrow { color: inherit; opacity: .85; }
+.tile.tint { background: var(--accent-soft); border-color: transparent; }
+.tile.band { background: var(--band); border-color: transparent; }
+.tile.warm { background: var(--warn-soft); border-color: transparent; }
+.tile.dark { background: var(--head); color: var(--head-ink); border-color: transparent; }
+.tile.photo { padding: 0; border: 0; min-height: 10.5rem; display: flex; flex-direction: column; justify-content: flex-end; background: #222; }
+.tile.photo > .ph { position: absolute; inset: 0; border-radius: 0; }
+.tile.photo .cap { position: relative; z-index: 1; padding: 2.6rem .8rem .75rem; color: #FFF8EC; background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,.55) 45%, rgba(0,0,0,.78)); text-shadow: 0 1px 3px rgba(0,0,0,.5); display: grid; gap: .25rem; }
+.tile.photo .cap .script { color: #F2DFAE; }
+.tile.photo .cap h1, .tile.photo .cap h2 { color: #fff; }
+.tile.photo .cap .btn { justify-self: start; background: #FFF8EC; color: #1F3A2A; border-color: #FFF8EC; }
+.hero { min-height: 13rem; }
+@media (min-width: 720px) { .hero { min-height: 15rem; } }
+.hero .ph img { object-position: center 38%; }
+.ico { width: 2.6rem; height: 2.6rem; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex: none; }
+.ico svg.i { width: 1.5rem; height: 1.5rem; }
+.ico.big { width: 3.4rem; height: 3.4rem; border-radius: 14px; }
+.ico.big svg.i { width: 2.1rem; height: 2.1rem; stroke-width: 1.4; }
+.tile.tint .ico { background: var(--surface); }
+.tile.band .ico { background: var(--surface); }
+.tile.warm .ico { background: var(--surface); color: var(--warn); }
+/* Pup card */
+.pup { justify-items: center; text-align: center; gap: .3rem; }
+.pup .ph.round { width: 4.8rem; height: 4.8rem; border: 3px solid var(--surface); box-shadow: 0 0 0 2px var(--line); }
+.pname { font-family: var(--f-script); font-size: 2.1rem; line-height: 1; display: inline-flex; align-items: center; gap: .35rem; }
+.sex { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; font: 700 1rem/1 var(--f-body); }
+.sex.f { background: var(--girl-soft); color: var(--girl); }
+.sex.m { background: var(--boy-soft); color: var(--boy); }
+.facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: .8rem; justify-items: center; }
+.facts li { display: flex; gap: .35rem; align-items: center; }
+.facts svg.i { width: .95rem; height: .95rem; color: var(--accent); }
+/* Calendar page */
+.calrow { display: flex; gap: .65rem; align-items: center; }
+.calpage { width: 3.6rem; flex: none; border-radius: 10px; overflow: hidden; background: var(--surface); color: var(--ink); text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,.18); display: grid; }
+.calpage b { background: var(--cal); color: #fff; font-size: .66rem; letter-spacing: .12em; padding: .2rem 0; }
+.calpage span { font: 500 1.7rem/1.1 var(--f-display); padding-top: .15rem; }
+.calpage i { font-style: normal; font-size: .62rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding-bottom: .3rem; }
+.bigline { font: 500 1.45rem/1.05 var(--f-display); }
+/* Ring */
+.ring { width: 4.6rem; height: 4.6rem; }
+.ring circle { fill: none; stroke-width: 7; }
+.ring .bg { stroke: rgba(255,255,255,.18); }
+.ring .fg { stroke: #CFE3C4; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; }
+.ring text { fill: currentColor; font: 600 15px var(--f-display); }
+/* Quick links */
+.qgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .45rem; }
+@media (min-width: 720px) { .qgrid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.qtile { display: grid; justify-items: center; gap: .35rem; padding: .65rem .2rem .55rem; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; color: var(--ink); text-decoration: none; text-align: center; font-size: .76rem; font-weight: 700; line-height: 1.15; }
+.qtile:hover { border-color: var(--accent); box-shadow: var(--shadow); }
+/* Steps */
+.stepper { display: grid; grid-template-columns: repeat(var(--n), 1fr); position: relative; }
+.stepper::before { content: ""; position: absolute; left: calc(50% / var(--n)); right: calc(50% / var(--n)); top: .85rem; height: 3px; background: var(--line); }
+.stepper .s { position: relative; display: grid; justify-items: center; gap: .3rem; text-align: center; font-size: .68rem; font-weight: 700; line-height: 1.15; color: var(--muted); padding: 0 1px; }
+.stepper .dot { width: 1.8rem; height: 1.8rem; border-radius: 50%; border: 2.5px solid var(--line); background: var(--surface); display: grid; place-items: center; color: var(--surface); }
+.stepper .dot svg.i { width: 1rem; height: 1rem; stroke-width: 2.4; }
+.stepper .s.done .dot { background: var(--accent); border-color: var(--accent); }
+.stepper .s.now .dot { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.stepper .s.now, .stepper .s.done { color: var(--ink); }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: .45rem; }
+.steps li { display: flex; gap: .5rem; align-items: flex-start; font-size: .9rem; }
+.steps .n { width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 1.5px solid currentColor; display: grid; place-items: center; font-size: .7rem; font-weight: 800; flex: none; opacity: .8; }
+.steps .n.done { background: var(--ok); border-color: var(--ok); color: var(--surface); opacity: 1; }
+.task { display: grid; grid-template-columns: 2.9rem 1fr; gap: .6rem; padding: .6rem 0; border-bottom: 1px solid var(--line); }
+.task:last-child { border-bottom: 0; }
+.task .d { display: grid; align-content: start; justify-items: center; border-radius: 9px; background: var(--band); padding: .25rem 0 .3rem; font-size: .62rem; font-weight: 800; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }
+.task .d b { font: 500 1.2rem/1 var(--f-display); color: var(--ink); letter-spacing: 0; }
+.task.done h3 { color: var(--muted); }
+.task h3 { font-size: .95rem; }
+.progress { height: 6px; background: var(--band); border-radius: 3px; overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--accent); }
+.checks { columns: 2 11rem; column-gap: 1rem; }
+.checks > div { break-inside: avoid; padding: .25rem 0; display: flex; justify-content: space-between; gap: .4rem; align-items: flex-start; }
+.checks label.check { font-size: .84rem; }
+/* Photo-top cards */
+.pcard { padding: 0; gap: 0; }
+.pcard > .ph { aspect-ratio: 4 / 3; border-radius: 0; }
+.pcard > .body { padding: .65rem .75rem .75rem; display: grid; gap: .3rem; }
+.pcard > .body p { font-size: .88rem; }
+.filters { display: flex; gap: .35rem; flex-wrap: wrap; }
+.filters button { font: 700 .78rem var(--f-body); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 20px; padding: .4rem .8rem; cursor: pointer; }
+.filters button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+/* Stay */
+.weeks { display: flex; gap: 4px; }
+.weeks span { flex: 1; height: .45rem; border-radius: 4px; background: rgba(127,127,127,.3); }
+.weeks span.on { background: currentColor; }
+.weeks span.now { background: repeating-linear-gradient(90deg, currentColor 0 5px, transparent 5px 9px); }
+.skills { display: grid; grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr)); gap: .45rem; }
+.skill { background: var(--bg); border-radius: 10px; padding: .55rem .65rem; display: grid; gap: .3rem; font-size: .86rem; font-weight: 600; }
+.lvl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+.lvl i { height: .45rem; border-radius: 3px; background: var(--line); }
+.lvl i.on { background: var(--accent); }
+.skill .w { font-size: .66rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.skill .w b { color: var(--ok); }
+/* Gallery */
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.4rem, 1fr)); gap: 4px; }
+.gallery .ph { aspect-ratio: 1; border-radius: 6px; }
+.gallery button.ph { border: 0; padding: 0; cursor: pointer; width: 100%; }
+.collage { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+.collage .ph { aspect-ratio: 1; border-radius: 6px; }
+.play { position: absolute; inset: 0; display: grid; place-items: center; z-index: 1; }
+.play span { width: 2.6rem; height: 2.6rem; border-radius: 50%; background: rgba(0,0,0,.55); display: grid; place-items: center; color: #fff; }
+.play svg.i { width: 1.2rem; height: 1.2rem; fill: #fff; stroke: none; margin-left: 2px; }
+.vlen { position: absolute; right: 4px; bottom: 4px; z-index: 1; background: rgba(0,0,0,.6); color: #fff; font-size: .66rem; font-weight: 700; padding: 1px 5px; border-radius: 3px; }
+.pipeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; }
+.pipeline span { text-align: center; font-size: .62rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: .4rem 1px; border-radius: 6px; background: var(--band); color: var(--muted); }
+.pipeline span.done { background: var(--accent); color: var(--accent-ink); }
+.pipeline span.now { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.factgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr)); gap: .4rem; }
+.factgrid div { background: var(--bg); border-radius: 10px; padding: .45rem .6rem; }
+.factgrid dt { font-size: .64rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.factgrid dd { margin: 0; font-weight: 700; font-size: .9rem; overflow-wrap: anywhere; }
+
+dialog { border: 1px solid var(--line); border-radius: var(--rc); background: var(--surface); color: var(--ink); padding: 0; width: min(440px, calc(100vw - 20px)); box-shadow: var(--shadow); }
+dialog::backdrop { background: rgba(0,0,0,.4); }
+dialog .in { padding: 1.1rem; display: grid; gap: .8rem; }
+
+/* Her Site Manager */
+.adm { --head: #034655; --head-muted: #A9C9CE; --tab-on: #CFE6EA; --tab-on-ink: #034655; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .adm { --head: #0A2A31; --head-muted: #8FB0B5; --tab-on: #1F4A52; --tab-on-ink: #ECE7DC; } }
+:root[data-theme="dark"] .adm { --head: #0A2A31; --head-muted: #8FB0B5; --tab-on: #1F4A52; --tab-on-ink: #ECE7DC; }
+.adm .shell { display: grid; min-height: calc(100vh - 110px); }
+.adm main { padding: var(--gut) max(var(--gut), env(safe-area-inset-right, 0px)) 6rem max(var(--gut), env(safe-area-inset-left, 0px)); display: grid; gap: .7rem; align-content: start; max-width: 1040px; width: 100%; }
+.adm aside { display: none; }
+.adm header.app .in, .adm nav.tabs .in { max-width: none; }
+.adm nav.tabs .in { grid-template-columns: repeat(6, 1fr); }
+.adm nav.tabs a { font-size: .62rem; }
+@media (min-width: 900px) {
+  .adm .shell { grid-template-columns: 14rem 1fr; }
+  .adm aside { display: grid; align-content: start; gap: 2px; background: var(--head); padding: .9rem .6rem; }
+  .adm aside a { display: flex; align-items: center; gap: .7rem; padding: .65rem .7rem; color: var(--head-ink); text-decoration: none; border-radius: var(--r); font-weight: 700; font-size: .92rem; }
+  .adm aside a:hover { background: rgba(255,255,255,.08); }
+  .adm aside a[aria-current="page"] { background: var(--tab-on); color: var(--tab-on-ink); }
+  .adm aside .cnt { margin-left: auto; font-size: .74rem; min-width: 1.4rem; text-align: center; padding: 1px 6px; border-radius: 10px; background: #E8B04A; color: #2B1E05; }
+  .adm nav.tabs { display: none; }
+  .adm main { padding: 1.4rem 1.8rem 3rem; }
+}
+.needs { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.6rem, 1fr)); gap: .5rem; }
+.need { text-align: left; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--rc); padding: .7rem; display: grid; grid-template-columns: auto 1fr; gap: .15rem .6rem; align-items: center; cursor: pointer; text-decoration: none; }
+.need:hover { box-shadow: var(--shadow); }
+.need .ic { grid-row: span 2; width: 2.5rem; height: 2.5rem; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.need.bad .ic { background: var(--bad-soft); color: var(--bad); }
+.need.warn .ic { background: var(--warn-soft); color: var(--warn); }
+.need b { font: 500 1.5rem/1 var(--f-display); }
+.need span { font-size: .8rem; font-weight: 700; line-height: 1.2; }
+.cols { display: grid; gap: .7rem; }
+@media (min-width: 1100px) { .cols { grid-template-columns: 3fr 2fr; align-items: start; } }
+.list { list-style: none; margin: 0; padding: 0; }
+.list > li { padding: .6rem 0; border-bottom: 1px solid var(--line); display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+.list > li:last-child { border-bottom: 0; }
+.list .grow { flex: 1 1 11rem; min-width: 0; }
+.list .ph.round { width: 2.8rem; height: 2.8rem; flex: none; }
+.list a.rowlink { color: inherit; text-decoration: none; }
+.list a.rowlink:hover b { text-decoration: underline; }
+.tag { display: inline-block; font-size: .68rem; font-weight: 800; letter-spacing: .04em; padding: 2px 7px; border-radius: 20px; background: var(--band); color: var(--brass); margin: 2px 4px 0 0; }
+.crumb { font-size: .84rem; }
+.pick { display: grid; gap: .5rem; padding: .8rem; border: 1.5px solid var(--accent); border-radius: var(--rc); background: var(--surface); }
+.pf { display: flex; gap: .8rem; align-items: center; min-width: 0; }
+.pf .ph.round { width: 4rem; height: 4rem; flex: none; }
+.lvlpick { display: grid; grid-template-columns: minmax(0, 1fr) 9.5rem; gap: .4rem .7rem; align-items: center; }
+.lvlpick select { min-height: 2.3rem; padding: .3rem .5rem; }
+@media (max-width: 440px) { .lvlpick { grid-template-columns: 1fr; } }
+.fgroup { display: grid; gap: .6rem; }
+.fgroup + .fgroup { border-top: 1px solid var(--line); padding-top: .9rem; }
+.fgroup > h2, .fgroup > summary { font: 600 1rem/1.2 var(--f-display); display: flex; align-items: center; gap: .5rem; }
+.fgroup > h2::before { content: ""; width: 5px; height: 1.1rem; border-radius: 3px; background: var(--accent); }
+.fgroup > summary { cursor: pointer; color: var(--accent); list-style: none; min-height: 2.4rem; }
+.fgroup > summary::before { content: "+"; font-weight: 800; }
+.fgroup[open] > summary::before { content: "\2013"; }
+.fgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; align-items: start; }
+.fgrid > * { grid-column: 1 / -1; min-width: 0; }
+.fgrid > .half { grid-column: auto; }
+.fgrid .hint { font-size: .74rem; font-weight: 400; color: var(--muted); }
+.switches { background: var(--bg); border-radius: 12px; padding: 0 .8rem; }
+.switches label.check { flex-direction: row-reverse; justify-content: space-between; align-items: center; gap: .8rem; padding: .7rem 0; border-bottom: 1px solid var(--line); }
+.switches label.check:last-child { border-bottom: 0; }
+.switches label.check input { appearance: none; -webkit-appearance: none; width: 2.8rem; height: 1.65rem; border-radius: 1rem; background: var(--line); position: relative; cursor: pointer; margin: 0; }
+.switches label.check input::after { content: ""; position: absolute; top: 3px; left: 3px; width: calc(1.65rem - 6px); height: calc(1.65rem - 6px); border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.3); transition: transform .2s; }
+.switches label.check input:checked { background: var(--accent); }
+.switches label.check input:checked::after { transform: translateX(1.15rem); }
+.chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+.chips label { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; font-weight: 700; border: 1.5px solid var(--line); border-radius: 20px; padding: .35rem .7rem; cursor: pointer; }
+.chips label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.chips input { width: 1rem; height: 1rem; min-height: 0; margin: 0; accent-color: var(--accent); }
+.thumbs { display: flex; gap: .4rem; overflow-x: auto; }
+.thumbs label { flex: none; width: 4.6rem; height: 4.6rem; border-radius: 10px; overflow: hidden; position: relative; border: 2.5px solid transparent; cursor: pointer; }
+.thumbs label:has(input:checked) { border-color: var(--accent); }
+.thumbs input { position: absolute; top: 4px; left: 4px; z-index: 2; width: 1rem; height: 1rem; min-height: 0; margin: 0; }
+.thumbs .ph { width: 100%; height: 100%; border-radius: 0; }
+.tile.dark .eyebrow, .sec.deep h1 { color: inherit; }
+/* Reports: thin marks, rounded data ends, labels in text colours, a quiet grid. */
+:root { --mark: var(--accent); --mark-before: #B4AC9D; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --mark-before: #6A655B; } }
+:root[data-theme="dark"] { --mark-before: #6A655B; }
+.chart { width: 100%; height: auto; display: block; overflow: visible; }
+.chart text { fill: var(--muted); font: 600 11px var(--f-body); }
+.chart text.v { fill: var(--ink); font-weight: 700; }
+.chart text.h { fill: var(--ink); font: 700 12px var(--f-body); }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .base { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.chart .m { fill: var(--mark); }
+.chart .m.before { fill: var(--mark-before); }
+.chart [data-tip] { cursor: default; }
+.chart .hit { fill: transparent; }
+.chart .hit:hover + .m, .chart g:hover .m { opacity: .85; }
+.legend { display: flex; flex-wrap: wrap; gap: .3rem 1rem; font-size: .8rem; font-weight: 700; color: var(--ink); }
+.legend span { display: inline-flex; align-items: center; gap: .4rem; }
+.legend i { width: .85rem; height: .85rem; border-radius: 3px; background: var(--mark); }
+.legend i.before { background: var(--mark-before); }
+.legend i.base { height: 0; border-radius: 0; border-top: 2px dashed var(--ink); background: none; }
+.stat b { font: 600 1.9rem/1 var(--f-display); display: block; }
+.stat .vs { font-size: .78rem; color: var(--muted); }
+.stat .vs b { display: inline; font: 800 .78rem var(--f-body); color: var(--ok); }
+#tip { position: fixed; z-index: 60; pointer-events: none; background: var(--ink); color: var(--bg); font-size: .78rem; font-weight: 700; padding: .35rem .55rem; border-radius: 6px; max-width: 16rem; box-shadow: var(--shadow); }
+.mini { display: grid; gap: .3rem; }
+.mini + .mini { border-top: 1px solid var(--line); padding-top: .7rem; }
+@media (min-width: 720px) { .minis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; } .mini + .mini { border-top: 0; padding-top: 0; } }
+@media (prefers-reduced-motion: no-preference) { .qtile, .tile, .need { transition: box-shadow .2s, border-color .2s; } }
+
+/* Section types, each used once or twice a page, so a scroll never repeats itself
+   (after the marketing pages she pointed to: bands, gauges, numbered steps, photo rows,
+   side-scrolling cards, highlight lists, a pinned action bar). */
+.bleed { margin: 0 calc(-1 * max(var(--gut), env(safe-area-inset-left, 0px))); border-radius: 0; }
+@media (min-width: 720px) { .bleed { margin: 0; border-radius: var(--rc); } }
+.sec { padding: 1.3rem max(var(--gut), env(safe-area-inset-left, 0px)) 1.4rem; display: grid; gap: .8rem; }
+@media (min-width: 720px) { .sec { padding: 1.6rem 1.6rem 1.7rem; } }
+.sec .big-h { font: 600 1.7rem/1.05 var(--f-display); letter-spacing: -.01em; }
+.sec.deep { background: var(--head); color: var(--head-ink); }
+.sec.deep .eyebrow { color: #E9C77E; }
+.sec.mint { background: var(--accent-soft); }
+.sec.sand { background: var(--band); }
+.sec.paper { background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+@media (min-width: 720px) { .sec.paper { border: 1px solid var(--line); } }
+.pill { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.9rem; padding: .6rem 1.4rem; border-radius: 40px; font: 800 .95rem/1 var(--f-body); text-decoration: none; border: 0; cursor: pointer; }
+.pill.light { background: #FFF8EC; color: #1F3A2A; }
+.pill.dark { background: var(--accent); color: var(--accent-ink); }
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; text-align: center; font-size: .82rem; font-weight: 700; line-height: 1.2; }
+.trio svg.i { width: 1.7rem; height: 1.7rem; margin: 0 auto .3rem; display: block; stroke-width: 2; }
+.prodrow { display: grid; grid-template-columns: 4.6rem 1fr; gap: .8rem; align-items: center; }
+.prodrow .box { width: 4.6rem; height: 4.6rem; border-radius: 14px; background: #FFF8EC; color: #1F3A2A; display: grid; place-items: center; }
+.prodrow .box svg.i { width: 2.8rem; height: 2.8rem; stroke-width: 1.3; }
+/* Gauges */
+.gauges { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem .6rem; }
+@media (min-width: 720px) { .gauges { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.gauge { display: grid; justify-items: center; gap: .1rem; text-align: center; color: inherit; text-decoration: none; }
+.gauge svg { width: 100%; max-width: 8rem; height: auto; }
+.gauge .trk { fill: none; stroke: var(--line); stroke-width: 7; stroke-linecap: round; }
+.gauge .val { fill: none; stroke: var(--accent); stroke-width: 7; stroke-linecap: round; }
+.gauge use { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.gauge b { font: 700 .92rem/1.15 var(--f-body); margin-top: -.5rem; }
+.gauge span { font-size: .66rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.gauge span.up { color: var(--ok); }
+/* Numbered steps */
+.numsteps { list-style: none; margin: 0; padding: 0; display: grid; }
+.numsteps li { display: grid; grid-template-columns: 3.1rem 1fr; gap: .8rem; position: relative; padding-bottom: 1.1rem; }
+.numsteps li:last-child { padding-bottom: 0; }
+.numsteps li:not(:last-child)::before { content: ""; position: absolute; left: 1.5rem; top: 3.2rem; bottom: .25rem; width: 2px; background: var(--accent); opacity: .45; }
+.numsteps .num { width: 3rem; height: 3rem; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font: 700 1.45rem/1 var(--f-display); border-radius: 48% 52% 46% 54% / 55% 45% 55% 45%; transform: rotate(-4deg); }
+.numsteps .num.done { background: var(--ok); }
+.numsteps .num svg.i { width: 1.5rem; height: 1.5rem; stroke-width: 2.5; }
+.numsteps h3 { font: 600 1.15rem/1.15 var(--f-display); }
+.numsteps p { font-size: .9rem; margin-top: .2rem; }
+/* Photo rows */
+.prows { display: grid; gap: .45rem; }
+@media (min-width: 720px) { .prows { grid-template-columns: repeat(3, 1fr); } }
+.prow { display: grid; grid-template-columns: 40% 1fr; height: 5.6rem; border-radius: var(--rc); overflow: hidden; text-decoration: none; }
+.prow .ph { border-radius: 0; height: 100%; }
+.prow .ph img { position: absolute; inset: 0; object-position: center 30%; }
+.prow .lab { background: var(--head); color: var(--head-ink); display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .7rem .8rem; font: 600 1.05rem/1.15 var(--f-display); }
+.prow:nth-child(2) .lab { background: var(--accent); color: var(--accent-ink); }
+.chev { width: 2.1rem; height: 2.1rem; border-radius: 50%; background: #FFF8EC; color: #1F3A2A; display: grid; place-items: center; flex: none; }
+.chev svg.i { width: 1.1rem; height: 1.1rem; stroke-width: 2.4; }
+/* Side-scrolling cards */
+.carousel { display: grid; grid-auto-flow: column; grid-auto-columns: 64%; gap: .55rem; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: .3rem; scrollbar-width: thin; }
+@media (min-width: 720px) { .carousel { grid-auto-columns: 23%; } }
+.carousel > * { scroll-snap-align: start; }
+/* Highlights */
+.hl { list-style: none; margin: 0; padding: 0; display: grid; gap: .8rem; }
+.hl li > a, .hl li > div { display: grid; grid-template-columns: 3.4rem 1fr auto; gap: .8rem; align-items: center; color: inherit; text-decoration: none; }
+.hl .badge { width: 3.4rem; height: 3.4rem; border-radius: 50%; border: 2.5px solid var(--accent); color: var(--accent); display: grid; place-items: center; }
+.hl .badge svg.i { width: 1.8rem; height: 1.8rem; }
+.hl b { font-size: .98rem; display: block; }
+/* Segmented toggle */
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1.5px solid var(--accent); border-radius: 40px; overflow: hidden; }
+.seg button { font: 800 .86rem var(--f-body); border: 0; background: transparent; color: var(--accent); padding: .6rem .4rem; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+/* Pinned action bar, above the tabs */
+.actionbar { position: fixed; left: 0; right: 0; bottom: calc(3.75rem + env(safe-area-inset-bottom, 0px)); z-index: 19; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -6px 18px rgba(0,0,0,.08); }
+.actionbar .in { max-width: 1080px; margin: 0 auto; display: flex; gap: .6rem; align-items: center; padding: .45rem max(var(--gut), env(safe-area-inset-right, 0px)) .45rem max(var(--gut), env(safe-area-inset-left, 0px)); }
+.actionbar .ico { width: 2.5rem; height: 2.5rem; }
+.actionbar p { flex: 1; min-width: 0; font-size: .82rem; line-height: 1.25; }
+.actionbar p b { display: block; font: 600 .98rem/1.15 var(--f-display); }
+.fam.has-bar main { padding-bottom: 10rem; }
+.fam.has-bar ~ .toast, .toast { bottom: calc(8.6rem + env(safe-area-inset-bottom, 0px)); }
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="sprig" viewBox="0 0 120 60"><g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M4 50 C 34 44, 64 32, 116 8"/><path d="M28 44 c-4-10 2-18 10-20 c2 9-3 17-10 20z"/><path d="M28 44 c10 4 18 0 22-7 c-9-3-17 0-22 7z"/><path d="M58 33 c-3-10 3-18 11-19 c1 9-4 16-11 19z"/><path d="M58 33 c10 3 18-1 21-9 c-9-2-17 1-21 9z"/><path d="M88 20 c-2-8 3-14 9-15 c1 7-3 12-9 15z"/><path d="M88 20 c8 2 14-2 16-8 c-7-1-13 2-16 8z"/></g></symbol>
+  <symbol id="mono" viewBox="0 0 48 48"><g fill="none" stroke="currentColor"><rect x="9" y="9" width="30" height="30" transform="rotate(45 24 24)" stroke-width="1.4"/><rect x="12.5" y="12.5" width="23" height="23" transform="rotate(45 24 24)" stroke-width=".7"/></g><text x="24" y="29.5" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="15" font-style="italic" fill="currentColor">AK</text></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M12 16s-4-2.4-4-5a2 2 0 0 1 4-.6 2 2 0 0 1 4 .6c0 2.6-4 5-4 5z"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M3 5h6a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H3z"/><path d="M21 5h-6a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h7z"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3.5"/><path d="M5.5 19c1.5-2.6 3.8-4 6.5-4s5 1.4 6.5 4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v4h16v-4"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 16v4h16v-4"/></symbol>
+  <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.5-5 6.5-5s5.5 1.5 6.5 5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 15c2 .6 3.2 2.2 3.8 5"/></symbol>
+  <symbol id="i-today" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-pages" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+  <symbol id="i-paw" viewBox="0 0 24 24"><circle cx="6" cy="10" r="2"/><circle cx="10" cy="6" r="2"/><circle cx="14" cy="6" r="2"/><circle cx="18" cy="10" r="2"/><path d="M12 12c-3 0-6 4-6 6.5 0 1.5 1.5 2 3 1.6 1.2-.3 2-.6 3-.6s1.8.3 3 .6c1.5.4 3-.1 3-1.6C18 16 15 12 12 12z"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M3 8h4l2-3h6l2 3h4v12H3z"/><circle cx="12" cy="13.5" r="3.5"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="5" rx="1"/><path d="M5 13v8h14v-8M12 8v13"/><path d="M12 8c-1.5-3-5-4-5-1.5S10 8 12 8zM12 8c1.5-3 5-4 5-1.5S14 8 12 8z"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 16.8l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"/></symbol>
+  <symbol id="i-bowl" viewBox="0 0 24 24"><path d="M2.5 12.5h19c0 4-4 7-9.5 7s-9.5-3-9.5-7z"/><path d="M7 12.5c0-1.2.8-2 1.8-2s1.7.8 1.7 2M11 12.5c0-1.5 1-2.5 2.2-2.5s2.3 1 2.3 2.5M15.5 12.5c0-.9.6-1.6 1.5-1.6s1.5.7 1.5 1.6"/><path d="M10 16.5h4"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><circle cx="9.3" cy="10.3" r=".9"/><circle cx="11.2" cy="8.6" r=".9"/><circle cx="12.8" cy="8.6" r=".9"/><circle cx="14.7" cy="10.3" r=".9"/><path d="M12 11.2c-1.3 0-2.6 1.7-2.6 2.8 0 .7.7.9 1.3.7.5-.1.9-.3 1.3-.3s.8.2 1.3.3c.6.2 1.3 0 1.3-.7 0-1.1-1.3-2.8-2.6-2.8z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol>
+  <symbol id="i-draft" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></symbol>
+  <symbol id="i-crate" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M7.5 10v10M12 10v10M16.5 10v10"/></symbol>
+  <symbol id="i-brush" viewBox="0 0 24 24"><rect x="3" y="10" width="13" height="5" rx="2"/><path d="M5 15v3M8 15v3M11 15v3M14 15v3M16 12.5h5"/></symbol>
+  <symbol id="i-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M4 9.5c3 1.5 13 1.5 16 0M4 14.5c3-1.5 13-1.5 16 0"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2.5h6"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V4M4 20h16"/><path d="M8 16v-5M12 16V8M16 16v-3M20 16V6"/></symbol>
+  <symbol id="i-vet" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></symbol>
+</svg>
+
+<div class="proto" role="region" aria-label="Prototype controls">
+  <b>Prototype</b>
+  <div class="grp" id="pv"><button data-view="family">Family</button><button data-view="admin">Breeder</button></div>
+  <div class="grp" id="pf"><span class="note">Family:</span><button data-fam="reed">Reeds · Opal</button><button data-fam="hale">Hales · Onyx, 12-week stay + photos</button></div>
+  <div class="grp" id="ps"><span class="note">Today is:</span><button data-stage="before">Dec 18</button><button data-stage="vet">Dec 24</button><button data-stage="weeks">Jan 12</button><button data-stage="later">Oct 28, a year on</button></div>
+  <div class="grp" id="pt"><button data-theme="auto">Auto</button><button data-theme="light">Light</button><button data-theme="dark">Dark</button></div>
+  <span class="note">Sample families and details; photos from A-K's website.</span>
+</div>
+<div id="app"></div>
+<dialog id="dlg"><div class="in" id="dlgIn"></div></dialog>
+
+<script>
+(() => {
+'use strict';
+const KENNEL = 'A-K Boston Terriers';
+const D = (y, m, d, h = 0, mi = 0) => new Date(y, m - 1, d, h, mi);
+const HOUR = 36e5, DAY = 864e5;
+const STAGES = { before: D(2026, 12, 18, 9, 0), vet: D(2026, 12, 24, 16, 30), weeks: D(2027, 1, 12, 10, 0), later: D(2027, 10, 28, 8, 0) };
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const WD = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const icon = (n) => `<svg class="i" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const time = (d) => { let h = d.getHours(), m = d.getMinutes(); const ap = h < 12 ? 'am' : 'pm'; h = h % 12 || 12; return `${h}:${String(m).padStart(2, '0')} ${ap}`; };
+const short = (d) => `${MON[d.getMonth()]} ${d.getDate()}`;
+const long = (d) => `${WD[d.getDay()]}, ${MONTH[d.getMonth()]} ${d.getDate()}`;
+const withYear = (d) => `${MONTH[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, d.getHours(), d.getMinutes());
+const dayOf = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const calDays = (a, b) => Math.round((dayOf(b) - dayOf(a)) / DAY);
+const toLocalInput = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+const fromLocalInput = (v) => { const [a, b] = v.split('T'); const [y, m, d] = a.split('-').map(Number); const [h, mi] = (b || '0:0').split(':').map(Number); return D(y, m, d, h, mi); };
+const photo = (src, alt, cls = '') => `<span class="ph ${cls}">${src ? `<img src="${src}" alt="${esc(alt)}" loading="lazy">` : ''}</span>`;
+// The contract's rule, one function (plan section 5). Placeholder: 72 hours.
+const vetDeadline = (pickup) => new Date(pickup.getTime() + 72 * HOUR);
+
+// ---------- Real: the kennel, the Gem litter, Willow, Opal, Onyx, Diamond, the stay packages. Made up: the rest. ----------
+const BORN = D(2026, 10, 28, 4, 10);
+const STAY_START = D(2026, 12, 23);
+const PUPS = [
+  { id: 'opal', name: 'Opal', collar: 'pink', sex: 'Female', mark: '♀', he: 'she', his: 'her', him: 'her', family: 'reed', img: 'img/opal.jpg', goHome: D(2026, 12, 23, 11), stay: null, extras: [] },
+  { id: 'onyx', name: 'Onyx', collar: 'black', sex: 'Male', mark: '♂', he: 'he', his: 'his', him: 'him', family: 'hale', img: 'img/onyx.jpg', goHome: D(2027, 1, 20, 11), stay: 'x12', extras: ['x12', 'xphoto'] },
+  { id: 'diamond', name: 'Diamond', collar: 'blue', sex: 'Male', mark: '♂', he: 'he', his: 'his', him: 'him', family: 'ortega', img: null, goHome: D(2026, 12, 23, 14, 30), stay: null, extras: [] },
+];
+const FAMILIES = {
+  reed: { name: 'The Reed family', short: 'Reed family', emails: ['sam.reed@example.com', 'jo.reed@example.com'], pup: 'opal' },
+  hale: { name: 'The Hale family', short: 'Hale family', emails: ['m.hale@example.com'], pup: 'onyx' },
+  ortega: { name: 'The Ortega family', short: 'Ortega family', emails: ['ortega.home@example.com'], pup: 'diamond' },
+  park: { name: 'The Park family', short: 'Park family', emails: ['parks@example.com'], pup: null, note: 'Spring 2025 litter' },
+};
+const EXTRAS = {
+  x10: { name: '10-Week Homegoing', type: 'stay', weeks: 10, every: 7 },
+  x12: { name: '12-Week Extended Homegoing', type: 'stay', weeks: 12, every: 7, skills: ['Individualized socialization', 'Household and environmental exposure', 'Confidence-building experiences', 'Crate-training foundations', 'Potty-training development', 'Grooming and handling practice', 'Age-appropriate enrichment and training', 'Continued structure and household routines'] },
+  x16: { name: '16-Week Premier Development Package', type: 'stay', weeks: 16, every: 7 },
+  xphoto: { name: 'Photo & video package', type: 'media', includes: 'An 8-week photo session: 25+ edited photos and 3 short videos, full size' },
+  xpack: { name: 'Puppy starter pack', type: 'none' },
+};
+const LEVELS = ['Not started', 'Introduced', 'Practicing', 'Reliable'];
+const FOOD = { what: 'Small-breed puppy formula, chicken & rice', bag: '4 lb bag', how: '⅓ cup, three times a day' };
+const PROGRAMS0 = [
+  { id: 'food', name: 'Puppy food program', type: 'Food', where: 'Home, checklist, Feeding chapter', on: true, step: 'Order with A-K’s code for a first-order discount', ic: 'bowl', why: 'The food your puppy already eats, delivered.' },
+  { id: 'ins', name: 'Pet insurance trial', type: 'Insurance', where: 'Home, timeline (5 days after pickup)', on: true, step: 'Activate the free trial within 5 days of pickup', ic: 'shield', why: 'A free trial that starts the day your puppy comes home.' },
+  { id: 'akc', name: 'AKC registration', type: 'Registration', where: 'Timeline (30 days after pickup)', on: true, step: 'Register with the papers in your go-home folder', ic: 'star', why: 'Register with the papers in your go-home folder.' },
+  { id: 'toys', name: 'Toys and chews', type: 'Product', where: 'Go-home bag, A-K’s picks', on: true, step: '—', ic: 'ball', why: 'The chews and toys our puppies already know.' },
+  { id: 'crate', name: 'Crate and bedding', type: 'Product', where: 'Checklist, Crate & potty chapter', on: true, step: '—', ic: 'home', why: 'The 24-inch crate with a divider we use for every puppy.' },
+];
+const CHECKLIST = [
+  { id: 'c1', t: 'Crate, 24 inch, with a divider', link: 'crate', done: true },
+  { id: 'c2', t: 'Washable crate bed and two old towels', done: true },
+  { id: 'c3', t: `Food: ${FOOD.what}, ${FOOD.bag}`, link: 'food', done: false },
+  { id: 'c4', t: 'Stainless food and water bowls', done: true },
+  { id: 'c5', t: 'Soft collar (8–10 in) and a 6 ft leash', done: true },
+  { id: 'c6', t: 'Puppy pads and enzyme cleaner', done: false },
+  { id: 'c7', t: 'Two chew toys sized for small breeds', done: false },
+  { id: 'c8', t: 'A vet visit booked within 72 hours of pickup', vet: true },
+  { id: 'c9', t: 'Car crate or carrier for the ride home', done: false },
+];
+// Each task counts from birth or from pickup (plan 8.2). A birth-dated task that falls
+// before go-home is A-K's: "Done by A-K during the stay".
+const TASKS = [
+  { id: 'book', from: 'pickup', off: -3, title: 'Book the 3-day vet visit', body: 'Vets fill up fast. Book it before your puppy comes home.', vet: 'book' },
+  { id: 'supplies', from: 'pickup', off: -1, title: 'Go-home supplies ready', body: 'Everything on the checklist, with links to what we use.' },
+  { id: 'pickup', from: 'pickup', off: 0, title: 'Pickup day', body: 'At A-K, 11:00 am. Bring the carrier and a towel.' },
+  { id: 'vet', from: 'pickup', off: 3, title: '3-day vet visit, and upload the record', body: 'Your contract asks for it within 72 hours of pickup.', vet: 'visit' },
+  { id: 'ins', from: 'pickup', off: 5, title: 'Activate {name}’s insurance trial', body: 'Free trial through A-K’s insurance program, activated within 5 days of pickup.', prog: 'ins', btn: 'Activate the trial' },
+  { id: 'worm', from: 'birth', off: 70, title: 'Deworming at 10 weeks', body: 'The dose is in your go-home folder.' },
+  { id: 'food', from: 'pickup', off: 14, title: 'Keep the same food for two weeks', body: 'Change food slowly, if at all, over 7–10 days.', prog: 'food', btn: 'Order {name}’s food' },
+  { id: 'v12', from: 'birth', off: 84, title: '12-week vaccines', body: 'Second DHPP. Your vet sets the schedule from here.' },
+  { id: 'akc', from: 'pickup', off: 30, title: 'Register {name} with AKC', body: 'Your registration paper is in the go-home folder. Limited registration.', prog: 'akc', btn: 'Register with AKC' },
+  { id: 'v16', from: 'birth', off: 112, title: '16-week vaccines and rabies', body: 'Ask your vet about the rabies date for your county.' },
+  { id: 'm6', from: 'birth', off: 182, title: 'Six months: spay or neuter talk, adult teeth', body: 'A good time to ask your vet about timing.' },
+  { id: 'adult', from: 'birth', off: 365, title: 'One year: talk to your vet about adult food', body: 'Most Bostons switch between 10 and 12 months.', prog: 'food', btn: 'See adult formulas' },
+];
+const CHAPTERS0 = [
+  { id: 'h1', t: 'Before your puppy comes home', on: true, body: 'Puppy-proof one room first: cords up, shoes away, a gate across the door. Set the crate up a day early so it smells like home on arrival.' },
+  { id: 'h2', t: 'The first night', on: true, body: 'Put the crate beside your bed. Expect two wake-ups: out, praise, back in, no play. The towel in the go-home bag smells of the littermates; put it in the crate.' },
+  { id: 'h3', t: 'Feeding', on: true, prog: 'food', body: `Your puppy eats ${FOOD.what.toLowerCase()}, ${FOOD.how}. Keep the same food for at least two weeks.` },
+  { id: 'h4', t: 'Crate and potty training', on: true, prog: 'crate', body: 'Out after every sleep, meal and play. Same door, same spot, same word. Bostons learn fast and forget faster when they’re excited.' },
+  { id: 'h5', t: 'Vet visits and vaccines', on: true, body: 'Your contract asks for a vet visit within 72 hours of pickup. Bring the shot record from your folder, or show the Records tab.' },
+  { id: 'h6', t: 'Pet insurance', on: true, prog: 'ins', body: 'Every puppy comes with a free trial through A-K’s insurance program. The program’s own page explains what the trial includes.' },
+  { id: 'h7', t: 'Boston basics: heat, breathing, eyes', on: true, body: 'Short faces overheat. Walk early and late in summer, never leave a Boston in a car, and watch for squinting or a red eye: Boston eyes need a vet the same day.' },
+];
+const DRAFTS0 = [
+  { id: 'd1', date: D(2026, 11, 25), kind: 'Milestone', text: 'First food: soaked kibble', pup: 'Opal' },
+  { id: 'd2', date: D(2026, 12, 2), kind: 'Milestone', text: 'First time outside', pup: 'Gem litter' },
+  { id: 'd3', date: D(2026, 12, 9), kind: 'Weight', text: '2 lb 15 oz (week 6)', pup: 'Opal' },
+];
+const WEIGHTS = [6.8, 11, 17, 22, 30, 38, 47, 54, 61];
+const GALLERY = ['img/onyx.jpg', 'img/contessa.jpg', 'img/willow.jpg', 'img/ziva.jpg', 'img/peaches.jpg', 'img/pearl.jpg', 'img/ruby.jpg', 'img/opal.jpg'];
+const VIDEOS = [{ poster: 'img/contessa.jpg', len: '0:48', t: 'First bath' }, { poster: 'img/onyx.jpg', len: '1:12', t: 'Zoomies in the yard' }, { poster: 'img/peaches.jpg', len: '0:35', t: 'Meeting Peaches' }];
+
+// ---------- State ----------
+const S = { view: 'family', fam: 'reed', stage: 'vet', theme: 'auto', zoom: 1 };
+// Text size, remembered on this device only.
+try { const z = +localStorage.getItem('portal-zoom'); if (z >= 1 && z <= 3) S.zoom = z; } catch (e) { /* storage blocked */ }
+document.documentElement.dataset.zoom = S.zoom;
+function reset() {
+  const now = STAGES[S.stage];
+  S.now = now;
+  S.pickup = {}; PUPS.forEach((p) => { S.pickup[p.id] = now >= p.goHome ? p.goHome : null; });
+  S.booked = { opal: S.stage === 'before' ? null : D(2026, 12, 24, 10, 30), onyx: now >= D(2027, 1, 17) ? D(2027, 1, 21, 9, 0) : null, diamond: null };
+  const late = S.stage === 'weeks' || S.stage === 'later';
+  S.proof = {
+    opal: late ? { file: 'vet-visit-dec24.pdf', at: D(2026, 12, 24, 18), ok: true } : null,
+    onyx: S.stage === 'later' ? { file: 'IMG_2231.jpg', at: D(2027, 1, 21, 12), ok: true } : null,
+    diamond: late ? { file: 'receipt.pdf', at: D(2026, 12, 26, 9), ok: true } : null,
+  };
+  S.taskDone = {}; S.check = {};
+  CHECKLIST.forEach((c) => { S.check[c.id] = S.stage === 'before' ? !!c.done : true; });
+  S.familyEntries = [];
+  if (late) S.familyEntries.push({ id: 'f1', pup: 'opal', date: D(2026, 12, 23, 15), title: 'Home!', body: 'Slept the whole ride. Then ran laps of the kitchen.', vis: 'shared', img: null });
+  if (S.stage === 'later') {
+    S.familyEntries.push({ id: 'f2', pup: 'opal', date: D(2027, 6, 2), title: 'First beach day', body: 'Hated the waves, loved the sand.', vis: 'public', img: null });
+    S.familyEntries.push({ id: 'f3', pup: 'onyx', date: D(2027, 1, 20, 16), title: 'Home at last', body: 'Twelve weeks felt like forever. He walked in like he owned the place.', vis: 'shared', img: null });
+  }
+  S.breederEntries = [
+    { id: 'b1', pup: 'opal', date: D(2026, 10, 28), title: 'Hello, world', body: 'Born at 4:10 in the morning, second of three. 6.8 oz and already rooting for the warm spot.', img: 'img/opal.jpg' },
+    { id: 'b2', pup: 'onyx', date: D(2026, 10, 28), title: 'Hello, world', body: 'Third of three, the darkest of the litter with a little white snip. 7.1 oz.', img: 'img/onyx.jpg' },
+    { id: 'b3', pup: '*', date: D(2026, 11, 9), title: 'Eyes open', body: 'Day 12. One eye first, then the other the next morning. Very offended by the light.', img: null },
+    { id: 'b4', pup: '*', date: D(2026, 11, 18), title: 'First wobbly steps', body: 'Three steps, a sit, two more steps. Then a nap.', img: null },
+  ];
+  // Onyx's stay updates (made up), shown once their date has come.
+  S.updates = [
+    { id: 'u1', pup: 'onyx', date: D(2026, 12, 30, 19), week: 1, note: 'First week of his stay. Sleeping through the night in the crate with one trip out at 3 am. Met the vacuum: unimpressed.', weight: '4 lb 6 oz', levels: [1, 1, 1, 2, 1, 1, 1, 1], img: 'img/onyx.jpg', video: null, book: true },
+    { id: 'u2', pup: 'onyx', date: D(2027, 1, 6, 19), week: 2, note: 'Rode to the feed store and back with no fuss. Rings the potty bell about half the time. Nails trimmed without a wiggle.', weight: '5 lb 1 oz', levels: [2, 2, 1, 2, 2, 2, 2, 2], img: null, video: VIDEOS[1], book: false },
+    { id: 'u3', pup: 'onyx', date: D(2027, 1, 13, 19), week: 3, note: 'Walked on a leash the length of the driveway. Crate at bedtime without a peep.', weight: '5 lb 12 oz', levels: [2, 2, 2, 3, 2, 2, 2, 3], img: null, video: null, book: false },
+    { id: 'u4', pup: 'onyx', date: D(2027, 1, 19, 19), week: 4, note: 'Last update before he goes home! Potty bell every time this week.', weight: '6 lb 4 oz', levels: [3, 3, 2, 3, 3, 3, 2, 3], img: null, video: null, book: true },
+  ];
+  S.media = { onyx: {
+    status: { before: 'booked', vet: 'editing', weeks: 'delivered', later: 'delivered' }[S.stage],
+    session: D(2026, 12, 21), due: D(2027, 1, 8), delivered: late ? D(2027, 1, 8, 17) : null,
+    photos: late ? GALLERY.length : S.stage === 'vet' ? 5 : 0, videos: late ? VIDEOS.length : 0,
+  } };
+  S.drafts = DRAFTS0.slice();
+  S.chapters = CHAPTERS0.map((c) => ({ ...c }));
+  S.programs = PROGRAMS0.map((p) => ({ ...p }));
+  S.keep = {}; S.deleted = {};
+  S.bounced = S.stage === 'vet' ? { hale: 'm.hale@example.com · Dec 23, 11:04 am · mailbox full' } : {};
+  S.signedIn = { reed: true, hale: true, ortega: late, park: true };
+  S.lastActive = { reed: now, hale: new Date(now - 2 * DAY), ortega: late ? new Date(now - 40 * DAY) : null, park: D(2026, 11, 20) };
+  S.site = {
+    changes: S.stage === 'before' ? ['Opal: Reserved → Placed', 'Gem litter: new photos (6)', 'Home: holiday hours'] : S.stage === 'vet' ? ['Gem litter: “Opal and Diamond are home”'] : [],
+    published: S.stage === 'before' ? D(2026, 12, 14) : D(2026, 12, 23, 18),
+    messages: [
+      { id: 'm1', from: 'Dana', text: 'Do you have a spring litter planned? We’d love a girl.', at: new Date(now - 3 * HOUR), read: false },
+      { id: 'm2', from: 'Chris', text: 'Is the Gem litter’s dad health tested?', at: new Date(now - 30 * HOUR), read: S.stage !== 'before' },
+      { id: 'm3', from: 'Lee', text: 'Thank you for the Christmas card!', at: new Date(now - 5 * DAY), read: true },
+    ],
+    reviews: late ? [{ id: 'r1', who: 'The Reed family', stars: 5, text: 'Opal is the happiest little girl. A-K answered every question, even at 11 pm.' }] : [],
+  };
+  S.waitlist = [
+    { id: 'w1', name: 'The Kim family', wants: 'Female · spring 2027', since: D(2026, 9, 2) },
+    { id: 'w2', name: 'The Novak family', wants: 'Either · 2027', since: D(2026, 10, 15) },
+    { id: 'w3', name: 'The Brooks family', wants: 'Male · any litter', since: D(2026, 11, 20) },
+  ];
+  S.pupStatus = { opal: S.stage === 'before' ? 'reserved' : 'placed', onyx: S.stage === 'later' ? 'placed' : 'reserved', diamond: S.stage === 'before' ? 'reserved' : 'placed' };
+  S.demo = { reed: { found: 'A past family', state: 'GA', first: 'Yes', home: ['Kids'], repeat: 'No', referredby: 'The Cole family', referred: '1', social: 'Under 1,000', again: 'Likely', budget: 'Comfortable', paid: 'On time' }, hale: { found: 'Facebook', state: 'TN', first: 'No', home: ['Other dogs'], repeat: 'No', referred: '0', social: '1,000–10,000', again: 'Likely', budget: 'Price no object', paid: 'Early' }, ortega: { found: 'Website or Google', state: 'GA', first: 'Yes', home: ['Kids', 'Cats'], repeat: 'No', referred: '0', social: 'Not on social', again: 'Maybe', budget: 'Price-sensitive', paid: 'Needed reminders' } };
+  S.bagItems = BAG0.map((x) => ({ ...x }));
+  S.bag = { reed: BAG0.filter((x) => x.id !== 'g7').map((x) => x.id), hale: BAG0.map((x) => x.id), ortega: BAG0.filter((x) => x.id !== 'g1').map((x) => x.id) }; S.bagExtra = { hale: ['Photo package USB card'] };
+  S.demoFields = DEMO_FIELDS0.map((x) => ({ ...x })); S.results = {}; S.earn = {}; S.repTable = false;
+  S.famTab = 'puppy'; S.bookOpen = false; S.bookFilter = 'all'; S.q = ''; S.editing = null; S.writing = null; S.lightbox = null;
+}
+
+// ---------- Derived ----------
+const pupOf = (fam) => PUPS.find((p) => p.family === fam);
+const P = () => pupOf(S.fam);
+const nm = (s, p = P()) => String(s).replace(/\{name\}/g, p.name);
+const isBirthday = (now) => now.getMonth() === BORN.getMonth() && now.getDate() === BORN.getDate() && now.getFullYear() > BORN.getFullYear();
+const stayWeeks = (p) => Math.round((dayOf(p.goHome) - STAY_START) / (7 * DAY));
+const stayWeek = (p) => Math.min(stayWeeks(p), Math.max(1, Math.floor((S.now - STAY_START) / (7 * DAY)) + 1));
+const updatesFor = (p) => S.updates.filter((u) => u.pup === p.id && u.date <= S.now).sort((a, b) => b.date - a.date);
+function phase(p) {
+  if (isBirthday(S.now)) return 'birthday';
+  if (!S.pickup[p.id]) return p.stay && S.now >= STAY_START ? 'stay' : 'pre';
+  const pr = S.proof[p.id];
+  if (!(pr && pr.ok) && S.now < addDays(vetDeadline(S.pickup[p.id]), 2)) return 'vet';
+  return 'settling';
+}
+function dueOf(p, t) {
+  if (t.vet === 'visit') return vetDeadline(S.pickup[p.id] || p.goHome);
+  if (t.id === 'pickup') return S.pickup[p.id] || p.goHome;
+  return dayOf(addDays(t.from === 'birth' ? BORN : p.goHome, t.off));
+}
+const whose = (p, t) => (t.from === 'birth' && dueOf(p, t) <= p.goHome ? 'ak' : 'family');
+function taskState(p, t) {
+  const d = dueOf(p, t), by = whose(p, t);
+  let done;
+  if (t.vet === 'book') done = !!S.booked[p.id];
+  else if (t.vet === 'visit') done = !!S.proof[p.id];
+  else if (t.id === 'pickup') done = !!S.pickup[p.id];
+  else done = !!S.taskDone[p.id + ':' + t.id] || (by === 'ak' ? d <= S.now : S.now > addDays(d, 1));
+  return { done, due: d, by, overdue: !done && by === 'family' && addDays(d, 1) < S.now };
+}
+const openTasks = (p, n) => TASKS.map((t) => ({ t, s: taskState(p, t) })).filter((x) => !x.s.done && x.s.by === 'family').sort((a, b) => a.s.due - b.s.due).slice(0, n);
+const disclosure = `<p class="disclose">${KENNEL} may earn a commission or product credit when you use some links on this page. We only link to what we use for our own Bostons.</p>`;
+
+// ---------- Family view ----------
+const cap1 = (s) => s[0].toUpperCase() + s.slice(1);
+const calPage = (d) => `<span class="calpage" aria-hidden="true"><b>${MON[d.getMonth()].toUpperCase()}</b><span>${d.getDate()}</span><i>${WD[d.getDay()].slice(0, 3)}</i></span>`;
+const sexMark = (p) => `<span class="sex ${p.sex === 'Female' ? 'f' : 'm'}" aria-label="${p.sex}">${p.mark}</span>`;
+const ring = (done, total, label) => { const r = 30, c = 2 * Math.PI * r; return `<svg class="ring" viewBox="0 0 72 72" role="img" aria-label="${label}"><circle class="bg" cx="36" cy="36" r="${r}"/><circle class="fg" cx="36" cy="36" r="${r}" stroke-dasharray="${c * done / total} ${c}"/><text x="36" y="41" text-anchor="middle">${done}/${total}</text></svg>`; };
+function header(sub, subIcon) {
+  const fam = S.view === 'family';
+  return `<header class="app"><div class="in">
+    <a class="brand" href="${fam ? '#f-home' : '#a-today'}"><span class="logo">${fam ? '<img src="img/ak-logo.jpg" alt="">' : '<img src="img/kp-icon.png" alt="">'}<svg aria-hidden="true"><use href="#mono"/></svg></span><div><b>${KENNEL}</b><span class="sub">${icon(subIcon)}${sub}</span></div></a>
+    <button class="hb" data-act="zoom" aria-label="Text size: ${['normal', 'large', 'larger'][S.zoom - 1]}. Change">Aa</button>
+    <button class="hb" data-act="${fam ? 'account' : 'account-admin'}" aria-label="Your account">${icon('user')}</button>
+  </div></header>`;
+}
+// --- Home tiles ---
+function heroTile(p, ph) {
+  const F = FAMILIES[p.family], now = S.now;
+  const t = {
+    pre: ['Welcome!', `${p.name} comes home in ${calDays(now, p.goHome)} days`],
+    vet: ['Welcome home', `${p.name} is home`],
+    stay: [`Week ${stayWeek(p)} of ${stayWeeks(p)}`, `${p.name}’s extended stay`],
+    settling: [`Hello, ${F.short}`, `${Math.round((now - S.pickup[p.id]) / DAY / 7)} weeks home`],
+    birthday: ['Happy birthday', `${p.name} is one today`],
+  }[ph];
+  return `<div class="tile photo hero s2">${photo('img/contessa.jpg', 'A Boston Terrier puppy at A-K, sitting on a grey blanket')}<div class="cap"><span class="script">${t[0]}</span><h1>${t[1]}</h1></div></div>`;
+}
+function pupTile(p) {
+  const stay = p.stay ? EXTRAS[p.stay] : null;
+  return `<a class="tile pup" href="#f-records">${photo(p.img, p.name, 'round')}<span class="pname">${p.name}${sexMark(p)}</span><span class="small muted">Boston Terrier · ${p.collar} collar</span>
+    <ul class="facts"><li>${icon('cal')}Born ${short(BORN)}, ${BORN.getFullYear()}</li><li>${icon('home')}Home ${short(p.goHome)}${stay ? ' · ' + stay.weeks + '-wk stay' : ''}</li></ul></a>`;
+}
+function statusTile(p, ph) {
+  const now = S.now;
+  if (ph === 'vet') {
+    const dl = vetDeadline(S.pickup[p.id]), left = Math.max(0, Math.round((dl - now) / HOUR)), pr = S.proof[p.id];
+    return `<div class="tile green"><span class="eyebrow">3-day vet visit</span><div class="calrow">${calPage(dl)}<div><p class="bigline">${pr ? (pr.ok ? 'Done' : 'Uploaded') : left + ' h left'}</p><p class="small">Due by ${time(dl)}</p></div></div>
+      ${pr ? `<span class="small"><b>${pr.ok ? '✓ Accepted by A-K' : 'A-K will check it'}</b></span>` : `<label class="btn onfill small">${icon('up')}Upload record<input class="sr" type="file" accept="image/*,application/pdf" data-act="proof"></label>`}</div>`;
+  }
+  if (ph === 'pre') return `<div class="tile green"><span class="eyebrow">Comes home</span><div class="calrow">${calPage(p.goHome)}<div><p class="bigline">${calDays(now, p.goHome)} days</p><p class="small">Pickup ${time(p.goHome)}</p></div></div><a class="btn onfill small" href="#${p.stay ? 'f-stay' : 'f-timeline'}">${p.stay ? 'The stay plan' : 'What to do first'}</a></div>`;
+  if (ph === 'stay') return `<a class="tile dark" href="#f-stay"><span class="eyebrow">Extended stay</span><div class="calrow">${ring(stayWeek(p) - 1 + (updatesFor(p).length >= stayWeek(p) ? 1 : 0), stayWeeks(p), 'Weeks done')}<div><p class="bigline">Week ${stayWeek(p)}</p><p class="small">of ${stayWeeks(p)} · home ${short(p.goHome)}</p></div></div><span class="weeks">${Array.from({ length: stayWeeks(p) }, (_, i) => `<span class="${i + 1 < stayWeek(p) ? 'on' : i + 1 === stayWeek(p) ? 'now' : ''}"></span>`).join('')}</span></a>`;
+  if (ph === 'settling') { const n = openTasks(p, 1)[0]; return `<div class="tile green"><span class="eyebrow">Next up</span>${n ? `<div class="calrow">${calPage(n.s.due)}<div><p class="bigline" style="font-size:1.05rem">${esc(nm(n.t.title, p))}</p></div></div>${n.t.prog ? `<a class="btn onfill small ext" href="#" data-act="go" data-prog="${n.t.prog}">${esc(nm(n.t.btn, p))}</a>` : ''}` : '<p>All caught up.</p>'}</div>`; }
+  return `<div class="tile green"><span class="eyebrow">Birthday</span><div class="calrow">${calPage(now)}<div><p class="bigline">1 year</p><p class="small">Born ${withYear(BORN)}</p></div></div></div>`;
+}
+function bookVetTile(p) {
+  const dl = vetDeadline(p.goHome), b = S.booked[p.id];
+  return `<div class="tile warm s2"><div class="calrow"><span class="ico big">${icon('vet')}</span><div><span class="eyebrow">Do this week</span><h2>Book ${p.name}’s vet visit</h2></div></div>
+    <p class="small">Your contract asks for a visit within 72 hours of pickup: by <b>${long(dl)}, ${time(dl)}</b>. Vets fill up fast.</p>
+    ${b ? `<p class="small"><span class="st ok">Booked</span> ${long(b)}, ${time(b)} <button class="btn text small" data-act="book">Change</button></p>` : `<button class="btn line small" data-act="book" style="justify-self:start">${icon('check')}I’ve booked it</button>`}</div>`;
+}
+function checklistTile(p) {
+  const done = CHECKLIST.filter((c) => (c.vet ? !!S.booked[p.id] : S.check[c.id])).length;
+  return `<div class="tile full"><div class="between"><h2>Go-home checklist</h2><span class="small muted">${done} of ${CHECKLIST.length} ready</span></div>
+    <div class="progress" aria-hidden="true"><i style="width:${Math.round(done / CHECKLIST.length * 100)}%"></i></div>
+    <div class="checks">${CHECKLIST.map((c) => `<div><label class="check"><input type="checkbox" data-act="check" data-id="${c.id}" ${c.vet ? (S.booked[p.id] ? 'checked' : '') + ' disabled' : (S.check[c.id] ? 'checked' : '')}>${esc(c.t)}</label>${c.link ? `<a class="btn text small ext" href="#" data-act="go" data-prog="${c.link}">${c.link === 'food' ? 'Order' : 'See'}</a>` : ''}</div>`).join('')}</div></div>`;
+}
+const foodTile = (p) => `<a class="tile band" href="#" data-act="go" data-prog="food"><span class="ico big">${icon('bowl')}</span><span class="eyebrow">What ${p.he}’s eating</span><h3>${esc(FOOD.what)}</h3><span class="small muted">${esc(FOOD.how)}</span><span class="btn line small ext" style="justify-self:start">Order</span></a>`;
+function insTile(p) {
+  const s = taskState(p, TASKS.find((x) => x.id === 'ins'));
+  return `<a class="tile tint" href="#" data-act="go" data-prog="ins"><span class="ico big">${icon('shield')}</span><span class="eyebrow">${s.done ? 'Done' : 'By ' + short(s.due)}</span><h3>Free insurance trial</h3><span class="small muted">Activate within 5 days of pickup.</span><span class="btn line small ext" style="justify-self:start">Activate</span></a>`;
+}
+const bookTile = (p) => `<a class="tile tint" href="#f-book" data-act="openbook"><span class="ico big">${icon('camera')}</span><span class="eyebrow">Baby book</span><h3>Add a photo of ${p.name}</h3><span class="small muted">A weight, a first, a favourite nap spot.</span></a>`;
+function stepperTile(p) {
+  const days = S.pickup[p.id] ? (S.now - S.pickup[p.id]) / DAY : -1;
+  const st = [['Go home', 0], ['Week 1', 1], ['Weeks 2–4', 7], ['Months 2–6', 28], ['Later', 180]];
+  const idx = st.reduce((a, [, d], i) => (days >= d ? i : a), -1);
+  const nx = openTasks(p, 2);
+  return `<div class="tile s2"><div class="between"><h2>Timeline</h2><a class="btn text small" href="#f-timeline">All →</a></div>
+    <div class="stepper" style="--n:${st.length}">${st.map(([l], i) => `<div class="s ${i < idx ? 'done' : i === idx ? 'now' : ''}"><span class="dot">${i < idx ? icon('check') : i === idx ? icon('paw') : ''}</span>${l}</div>`).join('')}</div>
+    ${nx.length ? `<div>${nx.map(({ t, s }) => taskRow(p, t, s)).join('')}</div>` : ''}</div>`;
+}
+function quickLinks(p, ph) {
+  const hasPkg = p.extras.includes('xphoto');
+  const tiles = [['#f-handbook', 'book', 'Handbook'], ['#f-photos', 'camera', hasPkg ? 'Photo package' : 'Photos'], ['#f-records', 'file', 'Records'], ['#f-book', 'heart', 'Baby book'],
+    p.stay && ph === 'stay' ? ['#f-stay', 'star', 'Stay updates'] : ['#f-timeline', 'cal', 'Timeline'], ['#f-picks', 'gift', 'A-K’s picks']];
+  return `<div class="tile full"><h2>Quick links</h2><div class="qgrid">${tiles.map(([h, ic, l]) => `<a class="qtile" href="${h}"><span class="ico">${icon(ic)}</span>${l}</a>`).join('')}</div></div>`;
+}
+function updateTile(p, u, wide) {
+  return u.video
+    ? `<div class="tile photo ${wide ? 's2' : ''}">${photo(u.video.poster, '')}<button class="play" data-act="playvideo" data-t="${esc(u.video.t)}" aria-label="Play video: ${esc(u.video.t)}" style="border:0;background:none;cursor:pointer"><span>${icon('play')}</span></button><div class="cap"><span class="eyebrow" style="color:#F2DFAE">Week ${u.week} · ${short(u.date)} · video ${u.video.len}</span><p class="small">${esc(u.note)}</p></div></div>`
+    : `<a class="tile photo ${wide ? 's2' : ''}" href="#f-stay">${photo(u.img || p.img, p.name)}<div class="cap"><span class="eyebrow" style="color:#F2DFAE">Week ${u.week} · ${short(u.date)}</span><p class="small">${esc(u.note)}</p></div></a>`;
+}
+function skillsTile(p) {
+  const x = EXTRAS[p.stay], ups = updatesFor(p), last = ups[0], first = ups[ups.length - 1];
+  const top = x.skills.map((s, i) => ({ s, i, lv: last ? last.levels[i] : 0, gain: last && first && last !== first ? last.levels[i] - first.levels[i] : 0 })).sort((a, b) => b.gain - a.gain).slice(0, 3);
+  return `<a class="tile" href="#f-stay"><span class="eyebrow">Skills ${last ? '· week ' + last.week : ''}</span>${top.map((k) => `<div style="display:grid;gap:3px"><span class="small" style="font-weight:700">${esc(k.s)}</span>${lvlBar(k.lv, !!last)}</div>`).join('')}<span class="btn text small">All ${x.skills.length} skills →</span></a>`;
+}
+const lvlBar = (lv, on) => `<span class="lvl" aria-label="${LEVELS[lv]}">${[1, 2, 3].map((k) => `<i class="${on && k <= lv ? 'on' : ''}"></i>`).join('')}</span>`;
+function stayPlanTile(p) {
+  const x = EXTRAS[p.stay];
+  return `<a class="tile tint s2" href="#f-stay"><div class="calrow"><span class="ico big">${icon('star')}</span><div><span class="eyebrow">${x.name}</span><h2>What ${p.name} will work on</h2></div></div><ul class="steps">${x.skills.slice(0, 4).map((s) => `<li><span class="n">✓</span>${esc(s)}</li>`).join('')}</ul><span class="small muted">${short(STAY_START)} to ${short(p.goHome)}, an update from A-K every week.</span></a>`;
+}
+function packageTile(p) {
+  const m = S.media[p.id]; if (!m) return '';
+  if (m.status === 'delivered') return `<a class="tile" href="#f-photos"><span class="eyebrow">Ready ${short(m.delivered)}</span><div class="collage">${GALLERY.slice(0, 4).map((g) => photo(g, '')).join('')}</div><h3>Your photo package</h3><span class="small muted">${m.photos} photos · ${m.videos} videos</span></a>`;
+  return `<a class="tile band" href="#f-photos"><span class="ico big">${icon('camera')}</span><span class="eyebrow">Photo &amp; video package</span><h3>${m.status === 'booked' ? 'Session ' + short(m.session) : 'Ready by ' + short(m.due)}</h3>${pipeline(m.status)}</a>`;
+}
+const offerTile = (p) => `<div class="tile photo">${photo('img/willow.jpg', 'Willow, the Gem litter’s mother')}<div class="cap"><span class="eyebrow" style="color:#F2DFAE">From A-K</span><h2>Keep ${p.name}’s puppy days</h2><p class="small">Our photo &amp; video package, delivered here.</p><button class="btn small" data-act="toast" data-msg="Sends A-K a message about the photo package">Ask about this</button></div></div>`;
+const videoTile = (v) => `<button class="ph" data-act="playvideo" data-t="${esc(v.t)}" aria-label="Play video: ${esc(v.t)}"><img src="${v.poster}" alt="" loading="lazy"><span class="play"><span>${icon('play')}</span></span><span class="vlen">${v.len}</span></button>`;
+function pipeline(status) {
+  const st = ['booked', 'shooting', 'editing', 'delivered'], i = st.indexOf(status);
+  return `<div class="pipeline">${['Booked', 'Shooting', 'Editing', 'Delivered'].map((l, j) => `<span class="${j < i ? 'done' : j === i ? (status === 'delivered' ? 'done' : 'now') : ''}">${l}</span>`).join('')}</div>`;
+}
+function vetStepsTile(p) {
+  const b = S.booked[p.id], pr = S.proof[p.id];
+  return `<div class="tile s2"><h2>${p.name}’s vet visit</h2><ol class="steps"><li><span class="n ${b ? 'done' : ''}">${b ? '✓' : '1'}</span><div>${b ? `Booked ${long(b)}, ${time(b)}` : 'Book the visit'} <button class="btn text small" data-act="book">${b ? 'Change' : 'Add booking'}</button></div></li>
+    <li><span class="n ${pr ? 'done' : ''}">${pr ? '✓' : '2'}</span><div>${pr ? `Uploaded ${esc(pr.file)}` : 'Upload the vet’s record or receipt after the visit'}</div></li></ol><p class="small muted">This is a reminder. Your contract sets the requirement and the deadline.</p></div>`;
+}
+// --- Section types (each once a page) ---
+const SKILL_ICONS = ['people', 'home', 'star', 'crate', 'paw', 'brush', 'ball', 'clock'];
+function gauge(ic, label, lv, gain, on) {
+  const r = 40, C = 2 * Math.PI * r, arc = C * 0.75, f = on ? lv / 3 : 0;
+  return `<a class="gauge" href="#f-stay"><svg viewBox="0 0 100 92" role="img" aria-label="${esc(label)}: ${on ? LEVELS[lv] : 'not started'}"><circle class="trk" cx="50" cy="50" r="${r}" stroke-dasharray="${arc} ${C}" transform="rotate(135 50 50)"/>${f ? `<circle class="val" cx="50" cy="50" r="${r}" stroke-dasharray="${arc * f} ${C}" transform="rotate(135 50 50)"/>` : ''}<use href="#i-${ic}" x="30" y="28" width="40" height="40"/></svg><b>${esc(label)}</b><span class="${gain > 0 ? 'up' : ''}">${on ? LEVELS[lv] : 'Not started'}${gain > 0 ? ' · +' + gain : ''}</span></a>`;
+}
+function gaugesFor(p, n) {
+  const x = EXTRAS[p.stay], ups = updatesFor(p), last = ups[0], first = ups[ups.length - 1];
+  const all = x.skills.map((s, i) => ({ s, i, lv: last ? last.levels[i] : 0, gain: last && first && last !== first ? last.levels[i] - first.levels[i] : 0 }));
+  const list = n ? all.slice().sort((a, b) => b.gain - a.gain || b.lv - a.lv).slice(0, n) : all;
+  const short = (s) => s.replace('Individualized ', '').replace(' and environmental exposure', '').replace('-building experiences', '').replace(' foundations', '').replace('-training development', ' training').replace(' and handling practice', ' & handling').replace('Age-appropriate ', '').replace(' and training', '').replace('Continued structure and household routines', 'Routines');
+  return `<div class="gauges">${list.map((k) => gauge(SKILL_ICONS[k.i], cap1(short(k.s)), k.lv, k.gain, !!last)).join('')}</div>`;
+}
+function numSteps(items) {
+  return `<ol class="numsteps">${items.map((it, i) => `<li><span class="num ${it.done ? 'done' : ''}">${it.done ? icon('check') : i + 1}</span><div><h3>${it.h}</h3>${it.p ? `<p>${it.p}</p>` : ''}${it.act || ''}</div></li>`).join('')}</ol>`;
+}
+function foodBand(p) {
+  return `<section class="sec deep bleed"><span class="eyebrow">What ${p.he}’s eating now</span><h2 class="big-h">Keep ${p.name} on the same food</h2>
+    <div class="prodrow"><span class="box">${icon('bowl')}</span><div><b>${esc(FOOD.what)}</b><p class="small" style="opacity:.85">${esc(FOOD.bag)} · ${esc(FOOD.how)}</p></div></div>
+    <div class="trio"><div>${icon('check')}The food ${p.he} eats at A-K</div><div>${icon('check')}No upset tummy in week one</div><div>${icon('check')}First-order discount</div></div>
+    <a class="pill light ext" href="#" data-act="go" data-prog="food">Order ${p.name}’s food</a></section>`;
+}
+function programsList(p) {
+  const ins = taskState(p, TASKS.find((x) => x.id === 'ins')), akc = taskState(p, TASKS.find((x) => x.id === 'akc'));
+  const row = (prog, ic, t, sub, st) => `<li><a href="#" data-act="go" data-prog="${prog}"><span class="badge">${icon(ic)}</span><span><b>${t}</b><span class="small muted">${sub}</span></span>${st}</a></li>`;
+  return `<section class="sec paper bleed"><h2>Included with ${p.name}</h2><ul class="hl">
+    ${row('ins', 'shield', 'Free pet insurance trial', `Activate by ${short(ins.due)}, within 5 days of pickup`, ins.done ? '<span class="st ok">Done</span>' : '<span class="chev">' + icon('chev') + '</span>')}
+    ${row('akc', 'star', 'AKC registration', `Papers in your folder · by ${short(akc.due)}`, akc.done ? '<span class="st ok">Done</span>' : '<span class="chev">' + icon('chev') + '</span>')}
+    <li><a href="#f-picks"><span class="badge">${icon('gift')}</span><span><b>A-K’s picks</b><span class="small muted">The crate, bed and toys we use</span></span><span class="chev">${icon('chev')}</span></a></li></ul></section>`;
+}
+function readNext() {
+  const rows = [['img/willow.jpg', 'The first night', 'h2'], ['img/ziva.jpg', 'Crate and potty training', 'h4'], ['img/peaches.jpg', 'Boston basics', 'h7']];
+  return `<section class="stack" style="gap:.5rem"><div class="between"><h2>Read next</h2><a class="btn text small" href="#f-handbook">Handbook →</a></div><div class="prows">${rows.map(([im, t]) => `<a class="prow" href="#f-handbook" data-act="chapter" data-q="${esc(t.split(' ')[0])}">${photo(im, '')}<span class="lab">${t}<span class="chev">${icon('chev')}</span></span></a>`).join('')}</div></section>`;
+}
+function bookCarousel(p) {
+  const items = [...S.breederEntries.filter((e) => e.pup === p.id || e.pup === '*'), ...S.updates.filter((u) => u.pup === p.id && u.date <= S.now).map((u) => ({ date: u.date, title: `Stay, week ${u.week}`, img: u.img || (u.video && u.video.poster) || p.img })), ...S.familyEntries.filter((e) => e.pup === p.id)].sort((a, b) => b.date - a.date).slice(0, 6);
+  return `<section class="stack" style="gap:.5rem"><div class="between"><h2>${p.name}’s baby book</h2><a class="btn text small" href="#f-book">All →</a></div>
+    <div class="carousel">${items.map((e) => `<a class="tile pcard" href="#f-book">${photo(e.img || p.img, e.title)}<span class="body"><span class="eyebrow">${short(e.date)}</span><h3>${esc(e.title)}</h3></span></a>`).join('')}<a class="tile tint" href="#f-book" data-act="openbook" style="align-content:center;justify-items:center;text-align:center"><span class="ico big">${icon('camera')}</span><h3>Add yours</h3></a></div></section>`;
+}
+function actionBar(p, ph) {
+  const now = S.now;
+  let ic, t, sub, btn;
+  if (ph === 'vet' && !S.proof[p.id]) { const dl = vetDeadline(S.pickup[p.id]); ic = 'vet'; t = `${Math.max(0, Math.round((dl - now) / HOUR))} hours left`; sub = `Vet visit due ${short(dl)}, ${time(dl)}`; btn = `<label class="btn solid small">${icon('up')}Upload<input class="sr" type="file" accept="image/*,application/pdf" data-act="proof"></label>`; }
+  else if ((ph === 'pre' || ph === 'stay') && calDays(now, p.goHome) <= 14 && !S.booked[p.id]) { ic = 'cal'; t = 'Book the vet visit'; sub = `Needed by ${short(vetDeadline(p.goHome))}`; btn = '<button class="btn solid small" data-act="book">I’ve booked it</button>'; }
+  else if (ph === 'stay') { const u = updatesFor(p)[0]; ic = 'star'; t = u ? `Week ${u.week} update` : 'Stay started'; sub = u ? `From A-K, ${short(u.date)}` : `First update ${short(addDays(STAY_START, 7))}`; btn = '<a class="btn solid small" href="#f-stay">See it</a>'; }
+  else if (ph === 'settling') { const n = openTasks(p, 1)[0]; if (!n) return ''; ic = 'cal'; t = nm(n.t.title, p); sub = `By ${short(n.s.due)}`; btn = n.t.prog ? `<a class="btn solid small ext" href="#" data-act="go" data-prog="${n.t.prog}">Open</a>` : `<button class="btn solid small" data-act="done" data-id="${n.t.id}">Done</button>`; }
+  else return '';
+  return `<div class="actionbar" role="region" aria-label="Do this now"><div class="in"><span class="ico">${icon(ic)}</span><p><b>${esc(t)}</b>${esc(sub)}</p>${btn}</div></div>`;
+}
+function famHome() {
+  const p = P(), ph = phase(p), out = [];
+  const soon = calDays(S.now, p.goHome) <= 14 && !S.pickup[p.id];
+  out.push(heroTile(p, ph).replace('class="tile photo hero s2"', 'class="tile photo hero bleed"'));
+  out.push(`<div class="bento">${pupTile(p)}${statusTile(p, ph)}</div>`);
+  if (ph === 'stay') {
+    const u = updatesFor(p)[0];
+    out.push(`<section class="sec mint bleed"><div class="between"><div><span class="eyebrow">${u ? 'As of week ' + u.week : 'The stay plan'}</span><h2 class="big-h">How ${p.name} is doing</h2></div><a class="btn text small" href="#f-stay">All ${EXTRAS[p.stay].skills.length} →</a></div>${gaugesFor(p, 4)}</section>`);
+    if (u) out.push(`<div class="bento">${updateTile(p, u, true)}</div>`);
+  }
+  if (ph === 'pre' && p.stay) out.push(`<section class="sec mint bleed"><span class="eyebrow">${EXTRAS[p.stay].name}</span><h2 class="big-h">How ${p.name}’s stay works</h2>${numSteps([
+    { h: `The stay starts ${short(STAY_START)}`, p: `${cap1(p.he)} stays with A-K until ${long(p.goHome)}.` },
+    { h: 'An update every week', p: 'Photos, a short video and how each skill is coming along, here and by email.' },
+    { h: `Home at ${EXTRAS[p.stay].weeks} weeks`, p: 'Crate and potty foundations started, handling and grooming practiced.' }])}</section>`);
+  if (ph === 'vet') { const b = S.booked[p.id], pr = S.proof[p.id], dl = vetDeadline(S.pickup[p.id]);
+    out.push(`<section class="sec mint bleed"><span class="eyebrow">Your contract’s 3-day visit</span><h2 class="big-h">${p.name}’s vet visit</h2>${numSteps([
+      { done: !!b, h: b ? `Booked ${short(b)}, ${time(b)}` : 'Book the visit', act: `<button class="btn text small" data-act="book">${b ? 'Change' : 'Add booking'}</button>` },
+      { done: !!pr, h: `See the vet by ${long(dl)}, ${time(dl)}`, p: 'Bring the shot record from your folder, or show the Records tab.' },
+      { done: !!pr, h: pr ? 'Record uploaded' : 'Upload the record', p: pr ? (pr.ok ? 'Accepted by A-K.' : 'A-K will check it.') : 'A photo of the receipt or report is fine.' }])}<p class="small muted">This is a reminder. Your contract sets the requirement and the deadline.</p></section>`); }
+  if (ph === 'settling') { const nx = openTasks(p, 3);
+    out.push(`<section class="sec mint bleed"><span class="eyebrow">${p.name}’s first months</span><h2 class="big-h">What’s next</h2>${numSteps(nx.map(({ t, s }) => ({ h: esc(nm(t.title, p)), p: `By ${long(s.due)}. ${esc(t.body)}`, act: t.prog ? `<a class="btn line small ext" href="#" data-act="go" data-prog="${t.prog}" style="margin-top:.4rem">${esc(nm(t.btn, p))}</a>` : '' })))}<a class="btn text small" href="#f-timeline">The whole timeline →</a></section>`); }
+  if (ph === 'birthday') { const b = S.breederEntries.find((e) => e.pup === p.id); out.push(`<div class="bento"><a class="tile photo" href="#f-book">${photo(b.img, b.title)}<div class="cap"><span class="eyebrow" style="color:#F2DFAE">A year ago today</span><h2>${esc(b.title)}</h2></div></a><button class="tile tint" data-act="toast" data-msg="Printable baby book: phase 3"><span class="ico big">${icon('heart')}</span><span class="eyebrow">Keepsake</span><h3>Print ${p.name}’s first year</h3><span class="small muted">The whole baby book as a photo book.</span></button></div>`); }
+  if ((ph === 'pre' || ph === 'stay') && soon) out.push(checklistTile(p).replace('class="tile full"', 'class="tile"'));
+  if (p.extras.includes('xphoto')) { const m = S.media[p.id]; out.push(m.status === 'delivered'
+      ? `<section class="stack" style="gap:.5rem"><div class="between"><h2>Your photo package</h2><a class="btn text small" href="#f-photos">All ${m.photos + m.videos} →</a></div><div class="carousel">${VIDEOS.slice(0, 1).map((v) => `<div class="tile pcard">${videoTile(v).replace('class="ph"', 'class="ph" style="aspect-ratio:4/3;border-radius:0"')}<span class="body"><span class="eyebrow">Video · ${v.len}</span><h3>${v.t}</h3></span></div>`).join('')}${GALLERY.slice(0, 5).map((g, i) => `<a class="tile pcard" href="#f-photos">${photo(g, '')}<span class="body"><span class="eyebrow">Photo ${i + 1}</span></span></a>`).join('')}</div></section>`
+      : `<div class="bento">${packageTile(p)}<div class="tile band"><span class="eyebrow">What you’ll get</span><h3>25+ photos, 3 videos</h3><span class="small muted">Full size, delivered here, kept at least two years.</span></div></div>`); }
+  else if (ph === 'pre') out.push(`<div class="bento">${offerTile(p).replace('class="tile photo"', 'class="tile photo s2"')}</div>`);
+  if (ph !== 'birthday') out.push(foodBand(p));
+  if (ph === 'settling' || ph === 'stay' || ph === 'birthday') out.push(bookCarousel(p));
+  if (ph !== 'birthday') out.push(programsList(p));
+  out.push(readNext(), `<div class="bento">${quickLinks(p, ph)}</div>`, disclosure);
+  return out.join('');
+}
+
+// --- Other pages ---
+function taskRow(p, t, s) {
+  const st = s.done ? `<span class="st ok">${s.by === 'ak' ? 'Done by A-K' : 'Done'}</span>` : s.by === 'ak' ? '<span class="st">A-K will do this</span>' : s.overdue ? '<span class="st bad">Overdue</span>' : (openTasks(p, 1)[0]?.t.id === t.id ? '<span class="st next">Next</span>' : '<span class="st">Later</span>');
+  const act = !s.done && s.by === 'family' && !t.vet && t.id !== 'pickup' ? `<div class="row">${t.prog ? `<a class="btn line small ext" href="#" data-act="go" data-prog="${t.prog}" data-task="${t.id}">${esc(nm(t.btn, p))}</a>` : ''}<button class="btn text small" data-act="done" data-id="${t.id}">Mark done</button></div>` : '';
+  const body = s.by === 'ak' ? `${p.stay ? `During ${p.name}’s stay with A-K.` : 'Before go-home, at A-K.'} ${t.body}` : t.body;
+  return `<div class="task ${s.done ? 'done' : ''}"><div class="d">${MON[s.due.getMonth()]}<b>${s.due.getDate()}</b></div><div class="stack" style="gap:.3rem"><div class="between"><h3>${esc(nm(t.title, p))}</h3>${st}</div><p class="small">${esc(body)}</p>${act}</div></div>`;
+}
+const pageHead = (eyebrow, title, sub) => `<div class="tile full band"><span class="eyebrow">${eyebrow}</span><h1>${title}</h1>${sub ? `<p class="small muted">${sub}</p>` : ''}</div>`;
+function famTimeline() {
+  const p = P();
+  const rows = TASKS.map((t) => ({ t, s: taskState(p, t) })).sort((a, b) => a.s.due - b.s.due);
+  const grp = (x) => (x.s.by === 'ak' ? (p.stay ? `During ${p.name}’s stay` : 'Before go-home') : x.s.due < dayOf(p.goHome) ? 'Before go-home' : x.s.due <= addDays(p.goHome, 7) ? 'First week' : x.s.due <= addDays(p.goHome, 60) ? 'First two months' : 'Ongoing');
+  const groups = [...new Set(rows.map(grp))];
+  return `<div class="bento">${pageHead(`${p.name}’s first year`, 'Timeline', `Dated from ${p.his} birthday (${short(BORN)}) and pickup (${short(p.goHome)}). Reminders stop once a step is done.`)}
+    ${groups.map((g) => `<div class="tile s2"><h2>${g}</h2><div>${rows.filter((x) => grp(x) === g).map((x) => taskRow(p, x.t, x.s)).join('')}</div></div>`).join('')}</div>${disclosure}`;
+}
+function famStay() {
+  const p = P();
+  if (!p.stay) return famTimeline();
+  const x = EXTRAS[p.stay], ups = updatesFor(p), first = ups[ups.length - 1], last = ups[0];
+  const n = stayWeeks(p), w = S.now < STAY_START ? 0 : stayWeek(p), ended = !!S.pickup[p.id];
+  const ringTile = `<div class="tile dark"><span class="eyebrow">${ended ? 'Stay complete' : w ? 'This week' : 'Starts soon'}</span><div class="calrow">${ring(ended ? n : Math.max(0, w - 1 + (ups.length >= w && w ? 1 : 0)), n, 'Weeks done')}<div><p class="bigline">${ended ? 'Home' : w ? 'Week ' + w : short(STAY_START)}</p><p class="small">of ${n} weeks</p></div></div></div>`;
+  const homeTile = `<div class="tile green"><span class="eyebrow">Comes home</span><div class="calrow">${calPage(p.goHome)}<div><p class="bigline">${ended ? 'Home!' : calDays(S.now, p.goHome) + ' days'}</p><p class="small">${time(p.goHome)}</p></div></div></div>`;
+  return `<div class="bento">${pageHead(x.name, `${p.name}’s extended stay`, `${long(STAY_START)} to ${long(p.goHome)}. A new update from A-K every week.`)}${ringTile}${homeTile}
+    <section class="sec mint bleed full" style="grid-column:1/-1"><div class="between"><h2 class="big-h">Skills</h2><span class="small muted">${last ? `As of week ${last.week}` : 'Updated every week'}</span></div>${gaugesFor(p)}<p class="small muted">Introduced · Practicing · Reliable. The number is how far each has come since week 1.</p></section>
+    ${ups.length ? ups.map((u, i) => updateTile(p, u, i === 0)).join('') : `<div class="tile band s2"><p>The first update arrives about ${short(addDays(STAY_START, 7))}: what ${p.name}’s working on, photos and a short video.</p></div>`}
+    ${ups.length ? `<div class="tile band"><span class="eyebrow">Weight</span><p class="bigline">${esc(ups[0].weight)}</p><ul class="steps">${ups.slice(1).map((u) => `<li class="small">Week ${u.week}: ${esc(u.weight)}</li>`).join('')}</ul></div>` : ''}</div>`;
+}
+function famPhotos() {
+  const p = P(), m = S.media[p.id];
+  const album = `<div class="tile full"><div class="between"><h2>From A-K’s albums</h2><span class="small muted">Gem litter</span></div><div class="gallery">${['img/opal.jpg', 'img/onyx.jpg', 'img/willow.jpg', 'img/contessa.jpg', 'img/ziva.jpg', 'img/peaches.jpg'].map((g) => photo(g, 'Gem litter photo')).join('')}</div></div>`;
+  if (!m) return `<div class="bento">${pageHead('Photos', `${p.name}’s photos`)}${album}${phase(p) === 'pre' ? offerTile(p) : ''}</div>`;
+  if (m.status !== 'delivered') return `<div class="bento">${pageHead(EXTRAS.xphoto.name, `${p.name}’s photo package`, EXTRAS.xphoto.includes + '.')}
+    <div class="tile green"><span class="eyebrow">${m.status === 'booked' ? 'Photo session' : 'Ready by'}</span><div class="calrow">${calPage(m.status === 'booked' ? m.session : m.due)}<div><p class="bigline">${m.status === 'booked' ? 'Booked' : 'Editing'}</p><p class="small">You’ll get an email when it’s ready.</p></div></div></div>
+    <div class="tile">${pipeline(m.status)}<p class="small">${m.status === 'booked' ? 'At A-K, before go-home.' : `${m.photos} photos in so far.`}</p></div>${album}</div>`;
+  return `<div class="bento">${pageHead(`${EXTRAS.xphoto.name} · delivered ${short(m.delivered)}`, `${p.name}’s photo package`, `${m.photos} photos and ${m.videos} videos, full size. Kept here at least two years.`)}
+    <button class="tile green" data-act="toast" data-msg="Downloads everything as a zip, in 2 parts (1.9 GB)"><span class="ico big" style="background:rgba(255,255,255,.15);color:inherit">${icon('down')}</span><h3 style="color:inherit">Download all</h3><span class="small">1.9 GB, in 2 parts</span></button>
+    <div class="tile"><span class="eyebrow">Videos</span><div class="collage">${VIDEOS.slice(0, 2).map(videoTile).join('')}</div><span class="small muted">${VIDEOS.length} videos</span></div>
+    <div class="tile full"><div class="between"><h2>Photos</h2><span class="small muted">Tap one for full size</span></div><div class="gallery">${GALLERY.map((g, i) => `<button class="ph" data-act="toast" data-msg="Opens photo ${i + 1} full size, with Download" aria-label="Photo ${i + 1}"><img src="${g}" alt="" loading="lazy"></button>`).join('')}</div></div>
+    <div class="tile full"><h2>Videos</h2><div class="gallery">${VIDEOS.map(videoTile).join('')}</div></div>${album}</div>`;
+}
+function famRecords() {
+  const p = P();
+  const rows = [[D(2026, 11, 11), 'Deworming', 'Pyrantel, 2 weeks', 'A-K'], [D(2026, 11, 25), 'Deworming', 'Pyrantel, 4 weeks', 'A-K'], [D(2026, 12, 9), 'Vaccine', 'DHPP, first puppy shot', 'A-K'], [D(2026, 12, 9), 'Deworming', 'Pyrantel, 6 weeks', 'A-K'], [D(2026, 12, 21), 'Vet check', 'Health certificate', 'A-K’s vet']];
+  TASKS.filter((t) => t.from === 'birth').forEach((t) => { const s = taskState(p, t); if (s.by === 'ak' && s.done) rows.push([s.due, t.id === 'worm' ? 'Deworming' : 'Vaccine', t.id === 'worm' ? 'Pyrantel, 10 weeks · during the stay' : 'DHPP, 12 weeks · during the stay', 'A-K']); });
+  const pr = S.proof[p.id];
+  if (pr) rows.push([pr.at, 'Vet visit', `3-day visit · ${pr.ok ? 'accepted' : 'waiting for A-K'}`, 'Your vet']);
+  const facts = [['Sex', p.sex], ['Colour', 'Black & white'], ['Born', withYear(BORN)], ['Parents', 'Willow × Boone'], ['Microchip', `985 ••• ${p.id === 'opal' ? '4471' : '4472'}`], ['Registration', 'AKC, limited'], ['Picked up', S.pickup[p.id] ? `${short(S.pickup[p.id])}, ${time(S.pickup[p.id])}` : `Not yet (${short(p.goHome)})`]];
+  const docs = [['Purchase contract', 'Signed Nov 2 · PDF'], ['Health guarantee', 'Contract, section 4'], ['Pedigree', 'Three generations']].concat(p.stay ? [[EXTRAS[p.stay].name, 'What’s included']] : []);
+  return `<div class="bento">${pupTile(p)}<div class="tile s1" style="grid-column:span 1"><span class="eyebrow">Gem litter · ${p.collar} collar</span><h1 style="font-size:1.3rem">${p.name}’s records</h1><p class="small muted">Shots, papers and everything A-K handed over.</p></div>
+    <div class="tile full"><dl class="factgrid" style="margin:0">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></div>
+    <div class="tile full"><h2>Shots, deworming and vet visits</h2><div class="tablewrap"><table><thead><tr><th>Date</th><th>Type</th><th>Details</th><th>By</th></tr></thead><tbody>${rows.sort((a, b) => a[0] - b[0]).map((r) => `<tr><td>${short(r[0])}</td><td>${r[1]}</td><td>${esc(r[2])}</td><td>${r[3]}</td></tr>`).join('')}</tbody></table></div></div>
+    ${S.pickup[p.id] ? `<div class="tile full band"><div class="between"><h2>What came home in ${p.name}’s bag</h2><span class="small muted">From A-K</span></div>
+      <ul class="hl">${S.bagItems.filter((x) => (S.bag[p.family] || []).includes(x.id)).map((x) => { const pr = x.prog && S.programs.find((q) => q.id === x.prog); return `<li><div><span class="badge">${icon(pr ? pr.ic : 'gift')}</span><span><b>${esc(x.name)}</b>${pr ? `<span class="small muted">${pr.why}</span>` : ''}</span>${pr ? `<a class="btn line small ext" href="#" data-act="go" data-prog="${pr.id}">${pr.id === 'food' ? 'Get more' : pr.id === 'ins' ? 'Activate' : pr.id === 'akc' ? 'Register' : 'Get more'}</a>` : '<span></span>'}</div></li>`; }).join('')}${(S.bagExtra[p.family] || []).map((x) => `<li><div><span class="badge">${icon('gift')}</span><span><b>${esc(x)}</b></span><span></span></div></li>`).join('')}</ul></div>` : ''}
+    ${docs.map(([t, s]) => `<button class="tile tint" data-act="toast" data-msg="Opens ${t}"><span class="ico">${icon('file')}</span><h3>${t}</h3><span class="small muted">${s}</span></button>`).join('')}</div>`;
+}
+function weightChart() {
+  const w = 300, h = 120, max = 64, pts = WEIGHTS.map((v, i) => [20 + i * (w - 30) / 8, h - 18 - v / max * (h - 30)]);
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Weight, weeks 0 to 8: from 6.8 ounces to 61 ounces" style="width:100%;height:auto"><path d="M20 ${h - 18}H${w - 10}" stroke="var(--line)" fill="none"/><polyline points="${pts.map((q) => q.join(',')).join(' ')}" fill="none" stroke="var(--accent)" stroke-width="2"/>${pts.map((q, i) => `<circle cx="${q[0]}" cy="${q[1]}" r="3" fill="var(--accent)"/><text x="${q[0]}" y="${h - 4}" font-size="9" text-anchor="middle" fill="var(--muted)">${i}</text>`).join('')}<text x="${pts[8][0]}" y="${pts[8][1] - 8}" font-size="10" text-anchor="end" fill="var(--ink)">3 lb 13 oz</text></svg>`;
+}
+function famBook() {
+  const p = P(), vis = { private: 'Just us', shared: 'Shared with A-K', public: 'OK for A-K to post' };
+  let all = [...S.breederEntries.filter((e) => e.pup === p.id || e.pup === '*').map((e) => ({ ...e, b: true })),
+    ...S.updates.filter((u) => u.pup === p.id && u.book && u.date <= S.now).map((u) => ({ id: u.id, date: u.date, title: `Stay, week ${u.week}`, body: u.note, img: u.img || p.img, b: true })),
+    ...S.familyEntries.filter((e) => e.pup === p.id)].sort((a, b) => b.date - a.date);
+  if (S.bookFilter === 'ak') all = all.filter((e) => e.b);
+  if (S.bookFilter === 'us') all = all.filter((e) => !e.b);
+  const canAdd = !!S.pickup[p.id];
+  const form = `<form class="tile full stack" data-act="addentry"><h2>New entry</h2>
+      <div class="row"><label style="flex:1 1 9rem" for="e-date">Date<input id="e-date" type="date" name="date" value="${toLocalInput(S.now).slice(0, 10)}" required></label><label style="flex:2 1 12rem" for="e-title">Title<input id="e-title" name="title" maxlength="80" required placeholder="First time on the stairs"></label></div>
+      <label for="e-body">Note<textarea id="e-body" name="body" maxlength="1500" placeholder="What happened?"></textarea></label>
+      <div class="row"><label style="flex:1 1 12rem" for="e-photo">Photo<input id="e-photo" type="file" accept="image/*" name="photo"></label><label style="flex:1 1 12rem" for="e-vis">Who can see it<select id="e-vis" name="vis"><option value="private">Just us</option><option value="shared" selected>Shared with A-K</option><option value="public">OK for A-K to post publicly</option></select></label></div>
+      <p class="small muted">A-K asks before posting anything, every time.</p><div class="row"><button class="btn solid">Add to the book</button><button type="button" class="btn text small" data-act="closebook">Cancel</button></div></form>`;
+  const bar = `<div class="tile full"><div class="between"><div class="seg" role="group" aria-label="Show" style="flex:1 1 16rem">${[['all', 'Everything'], ['ak', 'From A-K'], ['us', 'From us']].map(([k, l]) => `<button data-act="filter" data-f="${k}" aria-pressed="${S.bookFilter === k}">${l}</button>`).join('')}</div>${canAdd ? '<button class="btn solid small" data-act="openbook">Add an entry</button>' : `<span class="small muted">You can add entries once ${p.name} is home.</span>`}</div></div>`;
+  return `<div class="bento">${heroTile(p, phase(p)).replace(/<h1>.*?<\/h1>/, `<h1>${p.name}’s baby book</h1>`).replace(/<span class="script">.*?<\/span>/, '<span class="script">From day one</span>')}${pupTile(p)}
+    <div class="tile band"><span class="eyebrow">So far</span><p class="bigline">${all.length}</p><p class="small muted">entries, from A-K${p.stay ? ', the stay' : ''} and you</p></div>
+    ${S.bookOpen ? form : bar}
+    ${S.bookFilter !== 'us' && p.id === 'opal' ? `<div class="tile s2"><div class="between"><h3>Weight, weeks 0–8</h3><span class="small muted">A-K’s weigh-ins</span></div>${weightChart()}</div>` : ''}
+    ${all.map((e) => `<article class="tile pcard">${photo(e.img, e.title)}<div class="body"><span class="eyebrow">${short(e.date)}, ${e.date.getFullYear()} · ${e.b ? 'A-K' : 'Us'}</span><h3>${esc(e.title)}</h3>${e.body ? `<p>${esc(e.body)}</p>` : ''}${e.b ? '' : `<p class="small muted">${vis[e.vis]}</p>`}</div></article>`).join('')}</div>`;
+}
+function famHandbook() {
+  const q = S.q.trim().toLowerCase(), list = S.chapters.filter((c) => c.on && (!q || (c.t + ' ' + c.body).toLowerCase().includes(q)));
+  const names = { food: `Order ${P().name}’s food`, ins: 'Activate the insurance trial', akc: 'Register with AKC', crate: 'The crate we use' };
+  return `<div class="bento">${pageHead(KENNEL, 'Puppy handbook', 'Everything we tell every family, in one place.')}
+    <div class="tile full"><label class="sr" for="hq">Search the handbook</label><input id="hq" type="search" placeholder="Search: crate, food, heat…" value="${esc(S.q)}" data-act="search">
+    <div>${list.length ? list.map((c, i) => `<details class="ch" ${q || i === 0 ? 'open' : ''}><summary>${esc(c.t)}</summary><div class="body"><p>${esc(c.body)}</p>${c.prog ? `<p><a class="ext" href="#" data-act="go" data-prog="${c.prog}">${names[c.prog]}</a></p>` : ''}</div></details>`).join('') : '<p class="muted" style="padding:.8rem 0">Nothing matches. Try another word, or message A-K.</p>'}</div></div></div>${disclosure}`;
+}
+function famPicks() {
+  const tones = ['band', 'tint', '', 'warm'];
+  return `<div class="bento">${pageHead(KENNEL, 'A-K’s picks', 'What we use for our own Bostons, and the programs that come with every puppy.')}
+    ${S.programs.filter((x) => x.on).map((x, i) => `<a class="tile ${tones[i % 4]}" href="#" data-act="go" data-prog="${x.id}"><span class="ico big">${icon(x.ic)}</span><span class="eyebrow">${x.type}</span><h3>${x.name}</h3><span class="small muted">${x.why}</span><span class="btn line small ext" style="justify-self:start">Open</span></a>`).join('')}</div>${disclosure}`;
+}
+function famPage(route) {
+  const p = P(), ph = phase(p);
+  const pages = { home: famHome, timeline: famTimeline, stay: famStay, records: famRecords, book: famBook, handbook: famHandbook, photos: famPhotos, picks: famPicks };
+  const second = p.stay && (ph === 'stay' || ph === 'pre') ? ['stay', 'Stay', 'star'] : ['timeline', 'Timeline', 'cal'];
+  const tabs = [['home', 'Home', 'home'], second, ['photos', 'Photos', 'camera'], ['book', 'Baby book', 'heart'], ['records', 'Records', 'file']];
+  const r = pages[route] ? route : 'home';
+  const bar = r === 'home' ? actionBar(p, ph) : '';
+  return `<div class="fam ${bar ? 'has-bar' : ''}">${header('Puppy Parent Portal', 'paw')}<main id="main">${pages[r]()}</main>${bar}
+    <nav class="tabs" aria-label="Portal"><div class="in">${tabs.map(([k, l, ic]) => `<a href="#f-${k}" ${k === r ? 'aria-current="page"' : ''}>${icon(ic)}${l}</a>`).join('')}</div></nav></div>`;
+}
+
+// ---------- Her Site Manager ----------
+function vetRows() {
+  return PUPS.filter((p) => S.pickup[p.id]).map((p) => {
+    const dl = vetDeadline(S.pickup[p.id]), proof = S.proof[p.id], booked = S.booked[p.id], left = (dl - S.now) / HOUR;
+    let st;
+    if (proof && proof.ok) st = '<span class="st ok">Accepted</span>';
+    else if (proof) st = '<span class="st next">Record uploaded</span>';
+    else if (left < 0) st = '<span class="st bad">Missed</span>';
+    else if (!booked && left < 48) st = '<span class="st bad">Not booked</span>';
+    else if (!booked) st = '<span class="st warn">Not booked</span>';
+    else st = '<span class="st">Booked</span>';
+    return { p, dl, proof, booked, left, st };
+  }).filter((r) => !(r.proof && r.proof.ok) || S.now - r.dl < 7 * DAY);
+}
+function stayDue() {
+  return PUPS.filter((p) => p.stay && S.now >= STAY_START && !S.pickup[p.id]).map((p) => {
+    const last = updatesFor(p)[0], due = last ? addDays(last.date, 7) : addDays(STAY_START, 7);
+    return { p, last, due, soon: calDays(S.now, due) <= 1 };
+  });
+}
+function counts() {
+  const pickSoon = PUPS.filter((p) => !S.pickup[p.id] && calDays(S.now, p.goHome) >= 0 && calDays(S.now, p.goHome) <= 7);
+  const proofs = PUPS.filter((p) => S.proof[p.id] && !S.proof[p.id].ok);
+  const invites = Object.keys(FAMILIES).filter((k) => !S.signedIn[k] && !S.deleted[k]);
+  const due = Object.keys(FAMILIES).filter((k) => !S.deleted[k] && !S.keep[k] && S.lastActive[k] && (S.now - S.lastActive[k]) > 335 * DAY);
+  const stays = stayDue().filter((x) => x.soon);
+  const pkgs = Object.entries(S.media).filter(([, m]) => m.status !== 'delivered');
+  return { pickSoon, proofs, invites, bounced: Object.keys(S.bounced), drafts: S.drafts.length, due, stays, pkgs };
+}
+const need = (href, n, label, ic, tone = '') => `<a class="need ${tone}" href="${href}"><span class="ic">${icon(ic)}</span><b>${n}</b><span>${label}</span></a>`;
+function admToday() {
+  const c = counts(), vr = vetRows(), unread = S.site.messages.filter((m) => !m.read).length;
+  const needs = [];
+  if (c.proofs.length) needs.push(need('#a-vet', c.proofs.length, 'Vet record to review', 'vet'));
+  if (c.bounced.length) needs.push(need('#a-fam-' + c.bounced[0], c.bounced.length, 'Email bounced: text them', 'mail', 'bad'));
+  const unbooked = vr.filter((r) => !r.booked && !r.proof && r.left > 0).length;
+  if (unbooked) needs.push(need('#a-vet', unbooked, 'Vet visit not booked', 'cal', 'warn'));
+  if (c.stays.length) needs.push(need('#a-dogs', c.stays.length, `Stay update due ${calDays(S.now, c.stays[0].due) <= 0 ? 'today' : 'tomorrow'}`, 'star', 'warn'));
+  if (c.pkgs.length) needs.push(need('#a-dogs', c.pkgs.length, `Photo package ${c.pkgs[0][1].status === 'booked' ? 'session ' + short(c.pkgs[0][1].session) : 'due ' + short(c.pkgs[0][1].due)}`, 'camera'));
+  if (unread) needs.push(need('#a-website', unread, 'New message from your website', 'mail'));
+  if (S.site.reviews.length) needs.push(need('#a-website', S.site.reviews.length, 'Review to approve', 'star'));
+  if (c.invites.length) needs.push(need('#a-families', c.invites.length, 'Invite not accepted', 'people'));
+  if (c.drafts) needs.push(need('#a-dogs', c.drafts, 'KennelOS drafts', 'draft'));
+  if (c.due.length) needs.push(need('#a-families', c.due.length, 'Due for deletion in 30 days', 'people', 'warn'));
+  const isToday = (p) => calDays(S.now, p.goHome) === 0;
+  const pupCard = (p) => `<div class="tile pup">${photo(p.img, p.name, 'round')}<span class="pname" style="font-size:1.7rem">${p.name}${sexMark(p)}</span><span class="small muted">${FAMILIES[p.family].name}</span>
+    <div class="calrow" style="justify-content:center">${calPage(p.goHome)}<span class="small">${time(p.goHome)}${S.booked[p.id] ? '<br><span class="st ok">Vet booked</span>' : '<br><span class="st warn">Vet not booked</span>'}</span></div>
+    <button class="btn ${isToday(p) ? 'solid' : 'line'} small" data-act="pickup" data-id="${p.id}">Mark picked up</button></div>`;
+  return `<section class="sec deep bleed"><span class="eyebrow">${KENNEL}</span><h1 style="font-size:1.9rem">Today</h1><p class="small" style="opacity:.85">${long(S.now)}${c.pickSoon.length ? ` · ${c.pickSoon.length} going home ${isToday(c.pickSoon[0]) ? 'today' : 'in ' + calDays(S.now, c.pickSoon[0].goHome) + ' days'}` : ''}</p></section>
+    ${c.pickSoon.length ? `<div class="bento">${c.pickSoon.map(pupCard).join('')}</div><p class="small muted">Mark picked up starts the 72-hour vet clock. You can correct the time afterwards.</p>` : ''}
+    ${S.site.changes.length ? `<section class="card"><div class="between"><p><span class="st warn">Website</span> ${S.site.changes.length} change${S.site.changes.length === 1 ? '' : 's'} not published yet</p><a class="btn line small" href="#a-website">Review and publish</a></div></section>` : ''}
+    ${needs.length ? `<section><h2 style="margin-bottom:10px">Needs you</h2><div class="needs">${needs.join('')}</div></section>` : `<section class="card band"><p><span class="st ok">All caught up</span> Nothing needs you today.</p></section>`}
+    <div class="cols">
+      ${vr.length ? `<section class="card"><div class="between"><h2>Vet visits</h2><a class="btn text small" href="#a-vet">All →</a></div>${vetList(vr)}</section>` : `<section class="card"><h2>Vet visits</h2><p class="muted">None running. The clock starts when you mark a puppy picked up.</p></section>`}
+      <section class="card"><h2>Recent activity</h2><ul class="list">${activity().map((a) => `<li><span class="grow"><b>${a[0]}</b><br><span class="small">${a[1]}</span></span><span class="small muted">${a[2]}</span></li>`).join('')}</ul></section>
+    </div>`;
+}
+function vetList(vr) {
+  return `<ul class="list">${vr.map((r) => `<li>${photo(r.p.img, r.p.name, 'round')}<span class="grow"><a class="rowlink" href="#a-fam-${r.p.family}"><b>${r.p.name}</b></a> · <span class="small">${FAMILIES[r.p.family].name}</span><br>
+    <span class="small muted">Due ${short(r.dl)}, ${time(r.dl)}${r.left > 0 && !(r.proof && r.proof.ok) ? ` · ${Math.round(r.left)} h left` : ''}${r.booked && !r.proof ? ` · booked ${short(r.booked)} ${time(r.booked)}` : ''}</span></span>
+    ${r.st}${r.proof && !r.proof.ok ? `<button class="btn solid small" data-act="accept" data-id="${r.p.id}">Accept record</button>` : ''}</li>`).join('')}</ul>`;
+}
+function activity() {
+  const a = [];
+  if (S.proof.opal && !S.proof.opal.ok) a.push(['The Reed family', 'Uploaded Opal’s vet record', 'just now']);
+  if (S.stage === 'before') a.push(['The Reed family', 'Ticked 5 of 9 on the go-home checklist', 'yesterday'], ['The Hale family', 'Read Onyx’s 12-week stay plan', '2 days ago']);
+  if (S.stage === 'vet') a.push(['The Reed family', 'Booked Opal’s vet visit', 'Dec 23'], ['The Hale family', 'Opened Onyx’s stay page', 'Dec 23']);
+  if (S.stage === 'weeks') a.push(['The Hale family', 'Read Onyx’s week 2 update and played the video', 'Jan 7'], ['The Hale family', 'Downloaded the photo package', 'Jan 8'], ['The Reed family', 'Added “Home!” to the baby book (shared with you)', 'Dec 23']);
+  if (S.stage === 'later') a.push(['The Reed family', 'Marked “First beach day” OK to post', 'Jun 2'], ['The Hale family', 'Added “Home at last” to the baby book', 'Jan 20']);
+  return a;
+}
+function admVet() {
+  const vr = vetRows();
+  return `<p class="crumb"><a href="#a-today">Today</a> ›</p><h1>Vet visits</h1><p class="muted">Counted as 72 hours from pickup (placeholder until the contract wording is confirmed). Reminders count back from each deadline.</p><section class="card">${vr.length ? vetList(vr) : '<p class="muted">None running.</p>'}</section>`;
+}
+function admFamilies() {
+  const tabs = `<div class="filters" role="group" aria-label="Show">${[['puppy', 'Puppy families'], ['wait', `Waitlist (${S.waitlist.length})`]].map(([k, l]) => `<button data-act="famtab" data-f="${k}" aria-pressed="${S.famTab === k}">${l}</button>`).join('')}</div>`;
+  if (S.famTab === 'wait') return `<span class="eyebrow">${KENNEL}</span><h1>Families</h1>${tabs}
+    <section class="card"><ul class="list">${S.waitlist.map((w, i) => `<li><span class="grow"><b>${i + 1}. ${w.name}</b><br><span class="small muted">${w.wants} · on the list since ${short(w.since)}</span></span><button class="btn line small" data-act="toast" data-msg="Opens an email offering a puppy to ${w.name}">Offer a puppy</button></li>`).join('')}</ul></section>
+    <p class="small muted">The same list your website’s Waitlist page shows. When a family takes a puppy, they move to Puppy families and get their portal invite.</p>`;
+  const keys = Object.keys(FAMILIES).filter((k) => !S.deleted[k]);
+  return `<span class="eyebrow">${KENNEL}</span><h1>Families</h1>${tabs}
+    <section class="card"><ul class="list">${keys.map((k) => {
+      const f = FAMILIES[k], p = PUPS.find((x) => x.id === f.pup), last = S.lastActive[k];
+      const dueDel = last && (S.now - last) > 335 * DAY && !S.keep[k];
+      const st = !S.signedIn[k] ? '<span class="st warn">Invite not accepted</span>' : dueDel ? '<span class="st warn">Deletion due</span>' : S.keep[k] ? '<span class="st">Kept</span>' : '<span class="st ok">Active</span>';
+      return `<li>${photo(p ? p.img : null, p ? p.name : f.name, 'round')}<span class="grow"><a class="rowlink" href="#a-fam-${k}"><b>${f.name}</b></a><br><span class="small muted">${p ? `${p.name} · Gem litter` : esc(f.note)} · ${last ? `last active ${short(last)}${last.getFullYear() !== S.now.getFullYear() ? ' ' + last.getFullYear() : ''}` : 'never signed in'}</span>${p ? `<br>${p.extras.map((x) => `<span class="tag">${EXTRAS[x].name}</span>`).join('')}` : ''}</span>${st}</li>`;
+    }).join('')}</ul></section>
+    <p class="small muted">Accounts are deleted after 12 months with no activity (or 90 days after pickup if never used), with warnings at 30 and 7 days. Sale records, reminder logs and delivered packages have their own clocks.</p>`;
+}
+function admFamily(k) {
+  const f = FAMILIES[k];
+  if (!f || S.deleted[k]) return `<p class="crumb"><a href="#a-families">Families</a> ›</p><h1>Deleted</h1><p class="muted">This family was deleted. <button class="btn text small" data-act="undel" data-id="${k}">Undo</button></p>`;
+  const p = PUPS.find((x) => x.id === f.pup), pick = p && S.pickup[p.id], dl = pick && vetDeadline(pick), pr = p && S.proof[p.id];
+  const result = S.bounced[k] ? 'Bounced' : 'Delivered', log = [];
+  if (p) {
+    const ask = addDays(dayOf(p.goHome), -5); ask.setHours(9);
+    if (S.now >= ask) log.push([ask, 'Book your vet visit']);
+    if (pick) { log.push([pick, 'Pickup: your 72-hour deadline']); const h24 = new Date(dl - 24 * HOUR); if (S.now > h24) log.push([h24, '24 hours left']); }
+    updatesFor(p).forEach((u) => log.push([u.date, `Stay update, week ${u.week}`]));
+    const m = S.media[p.id]; if (m && m.delivered) log.push([m.delivered, 'Your photo package is ready']);
+  }
+  log.sort((a, b) => a[0] - b[0]);
+  return `<p class="crumb"><a href="#a-families">Families</a> ›</p><div class="between"><h1>${f.name}</h1>${S.bounced[k] ? '<span class="st bad">Email bounced</span>' : ''}</div>
+    ${S.bounced[k] ? `<section class="card" style="border-color:var(--bad)"><p><b>Emails aren’t reaching them.</b> ${esc(S.bounced[k])}. Text or call them, and check the address.</p></section>` : ''}
+    <div class="cols"><div class="stack" style="gap:16px">
+    ${p ? `<section class="card"><div class="pf">${photo(p.img, p.name, 'round')}<h2>${p.name} · Gem litter, ${p.collar} collar</h2></div>
+      <label for="pt-${p.id}">Picked up<input id="pt-${p.id}" type="datetime-local" value="${pick ? toLocalInput(pick) : ''}" data-act="pickuptime" data-id="${p.id}"></label>
+      ${pick ? `<p>Vet deadline: <b>${long(dl)}, ${time(dl)}</b></p>` : `<p class="muted">Goes home ${long(p.goHome)}. <button class="btn line small" data-act="pickup" data-id="${p.id}">Mark picked up now</button></p>`}
+      <p>Vet record: ${pr ? `${esc(pr.file)} · ${pr.ok ? '<span class="st ok">Accepted</span>' : `<button class="btn solid small" data-act="accept" data-id="${p.id}">Accept record</button>`}` : '<span class="muted">none yet</span>'}</p></section>
+    <section class="card"><h2>Extras</h2>${p.extras.length ? `<ul class="list">${p.extras.map((x) => { const e = EXTRAS[x], m = S.media[p.id];
+        const st = e.type === 'stay' ? (S.pickup[p.id] ? '<span class="st ok">Home</span>' : S.now >= STAY_START ? `<span class="st next">Week ${stayWeek(p)} of ${stayWeeks(p)}</span>` : '<span class="st">Booked</span>') : `<span class="st ${m.status === 'delivered' ? 'ok' : 'next'}">${m.status}</span>`;
+        return `<li><span class="grow"><b>${e.name}</b><br><span class="small muted">${e.type === 'stay' ? `Go-home moved to ${short(p.goHome)} · from KennelOS, confirmed` : `Due ${short(m.due)} · from KennelOS, confirmed`}</span></span>${st}</li>`; }).join('')}</ul>` : '<p class="muted small">None. Add one if KennelOS hasn’t sent it.</p>'}
+      <div class="row"><button class="btn line small" data-act="toast" data-msg="Choose an extra from your list">Add an extra</button></div></section>
+    <section class="card"><h2>Email log</h2>${log.length ? `<div class="tablewrap"><table><thead><tr><th>Sent</th><th>Email</th><th>Result</th></tr></thead><tbody>${log.map((l) => `<tr><td>${short(l[0])}, ${time(l[0])}</td><td>${l[1]}</td><td>${result === 'Bounced' ? '<span class="st bad">Bounced</span>' : '<span class="st ok">Delivered</span>'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted small">Nothing sent yet.</p>'}</section>`
+    : `<section class="card"><p class="muted">${esc(f.note)}. Puppy records from before the portal aren’t shown in this prototype.</p></section>`}
+    </div><div class="stack" style="gap:16px">
+    <section class="card"><h2>Family</h2><dl class="kv"><dt>Emails</dt><dd>${f.emails.map(esc).join('<br>')}</dd><dt>Signed in</dt><dd>${S.signedIn[k] ? 'Yes' : 'Not yet'}</dd><dt>Last active</dt><dd>${S.lastActive[k] ? withYear(S.lastActive[k]) : '—'}</dd></dl>
+      <div class="row">${S.signedIn[k] ? '' : '<button class="btn line small" data-act="toast" data-msg="Invite sent again">Resend invite</button>'}<button class="btn line small" data-act="toast" data-msg="Edit family (not in the prototype)">Edit</button></div></section>
+    ${f.pup ? `<form class="card" data-act="savebag" data-id="${k}"><div class="between"><h2>Sent home with</h2><span class="small muted">${(S.bag[k] || []).length + (S.bagExtra[k] || []).length} items · $${S.bagItems.filter((x) => (S.bag[k] || []).includes(x.id)).reduce((a, x) => a + x.cost, 0)} to you</span></div>
+      <div class="chips">${S.bagItems.map((x) => `<label><input type="checkbox" name="bag" value="${x.id}" ${(S.bag[k] || []).includes(x.id) ? 'checked' : ''}>${esc(x.name)}</label>`).join('')}${(S.bagExtra[k] || []).map((x) => `<label><input type="checkbox" name="extra" value="${esc(x)}" checked>${esc(x)}</label>`).join('')}</div>
+      <div class="row"><label for="bag-add" class="sr">Add something else</label><input id="bag-add" name="add" placeholder="Something else, like “Extra bag of treats”" style="flex:1 1 12rem"><button class="btn line small">Save</button></div></form>` : ''}
+    ${demoSection(k)}
+    <section class="card"><h2>Keeping their data</h2><label class="check"><input type="checkbox" data-act="keep" data-id="${k}" ${S.keep[k] ? 'checked' : ''}>Keep this family (pauses deletion for inactivity)</label>
+      <p class="small muted">Without Keep: deleted 12 months after last activity, with warnings at 30 and 7 days. A delivered photo package is kept at least 2 years.</p>
+      <div class="row"><button class="btn line small danger" data-act="del" data-id="${k}">Delete (undo for 30 days)</button><button class="btn text small" data-act="toast" data-msg="Erase: final, for a family’s request. Asks to confirm.">Erase on request</button></div></section>
+    </div></div>`;
+}
+function writeUpdateForm(p) {
+  const x = EXTRAS[p.stay], last = updatesFor(p)[0], lv = last ? last.levels : x.skills.map(() => 0);
+  return `<form class="stack" data-act="sendupdate" data-id="${p.id}"><h3>Week ${stayWeek(p)} update for the ${FAMILIES[p.family].short}</h3>
+    <p class="small muted">Skills start at last week’s levels. Change only what moved.</p>
+    <div class="stack" style="gap:8px">${x.skills.map((s, i) => `<div class="lvlpick"><label for="sk-${i}" style="font-weight:600">${esc(s)}</label><select id="sk-${i}" name="sk${i}">${LEVELS.map((l, j) => `<option value="${j}" ${j === lv[i] ? 'selected' : ''}>${l}</option>`).join('')}</select></div>`).join('')}</div>
+    <label for="u-note">This week<textarea id="u-note" name="note" required placeholder="What did ${p.name} do this week?"></textarea></label>
+    <div class="row"><label style="flex:1 1 140px" for="u-weight">Weight<input id="u-weight" name="weight" placeholder="6 lb 4 oz"></label><label style="flex:2 1 220px" for="u-files">Photos and videos<input id="u-files" type="file" accept="image/*,video/*" multiple></label></div>
+    <label class="check"><input type="checkbox" name="book" checked>Also add it to ${p.name}’s baby book</label>
+    <div class="row"><button class="btn solid">Send to the ${FAMILIES[p.family].short}</button><button type="button" class="btn text small" data-act="cancelwrite">Cancel</button></div></form>`;
+}
+function admDogs() {
+  const label = { available: 'Available', reserved: 'Reserved', placed: 'Placed', staying: 'Staying' };
+  const card = (p) => `<div class="tile pup">${photo(p.img, p.name, 'round')}<span class="pname" style="font-size:1.6rem">${p.name}${sexMark(p)}</span>
+    <a class="small" href="#a-fam-${p.family}">${FAMILIES[p.family].name}</a><span class="small muted">${S.pickup[p.id] ? 'Home ' + short(S.pickup[p.id]) : 'Goes home ' + short(p.goHome)}</span>
+    ${p.extras.length ? `<span>${p.extras.map((x) => `<span class="tag">${EXTRAS[x].type === 'stay' ? EXTRAS[x].weeks + '-week stay' : 'Photo package'}</span>`).join('')}</span>` : ''}
+    <label class="sr" for="ps-${p.id}">${p.name} on your website</label><select id="ps-${p.id}" data-act="pupstatus" data-id="${p.id}" style="min-height:2.2rem;padding:.25rem .5rem">${Object.entries(label).map(([k, l]) => `<option value="${k}" ${S.pupStatus[p.id] === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <a class="btn text small" href="#a-edit-${p.id}">Edit ${p.name} →</a></div>`;
+  const stays = PUPS.filter((p) => p.stay).map((p) => { const d = stayDue().find((x) => x.p.id === p.id), ups = updatesFor(p), w = stayWeek(p), n = stayWeeks(p);
+    return `<div class="tile dark s2" id="stay-${p.id}"><div class="between"><span class="eyebrow">${EXTRAS[p.stay].name}</span>${d && d.soon ? '<span class="st warn" style="color:#E9C77E">Update due</span>' : ''}</div>
+      <div class="calrow">${ring(S.pickup[p.id] ? n : S.now < STAY_START ? 0 : w - 1 + (ups.length >= w ? 1 : 0), n, 'Weeks done')}<div><p class="bigline">${p.name}’s stay</p><p class="small">${S.pickup[p.id] ? 'Home' : S.now < STAY_START ? 'Starts ' + short(STAY_START) : `Week ${w} of ${n}`} · ${ups.length} update${ups.length === 1 ? '' : 's'} sent${d ? ' · next due ' + short(d.due) : ''}</p></div></div>
+      ${S.writing === p.id ? `<div class="tile" style="color:var(--ink)">${writeUpdateForm(p)}</div>` : (!S.pickup[p.id] && S.now >= STAY_START ? `<button class="pill light" data-act="writeupdate" data-id="${p.id}" style="justify-self:start">${icon('draft')}Write this week’s update</button>` : '')}</div>`; }).join('');
+  const pkgs = PUPS.filter((p) => S.media[p.id]).map((p) => { const m = S.media[p.id];
+    return `<div class="tile band s2"><div class="between"><h2>${p.name}’s photo &amp; video package</h2><span class="small muted">${FAMILIES[p.family].name}</span></div>
+      <div class="collage" style="grid-template-columns:repeat(4,1fr)">${GALLERY.slice(0, m.photos ? 4 : 0).map((g) => photo(g, '')).join('') || '<p class="small muted" style="grid-column:1/-1">No files yet.</p>'}</div>${pipeline(m.status)}
+      <div class="row"><label for="ms-${p.id}" style="flex:1 1 9rem">Status<select id="ms-${p.id}" data-act="mediastatus" data-id="${p.id}">${['booked', 'shooting', 'editing', 'delivered'].map((x) => `<option value="${x}" ${m.status === x ? 'selected' : ''}>${cap1(x)}</option>`).join('')}</select></label>
+        <label class="btn line small" style="flex:0 0 auto;align-self:end">${icon('up')}Upload full-size files<input class="sr" type="file" multiple accept="image/*,video/*" data-act="mediafiles" data-id="${p.id}"></label></div>
+      <p class="small muted">${m.photos} photos, ${m.videos} videos · session ${short(m.session)} · due ${short(m.due)}. Delivered emails the family.</p></div>`; }).join('');
+  return `<section class="sec sand bleed"><span class="eyebrow">${KENNEL}</span><h1 style="font-size:1.9rem">Dogs and litters</h1><p class="small muted">One record for each dog, litter and puppy, for your website and the portal.</p></section>
+    <div class="between"><h2>The Gem litter</h2><span class="small muted">Willow × Boone · born ${short(BORN)}</span></div>
+    <div class="bento">${PUPS.map(card).join('')}${stays}${pkgs}</div>
+    <p class="small muted">The status shows on your website (a change waits for Publish). Families, pickups and extras belong to the portal.</p>
+    <section class="stack" style="gap:.5rem"><h2>Our Bostons</h2><div class="prows">${[['Willow', 'Dam · Gem litter', 'img/willow.jpg'], ['Ziva', 'Dam', 'img/ziva.jpg'], ['Peaches', 'Dam', 'img/peaches.jpg']].map(([n, r, im]) => `<a class="prow" href="#" data-act="toast" data-msg="${n}: the dog’s own screen">${photo(im, n)}<span class="lab"><span>${n}<br><span class="small" style="font-family:var(--f-body);opacity:.8">${r}</span></span><span class="chev">${icon('chev')}</span></span></a>`).join('')}</div></section>
+    <section class="sec mint bleed">${admDrafts(true)}</section>`;
+}
+function admEdit(id) {
+  const p = PUPS.find((x) => x.id === id); if (!p) return admDogs();
+  const sel = (lab, opts, cur, half = true) => `<label class="${half ? 'half' : ''}">${lab}<select>${opts.map((o) => `<option ${o === cur ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`;
+  const inp = (lab, val, half = true, hint = '') => `<label class="${half ? 'half' : ''}">${lab}<input value="${esc(val)}">${hint ? `<span class="hint">${hint}</span>` : ''}</label>`;
+  const sw = (lab, on, hint) => `<label class="check"><input type="checkbox" ${on ? 'checked' : ''}><span>${lab}${hint ? `<br><span class="hint">${hint}</span>` : ''}</span></label>`;
+  return `<p class="crumb"><a href="#a-dogs">Dogs</a> ›</p>
+    <div class="bento"><div class="tile pup">${photo(p.img, p.name, 'round')}<span class="pname" style="font-size:1.7rem">${p.name}${sexMark(p)}</span><span class="small muted">Gem litter · ${p.collar} collar</span></div>
+      <div class="tile green"><span class="eyebrow">Goes home</span><div class="calrow">${calPage(p.goHome)}<div><p class="bigline">${short(p.goHome)}</p><p class="small">${p.stay ? EXTRAS[p.stay].weeks + '-week stay' : '8 weeks'}</p></div></div></div></div>
+    <form class="tile stack" data-act="savepup" style="gap:.9rem">
+      <section class="fgroup"><h2>The puppy</h2><div class="fgrid">${inp('Name', p.name)}${inp('Collar', p.collar + ' collar')}${sel('Sex', ['Female', 'Male'], p.sex)}${inp('Colour', 'Black & white')}${sel('Status', ['Available', 'Reserved', 'Placed', 'Staying'], { reserved: 'Reserved', placed: 'Placed' }[S.pupStatus[p.id]] || 'Available')}${sel('Registration', ['Not settled', 'Limited', 'Full'], 'Limited')}${inp('Registry', 'AKC')}${inp('Its own price', '', true, 'Empty: the litter’s price.')}</div></section>
+      <section class="fgroup"><h2>Photo and story</h2><div class="fgrid"><div class="thumbs">${['img/opal.jpg', 'img/onyx.jpg', 'img/contessa.jpg', 'img/willow.jpg'].map((g, i) => `<label>${photo(g, '')}<input type="radio" name="ph" ${g === p.img ? 'checked' : ''} aria-label="Photo ${i + 1}"></label>`).join('')}</div>
+        <label>About<textarea>${esc(p.id === 'onyx' ? 'The darkest of the three, with a little white snip.' : 'Loudest at feeding time and first to find the warm spot.')}</textarea></label>${inp('More photos link', '', false, 'A Google Photos or Shutterfly share for this puppy.')}</div></section>
+      <section class="fgroup"><h2>Family and extras</h2><div class="fgrid">${sel('Family', Object.values(FAMILIES).map((f) => f.name), FAMILIES[p.family].name, false)}
+        <label class="half">Picked up<input type="datetime-local" value="${S.pickup[p.id] ? toLocalInput(S.pickup[p.id]) : ''}"></label><label class="half">Microchip<input value="985 ••• ${p.id === 'opal' ? '4471' : '4472'}"></label>
+        <div><span class="small" style="font-weight:700">Extras</span><div class="chips">${Object.entries(EXTRAS).map(([k, e]) => `<label><input type="checkbox" ${p.extras.includes(k) ? 'checked' : ''}>${e.name}</label>`).join('')}</div></div></div></section>
+      <section class="fgroup"><h2>On your website</h2><div class="switches">${sw('Show on my website', true)}${sw('Show tagged photos on its page', false, 'Publishes the photos you’ve tagged as this puppy.')}${sw('Families can ask about full registration', true)}</div></section>
+      <details class="fgroup"><summary>Web address</summary><div class="fgrid">${inp('Web address', p.id, false, 'Old addresses keep working if you change it.')}</div></details>
+      <div class="row"><button class="btn solid">Save</button><a class="btn text small" href="#a-dogs">Cancel</a></div></form>`;
+}
+function admDrafts(embedded) {
+  return `${embedded ? '<h2 id="drafts">Baby book drafts from KennelOS</h2>' : '<h1>Baby book drafts</h1>'}
+    <p class="muted">Milestones and weights from KennelOS. Families never see a draft. Write it up in your words, or dismiss it.</p>
+    ${S.drafts.length ? S.drafts.map((d) => `<section class="card"><div><span class="eyebrow">${d.kind} · ${short(d.date)} · ${d.pup}</span><h2>${esc(d.text)}</h2></div>
+      ${S.editing === d.id ? `<form class="stack" data-act="publishdraft" data-id="${d.id}"><label for="dt-${d.id}">Title<input id="dt-${d.id}" name="title" value="${esc(d.text)}" required></label><label for="db-${d.id}">Story<textarea id="db-${d.id}" name="body" placeholder="What was it like?"></textarea></label><label for="dp-${d.id}">Photo<input id="dp-${d.id}" type="file" accept="image/*"></label>
+        <div class="row"><button class="btn solid">Add to ${d.pup === 'Gem litter' ? 'the litter’s' : 'Opal’s'} baby book</button><button type="button" class="btn text small" data-act="canceldraft">Cancel</button></div></form>`
+      : `<div class="row"><button class="btn line small" data-act="editdraft" data-id="${d.id}">Write entry</button><button class="btn text small" data-act="dismiss" data-id="${d.id}">Dismiss</button></div>`}</section>`).join('')
+      : '<section class="card band"><p><span class="st ok">No drafts</span> New KennelOS milestones will appear here.</p></section>'}`;
+}
+function admWebsite() {
+  const ch = S.site.changes, msgs = S.site.messages;
+  return `<span class="eyebrow">akbostons.kennelport.com</span><h1>Website</h1>
+    <section class="card feature"><p><span class="st ok">Live</span> ${ch.length ? `· <b>${ch.length} change${ch.length === 1 ? '' : 's'} not published yet</b>` : `· published ${short(S.site.published)}`}</p>
+      ${ch.length ? `<ul class="list">${ch.map((x) => `<li class="small">${esc(x)}</li>`).join('')}</ul>` : ''}
+      <div class="row"><button class="btn line small" data-act="toast" data-msg="Opens your website">View my site</button><button class="btn line small" data-act="toast" data-msg="Opens a preview with your changes">Preview changes</button><button class="btn line small" data-act="toast" data-msg="Links and QR codes">Share</button></div>
+      ${ch.length ? '<div class="row"><button class="btn solid" data-act="publish">Review and publish</button></div>' : ''}</section>
+    <div class="cols">
+      <section class="card"><div class="between"><h2>Inbox</h2><span class="small muted">From your contact form</span></div><ul class="list">${msgs.map((m) => `<li><span class="grow">${m.read ? '' : '<span class="st next">New</span> '}<b>${esc(m.from)}</b><br><span class="small">${esc(m.text)}</span></span><span class="small muted">${short(m.at)}</span>${m.read ? '' : `<button class="btn text small" data-act="readmsg" data-id="${m.id}">Mark read</button>`}</li>`).join('')}</ul></section>
+      <section class="card"><h2>Reviews to approve</h2>${S.site.reviews.length ? S.site.reviews.map((r) => `<div class="stack"><p><b>${esc(r.who)}</b> <span style="color:var(--brass)">${'★'.repeat(r.stars)}</span></p><p class="small">“${esc(r.text)}”</p><div class="row"><button class="btn line small" data-act="review" data-id="${r.id}" data-ok="1">Approve</button><button class="btn text small" data-act="review" data-id="${r.id}">Decline</button></div></div>`).join('') : '<p class="muted small">None waiting.</p>'}</section>
+    </div>
+    <section class="card"><h2>Your site</h2><ul class="list">${[
+      ['Photos and albums', 'Camera roll, galleries · shared with baby books'], ['Pages and wording', 'Home, about, policies, FAQ…'], ['Waitlist and application', 'Open or closed, your questions'], ['How to pay', 'Fee, deposit, scam warning'],
+      ['Extras', 'Stays and packages: the website lists them, the portal delivers them', '#a-portal'], ['Recommended products', 'One list with the portal’s programs', '#a-portal'], ['Kennel details', 'Name, contact, town'], ['KennelOS', 'Linked · last update Dec 22'],
+    ].map(([t, sub, href]) => `<li><a class="rowlink grow" href="${href || '#'}" ${href ? '' : `data-act="toast" data-msg="${t}: the existing Site Manager screen"`}><b>${t}</b><br><span class="small muted">${sub}</span></a><span aria-hidden="true" style="color:var(--accent);font-size:1.3rem">›</span></li>`).join('')}</ul></section>`;
+}
+function admPortal() {
+  return `<span class="eyebrow">${KENNEL}</span><h1>Family portal</h1><p class="muted">What families see after they sign in. Your website’s pages are under Website.</p>
+    <section class="card"><h2>Extras the portal delivers</h2><div class="tablewrap"><table><thead><tr><th>Extra</th><th>Delivers as</th><th>Details</th></tr></thead><tbody>
+      ${Object.values(EXTRAS).map((e) => `<tr><td><b>${e.name}</b></td><td>${e.type === 'stay' ? 'Extended stay' : e.type === 'media' ? 'Photo &amp; video' : 'Listed only'}</td><td class="small">${e.type === 'stay' ? `Go-home at ${e.weeks} weeks · update every ${e.every} days · skills from What’s included` : e.type === 'media' ? esc(e.includes) : 'Shows on the family’s placement'}</td></tr>`).join('')}</tbody></table></div>
+      <p class="small muted">The same extras as your website’s Extras page and KennelOS’s price list. Payments stay in KennelOS.</p></section>
+    <section class="card"><div class="between"><h2>Go-home bag</h2><button class="btn line small" data-act="addbag">Add an item</button></div>
+      <ul class="list">${S.bagItems.map((x) => `<li><span class="ico">${icon(x.prog ? (S.programs.find((p) => p.id === x.prog) || {}).ic || 'gift' : 'gift')}</span><span class="grow"><b>${esc(x.name)}</b><br><span class="small muted">${x.cost ? 'Costs you $' + x.cost : 'Free to you'}${x.from ? ' · ' + esc(x.from) : ''}${x.prog ? ' · tied to ' + (S.programs.find((p) => p.id === x.prog) || {}).name : ''}</span></span></li>`).join('')}</ul>
+      <p class="small muted">Every new family starts with this bag ticked; change it on the family’s screen. Items tied to a program show a Get more link on the family’s side, and Reports compares sign-ups with and without them.</p></section>
+    <section class="card"><div class="between"><h2>Buyer details you track</h2><button class="btn line small" data-act="adddemo">Add a field</button></div>
+      <div class="switches">${S.demoFields.map((x, i) => `<label class="check"><input type="checkbox" data-act="demoon" data-i="${i}" ${x.on ? 'checked' : ''}><span>${esc(x.label)}<br><span class="hint">${{ choice: 'A choice: ' + (x.options || []).join(', '), text: 'Short text', yesno: 'Yes or no', multi: 'Tick any: ' + (x.options || []).join(', ') }[x.type]}${x.custom ? ' · yours' : ''}</span></span></label>`).join('')}</div>
+      <p class="small muted">You fill these in on each family’s screen. Families never see them. Add any field you want to track.</p></section>
+    <section class="card"><div class="between"><h2>Handbook chapters</h2><button class="btn line small" data-act="toast" data-msg="New chapter editor (not in the prototype)">Add chapter</button></div>
+      <ul class="list">${S.chapters.map((c, i) => `<li><span class="grow"><b>${esc(c.t)}</b>${c.prog ? `<br><span class="small muted">Links: ${S.programs.find((p) => p.id === c.prog).name}</span>` : ''}</span>
+        <button class="btn text small" data-act="up" data-i="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Move ${esc(c.t)} up">↑</button><button class="btn text small" data-act="down" data-i="${i}" ${i === S.chapters.length - 1 ? 'disabled' : ''} aria-label="Move ${esc(c.t)} down">↓</button>
+        <label class="check small"><input type="checkbox" data-act="chon" data-i="${i}" ${c.on ? 'checked' : ''}>On</label></li>`).join('')}</ul></section>
+    <section class="card"><div class="between"><h2>Programs and links</h2><button class="btn line small" data-act="toast" data-msg="New program (not in the prototype)">Add</button></div>
+      <div class="tablewrap"><table><thead><tr><th>Program</th><th>Shows on</th><th>Family must</th><th>On</th></tr></thead><tbody>
+      ${S.programs.map((p, i) => `<tr><td><b>${p.name}</b><br><span class="small muted">${p.type}</span></td><td>${p.where}</td><td>${p.step}</td><td><input type="checkbox" aria-label="${p.name} on" data-act="progon" data-i="${i}" ${p.on ? 'checked' : ''} style="width:20px;min-height:0"></td></tr>`).join('')}</tbody></table></div>
+      <p class="small muted">These are your website’s Recommended products too: one list. A change to a link or code updates the website, the portal and every email at once.</p></section>
+    <section class="card"><h2>Checklist, timeline and emails</h2><ul class="list">
+      <li><span class="grow"><b>Go-home checklist</b><br><span class="small muted">${CHECKLIST.length} items</span></span><button class="btn line small" data-act="toast" data-msg="Checklist editor (not in the prototype)">Edit</button></li>
+      <li><span class="grow"><b>First-year timeline</b><br><span class="small muted">${TASKS.length} tasks, each dated from birth or pickup</span></span><button class="btn line small" data-act="toast" data-msg="Timeline editor (not in the prototype)">Edit</button></li>
+      <li><span class="grow"><b>Email wording</b><br><span class="small muted">Vet reminders, stay updates, package ready, birthdays, retention warnings</span></span><button class="btn line small" data-act="toast" data-msg="Email editor (not in the prototype)">Edit</button></li></ul></section>`;
+}
+// ---------- Reports (plan section 9): made-up figures for two litters before the portal and the Gem litter with it ----------
+const LITS = [{ id: 's25', name: 'Spring 2025', portal: false, fams: 6 }, { id: 'f25', name: 'Fall 2025', portal: false, fams: 5 }, { id: 'gem', name: 'Gem litter', portal: true, fams: 3 }];
+const PROGS = [{ id: 'food', name: 'Puppy food program', short: 'Food' }, { id: 'ins', name: 'Pet insurance trial', short: 'Insurance' }, { id: 'akc', name: 'AKC registration', short: 'AKC' }];
+const SIGN0 = { s25: { food: 2, ins: 3, akc: 4 }, f25: { food: 2, ins: 2, akc: 3 } };
+const GEM_SIGN = { before: { food: 0, ins: 0, akc: 0 }, vet: { food: 2, ins: 1, akc: 0 }, weeks: { food: 3, ins: 3, akc: 1 }, later: { food: 3, ins: 3, akc: 3 } };
+const EARN0 = { s25: 185, f25: 140 }, GEM_EARN = { before: 0, vet: 40, weeks: 150, later: 260 };
+const CLICKS = { before: [6, 9, 2, 1, 4, 2], vet: [12, 10, 7, 4, 5, 4], weeks: [16, 10, 9, 8, 7, 6], later: [21, 10, 9, 12, 9, 11] };
+const PLACES = ['Home: food band', 'Go-home checklist', 'Insurance tile', 'Timeline tasks', 'Handbook chapters', 'Emails'];
+const FOUND = ['Facebook', 'A past family', 'Website or Google', 'A show or event', 'Other'];
+// Every family she's placed with: how they found her and whether they used the insurance trial (made up).
+const PAST = [['Facebook', 1, 1, 1, 'The Lee family', 980, 2], ['Facebook', 0, 0, 0, 'The Grant family', 60, 0], ['Facebook', 1, 1, 1, 'The Moss family', 420, 1], ['Facebook', 0, 1, 0, 'The Day family', 85, 0], ['Facebook', 1, 1, 1, 'The Ward family', 310, 0],
+  ['A past family', 1, 1, 1, 'The Cole family', 760, 3], ['A past family', 1, 1, 1, 'The Pike family', 255, 1], ['A past family', 0, 0, 0, 'The Hart family', 40, 0], ['A past family', 1, 1, 0, 'The Vance family', 190, 0],
+  ['Website or Google', 0, 0, 0, 'The Bell family', 35, 0], ['Website or Google', 1, 1, 1, 'The Snow family', 330, 1], ['Website or Google', 0, 0, 1, 'The Fox family', 120, 0], ['A show or event', 1, 1, 1, 'The Rhee family', 640, 2], ['A show or event', 0, 1, 0, 'The Lowe family', 75, 0]];
+// Her go-home bag: what she usually sends, what each costs her, and the program it belongs to.
+const BAG0 = [
+  { id: 'g1', name: 'Food starter bag (2 lb)', prog: 'food', cost: 0, from: 'The food program’s breeder kit' },
+  { id: 'g2', name: 'Insurance trial certificate', prog: 'ins', cost: 0, from: 'The insurance program' },
+  { id: 'g3', name: 'AKC registration paper', prog: 'akc', cost: 0 },
+  { id: 'g4', name: 'Blanket with the litter’s scent', cost: 4 },
+  { id: 'g5', name: 'Chew toy and squeaky toy', prog: 'toys', cost: 6 },
+  { id: 'g6', name: 'Collar and 6 ft leash', cost: 9 },
+  { id: 'g7', name: 'Puppy shampoo sample', cost: 2 },
+  { id: 'g8', name: 'Go-home folder: records, contract, handbook', cost: 3 },
+];
+const EXTRAS_INCOME = { s25: 450, f25: 250 }, GEM_EXTRAS = { before: 950, vet: 950, weeks: 950, later: 950 };
+const DEMO_FIELDS0 = [
+  { id: 'found', label: 'How they found you', type: 'choice', options: FOUND, on: true },
+  { id: 'state', label: 'State', type: 'text', on: true },
+  { id: 'first', label: 'First Boston', type: 'yesno', on: true },
+  { id: 'home', label: 'At home', type: 'multi', options: ['Kids', 'Other dogs', 'Cats', 'Neither'], on: true },
+  { id: 'repeat', label: 'Repeat family', type: 'yesno', on: true },
+  { id: 'referredby', label: 'Referred by', type: 'text', on: true },
+  { id: 'referred', label: 'Families they’ve referred', type: 'text', on: true },
+  { id: 'social', label: 'Social reach', type: 'choice', options: ['Not on social', 'Under 1,000', '1,000–10,000', 'Over 10,000'], on: true },
+  { id: 'again', label: 'Likely to buy again', type: 'choice', options: ['Likely', 'Maybe', 'Unlikely'], on: true },
+  { id: 'budget', label: 'Budget', type: 'choice', options: ['Price-sensitive', 'Comfortable', 'Price no object'], on: true },
+  { id: 'paid', label: 'How they paid', type: 'choice', options: ['Early', 'On time', 'Late', 'Needed reminders'], on: true },
+  { id: 'show', label: 'Interested in showing', type: 'yesno', on: false, custom: true },
+];
+function signups() {
+  const out = JSON.parse(JSON.stringify(SIGN0)); out.gem = { ...GEM_SIGN[S.stage] };
+  Object.entries(S.results || {}).forEach(([k, v]) => { const [l, pr] = k.split(':'); out[l][pr] = v; });
+  return out;
+}
+const earnings = () => ({ ...EARN0, gem: GEM_EARN[S.stage], ...(S.earn || {}) });
+const pct = (n, d) => (d ? Math.round(n / d * 100) : 0);
+// One mini horizontal bar chart per program: a row per litter, the before-portal average as a dashed line.
+function miniBars(pr, sg) {
+  const W = 300, rowH = 26, top = 18, left = 78, right = 72, plot = W - left - right, H = top + LITS.length * rowH + 4;
+  const before = LITS.filter((l) => !l.portal), base = pct(before.reduce((a, l) => a + sg[l.id][pr.id], 0), before.reduce((a, l) => a + l.fams, 0));
+  const x = (v) => left + plot * v / 100;
+  return `<div class="mini"><div class="between"><h3>${pr.name}</h3><span class="small muted">before the portal ${base}%</span></div>
+    <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${pr.name}: share of families who signed up, by litter">
+      ${[0, 50, 100].map((t) => `<line class="grid" x1="${x(t)}" x2="${x(t)}" y1="${top - 4}" y2="${H - 2}"/><text x="${x(t)}" y="10" text-anchor="middle">${t}%</text>`).join('')}
+      ${LITS.map((l, i) => { const n = sg[l.id][pr.id], v = pct(n, l.fams), y = top + i * rowH + 6, w = Math.max(plot * v / 100, v ? 4 : 0);
+        return `<g data-tip="${l.name}: ${n} of ${l.fams} families (${v}%)${l.portal ? '' : ' · before the portal'}"><rect class="hit" x="0" y="${y - 6}" width="${W}" height="${rowH}"/><text x="${left - 6}" y="${y + 10}" text-anchor="end"${l.portal ? ' class="h"' : ''}>${l.name}</text>${w ? `<path class="m${l.portal ? '' : ' before'}" d="M${left} ${y}h${w - 4}a4 4 0 0 1 4 4v6a4 4 0 0 1-4 4h-${w - 4}z"/>` : ''}<text class="v" x="${left + w + 6}" y="${y + 10}">${v}% · ${n}/${l.fams}</text></g>`; }).join('')}
+      <line class="base" x1="${x(base)}" x2="${x(base)}" y1="${top - 4}" y2="${H - 2}"/>
+    </svg></div>`;
+}
+function hbars(rows, { fmt = (v) => v, cls = () => '', tip = (r) => `${r[0]}: ${r[1]}` } = {}) {
+  const W = 300, rowH = 24, left = 118, right = 46, plot = W - left - right, H = rows.length * rowH + 4, max = Math.max(1, ...rows.map((r) => r[1]));
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(rows.map((r) => r[0] + ' ' + fmt(r[1])).join(', '))}">${rows.map((r, i) => { const y = i * rowH + 6, w = Math.max(plot * r[1] / max, r[1] ? 4 : 0);
+    return `<g data-tip="${esc(tip(r))}"><rect class="hit" x="0" y="${y - 6}" width="${W}" height="${rowH}"/><text x="${left - 6}" y="${y + 10}" text-anchor="end">${esc(r[0])}</text>${w ? `<path class="m ${cls(r)}" d="M${left} ${y}h${w - 4}a4 4 0 0 1 4 4v6a4 4 0 0 1-4 4h-${w - 4}z"/>` : ''}<text class="v" x="${left + w + 6}" y="${y + 10}">${fmt(r[1])}</text></g>`; }).join('')}</svg>`;
+}
+function admReports() {
+  const sg = signups(), er = earnings(), gem = LITS[2];
+  const before = LITS.filter((l) => !l.portal), fb = before.reduce((a, l) => a + l.fams, 0);
+  const anyNow = pct(Math.max(...PROGS.map((pr) => sg.gem[pr.id])), gem.fams), anyBefore = 45;
+  const tiles = PROGS.map((pr) => { const n = sg.gem[pr.id], v = pct(n, gem.fams), b = pct(before.reduce((a, l) => a + sg[l.id][pr.id], 0), fb);
+    return `<div class="tile stat"><span class="eyebrow">${pr.short} · Gem litter</span><b>${v}%</b><span class="small">${n} of ${gem.fams} families</span><span class="vs">before the portal ${b}%${v > b ? ` · <b>+${v - b} pts</b>` : ''}</span></div>`; }).join('');
+  const clicks = CLICKS[S.stage].map((n, i) => [PLACES[i], n]).sort((a, b) => b[1] - a[1]);
+  const totalClicks = clicks.reduce((a, r) => a + r[1], 0);
+  const found = FOUND.map((f) => [f, PAST.filter((x) => x[0] === f).length + Object.values(S.demo).filter((d) => d.found === f).length]).filter((r) => r[1]);
+  const byFound = FOUND.map((f) => { const fams = PAST.filter((x) => x[0] === f); return [f, fams.length, fams.filter((x) => x[1]).length]; }).filter((r) => r[1]);
+  const table = S.repTable;
+  return `<section class="sec deep bleed"><span class="eyebrow">Programs and referrals</span><h1 style="font-size:1.9rem">Reports</h1>
+      <p class="small" style="opacity:.85">With the portal, ${anyNow}% of Gem litter families used at least one program so far. Before it: about ${anyBefore}%. Sign-ups come from each program’s own report; clicks show interest.</p></section>
+    <div class="row"><div class="seg" role="group" aria-label="Show" style="flex:1 1 14rem">${[['charts', 'Charts'], ['table', 'Table']].map(([k, l]) => `<button data-act="reptab" data-f="${k}" aria-pressed="${(table ? 'table' : 'charts') === k}">${l}</button>`).join('')}</div><button class="btn line small" data-act="toast" data-msg="Downloads every figure as a spreadsheet (CSV)">${icon('down')}Export</button></div>
+    <div class="bento">${tiles}<div class="tile green stat"><span class="eyebrow">Earned · Gem litter</span><b>$${er.gem}</b><span class="small">commissions and credit</span><span class="small" style="opacity:.85">Spring 2025: $${er.s25} · Fall 2025: $${er.f25}</span></div></div>
+    ${table ? `<div class="tile full"><h2>Sign-ups by litter</h2><div class="tablewrap"><table><thead><tr><th>Litter</th><th>Families</th>${PROGS.map((pr) => `<th>${pr.short}</th>`).join('')}<th>Earned</th></tr></thead><tbody>${LITS.map((l) => `<tr><td>${l.name}${l.portal ? '' : ' <span class="small muted">(before)</span>'}</td><td>${l.fams}</td>${PROGS.map((pr) => `<td>${sg[l.id][pr.id]} (${pct(sg[l.id][pr.id], l.fams)}%)</td>`).join('')}<td>$${er[l.id]}</td></tr>`).join('')}</tbody></table></div></div>
+      <div class="tile full"><h2>Clicks by place · Gem litter</h2><div class="tablewrap"><table><thead><tr><th>Place</th><th>Clicks</th></tr></thead><tbody>${clicks.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')}</tbody></table></div></div>`
+    : `<section class="sec mint bleed"><div class="between"><h2 class="big-h">Sign-ups by litter</h2></div>
+        <div class="legend"><span><i class="before"></i>Before the portal</span><span><i></i>With the portal</span><span><i class="base"></i>Before-portal average</span></div>
+        <div class="minis">${PROGS.map((pr) => miniBars(pr, sg)).join('')}</div>
+        <p class="small muted">Share of each litter’s families who signed up, from the program’s own report. Three families is a small litter: read a big change, not a few points.</p></section>
+      <div class="bento"><div class="tile s2"><div class="between"><h2>Where families click</h2><span class="small muted">Gem litter · ${totalClicks} clicks</span></div>${hbars(clicks, { tip: (r) => `${r[0]}: ${r[1]} clicks (${pct(r[1], totalClicks)}%)` })}<p class="small muted">Keep what gets clicked; move or drop what doesn’t.</p></div>
+        <div class="tile s2"><div class="between"><h2>Earned per litter</h2><span class="small muted">From program reports</span></div>${hbars(LITS.map((l) => [l.name, er[l.id], l.portal]), { fmt: (v) => '$' + v, cls: (r) => (r[2] ? '' : 'before'), tip: (r) => `${r[0]}: $${r[1]}${r[2] ? '' : ' (before the portal)'}` })}<div class="legend"><span><i class="before"></i>Before the portal</span><span><i></i>With the portal</span></div></div></div>`}
+    <div class="bento"><div class="tile s2"><div class="between"><h2>Extras income per litter</h2><span class="small muted">Stays, photo packages, packs · from KennelOS</span></div>${hbars(LITS.map((l) => [l.name, l.portal ? GEM_EXTRAS[S.stage] : EXTRAS_INCOME[l.id], l.portal]), { fmt: (v) => '$' + v.toLocaleString(), cls: (r) => (r[2] ? '' : 'before'), tip: (r) => `${r[0]}: $${r[1]} in extras` })}</div>
+      <div class="tile s2"><div class="between"><h2>Food starter bag and food sign-ups</h2><span class="small muted">All families</span></div>${(() => { const got = PAST.filter((x) => x[2]), not = PAST.filter((x) => !x[2]); return hbars([['Got the starter bag', pct(got.filter((x) => x[3]).length, got.length)], ['Didn’t', pct(not.filter((x) => x[3]).length, not.length)]], { fmt: (v) => v + '%', tip: (r) => `${r[0]}: ${r[1]}% signed up for the food program` }) + `<p class="small muted">${got.length} families got the bag, ${not.length} didn’t. Send it with every puppy.</p>`; })()}</div></div>
+    <div class="tile full"><div class="between"><h2>Families who’ve brought you the most</h2><span class="small muted">Extras, program credit and referrals</span></div><div class="tablewrap"><table><thead><tr><th>Family</th><th>Found you via</th><th>Brought you</th><th>Referred</th></tr></thead><tbody>${PAST.slice().sort((a, b) => b[5] - a[5]).slice(0, 6).map((x) => `<tr><td><b>${x[4]}</b></td><td>${x[0]}</td><td>$${x[5]}</td><td>${x[6] ? x[6] + ' famil' + (x[6] === 1 ? 'y' : 'ies') : '—'}</td></tr>`).join('')}</tbody></table></div><p class="small muted">Your best ask-for-a-referral and ask-for-a-review list.</p></div>
+    <section class="sec sand bleed"><span class="eyebrow">Your families</span><h2 class="big-h">Who your buyers are</h2>
+      <div class="bento"><div class="tile s2"><div class="between"><h3>How they found you</h3><span class="small muted">All ${PAST.length + Object.keys(S.demo).length} families</span></div>${hbars(found, { tip: (r) => `${r[0]}: ${r[1]} families` })}</div>
+      <div class="tile s2"><h3>Insurance trial, by how they found you</h3><div class="tablewrap"><table><thead><tr><th>Found you via</th><th>Families</th><th>Used the trial</th></tr></thead><tbody>${byFound.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]} (${pct(r[2], r[1])}%)${r[1] < 3 ? ' <span class="small muted">· small group</span>' : ''}</td></tr>`).join('')}</tbody></table></div><p class="small muted">Every count shows. With only a few families in a group, read it as a hint, not a trend.</p></div></div>
+      <p class="small muted">From the details you add on each family’s screen.</p></section>
+    <form class="tile stack" data-act="saveresult"><h2>Add a program’s report</h2><p class="small muted">Once a month, copy each program’s sign-ups and earnings from its dashboard. Most programs don’t send them to the portal on their own.</p>
+      <div class="fgrid"><label class="half" for="rr-l">Litter<select id="rr-l" name="l">${LITS.map((l) => `<option value="${l.id}" ${l.portal ? 'selected' : ''}>${l.name}</option>`).join('')}</select></label>
+        <label class="half" for="rr-p">Program<select id="rr-p" name="p">${PROGS.map((pr) => `<option value="${pr.id}">${pr.name}</option>`).join('')}</select></label>
+        <label class="half" for="rr-n">Families signed up<input id="rr-n" name="n" type="number" min="0" max="12" required></label>
+        <label class="half" for="rr-e">Earned or credited ($)<input id="rr-e" name="e" type="number" min="0"></label></div>
+      <div class="row"><button class="btn solid small">Add to reports</button><span class="small muted">Or upload the program’s CSV export (a later step).</span></div></form>`;
+}
+function demoSection(k) {
+  const d = S.demo[k] || {}, f = (id) => S.demoFields.find((x) => x.id === id);
+  const on = S.demoFields.filter((x) => x.on);
+  const ctl = (x) => {
+    if (x.type === 'choice') return `<label class="half" for="dm-${x.id}">${x.label}<select id="dm-${x.id}" name="${x.id}"><option value="">—</option>${x.options.map((o) => `<option ${d[x.id] === o ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`;
+    if (x.type === 'text') return `<label class="half" for="dm-${x.id}">${x.label}<input id="dm-${x.id}" name="${x.id}" value="${esc(d[x.id] || '')}" maxlength="40"></label>`;
+    if (x.type === 'yesno') return `<label class="half" for="dm-${x.id}">${x.label}<select id="dm-${x.id}" name="${x.id}"><option value="">—</option>${['Yes', 'No'].map((o) => `<option ${d[x.id] === o ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`;
+    return `<div><span class="small" style="font-weight:700">${x.label}</span><div class="chips">${x.options.map((o) => `<label><input type="checkbox" name="${x.id}" value="${o}" ${(d[x.id] || []).includes(o) ? 'checked' : ''}>${o}</label>`).join('')}</div></div>`;
+  };
+  return `<form class="card" data-act="savedemo" data-id="${k}"><div class="between"><h2>About this family</h2><span class="small muted">Only you see this</span></div>
+    <div class="fgrid">${on.map(ctl).join('')}<label for="dm-note">Notes<textarea id="dm-note" name="note" placeholder="Anything you want to remember">${esc(d.note || '')}</textarea></label></div>
+    <div class="row"><button class="btn line small">Save</button><a class="btn text small" href="#a-portal">Change these fields →</a></div></form>`;
+}
+function admPage(route) {
+  const [r, arg] = route.split('-');
+  const c = counts(), unread = S.site.messages.filter((m) => !m.read).length;
+  const pages = { today: admToday, vet: admVet, families: admFamilies, fam: () => admFamily(arg), dogs: admDogs, edit: () => admEdit(arg), website: admWebsite, portal: admPortal, reports: admReports };
+  const nav = [['today', 'Today', 'today', c.proofs.length + c.bounced.length + c.stays.length || ''], ['families', 'Families', 'people', ''], ['dogs', 'Dogs', 'paw', c.drafts + c.stays.length || ''], ['website', 'Website', 'globe', unread + S.site.reviews.length || ''], ['portal', 'Portal', 'heart', ''], ['reports', 'Reports', 'chart', '']];
+  const cur = r === 'fam' ? 'families' : r === 'vet' ? 'today' : r === 'edit' ? 'dogs' : (pages[r] ? r : 'today');
+  return `<div class="adm">${header('Site Manager', 'globe')}<div class="shell">
+    <aside aria-label="Site Manager">${nav.map(([k, l, ic, n]) => `<a href="#a-${k}" ${k === cur ? 'aria-current="page"' : ''}>${icon(ic)}${l}${n ? `<span class="cnt">${n}</span>` : ''}</a>`).join('')}</aside>
+    <main id="main">${(pages[r] || admToday)()}</main></div>
+    <nav class="tabs" aria-label="Site Manager"><div class="in">${nav.map(([k, l, ic]) => `<a href="#a-${k}" ${k === cur ? 'aria-current="page"' : ''}>${icon(ic)}${l}</a>`).join('')}</div></nav></div>`;
+}
+
+// ---------- Render and events ----------
+const app = document.getElementById('app');
+function route() { const h = location.hash.slice(1); const [v, ...rest] = h.split('-'); return { v: v === 'a' ? 'admin' : 'family', r: rest.join('-') || (v === 'a' ? 'today' : 'home') }; }
+function render(keepScroll) {
+  const { v, r } = route(), y = window.scrollY;
+  S.view = v;
+  app.innerHTML = v === 'admin' ? admPage(r) : famPage(r);
+  document.querySelectorAll('#pv button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.view === S.view));
+  document.querySelectorAll('#pf button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.fam === S.fam));
+  document.querySelectorAll('#ps button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.stage === S.stage));
+  document.querySelectorAll('#pt button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.theme === S.theme));
+  if (keepScroll) window.scrollTo(0, y);
+}
+// Chart tooltips: any mark with data-tip.
+const tip = document.createElement('div'); tip.id = 'tip'; tip.hidden = true; document.body.appendChild(tip);
+document.addEventListener('pointermove', (e) => { const t = e.target.closest && e.target.closest('[data-tip]'); if (!t) { tip.hidden = true; return; } tip.textContent = t.dataset.tip; tip.hidden = false; const x = Math.min(e.clientX + 12, innerWidth - tip.offsetWidth - 8); tip.style.left = x + 'px'; tip.style.top = (e.clientY - tip.offsetHeight - 10) + 'px'; });
+// A missing photo (the file opened outside its artifact) falls back to the drawn placeholder.
+document.addEventListener('error', (e) => { if (e.target.tagName === 'IMG') e.target.classList.add('gone'); }, true);
+let toastT;
+function toast(msg) { document.querySelector('.toast')?.remove(); const t = document.createElement('div'); t.className = 'toast'; t.role = 'status'; t.textContent = msg; document.body.appendChild(t); clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2600); }
+const dlg = document.getElementById('dlg'), dlgIn = document.getElementById('dlgIn');
+function openDialog(html) { dlgIn.innerHTML = html; dlg.showModal(); }
+
+document.querySelector('.proto').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.view) { location.hash = b.dataset.view === 'admin' ? '#a-today' : '#f-home'; return; }
+  if (b.dataset.fam) { S.fam = b.dataset.fam; if (S.view !== 'family') location.hash = '#f-home'; else render(); window.scrollTo(0, 0); }
+  if (b.dataset.stage) { S.stage = b.dataset.stage; reset(); render(); window.scrollTo(0, 0); }
+  if (b.dataset.theme) { S.theme = b.dataset.theme; if (S.theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = S.theme; render(true); }
+});
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act]'); if (!el || el.closest('.proto')) return;
+  const a = el.dataset.act, id = el.dataset.id;
+  if (el.tagName === 'INPUT' || el.tagName === 'SELECT') return;
+  if (a === 'go') { e.preventDefault(); const p = S.programs.find((x) => x.id === el.dataset.prog); toast(`Opens ${p ? p.name : 'the link'} in a new tab (click counted)`); return; }
+  if (a === 'toast') { e.preventDefault(); toast(el.dataset.msg); return; }
+  if (a === 'playvideo') { toast(`Plays “${el.dataset.t}” here, with Download`); return; }
+  if (a === 'done') { S.taskDone[P().id + ':' + id] = true; render(true); toast('Marked done. Reminders for this step stop.'); return; }
+  if (a === 'book') { const p = P(); openDialog(`<h2>When is ${p.name}’s vet visit?</h2><form class="stack" data-act="booksave"><label for="b-at">Date and time<input id="b-at" type="datetime-local" name="at" required value="${toLocalInput(S.booked[p.id] || addDays(p.goHome, 1))}"></label><label for="b-vet">Vet (optional)<input id="b-vet" name="vet" placeholder="Clinic name"></label><div class="row"><button class="btn solid">Save</button><button type="button" class="btn text small" data-act="closedlg">Cancel</button></div></form>`); return; }
+  if (a === 'closedlg') { dlg.close(); return; }
+  if (a === 'account') { const F = FAMILIES[S.fam]; openDialog(`<h2>Your account</h2><dl class="kv"><dt>Signed in</dt><dd>${F.emails[0]}</dd>${F.emails[1] ? `<dt>Also</dt><dd>${F.emails[1]}</dd>` : ''}</dl>
+      <fieldset class="stack" style="border:0;padding:0;margin:0"><legend class="eyebrow">Emails</legend><label class="check"><input type="checkbox" checked disabled>Vet and go-home reminders (always on: they’re about your contract)</label>${P().stay ? '<label class="check"><input type="checkbox" checked disabled>Stay updates (always on while the stay runs)</label>' : ''}<label class="check"><input type="checkbox" checked>Birthday</label><label class="check"><input type="checkbox" checked>Monthly “what’s next” tips</label></fieldset>
+      <div class="stack"><button class="btn line" data-act="toast" data-msg="A zip of your photos and entries is on its way">Download everything</button><button class="btn line" data-act="toast" data-msg="Signed out">Sign out</button><button class="btn text small" data-act="toast" data-msg="Asks to confirm, then deletes your account (A-K keeps the sale records the contract needs)">Delete our account</button></div>
+      <p class="small muted">Accounts with no activity for 12 months are deleted, after two warning emails with a download link.</p><button class="btn text small" data-act="closedlg">Close</button>`); return; }
+  if (a === 'zoom') { S.zoom = S.zoom % 3 + 1; document.documentElement.dataset.zoom = S.zoom; try { localStorage.setItem('portal-zoom', S.zoom); } catch (err) { /* storage blocked */ } render(true); toast(`Text size: ${['normal', 'large', 'larger'][S.zoom - 1]}`); return; }
+  if (a === 'chapter') { S.q = el.dataset.q; return; }
+  if (a === 'account-admin') { toast('The Site Manager’s own menu'); return; }
+  if (a === 'openbook') { S.bookOpen = !!S.pickup[P().id]; if (route().r !== 'book') location.hash = '#f-book'; else render(true); e.preventDefault(); return; }
+  if (a === 'closebook') { S.bookOpen = false; render(true); return; }
+  if (a === 'filter') { S.bookFilter = el.dataset.f; render(true); return; }
+  if (a === 'reptab') { S.repTable = el.dataset.f === 'table'; render(true); return; }
+  if (a === 'addbag') { S.bagItems.push({ id: 'g' + Date.now(), name: 'Treat sampler', cost: 5 }); render(true); toast('Added to your go-home bag.'); return; }
+  if (a === 'adddemo') { S.demoFields.push({ id: 'c' + Date.now(), label: 'Wants a second puppy', type: 'yesno', on: true, custom: true }); render(true); toast('Field added. It shows on every family’s screen.'); return; }
+  if (a === 'famtab') { S.famTab = el.dataset.f; render(true); return; }
+  if (a === 'pickup') { S.pickup[id] = new Date(S.now); render(true); toast(`${PUPS.find((p) => p.id === id).name} picked up. The vet clock is running; reminder sent.`); return; }
+  if (a === 'accept') { S.proof[id].ok = true; render(true); toast('Accepted. The family sees it on their page.'); return; }
+  if (a === 'del') { S.deleted[id] = true; location.hash = '#a-fam-' + id; render(); toast('Deleted. Undo for 30 days.'); return; }
+  if (a === 'undel') { delete S.deleted[id]; render(); return; }
+  if (a === 'editdraft') { S.editing = id; render(true); return; }
+  if (a === 'canceldraft') { S.editing = null; render(true); return; }
+  if (a === 'dismiss') { S.drafts = S.drafts.filter((d) => d.id !== id); render(true); toast('Dismissed. It won’t come back on the next sync.'); return; }
+  if (a === 'writeupdate') { S.writing = id; render(true); return; }
+  if (a === 'cancelwrite') { S.writing = null; render(true); return; }
+  if (a === 'publish') { S.site.changes = []; S.site.published = new Date(S.now); render(true); toast('Published. Visitors now see your changes.'); return; }
+  if (a === 'readmsg') { S.site.messages.find((m) => m.id === id).read = true; render(true); return; }
+  if (a === 'review') { S.site.reviews = S.site.reviews.filter((r) => r.id !== id); if (el.dataset.ok) S.site.changes.push('Reviews: a new review from the Reed family'); render(true); toast(el.dataset.ok ? 'Approved. It shows on your site after you publish.' : 'Declined and deleted.'); return; }
+  if (a === 'up' || a === 'down') { const i = +el.dataset.i, j = a === 'up' ? i - 1 : i + 1; [S.chapters[i], S.chapters[j]] = [S.chapters[j], S.chapters[i]]; render(true); return; }
+});
+document.addEventListener('change', (e) => {
+  const el = e.target, a = el.dataset.act, id = el.dataset.id;
+  if (a === 'check') { S.check[id] = el.checked; render(true); }
+  if (a === 'proof' && el.files[0]) { S.proof[P().id] = { file: el.files[0].name, at: new Date(S.now), ok: false }; render(true); toast('Uploaded. A-K will check it; see the Breeder view.'); }
+  if (a === 'keep') { S.keep[id] = el.checked; render(true); }
+  if (a === 'pickuptime' && el.value) { S.pickup[id] = fromLocalInput(el.value); render(true); toast('Pickup time corrected. Deadline and reminders moved with it.'); }
+  if (a === 'chon') { S.chapters[+el.dataset.i].on = el.checked; render(true); }
+  if (a === 'demoon') { S.demoFields[+el.dataset.i].on = el.checked; render(true); }
+  if (a === 'progon') { S.programs[+el.dataset.i].on = el.checked; }
+  if (a === 'pupstatus') { const p = PUPS.find((x) => x.id === id); S.pupStatus[id] = el.value; S.site.changes.push(`${p.name}: status changed`); render(true); toast('Saved to your draft. Publish when you’re ready.'); }
+  if (a === 'mediastatus') { const m = S.media[id]; m.status = el.value; if (el.value === 'delivered') { m.delivered = new Date(S.now); if (!m.photos) m.photos = GALLERY.length; if (!m.videos) m.videos = VIDEOS.length; } render(true); toast(el.value === 'delivered' ? 'Delivered. The family got an email and a notification.' : 'Status saved. The family’s page shows it.'); }
+  if (a === 'mediafiles' && el.files.length) { const m = S.media[id]; [...el.files].forEach((f) => { if (f.type.startsWith('video')) m.videos++; else m.photos++; }); render(true); toast(`${el.files.length} file${el.files.length === 1 ? '' : 's'} uploaded, full size`); }
+});
+document.addEventListener('input', (e) => {
+  if (e.target.dataset.act === 'search') { S.q = e.target.value; const pos = e.target.selectionStart; render(true); const n = document.getElementById('hq'); n.focus(); n.setSelectionRange(pos, pos); }
+});
+document.addEventListener('submit', (e) => {
+  const f = e.target, a = f.dataset.act; if (!a) return;
+  e.preventDefault();
+  const fd = new FormData(f);
+  if (a === 'booksave') { S.booked[P().id] = fromLocalInput(fd.get('at')); dlg.close(); render(true); toast('Booking saved. Thank you!'); }
+  if (a === 'addentry') { const [y, m, d] = String(fd.get('date')).split('-').map(Number); S.familyEntries.push({ id: 'f' + Date.now(), pup: P().id, date: D(y, m, d), title: fd.get('title'), body: fd.get('body'), vis: fd.get('vis'), img: null }); S.bookOpen = false; S.bookFilter = 'all'; render(true); toast('Added to the baby book'); }
+  if (a === 'publishdraft') { const d = S.drafts.find((x) => x.id === f.dataset.id); S.breederEntries.push({ id: 'b' + Date.now(), pup: d.pup === 'Gem litter' ? '*' : 'opal', date: d.date, title: fd.get('title'), body: fd.get('body'), img: null }); S.drafts = S.drafts.filter((x) => x.id !== d.id); S.editing = null; render(true); toast('Added to the baby book. Families see it now.'); }
+  if (a === 'saveresult') { const l = fd.get('l'), pr = fd.get('p'), n = +fd.get('n'), e2 = fd.get('e'); const lit = LITS.find((x) => x.id === l);
+    if (n > lit.fams) { toast(`${lit.name} has ${lit.fams} families. Check the number.`); return; }
+    S.results[`${l}:${pr}`] = n; if (e2 !== '') S.earn[l] = (S.earn[l] ?? earnings()[l]) + +e2; render(true); toast('Added. The charts include it now.'); return; }
+  if (a === 'savebag') { const k = f.dataset.id; S.bag[k] = fd.getAll('bag'); S.bagExtra[k] = fd.getAll('extra').concat(String(fd.get('add') || '').trim() ? [String(fd.get('add')).trim()] : []); render(true); toast('Saved. The family sees it under Records.'); return; }
+  if (a === 'savedemo') { const k = f.dataset.id, d = {}; S.demoFields.forEach((x) => { d[x.id] = x.type === 'multi' ? fd.getAll(x.id) : fd.get(x.id) || ''; }); d.note = fd.get('note') || ''; S.demo[k] = d; render(true); toast('Saved.'); return; }
+  if (a === 'savepup') { location.hash = '#a-dogs'; toast('Saved to your draft. Publish when you’re ready.'); return; }
+  if (a === 'sendupdate') { const p = PUPS.find((x) => x.id === f.dataset.id), x = EXTRAS[p.stay];
+    S.updates = S.updates.filter((u) => !(u.pup === p.id && u.date > S.now));
+    S.updates.push({ id: 'u' + Date.now(), pup: p.id, date: new Date(S.now), week: stayWeek(p), note: fd.get('note'), weight: fd.get('weight') || '—', levels: x.skills.map((_, i) => +fd.get('sk' + i)), img: p.img, video: null, book: !!fd.get('book') });
+    S.writing = null; render(true); toast(`Sent to the ${FAMILIES[p.family].short}: email and notification`); }
+});
+window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
+reset();
+if (!location.hash) history.replaceState(null, '', '#f-home');
+render();
+})();
+</script>

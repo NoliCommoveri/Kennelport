@@ -328,10 +328,52 @@ function photoPicker(name, label, hint, chosen, ctx, { multiple, max }) {
     ${parts.join('')}${others}${add}</fieldset>`;
 }
 
-// The web address goes last: most people never change it.
+// The long forms in sections (docs/Puppy_Parent_Portal_Plan.md section 7.3): what belongs
+// together under a heading, short fields two to a row, and every on/off setting gathered
+// at the end as switches instead of scattered between the inputs. A field a group doesn't
+// name still shows, under More, so a new field is never lost. Kinds without groups keep
+// the one plain list.
+const GROUPS = {
+  dogs: [['About', ['call_name', 'sex', 'registered_name', 'date_of_birth', 'color', 'weight', 'role', 'registry', 'titles']], ['Photo and story', ['photo_id', 'bio']], ['Where they show', ['status', 'health_display', 'price', 'died_on']]],
+  litters: [['The litter', ['name', 'stage', 'summary']], ['Parents', ['dam_id', 'sire_id', 'dam', 'sire', 'dam_name', 'sire_name']], ['Dates', ['born_on', 'ready_on', 'deposits_on']], ['For a planned litter', ['plan_label', 'expected_label', 'ready_label'], (v) => v?.stage === 'planned'], ['Prices', ['price_female', 'price_male', 'full_reg_female', 'full_reg_male', 'deposit_female', 'deposit_male', 'price_note']]],
+  puppies: [['The puppy', ['name', 'collar', 'sex', 'color', 'status', 'registration', 'registry', 'price']], ['Photo and story', ['photo_id', 'bio', 'more_photos_url']]],
+  site: [['Your kennel', ['kennel_name', 'breed', 'tagline', 'monogram', 'blurb', 'logo_photo_id']], ['Where families find you', ['town', 'region', 'contact_email', 'contact_phone', 'facebook_url', 'facebook_label', 'instagram_url']], ['Look', ['scheme', 'dark_mode']]],
+  health: [['The result', ['test', 'result', 'date', 'verify_url']]],
+  reviews: [['The review', ['quote', 'first_name', 'rating', 'town', 'puppy_name', 'home_month', 'topic', 'photo_id']], ['Shown', ['status']]],
+  extras: [['The extra', ['kind', 'name', 'grp', 'description', 'photo_id']], ['Price and length', ['price_from', 'price_to', 'weeks']], ['What\u2019s included', ['lead_in', 'checklist', 'closing']]],
+  products: [['The product', ['name', 'grp', 'description', 'photo_id', 'image_url']], ['Link and code', ['link_url', 'link_label', 'code', 'code_note']]],
+  albums: [['The album', ['title', 'litter_id', 'litter', 'description', 'cover_photo_id']], ['Photos', ['photos', 'more_photos_url']]],
+};
+const SWITCHES_TITLE = { site: 'Prices', health: 'This result' };
+// Two to a row: numbers, dates, choices, and one-line text of 80 characters or fewer.
+const half = (f) => !f.ui && (['int', 'date', 'month', 'enum', 'dogid', 'dogref', 'litterid', 'litterref'].includes(f.type) || (f.type === 'text' && !f.multiline && (f.max ?? 999) <= 80));
+const group = (title, inner, cls = '') => `<section class="fgroup${cls}"><h2>${esc(title)}</h2><div class="fgrid">${inner}</div></section>`;
+
+// The web address goes last, folded away: most people never change it.
 export function fields(list, values, ctx) {
-  const entries = Object.entries(list).sort(([a], [b]) => (a === 'slug') - (b === 'slug'));
-  return entries.map(([n, f]) => field(n, f, values?.[n], { ...ctx, values })).join('\n');
+  const draw = (n) => field(n, list[n], values?.[n], { ...ctx, values });
+  const groups = GROUPS[ctx.kind];
+  if (!groups) {
+    const entries = Object.entries(list).sort(([a], [b]) => (a === 'slug') - (b === 'slug'));
+    return entries.map(([n]) => draw(n)).join('\n');
+  }
+  const used = new Set(['slug']);
+  const cell = (n) => { used.add(n); return `<div class="f${half(list[n]) ? ' half' : ''}">${draw(n)}</div>`; };
+  const out = [];
+  // A group with a test folds away unless the test holds (planned-litter wording on a
+  // born litter, say); it opens with a tap either way.
+  for (const [title, names, openIf] of groups) {
+    const here = names.filter((n) => list[n] && list[n].type !== 'bool');
+    if (!here.length) continue;
+    const inner = here.map(cell).join('');
+    out.push(openIf ? `<details class="fgroup fold"${openIf(values) ? ' open' : ''}><summary>${esc(title)}</summary><div class="fgrid">${inner}</div></details>` : group(title, inner));
+  }
+  const rest = Object.keys(list).filter((n) => !used.has(n) && list[n].type !== 'bool');
+  if (rest.length) out.push(group('More', rest.map(cell).join('')));
+  const bools = Object.keys(list).filter((n) => list[n].type === 'bool');
+  if (bools.length) out.push(group(SWITCHES_TITLE[ctx.kind] ?? 'On your website', bools.map((n) => { used.add(n); return draw(n); }).join(''), ' switches'));
+  if (list.slug) out.push(`<details class="fgroup advanced"><summary>Web address</summary><div class="fgrid">${draw('slug')}</div></details>`);
+  return out.join('\n');
 }
 
 // A submitted form → values for the model. Checkboxes absent mean off; empty
