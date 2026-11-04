@@ -6,7 +6,7 @@ import {
   litterCard, parentCards, litterFacts, dogCard, coCard, partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
   paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
   dogGroups, depositsAhead, puppyStatus, puppyPriceText, regText, fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
-  faqBlock,
+  faqBlock, familyLogin as familyLoginLink,
 } from './parts.js';
 import { embedView } from '../embeds.js';
 import { COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk } from '../content/model.js';
@@ -541,6 +541,21 @@ function expanderPage(snap, key, fallback) {
 }
 export const policies = (snap) => expanderPage(snap, 'policies', { eyebrow: 'Our promises', heading: 'Policies' });
 export const faq = (snap) => expanderPage(snap, 'faq', { eyebrow: 'Questions', heading: 'FAQ' });
+// /family-login, only on a site with the family portal on and a KennelOS
+// waitlist linked: the one Family login button asks which the family wants.
+export function familyLogin(snap, ctx) {
+  if (!ctx.portal || !snap.site.family_login) return null;
+  const card = (h, text, href, button, external) => `<div class="pay-card"><h3>${esc(h)}</h3><p class="pay-when">${esc(text)}</p><p><a class="btn solid" href="${attr(href)}"${external ? ' rel="noopener noreferrer" target="_blank"' : ''}>${esc(button)}</a></p></div>`;
+  return {
+    title: 'Family login', section: null, noindex: true,
+    body: `${pagehead(null, { eyebrow: 'Families', heading: 'Family login', lede: 'Where would you like to go?' })}
+      <section class="section tight"><div class="wrap"><div class="pay"><div class="pay-grid">
+        ${card('Waitlist Status Page', 'Your place on the list, choosing your puppy, booking pickup and messages to us.', snap.site.family_login, 'Open', true)}
+        ${card('A-K Puppy Families', "Once your contract is signed: your puppy's records, the vet visit and the first weeks at home.", '/family', 'Open', false)}
+      </div></div></div></section>`,
+  };
+}
+
 export function waitlistHelp(snap, ctx) {
   const page = expanderPage(snap, 'waitlist_help', { eyebrow: 'Waitlist', heading: 'Using your status page' });
   const login = snap.site.family_login ? `<a class="btn solid" href="${attr(snap.site.family_login)}" rel="noopener noreferrer" target="_blank">Sign in to see your details</a> ` : '';

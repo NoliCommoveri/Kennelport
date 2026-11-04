@@ -1,6 +1,6 @@
 // The page around every "ak" page: <head> with title, description, share
 // preview (Open Graph) and structured data; the header and menu; the footer.
-import { esc, attr, menuGroups, photoUrl, label, pageOn, payShown } from './parts.js';
+import { esc, attr, menuGroups, photoUrl, label, pageOn, payShown, familyLogin } from './parts.js';
 
 import { ASSET_VERSION } from './version.js';
 import { schemeOf, schemeFile, preloadFont, ORNAMENTS } from './schemes.js';
@@ -52,8 +52,9 @@ function header(snap, ctx) {
     return `<li><button class="navtop" type="button" aria-expanded="false"${current ? ' aria-current="page"' : ''}>${esc(g.label)} <i class="chev"></i></button>
       <ul class="drop">${g.links.map((l) => `<li><a href="${attr(l.href)}">${esc(l.text)}</a></li>`).join('')}</ul></li>`;
   }).join('');
-  // Family login (plan 3.8): KennelOS's sign-in, beside the Waitlist button.
-  const login = snap.site.family_login ? `<li><a class="navtop" href="${attr(snap.site.family_login)}" rel="noopener noreferrer" target="_blank">Family login</a></li>` : '';
+  // Family login (plan 3.8): beside the Waitlist button (familyLogin says where).
+  const fl = familyLogin(snap, ctx);
+  const login = fl ? `<li><a class="navtop" href="${attr(fl.href)}"${fl.external ? ' rel="noopener noreferrer" target="_blank"' : ''}>Family login</a></li>` : '';
   const withLogin = login && items.includes('class="btn solid"') ? items.replace(/<li><a class="btn solid"/, `${login}<li><a class="btn solid"`) : items + login;
   return `<header class="site"><div class="wrap bar">
     ${headerBrand(snap)}
@@ -68,7 +69,7 @@ function footer(snap, ctx) {
   const cols = [
     ['About us', groups.find((g) => g.key === 'about')?.links ?? []],
     ['Dogs and puppies', [...(groups.find((g) => g.key === 'residents')?.links.slice(0, 1) ?? []), ...(groups.find((g) => g.key === 'puppies')?.links ?? [])]],
-    ['Buying a puppy', [...(groups.find((g) => g.key === 'how')?.links ?? []), ...(pageOn(snap, 'waitlist', ctx) ? [{ href: '/waitlist', text: label(snap, 'waitlist') }] : []), ...(payShown(snap, ctx) ? [{ href: '/waitlist#how-to-pay', text: 'How to pay' }] : []), ...(snap.site.family_login ? [{ href: snap.site.family_login, text: 'Family login', external: true }] : [])]],
+    ['Buying a puppy', [...(groups.find((g) => g.key === 'how')?.links ?? []), ...(pageOn(snap, 'waitlist', ctx) ? [{ href: '/waitlist', text: label(snap, 'waitlist') }] : []), ...(payShown(snap, ctx) ? [{ href: '/waitlist#how-to-pay', text: 'How to pay' }] : []), ...(familyLogin(snap, ctx) ? [{ ...familyLogin(snap, ctx), text: 'Family login' }] : [])]],
   ].filter(([, links]) => links.length);
   return `<footer class="site"><div class="wrap">
     <div class="foot-brand">${footerBrand(snap)}${snap.site.blurb ? `<p class="small">${esc(snap.site.blurb)}</p>` : ''}</div>

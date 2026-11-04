@@ -34,6 +34,7 @@ function pick(snap, ctx) {
     if (key !== 'home' && !pageOn(snap, key, ctx)) return null;
     return fn(snap, ctx);
   }
+  if (path === '/family-login') return P.familyLogin(snap, ctx);
   let m = path.match(/^\/dogs\/([a-z0-9-]+)$/);
   if (m) return pageOn(snap, 'dogs', ctx) || snap.dogs.length ? P.dog(snap, ctx, m[1]) : null;
   m = path.match(/^\/albums\/([a-z0-9-]+)$/);
@@ -45,7 +46,7 @@ function pick(snap, ctx) {
   return null;
 }
 
-// ctx: { path, origin, today (YYYY-MM-DD), preview }
+// ctx: { path, origin, today (YYYY-MM-DD), preview, portal (the family portal is on) }
 export function renderPage(snap, ctx) {
   const page = pick(snap, ctx);
   if (!page) return { status: 404, html: layout(snap, ctx, P.unavailable(snap, ctx)) };

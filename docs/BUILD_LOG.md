@@ -1417,3 +1417,17 @@ here: the notes below say what KennelPort now receives.
 Before the gate (plan section 6): a KennelOS Worker deploy, then one litter from signed
 contract to the vet visit against staging, the `RESEND_WEBHOOK_SECRET` secret, and her
 answers to plan 15.
+
+## 2026-11-04: Puppy parent portal, one Family login button that asks
+
+- On a site with the family portal on (`sites.portal_on`, read when the page is served, so
+  no publish is needed), the menu's and footer's **Family login** opens the site's own
+  `/family-login` page instead of KennelOS's sign-in. It offers two choices: **Waitlist
+  Status Page** (KennelOS's sign-in, in a new tab, as before) and **A-K Puppy Families**
+  (`/family`). With no KennelOS waitlist linked, Family login goes straight to `/family`.
+  The page isn't indexed or in the sitemap, and it's a 404 while the portal is off.
+- Every other site is unchanged. The status-page help's "Sign in to see your details"
+  still goes to KennelOS everywhere.
+- The page cache keys on the portal switch too, so turning it on or off shows at once.
+- Built from the template's existing How to pay card styles: no site template file
+  changed, so no version bump.
