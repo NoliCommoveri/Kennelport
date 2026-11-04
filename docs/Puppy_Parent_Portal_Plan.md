@@ -274,17 +274,36 @@ One page, four states, worked out from the go-home date, pickup time and today:
   book, Handbook. Account (email choices, download everything, sign out) opens from the
   header.
 
-### 7.3 Her screens in the manage app
+### 7.3 Her screens: one app for the website and the portal
 
-The portal's admin is a section of the manage app she already has, not a second app.
+The portal's admin is not a second app or a separate section: the Site Manager she
+already has becomes one app for her website and her families, in the look of section
+7.1 (already applied to the existing screens: Fraunces and Mulish, square corners,
+the teal header that matches the app icon). Five places, a sidebar on a computer and
+tabs on a phone:
 
-- **Today** leads with what needs her, and shows only the items that are there:
+| Tab | Holds |
+|---|---|
+| **Today** | Everything that needs her, from both sides (below), plus "N website changes not published" with **Review and publish** |
+| **Families** | **Puppy families** (the portal) and the **Waitlist** (the website's list), so a family moves from one to the other when they take a puppy and gets their invite then |
+| **Dogs** | Dogs, litters and puppies: one record each, used by both. A puppy's website status (Available, Reserved, Placed) sits beside its family and pickup. KennelOS baby book drafts are here too |
+| **Website** | Publish, view, preview, share; the inbox and reviews to approve; photos and albums; pages and wording, waitlist and application, how to pay, extras, recommended products, kennel details, KennelOS (today's Site Manager screens) |
+| **Portal** | What families see: handbook chapters, programs, checklist and timeline templates, email wording |
+
+**Shared, not copied:** photos and albums feed both the website and baby books, and
+the website's Recommended products are the portal's programs: one list, one place to
+change a link or code.
+
+The screens:
+
+- **Today** leads with what needs her, from the website and the portal, and shows only the items that are there:
   - **Mark picked up** on any puppy going home today: the main action on the screen;
   - vet proof to review, with **Accept**;
   - emails that bounced (so she can text the family);
   - invites not accepted;
   - KennelOS drafts to review;
-  - families due for deletion in the next 30 days.
+  - families due for deletion in the next 30 days;
+  - new messages from the website and reviews to approve.
   
   Totals such as "62 families" are not on Today.
 - **Vet visits** list each placement with its status in words: Not booked, Booked, Record
@@ -294,8 +313,8 @@ The portal's admin is a section of the manage app she already has, not a second 
 - **Families:** each family's emails, puppy, pickup time (editable; the deadline
   moves with it), vet proof, reminder log, program status, **Keep**, resend invite,
   delete (undoable for 30 days) and erase.
-- **Drafts:** KennelOS milestones to turn into baby book entries, or dismiss.
-- **Content:** handbook chapters (order, on/off, edit), programs and where each appears,
+- **Dogs:** KennelOS milestones to turn into baby book entries, or dismiss, beside the litters and puppies they belong to.
+- **Portal:** handbook chapters (order, on/off, edit), programs and where each appears,
   checklist and timeline templates, email wording.
 - **Setup progress** shows only while something is unfinished.
 - **No free-form email to all families** in phase 1. If it is added, it is commercial

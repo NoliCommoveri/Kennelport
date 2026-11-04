@@ -152,12 +152,14 @@ dialog::backdrop { background: rgba(0,0,0,.4); }
 dialog .in { padding: 20px; display: grid; gap: 14px; }
 
 /* Her manage-app screens */
-.adm { --side: 0px; }
+.adm { --head: #034655; --head-muted: #A9C9CE; } /* her app: the Site Manager's teal, as in worker/public/_kp/m/app.css */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .adm { --head: #0A2A31; --head-muted: #8FB0B5; } }
+:root[data-theme="dark"] .adm { --head: #0A2A31; --head-muted: #8FB0B5; }
 .adm .shell { display: grid; min-height: calc(100vh - 110px); }
 .adm main { padding: 18px 16px 110px; display: grid; gap: 16px; align-content: start; max-width: 980px; width: 100%; }
 .adm aside { display: none; }
 .adm header.app .in { max-width: none; }
-.adm nav.tabs .in { grid-template-columns: repeat(4, 1fr); max-width: none; }
+.adm nav.tabs .in { grid-template-columns: repeat(5, 1fr); max-width: none; }
 @media (min-width: 900px) {
   .adm .shell { grid-template-columns: 230px 1fr; }
   .adm aside { display: block; background: var(--surface); border-right: 1px solid var(--line); padding: 16px 10px; }
@@ -201,6 +203,8 @@ dialog .in { padding: 20px; display: grid; gap: 14px; }
   <symbol id="i-today" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
   <symbol id="i-draft" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></symbol>
   <symbol id="i-pages" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+  <symbol id="i-paw" viewBox="0 0 24 24"><circle cx="6" cy="10" r="2"/><circle cx="10" cy="6" r="2"/><circle cx="14" cy="6" r="2"/><circle cx="18" cy="10" r="2"/><path d="M12 12c-3 0-6 4-6 6.5 0 1.5 1.5 2 3 1.6 1.2-.3 2-.6 3-.6s1.8.3 3 .6c1.5.4 3-.1 3-1.6C18 16 15 12 12 12z"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z"/></symbol>
   <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h13l-3-3M20 16H7l3 3"/></symbol>
 </svg>
 
@@ -340,6 +344,24 @@ function reset() {
     park: D(2026, 11, 20),
   };
   S.bookOpen = false; S.bookFilter = 'all'; S.q = '';
+  // Her website (the existing Site Manager's screens), made up around the AK sample.
+  S.site = {
+    changes: S.stage === 'before' ? ['Opal: Reserved → Placed', 'Gem litter: new photos (6)', 'Home: holiday hours'] : S.stage === 'vet' ? ['Gem litter: “All three are home”'] : [],
+    published: S.stage === 'before' ? D(2026, 12, 14) : D(2026, 12, 23, 18),
+    messages: [
+      { id: 'm1', from: 'Dana', text: 'Do you have a spring litter planned? We’d love a girl.', at: new Date(STAGES[S.stage] - 3 * HOUR), read: false },
+      { id: 'm2', from: 'Chris', text: 'Is the Gem litter’s dad health tested?', at: new Date(STAGES[S.stage] - 30 * HOUR), read: S.stage !== 'before' },
+      { id: 'm3', from: 'Lee', text: 'Thank you for the Christmas card!', at: new Date(STAGES[S.stage] - 5 * DAY), read: true },
+    ],
+    reviews: S.stage === 'weeks' || S.stage === 'later' ? [{ id: 'r1', who: 'The Hale family', stars: 5, text: 'Onyx is the happiest little guy. A-K answered every question, even at 11 pm.' }] : [],
+  };
+  S.waitlist = [
+    { id: 'w1', name: 'The Kim family', wants: 'Female · spring 2027', since: D(2026, 9, 2) },
+    { id: 'w2', name: 'The Novak family', wants: 'Either · 2027', since: D(2026, 10, 15) },
+    { id: 'w3', name: 'The Brooks family', wants: 'Male · any litter', since: D(2026, 11, 20) },
+  ];
+  S.pupStatus = { opal: S.stage === 'before' ? 'reserved' : 'placed', onyx: S.stage === 'before' ? 'reserved' : 'placed', diamond: S.stage === 'before' ? 'reserved' : 'placed' };
+  S.famTab = 'puppy';
 }
 
 // ---------- Family view ----------
@@ -549,15 +571,19 @@ function admToday() {
   const unbooked = vr.filter((r) => !r.booked && !r.proof && r.left > 0).length;
   if (unbooked) needs.push(`<a class="need warn" href="#a/vet"><b>${unbooked}</b><span>Vet visit not booked</span></a>`);
   if (c.invites.length) needs.push(`<a class="need" href="#a/families"><b>${c.invites.length}</b><span>Invite not accepted</span></a>`);
-  if (c.drafts) needs.push(`<a class="need" href="#a/drafts"><b>${c.drafts}</b><span>KennelOS drafts</span></a>`);
+  if (c.drafts) needs.push(`<a class="need" href="#a/dogs"><b>${c.drafts}</b><span>KennelOS drafts</span></a>`);
+  const unread = S.site.messages.filter((m) => !m.read).length;
+  if (unread) needs.push(`<a class="need" href="#a/website"><b>${unread}</b><span>New message from your website</span></a>`);
+  if (S.site.reviews.length) needs.push(`<a class="need" href="#a/website"><b>${S.site.reviews.length}</b><span>Review to approve</span></a>`);
   if (c.due.length) needs.push(`<a class="need warn" href="#a/families"><b>${c.due.length}</b><span>Due for deletion in 30 days</span></a>`);
   const isToday = calDays(S.now, LITTER.goHome) === 0;
   const goHomeSoon = c.pickToday.length ? `<section class="pick"><span class="eyebrow">Gem litter goes home ${long(LITTER.goHome)}</span>
       <h2>${isToday ? 'Mark each puppy as they leave' : `Going home in ${calDays(S.now, LITTER.goHome)} days`}</h2>
       <p class="small muted">${isToday ? 'Starts the 72-hour vet clock. You can correct the time afterwards.' : 'On the day, Mark picked up starts the 72-hour vet clock. Families got their “book your vet visit” email this morning.'}</p>
       <ul class="list">${c.pickToday.map((p) => `<li><span class="grow"><b>${p.name}</b> · ${FAMILIES[p.family].name}${S.booked[p.id] ? ' · <span class="st">Vet booked</span>' : ''}</span><button class="btn ${isToday ? 'solid' : 'line'} small" data-act="pickup" data-id="${p.id}">Mark picked up</button></li>`).join('')}</ul></section>` : '';
-  return `<div class="between"><div><span class="eyebrow">Family portal</span><h1>Today</h1><p class="muted">${long(S.now)}</p></div></div>
+  return `<div class="between"><div><span class="eyebrow">${KENNEL}</span><h1>Today</h1><p class="muted">${long(S.now)}</p></div></div>
     ${goHomeSoon}
+    ${S.site.changes.length ? `<section class="card"><div class="between"><p><span class="st warn">Website</span> ${S.site.changes.length} change${S.site.changes.length === 1 ? '' : 's'} not published yet</p><a class="btn line small" href="#a/website">Review and publish</a></div></section>` : ''}
     ${needs.length ? `<section><h2 style="margin-bottom:10px">Needs you</h2><div class="needs">${needs.join('')}</div></section>` : `<section class="card band"><p><span class="st ok">All caught up</span> Nothing needs you today.</p></section>`}
     <div class="cols">
       ${vr.length ? `<section class="card"><div class="between"><h2>Vet visits</h2><a class="btn text small" href="#a/vet">All →</a></div>${vetList(vr)}</section>` : `<section class="card"><h2>Vet visits</h2><p class="muted">None running. The clock starts when you mark a puppy picked up.</p></section>`}
@@ -588,7 +614,11 @@ function admVet() {
 }
 function admFamilies() {
   const keys = Object.keys(FAMILIES).filter((k) => !S.deleted[k]);
-  return `<span class="eyebrow">Family portal</span><h1>Families</h1>
+  const tabs = `<div class="filters" role="group" aria-label="Show">${[['puppy', 'Puppy families'], ['wait', `Waitlist (${S.waitlist.length})`]].map(([k, l]) => `<button data-act="famtab" data-f="${k}" aria-pressed="${S.famTab === k}">${l}</button>`).join('')}</div>`;
+  if (S.famTab === 'wait') return `<span class="eyebrow">${KENNEL}</span><h1>Families</h1>${tabs}
+    <section class="card"><ul class="list">${S.waitlist.map((w, i) => `<li><span class="grow"><b>${i + 1}. ${w.name}</b><br><span class="small muted">${w.wants} · on the list since ${short(w.since)}</span></span><button class="btn line small" data-act="toast" data-msg="Opens an email offering a puppy to ${w.name}">Offer a puppy</button></li>`).join('')}</ul></section>
+    <p class="small muted">The same list your website’s Waitlist page shows. When a family takes a puppy, they move to Puppy families and get their portal invite.</p>`;
+  return `<span class="eyebrow">${KENNEL}</span><h1>Families</h1>${tabs}
     <section class="card"><ul class="list">${keys.map((k) => {
       const f = FAMILIES[k], p = PUPS.find((x) => x.id === f.pup);
       const last = S.lastActive[k];
@@ -633,8 +663,8 @@ function admFamily(k) {
       <div class="row"><button class="btn line small danger" data-act="del" data-id="${k}">Delete (undo for 30 days)</button><button class="btn text small" data-act="toast" data-msg="Erase: final, for a family’s request. Asks to confirm.">Erase on request</button></div></section>
     </div></div>`;
 }
-function admDrafts() {
-  return `<span class="eyebrow">From KennelOS</span><h1>Baby book drafts</h1>
+function admDrafts(embedded) {
+  return `${embedded ? '<h2 id="drafts">Baby book drafts from KennelOS</h2>' : '<span class="eyebrow">From KennelOS</span><h1>Baby book drafts</h1>'}
     <p class="muted">Milestones and weights from KennelOS. Families never see a draft. Write it up in your words, or dismiss it.</p>
     ${S.drafts.length ? S.drafts.map((d) => `<section class="card"><div class="between"><div><span class="eyebrow">${d.kind} · ${short(d.date)} · ${d.pup}</span><h2>${esc(d.text)}</h2></div></div>
       ${S.editing === d.id ? `<form class="stack" data-act="publishdraft" data-id="${d.id}"><label>Title<input name="title" value="${esc(d.text)}" required></label><label>Story<textarea name="body" placeholder="What was it like?"></textarea></label><label>Photo<input type="file" accept="image/*"></label>
@@ -643,7 +673,7 @@ function admDrafts() {
       : '<section class="card band"><p><span class="st ok">No drafts</span> New KennelOS milestones will appear here.</p></section>'}`;
 }
 function admContent() {
-  return `<span class="eyebrow">Family portal</span><h1>Content</h1>
+  return `<span class="eyebrow">${KENNEL}</span><h1>Family portal</h1><p class="muted">What families see after they sign in. Your website’s pages are under Website.</p>
     <section class="card"><div class="between"><h2>Handbook chapters</h2><button class="btn line small" data-act="toast" data-msg="New chapter editor (not in the prototype)">Add chapter</button></div>
       <ul class="list">${S.chapters.map((c, i) => `<li><span class="grow"><b>${esc(c.t)}</b>${c.prog ? `<br><span class="small muted">Links: ${S.programs.find((p) => p.id === c.prog).name}</span>` : ''}</span>
         <button class="btn text small" data-act="up" data-i="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Move ${esc(c.t)} up">↑</button>
@@ -652,24 +682,59 @@ function admContent() {
     <section class="card"><div class="between"><h2>Programs and links</h2><button class="btn line small" data-act="toast" data-msg="New program (not in the prototype)">Add</button></div>
       <div class="tablewrap"><table><thead><tr><th>Program</th><th>Shows on</th><th>Family must</th><th>On</th></tr></thead><tbody>
       ${S.programs.map((p, i) => `<tr><td><b>${p.name}</b><br><span class="small muted">${p.type}</span></td><td>${p.where}</td><td>${p.step}</td><td><input type="checkbox" aria-label="${p.name} on" data-act="progon" data-i="${i}" ${p.on ? 'checked' : ''} style="width:20px;min-height:0"></td></tr>`).join('')}</tbody></table></div>
-      <p class="small muted">Link and code changes here update every page and email at once.</p></section>
+      <p class="small muted">These are your website’s Recommended products too: one list. A change to a link or code updates the website, the portal and every email at once.</p></section>
     <section class="card"><h2>Checklist, timeline and emails</h2><ul class="list">
       <li><span class="grow"><b>Go-home checklist</b><br><span class="small muted">${CHECKLIST.length} items</span></span><button class="btn line small" data-act="toast" data-msg="Checklist editor (not in the prototype)">Edit</button></li>
       <li><span class="grow"><b>First-year timeline</b><br><span class="small muted">${TASKS.length} tasks, dated from birth or pickup</span></span><button class="btn line small" data-act="toast" data-msg="Timeline editor (not in the prototype)">Edit</button></li>
       <li><span class="grow"><b>Email wording</b><br><span class="small muted">Vet reminders, birthdays, milestones, retention warnings</span></span><button class="btn line small" data-act="toast" data-msg="Email editor (not in the prototype)">Edit</button></li>
     </ul></section>`;
 }
+function admWebsite() {
+  const ch = S.site.changes;
+  const msgs = S.site.messages;
+  return `<span class="eyebrow">akbostons.kennelport.com</span><h1>Website</h1>
+    <section class="card feature"><p><span class="st ok">Live</span> ${ch.length ? `· <b>${ch.length} change${ch.length === 1 ? '' : 's'} not published yet</b>` : `· published ${short(S.site.published)}`}</p>
+      ${ch.length ? `<ul class="list">${ch.map((x) => `<li class="small">${esc(x)}</li>`).join('')}</ul>` : ''}
+      <div class="row"><button class="btn line small" data-act="toast" data-msg="Opens your website">View my site</button><button class="btn line small" data-act="toast" data-msg="Opens a preview with your changes">Preview changes</button><button class="btn line small" data-act="toast" data-msg="Links and QR codes">Share</button></div>
+      ${ch.length ? '<div class="row"><button class="btn solid" data-act="publish">Review and publish</button></div>' : ''}</section>
+    <div class="cols">
+      <section class="card"><div class="between"><h2>Inbox</h2><span class="small muted">From your contact form</span></div><ul class="list">${msgs.map((m) => `<li><span class="grow">${m.read ? '' : '<span class="st next">New</span> '}<b>${esc(m.from)}</b><br><span class="small">${esc(m.text)}</span></span><span class="small muted">${short(m.at)}</span>${m.read ? '' : `<button class="btn text small" data-act="readmsg" data-id="${m.id}">Mark read</button>`}</li>`).join('')}</ul></section>
+      <section class="card"><h2>Reviews to approve</h2>${S.site.reviews.length ? S.site.reviews.map((r) => `<div class="stack"><p><b>${esc(r.who)}</b> <span style="color:var(--brass)">${'★'.repeat(r.stars)}</span></p><p class="small">“${esc(r.text)}”</p><div class="row"><button class="btn line small" data-act="review" data-id="${r.id}" data-ok="1">Approve</button><button class="btn text small" data-act="review" data-id="${r.id}">Decline</button></div></div>`).join('') : '<p class="muted small">None waiting.</p>'}</section>
+    </div>
+    <section class="card"><h2>Your site</h2><ul class="list">${[
+      ['Photos and albums', 'Camera roll, galleries · shared with baby books'],
+      ['Pages and wording', 'Home, about, policies, FAQ…'],
+      ['Waitlist and application', 'Open or closed, your questions'],
+      ['How to pay', 'Fee, deposit, scam warning'],
+      ['Extras', 'Packages and prices'],
+      ['Recommended products', 'One list with the portal’s programs', '#a/portal'],
+      ['Kennel details', 'Name, contact, town'],
+      ['KennelOS', 'Linked · last update Dec 22'],
+    ].map(([t, sub, href]) => `<li><a class="rowlink grow" href="${href || '#'}" ${href ? '' : `data-act="toast" data-msg="${t}: the existing Site Manager screen"`}><b>${t}</b><br><span class="small muted">${sub}</span></a><span aria-hidden="true" style="color:var(--accent);font-size:1.3rem">›</span></li>`).join('')}</ul></section>`;
+}
+function admDogs() {
+  const label = { available: 'Available', reserved: 'Reserved', placed: 'Placed', staying: 'Staying' };
+  return `<span class="eyebrow">${KENNEL}</span><h1>Dogs and litters</h1>
+    <p class="muted">One record for each dog, litter and puppy, used by your website and the portal.</p>
+    <section class="card"><div class="between"><h2>The Gem litter</h2><span class="small muted">Willow × Boone · born Oct 28 · home ${short(LITTER.goHome)}</span></div>
+      <ul class="list">${PUPS.map((p) => `<li><span class="grow"><b>${p.name}</b> <span class="small muted">· ${p.collar} collar · ${p.sex.toLowerCase()}</span><br><a class="small" href="#a/fam/${p.family}">${FAMILIES[p.family].name}</a> <span class="small muted">· ${S.pickup[p.id] ? 'home ' + short(S.pickup[p.id]) : 'not picked up'}</span></span>
+        <label class="sr" for="ps-${p.id}">${p.name} on your website</label><select id="ps-${p.id}" data-act="pupstatus" data-id="${p.id}" style="width:auto">${Object.entries(label).map(([k, l]) => `<option value="${k}" ${S.pupStatus[p.id] === k ? 'selected' : ''}>${l}</option>`).join('')}</select></li>`).join('')}</ul>
+      <p class="small muted">The status shows on your website (a change waits for Publish). The family and pickup belong to the portal.</p></section>
+    <section class="card"><h2>Our Bostons</h2><ul class="list">${[['Willow', 'Dam · Gem litter'], ['Ziva', 'Dam'], ['Peaches', 'Dam']].map(([n, r]) => `<li><span class="grow"><b>${n}</b><br><span class="small muted">${r}</span></span><span class="st ok">On site</span></li>`).join('')}</ul></section>
+    <section class="card">${admDrafts(true)}</section>`;
+}
 function admPage(route) {
   const [r, arg] = route.split('/');
   const c = counts();
-  const pages = { today: admToday, vet: admVet, families: admFamilies, fam: () => admFamily(arg), drafts: admDrafts, content: admContent };
-  const nav = [['today', 'Today', 'today', c.proofs.length + c.bounced.length || ''], ['families', 'Families', 'people', ''], ['drafts', 'Drafts', 'draft', c.drafts || ''], ['content', 'Content', 'pages', '']];
-  const cur = r === 'fam' ? 'families' : r === 'vet' ? 'today' : (pages[r] ? r : 'today');
+  const pages = { today: admToday, vet: admVet, families: admFamilies, fam: () => admFamily(arg), dogs: admDogs, drafts: admDogs, website: admWebsite, portal: admContent, content: admContent };
+  const unread = S.site.messages.filter((m) => !m.read).length;
+  const nav = [['today', 'Today', 'today', c.proofs.length + c.bounced.length || ''], ['families', 'Families', 'people', ''], ['dogs', 'Dogs', 'paw', c.drafts || ''], ['website', 'Website', 'globe', unread + S.site.reviews.length || ''], ['portal', 'Portal', 'heart', '']];
+  const cur = r === 'fam' ? 'families' : r === 'vet' ? 'today' : r === 'drafts' ? 'dogs' : r === 'content' ? 'portal' : (pages[r] ? r : 'today');
   const body = (pages[r] || admToday)();
-  return `<div class="adm">${header('Site Manager · Family portal')}<div class="shell">
-    <aside aria-label="Family portal">${nav.map(([k, l, ic, n]) => `<a href="#a/${k}" ${k === cur ? 'aria-current="page"' : ''}>${icon(ic)}${l}${n ? `<span class="cnt">${n}</span>` : ''}</a>`).join('')}</aside>
+  return `<div class="adm">${header('Site Manager')}<div class="shell">
+    <aside aria-label="Site Manager">${nav.map(([k, l, ic, n]) => `<a href="#a/${k}" ${k === cur ? 'aria-current="page"' : ''}>${icon(ic)}${l}${n ? `<span class="cnt">${n}</span>` : ''}</a>`).join('')}</aside>
     <main id="main">${body}</main></div>
-    <nav class="tabs" aria-label="Family portal"><div class="in">${nav.map(([k, l, ic]) => `<a href="#a/${k}" ${k === cur ? 'aria-current="page"' : ''}>${icon(ic)}${l}</a>`).join('')}</div></nav></div>`;
+    <nav class="tabs" aria-label="Site Manager"><div class="in">${nav.map(([k, l, ic]) => `<a href="#a/${k}" ${k === cur ? 'aria-current="page"' : ''}>${icon(ic)}${l}</a>`).join('')}</div></nav></div>`;
 }
 
 // ---------- Render and events ----------
@@ -720,6 +785,10 @@ document.addEventListener('click', (e) => {
   if (a === 'editdraft') { S.editing = id; render(true); return; }
   if (a === 'canceldraft') { S.editing = null; render(true); return; }
   if (a === 'dismiss') { S.drafts = S.drafts.filter((d) => d.id !== id); render(true); toast('Dismissed. It won’t come back on the next sync.'); return; }
+  if (a === 'famtab') { S.famTab = el.dataset.f; render(true); return; }
+  if (a === 'publish') { S.site.changes = []; S.site.published = new Date(S.now); render(true); toast('Published. Visitors now see your changes.'); return; }
+  if (a === 'readmsg') { S.site.messages.find((m) => m.id === id).read = true; render(true); return; }
+  if (a === 'review') { S.site.reviews = S.site.reviews.filter((r) => r.id !== id); if (el.dataset.ok) S.site.changes.push('Reviews: a new review from the Hale family'); render(true); toast(el.dataset.ok ? 'Approved. It shows on your site after you publish.' : 'Declined and deleted.'); return; }
   if (a === 'up' || a === 'down') { const i = +el.dataset.i, j = a === 'up' ? i - 1 : i + 1; [S.chapters[i], S.chapters[j]] = [S.chapters[j], S.chapters[i]]; render(true); return; }
 });
 document.addEventListener('change', (e) => {
@@ -729,6 +798,7 @@ document.addEventListener('change', (e) => {
   if (a === 'keep') { S.keep[id] = el.checked; render(true); }
   if (a === 'pickuptime' && el.value) { S.pickup[id] = fromLocalInput(el.value); render(true); toast('Pickup time corrected. Deadline and reminders moved with it.'); }
   if (a === 'chon') { S.chapters[+el.dataset.i].on = el.checked; render(true); }
+  if (a === 'pupstatus') { const p = PUPS.find((x) => x.id === id); S.pupStatus[id] = el.value; S.site.changes.push(`${p.name}: status changed`); render(true); toast('Saved to your draft. Publish when you’re ready.'); }
   if (a === 'progon') { S.programs[+el.dataset.i].on = el.checked; }
 });
 document.addEventListener('input', (e) => {
