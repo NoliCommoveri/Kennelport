@@ -92,7 +92,7 @@ export async function redeemCode(env, request, body) {
   if (!row || row.used_at || row.expires_at <= new Date().toISOString()) {
     throw new ApiError(400, 'invalid_code', { message: 'That code isn\'t right or has expired. In KennelPort Site Manager, open Link KennelOS for a new one.' });
   }
-  const site = await env.DB.prepare("SELECT id, subdomain, kennel_name, status, use_kennelos_prices FROM sites WHERE id = ? AND status != 'closed'").bind(row.site_id).first();
+  const site = await env.DB.prepare("SELECT id, subdomain, kennel_name, status, use_kennelos_prices, portal_on FROM sites WHERE id = ? AND status != 'closed'").bind(row.site_id).first();
   if (!site) throw new ApiError(400, 'invalid_code', { message: 'That website is no longer on KennelPort.' });
   const other = await env.DB.prepare('SELECT kennelos_kennel_id FROM links WHERE site_id = ? AND revoked_at IS NULL AND kennelos_kennel_id != ? LIMIT 1').bind(site.id, kennel).first();
   if (other) throw new ApiError(409, 'other_kennel', { message: 'This website is already linked to another of your kennels. Each kennel links to its own website.' });
@@ -125,6 +125,8 @@ export async function siteFacts(env, site) {
     sections: SECTIONS,
     // What KennelOS may set here (POST /v1/settings), so it asks only a Worker that takes it.
     settings: ['kennelos_prices'],
+    // The puppy portal is on: KennelOS sends the family feed (POST /v1/portal, format 1).
+    portal_feed: site.portal_on ? 1 : null,
   };
 }
 
@@ -184,6 +186,8 @@ export async function unlinkSite(env, siteId) {
     db.prepare('DELETE FROM link_codes WHERE site_id = ?').bind(siteId),
     db.prepare('DELETE FROM link_pending WHERE site_id = ?').bind(siteId),
     db.prepare('DELETE FROM link_declines WHERE site_id = ?').bind(siteId),
+    // The portal keeps every record KennelOS sent (portal plan 3.1); only its waiting suggestions go.
+    db.prepare('DELETE FROM portal_suggestions WHERE site_id = ?').bind(siteId),
     db.prepare("UPDATE dogs SET show_on_site = CASE WHEN hidden_by_kennelos = 1 THEN 0 ELSE show_on_site END, hidden_by_kennelos = 0, source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
     db.prepare("UPDATE litters SET show_on_site = CASE WHEN hidden_by_kennelos = 1 THEN 0 ELSE show_on_site END, hidden_by_kennelos = 0, source = 'kennelport', kennelos_id = NULL, kennelos_kind = NULL, kennelos_name = NULL WHERE site_id = ?").bind(siteId),
     db.prepare("UPDATE puppies SET status = CASE WHEN hidden_by_kennelos = 1 THEN 'hidden' ELSE status END, hidden_by_kennelos = 0, source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),

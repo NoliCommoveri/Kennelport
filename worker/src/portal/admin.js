@@ -21,6 +21,20 @@ import {
 import { sendDueFor } from './reminders.js';
 import { vetStatus, formatAt, formatDay, localParts, timeLeft, clockRunning, VET_RULES } from './vet.js';
 import { MailError } from '../mail.js';
+import { suggestionsFor, takeSuggestion, ignoreSuggestion, tombstoneStatements, QUIET_MS } from './feed.js';
+
+// "2 hours ago", for Last from KennelOS.
+export function ago(at, now = new Date()) {
+  const m = Math.max(0, Math.round((now.getTime() - Date.parse(at)) / 60000));
+  if (m < 2) return 'just now';
+  if (m < 60) return `${m} minutes ago`;
+  const h = Math.round(m / 60);
+  if (h < 36) return `${h} hour${h === 1 ? '' : 's'} ago`;
+  const d = Math.round(h / 24);
+  return `${d} days ago`;
+}
+const CLOSED = { died: 'the puppy died', failed_health: 'the puppy failed a health check', backed_out: 'the family backed out', other: 'the sale was voided' };
+const SUGGEST_LABEL = { name: 'Family name', puppy_id: 'Puppy', puppy_name: 'Puppy', go_home_on: 'Go-home', pickup_booked_at: 'Pickup booked for', microchip: 'Microchip', registration_no: 'Registration number', vet_clinic: 'Vet\'s clinic', vet_doctor: 'Vet\'s name', vet_phone: 'Vet\'s phone', vet_address: 'Vet\'s address' };
 
 const redirect = (location) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store' } });
 
@@ -76,6 +90,32 @@ export async function portalNeedsYou(env, siteId, now = new Date()) {
       }
     }
   }
+  // From the KennelOS feed (plan 3.4): new families to invite, sales voided, records
+  // no longer in KennelOS, newer values waiting, and a feed gone quiet.
+  const { results: kos } = await env.DB.prepare(`SELECT f.id, f.name, f.invited_at, f.kennelos_gone_at,
+      (SELECT COUNT(*) FROM portal_suggestions g WHERE g.ignored = 0 AND ((g.tbl = 'portal_families' AND g.row_id = f.id) OR (g.tbl = 'portal_placements' AND g.row_id IN (SELECT id FROM portal_placements WHERE family_id = f.id)))) AS waiting
+    FROM portal_families f WHERE f.site_id = ? AND f.status = 'active' AND f.kennelos_id IS NOT NULL`).bind(siteId).all();
+  for (const f of kos) {
+    const href = `/portal/f/${f.id}`;
+    if (!f.invited_at) out.push({ href, label: `Invite ${f.name}`, note: 'Their contract is signed in KennelOS. Check their details, then send the invite.' });
+    if (f.kennelos_gone_at) out.push({ href, label: `${f.name}: no longer in KennelOS`, note: 'Nothing was removed here. Decide what it means.' });
+    if (f.waiting) out.push({ href, label: `${f.name}: KennelOS has ${f.waiting === 1 ? 'a newer value' : `${f.waiting} newer values`}`, note: 'Use it or ignore it; yours stays until you choose' });
+  }
+  const { results: voided } = await env.DB.prepare(`SELECT p.family_id, p.puppy_name, p.call_name, p.closed_reason, p.kennelos_gone_at FROM portal_placements p
+    WHERE p.site_id = ? AND ((p.status = 'closed' AND p.closed_reason IS NOT NULL AND p.updated_at > ?) OR (p.status = 'open' AND p.kennelos_gone_at IS NOT NULL))`).bind(siteId, new Date(t - 14 * 86400000).toISOString()).all();
+  for (const p of voided) {
+    out.push(p.kennelos_gone_at && !p.closed_reason
+      ? { href: `/portal/f/${p.family_id}`, label: `${p.call_name || p.puppy_name}: no longer in KennelOS`, note: 'The placement is still open here. Decide what it means.' }
+      : { href: `/portal/f/${p.family_id}`, label: `${p.call_name || p.puppy_name}'s placement closed`, note: `From KennelOS: ${CLOSED[p.closed_reason]}. Reminders have stopped.` });
+  }
+  const vetWaiting = await env.DB.prepare("SELECT COUNT(*) AS n FROM portal_suggestions WHERE site_id = ? AND tbl = 'portal_settings' AND ignored = 0").bind(siteId).first('n');
+  if (vetWaiting) out.push({ href: '/portal/settings', label: 'KennelOS has your vet\'s details', note: 'Use them for families or ignore them' });
+  const feedAt = await env.DB.prepare('SELECT portal_feed_at FROM sites WHERE id = ?').bind(siteId).first('portal_feed_at');
+  if (feedAt && t - Date.parse(feedAt) > QUIET_MS) {
+    const open = await env.DB.prepare("SELECT 1 FROM portal_placements WHERE site_id = ? AND status = 'open' AND kennelos_id IS NOT NULL LIMIT 1").bind(siteId).first();
+    if (open) out.push({ href: '/portal', label: 'Open KennelOS so your families\' pages are up to date', note: `Last from KennelOS: ${ago(feedAt, now)}` });
+  }
+
   const failed = await env.DB.prepare(`SELECT COUNT(*) AS n FROM portal_email_log WHERE site_id = ? AND result IN ('failed', 'bounced') AND sent_at > ?`)
     .bind(siteId, new Date(t - 7 * 86400000).toISOString()).first('n');
   if (failed) out.push({ href: '/portal', label: `${failed} portal email${failed === 1 ? '' : 's'} not delivered`, note: 'Text the family; see the reminder log on their screen' });
@@ -98,11 +138,13 @@ function familiesScreen(site, families, s, url, now = new Date()) {
     } else bits.push('No puppy yet');
     if (!f.invited_at) bits.push('not invited');
     else if (!f.first_signed_in_at) bits.push('invite not accepted');
+    if (f.kennelos_id) bits.push('from KennelOS');
     return `<li class="item"><a href="${base}/f/${esc(f.id)}"><b>${esc(f.name)}${p ? ` · ${esc(pupName(p))}` : ''}</b><span>${esc(bits.join(' · '))}</span></a></li>`;
   }).join('');
   return `${note(url)}
   <section class="card"><h1>Puppy families</h1>
     <p class="muted small">Families who've signed their contract, and their puppy portal. Families see it at <strong>${esc(site.portalUrl)}</strong>.</p>
+    ${site.feedAt ? `<p class="muted small">Last from KennelOS: ${esc(ago(site.feedAt, now))}</p>` : ''}
     <p><a class="button primary" href="${base}/new">Add a family</a></p>
     ${rows ? `<ul class="items">${rows}</ul>` : '<p class="muted">No families yet.</p>'}
   </section>
@@ -146,6 +188,22 @@ async function familyScreen(env, site, familyId, url, { error } = {}, now = new 
   const form = (action, inner, cls = '') => `<form method="post" action="${base}/${action}"${cls ? ` class="${cls}"` : ''}>${inner}</form>`;
   const puppies = await placeablePuppies(env, site.id);
   const parts = [note(url), errorBox(error)];
+
+  // From KennelOS (plan 3.1): when it last sent, anything it no longer has, and
+  // newer values waiting beside hers.
+  const sug = async (tbl, id) => (await suggestionsFor(env, site.id, tbl, id)).map((g) => ({ ...g, tbl, id }));
+  const waiting = [...await sug('portal_families', f.id), ...(p ? await sug('portal_placements', p.id) : [])];
+  const pupNames = new Map(puppies.map((x) => [x.id, x.name]));
+  const shown = (g) => (g.value === null ? 'blank' : g.field === 'pickup_booked_at' ? formatAt(g.value, s.time_zone) : g.field === 'go_home_on' ? formatDay(g.value) : g.field === 'puppy_id' ? pupNames.get(g.value) ?? 'another puppy' : g.value);
+  if (f.kennelos_id) {
+    parts.push(`<section class="card"><p class="hint">From KennelOS${site.feedAt ? `, last sent ${esc(ago(site.feedAt, now))}` : ''}. Your changes here win; KennelOS never overwrites them.</p>
+      ${f.kennelos_gone_at ? `<p class="error">This family is no longer in KennelOS (since ${esc(formatAt(f.kennelos_gone_at, s.time_zone, { weekday: false }))}). Nothing was removed here: keep them, or delete them below.</p>` : ''}
+      ${p?.kennelos_gone_at ? `<p class="error">${esc(pupName(p))}'s sale is no longer in KennelOS. The placement is still open here: change its life status, or delete the family, if that's what it means.</p>` : ''}
+      ${waiting.map((g) => `<div class="box"><p><b>KennelOS has a newer value</b> for ${esc(SUGGEST_LABEL[g.field] ?? g.field)}: <strong>${esc(shown(g))}</strong></p>
+        <div class="row">${form('suggestion', `<input type="hidden" name="tbl" value="${g.tbl}"><input type="hidden" name="field" value="${esc(g.field)}"><input type="hidden" name="act" value="use"><button class="primary">Use it</button>`)}
+        ${form('suggestion', `<input type="hidden" name="tbl" value="${g.tbl}"><input type="hidden" name="field" value="${esc(g.field)}"><input type="hidden" name="act" value="ignore"><button>Ignore</button>`)}</div></div>`).join('')}</section>`);
+  }
+  if (p && p.status === 'closed' && p.closed_reason) parts.push(`<section class="card"><p class="error">${esc(pupName(p))}'s placement is closed: ${esc(CLOSED[p.closed_reason])} (from KennelOS). Every reminder has stopped.</p></section>`);
 
   parts.push(`<section class="card"><h1>${esc(f.name)}</h1>
     <dl class="kv">${emails.map((e, i) => `<dt>${i ? '' : 'Emails'}</dt><dd>${esc(e.email)}${e.invited_at ? ` <span class="muted small">invited ${esc(formatAt(e.invited_at, s.time_zone, { weekday: false }))}${e.invite_hash ? '' : ', link used'}</span>` : ''}</dd>`).join('')}
@@ -263,12 +321,12 @@ async function familyScreen(env, site, familyId, url, { error } = {}, now = new 
     <label>Email addresses<input name="emails" value="${esc(emails.map((e) => e.email).join(', '))}" required><span class="hint">Removing an address stops it signing in and getting reminders.</span></label>
     <p><button>Save</button></p></div></details>`));
   parts.push(form('delete', `<details class="card danger"><summary>Delete this family</summary>
-    <p>Deletes their account, emails, puppy records here, files and history now. Nothing is deleted from your website or from KennelOS.</p>
+    <p>Deletes their account, emails, puppy records here, files and history now. Nothing is deleted from your website or from KennelOS${f.kennelos_id ? ', and KennelOS won\'t send them again' : ''}.</p>
     <label>Type <strong>delete</strong> to confirm<input name="confirm" autocomplete="off" required></label><p><button>Delete the family</button></p></details>`));
   return parts.join('\n');
 }
 
-function settingsScreen(site, s, products, { error } = {}, url) {
+function settingsScreen(site, s, products, { error, waiting = [] } = {}, url) {
   const zones = ZONES.includes(s.time_zone) ? ZONES : [s.time_zone, ...ZONES];
   const TYPES = { '': 'Not shown', food: 'Food', insurance: 'Insurance', registration: 'Registration', product: 'Product', other: 'Other' };
   return `${url ? note(url) : ''}${errorBox(error)}<form method="post" action="/s/${esc(site.subdomain)}/portal/settings" class="card">
@@ -281,6 +339,8 @@ function settingsScreen(site, s, products, { error } = {}, url) {
     </div></section>
     <section class="fgroup"><h2>Contacts for families, once the puppy is home</h2><div class="fgrid">
       <p class="hint">From pickup, each family's Home leads with these as one-tap buttons for the first weeks, so a question goes to you or your vet, who already knows the puppy. They stay under Records after that.</p>
+      ${waiting.map((g) => `<div class="box"><p><b>KennelOS has</b> ${esc(SUGGEST_LABEL[g.field] ?? g.field)}: <strong>${esc(g.value ?? '')}</strong></p><div class="row">
+        <button form="sug-use-${esc(g.field)}" class="primary">Use it</button><button form="sug-ignore-${esc(g.field)}">Ignore</button></div></div>`).join('')}
       <div class="row"><label>Your phone for families<input name="her_phone" type="tel" value="${esc(s.her_phone ?? '')}" maxlength="40" placeholder="${esc(site.contactPhone ?? '')}"><span class="hint">Call and text.${site.contactPhone ? ' Blank: your website\'s number.' : ''}</span></label>
       <label>Your email for families<input name="her_email" type="email" value="${esc(s.her_email ?? '')}" maxlength="254" placeholder="${esc(site.contactEmail ?? '')}"><span class="hint">${site.contactEmail ? 'Blank: your website\'s address.' : 'Optional.'}</span></label></div>
       <div class="row"><label>Your vet's clinic<input name="vet_clinic" value="${esc(s.vet_clinic ?? '')}" maxlength="120" placeholder="Maple Street Animal Hospital"></label>
@@ -305,6 +365,7 @@ function settingsScreen(site, s, products, { error } = {}, url) {
       <label>Disclosure line<input name="disclosure" value="${esc(s.disclosure ?? '')}" maxlength="400" placeholder="${esc(DEFAULT_DISCLOSURE)}"><span class="hint">At the foot of every page with program links.</span></label>
     </div></section>
     <p><button class="primary">Save</button></p></form>
+  ${waiting.map((g) => ['use', 'ignore'].map((a) => `<form id="sug-${a}-${esc(g.field)}" method="post" action="/s/${esc(site.subdomain)}/portal/settings/suggestion"><input type="hidden" name="field" value="${esc(g.field)}"><input type="hidden" name="act" value="${a}"></form>`).join('')).join('')}
   <ul class="items"><li class="item"><a href="/s/${esc(site.subdomain)}/portal/checklist"><b>Go-home checklist</b><span>Your list for every family</span></a></li>
     <li class="item"><a href="/s/${esc(site.subdomain)}/portal/timeline"><b>First-weeks timeline</b><span>Tasks dated from birth or pickup</span></a></li></ul>`;
 }
@@ -382,17 +443,25 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   const rest = m[1] ?? '';
   const post = request.method === 'POST';
   // With its own domain, for links in emails and the address shown to her.
-  const full = await env.DB.prepare(`SELECT s.id, s.subdomain, s.kennel_name, s.contact_phone, s.contact_email, d.hostname AS domain FROM sites s
+  const full = await env.DB.prepare(`SELECT s.id, s.subdomain, s.kennel_name, s.contact_phone, s.contact_email, s.portal_feed_at, d.hostname AS domain FROM sites s
     LEFT JOIN custom_domains d ON d.site_id = s.id AND d.status = 'active' WHERE s.id = ?`).bind(site.id).first();
-  site = { ...site, domain: full.domain, kennel_name: full.kennel_name, contactPhone: full.contact_phone, contactEmail: full.contact_email, portalUrl: `${portalBase(env, full).replace(/^https:\/\//, '')}/family` };
+  site = { ...site, domain: full.domain, kennel_name: full.kennel_name, contactPhone: full.contact_phone, contactEmail: full.contact_email, feedAt: full.portal_feed_at, portalUrl: `${portalBase(env, full).replace(/^https:\/\//, '')}/family` };
   const home = `/s/${site.subdomain}/portal`;
   const back = `/s/${site.subdomain}`;
   const s = await getSettings(env, site.id);
 
   if (!rest && !post) return page('Puppy families', familiesScreen(site, await listFamilies(env, site.id), s, url), { back });
 
+  if (rest === '/settings/suggestion' && post) {
+    const form = await request.formData();
+    const field = String(form.get('field') ?? '');
+    if (form.get('act') === 'use') await takeSuggestion(env, site.id, 'portal_settings', site.id, field);
+    else await ignoreSuggestion(env, site.id, 'portal_settings', site.id, field);
+    return redirect(`${home}/settings?note=saved`);
+  }
   if (rest === '/settings') {
-    if (!post) return page('Portal settings', settingsScreen(site, s, await products(env, site.id), {}, url), { back: home });
+    const waiting = await suggestionsFor(env, site.id, 'portal_settings', site.id);
+    if (!post) return page('Portal settings', settingsScreen(site, s, await products(env, site.id), { waiting }, url), { back: home });
     const form = await request.formData();
     const input = Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
     try {
@@ -505,8 +574,17 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
         await saveFile(env, site.id, needP().id, { kind: 'contract', bytes: new Uint8Array(await file.arrayBuffer()), name: file.name, by: 'breeder' });
         return to('contract');
       }
+      case 'suggestion': {
+        const tbl = get('tbl');
+        if (tbl !== 'portal_families' && tbl !== 'portal_placements') throw new PortalError('Unknown value.');
+        const rowId = tbl === 'portal_families' ? familyId : needP().id;
+        if (get('act') === 'use') await takeSuggestion(env, site.id, tbl, rowId, get('field'));
+        else await ignoreSuggestion(env, site.id, tbl, rowId, get('field'));
+        return to('saved');
+      }
       case 'delete':
         if (get('confirm').trim().toLowerCase() !== 'delete') throw new PortalError('Type delete to confirm.');
+        await env.DB.batch(await tombstoneStatements(env, site.id, familyId));
         await deleteFamily(env, site.id, familyId);
         return redirect(`${home}?note=deleted`);
       default: {

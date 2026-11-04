@@ -58,7 +58,8 @@ export async function startFamilySignIn(env, request, site, rawEmail) {
   return { email };
 }
 
-async function startSession(env, siteId, familyId) {
+// A family session (an email code, the invite, or the status page's one tap).
+export async function startSession(env, siteId, familyId) {
   const token = randomHex(32);
   const t = new Date().toISOString();
   await env.DB.batch([
@@ -147,7 +148,7 @@ export async function currentFamily(env, request, site) {
   const token = readCookie(request, FAMILY_COOKIE);
   if (!token || !/^[0-9a-f]{64}$/.test(token)) return null;
   const tokenHash = await sha256Hex(token);
-  const row = await env.DB.prepare(`SELECT s.family_id, s.last_seen_at, s.expires_at, s.revoked_at, f.name, f.last_activity_at
+  const row = await env.DB.prepare(`SELECT s.family_id, s.last_seen_at, s.expires_at, s.revoked_at, f.name, f.last_activity_at, f.status_url
     FROM portal_sessions s JOIN portal_families f ON f.id = s.family_id WHERE s.token_hash = ? AND s.site_id = ? AND f.status = 'active'`).bind(tokenHash, site.id).first();
   if (!row || row.revoked_at || Date.parse(row.expires_at) <= Date.now()) return null;
   const t = new Date().toISOString();
@@ -157,7 +158,7 @@ export async function currentFamily(env, request, site) {
   if (!row.last_activity_at || Date.now() - Date.parse(row.last_activity_at) > 3600000) {
     await env.DB.prepare('UPDATE portal_families SET last_activity_at = ? WHERE id = ?').bind(t, row.family_id).run();
   }
-  return { tokenHash, familyId: row.family_id, name: row.name };
+  return { tokenHash, familyId: row.family_id, name: row.name, statusUrl: row.status_url };
 }
 
 export async function signOutFamily(env, fam) {

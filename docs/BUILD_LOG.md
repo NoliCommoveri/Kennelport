@@ -1198,3 +1198,50 @@ Left for later: reminder emails for timeline tasks such as the insurance trial's
 (plan section 11; with her email wording, plan section 4); which pages each program shows on
 (`portal_link_spots`) and the handbook's links come with the handbook in phase 2; a litter's
 own food (from KennelOS's feeding schedule) with chunk 3.
+
+## 2026-11-04: Puppy parent portal, build chunk 3 (KennelPort's end of the KennelOS feed)
+
+The family feed's KennelPort side, ready for KennelOS to send to. KennelOS's part (building
+the new rows for her kennel, sending them on its own, the status page's Open your puppy
+portal link, applying the facts that come back) is built in the KennelOS repository.
+Chunk 3's tables went into the branch's one migration, **0024**, with chunk 2's.
+
+- **`POST api.kennelport.com/v1/portal`** (the device's link token; `src/portal/feed.js`
+  documents format 1). Families from their signed contract on, each with their sale's
+  placements (puppy by its KennelOS Dog id, go-home day, pickup time, microchip,
+  registration number, contract date, a voided sale's reason, shots and deworming), her
+  vet, and `removed`. Every key is named; anything else is refused. Advertised in the link
+  facts as `portal_feed: 1` while the portal is on; refused (`portal_off`) while it isn't.
+  Kept apart from the website bundle, which still waits for Update website.
+- **How it lands (plan 3.1):** a new family and placement from `source = kennelos`, waiting
+  for her invite ("Invite the Reed family" on Today); a family she typed in is matched by
+  address and linked, not doubled, and what she typed stays hers. A field she has edited
+  keeps her value: KennelOS's newer one waits on the family's screen with **Use it** /
+  **Ignore** (an ignored value isn't offered again; Use it follows KennelOS again). Addresses
+  are only added (one she removed isn't put back). Once a puppy is home, KennelOS's booked
+  time moves nothing. Everything is in History, by KennelOS.
+- **Gone and deleted:** `removed` marks a family, placement or record "no longer in
+  KennelOS" (her screen and Today), never deletes it. Deleting a family, or removing a
+  health record, leaves a tombstone (KennelOS id and type only), so it never comes back.
+- **A voided sale** closes the placement with its reason (died, failed health check, backed
+  out); died before pickup sets life status deceased. Every reminder stops; Today says so.
+  The replacement's contract arrives as a second placement on the same family. The family's
+  page for a loss comes with chunk 4 (`closed_reason` is there for it).
+- **Her vet** arrives as contacts for families: filled where hers are blank, a suggestion in
+  Portal settings where they differ.
+- **The facts that go back**, in every answer: each placement's real pickup time once she
+  has marked it, with `portal_only` (the handoff); the microchip she entered or corrected;
+  a death after pickup she recorded. Nothing with money.
+- **The one-tap link:** `/family/handoff?t=` signs a family in from the status page. The
+  token is KennelOS's: base64url JSON `{ f: family's KennelOS id, x: expiry ms, n: nonce }`,
+  a dot, and its HMAC-SHA256 under `handoff_key` (in every feed answer; derived from the
+  site and kennel, never stored, dead once unlinked). Works once, for 10 minutes.
+- **Family side:** before pickup, Home's go-home block links to their status page ("Book
+  your pickup on your status page", or "Change it on your status page").
+- **Last from KennelOS** on Puppy families and each family; Today says "Open KennelOS so
+  your families' pages are up to date" when an open placement's feed is 24 hours quiet.
+  Unlink keeps every portal record and drops only the waiting suggestions.
+
+Left for later: the contract document itself (only its date comes now), the puppy's own vet
+when it differs from hers, extras and stays (chunk 5), feeding schedule, buyer details and
+baby book drafts (phase 2).

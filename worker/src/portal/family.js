@@ -11,7 +11,7 @@
 import { schemaReady } from '../gate.js';
 import { escapeHtml as esc, htmlPage } from '../lib/html.js';
 import {
-  startFamilySignIn, verifyFamilySignIn, acceptInvite, currentFamily, signOutFamily, familyCookie, AuthError,
+  startFamilySignIn, verifyFamilySignIn, acceptInvite, currentFamily, signOutFamily, familyCookie, startSession, AuthError,
 } from './auth.js';
 import {
   getSettings, placementFor, puppyFor, healthRecords, recordVetBooking, saveFile, getFile, fileResponse, familyEmails,
@@ -21,6 +21,7 @@ import { stage, vetDeadline, formatAt, formatDay, timeLeft, localParts, addDays,
 import { stepsFor, openTasks, programsFor, noteClick, setDone, setProgramStatus } from './steps.js';
 import { PORTAL_VERSION } from './version.js';
 import { CODE_TTL_MS } from '../auth.js';
+import { redeemHandoff } from './feed.js';
 
 export const PORTAL_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
 const HEADERS = {
@@ -297,7 +298,9 @@ async function homePage(env, site, fam, now = new Date()) {
   if (st === 'before') {
     greeting = days === null ? `Welcome, ${fam.name}` : days > 1 ? `${name} comes home in ${days} days` : days === 1 ? `${name} comes home tomorrow` : days === 0 ? `${name} comes home today` : `Welcome, ${fam.name}`;
     const expected = p.pickup_booked_at ? vetDeadline(p.pickup_booked_at, s.vet_rule, s.time_zone) : null;
-    calendar = `<div class="cal">${ic('calendar')}<p class="eyebrow">Go-home</p>${goHomeWords(p, s) ? `<p class="big">${esc(goHomeWords(p, s))}</p>` : `<p>Not booked yet. ${esc(kennel)} will confirm the day and time with you.</p>`}</div>`;
+    const statusUrl = /^https:\/\//i.test(fam.statusUrl ?? '') ? fam.statusUrl : null;
+    calendar = `<div class="cal">${ic('calendar')}<p class="eyebrow">Go-home</p>${goHomeWords(p, s) ? `<p class="big">${esc(goHomeWords(p, s))}</p>${statusUrl ? `<p class="small"><a href="${esc(statusUrl)}">Change it on your status page ${ic('arrow')}</a></p>` : ''}`
+      : statusUrl ? `<p><a href="${esc(statusUrl)}">Book your pickup on your status page ${ic('arrow')}</a></p>` : `<p>Not booked yet. ${esc(kennel)} will confirm the day and time with you.</p>`}</div>`;
     band = `<section class="band"><p class="eyebrow">Before ${esc(name)} comes home</p><h2>Book the vet visit now</h2>
       <p>Your contract asks for a vet visit ${s.vet_rule === 'days3' ? `by the end of the third day after the day you take ${esc(name)} home` : 'within 72 hours of pickup'}.${expected ? ` With pickup ${esc(formatAt(p.pickup_booked_at, s.time_zone))}, that's by ${deadlineLine(expected, s)}.` : ''} Vets are often booked days ahead.</p>
       ${p.vet_booked_at ? `<p class="status ok">${ic('check')} Booked${p.vet_booked_for ? ` for ${esc(p.vet_booked_for.replace('T', ' at '))}` : ''}${p.vet_clinic ? `, ${esc(p.vet_clinic)}` : ''}</p>` : '<p><a class="btn solid" href="/family/vet">I\'ve booked it</a></p>'}</section>`;
@@ -524,6 +527,12 @@ export async function servePortal(request, env, ctx, subdomain, { onDomain = fal
   } catch (err) {
     if (err instanceof AuthError) return signInPage(site, { error: err.message });
     throw err;
+  }
+  // The status page's one tap (plan 3.4): a link KennelOS signed, once, for 10 minutes.
+  if (path === '/family/handoff') {
+    const familyId = await redeemHandoff(env, site, url.searchParams.get('t'));
+    if (familyId) return redirect('/family', { 'set-cookie': await startSession(env, site.id, familyId) });
+    return signInPage(site, { note: 'That link has been used or has expired. Sign in with your email instead, or open the portal again from your status page.' });
   }
   if (path === '/family/welcome') {
     const cookie = await acceptInvite(env, site, url.searchParams.get('t'));

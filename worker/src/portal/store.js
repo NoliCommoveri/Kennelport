@@ -174,6 +174,8 @@ export async function updateFamily(env, siteId, familyId, input) {
     env.DB.prepare('UPDATE portal_families SET name = ?, updated_at = ?, edited_fields = ? WHERE id = ? AND site_id = ?')
       .bind(name, t, mergeEdited(fam.edited_fields, Object.keys(changes).filter((k) => k === 'name')), familyId, siteId),
     ...gone.map((r) => env.DB.prepare('DELETE FROM portal_emails WHERE id = ?').bind(r.id)),
+    // Kept by its hash alone, so the KennelOS feed doesn't put it back (portal/feed.js).
+    ...gone.map((r) => env.DB.prepare("INSERT INTO portal_history (site_id, tbl, row_id, field, old_value, new_value, changed_at, changed_by) VALUES (?, 'portal_families', ?, 'email_removed', ?, NULL, ?, 'breeder')").bind(siteId, familyId, r.email_hash, t)),
     ...await emailStatements(env, siteId, familyId, added),
     ...historyStatements(env, siteId, 'portal_families', familyId, changes, 'breeder', t),
   ]);
@@ -190,7 +192,7 @@ export async function familyEmails(env, familyId) {
 }
 
 export async function listFamilies(env, siteId) {
-  const { results } = await env.DB.prepare(`SELECT f.id, f.name, f.invited_at, f.first_signed_in_at, f.last_activity_at,
+  const { results } = await env.DB.prepare(`SELECT f.id, f.name, f.invited_at, f.first_signed_in_at, f.last_activity_at, f.kennelos_id,
       p.id AS placement_id, p.puppy_name, p.call_name, p.go_home_on, p.pickup_booked_at, p.picked_up_at, p.pickup_state, p.vet_deadline_at,
       p.vet_booked_at, p.proof_uploaded_at, p.proof_accepted_at, p.status, p.life_status
     FROM portal_families f LEFT JOIN portal_placements p ON p.family_id = f.id AND p.status = 'open'
@@ -300,7 +302,7 @@ export async function createPlacement(env, siteId, familyId, input) {
 
 // Apply changes to a placement, keeping history. `by` is breeder, family or portal.
 // A moved pickup moves the deadline, using the rule in force now.
-async function applyChanges(env, siteId, p, values, by) {
+export async function applyChanges(env, siteId, p, values, by) {
   const changes = {};
   for (const [k, v] of Object.entries(values)) if (show(p[k]) !== show(v)) changes[k] = [p[k], v];
   if (!Object.keys(changes).length) return p;
@@ -419,9 +421,11 @@ export async function addHealthRecord(env, siteId, placementId, input) {
 }
 
 export async function removeHealthRecord(env, siteId, placementId, id) {
-  const r = await env.DB.prepare('SELECT type, name, given_on FROM portal_health_records WHERE id = ? AND site_id = ? AND placement_id = ?').bind(id, siteId, placementId).first();
+  const r = await env.DB.prepare('SELECT type, name, given_on, kennelos_id FROM portal_health_records WHERE id = ? AND site_id = ? AND placement_id = ?').bind(id, siteId, placementId).first();
   if (!r) return;
   await env.DB.batch([
+    // From KennelOS: a tombstone, so the next feed doesn't bring it back.
+    ...(r.kennelos_id ? [env.DB.prepare('INSERT OR IGNORE INTO portal_tombstones (site_id, type, kennelos_id, deleted_at) VALUES (?, \'health\', ?, ?)').bind(siteId, r.kennelos_id, now())] : []),
     env.DB.prepare('DELETE FROM portal_health_records WHERE id = ?').bind(id),
     ...historyStatements(env, siteId, 'portal_placements', placementId, { health_record: [`${RECORD_TYPES[r.type]}: ${r.name}, ${r.given_on}`, null] }, 'breeder'),
   ]);

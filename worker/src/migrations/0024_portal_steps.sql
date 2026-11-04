@@ -83,3 +83,55 @@ CREATE TABLE IF NOT EXISTS portal_placements_programs (
   updated_by    TEXT NOT NULL CHECK (updated_by IN ('family', 'breeder', 'portal')),
   PRIMARY KEY (placement_id, product_id)
 );
+
+-- ---------- chunk 3: the KennelOS family feed ----------
+
+-- When the family feed last arrived (her "Last from KennelOS"), per site.
+ALTER TABLE sites ADD COLUMN portal_feed_at TEXT;
+
+-- status_url: the family's KennelOS status page, for "Book your pickup on your
+-- status page" before pickup. kennelos_gone_at: KennelOS no longer sends it; she
+-- decides what that means (plan 3.1), nothing is removed.
+ALTER TABLE portal_families ADD COLUMN status_url TEXT;
+ALTER TABLE portal_families ADD COLUMN kennelos_gone_at TEXT;
+
+-- closed_reason: why a placement closed (a sale voided in KennelOS: the pup died,
+-- failed a health check, or the family backed out). contract_signed_on: the signed
+-- contract's date from KennelOS, the start of the portal for that family.
+ALTER TABLE portal_placements ADD COLUMN closed_reason TEXT CHECK (closed_reason IN ('died', 'failed_health', 'backed_out', 'other'));
+ALTER TABLE portal_placements ADD COLUMN contract_signed_on TEXT;
+ALTER TABLE portal_placements ADD COLUMN kennelos_gone_at TEXT;
+ALTER TABLE portal_health_records ADD COLUMN kennelos_gone_at TEXT;
+CREATE INDEX IF NOT EXISTS idx_portal_placements_kennelos ON portal_placements (site_id, kennelos_id);
+CREATE INDEX IF NOT EXISTS idx_portal_families_kennelos ON portal_families (site_id, kennelos_id);
+
+-- A value KennelOS sent for a field she has edited (plan 3.1): her value stays;
+-- her screen offers "use it / ignore". Ignored: that value isn't offered again.
+CREATE TABLE IF NOT EXISTS portal_suggestions (
+  site_id     TEXT NOT NULL REFERENCES sites(id),
+  tbl         TEXT NOT NULL,
+  row_id      TEXT NOT NULL,
+  field       TEXT NOT NULL,
+  value       TEXT,
+  ignored     INTEGER NOT NULL DEFAULT 0,
+  sent_at     TEXT NOT NULL,
+  PRIMARY KEY (tbl, row_id, field)
+);
+CREATE INDEX IF NOT EXISTS idx_portal_suggestions_site ON portal_suggestions (site_id, ignored);
+
+-- Deleted stays deleted (plan 3.1): a KennelOS record she deleted, by its id and
+-- type only (no name or email), so the next feed doesn't bring it back.
+CREATE TABLE IF NOT EXISTS portal_tombstones (
+  site_id      TEXT NOT NULL REFERENCES sites(id),
+  type         TEXT NOT NULL CHECK (type IN ('family', 'placement', 'health')),
+  kennelos_id  TEXT NOT NULL,
+  deleted_at   TEXT NOT NULL,
+  PRIMARY KEY (site_id, type, kennelos_id)
+);
+
+-- The status page's one-tap links into the portal (plan 3.4): each works once.
+CREATE TABLE IF NOT EXISTS portal_handoffs (
+  nonce_hash  TEXT PRIMARY KEY,
+  site_id     TEXT NOT NULL REFERENCES sites(id),
+  used_at     TEXT NOT NULL
+);
