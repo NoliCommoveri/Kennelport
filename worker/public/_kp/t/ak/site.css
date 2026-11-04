@@ -183,6 +183,28 @@ nav.main li.open > .navtop .chev { transform: rotate(225deg) translate(-2px, -1p
 .arrow:disabled { opacity: .35; cursor: default; }
 .count { font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: .08em; }
 
+/* Co-owned dogs living with a co-owner: light cards, no flip, smaller and more of
+   them across; the partner kennels' logos under them. */
+.track.light { grid-auto-columns: calc((100% - 4 * 16px) / 5); gap: 16px; }
+@media (max-width: 960px) { .track.light { grid-auto-columns: calc((100% - 2 * 16px) / 2.5); } }
+@media (max-width: 560px) { .track.light { grid-auto-columns: 60%; gap: 12px; } }
+.cocard { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; color: var(--ink); text-decoration: none; height: 100%; }
+.cocard:hover { border-color: var(--accent); }
+.cocard > img, .cocard > .ph-photo { width: 100%; aspect-ratio: 4 / 3; flex: none; }
+.cocard > img { object-fit: cover; display: block; }
+.cocard > .ph-photo { font-size: .9rem; }
+.cocard .cobody { display: grid; gap: 2px; padding: 10px 12px 12px; }
+.cocard .call { font-family: var(--f-display); font-weight: var(--display-w); font-size: 1.05rem; }
+.cowith { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: .78rem; color: var(--muted); }
+.plogo { width: 22px; height: 22px; object-fit: contain; border-radius: 3px; flex: none; }
+.pk { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; }
+.partners { list-style: none; margin: 22px 0 0; padding: 18px 0 0; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 14px 26px; align-items: center; }
+.partners li { display: flex; }
+.partners a, .partners li > span { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-size: .86rem; }
+.partners .plogo { width: 44px; height: 44px; filter: grayscale(1); opacity: .8; transition: filter .2s, opacity .2s; }
+.partners a:hover, .partners a:focus-visible { color: var(--ink); }
+.partners a:hover .plogo, .partners a:focus-visible .plogo { filter: none; opacity: 1; }
+
 /* Flip cards */
 .flip { perspective: 1200px; cursor: pointer; height: 430px; border-radius: var(--r); }
 .flip-in { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .6s cubic-bezier(.3,.7,.3,1); }

@@ -164,7 +164,9 @@ KennelOS's waitlist already has).
 6); a litter diary from milestones and weights; draft news posts from a whelping or a
 title; upcoming show entries; the vaccines usually given by go-home age.
 
-**Never from KennelOS:** buyers, families, guardians, co-owners and any contact; sales,
+**Never from KennelOS:** buyers, families, guardians, co-owners' personal details and any
+contact (a co-owner's kennel only by its public name and website, and only once she ticks
+Name this kennel on my website: `docs/Co_Owned_Dogs_Plan.md`); sales,
 contracts and invoices; private notes; stud fees and stud partners; addresses; individual
 puppies' medical records; vault documents and certificates; anything not ticked **Show on
 website**.

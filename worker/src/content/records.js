@@ -3,7 +3,7 @@
 // can't disagree about what a field may hold. Every write marks the draft as
 // changed; nothing is live until Publish.
 import {
-  DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, FAQ_FIELDS, EXTRA_FIELDS, PRODUCT_FIELDS, HOME_BADGES_MAX, brandImageOk,
+  DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, FAQ_FIELDS, EXTRA_FIELDS, PRODUCT_FIELDS, PARTNER_FIELDS, PARTNERS_PER_DOG, PARTNERS_MAX, HOME_BADGES_MAX, brandImageOk,
   EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue, slugify,
 } from './model.js';
 import { untagStatements } from '../photoTags.js';
@@ -14,12 +14,18 @@ const omit = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) 
 
 // Litters name their parents by dog id here (the import uses slugs).
 const LITTER_RECORD_FIELDS = { ...omit(LITTER_FIELDS, ['dam', 'sire']), dam_id: { type: 'dogid' }, sire_id: { type: 'dogid' } };
+// Co-owned dogs name their partner kennels by id here (the import uses names).
+const DOG_RECORD_FIELDS = {
+  ...omit(DOG_FIELDS, ['lives_with', 'co_owned_with']),
+  lives_with_kennel_id: { type: 'kennelid' },
+  co_owned_with_ids: { type: 'list', item: 'kennel', max: PARTNERS_PER_DOG },
+};
 // Albums name their litter by id here (the import uses its slug).
 const ALBUM_RECORD_FIELDS = { ...omit(ALBUM_FIELDS, ['litter']), litter_id: { type: 'litterid' } };
 
 // kind → where it lives and what it holds. `scope` is the parent column, if any.
 export const KINDS = {
-  dogs: { table: 'dogs', fields: DOG_FIELDS, slug: 'call_name', label: 'call_name', defaults: { status: 'active', health_display: 'normal_only', show_on_site: 1, upcoming: 0, for_sale: 0 }, stamps: true },
+  dogs: { table: 'dogs', fields: DOG_RECORD_FIELDS, slug: 'call_name', label: 'call_name', defaults: { status: 'active', health_display: 'normal_only', show_on_site: 1, upcoming: 0, for_sale: 0, co_owned: 0, lives_away: 0 }, json: ['co_owned_with_ids'], stamps: true },
   health: { table: 'health_results', fields: HEALTH_FIELDS, scope: 'dog_id', label: 'test', defaults: { normal: 1, show: 0 } },
   litters: { table: 'litters', fields: LITTER_RECORD_FIELDS, slug: 'name', label: 'name', defaults: { show_on_site: 1, show_prices: 0, show_placed: 1, ask_full_reg: 0 }, stamps: true },
   puppies: { table: 'puppies', fields: PUPPY_FIELDS, scope: 'litter_id', slug: 'name', label: 'name', defaults: { status: 'coming_soon' }, stamps: true },
@@ -27,6 +33,7 @@ export const KINDS = {
   steps: { table: 'steps', fields: STEP_FIELDS, label: 'heading', where: "page = 'how_it_works'", fixed: { page: 'how_it_works' }, defaults: { pay_link: 0 } },
   extras: { table: 'extras', fields: EXTRA_FIELDS, label: 'name', defaults: { featured: 0 }, json: ['checklist'] },
   products: { table: 'products', fields: PRODUCT_FIELDS, label: 'name', defaults: { home_badge: 0 } },
+  partners: { table: 'partner_kennels', fields: PARTNER_FIELDS, label: 'name', created: true },
   albums: { table: 'albums', fields: ALBUM_RECORD_FIELDS, slug: 'title', label: 'title', defaults: { show_on_site: 1 }, json: ['photos'], stamps: true },
   questions: { table: 'form_fields', fields: QUESTION_FIELDS, label: 'label', where: "form = 'application'", fixed: { form: 'application' }, defaults: { required: 0 }, json: ['options'] },
 };
@@ -113,12 +120,18 @@ async function checkRefs(env, siteId, k, clean) {
       const ok = await env.DB.prepare('SELECT 1 FROM dogs WHERE id = ? AND site_id = ?').bind(v, siteId).first();
       if (!ok) throw new ContentError(name, 'that dog is no longer on this site');
     }
+    if (f.type === 'kennelid' || (f.type === 'list' && f.item === 'kennel' && v.length)) {
+      const ids = [...new Set(f.type === 'kennelid' ? [v] : v)];
+      const found = (await env.DB.prepare(`SELECT id FROM partner_kennels WHERE site_id = ? AND id IN (${placeholders(ids)})`).bind(siteId, ...ids).all()).results.length;
+      if (found !== ids.length) throw new ContentError(name, 'that kennel is no longer on your list');
+    }
   }
 }
 
 // Fields the record model knows that cleanValue doesn't: a parent dog by id.
 function cleanFields(fields, input, path) {
-  const plain = Object.fromEntries(Object.entries(fields).map(([n, f]) => [n, f.type === 'dogid' || f.type === 'litterid' ? { type: 'photo' } : f]));
+  const plain = Object.fromEntries(Object.entries(fields).map(([n, f]) => [n, ['dogid', 'litterid', 'kennelid'].includes(f.type) ? { type: 'photo' }
+    : f.type === 'list' && f.item === 'kennel' ? { type: 'list', max: f.max, itemMax: 80 } : f]));
   const out = cleanRecord(plain, input, path);
   return out;
 }
@@ -144,6 +157,12 @@ export async function saveRecord(env, siteId, kind, id, input, scopeId = null) {
     if (n >= HOME_BADGES_MAX) throw new ContentError('home_badge', `the home page shows at most ${HOME_BADGES_MAX} badges: turn one off first`);
   }
   if (kind === 'albums' && clean.photos) clean.photos = [...new Set(clean.photos)];
+  if (kind === 'dogs') coOwnedRules(clean);
+  if (kind === 'partners') {
+    const twin = await env.DB.prepare('SELECT id FROM partner_kennels WHERE site_id = ? AND lower(name) = lower(?) AND id != ?').bind(siteId, clean.name, id ?? '').first();
+    if (twin) throw new ContentError('name', 'that kennel is already on your list');
+    if (!existing && await env.DB.prepare('SELECT COUNT(*) AS n FROM partner_kennels WHERE site_id = ?').bind(siteId).first('n') >= PARTNERS_MAX) throw new ContentError('partners', `at most ${PARTNERS_MAX} partner kennels`);
+  }
   if (kind === 'albums' && !existing) {
     const lim = await env.DB.prepare('SELECT album_limit FROM sites WHERE id = ?').bind(siteId).first('album_limit');
     const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM albums WHERE site_id = ?').bind(siteId).first('n');
@@ -171,6 +190,7 @@ export async function saveRecord(env, siteId, kind, id, input, scopeId = null) {
   const row = { id: crypto.randomUUID(), site_id: siteId, ...(k.fixed ?? {}), ...clean, sort: newestFirst ? edge - 1 : edge + 1 };
   if (k.scope) row[k.scope] = scopeId;
   if (k.stamps) { row.created_at = t; row.updated_at = t; }
+  if (k.created) row.created_at = t;
   if (k.table === 'stories') { row.submitted_at = t; row.permission_confirmed_at = t; }
   const cols = Object.keys(row);
   await env.DB.batch([
@@ -178,6 +198,19 @@ export async function saveRecord(env, siteId, kind, id, input, scopeId = null) {
     ...touchAll(env, siteId, kind),
   ]);
   return getRecord(env, siteId, kind, row.id);
+}
+
+// A co-owned dog's fields agree with each other: only a co-owned dog lives away
+// or has partner kennels, only one living away lives with a kennel, and the
+// kennel it lives with is one of its co-owners'. KennelOS's bundle keeps the same
+// rules on its side (siteExport.js).
+export function coOwnedRules(d) {
+  if (!d.co_owned) { d.lives_away = 0; d.lives_with_kennel_id = null; d.co_owned_with_ids = []; return d; }
+  if (!d.lives_away) d.lives_with_kennel_id = null;
+  d.co_owned_with_ids = [...new Set(d.co_owned_with_ids ?? [])];
+  if (d.lives_with_kennel_id && !d.co_owned_with_ids.includes(d.lives_with_kennel_id)) d.co_owned_with_ids.unshift(d.lives_with_kennel_id);
+  d.co_owned_with_ids = d.co_owned_with_ids.slice(0, PARTNERS_PER_DOG);
+  return d;
 }
 
 // Quick changes that aren't a whole form: a puppy's status from the list.
@@ -200,6 +233,7 @@ export async function removeRecord(env, siteId, kind, id) {
     s.push(env.DB.prepare('UPDATE litters SET sire_id = NULL WHERE site_id = ? AND sire_id = ?').bind(siteId, id));
     s.push(env.DB.prepare('DELETE FROM health_results WHERE site_id = ? AND dog_id = ?').bind(siteId, id));
   }
+  if (kind === 'partners') s.push(...await unlinkPartnerStatements(env, siteId, id));
   if (kind === 'litters') s.push(env.DB.prepare('DELETE FROM puppies WHERE site_id = ? AND litter_id = ?').bind(siteId, id));
   if (kind === 'litters') s.push(env.DB.prepare('UPDATE albums SET litter_id = NULL WHERE site_id = ? AND litter_id = ?').bind(siteId, id));
   // Videos and posts on a removed dog, litter or album go with it.
@@ -208,6 +242,18 @@ export async function removeRecord(env, siteId, kind, id) {
   s.push(env.DB.prepare(`DELETE FROM ${k.table} WHERE id = ? AND site_id = ?${k.where ? ` AND ${k.where}` : ''}`).bind(id, siteId));
   s.push(touch(env, siteId));
   await env.DB.batch(s);
+}
+
+// A partner kennel's dogs, as it goes: it leaves their co-owners' kennels, and the
+// one living there still lives away, with no kennel named.
+export async function unlinkPartnerStatements(env, siteId, partnerId) {
+  const { results } = await env.DB.prepare("SELECT id, lives_with_kennel_id, co_owned_with_ids FROM dogs WHERE site_id = ? AND (lives_with_kennel_id = ? OR co_owned_with_ids LIKE ?)")
+    .bind(siteId, partnerId, `%${partnerId}%`).all();
+  return results.map((d) => {
+    const ids = (d.co_owned_with_ids ? JSON.parse(d.co_owned_with_ids) : []).filter((x) => x !== partnerId);
+    return env.DB.prepare('UPDATE dogs SET lives_with_kennel_id = ?, co_owned_with_ids = ?, updated_at = ? WHERE id = ? AND site_id = ?')
+      .bind(d.lives_with_kennel_id === partnerId ? null : d.lives_with_kennel_id, ids.length ? JSON.stringify(ids) : null, now(), d.id, siteId);
+  });
 }
 
 // Move one place up (-1) or down (+1) in its list.

@@ -78,6 +78,7 @@ const LISTS = {
   reviews: { title: 'Reviews', one: 'review', name: (r) => r.first_name, sub: (r) => (r.status === 'hidden' ? 'hidden' : r.quote.slice(0, 60)) },
   steps: { title: 'How it works', one: 'step', name: (r) => r.heading, sub: () => '' },
   extras: { title: 'Extras', one: 'extra', name: (r) => r.name, sub: (r) => (r.kind === 'homegoing' ? `${r.weeks ?? ''}-week package` : r.grp ?? '') },
+  partners: { title: 'Partner kennels', one: 'kennel', name: (r) => r.name, sub: (r) => (r.hidden_by_kennelos ? 'Not sent by KennelOS · not shown' : r.url ? r.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : '') },
   products: { title: 'Recommended products', one: 'product', name: (r) => r.name, sub: (r) => [r.grp, r.code ? `code ${r.code}` : null, r.home_badge ? 'home page badge' : null].filter(Boolean).join(' · ') },
   policies: { title: 'Policies', one: 'policy', name: (r) => r.heading, sub: () => '' },
   // A question also placed elsewhere says so here, so she can see at a glance
@@ -90,6 +91,9 @@ const LISTS = {
 // Under a product's fields: the brand's embed code, read for its link and picture
 // (badgeCode.js), never kept.
 const BADGE_CODE_FIELD = `<label for="f-badge_code">Or paste the embed code they gave you<span class="hint">The HTML from the brand's referral page, starting with &lt;a href=. It fills in your referral link and the picture. The code itself isn't kept.</span><textarea id="f-badge_code" name="_badge_code" rows="4" autocapitalize="none" spellcheck="false" placeholder="&lt;a href=&quot;https://…&quot;&gt;&lt;img src=&quot;https://…&quot;&gt;&lt;/a&gt;"></textarea></label>`;
+// Under a partner kennel's fields: the badge code a kennel hands out, read for its
+// link and logo (badgeCode.js), never kept.
+const PARTNER_BADGE_FIELD = `<label for="f-badge_code">Or paste the badge code they gave you<span class="hint">The HTML for their badge or logo, starting with &lt;a href=. It fills in their website and logo. The code itself isn't kept.</span><textarea id="f-badge_code" name="_badge_code" rows="4" autocapitalize="none" spellcheck="false" placeholder="&lt;a href=&quot;https://…&quot;&gt;&lt;img src=&quot;https://…&quot;&gt;&lt;/a&gt;"></textarea></label>`;
 const QUESTION_WORDS = { text: 'Short answer', paragraph: 'Longer answer', choice: 'Choice', yes_no: 'Yes or no', litter: 'Which litter', phone: 'Phone', town: 'Town' };
 const FORM_KIND = { policies: 'expander', faq: 'expander', waitlist_help: 'expander' };
 // The kinds whose records a photo can be of (photoTags.js).
@@ -110,6 +114,7 @@ export function createScreens({ env, request, url, site, user, page }) {
   const photos = async () => (photosCache ??= (await env.DB.prepare('SELECT id, alt FROM photos WHERE site_id = ? AND removed_at IS NULL ORDER BY created_at DESC').bind(site.id).all()).results);
   const dogsList = async () => (await env.DB.prepare('SELECT id, call_name FROM dogs WHERE site_id = ? ORDER BY sort').bind(site.id).all()).results;
   const littersList = async () => (await env.DB.prepare('SELECT id, name FROM litters WHERE site_id = ? ORDER BY sort').bind(site.id).all()).results;
+  const partnersList = async () => (await env.DB.prepare('SELECT id, name FROM partner_kennels WHERE site_id = ? ORDER BY sort, name').bind(site.id).all()).results;
   let tagsCache = null;
   const tags = async () => (tagsCache ??= await tagsByPhoto(env, site.id));
 
@@ -129,7 +134,7 @@ export function createScreens({ env, request, url, site, user, page }) {
   const tickBox = (p) => `<label class="check"><input type="checkbox" name="photos" value="${esc(p.id)}" form="tag-many"> Tick</label>`;
   // pick: { groups: [{ label, subject }], tags: [subject…] to tag uploads with, alt }
   const ctxFor = async (kind, pick) => {
-    const ctx = { kind, photos: await photos(), photoUrl, dogs: await dogsList(), litters: await littersList(), photosLink: `${base}/photos` };
+    const ctx = { kind, photos: await photos(), photoUrl, dogs: await dogsList(), litters: await littersList(), partners: kind === 'dogs' ? await partnersList() : [], photosLink: `${base}/photos` };
     if (pick) {
       const t = await tags();
       ctx.photoGroups = pick.groups.map((g) => ({ label: g.label, ids: g.subject ? ctx.photos.filter((p) => (t.get(p.id) ?? []).includes(g.subject)).map((p) => p.id) : [] }));
@@ -144,11 +149,19 @@ export function createScreens({ env, request, url, site, user, page }) {
 
   // A pasted embed code fills in the product's link and picture (and its name, if
   // empty). Its errors read as the form's.
-  async function fromBadgeCode(fd, values) {
+  async function fromBadgeCode(fd, values, kind = 'products') {
     const code = String(fd.get('_badge_code') ?? '').trim();
     if (!code) return;
     try {
       const { link, image, alt } = readBadgeCode(code);
+      // A partner kennel's: its website (unless KennelOS gave one) and its logo,
+      // always copied onto the site.
+      if (kind === 'partners') {
+        if (link && !values.url) values.url = link;
+        if (!values.name && alt) values.name = alt;
+        if (image) values.photo_id = await storeBadgeImage(env, site.id, image, alt ?? values.name ?? '');
+        return;
+      }
       if (link) values.link_url = link;
       if (!values.name && alt) values.name = alt;
       // An approved brand's picture is shown from the brand; any other is copied.
@@ -185,6 +198,10 @@ export function createScreens({ env, request, url, site, user, page }) {
   }
 
   // Dogs that wait in the draft (5.3): never deleted by a clock; removing is hers.
+  // Co-owned dogs (docs/Co_Owned_Dogs_Plan.md): her partner kennels, from Dogs.
+  const partnersLink = () => `<p><a class="button" href="${base}/lists/partners">Partner kennels</a> <span class="muted small">The kennels your co-owned dogs are shared with, and their logos.</span></p>`;
+  const partnersIntro = async () => `<p class="muted">The kennels your co-owned dogs are shared with. Your Dogs page shows co-owned dogs living with one of them under Co-owned, with that kennel's logo; each co-owned dog's page names its kennels.${(await kos()).linked ? ' The kennels you tick "Name this kennel on my website" for in KennelOS come from there, by name and website: add their logo here.' : ''}</p>`;
+
   async function offSiteDogsCard(rows) {
     const off = rows.filter((d) => !d.show_on_site || d.hidden_by_kennelos);
     if (!off.length) return '';
@@ -373,8 +390,10 @@ export function createScreens({ env, request, url, site, user, page }) {
     const formKind = FORM_KIND[kind] ?? kind;
     const formFields = Object.fromEntries(Object.entries(k.fields).filter(([n]) => !(kind === 'reviews' && n === 'photo_id')));
     const one = SUBJECT_OF[kind];
-    const subsFor = (id) => [id && one ? `${one}:${id}` : null, kind === 'puppies' ? `litter:${scopeId}` : null].filter(Boolean);
+    const subsFor = (id) => [id && one ? `${one}:${id}` : null, kind === 'puppies' ? `litter:${scopeId}` : null, kind === 'partners' ? 'page:partners' : null].filter(Boolean);
     const pickFor = (rec) => {
+      // A partner kennel's logo: from the logos she has added for them.
+      if (kind === 'partners') return { groups: [{ label: 'Partner kennel logos', subject: 'page:partners' }], tags: ['page:partners'], alt: rec ? `${rec.name} logo` : '' };
       // An album offers its litter's photos first; photos added here are tagged with it.
       if (kind === 'albums') {
         const lit = rec?.litter_id ? `litter:${rec.litter_id}` : null;
@@ -391,7 +410,7 @@ export function createScreens({ env, request, url, site, user, page }) {
       const lock = rec ? await lockedFor(kind, rec) : null;
       const from = lock ? `<p class="notice">This ${esc(L.one)} comes from KennelOS. What's marked "from KennelOS" changes there, then Update website; everything else here is yours.</p>` : '';
       const body = `${from}${errorBox(err)}<form method="post" action="${esc(action)}" data-save class="card">${fields(formFields, values ?? rec ?? { ...(k.defaults ?? {}) }, { ...await ctxFor(formKind, pickFor(rec)), locked: lock })}
-        ${kind === 'products' ? BADGE_CODE_FIELD : ''}<button class="primary">${rec ? 'Save' : `Add ${L.one}`}</button></form>
+        ${kind === 'products' ? BADGE_CODE_FIELD : kind === 'partners' ? PARTNER_BADGE_FIELD : ''}<button class="primary">${rec ? 'Save' : `Add ${L.one}`}</button></form>
         ${rec ? `<form method="post" action="${esc(`${path}/${rec.id}/remove`)}" class="card danger"><p class="muted small">Removing takes it off your draft; it stays on the live site until you publish.</p><button>Remove this ${L.one}</button></form>` : ''}`;
       return { title: rec ? L.name(rec) : `New ${L.one}`, back: path, body };
     };
@@ -402,7 +421,7 @@ export function createScreens({ env, request, url, site, user, page }) {
       const items = rows.map((r, i) => `<li class="item"><a href="${esc(`${path}/${r.id}`)}"><b>${esc(L.name(r))}</b><span>${esc(L.sub(r) ?? '')}</span></a>
         <span class="order">${i ? `<form method="post" action="${esc(`${path}/${r.id}/up`)}"><button aria-label="Move ${esc(L.name(r))} up">↑</button></form>` : ''}${i < rows.length - 1 ? `<form method="post" action="${esc(`${path}/${r.id}/down`)}"><button aria-label="Move ${esc(L.name(r))} down">↓</button></form>` : ''}</span></li>`).join('');
       const intro = kind === 'questions' ? `${(await kos()).online ? '<p class="error">Not used right now: KennelOS takes your applications online, so your website shows your KennelOS form. These questions come back if you turn online applications off in KennelOS or remove the link.</p>' : ''}<p class="muted">The application form on your waitlist page always asks for the family's name and email. These questions come after, in this order. With none, it asks for a few lines about their family.</p>` : '';
-      const extra = kind === 'litters' ? await leavingCard() : kind === 'dogs' ? await offSiteDogsCard(rows) : kind === 'reviews' ? '<p><a class="button" href="' + base + '/reviews-queue">Reviews families sent</a></p>' : '';
+      const extra = kind === 'litters' ? await leavingCard() : kind === 'dogs' ? `${await offSiteDogsCard(rows)}${partnersLink()}` : kind === 'partners' ? await partnersIntro() : kind === 'reviews' ? '<p><a class="button" href="' + base + '/reviews-queue">Reviews families sent</a></p>' : '';
       return { title: parentTitle ? `${parentTitle}: ${L.title}` : L.title, back: back ?? base, body: `${note(url)}${intro}${extra}<ul class="items">${items || `<li class="muted">None yet.</li>`}</ul><p><a class="button primary" href="${esc(`${path}/new`)}">Add ${L.one}</a></p>` };
     }
     if (rest === 'new') {
@@ -411,7 +430,7 @@ export function createScreens({ env, request, url, site, user, page }) {
       const values = parseForm(formFields, fd);
       let saved;
       try {
-        if (kind === 'products') await fromBadgeCode(fd, values);
+        if (kind === 'products' || kind === 'partners') await fromBadgeCode(fd, values, kind);
         saved = await saveRecord(env, site.id, kind, null, values, scopeId); } catch (err) {
         if (err instanceof ContentError) return form(null, err.message, values);
         throw err;
@@ -442,7 +461,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     // KennelOS's fields keep what's stored, whatever the form sent.
     for (const f of await lockedFor(kind, rec) ?? []) values[f] = rec[f];
     try {
-      if (kind === 'products') await fromBadgeCode(fd, values);
+      if (kind === 'products' || kind === 'partners') await fromBadgeCode(fd, values, kind);
       await saveRecord(env, site.id, kind, rec.id, values, scopeId); } catch (err) {
       if (err instanceof ContentError) return form(rec, err.message, values);
       throw err;
@@ -1141,8 +1160,8 @@ export function createScreens({ env, request, url, site, user, page }) {
         if (view && !(view instanceof Response)) view = await litterPhotos(await withChildren(view, `${base}/litters/${view.rec?.id}/puppies`, 'puppies', 'Puppies'));
       }
     } else {
-      const lm = p.match(/^\/lists\/(reviews|steps|extras|products|policies|faq|waitlist_help|questions|albums)(\/|$)/);
-      if (lm) view = await collection(`${base}/lists/${lm[1]}`, lm[1], null, { back: lm[1] === 'questions' ? `${base}/pages/waitlist` : lm[1] === 'albums' ? `${base}/photos` : `${base}/pages` });
+      const lm = p.match(/^\/lists\/(reviews|steps|extras|products|policies|faq|waitlist_help|questions|albums|partners)(\/|$)/);
+      if (lm) view = await collection(`${base}/lists/${lm[1]}`, lm[1], null, { back: lm[1] === 'questions' ? `${base}/pages/waitlist` : lm[1] === 'albums' ? `${base}/photos` : lm[1] === 'partners' ? `${base}/dogs` : `${base}/pages` });
     }
     if (!view) return null;
     if (view instanceof Response) return view;

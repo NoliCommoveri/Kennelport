@@ -32,6 +32,7 @@ import faqPlacesLitterNames from './0021_faq_places_litter_names.sql';
 import dogWeight from './0022_dog_weight.sql';
 import portal from './0023_portal.sql';
 import portalSteps from './0024_portal_steps.sql';
+import coOwned from './0025_co_owned.sql';
 
 export const MIGRATIONS = [
   { id: '0001', name: 'schema', sql: schema },
@@ -58,4 +59,5 @@ export const MIGRATIONS = [
   { id: '0022', name: 'dog_weight', sql: dogWeight },
   { id: '0023', name: 'portal', sql: portal },
   { id: '0024', name: 'portal_steps', sql: portalSteps },
+  { id: '0025', name: 'co_owned', sql: coOwned },
 ];

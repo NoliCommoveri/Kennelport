@@ -194,6 +194,9 @@ export async function unlinkSite(env, siteId) {
     db.prepare("UPDATE health_results SET source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
     db.prepare("UPDATE extras SET source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
     db.prepare("UPDATE products SET source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
+    // A partner kennel KennelOS stopped sending stays hidden (she may have unticked
+    // naming it): it waits under Not on your site, with Remove.
+    db.prepare("UPDATE partner_kennels SET source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
     db.prepare("UPDATE steps SET source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
     db.prepare("UPDATE payment_info SET source = 'kennelport' WHERE site_id = ?").bind(siteId),
     db.prepare('UPDATE sites SET use_kennelos_prices = 0, draft_changed_at = ? WHERE id = ?').bind(t, siteId),

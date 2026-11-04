@@ -34,6 +34,13 @@ export const SITE_FIELDS = {
   show_other_prices: BOOL,
 };
 
+export const PARTNERS_PER_DOG = 10;
+export const PARTNER_FIELDS = {
+  name: S(80, { required: true }),
+  url: { type: 'url' },
+  photo_id: { type: 'photo' },
+};
+
 export const DOG_FIELDS = {
   slug: { type: 'slug', required: true },
   call_name: S(40, { required: true }),
@@ -54,7 +61,19 @@ export const DOG_FIELDS = {
   died_on: DATE,
   health_display: ENUM('normal_only', 'all', 'none'),
   show_on_site: BOOL,
+  // Co-owned (docs/Co_Owned_Dogs_Plan.md): lives_away, living with one of its
+  // co-owners, puts it in the Dogs page's Co-owned section only. Its partner
+  // kennels by name here (the import's way, like a litter's dam by slug); the
+  // forms name them by id (records.js).
+  co_owned: BOOL,
+  lives_away: BOOL,
+  lives_with: S(80),
+  co_owned_with: { type: 'list', max: PARTNERS_PER_DOG, itemMax: 80 },
 };
+
+// A partner kennel (docs/Co_Owned_Dogs_Plan.md): one her co-owned dogs are shared
+// with. Its logo is a photo on the site, uploaded or copied from its badge code.
+export const PARTNERS_MAX = 50;
 
 export const HEALTH_FIELDS = {
   test: S(60, { required: true }),
@@ -329,7 +348,7 @@ export const PAGES = {
   about:          { path: '/about', group: 'about', label: 'Our story', canHide: true, fields: { ...HEAD, photo_id: { type: 'photo' }, text: ML(4000), facts: { type: 'pairs', max: 6, keyMax: 40, valueMax: 60 } } },
   reviews:        { path: '/reviews', group: 'about', label: 'Reviews', canHide: true, fields: { ...HEAD } },
   contact:        { path: '/contact', group: 'about', label: 'Contact', canHide: false, fields: { ...HEAD, location_note: S(160) } },
-  dogs:           { path: '/dogs', group: 'residents', label: 'All our dogs', canHide: true, fields: { ...HEAD } },
+  dogs:           { path: '/dogs', group: 'residents', label: 'All our dogs', canHide: true, fields: { ...HEAD, co_owned_heading: S(80), co_owned_lede: S(200) } },
   litters:        { path: '/litters', group: 'puppies', label: 'Puppies', canHide: true, fields: { ...HEAD } },
   older:          { path: '/litters/older', group: 'puppies', label: 'Older puppies', canHide: true, fields: { ...HEAD } },
   how_it_works:   { path: '/how-it-works', group: 'how', label: 'The steps', canHide: true, fields: { ...HEAD } },

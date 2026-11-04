@@ -3,7 +3,7 @@
 // "no such page".
 import {
   esc, attr, fmtDate, priceText, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, parentName,
-  litterCard, parentCards, litterFacts, dogCard, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
+  litterCard, parentCards, litterFacts, dogCard, coCard, partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
   paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
   dogGroups, depositsAhead, puppyStatus, puppyPriceText, regText, fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
   faqBlock,
@@ -293,15 +293,41 @@ export function dogs(snap, ctx) {
       <div class="grid" id="all-dogs">${list.map((d) => `<div data-sex="${d.sex}">${dogCard(snap, d)}</div>`).join('')}</div>
       <p class="flip-hint">Tap a card to turn it over; tap again to turn it back.</p></div></section>` : ''}
       ${group('up-and-coming', 'Our next generation', 'Up and coming', 'Young dogs we have kept, growing up with us.', g.upcoming)}
-      ${group('looking-for-a-home', 'Ready for a family', 'Looking for a home', 'Grown dogs we are placing in a loving pet home.', g.for_sale)}`,
+      ${group('looking-for-a-home', 'Ready for a family', 'Looking for a home', 'Grown dogs we are placing in a loving pet home.', g.for_sale)}
+      ${coOwnedSection(snap, p, g.away)}`,
   };
+}
+
+// Co-owned dogs living with a co-owner (docs/Co_Owned_Dogs_Plan.md): light cards in
+// a slider, then the logos of the kennels they live with, each linked to its site.
+function coOwnedSection(snap, p, away) {
+  if (!away.length) return '';
+  const seen = new Set();
+  const kennels = away.map((d) => partnerOf(snap, d.lives_with_kennel_id)).filter((k) => k && !seen.has(k.id) && seen.add(k.id));
+  const strip = kennels.length ? `<ul class="partners" aria-label="Our partner kennels">${kennels.map((k) => {
+    const inner = `${partnerLogo(snap, k)}<span>${esc(k.name)}</span>`;
+    return `<li>${k.url ? `<a href="${attr(k.url)}" rel="noopener">${inner}</a>` : inner}</li>`;
+  }).join('')}</ul>` : '';
+  return `<section class="section" id="co-owned"><div class="wrap">
+      ${head('Co-owned', p.co_owned_heading || 'Shared with friends', p.co_owned_lede || 'Dogs we co-own, living with partner kennels.')}
+      ${slider(away.map((d) => coCard(snap, d)), { cls: 'light' })}${strip}
+    </div></section>`;
 }
 
 export function dog(snap, ctx, slug) {
   const d = snap.dogs.find((x) => x.slug === slug);
   if (!d) return null;
   const photo = img(snap, d.photo_id, { alt: d.call_name, cls: 'photo', lazy: false }) ?? '<div class="photo" aria-hidden="true"></div>';
-  const facts = [['Sex', d.sex === 'female' ? 'Female' : 'Male'], ['Color', d.color], ['Born', fmtDate(d.date_of_birth)], ['Weight', d.weight], ['Registry', d.registry], ['Titles', d.titles]].filter(([, v]) => v);
+  const facts = [['Sex', d.sex === 'female' ? 'Female' : 'Male'], ['Color', d.color], ['Born', fmtDate(d.date_of_birth)], ['Weight', d.weight], ['Registry', d.registry], ['Titles', d.titles]].filter(([, v]) => v)
+    .map(([k, v]) => [k, esc(v)]);
+  // Co-owned (docs/Co_Owned_Dogs_Plan.md): every named co-owner kennel, with its
+  // logo and link; a dog living with one says which.
+  const partners = d.co_owned ? coOwnedWith(snap, d) : [];
+  if (partners.length) facts.push(['Co-owned with', partners.map((k) => `<span class="pk">${partnerLogo(snap, k)}${partnerLink(k)}</span>`).join(', ')]);
+  if (d.lives_away) {
+    const k = partnerOf(snap, d.lives_with_kennel_id);
+    facts.push(['Lives with', k ? `<span class="pk">${partnerLogo(snap, k)}${partnerLink(k)}</span>` : 'A partner kennel']);
+  }
   const tests = d.health.length ? `<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${h.verify_url ? `<a href="${attr(h.verify_url)}" rel="noopener">${esc(h.result)}</a>` : esc(h.result)}</span></li>`).join('')}</ul>` : '';
   const litters = snap.litters.filter((l) => l.dam_id === d.id || l.sire_id === d.id);
   const sale = saleOf(snap, ctx, d);
@@ -314,7 +340,7 @@ export function dog(snap, ctx, slug) {
       <div class="dogpage${faqs ? ' mt-26' : ''}">${photo}<div class="info">
         <span class="eyebrow">${esc([snap.site.breed, d.role].filter(Boolean).join(' · '))}</span><h1>${esc(d.call_name)}</h1>
         ${d.registered_name ? `<p class="reg">${esc(d.registered_name)}</p>` : ''}
-        <dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
+        <dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>
         ${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''}${sale ? `<p class="status avail">Looking for a home${sale.price ? ` · ${esc(sale.price)}` : ''}</p><p><a class="btn solid" href="${attr(sale.ask)}">Ask about ${esc(d.call_name)}</a></p>` : ''}${tests}${shareRow()}
       </div></div>
       ${embedsBlock(snap, `dog:${d.id}`, { inWrap: true })}
