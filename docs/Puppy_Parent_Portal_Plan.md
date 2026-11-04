@@ -196,6 +196,14 @@ needs do.
    which closes the placement and stops its reminders). In the portal, the buttons for
    those link to the status page ("Book your pickup on your status page"), and portal
    messaging is off.
+
+   **One tap between the two, not two sign-ins.** The status page shows **Open your puppy
+   portal**, which signs the family straight in: KennelOS's server makes a link that works
+   once, for 10 minutes, for that family only, signed with the key her site and KennelOS
+   already share for the link, and the portal checks it and starts a family session (the
+   same session as an email code gives, section 2). The portal's links back to the status
+   page do the same the other way, using the status page's own sign-in. The invite email
+   and the email code still work on their own, for a family who comes in from email.
 3. **Pickup.** She marks the puppy picked up in the Site Manager, which starts the vet
    clock (section 5). The portal tells KennelOS through the feed's reply, and from then
    the status page shows that family only **Your puppy portal**, a link. KennelOS also
@@ -213,9 +221,39 @@ pick and sign for their replacement there. When the replacement's contract is si
 the feed sends it as a **second placement on the same family** (section 9), so their
 account, emails and anything they added carry on.
 
-**What KennelOS changes for her kennel:** the feed's new rows; the status page's handoff
-(steps 2 and 3); and Companion and Furever off (no Companion link request on her status
-page, no Send to Furever for her pups). Nothing changes for other breeders.
+**The feed sends on its own, for her kennel.** Today KennelOS sends to KennelPort only when
+she presses Update website. That's right for her public pages, but not for families: a
+signed contract, a booked pickup, an approved extra or a lost puppy has to reach the
+portal without her remembering a button. So the feed's new rows go by themselves, from her
+device, whenever one of their records changes, and again whenever KennelOS opens. Website
+pages still wait for Update website, as now. Because KennelOS runs on her device, nothing
+moves while it's closed on every device she has; the same is true of the status page,
+which her device publishes. So:
+- her Site Manager shows **Last from KennelOS: 2 hours ago** on Today and on each family;
+- if a family's placement is open and nothing has come from KennelOS for 24 hours, Today
+  says so ("Open KennelOS so your families' pages are up to date");
+- the status page's switch at pickup also happens on its own on the server, once the
+  pickup date has passed, so it never waits for her device.
+
+**A few facts go back to KennelOS, with no new setting.** What she records in the Site
+Manager that KennelOS also keeps comes back through the feed's reply and is applied at
+KennelOS's next sync, the way family requests are, but without asking her to approve it,
+since she made the change herself:
+- **picked up, and its time:** the pup's pickup (`placement` event) gets the real time,
+  and the sale is marked Delivered if it isn't already, so KennelOS's own go-home nudges
+  stop;
+- **a corrected pickup time** before pickup: the same event moves;
+- **the microchip** she enters or corrects;
+- **a death after pickup** she records: the dog is marked deceased with its date.
+
+Anything with money in it (a return, a rehoming, a refund) never goes back on its own:
+KennelOS shows it as a Today nudge for her to handle there. Everything else she edits in
+the portal stays the portal's (section 3.1).
+
+**What KennelOS changes for her kennel:** the feed's new rows, sent on their own; the
+facts that come back; the one-tap link to the portal; the status page's handoff (steps 2
+and 3); and Companion and Furever off (no Companion link request on her status page, no
+Send to Furever for her pups). Nothing changes for other breeders.
 
 ## 4. What she can change
 
@@ -255,6 +293,13 @@ The highest-stakes feature: missing the visit voids her curable-conditions guara
 - **Pickup time is editable.** "Picked up" sets the time to now, but she can enter or
   correct the actual time later, and the deadline and reminders move with it. A
   KennelOS pickup date pre-fills it; she confirms.
+- **The clock never waits on a tap.** If the booked pickup time passes and she hasn't
+  marked the puppy picked up, the portal starts the clock from the booked time anyway,
+  sends the pickup reminder, and her Today asks **Did Opal go home at 11:00 am?** with
+  **Yes**, **Change the time** and **Not yet**. Not yet stops the clock and its
+  reminders until she marks the real pickup. Every start and change is in the placement's
+  history (section 3.1), so the reminder log shows which time each reminder was sent
+  from.
 - **Reminders count back from the deadline**, not forward from pickup, so none can land
   after it:
   - **Before pickup** (from the planned go-home date, about 5 days ahead): "Book your vet
@@ -295,18 +340,15 @@ The revenue placements and the vet countdown, and nothing else:
 - Retention basics: invite expiry, the activity date, erase on request (section 10)
 - Extended stays: the package on the placement, its go-home date, the timeline split
   between her and the family, and weekly updates with skills and photos (section 8.2)
-- The KennelOS feed's new rows and the handoff (section 3.4); portal messages from pickup
-- A puppy who dies or fails a health check before pickup: the family's quiet page and the way back to the status
-  page (section 7.4)
+- The KennelOS feed's new rows, sent on their own, the few facts that go back, the
+  handoff and the one-tap link (section 3.4); portal messages from pickup
+- A puppy who dies or fails a health check before pickup: the family's quiet page and
+  the way back to the status page (section 7.4)
 - History on every record (section 3.1)
 - Her Site Manager as one app for the website and the portal (section 7.3): Today with
   both sides, Families with the waitlist, Dogs shared, the Portal tab
-- The go-home bag: her template, what each family was sent, and **What came home in
-  Opal's bag** on Records (section 8.4)
-- Buyer details she records on each family's screen, pre-filled from KennelOS
-  (section 12.2)
-
-**Gate:** one litter run from invite to the vet visit with no fixes by hand.
+**Gate:** one litter run from signed contract to the vet visit with no fixes by hand,
+including one pickup she forgot to mark (section 5).
 
 ### Phase 2: handbook and keepsakes
 
@@ -319,7 +361,11 @@ The revenue placements and the vet countdown, and nothing else:
 - Retention in full: warning emails, Keep, download everything, daily deletion
 - Photo and video packages: full-resolution uploads, video in parts, playback, delivery
   status, download all (section 8.3); video in stay updates
-- The Reports page: sign-ups by litter, where families click, earnings, extras income,
+- The go-home bag: her template, what each family was sent, and **What came home in
+  Opal's bag** on Records (section 8.4)
+- Buyer details she records on each family's screen, pre-filled from KennelOS
+  (section 12.2)
+- The Reports page, which uses both: sign-ups by litter, where families click, earnings, extras income,
   the go-home bag against sign-ups, the families who've brought her the most, and who her
   buyers are (section 12.1). Its before-portal baseline is typed in before launch
   (section 12), and the program reports from phase 1's litters are typed in as they come,
@@ -827,6 +873,12 @@ who have moved on.
   her own albums when it is shared, so deletion doesn't take her copy. The consent
   record stays as long as she uses the photo.
 - Sets `family` to null on clicks and program status rows.
+- **Clears the history too** (`portal_history`, section 3.1): every history row about the
+  family's account is deleted with it, so an old email address, name or note doesn't
+  outlive the account. History about the records she keeps (pickup times, the vet
+  deadline, reminders sent) stays with those records, with any family detail in it
+  replaced by the name she can read, and goes when they go (10.1). An erase does the
+  same, at once.
 - Leaves the placement, health records, contract and email log until their own date
   (10.1), with the family reduced to a name she can read.
 - If the family came from KennelOS, writes a tombstone with the KennelOS ID only.
@@ -984,8 +1036,8 @@ and sources bring her the most.
 12. Photo and video packages: what's in each, how soon after go-home is it delivered, and
     may she use package photos on her own site?
 13. Should families be able to share their package gallery with relatives?
-14. The handoff at pickup: is "her Mark picked up, or else KennelOS's pickup date passed
-    or the sale Delivered" the right switch for the status page (section 3.4)?
+14. The handoff at pickup: is "her Mark picked up, or else the pickup date passed" the
+    right switch for the status page (section 3.4)?
 15. After pickup, a family wants another extra (a second photo session, say): a portal
     message she handles by hand, or a request in the portal that reaches KennelOS?
 16. The look's few fully round controls (section 7.1): keep them, or square them off to

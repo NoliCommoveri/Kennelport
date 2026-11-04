@@ -42,7 +42,7 @@ art in Android's middle 80%.
 
 **`portal-prototype.html`** is a clickable prototype of the Puppy Parent Portal
 ([`../Puppy_Parent_Portal_Plan.md`](../Puppy_Parent_Portal_Plan.md) section 7): the family
-pages and her Site Manager as one app for her website and the portal (Today, Families with the
+pages, the KennelOS status page they hand off from, and her Site Manager as one app for her website and the portal (Today, Families with the
 waitlist, Dogs, Website, Portal, Reports), in the AK sample's Lawn scheme, light and dark. A bar at
 the top switches between the Family and Breeder views and four dates (before go-home, the
 vet window, weeks 1–8, the first birthday); everything is in memory and resets when
@@ -50,12 +50,18 @@ the date changes. Like the AK sample it has no `<html>`/`<head>` wrapper (artifa
 
 - **Real:** the kennel name, the Gem litter, its birth date and go-home date, Willow, and
   the puppies Opal, Onyx and Diamond.
-- **Made up:** every family and email, the website's messages, review, waitlist and unpublished changes, Boone (as in the AK sample), pickup and booking
+- **Made up:** every family and email, the families' messages and notes, the website's messages, review, waitlist and unpublished changes, Boone (as in the AK sample), pickup and booking
   times, the microchip, the food, the programs and their wording, the discount code,
   health records, the weights and the baby book text. Photos are placeholders (this
   repository is public).
-- **Not shown:** the KennelOS status page and the handoff to the portal (plan section 3.4:
-  the prototype starts with the family already in the portal, and its **Ask about this**
-  and booking buttons don't link out); portal messages; littermates' birthdays; a
-  family's program status on her side; life status. Its Dogs screen offers **Staying**,
-  KennelPort's word for a puppy she keeps, never an extended stay (plan section 7.3).
+- **The journey (plan sections 1, 3.4 and 7.4):** a third view, **Status page**, is the
+  KennelOS family status page in its own plainer look: before pickup it keeps pickup,
+  extras and messages and opens the portal with one tap; after pickup it shows only the
+  portal link. The **Opal, before pickup** buttons show the quiet page for a puppy who dies
+  or fails a health check, and the way back to the status page. Her side shows the invite
+  after a signed contract, the note she writes after a loss, messages from pickup on,
+  pickup history, **Last from KennelOS**, and (on Dec 24) Diamond's pickup that she
+  didn't mark, with the vet clock started from the booked time.
+- **Not shown:** littermates' birthdays; a family's program status on her side; life
+  status after pickup. Its Dogs screen offers **Staying**, KennelPort's word for a puppy
+  she keeps, never an extended stay (plan section 7.3).
