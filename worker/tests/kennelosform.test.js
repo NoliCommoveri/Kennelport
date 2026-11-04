@@ -312,6 +312,32 @@ test('Family login: in the menu, the footer and the status-page help, once publi
   assert.doesNotMatch(await home(), /Family login/);
 });
 
+test('Family login with the family portal on: one button that asks, on her site only', async () => {
+  const b = await breeder(kennelos(LIST));
+  await b.post('/pages/waitlist/kennelos', { feed: FEED_URL });
+  await b.post('/publish');
+  const signin = 'https://apply.kennelos.example/list/kos1_11111111-2222-4333-8444-555555555555#signin';
+  const get = async (path) => call(b.env, SITE, path);
+  assert.equal((await get('/family-login')).status, 404, 'no chooser while the portal is off');
+  b.env.DB.raw.prepare("UPDATE sites SET portal_on = 1 WHERE subdomain = 'akbostons'").run();
+  const html = await (await get('/')).text();
+  assert.match(html, /<li><a class="navtop" href="\/family-login">Family login<\/a><\/li><li><a class="btn solid" href="\/waitlist">/, 'the menu, no publish needed');
+  assert.match(html, /<li><a href="\/family-login">Family login<\/a><\/li>/, 'the footer');
+  assert.doesNotMatch(html, new RegExp(`href="${signin}"`));
+  const res = await get('/family-login');
+  assert.equal(res.status, 200);
+  const page = await res.text();
+  assert.match(page, new RegExp(`<a class="btn solid" href="${signin}" rel="noopener noreferrer" target="_blank">Waitlist Status Page</a></p><p class="pay-when">For families waiting`));
+  assert.match(page, /<a class="btn solid" href="\/family">A-K Puppy Families<\/a><\/p><p class="pay-when">For families with/);
+  assert.match(page, /<meta name="robots" content="noindex">/);
+  assert.match(await (await get('/waitlist/help')).text(), new RegExp(`<a class="btn solid" href="${signin}"[^>]*>Sign in to see your details</a>`), 'the status-page help still goes to KennelOS');
+  // Without a KennelOS waitlist, Family login goes straight to the portal.
+  await b.post('/pages/waitlist/kennelos', { remove: '1' });
+  await b.post('/publish');
+  assert.match(await (await get('/')).text(), /<li><a class="navtop" href="\/family">Family login<\/a><\/li>/);
+  assert.equal((await get('/family-login')).status, 404);
+});
+
 test('the manage app steers by the KennelOS link: says it can be linked, then leaves out what is unused', async () => {
   const k = kennelos(feed());
   const b = await breeder(k);

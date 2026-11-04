@@ -441,6 +441,17 @@ export function faqBlock(snap, place) {
   return rows.length ? `<div class="acc">${expanders(rows)}</div>` : '';
 }
 
+// Where Family login goes (plan 3.8). Everywhere: KennelOS's sign-in for her
+// status page, in a new tab. On a site with the family portal on (ctx.portal,
+// from the site row, so no publish is needed): her own /family-login page, which
+// asks which of the two the family wants; or the portal itself when she has no
+// KennelOS waitlist linked.
+export function familyLogin(snap, ctx) {
+  const kos = snap.site.family_login;
+  if (ctx.portal) return { href: kos ? '/family-login' : '/family', external: false };
+  return kos ? { href: kos, external: true } : null;
+}
+
 export function pagehead(page, fallback, { ornament = true } = {}) {
   const heading = page?.heading || fallback.heading;
   const eyebrow = page?.eyebrow ?? fallback.eyebrow;

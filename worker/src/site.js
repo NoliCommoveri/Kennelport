@@ -123,7 +123,7 @@ export async function serveSite(request, env, ctxWorker, subdomain, { onDomain =
     return htmlPage('Back soon', '<h1>Back soon</h1><p>This site is being updated. Please try again in a few minutes.</p>', { status: 503, headers: { 'retry-after': '300' } });
   }
 
-  const site = await env.DB.prepare(`SELECT s.id, s.subdomain, s.kennel_name, s.status, s.published_snapshot_id, s.kennelos_public_id, d.hostname AS domain
+  const site = await env.DB.prepare(`SELECT s.id, s.subdomain, s.kennel_name, s.status, s.published_snapshot_id, s.kennelos_public_id, s.portal_on, d.hostname AS domain
     FROM sites s LEFT JOIN custom_domains d ON d.site_id = s.id AND d.status = 'active' WHERE s.subdomain = ?`).bind(subdomain).first();
   if (!site) return htmlPage('Not found', '<h1>Not found</h1><p>No KennelPort site has this address.</p>', { status: 404 });
   if (site.status === 'closed') return closedNotice();
@@ -169,7 +169,7 @@ export async function serveSite(request, env, ctxWorker, subdomain, { onDomain =
     return htmlPage(site.kennel_name || site.subdomain, `<h1>${esc(site.kennel_name || site.subdomain)}</h1><p>This website is being built.</p>`);
   }
 
-  const ctx = { path: url.pathname, origin, today: today(), preview, turnstileKey: turnstileOn(env) ? env.TURNSTILE_SITE_KEY : null };
+  const ctx = { path: url.pathname, origin, today: today(), preview, portal: Boolean(site.portal_on), turnstileKey: turnstileOn(env) ? env.TURNSTILE_SITE_KEY : null };
   // The waitlist page is drawn from the snapshot and the list as it is now: the
   // KennelOS feed's five-minute copy, or the simple waitlist the breeder keeps (no
   // publish needed), so it isn't cached with the snapshot.
@@ -215,9 +215,10 @@ export async function serveSite(request, env, ctxWorker, subdomain, { onDomain =
     return html(body, status, { 'cache-control': 'public, max-age=60' }, cspFor(env, url.pathname, ctx.feed));
   }
 
-  // The cache: one entry per snapshot, path and day.
+  // The cache: one entry per snapshot, path and day, and whether the portal is on
+  // (it changes where Family login goes, without a publish).
   const cache = typeof caches !== 'undefined' ? caches.default : null;
-  const cacheKey = new Request(`${origin}${url.pathname}?__kp=${snap.id}.${ctx.today}`);
+  const cacheKey = new Request(`${origin}${url.pathname}?__kp=${snap.id}.${ctx.today}${ctx.portal ? '.f' : ''}`);
   if (cache) {
     const hit = await cache.match(cacheKey);
     if (hit) {
