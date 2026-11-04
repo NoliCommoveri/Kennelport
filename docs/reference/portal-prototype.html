@@ -540,6 +540,7 @@ const PROGRAMS0 = [
   { id: 'food', name: 'Puppy food program', type: 'Food', where: 'Home, checklist, Feeding chapter', on: true, step: 'Order with A-K’s code for a first-order discount', ic: 'bowl', why: 'The food your puppy already eats, delivered.' },
   { id: 'ins', name: 'Pet insurance trial', type: 'Insurance', where: 'Home, timeline (5 days after pickup)', on: true, step: 'Activate the free trial within 5 days of pickup', ic: 'shield', why: 'A free trial that starts the day your puppy comes home.' },
   { id: 'akc', name: 'AKC registration', type: 'Registration', where: 'Timeline (30 days after pickup)', on: true, step: 'Register with the papers in your go-home folder', ic: 'star', why: 'Register with the papers in your go-home folder.' },
+  { id: 'toys', name: 'Toys and chews', type: 'Product', where: 'Go-home bag, A-K’s picks', on: true, step: '—', ic: 'ball', why: 'The chews and toys our puppies already know.' },
   { id: 'crate', name: 'Crate and bedding', type: 'Product', where: 'Checklist, Crate & potty chapter', on: true, step: '—', ic: 'home', why: 'The 24-inch crate with a divider we use for every puppy.' },
 ];
 const CHECKLIST = [
@@ -652,7 +653,9 @@ function reset() {
     { id: 'w3', name: 'The Brooks family', wants: 'Male · any litter', since: D(2026, 11, 20) },
   ];
   S.pupStatus = { opal: S.stage === 'before' ? 'reserved' : 'placed', onyx: S.stage === 'later' ? 'placed' : 'reserved', diamond: S.stage === 'before' ? 'reserved' : 'placed' };
-  S.demo = { reed: { found: 'A past family', state: 'GA', first: 'Yes', home: ['Kids'], repeat: 'No' }, hale: { found: 'Facebook', state: 'TN', first: 'No', home: ['Other dogs'], repeat: 'No' }, ortega: { found: 'Website or Google', state: 'GA', first: 'Yes', home: ['Kids', 'Cats'], repeat: 'No' } };
+  S.demo = { reed: { found: 'A past family', state: 'GA', first: 'Yes', home: ['Kids'], repeat: 'No', referredby: 'The Cole family', referred: '1', social: 'Under 1,000', again: 'Likely', budget: 'Comfortable', paid: 'On time' }, hale: { found: 'Facebook', state: 'TN', first: 'No', home: ['Other dogs'], repeat: 'No', referred: '0', social: '1,000–10,000', again: 'Likely', budget: 'Price no object', paid: 'Early' }, ortega: { found: 'Website or Google', state: 'GA', first: 'Yes', home: ['Kids', 'Cats'], repeat: 'No', referred: '0', social: 'Not on social', again: 'Maybe', budget: 'Price-sensitive', paid: 'Needed reminders' } };
+  S.bagItems = BAG0.map((x) => ({ ...x }));
+  S.bag = { reed: BAG0.filter((x) => x.id !== 'g7').map((x) => x.id), hale: BAG0.map((x) => x.id), ortega: BAG0.filter((x) => x.id !== 'g1').map((x) => x.id) }; S.bagExtra = { hale: ['Photo package USB card'] };
   S.demoFields = DEMO_FIELDS0.map((x) => ({ ...x })); S.results = {}; S.earn = {}; S.repTable = false;
   S.famTab = 'puppy'; S.bookOpen = false; S.bookFilter = 'all'; S.q = ''; S.editing = null; S.writing = null; S.lightbox = null;
 }
@@ -931,6 +934,8 @@ function famRecords() {
   return `<div class="bento">${pupTile(p)}<div class="tile s1" style="grid-column:span 1"><span class="eyebrow">Gem litter · ${p.collar} collar</span><h1 style="font-size:1.3rem">${p.name}’s records</h1><p class="small muted">Shots, papers and everything A-K handed over.</p></div>
     <div class="tile full"><dl class="factgrid" style="margin:0">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></div>
     <div class="tile full"><h2>Shots, deworming and vet visits</h2><div class="tablewrap"><table><thead><tr><th>Date</th><th>Type</th><th>Details</th><th>By</th></tr></thead><tbody>${rows.sort((a, b) => a[0] - b[0]).map((r) => `<tr><td>${short(r[0])}</td><td>${r[1]}</td><td>${esc(r[2])}</td><td>${r[3]}</td></tr>`).join('')}</tbody></table></div></div>
+    ${S.pickup[p.id] ? `<div class="tile full band"><div class="between"><h2>What came home in ${p.name}’s bag</h2><span class="small muted">From A-K</span></div>
+      <ul class="hl">${S.bagItems.filter((x) => (S.bag[p.family] || []).includes(x.id)).map((x) => { const pr = x.prog && S.programs.find((q) => q.id === x.prog); return `<li><div><span class="badge">${icon(pr ? pr.ic : 'gift')}</span><span><b>${esc(x.name)}</b>${pr ? `<span class="small muted">${pr.why}</span>` : ''}</span>${pr ? `<a class="btn line small ext" href="#" data-act="go" data-prog="${pr.id}">${pr.id === 'food' ? 'Get more' : pr.id === 'ins' ? 'Activate' : pr.id === 'akc' ? 'Register' : 'Get more'}</a>` : '<span></span>'}</div></li>`; }).join('')}${(S.bagExtra[p.family] || []).map((x) => `<li><div><span class="badge">${icon('gift')}</span><span><b>${esc(x)}</b></span><span></span></div></li>`).join('')}</ul></div>` : ''}
     ${docs.map(([t, s]) => `<button class="tile tint" data-act="toast" data-msg="Opens ${t}"><span class="ico">${icon('file')}</span><h3>${t}</h3><span class="small muted">${s}</span></button>`).join('')}</div>`;
 }
 function weightChart() {
@@ -1099,6 +1104,9 @@ function admFamily(k) {
     </div><div class="stack" style="gap:16px">
     <section class="card"><h2>Family</h2><dl class="kv"><dt>Emails</dt><dd>${f.emails.map(esc).join('<br>')}</dd><dt>Signed in</dt><dd>${S.signedIn[k] ? 'Yes' : 'Not yet'}</dd><dt>Last active</dt><dd>${S.lastActive[k] ? withYear(S.lastActive[k]) : '—'}</dd></dl>
       <div class="row">${S.signedIn[k] ? '' : '<button class="btn line small" data-act="toast" data-msg="Invite sent again">Resend invite</button>'}<button class="btn line small" data-act="toast" data-msg="Edit family (not in the prototype)">Edit</button></div></section>
+    ${f.pup ? `<form class="card" data-act="savebag" data-id="${k}"><div class="between"><h2>Sent home with</h2><span class="small muted">${(S.bag[k] || []).length + (S.bagExtra[k] || []).length} items · $${S.bagItems.filter((x) => (S.bag[k] || []).includes(x.id)).reduce((a, x) => a + x.cost, 0)} to you</span></div>
+      <div class="chips">${S.bagItems.map((x) => `<label><input type="checkbox" name="bag" value="${x.id}" ${(S.bag[k] || []).includes(x.id) ? 'checked' : ''}>${esc(x.name)}</label>`).join('')}${(S.bagExtra[k] || []).map((x) => `<label><input type="checkbox" name="extra" value="${esc(x)}" checked>${esc(x)}</label>`).join('')}</div>
+      <div class="row"><label for="bag-add" class="sr">Add something else</label><input id="bag-add" name="add" placeholder="Something else, like “Extra bag of treats”" style="flex:1 1 12rem"><button class="btn line small">Save</button></div></form>` : ''}
     ${demoSection(k)}
     <section class="card"><h2>Keeping their data</h2><label class="check"><input type="checkbox" data-act="keep" data-id="${k}" ${S.keep[k] ? 'checked' : ''}>Keep this family (pauses deletion for inactivity)</label>
       <p class="small muted">Without Keep: deleted 12 months after last activity, with warnings at 30 and 7 days. A delivered photo package is kept at least 2 years.</p>
@@ -1188,9 +1196,12 @@ function admPortal() {
     <section class="card"><h2>Extras the portal delivers</h2><div class="tablewrap"><table><thead><tr><th>Extra</th><th>Delivers as</th><th>Details</th></tr></thead><tbody>
       ${Object.values(EXTRAS).map((e) => `<tr><td><b>${e.name}</b></td><td>${e.type === 'stay' ? 'Extended stay' : e.type === 'media' ? 'Photo &amp; video' : 'Listed only'}</td><td class="small">${e.type === 'stay' ? `Go-home at ${e.weeks} weeks · update every ${e.every} days · skills from What’s included` : e.type === 'media' ? esc(e.includes) : 'Shows on the family’s placement'}</td></tr>`).join('')}</tbody></table></div>
       <p class="small muted">The same extras as your website’s Extras page and KennelOS’s price list. Payments stay in KennelOS.</p></section>
+    <section class="card"><div class="between"><h2>Go-home bag</h2><button class="btn line small" data-act="addbag">Add an item</button></div>
+      <ul class="list">${S.bagItems.map((x) => `<li><span class="ico">${icon(x.prog ? (S.programs.find((p) => p.id === x.prog) || {}).ic || 'gift' : 'gift')}</span><span class="grow"><b>${esc(x.name)}</b><br><span class="small muted">${x.cost ? 'Costs you $' + x.cost : 'Free to you'}${x.from ? ' · ' + esc(x.from) : ''}${x.prog ? ' · tied to ' + (S.programs.find((p) => p.id === x.prog) || {}).name : ''}</span></span></li>`).join('')}</ul>
+      <p class="small muted">Every new family starts with this bag ticked; change it on the family’s screen. Items tied to a program show a Get more link on the family’s side, and Reports compares sign-ups with and without them.</p></section>
     <section class="card"><div class="between"><h2>Buyer details you track</h2><button class="btn line small" data-act="adddemo">Add a field</button></div>
       <div class="switches">${S.demoFields.map((x, i) => `<label class="check"><input type="checkbox" data-act="demoon" data-i="${i}" ${x.on ? 'checked' : ''}><span>${esc(x.label)}<br><span class="hint">${{ choice: 'A choice: ' + (x.options || []).join(', '), text: 'Short text', yesno: 'Yes or no', multi: 'Tick any: ' + (x.options || []).join(', ') }[x.type]}${x.custom ? ' · yours' : ''}</span></span></label>`).join('')}</div>
-      <p class="small muted">Filled in by you on each family’s screen, never asked of families. Only you see them, in Reports and on each family’s screen. Leave out anything sensitive (health, religion, ethnicity, income).</p></section>
+      <p class="small muted">You fill these in on each family’s screen. Families never see them. Add any field you want to track.</p></section>
     <section class="card"><div class="between"><h2>Handbook chapters</h2><button class="btn line small" data-act="toast" data-msg="New chapter editor (not in the prototype)">Add chapter</button></div>
       <ul class="list">${S.chapters.map((c, i) => `<li><span class="grow"><b>${esc(c.t)}</b>${c.prog ? `<br><span class="small muted">Links: ${S.programs.find((p) => p.id === c.prog).name}</span>` : ''}</span>
         <button class="btn text small" data-act="up" data-i="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Move ${esc(c.t)} up">↑</button><button class="btn text small" data-act="down" data-i="${i}" ${i === S.chapters.length - 1 ? 'disabled' : ''} aria-label="Move ${esc(c.t)} down">↓</button>
@@ -1214,13 +1225,33 @@ const CLICKS = { before: [6, 9, 2, 1, 4, 2], vet: [12, 10, 7, 4, 5, 4], weeks: [
 const PLACES = ['Home: food band', 'Go-home checklist', 'Insurance tile', 'Timeline tasks', 'Handbook chapters', 'Emails'];
 const FOUND = ['Facebook', 'A past family', 'Website or Google', 'A show or event', 'Other'];
 // Every family she's placed with: how they found her and whether they used the insurance trial (made up).
-const PAST = [['Facebook', 1], ['Facebook', 0], ['Facebook', 1], ['Facebook', 0], ['Facebook', 1], ['A past family', 1], ['A past family', 1], ['A past family', 0], ['A past family', 1], ['Website or Google', 0], ['Website or Google', 1], ['Website or Google', 0], ['A show or event', 1], ['A show or event', 0]];
+const PAST = [['Facebook', 1, 1, 1, 'The Lee family', 980, 2], ['Facebook', 0, 0, 0, 'The Grant family', 60, 0], ['Facebook', 1, 1, 1, 'The Moss family', 420, 1], ['Facebook', 0, 1, 0, 'The Day family', 85, 0], ['Facebook', 1, 1, 1, 'The Ward family', 310, 0],
+  ['A past family', 1, 1, 1, 'The Cole family', 760, 3], ['A past family', 1, 1, 1, 'The Pike family', 255, 1], ['A past family', 0, 0, 0, 'The Hart family', 40, 0], ['A past family', 1, 1, 0, 'The Vance family', 190, 0],
+  ['Website or Google', 0, 0, 0, 'The Bell family', 35, 0], ['Website or Google', 1, 1, 1, 'The Snow family', 330, 1], ['Website or Google', 0, 0, 1, 'The Fox family', 120, 0], ['A show or event', 1, 1, 1, 'The Rhee family', 640, 2], ['A show or event', 0, 1, 0, 'The Lowe family', 75, 0]];
+// Her go-home bag: what she usually sends, what each costs her, and the program it belongs to.
+const BAG0 = [
+  { id: 'g1', name: 'Food starter bag (2 lb)', prog: 'food', cost: 0, from: 'The food program’s breeder kit' },
+  { id: 'g2', name: 'Insurance trial certificate', prog: 'ins', cost: 0, from: 'The insurance program' },
+  { id: 'g3', name: 'AKC registration paper', prog: 'akc', cost: 0 },
+  { id: 'g4', name: 'Blanket with the litter’s scent', cost: 4 },
+  { id: 'g5', name: 'Chew toy and squeaky toy', prog: 'toys', cost: 6 },
+  { id: 'g6', name: 'Collar and 6 ft leash', cost: 9 },
+  { id: 'g7', name: 'Puppy shampoo sample', cost: 2 },
+  { id: 'g8', name: 'Go-home folder: records, contract, handbook', cost: 3 },
+];
+const EXTRAS_INCOME = { s25: 450, f25: 250 }, GEM_EXTRAS = { before: 950, vet: 950, weeks: 950, later: 950 };
 const DEMO_FIELDS0 = [
   { id: 'found', label: 'How they found you', type: 'choice', options: FOUND, on: true },
   { id: 'state', label: 'State', type: 'text', on: true },
   { id: 'first', label: 'First Boston', type: 'yesno', on: true },
   { id: 'home', label: 'At home', type: 'multi', options: ['Kids', 'Other dogs', 'Cats', 'Neither'], on: true },
   { id: 'repeat', label: 'Repeat family', type: 'yesno', on: true },
+  { id: 'referredby', label: 'Referred by', type: 'text', on: true },
+  { id: 'referred', label: 'Families they’ve referred', type: 'text', on: true },
+  { id: 'social', label: 'Social reach', type: 'choice', options: ['Not on social', 'Under 1,000', '1,000–10,000', 'Over 10,000'], on: true },
+  { id: 'again', label: 'Likely to buy again', type: 'choice', options: ['Likely', 'Maybe', 'Unlikely'], on: true },
+  { id: 'budget', label: 'Budget', type: 'choice', options: ['Price-sensitive', 'Comfortable', 'Price no object'], on: true },
+  { id: 'paid', label: 'How they paid', type: 'choice', options: ['Early', 'On time', 'Late', 'Needed reminders'], on: true },
   { id: 'show', label: 'Interested in showing', type: 'yesno', on: false, custom: true },
 ];
 function signups() {
@@ -1271,10 +1302,13 @@ function admReports() {
         <p class="small muted">Share of each litter’s families who signed up, from the program’s own report. Three families is a small litter: read a big change, not a few points.</p></section>
       <div class="bento"><div class="tile s2"><div class="between"><h2>Where families click</h2><span class="small muted">Gem litter · ${totalClicks} clicks</span></div>${hbars(clicks, { tip: (r) => `${r[0]}: ${r[1]} clicks (${pct(r[1], totalClicks)}%)` })}<p class="small muted">Keep what gets clicked; move or drop what doesn’t.</p></div>
         <div class="tile s2"><div class="between"><h2>Earned per litter</h2><span class="small muted">From program reports</span></div>${hbars(LITS.map((l) => [l.name, er[l.id], l.portal]), { fmt: (v) => '$' + v, cls: (r) => (r[2] ? '' : 'before'), tip: (r) => `${r[0]}: $${r[1]}${r[2] ? '' : ' (before the portal)'}` })}<div class="legend"><span><i class="before"></i>Before the portal</span><span><i></i>With the portal</span></div></div></div>`}
+    <div class="bento"><div class="tile s2"><div class="between"><h2>Extras income per litter</h2><span class="small muted">Stays, photo packages, packs · from KennelOS</span></div>${hbars(LITS.map((l) => [l.name, l.portal ? GEM_EXTRAS[S.stage] : EXTRAS_INCOME[l.id], l.portal]), { fmt: (v) => '$' + v.toLocaleString(), cls: (r) => (r[2] ? '' : 'before'), tip: (r) => `${r[0]}: $${r[1]} in extras` })}</div>
+      <div class="tile s2"><div class="between"><h2>Food starter bag and food sign-ups</h2><span class="small muted">All families</span></div>${(() => { const got = PAST.filter((x) => x[2]), not = PAST.filter((x) => !x[2]); return hbars([['Got the starter bag', pct(got.filter((x) => x[3]).length, got.length)], ['Didn’t', pct(not.filter((x) => x[3]).length, not.length)]], { fmt: (v) => v + '%', tip: (r) => `${r[0]}: ${r[1]}% signed up for the food program` }) + `<p class="small muted">${got.length} families got the bag, ${not.length} didn’t. Send it with every puppy.</p>`; })()}</div></div>
+    <div class="tile full"><div class="between"><h2>Families who’ve brought you the most</h2><span class="small muted">Extras, program credit and referrals</span></div><div class="tablewrap"><table><thead><tr><th>Family</th><th>Found you via</th><th>Brought you</th><th>Referred</th></tr></thead><tbody>${PAST.slice().sort((a, b) => b[5] - a[5]).slice(0, 6).map((x) => `<tr><td><b>${x[4]}</b></td><td>${x[0]}</td><td>$${x[5]}</td><td>${x[6] ? x[6] + ' famil' + (x[6] === 1 ? 'y' : 'ies') : '—'}</td></tr>`).join('')}</tbody></table></div><p class="small muted">Your best ask-for-a-referral and ask-for-a-review list.</p></div>
     <section class="sec sand bleed"><span class="eyebrow">Your families</span><h2 class="big-h">Who your buyers are</h2>
       <div class="bento"><div class="tile s2"><div class="between"><h3>How they found you</h3><span class="small muted">All ${PAST.length + Object.keys(S.demo).length} families</span></div>${hbars(found, { tip: (r) => `${r[0]}: ${r[1]} families` })}</div>
       <div class="tile s2"><h3>Insurance trial, by how they found you</h3><div class="tablewrap"><table><thead><tr><th>Found you via</th><th>Families</th><th>Used the trial</th></tr></thead><tbody>${byFound.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]} (${pct(r[2], r[1])}%)${r[1] < 3 ? ' <span class="small muted">· small group</span>' : ''}</td></tr>`).join('')}</tbody></table></div><p class="small muted">Every count shows. With only a few families in a group, read it as a hint, not a trend.</p></div></div>
-      <p class="small muted">From the details you add on each family’s screen. Only you see them; they’re deleted with the family.</p></section>
+      <p class="small muted">From the details you add on each family’s screen.</p></section>
     <form class="tile stack" data-act="saveresult"><h2>Add a program’s report</h2><p class="small muted">Once a month, copy each program’s sign-ups and earnings from its dashboard. Most programs don’t send them to the portal on their own.</p>
       <div class="fgrid"><label class="half" for="rr-l">Litter<select id="rr-l" name="l">${LITS.map((l) => `<option value="${l.id}" ${l.portal ? 'selected' : ''}>${l.name}</option>`).join('')}</select></label>
         <label class="half" for="rr-p">Program<select id="rr-p" name="p">${PROGS.map((pr) => `<option value="${pr.id}">${pr.name}</option>`).join('')}</select></label>
@@ -1358,6 +1392,7 @@ document.addEventListener('click', (e) => {
   if (a === 'closebook') { S.bookOpen = false; render(true); return; }
   if (a === 'filter') { S.bookFilter = el.dataset.f; render(true); return; }
   if (a === 'reptab') { S.repTable = el.dataset.f === 'table'; render(true); return; }
+  if (a === 'addbag') { S.bagItems.push({ id: 'g' + Date.now(), name: 'Treat sampler', cost: 5 }); render(true); toast('Added to your go-home bag.'); return; }
   if (a === 'adddemo') { S.demoFields.push({ id: 'c' + Date.now(), label: 'Wants a second puppy', type: 'yesno', on: true, custom: true }); render(true); toast('Field added. It shows on every family’s screen.'); return; }
   if (a === 'famtab') { S.famTab = el.dataset.f; render(true); return; }
   if (a === 'pickup') { S.pickup[id] = new Date(S.now); render(true); toast(`${PUPS.find((p) => p.id === id).name} picked up. The vet clock is running; reminder sent.`); return; }
@@ -1400,7 +1435,8 @@ document.addEventListener('submit', (e) => {
   if (a === 'saveresult') { const l = fd.get('l'), pr = fd.get('p'), n = +fd.get('n'), e2 = fd.get('e'); const lit = LITS.find((x) => x.id === l);
     if (n > lit.fams) { toast(`${lit.name} has ${lit.fams} families. Check the number.`); return; }
     S.results[`${l}:${pr}`] = n; if (e2 !== '') S.earn[l] = (S.earn[l] ?? earnings()[l]) + +e2; render(true); toast('Added. The charts include it now.'); return; }
-  if (a === 'savedemo') { const k = f.dataset.id, d = {}; S.demoFields.forEach((x) => { d[x.id] = x.type === 'multi' ? fd.getAll(x.id) : fd.get(x.id) || ''; }); d.note = fd.get('note') || ''; S.demo[k] = d; render(true); toast('Saved. Only you see these.'); return; }
+  if (a === 'savebag') { const k = f.dataset.id; S.bag[k] = fd.getAll('bag'); S.bagExtra[k] = fd.getAll('extra').concat(String(fd.get('add') || '').trim() ? [String(fd.get('add')).trim()] : []); render(true); toast('Saved. The family sees it under Records.'); return; }
+  if (a === 'savedemo') { const k = f.dataset.id, d = {}; S.demoFields.forEach((x) => { d[x.id] = x.type === 'multi' ? fd.getAll(x.id) : fd.get(x.id) || ''; }); d.note = fd.get('note') || ''; S.demo[k] = d; render(true); toast('Saved.'); return; }
   if (a === 'savepup') { location.hash = '#a-dogs'; toast('Saved to your draft. Publish when you’re ready.'); return; }
   if (a === 'sendupdate') { const p = PUPS.find((x) => x.id === f.dataset.id), x = EXTRAS[p.stay];
     S.updates = S.updates.filter((u) => !(u.pup === p.id && u.date > S.now));

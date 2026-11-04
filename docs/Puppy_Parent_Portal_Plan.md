@@ -484,7 +484,26 @@ services today. Hosting them means:
   10 GB free, no download fees). Check the price before building. Package files count
   against a separate, larger allowance on her site, not the website's photo limit.
 
-### 8.4 On her screens and theirs
+### 8.4 The go-home bag
+
+She sends every puppy home with goodies: a food starter bag, the insurance certificate,
+the AKC paper, a blanket with the litter's scent, toys, a collar and leash, samples, the
+go-home folder. Several come from the programs' breeder kits, so the bag is also a
+revenue tool.
+
+- **Her bag template** (Portal tab): each item with what it costs her, where it comes
+  from (a program's kit, or bought), and the program or product it's tied to, if any.
+- **Per family** (the family's screen, **Sent home with**): the template ticked by default;
+  she unticks what didn't go and adds anything else. The card shows the count and what
+  the bag cost her.
+- **The family's side:** **What came home in Opal's bag** (Records), each item with its
+  program's line, and **Get more**, **Activate** or **Register** where it's tied to a
+  program or product. A reorder link on the food they already have is the easiest sale
+  in the portal.
+- **Reports:** sign-up rates for families who got an item against those who didn't (food
+  starter bag → food program, say), and what the bag costs her per litter.
+
+### 8.5 On her screens and theirs
 
 | Her side (Site Manager, section 7.3) | The family's side |
 |---|---|
@@ -517,7 +536,9 @@ New tables, all with `site_id` like the rest of KennelPort. Imported tables also
 | `portal_tombstones` | kennelos_id, type, deleted at | Stops a deleted record being imported again |
 | `portal_program_results` | litter, product, families signed up, amount earned, period, entered at, source (typed / CSV) | What each program's own report says, per litter (section 12.1) |
 | `portal_detail_fields` | label, type (choice / yes-no / text / tick-any), options, order, on/off | The buyer details she tracks (section 12.2) |
-| `portal_family_details` | family, field, value | Her answers for each family. Deleted with the family |
+| `portal_family_details` | family, field, value | Her answers for each family. Kept with her sale records |
+| `portal_bag_items` | name, cost to her, where it comes from, product (nullable), order, on/off | Her go-home bag template |
+| `portal_placement_bag` | placement, bag item or free text, quantity | What each puppy actually went home with |
 | `extras` (existing) | adds delivery type (stay / media / none), update cadence in days (stay), what the package includes and a delivery note (media) | The website's catalog, also the portal's list of what it delivers |
 | `portal_placement_extras` | placement, extra, `kennelos_id`, status (stay: booked / staying / home; media: booked / shooting / editing / delivered), due date, delivered at | Which family has which extra |
 | `portal_stay_skills` | placement extra, skill, order, from the package (yes/no) | The stay's skills list, copied from the package's checklist so she can add her own |
@@ -551,6 +572,7 @@ Two kinds of data, kept on different clocks:
 | Inactive family | Account deleted 12 months after last activity, with warnings at 30 and 7 days |
 | Photo and video package files | Kept at least 2 years after delivery whatever the activity, then deleted with 60 and 14 days' warning, each with **Download all** |
 | Stay updates | With the family's account; any update turned into a baby book entry goes with the baby book |
+| Her buyer details, go-home bag records, program results | Kept with her sale records until she deletes them; not removed with the family's portal account |
 | Sale record, contract, vet proof, reminder log | Kept until the end of her longest health guarantee plus 6 months, then deleted |
 | Clicks and program status | Family removed from the rows at account deletion; the counts stay for her stats |
 | Anything | Paused while she has **Keep** on; erased at once when the family asks |
@@ -637,6 +659,13 @@ A tab of its own in the Site Manager. Everything on it is hers alone.
 - **Where families click:** clicks by place (food band, checklist, insurance tile,
   timeline, handbook chapter, each email), so she keeps the placements that work.
 - **Earned per litter:** commissions and credit, from the programs' reports.
+- **Extras income per litter:** stays, photo packages and packs, from KennelOS's income
+  records (or typed, without KennelOS).
+- **Go-home bag and sign-ups:** for each bag item tied to a program, the program's
+  sign-up rate among families who got it and those who didn't.
+- **Families who've brought you the most:** extras, program credit and referrals per
+  family, sorted. Her list for asking for referrals and reviews, and for offering the
+  next litter first.
 - **Charts or Table** for every figure, hover for exact numbers, and **Export** to a
   spreadsheet (CSV).
 - **Add a program's report:** once a month she copies each program's sign-ups and earnings
@@ -649,22 +678,21 @@ A tab of its own in the Site Manager. Everything on it is hers alone.
 
 ### 12.2 Buyer details she records
 
-- **She fills them in on each family's screen** ("About this family"), never asking
-  families to. Starting fields: how they found her, state, first Boston, who's at home
-  (kids, other dogs, cats), repeat family, and notes. She turns fields on or off and adds
-  her own (a choice, yes/no, short text, or tick-any) under Portal, **Buyer details you
-  track**.
-- **Reports use them:** "How they found you" across all her families, and each program's
-  sign-ups by how families found her, so she sees which sources bring the families who
-  use the programs.
-- **Every count shows,** including small groups, marked "small group". These are her own
-  buyers in her own reports; hiding small groups would only hide her numbers from her.
-- **Private to her:** never shown to families or anyone else, never sent to a program, and
-  not part of the families' download.
-- **Nothing sensitive:** the field editor says to leave out health, religion, ethnicity
-  and income.
-- **Retention:** deleted with the family's account (section 10); the litter totals in
-  Reports stay, without the family.
+Her own observations about each family, as granular as she likes, to see which buyers
+and sources bring her the most.
+
+- **She fills them in on each family's screen** ("About this family"). Starting fields:
+  how they found her, state, first Boston, who's at home, repeat family, referred by,
+  families they've referred, social reach, likely to buy again, budget, how they paid,
+  and notes. She turns fields on or off and adds her own (a choice, yes/no, short text,
+  or tick-any) under Portal, **Buyer details you track**.
+- **Reports use them:** how families found her, each program's sign-ups by source, and
+  the families who've brought her the most. Every count shows, however small the group.
+- **Families don't see them.** They're her business records, not part of the family's
+  pages or download.
+- **Kept with her sale records,** not with the family's portal account: deleting an
+  inactive account (section 10) leaves her details and figures in place, so lifetime
+  value and referral history survive. She deletes them herself if she wants to.
 
 ## 13. Risks and safeguards
 
