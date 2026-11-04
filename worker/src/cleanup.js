@@ -6,10 +6,13 @@
 // - removed photos' files in R2, a day after removal, once no kept version of the
 //   site (the live one, or one Undo publish could go back to) uses them;
 // - litters 30 days after they left the site, unless kept (plan 5.3), with their
-//   puppies, albums and the photos nothing else uses, whose files go the same night.
+//   puppies, albums and the photos nothing else uses, whose files go the same night;
+// - the puppy portal's deleted families, 30 days after (undoable until then), used
+//   one-tap links after a day, expired family codes and sessions (portal/account.js).
 import { loadSnapshot } from './publish.js';
 import { expireLitters } from './kennelos/clock.js';
 import { chunks, placeholders } from './lib/sql.js';
+import { runPortalDaily } from './portal/account.js';
 
 export const INQUIRY_DAYS = 90;
 const DAY = 86400000;
@@ -29,8 +32,9 @@ export async function runCleanup(env, now = new Date()) {
     env.DB.prepare('DELETE FROM dev_outbox WHERE created_at < ?').bind(before(7)),
   ]);
   const litters = await expireLitters(env, now);
+  const portal = await runPortalDaily(env, now);
   const photos = await purgeRemovedPhotos(env, before(1)) + (litters.photos.length ? await purgeRemovedPhotos(env, null, PURGE_PER_RUN, litters.photos) : 0);
-  return { inquiries: results[0].meta.changes, photos, litters: litters.litters };
+  return { inquiries: results[0].meta.changes, photos, litters: litters.litters, portal_deleted: portal.deleted };
 }
 
 // Delete the R2 files of photos removed before `cutoff`, skipping any that a kept

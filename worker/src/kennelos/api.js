@@ -5,6 +5,7 @@
 //   DELETE /v1/link    (Bearer)  → this device stops; the last one is an Unlink
 //   POST   /v1/bundle  (Bearer, the bundle as JSON) → { summary, addresses, site }
 //   POST   /v1/settings (Bearer) { kennelos_prices: true | false } → { site }
+//   POST   /v1/portal  (Bearer, the family feed, portal/feed.js) → { received, summary, facts, portal }
 //
 // KennelOS Pro is a static app on its own origin, so a browser call comes with an
 // Origin that must be one of KENNELOS_APP_ORIGINS (comma-separated), and gets the
@@ -16,6 +17,8 @@
 import { ApiError, json, readJson } from '../lib/http.js';
 import { redeemCode, deviceFor, siteFacts, stopDevice, setKennelosPrices } from './link.js';
 import { applyBundle, MAX_BUNDLE_BYTES } from './bundle.js';
+import { applyFeed, MAX_FEED_BYTES } from '../portal/feed.js';
+import { handleResendEvent } from '../portal/bounces.js';
 
 export const appOrigins = (env) => String(env.KENNELOS_APP_ORIGINS ?? '').split(',').map((s) => s.trim().replace(/\/+$/, '')).filter(Boolean);
 
@@ -36,6 +39,8 @@ function cors(env, request) {
 }
 
 export async function handleApi(request, env, url) {
+  // Resend's delivery events (portal/bounces.js): server to server, signed, no CORS.
+  if (url.pathname === '/v1/resend') return handleResendEvent(request, env);
   const c = cors(env, request);
   if (!c.ok) return json({ error: 'origin_not_allowed', message: 'KennelPort only takes this from the KennelOS app.' }, 403);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: c.headers });
@@ -63,6 +68,13 @@ export async function handleApi(request, env, url) {
       const device = await deviceFor(env, request);
       const body = await readJson(request, MAX_BUNDLE_BYTES);
       return reply(await applyBundle(env, device, body));
+    }
+    // The puppy portal's family feed, sent on its own (portal/feed.js).
+    if (url.pathname === '/v1/portal') {
+      if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
+      const device = await deviceFor(env, request);
+      const body = await readJson(request, MAX_FEED_BYTES);
+      return reply(await applyFeed(env, device, body));
     }
     // Her settings here that KennelOS may change for her (Kels's Update my website):
     // only those named; anything else is refused.

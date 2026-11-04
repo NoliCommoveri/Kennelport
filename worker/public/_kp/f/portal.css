@@ -139,3 +139,76 @@ html[data-zoom="3"] .tiles { grid-template-columns: 1fr; }
 .tabs { position: fixed; z-index: 4; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-around; background: var(--head); padding: .35rem .3rem calc(.35rem + env(safe-area-inset-bottom)); }
 .tabs a { flex: 1; max-width: 8rem; display: grid; justify-items: center; gap: .1rem; padding: .3rem; border-radius: var(--r); color: var(--head-muted); text-decoration: none; font-size: .72rem; font-weight: 700; }
 .tabs a[aria-current] { background: var(--tab-on); color: var(--tab-on-ink); }
+
+/* Build chunk 2: the go-home checklist, the timeline, program status, the food band. */
+.between { display: flex; align-items: baseline; justify-content: space-between; gap: .6rem; flex-wrap: wrap; }
+.btn.small { min-height: 2.2rem; padding: .35rem .75rem; font-size: .8rem; }
+.btn.text.small { min-height: 2.2rem; padding: 0; }
+.acts { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .9rem; margin-top: .35rem; }
+.acts form { margin: 0; }
+.st { display: inline-flex; align-items: center; gap: .35rem; font-size: .68rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.st::before { content: ""; width: .45rem; height: .45rem; border-radius: 50%; background: currentColor; }
+.st.ok { color: var(--ok); } .st.bad { color: var(--bad); } .st.next { color: var(--accent); }
+.programs li.done b { color: var(--muted); }
+
+.progress { height: 6px; margin: .2rem 0 .7rem; background: var(--band); border-radius: 3px; overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--accent); }
+.checks { list-style: none; padding: 0; margin: 0; columns: 2 15rem; column-gap: 1.2rem; }
+.checks li { break-inside: avoid; display: flex; align-items: flex-start; gap: .55rem; padding: .3rem 0; }
+.checks li > span { flex: 1; padding-top: .3rem; font-size: .92rem; }
+.checks li.done > span { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+.checks .go { padding-top: .3rem; font-size: .84rem; }
+.tickf { margin: 0; }
+.tick { display: grid; place-items: center; width: 1.9rem; height: 1.9rem; flex: none; padding: 0; border: 1.5px solid var(--accent); border-radius: var(--r); background: var(--surface); color: transparent; cursor: pointer; }
+.tick svg.i { width: 1.1rem; height: 1.1rem; stroke-width: 2.6; }
+.tick[aria-pressed="true"], a.tick.on { background: var(--accent); color: var(--accent-ink); }
+a.tick:not(.on) { border-style: dashed; }
+
+.tasks { list-style: none; padding: 0; margin: 0; }
+.task { display: grid; grid-template-columns: 2.9rem 1fr; gap: .65rem; padding: .7rem 0; border-top: 1px solid var(--line); scroll-margin-top: 4.5rem; }
+.task:first-child { border-top: 0; }
+.task .d { display: grid; align-content: start; justify-items: center; border-radius: 9px; background: var(--band); padding: .25rem 0 .3rem; font-size: .62rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.task .d b { font: 500 1.2rem/1 var(--f-display); color: var(--ink); letter-spacing: 0; }
+.task .d svg.i { width: 1.1rem; height: 1.1rem; margin: .25rem 0; }
+.task h3 { margin: 0; font: 700 .95rem/1.3 var(--f-body); }
+.task p { margin: .2rem 0 0; }
+.task.done h3 { color: var(--muted); }
+.steps .acts { display: flex; }
+
+.food { background: var(--head); color: var(--head-ink); border-radius: var(--rc); padding: 1.2rem 1rem; display: grid; gap: .8rem; }
+.food .eyebrow { color: #E9C77E; margin: 0; }
+.food h2 { margin: 0; font-size: 1.35rem; }
+.food p { margin: 0; opacity: .9; }
+.prodrow { display: flex; align-items: center; gap: .7rem; }
+.food .tint { width: 3rem; height: 3rem; background: rgba(255,255,255,.12); color: var(--head-ink); flex: none; }
+.trio { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; text-align: center; font-size: .82rem; font-weight: 700; line-height: 1.2; }
+.trio svg.i { display: block; width: 1.6rem; height: 1.6rem; margin: 0 auto .3rem; stroke-width: 2; color: #CFE3C4; }
+html[data-zoom="3"] .trio { grid-template-columns: 1fr; }
+.pill { justify-self: start; display: inline-flex; align-items: center; gap: .4rem; min-height: 2.8rem; padding: .6rem 1.3rem; border-radius: 40px; background: #FFF8EC; color: #1F3A2A; font: 700 .92rem/1 var(--f-body); text-decoration: none; }
+.pill svg.i { width: 1rem; height: 1rem; }
+
+/* Build chunk 4: messages, the loss page, Account's delete. */
+textarea { font: 400 1rem/1.45 var(--f-body); color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--r); padding: .55rem .65rem; width: 100%; resize: vertical; }
+textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.acct { position: relative; }
+.acct b { position: absolute; top: .15rem; right: .1rem; min-width: 1.1rem; height: 1.1rem; padding: 0 .25rem; border-radius: .6rem; background: #E9C77E; color: var(--head); font: 700 .7rem/1.1rem var(--f-body); text-align: center; }
+.thread { list-style: none; padding: 0; margin: 0 0 .9rem; display: grid; gap: .6rem; }
+.thread li { max-width: 34rem; padding: .6rem .8rem; border-radius: var(--rc); background: var(--band); }
+.thread li.mine { justify-self: end; background: var(--accent-soft); }
+.thread li p { margin: 0 0 .35rem; } .thread li p:last-child { margin: 0; }
+.loss { display: grid; gap: .6rem; justify-items: start; }
+.loss .round { width: 5.5rem; height: 5.5rem; }
+details.card > summary { cursor: pointer; }
+
+/* Build chunk 5: the extended stay (skills, updates). */
+.skills { list-style: none; padding: 0; margin: .4rem 0 .6rem; display: grid; gap: .5rem; }
+.skills li { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: .15rem .6rem; }
+.skills li > span:first-child { font-weight: 700; font-size: .92rem; }
+.skills li > b { grid-column: 2; text-align: right; color: var(--accent); }
+.skills li > .meter { grid-column: 1; grid-row: 2; }
+.skills li > .muted { grid-column: 1 / -1; }
+.meter { display: inline-grid; grid-template-columns: repeat(3, 2.2rem); gap: 3px; }
+.meter i { height: 6px; border-radius: 3px; background: var(--line); }
+.meter i.on { background: var(--accent); }
+.update .gallery { margin: .6rem 0; }
+.update ul.small { padding-left: 1.1rem; margin: .4rem 0 0; }

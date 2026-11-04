@@ -27,6 +27,7 @@ export async function portalOn(env, siteId) {
 const SETTINGS_DEFAULTS = {
   time_zone: 'America/New_York', vet_rule: 'hours72', proof_note: null, disclosure: null,
   her_phone: null, her_email: null, vet_clinic: null, vet_doctor: null, vet_phone: null, vet_address: null, vet_note: null, help_weeks: 8,
+  food_name: null, food_bag: null, food_how: null, food_note: null,
 };
 
 export async function getSettings(env, siteId) {
@@ -59,6 +60,7 @@ export async function saveSettings(env, siteId, input) {
     her_phone: cleanPhone(input.her_phone, 'Your phone for families'), her_email: herEmail,
     vet_clinic: clean(input.vet_clinic, 120), vet_doctor: clean(input.vet_doctor, 120), vet_phone: cleanPhone(input.vet_phone, 'Your vet\'s phone'),
     vet_address: clean(input.vet_address, 200), vet_note: clean(input.vet_note, 400), help_weeks: Number(weeks),
+    food_name: clean(input.food_name, 160), food_bag: clean(input.food_bag, 80), food_how: clean(input.food_how, 160), food_note: clean(input.food_note, 300),
   };
   const cols = Object.keys(v);
   await env.DB.prepare(`INSERT INTO portal_settings (site_id, ${cols.join(', ')}, updated_at) VALUES (?, ${cols.map(() => '?').join(', ')}, ?)
@@ -172,13 +174,15 @@ export async function updateFamily(env, siteId, familyId, input) {
     env.DB.prepare('UPDATE portal_families SET name = ?, updated_at = ?, edited_fields = ? WHERE id = ? AND site_id = ?')
       .bind(name, t, mergeEdited(fam.edited_fields, Object.keys(changes).filter((k) => k === 'name')), familyId, siteId),
     ...gone.map((r) => env.DB.prepare('DELETE FROM portal_emails WHERE id = ?').bind(r.id)),
+    // Kept by its hash alone, so the KennelOS feed doesn't put it back (portal/feed.js).
+    ...gone.map((r) => env.DB.prepare("INSERT INTO portal_history (site_id, tbl, row_id, field, old_value, new_value, changed_at, changed_by) VALUES (?, 'portal_families', ?, 'email_removed', ?, NULL, ?, 'breeder')").bind(siteId, familyId, r.email_hash, t)),
     ...await emailStatements(env, siteId, familyId, added),
     ...historyStatements(env, siteId, 'portal_families', familyId, changes, 'breeder', t),
   ]);
 }
 
 export async function getFamily(env, siteId, familyId) {
-  return env.DB.prepare("SELECT * FROM portal_families WHERE id = ? AND site_id = ? AND status = 'active'").bind(familyId, siteId).first();
+  return env.DB.prepare("SELECT * FROM portal_families WHERE id = ? AND site_id = ? AND status = 'active' AND deleted_at IS NULL").bind(familyId, siteId).first();
 }
 
 // The family's addresses, readable. Only for sending and for her screens.
@@ -188,32 +192,55 @@ export async function familyEmails(env, familyId) {
 }
 
 export async function listFamilies(env, siteId) {
-  const { results } = await env.DB.prepare(`SELECT f.id, f.name, f.invited_at, f.first_signed_in_at, f.last_activity_at,
+  const { results } = await env.DB.prepare(`SELECT f.id, f.name, f.invited_at, f.first_signed_in_at, f.last_activity_at, f.kennelos_id,
       p.id AS placement_id, p.puppy_name, p.call_name, p.go_home_on, p.pickup_booked_at, p.picked_up_at, p.pickup_state, p.vet_deadline_at,
       p.vet_booked_at, p.proof_uploaded_at, p.proof_accepted_at, p.status, p.life_status
     FROM portal_families f LEFT JOIN portal_placements p ON p.family_id = f.id AND p.status = 'open'
-    WHERE f.site_id = ? AND f.status = 'active' ORDER BY COALESCE(p.go_home_on, '9999'), f.name`).bind(siteId).all();
+    WHERE f.site_id = ? AND f.status = 'active' AND f.deleted_at IS NULL ORDER BY COALESCE(p.go_home_on, '9999'), f.name`).bind(siteId).all();
   return results;
 }
 
 // Delete a family and everything of theirs. Phase 1's delete is final; the 30-day
 // undo and the erase/retention split (plan section 10) come with build chunk 4.
 export async function deleteFamily(env, siteId, familyId) {
-  const { results: files } = await env.DB.prepare('SELECT f.r2_key FROM portal_files f JOIN portal_placements p ON p.id = f.placement_id WHERE p.family_id = ? AND f.site_id = ?').bind(familyId, siteId).all();
+  const { results: files } = await env.DB.prepare(`SELECT f.r2_key FROM portal_files f JOIN portal_placements p ON p.id = f.placement_id WHERE p.family_id = ? AND f.site_id = ?
+    UNION ALL SELECT m.r2_key FROM portal_media m JOIN portal_placements p ON p.id = m.placement_id WHERE p.family_id = ? AND m.site_id = ?`).bind(familyId, siteId, familyId, siteId).all();
   if (files.length) await env.FILES.delete(files.map((f) => f.r2_key));
   const inPlacements = 'SELECT id FROM portal_placements WHERE family_id = ?';
   await env.DB.batch([
+    ...stayDeletes(env, familyId, { keepExtras: false }),
     env.DB.prepare(`DELETE FROM portal_files WHERE placement_id IN (${inPlacements})`).bind(familyId),
     env.DB.prepare(`DELETE FROM portal_health_records WHERE placement_id IN (${inPlacements})`).bind(familyId),
+    env.DB.prepare(`DELETE FROM portal_placement_progress WHERE placement_id IN (${inPlacements})`).bind(familyId),
+    env.DB.prepare(`DELETE FROM portal_placements_programs WHERE placement_id IN (${inPlacements})`).bind(familyId),
+    env.DB.prepare(`DELETE FROM portal_checklist_items WHERE placement_id IN (${inPlacements})`).bind(familyId),
+    env.DB.prepare(`DELETE FROM portal_timeline_tasks WHERE placement_id IN (${inPlacements})`).bind(familyId),
     env.DB.prepare(`DELETE FROM portal_history WHERE site_id = ? AND tbl = 'portal_placements' AND row_id IN (${inPlacements})`).bind(siteId, familyId),
     env.DB.prepare("DELETE FROM portal_history WHERE site_id = ? AND tbl = 'portal_families' AND row_id = ?").bind(siteId, familyId),
     env.DB.prepare('UPDATE portal_email_log SET family_id = NULL WHERE family_id = ?').bind(familyId),
     env.DB.prepare('UPDATE portal_clicks SET family_id = NULL WHERE family_id = ?').bind(familyId),
+    env.DB.prepare('DELETE FROM portal_messages WHERE family_id = ?').bind(familyId),
     env.DB.prepare('DELETE FROM portal_placements WHERE family_id = ?').bind(familyId),
     env.DB.prepare('DELETE FROM portal_sessions WHERE family_id = ?').bind(familyId),
     env.DB.prepare('DELETE FROM portal_emails WHERE family_id = ?').bind(familyId),
     env.DB.prepare('DELETE FROM portal_families WHERE id = ? AND site_id = ?').bind(familyId, siteId),
   ]);
+}
+
+// A family's stay updates and their photos' rows (and, unless keepExtras, the
+// extras and skills themselves). The R2 files are the caller's to delete.
+export function stayDeletes(env, familyId, { keepExtras }) {
+  const pe = 'SELECT id FROM portal_placement_extras WHERE placement_id IN (SELECT id FROM portal_placements WHERE family_id = ?)';
+  const ups = `SELECT id FROM portal_stay_updates WHERE placement_extra_id IN (${pe})`;
+  return [
+    env.DB.prepare('DELETE FROM portal_media WHERE placement_id IN (SELECT id FROM portal_placements WHERE family_id = ?)').bind(familyId),
+    env.DB.prepare(`DELETE FROM portal_update_skills WHERE update_id IN (${ups})`).bind(familyId),
+    env.DB.prepare(`DELETE FROM portal_stay_updates WHERE placement_extra_id IN (${pe})`).bind(familyId),
+    ...(keepExtras ? [] : [
+      env.DB.prepare(`DELETE FROM portal_stay_skills WHERE placement_extra_id IN (${pe})`).bind(familyId),
+      env.DB.prepare('DELETE FROM portal_placement_extras WHERE placement_id IN (SELECT id FROM portal_placements WHERE family_id = ?)').bind(familyId),
+    ]),
+  ];
 }
 
 // ---------- placements ----------
@@ -294,7 +321,7 @@ export async function createPlacement(env, siteId, familyId, input) {
 
 // Apply changes to a placement, keeping history. `by` is breeder, family or portal.
 // A moved pickup moves the deadline, using the rule in force now.
-async function applyChanges(env, siteId, p, values, by) {
+export async function applyChanges(env, siteId, p, values, by) {
   const changes = {};
   for (const [k, v] of Object.entries(values)) if (show(p[k]) !== show(v)) changes[k] = [p[k], v];
   if (!Object.keys(changes).length) return p;
@@ -413,9 +440,11 @@ export async function addHealthRecord(env, siteId, placementId, input) {
 }
 
 export async function removeHealthRecord(env, siteId, placementId, id) {
-  const r = await env.DB.prepare('SELECT type, name, given_on FROM portal_health_records WHERE id = ? AND site_id = ? AND placement_id = ?').bind(id, siteId, placementId).first();
+  const r = await env.DB.prepare('SELECT type, name, given_on, kennelos_id FROM portal_health_records WHERE id = ? AND site_id = ? AND placement_id = ?').bind(id, siteId, placementId).first();
   if (!r) return;
   await env.DB.batch([
+    // From KennelOS: a tombstone, so the next feed doesn't bring it back.
+    ...(r.kennelos_id ? [env.DB.prepare('INSERT OR IGNORE INTO portal_tombstones (site_id, type, kennelos_id, deleted_at) VALUES (?, \'health\', ?, ?)').bind(siteId, r.kennelos_id, now())] : []),
     env.DB.prepare('DELETE FROM portal_health_records WHERE id = ?').bind(id),
     ...historyStatements(env, siteId, 'portal_placements', placementId, { health_record: [`${RECORD_TYPES[r.type]}: ${r.name}, ${r.given_on}`, null] }, 'breeder'),
   ]);

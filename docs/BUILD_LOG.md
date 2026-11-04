@@ -1156,3 +1156,201 @@ Left for later chunks: deleting a family is final for now (the 30-day undo, eras
 retention come with chunk 4, as do bounces from Resend's webhook); her wording for the
 emails (plan section 4); the KennelOS feed and handoff (chunk 3).
 
+
+## 2026-11-04: Puppy parent portal, build chunk 2 (checklist, timeline and programs)
+
+- **Migration 0024** (`portal_steps`): `portal_checklist_items` and `portal_timeline_tasks`
+  (her templates, `placement_id` null; or a step she added for one family),
+  `portal_placement_progress` (one family's tick, who ticked it, a step hidden from them, a
+  task moved to another day), `portal_placements_programs` (each family's status in each
+  program: Not started, Clicked, Done; and their own code), the food on `portal_settings`
+  (`food_name`, `food_bag`, `food_how`, `food_note`) and `products.portal_per_family`.
+- **Her templates** (Puppy families → Go-home checklist / First-weeks timeline): start from a
+  suggested list (linked to her shown programs of each kind), then add, edit, reorder or
+  remove steps. Removing a template step takes it off every family's list. A task counts
+  from birth or pickup, so many days before or after; `{name}` is the puppy, `{food}` her
+  food. A few steps tick themselves: the vet booking ("I've booked it"), the pickup, the vet
+  record (dated by the real deadline).
+- **When a task is due** (`src/portal/steps.js`, pure, tested): from the litter's birthday
+  or the pickup day (the real one, else the booked one, else planned go-home), in her time
+  zone. A birth-dated task due by go-home is hers ("AK does this", then "Done by AK"). An
+  unticked task of theirs reads Overdue (red) for 14 days, then Past. Never booked but
+  already home: the booking task goes quiet; the vet visit task carries it.
+- **Family side:** a Timeline tab (Before go-home, The first week, The first two months,
+  Later), each task with its day, status word, program link and Mark done. Home: the
+  go-home checklist from two weeks before go-home (ticks are forms, so no script needed);
+  "Coming up" in the vet window; after it, **What's next** as numbered steps, the next task
+  in the calendar block and the action bar; the dark green food band with the exact food
+  and a round **Order Opal's food** button to her food program. Programs show the family's
+  status, their own code where she gives one each, and **I've done this** for a program
+  with a step. A click through the portal marks the program Clicked; a done task linked to
+  a program marks it Done. Clicks now record the checklist, timeline and food band as
+  places.
+- **Her side**, on each family's screen: the checklist and timeline as they have them
+  (tick or untick, hide a template step from them, add one for them alone, move a task's
+  day), and Programs (status and their code). Every tick, hide and move is in History.
+  Portal settings gains the food and "Each family gets its own code". Built on the Site
+  Manager's existing styles: no Site Manager version bump.
+- Deleting a family or closing the site removes their steps, ticks and statuses.
+  Portal CSS: the checklist, task rows, status words, the food band and the round button.
+
+Left for later: reminder emails for timeline tasks such as the insurance trial's deadline
+(plan section 11; with her email wording, plan section 4); which pages each program shows on
+(`portal_link_spots`) and the handbook's links come with the handbook in phase 2; a litter's
+own food (from KennelOS's feeding schedule) with chunk 3.
+
+## 2026-11-04: Puppy parent portal, build chunk 3 (KennelPort's end of the KennelOS feed)
+
+The family feed's KennelPort side, ready for KennelOS to send to. KennelOS's part (building
+the new rows for her kennel, sending them on its own, the status page's Open your puppy
+portal link, applying the facts that come back) is built in the KennelOS repository.
+Chunk 3's tables went into the branch's one migration, **0024**, with chunk 2's.
+
+- **`POST api.kennelport.com/v1/portal`** (the device's link token; `src/portal/feed.js`
+  documents format 1). Families from their signed contract on, each with their sale's
+  placements (puppy by its KennelOS Dog id, go-home day, pickup time, microchip,
+  registration number, contract date, a voided sale's reason, shots and deworming), her
+  vet, and `removed`. Every key is named; anything else is refused. Advertised in the link
+  facts as `portal_feed: 1` while the portal is on; refused (`portal_off`) while it isn't.
+  Kept apart from the website bundle, which still waits for Update website.
+- **How it lands (plan 3.1):** a new family and placement from `source = kennelos`, waiting
+  for her invite ("Invite the Reed family" on Today); a family she typed in is matched by
+  address and linked, not doubled, and what she typed stays hers. A field she has edited
+  keeps her value: KennelOS's newer one waits on the family's screen with **Use it** /
+  **Ignore** (an ignored value isn't offered again; Use it follows KennelOS again). Addresses
+  are only added (one she removed isn't put back). Once a puppy is home, KennelOS's booked
+  time moves nothing. Everything is in History, by KennelOS.
+- **Gone and deleted:** `removed` marks a family, placement or record "no longer in
+  KennelOS" (her screen and Today), never deletes it. Deleting a family, or removing a
+  health record, leaves a tombstone (KennelOS id and type only), so it never comes back.
+- **A voided sale** closes the placement with its reason (died, failed health check, backed
+  out); died before pickup sets life status deceased. Every reminder stops; Today says so.
+  The replacement's contract arrives as a second placement on the same family. The family's
+  page for a loss comes with chunk 4 (`closed_reason` is there for it).
+- **Her vet** arrives as contacts for families: filled where hers are blank, a suggestion in
+  Portal settings where they differ.
+- **The facts that go back**, in every answer: each placement's real pickup time once she
+  has marked it, with `portal_only` (the handoff); the microchip she entered or corrected;
+  a death after pickup she recorded. Nothing with money.
+- **The one-tap link:** `/family/handoff?t=` signs a family in from the status page. The
+  token is KennelOS's: base64url JSON `{ f: family's KennelOS id, x: expiry ms, n: nonce }`,
+  a dot, and its HMAC-SHA256 under `handoff_key` (in every feed answer; derived from the
+  site and kennel, never stored, dead once unlinked). Works once, for 10 minutes.
+- **Family side:** before pickup, Home's go-home block links to their status page ("Book
+  your pickup on your status page", or "Change it on your status page").
+- **Last from KennelOS** on Puppy families and each family; Today says "Open KennelOS so
+  your families' pages are up to date" when an open placement's feed is 24 hours quiet.
+  Unlink keeps every portal record and drops only the waiting suggestions.
+
+Left for later: the contract document itself (only its date comes now), the puppy's own vet
+when it differs from hers, extras and stays (chunk 5), feeding schedule, buyer details and
+baby book drafts (phase 2).
+
+## 2026-11-04: Puppy parent portal, build chunk 4 (messages, the loss page, bounces, delete and erase)
+
+Its tables joined the branch's one migration, **0024**, with chunks 2 and 3.
+
+- **Messages from pickup** (plan 2; `portal_messages`). Before pickup the family's
+  Messages page points to their status page (or her email) and posting is refused; from
+  pickup they write to her there. Each message lands on her Today ("New message from the
+  Reed family") and on their screen, and wakes her devices (push, as a `notice` with a
+  `portal-message:` ref, since the notification kinds are fixed by migration 0004). Her reply
+  shows in their portal and goes to every address by email, logged like every portal email.
+  An unread count sits on the family's header.
+- **The loss page** (plan 7.4). A puppy who died or failed a health check before pickup,
+  from KennelOS's voided sale or recorded by her on the family's screen: their Home is one
+  quiet page (the photo, "We're so sorry about Opal" or "About Opal", her note, the way back
+  through their status page), the tabs shrink to Home and Photos, and nothing that sells
+  shows. Today asks her to **Write to the Reed family**; her note starts from a draft with
+  [brackets] she must replace, shows on their page when saved, and is emailed only if she
+  ticks it. No reminder names the puppy again. A new Photos page keeps every puppy's photos.
+- **Bounces** (plan 5): `POST api.kennelport.com/v1/resend`, Resend's webhook, signed the
+  Svix way with `RESEND_WEBHOOK_SECRET` (set it in Resend and as a Worker secret). Delivered
+  and bounced (complaints count as bounced) update the reminder log by message id; a bounce
+  wakes her devices and shows on Today. A delivered event never undoes a bounce.
+- **Delete, undoable for 30 days** (plan 4): her delete closes the family's portal at once
+  (signed out, can't sign in) and lists them under **Recently deleted** with Undo; the daily
+  cleanup finishes it after 30 days, with KennelOS tombstones. A sale voided because the
+  family backed out, with nothing else open, schedules the same (plan 10.1); Today says when
+  their account goes.
+- **Erase** (plan 10.4): **Delete our account** on the family's Account page, or "They asked
+  for their data to go" on hers. Sign-in, addresses, sessions, messages, ticks, waiting
+  suggestions and the account's history go at once; the placement, health records,
+  contract, vet record and reminder log stay under the family's name, listed under **Erased
+  at the family's request** for her guarantee. From KennelOS: a tombstone.
+- **The daily cleanup** also removes used one-tap links after a day and expired family
+  codes and sessions.
+- Portal CSS: the message thread, the unread count, text areas, the loss page.
+
+Left for phase 2 (plan 10): the warnings at 30 and 7 days with Keep my account, deletion
+for inactivity and of families who never signed in, the sale records' own clock, and
+Download everything. Push to families' own devices isn't planned for phase 1: they get email.
+
+## 2026-11-04: Puppy parent portal, build chunk 5 (extended stays and weekly updates)
+
+Its tables joined the branch's one migration, **0024**, with chunks 2 to 4.
+
+- **Delivery type on her extras** (plan 8.1): Portal settings, **Extras the portal
+  delivers**: each extra in her website catalog is "Listed only" or "An extended stay, with
+  updates", with how often she writes (7 days by default). `extras.portal_delivery`,
+  `portal_every_days`. Photo and video packages (`media`) are phase 2.
+- **Extras on a placement** (`portal_placement_extras`), on the family's screen: add one
+  they bought, remove one. The name, weeks and cadence are copied, so the record survives
+  the catalog changing. Payment stays in KennelOS. From the KennelOS feed, a placement's
+  `extras: [{ id, extra_id }]` (the extra by its website-bundle id) arrives **unconfirmed**:
+  Today says "The Reed family bought the 12-Week Development Package", and she confirms it
+  or says Not right (then that charge isn't offered again).
+- **A stay** (plan 8.2): go-home becomes birth + the package's weeks (she can still change
+  it); the stay starts at 8 weeks old (editable); the package's "What's included" list
+  becomes its skills, and she can add her own. Birth-dated tasks during the stay are
+  already hers and pickup-dated ones move with the later go-home (chunk 2), so no
+  per-package timeline. The vet clock starts at the real pickup, as for every puppy.
+- **Her weekly update**, on the family's screen: a note, a weight, each skill on Not
+  started · Introduced · Practicing · Reliable with a line of notes, pre-filled from last
+  week, and up to 6 photos (JPEG, PNG or WebP, 10 MB each, checked by their bytes, in R2).
+  Saving emails every address (logged as `stay_update`). Today lists stays whose update is
+  due ("Opal: weekly update due, last one 8 days ago").
+- **The family's side** (plan 8.5): during the stay a **Stay** tab takes Timeline's place.
+  Home shows the week of the stay and how each skill is doing; the Stay page has the
+  countdown, each skill's progress since the first update, and the updates newest first
+  with photos (`/family/media/<id>`, only their own).
+- Stay updates and their photos go with the family's account (an erase, or the final
+  delete); the record that a stay was bought stays with her sale records.
+- Portal CSS: the skills meter and the update cards.
+
+Left for later: a stay update into the baby book (phase 2, with the baby book), video in
+updates and photo and video packages (phase 2), and her Dogs tab as the place to write
+updates (chunk 6).
+
+## 2026-11-04: Puppy parent portal, build chunk 6 (her Site Manager as one app)
+
+The last of phase 1's six chunks. No migration.
+
+- **Five tabs** (plan 7.3) on sites with the portal on, and only there: along the bottom on
+  a phone, down the side on a computer (`src/manage/hub.js`; Reports comes with phase 2).
+  Sub-screens keep their Back button. Other breeders' Site Manager is unchanged.
+  - **Today** (`/s/<sub>`): website changes not published with **Review and publish**;
+    **Going home this week**, each puppy with its pickup time and whether the vet visit is
+    booked, and **Mark picked up** on the day itself; **Needs you** from both sides (portal
+    items, inbox, reviews, litters leaving); Last from KennelOS. No totals.
+  - **Families** (`/s/<sub>/portal`): Puppy families, **Vet visits** in words with time left
+    (red only Missed, and Not booked under 48 hours), **Activity** (what families did in the
+    last two weeks: ticks, bookings, uploads, programs; never page views), recently
+    deleted and erased, and the **Waitlist** (the website's list, or a line saying it's in
+    KennelOS).
+  - **Dogs** (`/s/<sub>/kennel`): each litter's puppies with their website status, family,
+    go-home and extras, and **Write this week's update** for a stay puppy that's due; links
+    to the Dogs, Litters and Puppies screens.
+  - **Website** (`/s/<sub>/website`): the home screen it was (publish, view, preview,
+    share, the tiles, Set up your site).
+  - **Portal** (`/s/<sub>/portal/setup`): Portal settings, the checklist, the timeline,
+    programs, extras.
+- Today's "goes home" item in Needs you is now the Going home card (only "not invited
+  yet" stays an item).
+- **Versions:** Site Manager `APP_VERSION` 13 (the tabs in `app.css`), family portal
+  `PORTAL_VERSION` 2 (every chunk's portal CSS on this branch), with the owner's yes.
+
+Phase 1 is built on KennelPort's side. Before the gate (one litter from signed contract to
+the vet visit with no fixes by hand, plan section 6): KennelOS's side of the feed, the
+`RESEND_WEBHOOK_SECRET` secret, and her answers to the open questions that set wording
+(plan 15: the vet rule, programs, retention numbers).

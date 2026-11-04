@@ -42,7 +42,7 @@ export async function runPortalHourly(env, now = new Date()) {
   const { results } = await env.DB.prepare(`SELECT p.*, s.subdomain, s.kennel_name, d.hostname AS domain FROM portal_placements p
     JOIN sites s ON s.id = p.site_id JOIN portal_families f ON f.id = p.family_id
     LEFT JOIN custom_domains d ON d.site_id = s.id AND d.status = 'active'
-    WHERE s.portal_on = 1 AND s.status != 'closed' AND f.status = 'active' AND p.status = 'open' AND p.life_status = 'with_family'
+    WHERE s.portal_on = 1 AND s.status != 'closed' AND f.status = 'active' AND f.deleted_at IS NULL AND p.status = 'open' AND p.life_status = 'with_family'
       AND (p.vet_deadline_at IS NULL OR p.vet_deadline_at > ?)`).bind(new Date(now).toISOString()).all();
   const settings = new Map();
   let sent = 0;

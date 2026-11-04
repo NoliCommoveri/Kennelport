@@ -41,7 +41,7 @@ export async function startFamilySignIn(env, request, site, rawEmail) {
     throw new AuthError('rate_limited', 'Too many codes asked for. Try again in an hour.');
   }
   const known = await env.DB.prepare(`SELECT 1 FROM portal_emails e JOIN portal_families f ON f.id = e.family_id
-    WHERE e.site_id = ? AND e.email_hash = ? AND f.status = 'active'`).bind(site.id, eh).first();
+    WHERE e.site_id = ? AND e.email_hash = ? AND f.status = 'active' AND f.deleted_at IS NULL`).bind(site.id, eh).first();
   if (!known) return { email };
   const code = randomCode();
   const t = Date.now();
@@ -58,7 +58,8 @@ export async function startFamilySignIn(env, request, site, rawEmail) {
   return { email };
 }
 
-async function startSession(env, siteId, familyId) {
+// A family session (an email code, the invite, or the status page's one tap).
+export async function startSession(env, siteId, familyId) {
   const token = randomHex(32);
   const t = new Date().toISOString();
   await env.DB.batch([
@@ -89,7 +90,7 @@ export async function verifyFamilySignIn(env, site, rawEmail, rawCode) {
   const burned = await env.DB.prepare('DELETE FROM portal_codes WHERE site_id = ? AND email_hash = ? AND code_hash = ?').bind(site.id, eh, row.code_hash).run();
   if (burned.meta.changes !== 1) throw new AuthError('invalid_code', 'That code has already been used.');
   const fam = await env.DB.prepare(`SELECT f.id FROM portal_emails e JOIN portal_families f ON f.id = e.family_id
-    WHERE e.site_id = ? AND e.email_hash = ? AND f.status = 'active'`).bind(site.id, eh).first();
+    WHERE e.site_id = ? AND e.email_hash = ? AND f.status = 'active' AND f.deleted_at IS NULL`).bind(site.id, eh).first();
   if (!fam) throw new AuthError('invalid_code', wrong);
   return startSession(env, site.id, fam.id);
 }
@@ -100,7 +101,7 @@ export async function acceptInvite(env, site, token) {
   if (!/^[0-9a-f]{64}$/.test(String(token ?? ''))) return null;
   const h = await sha256Hex(token);
   const row = await env.DB.prepare(`SELECT e.id, e.family_id, e.invite_expires_at FROM portal_emails e JOIN portal_families f ON f.id = e.family_id
-    WHERE e.site_id = ? AND e.invite_hash = ? AND f.status = 'active'`).bind(site.id, h).first();
+    WHERE e.site_id = ? AND e.invite_hash = ? AND f.status = 'active' AND f.deleted_at IS NULL`).bind(site.id, h).first();
   if (!row || row.invite_expires_at <= new Date().toISOString()) return null;
   const used = await env.DB.prepare('UPDATE portal_emails SET invite_hash = NULL WHERE id = ? AND invite_hash = ?').bind(row.id, h).run();
   if (used.meta.changes !== 1) return null;
@@ -147,8 +148,8 @@ export async function currentFamily(env, request, site) {
   const token = readCookie(request, FAMILY_COOKIE);
   if (!token || !/^[0-9a-f]{64}$/.test(token)) return null;
   const tokenHash = await sha256Hex(token);
-  const row = await env.DB.prepare(`SELECT s.family_id, s.last_seen_at, s.expires_at, s.revoked_at, f.name, f.last_activity_at
-    FROM portal_sessions s JOIN portal_families f ON f.id = s.family_id WHERE s.token_hash = ? AND s.site_id = ? AND f.status = 'active'`).bind(tokenHash, site.id).first();
+  const row = await env.DB.prepare(`SELECT s.family_id, s.last_seen_at, s.expires_at, s.revoked_at, f.name, f.last_activity_at, f.status_url
+    FROM portal_sessions s JOIN portal_families f ON f.id = s.family_id WHERE s.token_hash = ? AND s.site_id = ? AND f.status = 'active' AND f.deleted_at IS NULL`).bind(tokenHash, site.id).first();
   if (!row || row.revoked_at || Date.parse(row.expires_at) <= Date.now()) return null;
   const t = new Date().toISOString();
   if (Date.now() - Date.parse(row.last_seen_at) > DAY) {
@@ -157,7 +158,7 @@ export async function currentFamily(env, request, site) {
   if (!row.last_activity_at || Date.now() - Date.parse(row.last_activity_at) > 3600000) {
     await env.DB.prepare('UPDATE portal_families SET last_activity_at = ? WHERE id = ?').bind(t, row.family_id).run();
   }
-  return { tokenHash, familyId: row.family_id, name: row.name };
+  return { tokenHash, familyId: row.family_id, name: row.name, statusUrl: row.status_url };
 }
 
 export async function signOutFamily(env, fam) {

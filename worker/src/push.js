@@ -169,10 +169,14 @@ export function pushText(items, sites) {
     const i = items[0];
     if (i.kind === 'test') return { title: 'KennelPort', body: 'Notifications are working on this device.', path: '/', tag };
     if (i.kind === 'message') return { title: 'New message', body: `${prefix(i)}New message${i.name ? ` from ${i.name}` : ''}`, path: `${home(i)}/inbox${i.ref ? `/${i.ref}` : ''}`, tag };
+    // The puppy portal's notices (portal/account.js, portal/bounces.js): ref says which.
+    const pm = /^portal-(message|bounce):([0-9a-f-]*)$/.exec(i.kind === 'notice' ? i.ref ?? '' : '');
+    if (pm?.[1] === 'message') return { title: 'New message', body: `${prefix(i)}${i.name ?? 'A puppy family'} sent you a message`, path: `${home(i)}/portal/f/${pm[2]}#messages`, tag };
+    if (pm?.[1] === 'bounce') return { title: 'Email bounced', body: `${prefix(i)}A portal email to ${i.name ?? 'a family'} bounced. Text them.`, path: `${home(i)}/portal/f/${pm[2]}`, tag };
     if (i.kind === 'review') return { title: 'New review', body: `${prefix(i)}${i.name ?? 'A family'} sent a review to approve`, path: `${home(i)}/reviews-queue`, tag };
     return { title: 'KennelPort', body: `${prefix(i)}Something needs a look on your website.`, path: home(i), tag };
   }
-  const messages = items.filter((i) => i.kind === 'message').length;
+  const messages = items.filter((i) => i.kind === 'message' || (i.kind === 'notice' && String(i.ref ?? '').startsWith('portal-message:'))).length;
   const reviews = items.filter((i) => i.kind === 'review').length;
   const parts = [messages && `${messages} new message${messages === 1 ? '' : 's'}`, reviews && `${reviews} review${reviews === 1 ? '' : 's'} to approve`].filter(Boolean);
   const first = items.find((i) => i.kind !== 'test') ?? items[0];
