@@ -1106,3 +1106,53 @@ KennelOS repo and isn't started. 166 tests with custom domains.
   KennelOS's `shared/assets/programIcons.js`. Template CSS: the column, the bubble
   opening below, and the phone grid with the extra column. Test added. Template
   `ASSET_VERSION` 14.
+
+## 2026-11-04: Puppy parent portal, build chunk 1 (the core, typed in by her)
+
+Phase 1 of the portal plan split into six build chunks (portal plan section 6), each one
+branch and one migration. The first, built here, is the plan's fallback made whole:
+everything a litter needs from signed contract to vet visit, with families and pickups
+typed in by her and no KennelOS feed yet.
+
+- **Migration 0023** (`portal`): `sites.portal_on`; programs on `products` (shown,
+  type, what the family does); `portal_settings`, `portal_families`, `portal_emails`
+  (AES-GCM with the new `PORTAL_EMAIL_KEY` secret, beside the keyed hash),
+  `portal_codes`, `portal_sessions`, `portal_placements` (pickup state, stored vet
+  deadline, booking, proof, contract, life status, `source` / `kennelos_id` /
+  `edited_fields` from day one), `portal_files`, `portal_health_records`,
+  `portal_email_log`, `portal_history`, `portal_clicks`.
+- **Switched on per site** from /ops (Puppy parent portal). Off, `/family` is a 404 and
+  her screens don't show.
+- **The vet clock** (`src/portal/vet.js`): 72 hours, or the end of the third calendar day
+  after the pickup day in her time zone (her setting; open question 4 stays hers to
+  answer). Reminders count back from the deadline: booking (5 days before go-home, until
+  "I've booked it"), at pickup, about a day before, the deadline morning; never after the
+  deadline, none once a record is uploaded, no burst when a pickup is marked late. A
+  booked time that passes unmarked starts the clock (an hourly cron, `7 * * * *`), and
+  her Today asks "Did Opal go home at 11:00 AM?" with Yes, Not yet or a corrected time.
+- **Family side**, `/family` on her site (open question 1: a path, for now): email code
+  or the invite's link (once, 30 days), year-long sessions on their own cookie
+  (`Path=/family`). Home by stage (before go-home, the vet window, after) in the Lawn look
+  of the prototype; Vet visit (booking, proof upload: photo or PDF, checked by its
+  bytes, 10 MB); Records (details, shots and deworming, contract, her photos of the
+  puppy); Account. Programs she marks shown appear as "Included with Opal", each click
+  through `/family/go/<id>` counted, with the disclosure. Its files are `_kp/f/` with
+  their own version (`PORTAL_VERSION`, now in CLAUDE.md's list).
+- **Her side**, Site Manager: a Puppy families tile and section (list, add, each
+  family's screen: invite, pickup, vet status and Accept, health records, contract,
+  details, life status, reminder log with each send's result and the deadline it was
+  counted from, history), Portal settings and programs, and the portal's items in
+  Needs you. Built on the app's existing styles, so no Site Manager version bump.
+- **Contacts for the first weeks** (asked for after the first push): in Portal
+  settings, her phone and email for families (blank: the website's) and her vet's
+  clinic, name, phone, address and a note. From pickup, the family's Home leads with
+  "Questions about Opal? One tap": Call, Text and Email her, Call the vet, the address
+  opening in maps, for 8 weeks by default (her setting); Records keeps them after.
+- **Kept safe:** a litter with an open placement is never expired by the 30-day litter
+  clock; closing a site deletes the portal's rows and files; `sendMail` now returns
+  Resend's message id for the log, and sends portal mail under the kennel's name.
+
+Left for later chunks: deleting a family is final for now (the 30-day undo, erase and
+retention come with chunk 4, as do bounces from Resend's webhook); her wording for the
+emails (plan section 4); the KennelOS feed and handoff (chunk 3).
+

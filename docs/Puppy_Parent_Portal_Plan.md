@@ -3,9 +3,9 @@
 > A sign-in-only portal for one breeder's puppy families, built as a module of the
 > KennelPort Worker and switched on for her site alone. Revised from the first roadmap
 > (Nov 3, 2026) after review: it now reuses KennelPort's stack, takes starting data from
-> KennelOS without depending on it, and adds data retention. The portal itself isn't built
-> yet. Built so far: the Site Manager's new look and its sectioned forms (section 7.3,
-> Site Manager version 12).
+> KennelOS without depending on it, and adds data retention. Built so far: the Site
+> Manager's new look and its sectioned forms (section 7.3, Site Manager version 12), and
+> phase 1's first build chunk (section 6: the core, typed in by her; build log, Nov 4).
 
 ## 1. Purpose and scope
 
@@ -146,6 +146,7 @@ pages: it lands in the portal's own tables, signed-in only.
 | The signed contract (its signed date, and its document if one is stored) | New | The invite (section 3.4); the contract under Records |
 | A sale voided with the reason pup died or failed health check, and the family put back in line | New | The placement closed and the portal's loss page (section 7.4) |
 | Vaccination, preventative (deworming) and vet visit events on the puppy | New | Health records on the puppy |
+| Her vet: the KennelOS Account (or contact) she uses as her vet, with clinic, vet's name, phone and address; and the clinic on each puppy's vet visit events | New | Suggested **Contacts for families** in her portal settings (section 4), and, where a puppy's vet visits name a different clinic, that clinic as the puppy's own "vet since birth" on its placement. Which KennelOS record holds her vet is to be checked in KennelOS |
 | Milestone and weight check events | New | Baby book **drafts** (section 3.3) |
 | Extras on the sale (`Sale.extra_charges`); a training package's `boarding` stay (reason Training, tied to the sale and the extra) | New | The placement's extras (section 8.1); a stay's go-home date and weeks (section 8.2) |
 | Her feeding schedule (`breedFeedingScheduleRepo`: brand, amounts by weight and age, notes; a litter's own override) | New | A suggested **What she's eating now** (section 7.2) and the handbook's Feeding chapter |
@@ -270,6 +271,12 @@ Everything families see is content she edits in the manage app:
 - **Email wording:** vet reminders, birthday, milestone and retention warning emails,
   each with a preview. The legal parts (unsubscribe link, mailing address, deadline) are
   added by the template and can't be removed.
+- **Contacts for families once the puppy is home:** her phone and email for families
+  (the website's by default) and her vet, who has known the puppy since birth: clinic,
+  vet's name, phone, address and a note. From pickup they lead the family's Home as
+  one-tap Call, Text, Email and Call the vet buttons for the weeks she sets (8 by
+  default), then stay under Records. With KennelOS linked, her vet arrives from it as
+  suggested values (section 3.2); her own edits win (section 3.1).
 - **Kennel info, FAQ, upcoming litters.**
 - **Baby book:** her entries, photos and order; which family entries she reposts (with
   their permission, section 9).
@@ -380,6 +387,23 @@ retention warning has gone out correctly (send one to a test family first).
 - Printable baby book export (PDF or photo book)
 - Optional passkey sign-in, never required
 - Text reminders for the vet visit, if email proves unreliable
+
+**Phase 1, in build chunks.** Each chunk is one branch and one migration, usable on
+its own:
+
+1. **The core, typed in by her** (built; the fallback below, made whole): family sign-in and
+   invites at `/family`; families, placements, pickup, health records and the contract
+   on her side; My Puppy and Records; the vet countdown with its reminders, **I've booked
+   it**, proof upload, acceptance and the reminder log; the programs on Home with click
+   tracking and the disclosure; her and her vet's contacts, one tap from Home for the
+   first weeks; history on placements; the portal switched on per site from /ops.
+2. **Checklist, timeline and programs:** her templates, each family's ticks and program
+   status, the food band.
+3. **KennelOS:** the feed's new rows, the handoff, the one-tap link, the facts that go
+   back.
+4. **Messages from pickup, the loss page, bounces, erase and retention basics, push.**
+5. **Extended stays** and weekly updates.
+6. **Her Site Manager as one app** (section 7.3): Today, Families, Dogs, Portal tabs.
 
 **Fallback:** if a litter goes home before phase 1 is done, ship sign-in, My Puppy, the
 vet countdown and the program links on the go-home page alone, with families and pickups

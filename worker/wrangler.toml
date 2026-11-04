@@ -53,7 +53,8 @@ fallthrough = true
 # MAIL_FROM: the sender for sign-in codes and invites, on a domain verified in
 # Resend. DEV_OUTBOX: staging only; until the RESEND_API_KEY secret is set, codes
 # and invites show on /ops instead of being emailed. Production must NOT set it.
-# Secrets, set in the dashboard: OPS_TOKEN, EMAIL_HMAC_KEY, RESEND_API_KEY,
+# Secrets, set in the dashboard: OPS_TOKEN, EMAIL_HMAC_KEY, PORTAL_EMAIL_KEY (the family
+# portal's address encryption; never change it once families are added), RESEND_API_KEY,
 # VAPID_PRIVATE_JWK (push; /ops makes it), TURNSTILE_SECRET (with the variable
 # TURNSTILE_SITE_KEY, from the Turnstile page of the Cloudflare dashboard).
 # KENNELOS_ORIGIN: KennelOS's family host (its FAMILY_PAGES_ORIGIN), the only place
@@ -74,9 +75,10 @@ DEV_OUTBOX = "1"
 MAIL_FROM = "KennelPort <signin@kennelport.com>"
 VAPID_SUBJECT = "mailto:support@kennelport.com"
 
-# The daily cleanup (src/cleanup.js): messages after 90 days, and the rest.
+# The daily cleanup (src/cleanup.js): messages after 90 days, and the rest; and
+# hourly, the family portal's vet clocks and reminders (src/portal/reminders.js).
 [triggers]
-crons = ["23 4 * * *"]
+crons = ["23 4 * * *", "7 * * * *"]
 
 # ---------------------------------------------------------------------------------
 [env.production]
@@ -123,4 +125,4 @@ VAPID_SUBJECT = "mailto:support@kennelport.com"
 TURNSTILE_SITE_KEY = "0x4AAAAAAFw9LuRAf6C2sL3e"
 
 [env.production.triggers]
-crons = ["23 4 * * *"]
+crons = ["23 4 * * *", "7 * * * *"]

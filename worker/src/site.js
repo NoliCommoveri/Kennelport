@@ -21,6 +21,7 @@ import { readFeed } from './feed.js';
 import { publicRows } from './waitlist.js';
 import { FRAME_ORIGINS } from './embeds.js';
 import { BRAND_IMAGE_ORIGINS } from './content/model.js';
+import { isPortalPath, servePortal } from './portal/family.js';
 
 export const PREVIEW_COOKIE = 'kp_preview';
 export const PREVIEW_DAYS = 7;
@@ -113,6 +114,9 @@ async function servePhoto(env, site, snap, url, { preview }) {
 
 export async function serveSite(request, env, ctxWorker, subdomain, { onDomain = false } = {}) {
   const url = new URL(request.url);
+  // The family portal (portal/family.js), on sites that have it on: its own
+  // sign-in and pages, never cached, never from the snapshot.
+  if (isPortalPath(url.pathname)) return servePortal(request, env, ctxWorker, subdomain, { onDomain });
   const formPost = request.method === 'POST' && FORM_PATHS.includes(url.pathname);
   if (request.method !== 'GET' && request.method !== 'HEAD' && !formPost) return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD' } });
   if (!(await schemaReady(env.DB))) {

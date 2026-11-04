@@ -10,6 +10,7 @@ import { fingerprint } from '../scripts/fingerprint.mjs';
 
 const { APP_VERSION, APP_FILES } = await import('../src/manage/version.js');
 const { ASSET_VERSION, TEMPLATE_FILES } = await import('../src/render/version.js');
+const { PORTAL_VERSION, PORTAL_FILES } = await import('../src/portal/version.js');
 
 const how = (name, file, key, now) => `Files under public/_kp/${key === 'APP_FILES' ? 'm' : 't'}/ changed since ${name} was last bumped. `
   + `Ask the owner first, then bump ${name} in ${file} and set ${key} = '${now}' there (node worker/scripts/fingerprint.mjs prints it).`;
@@ -22,6 +23,11 @@ test('the manage app files match their version', async () => {
 test('the site template files match their version', async () => {
   const now = await fingerprint('t');
   assert.equal(now, TEMPLATE_FILES, how('ASSET_VERSION', 'src/render/version.js', 'TEMPLATE_FILES', now));
+});
+
+test('the family portal files match their version', async () => {
+  const now = await fingerprint('f');
+  assert.equal(now, PORTAL_FILES, `Files under public/_kp/f/ changed since PORTAL_VERSION (${PORTAL_VERSION}) was last bumped. Ask the owner first, then bump PORTAL_VERSION in src/portal/version.js and set PORTAL_FILES = '${now}' there.`);
 });
 
 test('the service worker is served with the app version filled in, everywhere', async () => {

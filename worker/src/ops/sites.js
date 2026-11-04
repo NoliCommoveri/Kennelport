@@ -1,6 +1,7 @@
 // /ops: sites (plan 2.2, 8.1 phase 1). Everything here sits behind the ops
 // sign-in (ops.js has already checked it). Each form posts back and, on success,
 // redirects to the site's page with a note, so a reload never repeats an action.
+import { setPortalOn } from '../portal/store.js';
 import { escapeHtml as esc, htmlPage } from '../lib/html.js';
 import { json } from '../lib/http.js';
 import { createSite, setSuspended, closeSite, releaseSubdomain, SiteError } from '../sites.js';
@@ -40,6 +41,8 @@ const NOTES = {
   domain_active: 'The domain is now the main address; the kennelport.com address redirects there.',
   domain_paused: 'Back to pending: the kennelport.com address serves the site again.',
   domain_removed: 'Domain removed. The kennelport.com address is the main one again.',
+  portal_on: 'The puppy portal is on for this site.',
+  portal_off: 'The puppy portal is off for this site. Nothing was deleted.',
 };
 
 // Where to see a site from here. Staging can't receive real hostnames, so its
@@ -149,6 +152,10 @@ ${domain ? `<p><a href="https://${esc(domain.hostname)}/"><code>${esc(domain.hos
   <p><button>Save as pending</button></p>
 </form>`;
 
+  const portalSection = `<h2>Puppy parent portal</h2>
+<p class="muted">The family portal at <code>/family</code> on this site, and the Puppy families screens in the breeder's Site Manager (docs/Puppy_Parent_Portal_Plan.md). ${env.PORTAL_EMAIL_KEY ? '' : '<strong>The PORTAL_EMAIL_KEY secret isn\'t set: families can\'t be added until it is.</strong>'}</p>
+<form method="post" action="/ops/sites/${esc(site.id)}/portal/${site.portal_on ? 'off' : 'on'}"><p><button>${site.portal_on ? 'Switch the portal off' : 'Switch the portal on'}</button> <span class="muted">${site.portal_on ? 'On. Switching off hides it from families and the breeder; nothing is deleted.' : 'Off.'}</span></p></form>`;
+
   const lifecycle = `<h2>Suspend or close</h2>
 <form method="post" action="/ops/sites/${esc(site.id)}/${site.status === 'suspended' ? 'resume' : 'suspend'}"><p><button>${site.status === 'suspended' ? 'Turn the site back on' : 'Suspend'}</button> <span class="muted">${site.status === 'suspended' ? '' : 'Hides the site; keeps everything.'}</span></p></form>
 <form method="post" action="/ops/sites/${esc(site.id)}/close">
@@ -157,7 +164,7 @@ ${domain ? `<p><a href="https://${esc(domain.hostname)}/"><code>${esc(domain.hos
   <p><button>Close and delete everything</button></p>
 </form>`;
 
-  return page(`${top}${publishing}${peopleSection}${contentSection}${photoSection}${limitsSection}${domainSection}${lifecycle}`);
+  return page(`${top}${publishing}${peopleSection}${contentSection}${photoSection}${limitsSection}${domainSection}${portalSection}${lifecycle}`);
 }
 
 // ---------- routes ----------
@@ -271,6 +278,8 @@ export async function handleSites(request, env, url) {
         }
         return back(action === 'domain/activate' ? 'domain_active' : 'domain_paused');
       case 'domain/remove': await removeDomain(env, siteId); return back('domain_removed');
+      case 'portal/on':
+      case 'portal/off': await setPortalOn(env, siteId, action === 'portal/on'); return back(action === 'portal/on' ? 'portal_on' : 'portal_off');
       case 'people/remove': {
         const form = await request.formData();
         await removeFromSite(env, siteId, String(form.get('email_hash') ?? ''));

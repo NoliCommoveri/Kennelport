@@ -32,4 +32,5 @@ export async function fingerprint(sub) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   console.log(`APP_FILES (public/_kp/m)      ${await fingerprint('m')}`);
   console.log(`TEMPLATE_FILES (public/_kp/t) ${await fingerprint('t')}`);
+  console.log(`PORTAL_FILES (public/_kp/f)   ${await fingerprint('f')}`);
 }

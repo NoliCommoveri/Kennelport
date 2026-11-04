@@ -8,9 +8,11 @@ computers when its version number changes:
 - the manage app (`worker/public/_kp/m/`), served from its service worker's cache
   first: `APP_VERSION` in `worker/src/manage/version.js`;
 - the site template (`worker/public/_kp/t/`), kept by browsers for a day:
-  `ASSET_VERSION` in `worker/src/render/version.js`.
+  `ASSET_VERSION` in `worker/src/render/version.js`;
+- the family portal (`worker/public/_kp/f/`), kept by browsers for a day:
+  `PORTAL_VERSION` in `worker/src/portal/version.js` (`PORTAL_FILES`).
 
-**Never bump either without asking the owner first, every time,** even when a test
+**Never bump any of them without asking the owner first, every time,** even when a test
 fails for it. The owner may not be done changing things and wants to bump once, at
 the end. Say which files changed and ask; bump only after a yes.
 
