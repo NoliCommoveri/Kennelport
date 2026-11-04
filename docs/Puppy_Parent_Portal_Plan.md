@@ -25,7 +25,7 @@ and referred buyers.
 | Applying, on the waitlist, picking a puppy, until the contract is signed | Her KennelOS family status page, as today |
 | **From the signed contract to pickup** | Both. The status page keeps everything it does today: booking the pickup, asking for extras, transport, backing out, and messages to her. The portal opens alongside it (the invite goes out when the contract is signed) for the countdown, checklist, vet booking, handbook, programs and, for a stay, the weekly updates. Portal messaging is off; the portal links to the status page for anything it handles |
 | **From pickup on** | The portal only. The status page shows a link to the portal and nothing else for that family; portal messaging turns on |
-| **If the puppy dies before pickup** | The portal says so gently and sends them back to the status page, where they're back in line for a replacement (section 7.4) |
+| **If the puppy dies or fails a health check before pickup** | The portal says so gently and sends them back to the status page, where they're back in line for a replacement (section 7.4) |
 
 KennelOS's Companion links and the Furever app are not used for her families: KennelOS
 turns them off for her kennel (section 3.4). Every other breeder keeps KennelOS as it is.
@@ -144,7 +144,7 @@ pages: it lands in the portal's own tables, signed-in only.
 | The pickup: the `placement` event's date, time, place and method, from her own entry or the family's approved booking on the status page | New | A suggested pickup time; she confirms it (section 5) |
 | Microchip (`Dog.microchip_id`), registration type on the sale | New | Suggested values on the placement |
 | The signed contract (its signed date, and its document if one is stored) | New | The invite (section 3.4); the contract under Records |
-| A sale voided with the reason pup died, and the family put back in line | New | The placement closed and the portal's loss page (section 7.4) |
+| A sale voided with the reason pup died or failed health check, and the family put back in line | New | The placement closed and the portal's loss page (section 7.4) |
 | Vaccination, preventative (deworming) and vet visit events on the puppy | New | Health records on the puppy |
 | Milestone and weight check events | New | Baby book **drafts** (section 3.3) |
 | Extras on the sale (`Sale.extra_charges`); a training package's `boarding` stay (reason Training, tied to the sale and the extra) | New | The placement's extras (section 8.1); a stay's go-home date and weeks (section 8.2) |
@@ -296,7 +296,7 @@ The revenue placements and the vet countdown, and nothing else:
 - Extended stays: the package on the placement, its go-home date, the timeline split
   between her and the family, and weekly updates with skills and photos (section 8.2)
 - The KennelOS feed's new rows and the handoff (section 3.4); portal messages from pickup
-- A puppy who dies before pickup: the family's quiet page and the way back to the status
+- A puppy who dies or fails a health check before pickup: the family's quiet page and the way back to the status
   page (section 7.4)
 - History on every record (section 3.1)
 - Her Site Manager as one app for the website and the portal (section 7.3): Today with
@@ -527,7 +527,7 @@ The screens:
 - **No free-form email to all families** in phase 1. If it is added, it is commercial
   email and carries the unsubscribe link and mailing address (section 11).
 
-### 7.4 When a puppy dies before pickup
+### 7.4 When a puppy dies or fails a health check before pickup
 
 Rare, and the worst moment the portal will ever handle, so it's planned rather than left to
 whatever the pages happen to show.
@@ -565,6 +565,11 @@ always.
 placement to the same family, and Home becomes that puppy's, starting again at Before
 go-home. The lost puppy's photos stay under Photos, under its name, for as long as the
 family keeps their account.
+
+**A failed health check** before pickup (KennelOS's lost sale for a health problem) uses
+the same page and the same way back, with its own wording: no "we're so sorry about"
+heading, no deceased life status, and her note explains what was found. The puppy stays
+in her records as hers, not as the family's.
 
 **After pickup** a death is the life status of section 9: birthday emails stop, the family
 can tell her from the portal, and retention warnings wait for her (section 10.3). It
@@ -781,7 +786,7 @@ Two kinds of data, kept on different clocks:
 | Photo and video package files | Kept at least 2 years after delivery whatever the activity, then deleted with 60 and 14 days' warning, each with **Download all** |
 | Stay updates | With the family's account; any update turned into a baby book entry goes with the baby book |
 | Messages | With the family's account |
-| A family back in line after their puppy died (section 7.4) | Their account is kept (as with **Keep**) while KennelOS has them in line, then follows the usual rules from their next placement, or from leaving the list |
+| A family back in line after losing their puppy (section 7.4) | Their account is kept (as with **Keep**) while KennelOS has them in line, then follows the usual rules from their next placement, or from leaving the list |
 | A family who backs out before pickup | Their portal account goes with the closed placement, 30 days after the back-out (undoable until then); her sale records stay in KennelOS |
 | Her buyer details, go-home bag records, program results | Kept with her sale records until she deletes them; not removed with the family's portal account |
 | Sale record, contract, vet proof, reminder log | Kept until the end of her longest health guarantee plus 6 months, then deleted |
@@ -985,6 +990,3 @@ and sources bring her the most.
     message she handles by hand, or a request in the portal that reaches KennelOS?
 16. The look's few fully round controls (section 7.1): keep them, or square them off to
     match the buttons?
-17. A puppy who fails a health check, or is returned for one, before pickup: KennelOS
-    treats it like a death (`restoreAfterLostSale`). Should the portal use section 7.4's
-    page, with its own gentler wording, or something else?
