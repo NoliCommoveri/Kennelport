@@ -327,8 +327,8 @@ test('Family login with the family portal on: one button that asks, on her site 
   const res = await get('/family-login');
   assert.equal(res.status, 200);
   const page = await res.text();
-  assert.match(page, new RegExp(`<h3>Waitlist Status Page</h3><p class="pay-when">[^<]*</p><p><a class="btn solid" href="${signin}" rel="noopener noreferrer" target="_blank">Open</a>`));
-  assert.match(page, /<h3>A-K Puppy Families<\/h3><p class="pay-when">[^<]*<\/p><p><a class="btn solid" href="\/family">Open<\/a>/);
+  assert.match(page, new RegExp(`<a class="btn solid" href="${signin}" rel="noopener noreferrer" target="_blank">Waitlist Status Page</a></p><p class="pay-when">for families waiting`));
+  assert.match(page, /<a class="btn solid" href="\/family">A-K Puppy Families<\/a><\/p><p class="pay-when">For families with/);
   assert.match(page, /<meta name="robots" content="noindex">/);
   assert.match(await (await get('/waitlist/help')).text(), new RegExp(`<a class="btn solid" href="${signin}"[^>]*>Sign in to see your details</a>`), 'the status-page help still goes to KennelOS');
   // Without a KennelOS waitlist, Family login goes straight to the portal.

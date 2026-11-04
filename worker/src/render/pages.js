@@ -545,13 +545,13 @@ export const faq = (snap) => expanderPage(snap, 'faq', { eyebrow: 'Questions', h
 // waitlist linked: the one Family login button asks which the family wants.
 export function familyLogin(snap, ctx) {
   if (!ctx.portal || !snap.site.family_login) return null;
-  const card = (h, text, href, button, external) => `<div class="pay-card"><h3>${esc(h)}</h3><p class="pay-when">${esc(text)}</p><p><a class="btn solid" href="${attr(href)}"${external ? ' rel="noopener noreferrer" target="_blank"' : ''}>${esc(button)}</a></p></div>`;
+  const card = (button, text, href, external) => `<div class="pay-card"><p><a class="btn solid" href="${attr(href)}"${external ? ' rel="noopener noreferrer" target="_blank"' : ''}>${esc(button)}</a></p><p class="pay-when">${esc(text)}</p></div>`;
   return {
     title: 'Family login', section: null, noindex: true,
     body: `${pagehead(null, { heading: 'Family login' })}
       <section class="section tight"><div class="wrap"><div class="pay"><div class="pay-grid">
-        ${card('Waitlist Status Page', 'for families waiting for their turn to bring home a Boston baby', snap.site.family_login, 'Open', true)}
-        ${card('A-K Puppy Families', 'For families with a current A-K Boston pup; a lifetime of support beyond the sale', '/family', 'Open', false)}
+        ${card('Waitlist Status Page', 'for families waiting for their turn to bring home a Boston baby', snap.site.family_login, true)}
+        ${card('A-K Puppy Families', 'For families with a current A-K Boston pup; a lifetime of support beyond the sale', '/family', false)}
       </div></div></div></section>`,
   };
 }
