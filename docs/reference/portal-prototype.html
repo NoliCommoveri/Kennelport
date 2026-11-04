@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Puppy Parent Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Mulish:wght@400;600;700;800&family=Pinyon+Script&display=swap">
+<style>
+/* Prototype of the Puppy Parent Portal (docs/Puppy_Parent_Portal_Plan.md section 7):
+   the family pages and her manage-app screens, in the AK sample's Lawn scheme.
+   One file, hash routing, everything in memory. Families, dates, microchip, food,
+   programs and baby book text are made up; the kennel, litter and puppy names are real. */
+:root {
+  --bg: #F5F2EA; --surface: #FFFDF8; --ink: #1E1D1A; --muted: #625C51; --line: #DED7C8;
+  --accent: #34523C; --accent-ink: #FFFFFF; --brass: #9C7A34; --band: #ECE6D8;
+  --head: #1F3A2A; --head-ink: #F5F2EA; --head-muted: #B9C8BC;
+  --ok: #3E7A4B; --warn: #8A5A1E; --bad: #A3261E;
+  --shadow: 0 1px 2px rgba(30,29,26,.06), 0 8px 24px rgba(30,29,26,.08);
+  --f-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --f-body: "Mulish", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-script: "Pinyon Script", "Snell Roundhand", "Apple Chancery", cursive;
+  --r: 3px; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141412; --surface: #1D1C19; --ink: #ECE7DC; --muted: #A9A294; --line: #35332D;
+  --accent: #8FB998; --accent-ink: #0F1A12; --brass: #CFAE66; --band: #1A1916;
+  --head: #10201A; --head-ink: #ECE7DC; --head-muted: #8FA596;
+  --ok: #86C495; --warn: #E0A65A; --bad: #F08A80;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #141412; --surface: #1D1C19; --ink: #ECE7DC; --muted: #A9A294; --line: #35332D;
+  --accent: #8FB998; --accent-ink: #0F1A12; --brass: #CFAE66; --band: #1A1916;
+  --head: #10201A; --head-ink: #ECE7DC; --head-muted: #8FA596;
+  --ok: #86C495; --warn: #E0A65A; --bad: #F08A80;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35); color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 var(--f-body); }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 500; line-height: 1.2; margin: 0; }
+h1 { font-size: clamp(1.6rem, 5vw, 2.1rem); }
+h2 { font-size: 1.3rem; }
+h3 { font-size: 1.05rem; }
+p { margin: 0; }
+a { color: var(--accent); }
+svg.i { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.eyebrow { font-size: .72rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--brass); }
+.script { font-family: var(--f-script); font-size: 2rem; line-height: 1; color: var(--brass); font-weight: 400; }
+.muted { color: var(--muted); }
+.small { font-size: .86rem; }
+.stack { display: grid; gap: 12px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.between { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Buttons: rectangles. One solid per screen. */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 18px; border-radius: var(--r); font: 700 .9rem/1.1 var(--f-body); letter-spacing: .03em; border: 1.5px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; text-decoration: none; }
+.btn.solid { background: var(--accent); color: var(--accent-ink); }
+.btn.solid:hover { filter: brightness(1.08); }
+.btn.line:hover { background: var(--accent); color: var(--accent-ink); }
+.btn.text { border: 0; padding: 0; min-height: 36px; }
+.btn.text:hover { text-decoration: underline; }
+.btn.small { min-height: 36px; padding: 6px 12px; font-size: .82rem; }
+.btn.danger { border-color: var(--bad); color: var(--bad); }
+.btn svg.i { width: 17px; height: 17px; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Status: a word with a small mark */
+.st { display: inline-flex; align-items: center; gap: 6px; font-size: .76rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.st::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.st.ok { color: var(--ok); } .st.warn { color: var(--warn); } .st.bad { color: var(--bad); } .st.next { color: var(--accent); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 12px; min-width: 0; }
+.card.feature { border-color: var(--accent); border-width: 1.5px; box-shadow: var(--shadow); }
+.card.band { background: var(--band); }
+.photo { aspect-ratio: 4 / 3; border-radius: var(--r); background: repeating-linear-gradient(135deg, var(--band) 0 10px, transparent 10px 20px), var(--surface); border: 1px solid var(--line); display: grid; place-items: center; color: var(--muted); font-size: .8rem; text-align: center; padding: 8px; }
+.photo.round { aspect-ratio: 1; border-radius: 50%; width: 72px; flex: none; }
+.disclose { font-size: .8rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
+.ext::after { content: " \2197"; }
+input, select, textarea { font: inherit; color: var(--ink); background: var(--bg); border: 1.5px solid var(--line); border-radius: var(--r); padding: 10px 12px; min-height: 44px; width: 100%; }
+textarea { min-height: 96px; resize: vertical; }
+label { display: grid; gap: 6px; font-weight: 700; font-size: .88rem; }
+label.check { display: flex; align-items: flex-start; gap: 10px; font-weight: 600; font-size: .95rem; cursor: pointer; }
+label.check input { width: 20px; height: 20px; min-height: 0; margin: 2px 0 0; flex: none; accent-color: var(--accent); }
+dl.kv { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; }
+dl.kv dt { color: var(--muted); font-size: .88rem; }
+dl.kv dd { margin: 0; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+th { text-align: left; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 800; padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line); }
+td { padding: 9px 8px 9px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.tablewrap { overflow-x: auto; }
+details.ch { border-bottom: 1px solid var(--line); }
+details.ch summary { list-style: none; cursor: pointer; padding: 14px 0; display: flex; justify-content: space-between; gap: 12px; font-family: var(--f-display); font-size: 1.08rem; }
+details.ch summary::-webkit-details-marker { display: none; }
+details.ch summary::after { content: "+"; font-family: var(--f-body); color: var(--accent); font-weight: 700; }
+details.ch[open] summary::after { content: "\2013"; }
+details.ch .body { padding: 0 0 16px; display: grid; gap: 10px; }
+.sprig { width: 84px; height: 42px; color: var(--brass); opacity: .55; }
+.toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: var(--r); font-size: .9rem; z-index: 50; max-width: calc(100vw - 32px); }
+
+/* Prototype bar: not part of the design */
+.proto { position: sticky; top: 0; z-index: 30; background: #2B2A27; color: #EDE9DF; font: 600 .8rem/1.2 var(--f-body); padding: 8px 16px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.proto b { font-weight: 800; letter-spacing: .1em; text-transform: uppercase; font-size: .68rem; color: #CFAE66; }
+.proto .grp { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.proto button { font: inherit; background: transparent; color: inherit; border: 1px solid #5A574F; border-radius: 3px; padding: 5px 9px; cursor: pointer; }
+.proto button[aria-pressed="true"] { background: #EDE9DF; color: #2B2A27; border-color: #EDE9DF; }
+.proto .note { color: #A9A294; font-weight: 400; }
+
+/* App header */
+header.app { background: var(--head); color: var(--head-ink); }
+header.app .in { max-width: 640px; margin: 0 auto; display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+header.app .brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; min-width: 0; }
+header.app .brand svg { width: 40px; height: 40px; flex: none; color: var(--head-ink); }
+header.app .brand b { font: 500 1.12rem/1.1 var(--f-display); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+header.app .brand span { font-size: .7rem; letter-spacing: .16em; text-transform: uppercase; color: var(--head-muted); font-weight: 700; }
+header.app .acct { margin-left: auto; background: none; border: 1px solid transparent; color: inherit; width: 44px; height: 44px; display: grid; place-items: center; border-radius: var(--r); cursor: pointer; }
+header.app .acct:hover { border-color: var(--head-muted); }
+header.app .acct svg.i { width: 24px; height: 24px; }
+
+/* Family layout */
+.fam main { max-width: 640px; margin: 0 auto; padding: 18px 16px 110px; display: grid; gap: 16px; }
+nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
+nav.tabs .in { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); }
+nav.tabs a { display: grid; justify-items: center; gap: 3px; padding: 9px 2px 10px; color: var(--muted); text-decoration: none; font-size: .7rem; font-weight: 700; border-top: 2px solid transparent; }
+nav.tabs a[aria-current="page"] { color: var(--accent); border-top-color: var(--accent); }
+nav.tabs svg.i { width: 22px; height: 22px; }
+.hello { display: grid; gap: 4px; padding-top: 4px; }
+.pup { display: flex; gap: 14px; align-items: center; }
+.big { font: 500 clamp(2.2rem, 9vw, 3rem)/1 var(--f-display); }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.steps li { display: flex; gap: 10px; align-items: flex-start; }
+.steps .n { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; font-size: .75rem; font-weight: 800; flex: none; color: var(--muted); }
+.steps .n.done { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+.task { display: grid; grid-template-columns: 64px 1fr; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.task:last-child { border-bottom: 0; }
+.task .d { font-size: .8rem; color: var(--muted); font-weight: 700; line-height: 1.25; }
+.task .d b { display: block; font: 500 1.35rem/1 var(--f-display); color: var(--ink); }
+.task.done h3 { color: var(--muted); }
+.progress { height: 6px; background: var(--band); border-radius: 3px; overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--accent); }
+.entry { display: grid; grid-template-columns: 112px 1fr; gap: 14px; }
+@media (max-width: 420px) { .entry { grid-template-columns: 1fr; } .entry .photo { aspect-ratio: 16/9; } }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.filters button { font: 700 .8rem var(--f-body); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: var(--r); padding: 7px 12px; cursor: pointer; }
+.filters button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
+.banner { text-align: center; padding: 24px 18px; background: var(--band); border: 1px solid var(--line); border-radius: var(--r); display: grid; gap: 6px; justify-items: center; }
+
+dialog { border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); color: var(--ink); padding: 0; width: min(440px, calc(100vw - 32px)); box-shadow: var(--shadow); }
+dialog::backdrop { background: rgba(0,0,0,.4); }
+dialog .in { padding: 20px; display: grid; gap: 14px; }
+
+/* Her manage-app screens */
+.adm { --side: 0px; }
+.adm .shell { display: grid; min-height: calc(100vh - 110px); }
+.adm main { padding: 18px 16px 110px; display: grid; gap: 16px; align-content: start; max-width: 980px; width: 100%; }
+.adm aside { display: none; }
+.adm header.app .in { max-width: none; }
+.adm nav.tabs .in { grid-template-columns: repeat(4, 1fr); max-width: none; }
+@media (min-width: 900px) {
+  .adm .shell { grid-template-columns: 230px 1fr; }
+  .adm aside { display: block; background: var(--surface); border-right: 1px solid var(--line); padding: 16px 10px; }
+  .adm aside a { display: flex; align-items: center; gap: 12px; padding: 11px 12px; color: var(--ink); text-decoration: none; border-radius: var(--r); font-weight: 700; font-size: .95rem; }
+  .adm aside a[aria-current="page"] { background: var(--band); color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  .adm aside .cnt { margin-left: auto; font-size: .78rem; color: var(--accent); }
+  .adm nav.tabs { display: none; }
+  .adm main { padding: 24px 32px 48px; }
+}
+.needs { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.need { text-align: left; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--r); padding: 14px; display: grid; gap: 2px; cursor: pointer; text-decoration: none; }
+.need b { font: 500 1.8rem/1 var(--f-display); }
+.need span { font-size: .88rem; font-weight: 700; }
+.need.bad { border-left-color: var(--bad); }
+.need.warn { border-left-color: var(--warn); }
+.cols { display: grid; gap: 16px; }
+@media (min-width: 1100px) { .cols { grid-template-columns: 3fr 2fr; align-items: start; } }
+.list { list-style: none; margin: 0; padding: 0; }
+.list > li { padding: 12px 0; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.list > li:last-child { border-bottom: 0; }
+.list .grow { flex: 1 1 200px; min-width: 0; }
+.list a.rowlink { color: inherit; text-decoration: none; }
+.list a.rowlink:hover b { text-decoration: underline; }
+.crumb { font-size: .88rem; }
+.pick { display: grid; gap: 10px; padding: 14px; border: 1.5px solid var(--accent); border-radius: var(--r); background: var(--surface); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="sprig" viewBox="0 0 120 60"><g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M4 50 C 34 44, 64 32, 116 8"/><path d="M28 44 c-4-10 2-18 10-20 c2 9-3 17-10 20z"/><path d="M28 44 c10 4 18 0 22-7 c-9-3-17 0-22 7z"/><path d="M58 33 c-3-10 3-18 11-19 c1 9-4 16-11 19z"/><path d="M58 33 c10 3 18-1 21-9 c-9-2-17 1-21 9z"/><path d="M88 20 c-2-8 3-14 9-15 c1 7-3 12-9 15z"/><path d="M88 20 c8 2 14-2 16-8 c-7-1-13 2-16 8z"/></g></symbol>
+  <symbol id="mono" viewBox="0 0 48 48"><g fill="none" stroke="currentColor"><rect x="9" y="9" width="30" height="30" transform="rotate(45 24 24)" stroke-width="1.4"/><rect x="12.5" y="12.5" width="23" height="23" transform="rotate(45 24 24)" stroke-width=".7"/></g><text x="24" y="29.5" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="15" font-style="italic" fill="currentColor">AK</text></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="1"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M12 16s-4-2.4-4-5a2 2 0 0 1 4-.6 2 2 0 0 1 4 .6c0 2.6-4 5-4 5z"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M3 5h6a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H3z"/><path d="M21 5h-6a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h7z"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v4h16v-4"/></symbol>
+  <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.5-5 6.5-5s5.5 1.5 6.5 5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 15c2 .6 3.2 2.2 3.8 5"/></symbol>
+  <symbol id="i-today" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-draft" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></symbol>
+  <symbol id="i-pages" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h13l-3-3M20 16H7l3 3"/></symbol>
+</svg>
+
+<div class="proto" role="region" aria-label="Prototype controls">
+  <b>Prototype</b>
+  <div class="grp" id="pv"><button data-view="family">Family</button><button data-view="admin">Breeder</button></div>
+  <div class="grp" id="ps"><span class="note">Today is:</span><button data-stage="before">Dec 18 · before go-home</button><button data-stage="vet">Dec 24 · vet window</button><button data-stage="weeks">Jan 12 · weeks 1–8</button><button data-stage="later">Oct 28 · first birthday</button></div>
+  <div class="grp" id="pt"><button data-theme="auto">Auto</button><button data-theme="light">Light</button><button data-theme="dark">Dark</button></div>
+</div>
+<div id="app"></div>
+<dialog id="dlg"><div class="in" id="dlgIn"></div></dialog>
+
+<script>
+(() => {
+'use strict';
+const KENNEL = 'A-K Boston Terriers';
+const D = (y, m, d, h = 0, mi = 0) => new Date(y, m - 1, d, h, mi);
+const STAGES = {
+  before: D(2026, 12, 18, 9, 0),
+  vet: D(2026, 12, 24, 16, 30),
+  weeks: D(2027, 1, 12, 10, 0),
+  later: D(2027, 10, 28, 8, 0),
+};
+const HOUR = 36e5, DAY = 864e5;
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const WD = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const icon = (n) => `<svg class="i" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const time = (d) => { let h = d.getHours(), m = d.getMinutes(); const ap = h < 12 ? 'am' : 'pm'; h = h % 12 || 12; return `${h}:${String(m).padStart(2, '0')} ${ap}`; };
+const short = (d) => `${MON[d.getMonth()]} ${d.getDate()}`;
+const long = (d) => `${WD[d.getDay()]}, ${MONTH[d.getMonth()]} ${d.getDate()}`;
+const withYear = (d) => `${MONTH[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+const toLocalInput = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+const fromLocalInput = (v) => { const [a, b] = v.split('T'); const [y, m, d] = a.split('-').map(Number); const [h, mi] = (b || '0:0').split(':').map(Number); return D(y, m, d, h, mi); };
+// The contract's rule, one function (plan section 5). Placeholder: 72 hours.
+const calDays = (a, b) => Math.round((new Date(b.getFullYear(), b.getMonth(), b.getDate()) - new Date(a.getFullYear(), a.getMonth(), a.getDate())) / 864e5);
+const vetDeadline = (pickup) => new Date(pickup.getTime() + 72 * HOUR);
+
+// ---------- Made-up data around the real Gem litter ----------
+const LITTER = { name: 'Gem litter', dam: 'Willow', sire: 'Boone', born: D(2026, 10, 28, 4, 10), goHome: D(2026, 12, 23, 11, 0) };
+const PUPS = [
+  { id: 'opal', name: 'Opal', collar: 'pink', sex: 'Female', family: 'reed' },
+  { id: 'onyx', name: 'Onyx', collar: 'black', sex: 'Male', family: 'hale' },
+  { id: 'diamond', name: 'Diamond', collar: 'blue', sex: 'Male', family: 'ortega' },
+];
+const FAMILIES = {
+  reed: { name: 'The Reed family', emails: ['sam.reed@example.com', 'jo.reed@example.com'], pup: 'opal' },
+  hale: { name: 'The Hale family', emails: ['m.hale@example.com'], pup: 'onyx' },
+  ortega: { name: 'The Ortega family', emails: ['ortega.home@example.com'], pup: 'diamond' },
+  park: { name: 'The Park family', emails: ['parks@example.com'], pup: null, note: 'Spring 2025 litter' },
+};
+const FOOD = { what: 'Small-breed puppy formula, chicken & rice', bag: '4 lb bag', how: '⅓ cup, three times a day', brand: 'Brand and formula from A-K' };
+const PROGRAMS = [
+  { id: 'food', name: 'Puppy food program', type: 'Food', where: 'Home, checklist, Feeding chapter', on: true, step: 'Order with A-K’s code for a first-order discount' },
+  { id: 'ins', name: 'Pet insurance trial', type: 'Insurance', where: 'Home, timeline (by Dec 28)', on: true, step: 'Activate the free trial within 5 days of pickup' },
+  { id: 'akc', name: 'AKC registration', type: 'Registration', where: 'Timeline (by Jan 22)', on: true, step: 'Register with the papers in your go-home folder' },
+  { id: 'crate', name: 'Crate and bedding', type: 'Product', where: 'Checklist, Crate & potty chapter', on: true, step: '—' },
+];
+const CHECKLIST = [
+  { id: 'c1', t: 'Crate, 24 inch, with a divider', link: 'crate', done: true },
+  { id: 'c2', t: 'Washable crate bed and two old towels', done: true },
+  { id: 'c3', t: `Opal’s food: ${FOOD.what}, ${FOOD.bag}`, link: 'food', done: false },
+  { id: 'c4', t: 'Stainless food and water bowls', done: true },
+  { id: 'c5', t: 'Soft collar (8–10 in) and a 6 ft leash', done: true },
+  { id: 'c6', t: 'Puppy pads and enzyme cleaner', done: false },
+  { id: 'c7', t: 'Two chew toys sized for small breeds', done: false },
+  { id: 'c8', t: 'A vet visit booked within 72 hours of pickup', vet: true },
+  { id: 'c9', t: 'Car crate or carrier for the ride home', done: false },
+];
+const TASKS = [
+  { id: 't-book', due: D(2026, 12, 20), doneAt: D(2026, 12, 19), title: 'Book the 3-day vet visit', body: 'Vets fill up around Christmas. Book now for a visit before the deadline.', grp: 'Before go-home', vet: 'book' },
+  { id: 't-supplies', due: D(2026, 12, 22), doneAt: D(2026, 12, 21), title: 'Go-home supplies ready', body: 'Everything on the checklist, with links to what we use.', grp: 'Before go-home', link: '#f/home' },
+  { id: 't-pickup', due: D(2026, 12, 23, 11), doneAt: D(2026, 12, 23, 11), title: 'Pickup day', body: 'At A-K, 11:00 am. Bring the carrier and a towel.', grp: 'First week' },
+  { id: 't-vet', due: null, doneAt: D(2026, 12, 24, 18), title: '3-day vet visit, and upload the record', body: 'Your contract asks for it within 72 hours of pickup.', grp: 'First week', vet: 'visit' },
+  { id: 't-ins', due: D(2026, 12, 28), doneAt: D(2026, 12, 27), title: 'Activate Opal’s insurance trial', body: 'Free trial from A-K’s program. It has to be activated within 5 days of pickup.', grp: 'First week', prog: 'ins', btn: 'Activate the trial' },
+  { id: 't-food', due: D(2027, 1, 6), doneAt: D(2027, 1, 6), title: 'Keep the same food for two weeks', body: 'Change food slowly, if at all, over 7–10 days.', grp: 'Weeks 2–8', prog: 'food', btn: 'Order Opal’s food' },
+  { id: 't-worm', due: D(2027, 1, 6), doneAt: D(2027, 1, 7), title: 'Deworming at 10 weeks', body: 'Use the dose in your go-home folder, or ask your vet.', grp: 'Weeks 2–8' },
+  { id: 't-v12', due: D(2027, 1, 20), doneAt: D(2027, 1, 21), title: '12-week vaccines', body: 'Second DHPP. Your vet sets the schedule from here.', grp: 'Weeks 2–8' },
+  { id: 't-akc', due: D(2027, 1, 22), doneAt: D(2027, 1, 25), title: 'Register Opal with AKC', body: 'Your registration paper is in the go-home folder. Limited registration.', grp: 'Weeks 2–8', prog: 'akc', btn: 'Register with AKC' },
+  { id: 't-v16', due: D(2027, 2, 17), doneAt: D(2027, 2, 18), title: '16-week vaccines and rabies', body: 'Ask your vet about the rabies date for your county.', grp: 'Ongoing' },
+  { id: 't-6m', due: D(2027, 4, 28), doneAt: D(2027, 4, 30), title: 'Six months: spay talk and adult teeth', body: 'A good time to ask your vet about timing.', grp: 'Ongoing' },
+  { id: 't-adult', due: D(2027, 10, 28), doneAt: null, title: 'One year: talk to your vet about adult food', body: 'Most Bostons switch between 10 and 12 months.', grp: 'Ongoing', prog: 'food', btn: 'See adult formulas' },
+];
+const BREEDER_ENTRIES = [
+  { id: 'b1', date: D(2026, 10, 28), title: 'Hello, world', body: 'Born at 4:10 in the morning, second of three. 6.8 oz and already rooting for the warm spot.', who: 'A-K' },
+  { id: 'b2', date: D(2026, 11, 9), title: 'Eyes open', body: 'Day 12. One eye first, then the other the next morning. Very offended by the light.', who: 'A-K' },
+  { id: 'b3', date: D(2026, 11, 18), title: 'First wobbly steps', body: 'Three steps, a sit, two more steps. Then a nap.', who: 'A-K' },
+];
+const WEIGHTS = [6.8, 11, 17, 22, 30, 38, 47, 54, 61]; // oz, weeks 0–8 (made up)
+const DRAFTS0 = [
+  { id: 'd1', date: D(2026, 11, 25), kind: 'Milestone', text: 'First food: soaked kibble', pup: 'Opal' },
+  { id: 'd2', date: D(2026, 12, 2), kind: 'Milestone', text: 'First time outside', pup: 'Gem litter' },
+  { id: 'd3', date: D(2026, 12, 9), kind: 'Weight', text: '2 lb 15 oz (week 6)', pup: 'Opal' },
+];
+const CHAPTERS0 = [
+  { id: 'h1', t: 'Before she comes home', on: true, body: 'Puppy-proof one room first: cords up, shoes away, a gate across the door. Set the crate up a day early so it smells like home when she arrives.' },
+  { id: 'h2', t: 'The first night', on: true, body: 'Put the crate beside your bed. Expect two wake-ups; take her out, praise, back in, no play. The towel in her go-home bag smells of her littermates; put it in the crate.' },
+  { id: 'h3', t: 'Feeding', on: true, prog: 'food', body: `She eats ${FOOD.what.toLowerCase()}, ${FOOD.how}. Keep the same food for at least two weeks.` },
+  { id: 'h4', t: 'Crate and potty training', on: true, prog: 'crate', body: 'Out after every sleep, meal and play. Same door, same spot, same word. Bostons learn fast and forget faster when they’re excited.' },
+  { id: 'h5', t: 'Vet visits and vaccines', on: true, body: 'Your contract asks for a vet visit within 72 hours of pickup. Bring the shot record from your folder, or show the Records tab.' },
+  { id: 'h6', t: 'Pet insurance', on: true, prog: 'ins', body: 'Opal comes with a free trial through A-K’s insurance program. The program’s own page explains what the trial includes.' },
+  { id: 'h7', t: 'Boston basics: heat, breathing, eyes', on: true, body: 'Short faces overheat. Walk early and late in summer, never leave her in a car, and watch for squinting or a red eye: Boston eyes need a vet the same day.' },
+];
+const NAMES = { food: 'Order Opal’s food', ins: 'Activate the trial', akc: 'Register with AKC', crate: 'The crate we use' };
+
+// ---------- State ----------
+const S = { view: 'family', stage: 'vet', theme: 'auto' };
+function reset() {
+  const now = STAGES[S.stage];
+  const after = (d) => d && now >= d;
+  const picked = now >= LITTER.goHome ? LITTER.goHome : null;
+  S.now = now;
+  S.pickup = { opal: picked, onyx: picked, diamond: picked ? D(2026, 12, 23, 14, 30) : null };
+  S.booked = { opal: S.stage === 'before' ? null : D(2026, 12, 24, 10, 30), onyx: S.stage === 'before' ? null : D(2026, 12, 25, 9, 0), diamond: null };
+  const accepted = S.stage === 'weeks' || S.stage === 'later';
+  S.proof = {
+    opal: accepted ? { file: 'vet-visit-dec24.pdf', at: D(2026, 12, 24, 18), ok: true } : null,
+    onyx: accepted ? { file: 'IMG_2231.jpg', at: D(2026, 12, 25, 12), ok: true } : (S.stage === 'vet' ? null : null),
+    diamond: accepted ? { file: 'receipt.pdf', at: D(2026, 12, 26, 9), ok: true } : null,
+  };
+  S.taskDone = {};
+  TASKS.forEach((t) => { if (after(t.doneAt) && !t.vet) S.taskDone[t.id] = true; });
+  S.check = {}; CHECKLIST.forEach((c) => { S.check[c.id] = S.stage === 'before' ? !!c.done : true; });
+  S.familyEntries = S.stage === 'weeks' || S.stage === 'later'
+    ? [{ id: 'f1', date: D(2026, 12, 23, 15), title: 'Home!', body: 'Slept the whole ride. Then ran laps of the kitchen.', who: 'Reed family', vis: 'shared' }] : [];
+  if (S.stage === 'later') S.familyEntries.push({ id: 'f2', date: D(2027, 6, 2), title: 'First beach day', body: 'Hated the waves, loved the sand.', who: 'Reed family', vis: 'public' });
+  S.breederEntries = BREEDER_ENTRIES.slice();
+  S.drafts = DRAFTS0.slice();
+  S.chapters = CHAPTERS0.map((c) => ({ ...c }));
+  S.programs = PROGRAMS.map((p) => ({ ...p }));
+  S.keep = {}; S.deleted = {};
+  S.bounced = S.stage === 'vet' ? { hale: 'm.hale@example.com · Dec 23, 11:04 am · mailbox full' } : {};
+  S.signedIn = { reed: true, hale: true, ortega: S.stage === 'later' || S.stage === 'weeks', park: true };
+  S.lastActive = {
+    reed: now, hale: new Date(now - 2 * DAY), ortega: S.stage === 'weeks' || S.stage === 'later' ? new Date(now - 40 * DAY) : null,
+    park: D(2026, 11, 20),
+  };
+  S.bookOpen = false; S.bookFilter = 'all'; S.q = '';
+}
+
+// ---------- Family view ----------
+const opal = () => ({ pup: PUPS[0], pickup: S.pickup.opal, booked: S.booked.opal, proof: S.proof.opal });
+const vetDone = () => !!(S.proof.opal);
+function taskState(t) {
+  const now = S.now;
+  let done = !!S.taskDone[t.id];
+  if (t.vet === 'book') done = done || !!S.booked.opal;
+  if (t.vet === 'visit') done = !!S.proof.opal;
+  const due = t.vet === 'visit' ? (S.pickup.opal ? vetDeadline(S.pickup.opal) : vetDeadline(LITTER.goHome)) : t.due;
+  return { done, due, overdue: !done && due < now };
+}
+function nextTasks(n) {
+  return TASKS.map((t) => ({ t, s: taskState(t) })).filter((x) => !x.s.done).slice(0, n);
+}
+const disclosure = `<p class="disclose">${KENNEL} may earn a commission or product credit when you use some links on this page. We only link to what we use for our own Bostons.</p>`;
+
+function header(sub) {
+  return `<header class="app"><div class="in">
+    <a class="brand" href="${S.view === 'family' ? '#f/home' : '#a/today'}"><svg aria-hidden="true"><use href="#mono"/></svg><div><b>${KENNEL}</b><span>${sub}</span></div></a>
+    ${S.view === 'family' ? `<button class="acct" data-act="account" aria-label="Your account">${icon('user')}</button>` : `<button class="acct" data-act="account-admin" aria-label="Manage app menu">${icon('user')}</button>`}
+  </div></header>`;
+}
+
+function famHome() {
+  const o = opal(), now = S.now;
+  const parts = [];
+  if (S.stage === 'before') {
+    const days = calDays(now, LITTER.goHome);
+    const dl = vetDeadline(LITTER.goHome);
+    parts.push(`<section class="hello"><span class="script">Hello, Reed family</span>
+      <h1>Opal comes home in ${days} days</h1>
+      <p class="muted">${long(LITTER.goHome)} · pickup at ${time(LITTER.goHome)} at ${KENNEL}</p></section>`);
+    parts.push(`<section class="card feature"><span class="eyebrow">Do this week</span>
+      <h2>Book Opal’s vet visit now</h2>
+      <p>Your contract asks for a vet visit within 72 hours of pickup: by <b>${long(dl)}, ${time(dl)}</b>. Vets fill up around Christmas, so book it before she comes home.</p>
+      ${o.booked ? `<p><span class="st ok">Booked</span> ${long(o.booked)}, ${time(o.booked)} <button class="btn text small" data-act="book">Change</button></p>`
+        : `<div class="row"><button class="btn solid" data-act="book">${icon('check')}I’ve booked it</button></div>`}
+    </section>`);
+    const done = CHECKLIST.filter((c) => c.vet ? !!o.booked : S.check[c.id]).length;
+    parts.push(`<section class="card"><div class="between"><h2>Go-home checklist</h2><span class="small muted">${done} of ${CHECKLIST.length} ready</span></div>
+      <div class="progress" aria-hidden="true"><i style="width:${Math.round(done / CHECKLIST.length * 100)}%"></i></div>
+      <div class="stack">${CHECKLIST.map((c) => `<div class="between"><label class="check"><input type="checkbox" data-act="check" data-id="${c.id}" ${c.vet ? (o.booked ? 'checked' : '') + ' disabled' : (S.check[c.id] ? 'checked' : '')}>${esc(c.t)}</label>${c.link ? `<a class="btn text small ext" href="#" data-act="go" data-prog="${c.link}">${c.link === 'food' ? 'Order' : 'See it'}</a>` : ''}</div>`).join('')}</div>
+    </section>`);
+    parts.push(foodCard(true));
+  } else if (S.stage === 'vet') {
+    const dl = vetDeadline(o.pickup), left = Math.max(0, Math.round((dl - now) / HOUR));
+    parts.push(`<section class="card feature"><span class="eyebrow">3-day vet visit</span>
+      <div class="pup"><div class="photo round">Opal</div><div><p class="big">${left} hours left</p><p>Due <b>${long(dl)}, ${time(dl)}</b></p></div></div>
+      <ol class="steps">
+        <li><span class="n ${o.booked ? 'done' : ''}">${o.booked ? '✓' : '1'}</span><div>${o.booked ? `Booked for ${long(o.booked)}, ${time(o.booked)}` : 'Book the visit'} <button class="btn text small" data-act="book">${o.booked ? 'Change' : 'Add booking'}</button></div></li>
+        <li><span class="n ${o.proof ? 'done' : ''}">${o.proof ? '✓' : '2'}</span><div>${o.proof ? (o.proof.ok ? `<span class="st ok">Accepted by A-K</span>` : `<span class="st next">Uploaded</span> ${esc(o.proof.file)} · A-K will check it`) : 'Upload the vet’s record or receipt after the visit'}</div></li>
+      </ol>
+      ${o.proof ? '' : `<label class="btn solid" style="justify-self:start">${icon('up')}Upload vet record<input class="sr" type="file" accept="image/*,application/pdf" data-act="proof"></label>`}
+      <p class="small muted">This is a reminder. Your contract sets the requirement and the deadline.</p>
+    </section>`);
+    const ins = TASKS.find((t) => t.id === 't-ins');
+    parts.push(`<section class="card"><span class="eyebrow">By ${long(ins.due)}</span><h2>Activate Opal’s insurance trial</h2>
+      <p>${esc(ins.body)}</p>
+      ${S.taskDone['t-ins'] ? '<p><span class="st ok">Done</span></p>' : `<div class="row"><a class="btn line ext" href="#" data-act="go" data-prog="ins" data-task="t-ins">Activate the trial</a><button class="btn text small" data-act="done" data-id="t-ins">I’ve done this</button></div>`}
+    </section>`);
+    parts.push(foodCard(false));
+    parts.push(nextCard(3, true));
+  } else if (S.stage === 'weeks') {
+    const days = Math.floor((now - o.pickup) / DAY);
+    parts.push(`<section class="hello"><span class="script">Hello, Reed family</span><h1>Opal has been home ${Math.round(days / 7)} weeks</h1><p class="muted">She’s ${Math.floor((now - LITTER.born) / DAY / 7)} weeks old today.</p></section>`);
+    parts.push(nextCard(2, false, true));
+    parts.push(`<section class="card band"><h2>Add to Opal’s baby book</h2><p>Her first weeks with you: a photo, a weight, the first time she found the stairs.</p><div class="row"><a class="btn line" href="#f/book" data-act="openbook">Add an entry</a></div></section>`);
+    parts.push(`<section class="card"><div class="between"><h3>3-day vet visit</h3><span class="st ok">Done</span></div><p class="small muted">Accepted by A-K on Dec 24. Thank you.</p></section>`);
+    parts.push(foodCard(false, true));
+  } else {
+    parts.push(`<section class="banner"><svg class="sprig" aria-hidden="true"><use href="#sprig"/></svg><span class="script">Happy birthday</span><h1>Opal is one today</h1><p class="muted">And so are Onyx and Diamond, her Gem litter brothers.</p></section>`);
+    const b = S.breederEntries[0];
+    parts.push(`<section class="card"><span class="eyebrow">A year ago today</span><div class="entry"><div class="photo">${esc(b.title)}</div><div class="stack"><h2>${esc(b.title)}</h2><p>${esc(b.body)}</p><a class="btn text small" href="#f/book">Open the baby book →</a></div></div></section>`);
+    parts.push(nextCard(1, false, true));
+    parts.push(`<section class="card band"><h2>Print Opal’s first year</h2><p>Everything in her baby book, from A-K’s first photos to yours, as a printed book or a PDF.</p><div class="row"><button class="btn line" data-act="toast" data-msg="Printable book: phase 3">Make the book</button></div></section>`);
+  }
+  parts.push(disclosure);
+  return parts.join('');
+}
+function foodCard(before, small) {
+  if (small) return `<section class="card"><div class="between"><div><span class="eyebrow">What Opal eats</span><h3>${esc(FOOD.what)}</h3></div><a class="btn line small ext" href="#" data-act="go" data-prog="food">Reorder</a></div></section>`;
+  return `<section class="card"><span class="eyebrow">What she’s eating now</span><h2>${esc(FOOD.what)}</h2>
+    <dl class="kv"><dt>Bag</dt><dd>${esc(FOOD.bag)}</dd><dt>How much</dt><dd>${esc(FOOD.how)}</dd></dl>
+    <p class="small muted">${before ? 'A starter bag comes home with her. Have a full bag ready so you don’t change food in her first weeks.' : 'Keep the same food for at least two weeks.'}</p>
+    <div class="row"><a class="btn line ext" href="#" data-act="go" data-prog="food">Order Opal’s food</a><span class="small muted">Code AKPUPPY: first order discount (program wording to come)</span></div></section>`;
+}
+function nextCard(n, compact, withButtons) {
+  const list = nextTasks(n);
+  if (!list.length) return '';
+  return `<section class="card"><div class="between"><h2>${compact ? 'Coming up' : 'Next up'}</h2><a class="btn text small" href="#f/timeline">Full timeline →</a></div>
+    <div>${list.map(({ t, s }) => taskRow(t, s, withButtons)).join('')}</div></section>`;
+}
+function taskRow(t, s, withButtons = true) {
+  const st = s.done ? '<span class="st ok">Done</span>' : s.overdue ? '<span class="st bad">Overdue</span>' : (nextTasks(1)[0]?.t.id === t.id ? '<span class="st next">Next</span>' : '<span class="st">Later</span>');
+  const due = s.due;
+  const act = !s.done && withButtons && !t.vet ? `<div class="row">${t.prog ? `<a class="btn line small ext" href="#" data-act="go" data-prog="${t.prog}" data-task="${t.id}">${esc(t.btn)}</a>` : ''}<button class="btn text small" data-act="done" data-id="${t.id}">Mark done</button></div>`
+    : (!s.done && t.vet === 'visit' && S.stage !== 'before' ? `<a class="btn text small" href="#f/home">Go to the vet visit →</a>` : '');
+  return `<div class="task ${s.done ? 'done' : ''}"><div class="d">${MON[due.getMonth()]}<b>${due.getDate()}</b></div><div class="stack" style="gap:6px"><div class="between"><h3>${esc(t.title)}</h3>${st}</div><p class="small">${esc(t.body)}</p>${act}</div></div>`;
+}
+function famTimeline() {
+  const groups = [...new Set(TASKS.map((t) => t.grp))];
+  return `<section class="hello"><span class="eyebrow">Opal’s first year</span><h1>Timeline</h1><p class="muted">Dated from her birthday (Oct 28) and pickup (Dec 23). Reminders stop once a step is done.</p></section>
+    ${groups.map((g) => `<section class="card"><h2>${g}</h2><div>${TASKS.filter((t) => t.grp === g).map((t) => taskRow(t, taskState(t))).join('')}</div></section>`).join('')}
+    ${disclosure}`;
+}
+function famRecords() {
+  const o = opal();
+  const rows = [
+    [D(2026, 11, 11), 'Deworming', 'Pyrantel, 2 weeks'], [D(2026, 11, 25), 'Deworming', 'Pyrantel, 4 weeks'],
+    [D(2026, 12, 9), 'Vaccine', 'DHPP, first puppy shot'], [D(2026, 12, 9), 'Deworming', 'Pyrantel, 6 weeks'],
+    [D(2026, 12, 21), 'Vet check', 'Health certificate before go-home'],
+  ];
+  if (o.proof) rows.push([o.proof.at, 'Vet visit', `3-day visit · ${o.proof.ok ? 'accepted' : 'waiting for A-K'}`]);
+  return `<section class="hello"><span class="eyebrow">Gem litter · ${o.pup.collar} collar</span><h1>Opal’s records</h1></section>
+    <section class="card"><div class="pup"><div class="photo round">Opal</div><dl class="kv">
+      <dt>Sex</dt><dd>Female</dd><dt>Colour</dt><dd>Black &amp; white</dd><dt>Born</dt><dd>${withYear(LITTER.born)}</dd>
+      <dt>Parents</dt><dd>Willow × Boone</dd><dt>Microchip</dt><dd>985 •••• •••• 4471</dd><dt>Registration</dt><dd>AKC, limited</dd>
+      <dt>Picked up</dt><dd>${o.pickup ? `${withYear(o.pickup)}, ${time(o.pickup)}` : 'Not yet'}</dd></dl></div></section>
+    <section class="card"><h2>Shots, deworming and vet visits</h2><div class="tablewrap"><table><thead><tr><th>Date</th><th>Type</th><th>Details</th></tr></thead><tbody>
+      ${rows.map((r) => `<tr><td>${short(r[0])}</td><td>${r[1]}</td><td>${esc(r[2])}</td></tr>`).join('')}</tbody></table></div></section>
+    <section class="card"><h2>Documents</h2><ul class="list">
+      <li><span class="grow"><b>Purchase contract</b><br><span class="small muted">Signed Nov 2, 2026 · PDF</span></span><button class="btn line small" data-act="toast" data-msg="Opens the contract PDF">Open</button></li>
+      <li><span class="grow"><b>Health guarantee</b><br><span class="small muted">Part of the contract, section 4</span></span><button class="btn line small" data-act="toast" data-msg="Opens the guarantee">Open</button></li>
+      <li><span class="grow"><b>Pedigree</b><br><span class="small muted">Three generations</span></span><button class="btn line small" data-act="toast" data-msg="Opens the pedigree">Open</button></li>
+      ${o.proof ? `<li><span class="grow"><b>Your vet record</b><br><span class="small muted">${esc(o.proof.file)}</span></span><button class="btn line small" data-act="toast" data-msg="Opens your upload">Open</button></li>` : ''}
+    </ul></section>`;
+}
+function weightChart() {
+  const w = 300, h = 120, max = 64, pts = WEIGHTS.map((v, i) => [20 + i * (w - 30) / 8, h - 18 - v / max * (h - 30)]);
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Opal’s weight, weeks 0 to 8: from 6.8 ounces to 61 ounces" style="width:100%;height:auto">
+    <path d="M20 ${h - 18}H${w - 10}" stroke="var(--line)"/>
+    <polyline points="${pts.map((p) => p.join(',')).join(' ')}" fill="none" stroke="var(--accent)" stroke-width="2"/>
+    ${pts.map((p, i) => `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="var(--accent)"/><text x="${p[0]}" y="${h - 4}" font-size="9" text-anchor="middle" fill="var(--muted)">${i}</text>`).join('')}
+    <text x="${pts[8][0]}" y="${pts[8][1] - 8}" font-size="10" text-anchor="end" fill="var(--ink)">3 lb 13 oz</text>
+  </svg>`;
+}
+function famBook() {
+  const vis = { private: 'Just us', shared: 'Shared with A-K', public: 'OK for A-K to post' };
+  let all = [...S.breederEntries.map((e) => ({ ...e, b: true })), ...S.familyEntries].sort((a, b) => b.date - a.date);
+  if (S.bookFilter === 'ak') all = all.filter((e) => e.b);
+  if (S.bookFilter === 'us') all = all.filter((e) => !e.b);
+  const canAdd = !!S.pickup.opal;
+  return `<section class="hello"><span class="eyebrow">Opal’s baby book</span><h1>From day one</h1><p class="muted">A-K wrote the first eight weeks. The rest is yours.</p></section>
+    <section class="card">
+      ${S.bookOpen ? `<form class="stack" data-act="addentry"><h2>New entry</h2>
+        <div class="row"><label style="flex:1 1 160px">Date<input type="date" name="date" value="${toLocalInput(S.now).slice(0, 10)}" required></label><label style="flex:2 1 220px">Title<input name="title" maxlength="80" required placeholder="First time on the stairs"></label></div>
+        <label>Note<textarea name="body" maxlength="1500" placeholder="What happened?"></textarea></label>
+        <label>Photo<input type="file" accept="image/*" name="photo"></label>
+        <label>Who can see it<select name="vis"><option value="private">Just us</option><option value="shared" selected>Shared with A-K</option><option value="public">OK for A-K to post publicly</option></select><span class="small muted" style="font-weight:400">A-K asks before posting anything, every time.</span></label>
+        <div class="row"><button class="btn solid">Add to the book</button><button type="button" class="btn text small" data-act="closebook">Cancel</button></div></form>`
+      : `<div class="between"><div class="filters" role="group" aria-label="Show">${[['all', 'Everything'], ['ak', 'From A-K'], ['us', 'From us']].map(([k, l]) => `<button data-act="filter" data-f="${k}" aria-pressed="${S.bookFilter === k}">${l}</button>`).join('')}</div>
+        ${canAdd ? '<button class="btn line" data-act="openbook">Add an entry</button>' : '<span class="small muted">You can add entries once Opal is home.</span>'}</div>`}
+    </section>
+    ${S.bookFilter !== 'us' ? `<section class="card"><div class="between"><h2>Weight, weeks 0–8</h2><span class="small muted">From A-K’s weekly weigh-ins</span></div>${weightChart()}</section>` : ''}
+    ${all.map((e) => `<article class="card"><div class="entry"><div class="photo">${e.b ? 'A-K photo' : 'Your photo'}</div><div class="stack" style="gap:6px">
+      <span class="eyebrow">${withYear(e.date)} · ${e.b ? 'From A-K' : esc(e.who)}</span><h2>${esc(e.title)}</h2>${e.body ? `<p>${esc(e.body)}</p>` : ''}
+      ${e.b ? '' : `<p class="small muted">${vis[e.vis]}</p>`}</div></div></article>`).join('')}`;
+}
+function famHandbook() {
+  const q = S.q.trim().toLowerCase();
+  const list = S.chapters.filter((c) => c.on && (!q || (c.t + ' ' + c.body).toLowerCase().includes(q)));
+  return `<section class="hello"><span class="eyebrow">${KENNEL}</span><h1>Puppy handbook</h1></section>
+    <label class="sr" for="hq">Search the handbook</label><input id="hq" type="search" placeholder="Search: crate, food, heat…" value="${esc(S.q)}" data-act="search">
+    <section class="card" style="padding-top:4px;padding-bottom:4px">
+      ${list.length ? list.map((c, i) => `<details class="ch" ${q || i === 0 ? 'open' : ''}><summary>${esc(c.t)}</summary><div class="body"><p>${esc(c.body)}</p>
+        ${c.prog ? `<p><a class="ext" href="#" data-act="go" data-prog="${c.prog}">${NAMES[c.prog]}</a></p>` : ''}</div></details>`).join('') : '<p class="muted" style="padding:14px 0">Nothing matches. Try another word, or message A-K.</p>'}
+    </section>${disclosure}`;
+}
+function famPage(route) {
+  const pages = { home: famHome, timeline: famTimeline, records: famRecords, book: famBook, handbook: famHandbook };
+  const tabs = [['home', 'Home', 'home'], ['timeline', 'Timeline', 'cal'], ['records', 'Records', 'file'], ['book', 'Baby book', 'heart'], ['handbook', 'Handbook', 'book']];
+  const r = pages[route] ? route : 'home';
+  return `<div class="fam">${header('Puppy Parent Portal')}<main id="main">${pages[r]()}</main>
+    <nav class="tabs" aria-label="Portal"><div class="in">${tabs.map(([k, l, ic]) => `<a href="#f/${k}" ${k === r ? 'aria-current="page"' : ''}>${icon(ic)}${l}</a>`).join('')}</div></nav></div>`;
+}
+
+// ---------- Her screens (manage app) ----------
+function vetRows() {
+  return PUPS.filter((p) => S.pickup[p.id]).map((p) => {
+    const dl = vetDeadline(S.pickup[p.id]), proof = S.proof[p.id], booked = S.booked[p.id];
+    const left = (dl - S.now) / HOUR;
+    let st;
+    if (proof && proof.ok) st = '<span class="st ok">Accepted</span>';
+    else if (proof) st = '<span class="st next">Record uploaded</span>';
+    else if (left < 0) st = '<span class="st bad">Missed</span>';
+    else if (!booked && left < 48) st = '<span class="st bad">Not booked</span>';
+    else if (!booked) st = '<span class="st warn">Not booked</span>';
+    else st = '<span class="st">Booked</span>';
+    return { p, dl, proof, booked, left, st };
+  });
+}
+function counts() {
+  const pickToday = PUPS.filter((p) => !S.pickup[p.id] && Math.abs(LITTER.goHome - S.now) < 7 * DAY);
+  const proofs = PUPS.filter((p) => S.proof[p.id] && !S.proof[p.id].ok);
+  const invites = Object.keys(FAMILIES).filter((k) => !S.signedIn[k] && !S.deleted[k]);
+  const due = Object.keys(FAMILIES).filter((k) => !S.deleted[k] && !S.keep[k] && S.lastActive[k] && (S.now - S.lastActive[k]) > 335 * DAY);
+  return { pickToday, proofs, invites, bounced: Object.keys(S.bounced), drafts: S.drafts.length, due };
+}
+function admToday() {
+  const c = counts(), vr = vetRows();
+  const needs = [];
+  if (c.proofs.length) needs.push(`<a class="need" href="#a/vet"><b>${c.proofs.length}</b><span>Vet record to review</span></a>`);
+  if (c.bounced.length) needs.push(`<a class="need bad" href="#a/fam/${c.bounced[0]}"><b>${c.bounced.length}</b><span>Email bounced: text them</span></a>`);
+  vr.filter((r) => !r.booked && !r.proof && r.left > 0).forEach(() => {});
+  const unbooked = vr.filter((r) => !r.booked && !r.proof && r.left > 0).length;
+  if (unbooked) needs.push(`<a class="need warn" href="#a/vet"><b>${unbooked}</b><span>Vet visit not booked</span></a>`);
+  if (c.invites.length) needs.push(`<a class="need" href="#a/families"><b>${c.invites.length}</b><span>Invite not accepted</span></a>`);
+  if (c.drafts) needs.push(`<a class="need" href="#a/drafts"><b>${c.drafts}</b><span>KennelOS drafts</span></a>`);
+  if (c.due.length) needs.push(`<a class="need warn" href="#a/families"><b>${c.due.length}</b><span>Due for deletion in 30 days</span></a>`);
+  const isToday = calDays(S.now, LITTER.goHome) === 0;
+  const goHomeSoon = c.pickToday.length ? `<section class="pick"><span class="eyebrow">Gem litter goes home ${long(LITTER.goHome)}</span>
+      <h2>${isToday ? 'Mark each puppy as they leave' : `Going home in ${calDays(S.now, LITTER.goHome)} days`}</h2>
+      <p class="small muted">${isToday ? 'Starts the 72-hour vet clock. You can correct the time afterwards.' : 'On the day, Mark picked up starts the 72-hour vet clock. Families got their “book your vet visit” email this morning.'}</p>
+      <ul class="list">${c.pickToday.map((p) => `<li><span class="grow"><b>${p.name}</b> · ${FAMILIES[p.family].name}${S.booked[p.id] ? ' · <span class="st">Vet booked</span>' : ''}</span><button class="btn ${isToday ? 'solid' : 'line'} small" data-act="pickup" data-id="${p.id}">Mark picked up</button></li>`).join('')}</ul></section>` : '';
+  return `<div class="between"><div><span class="eyebrow">Family portal</span><h1>Today</h1><p class="muted">${long(S.now)}</p></div></div>
+    ${goHomeSoon}
+    ${needs.length ? `<section><h2 style="margin-bottom:10px">Needs you</h2><div class="needs">${needs.join('')}</div></section>` : `<section class="card band"><p><span class="st ok">All caught up</span> Nothing needs you today.</p></section>`}
+    <div class="cols">
+      ${vr.length ? `<section class="card"><div class="between"><h2>Vet visits</h2><a class="btn text small" href="#a/vet">All →</a></div>${vetList(vr)}</section>` : `<section class="card"><h2>Vet visits</h2><p class="muted">None running. The clock starts when you mark a puppy picked up.</p></section>`}
+      <section class="card"><h2>Recent activity</h2><ul class="list">${activity().map((a) => `<li><span class="grow"><b>${a[0]}</b><br><span class="small">${a[1]}</span></span><span class="small muted">${a[2]}</span></li>`).join('')}</ul></section>
+    </div>
+    <details class="card"><summary style="cursor:pointer"><b>Portal setup</b> <span class="st ok" style="margin-left:8px">All done</span></summary>
+      <ul class="list"><li>Handbook: ${S.chapters.filter((c) => c.on).length} chapters on</li><li>Programs: ${S.programs.filter((p) => p.on).length} on</li><li>Checklist and timeline templates</li><li>Reminder emails: wording checked</li></ul></details>`;
+}
+function vetList(vr) {
+  return `<ul class="list">${vr.map((r) => `<li><span class="grow"><a class="rowlink" href="#a/fam/${r.p.family}"><b>${r.p.name}</b></a> · <span class="small">${FAMILIES[r.p.family].name}</span><br>
+    <span class="small muted">Due ${short(r.dl)}, ${time(r.dl)}${r.left > 0 && !(r.proof && r.proof.ok) ? ` · ${Math.round(r.left)} h left` : ''}${r.booked && !r.proof ? ` · booked ${short(r.booked)} ${time(r.booked)}` : ''}</span></span>
+    ${r.st}${r.proof && !r.proof.ok ? `<button class="btn solid small" data-act="accept" data-id="${r.p.id}">Accept record</button>` : ''}</li>`).join('')}</ul>`;
+}
+function activity() {
+  const a = [];
+  if (S.proof.opal && !S.proof.opal.ok) a.push(['The Reed family', 'Uploaded Opal’s vet record', 'just now']);
+  if (S.stage === 'before') a.push(['The Reed family', 'Ticked 5 of 9 on the go-home checklist', 'yesterday'], ['The Hale family', 'Booked Onyx’s vet visit for Dec 25', '2 days ago']);
+  if (S.stage === 'vet') a.push(['The Reed family', 'Booked Opal’s vet visit', 'Dec 23'], ['The Hale family', 'Shared 3 photos with you', 'Dec 23']);
+  if (S.stage === 'weeks') a.push(['The Reed family', 'Added “Home!” to the baby book (shared with you)', 'Dec 23'], ['The Hale family', 'Activated the insurance trial', 'Dec 26']);
+  if (S.stage === 'later') a.push(['The Reed family', 'Marked “First beach day” OK to post', 'Jun 2'], ['The Hale family', 'Told you about Onyx’s new address', 'Sep 14']);
+  return a;
+}
+function admVet() {
+  const vr = vetRows();
+  return `<p class="crumb"><a href="#a/today">Today</a> ›</p><h1>Vet visits</h1>
+    <p class="muted">Counted as 72 hours from pickup (placeholder until the contract wording is confirmed). Reminders count back from each deadline.</p>
+    <section class="card">${vr.length ? vetList(vr) : '<p class="muted">None running.</p>'}</section>`;
+}
+function admFamilies() {
+  const keys = Object.keys(FAMILIES).filter((k) => !S.deleted[k]);
+  return `<span class="eyebrow">Family portal</span><h1>Families</h1>
+    <section class="card"><ul class="list">${keys.map((k) => {
+      const f = FAMILIES[k], p = PUPS.find((x) => x.id === f.pup);
+      const last = S.lastActive[k];
+      const dueDel = last && (S.now - last) > 335 * DAY && !S.keep[k];
+      const st = !S.signedIn[k] ? '<span class="st warn">Invite not accepted</span>' : dueDel ? '<span class="st warn">Deletion due</span>' : S.keep[k] ? '<span class="st">Kept</span>' : '<span class="st ok">Active</span>';
+      return `<li><span class="grow"><a class="rowlink" href="#a/fam/${k}"><b>${f.name}</b></a><br><span class="small muted">${p ? `${p.name} · Gem litter` : esc(f.note)} · ${last ? `last active ${short(last)}${last.getFullYear() !== S.now.getFullYear() ? ' ' + last.getFullYear() : ''}` : 'never signed in'}</span></span>${st}</li>`;
+    }).join('')}</ul></section>
+    <p class="small muted">Accounts are deleted after 12 months with no activity (or 90 days after pickup if never used), with warnings at 30 and 7 days. Sale records and reminder logs are kept for the guarantee period.</p>`;
+}
+function admFamily(k) {
+  const f = FAMILIES[k];
+  if (!f || S.deleted[k]) return `<p class="crumb"><a href="#a/families">Families</a> ›</p><h1>Gone</h1><p class="muted">This family was deleted. <button class="btn text small" data-act="undel" data-id="${k}">Undo</button></p>`;
+  const p = PUPS.find((x) => x.id === f.pup);
+  const pick = p && S.pickup[p.id];
+  const dl = pick && vetDeadline(pick);
+  const log = [];
+  if (p && S.stage !== 'before') {
+    log.push([D(2026, 12, 18, 9), 'Book your vet visit', S.bounced[k] ? 'Bounced' : 'Delivered']);
+    log.push([pick, 'Pickup: your 72-hour deadline', S.bounced[k] ? 'Bounced' : 'Delivered']);
+    if (S.now > new Date(dl - 24 * HOUR)) log.push([new Date(dl - 24 * HOUR), '24 hours left', S.bounced[k] ? 'Bounced' : 'Delivered']);
+  } else if (p) log.push([D(2026, 12, 18, 9), 'Book your vet visit', 'Delivered']);
+  const pr = p && S.proof[p.id];
+  return `<p class="crumb"><a href="#a/families">Families</a> ›</p><div class="between"><h1>${f.name}</h1>${S.bounced[k] ? '<span class="st bad">Email bounced</span>' : ''}</div>
+    ${S.bounced[k] ? `<section class="card" style="border-color:var(--bad)"><p><b>Reminder emails aren’t reaching them.</b> ${esc(S.bounced[k])}. Text or call them, and check the address.</p></section>` : ''}
+    <div class="cols"><div class="stack" style="gap:16px">
+    ${p ? `<section class="card"><h2>${p.name} · Gem litter, ${p.collar} collar</h2>
+      <label>Picked up<input type="datetime-local" value="${pick ? toLocalInput(pick) : ''}" data-act="pickuptime" data-id="${p.id}"></label>
+      ${pick ? `<p>Vet deadline: <b>${long(dl)}, ${time(dl)}</b></p>` : '<p class="muted">Not picked up yet. <button class="btn line small" data-act="pickup" data-id="' + p.id + '">Mark picked up now</button></p>'}
+      <p>Vet record: ${pr ? `${esc(pr.file)} · ${pr.ok ? '<span class="st ok">Accepted</span>' : `<button class="btn solid small" data-act="accept" data-id="${p.id}">Accept record</button>`}` : '<span class="muted">none yet</span>'}</p>
+    </section>
+    <section class="card"><h2>Reminder log</h2><div class="tablewrap"><table><thead><tr><th>Sent</th><th>Email</th><th>Result</th></tr></thead><tbody>${log.map((l) => `<tr><td>${short(l[0])}, ${time(l[0])}</td><td>${l[1]}</td><td>${l[2] === 'Bounced' ? '<span class="st bad">Bounced</span>' : '<span class="st ok">Delivered</span>'}</td></tr>`).join('')}</tbody></table></div></section>
+    <section class="card"><h2>Programs</h2><ul class="list">${S.programs.filter((x) => x.type !== 'Product').map((x) => {
+      const t = TASKS.find((tt) => tt.prog === x.id && tt.id !== 't-food' && tt.id !== 't-adult');
+      const done = k === 'reed' ? (t && taskState(t).done) : S.stage === 'weeks' || S.stage === 'later';
+      return `<li><span class="grow">${x.name}</span>${done ? '<span class="st ok">Done</span>' : '<span class="st">Not started</span>'}</li>`; }).join('')}</ul></section>` : `<section class="card"><p class="muted">${esc(f.note)}. Puppy records from before the portal aren’t shown in this prototype.</p></section>`}
+    </div><div class="stack" style="gap:16px">
+    <section class="card"><h2>Family</h2><dl class="kv"><dt>Emails</dt><dd>${f.emails.map(esc).join('<br>')}</dd><dt>Signed in</dt><dd>${S.signedIn[k] ? 'Yes' : 'Not yet'}</dd><dt>Last active</dt><dd>${S.lastActive[k] ? withYear(S.lastActive[k]) : '—'}</dd></dl>
+      <div class="row">${S.signedIn[k] ? '' : '<button class="btn line small" data-act="toast" data-msg="Invite sent again">Resend invite</button>'}<button class="btn line small" data-act="toast" data-msg="Edit family (not in the prototype)">Edit</button></div></section>
+    <section class="card"><h2>Keeping their data</h2>
+      <label class="check"><input type="checkbox" data-act="keep" data-id="${k}" ${S.keep[k] ? 'checked' : ''}>Keep this family (pauses deletion for inactivity)</label>
+      <p class="small muted">Without Keep: deleted 12 months after last activity, with warnings at 30 and 7 days.</p>
+      <div class="row"><button class="btn line small danger" data-act="del" data-id="${k}">Delete (undo for 30 days)</button><button class="btn text small" data-act="toast" data-msg="Erase: final, for a family’s request. Asks to confirm.">Erase on request</button></div></section>
+    </div></div>`;
+}
+function admDrafts() {
+  return `<span class="eyebrow">From KennelOS</span><h1>Baby book drafts</h1>
+    <p class="muted">Milestones and weights from KennelOS. Families never see a draft. Write it up in your words, or dismiss it.</p>
+    ${S.drafts.length ? S.drafts.map((d) => `<section class="card"><div class="between"><div><span class="eyebrow">${d.kind} · ${short(d.date)} · ${d.pup}</span><h2>${esc(d.text)}</h2></div></div>
+      ${S.editing === d.id ? `<form class="stack" data-act="publishdraft" data-id="${d.id}"><label>Title<input name="title" value="${esc(d.text)}" required></label><label>Story<textarea name="body" placeholder="What was it like?"></textarea></label><label>Photo<input type="file" accept="image/*"></label>
+        <div class="row"><button class="btn solid">Add to ${d.pup === 'Gem litter' ? 'the litter’s' : 'Opal’s'} baby book</button><button type="button" class="btn text small" data-act="canceldraft">Cancel</button></div></form>`
+      : `<div class="row"><button class="btn line small" data-act="editdraft" data-id="${d.id}">Write entry</button><button class="btn text small" data-act="dismiss" data-id="${d.id}">Dismiss</button></div>`}</section>`).join('')
+      : '<section class="card band"><p><span class="st ok">No drafts</span> New KennelOS milestones will appear here.</p></section>'}`;
+}
+function admContent() {
+  return `<span class="eyebrow">Family portal</span><h1>Content</h1>
+    <section class="card"><div class="between"><h2>Handbook chapters</h2><button class="btn line small" data-act="toast" data-msg="New chapter editor (not in the prototype)">Add chapter</button></div>
+      <ul class="list">${S.chapters.map((c, i) => `<li><span class="grow"><b>${esc(c.t)}</b>${c.prog ? `<br><span class="small muted">Links: ${S.programs.find((p) => p.id === c.prog).name}</span>` : ''}</span>
+        <button class="btn text small" data-act="up" data-i="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Move ${esc(c.t)} up">↑</button>
+        <button class="btn text small" data-act="down" data-i="${i}" ${i === S.chapters.length - 1 ? 'disabled' : ''} aria-label="Move ${esc(c.t)} down">↓</button>
+        <label class="check small"><input type="checkbox" data-act="chon" data-i="${i}" ${c.on ? 'checked' : ''}>On</label></li>`).join('')}</ul></section>
+    <section class="card"><div class="between"><h2>Programs and links</h2><button class="btn line small" data-act="toast" data-msg="New program (not in the prototype)">Add</button></div>
+      <div class="tablewrap"><table><thead><tr><th>Program</th><th>Shows on</th><th>Family must</th><th>On</th></tr></thead><tbody>
+      ${S.programs.map((p, i) => `<tr><td><b>${p.name}</b><br><span class="small muted">${p.type}</span></td><td>${p.where}</td><td>${p.step}</td><td><input type="checkbox" aria-label="${p.name} on" data-act="progon" data-i="${i}" ${p.on ? 'checked' : ''} style="width:20px;min-height:0"></td></tr>`).join('')}</tbody></table></div>
+      <p class="small muted">Link and code changes here update every page and email at once.</p></section>
+    <section class="card"><h2>Checklist, timeline and emails</h2><ul class="list">
+      <li><span class="grow"><b>Go-home checklist</b><br><span class="small muted">${CHECKLIST.length} items</span></span><button class="btn line small" data-act="toast" data-msg="Checklist editor (not in the prototype)">Edit</button></li>
+      <li><span class="grow"><b>First-year timeline</b><br><span class="small muted">${TASKS.length} tasks, dated from birth or pickup</span></span><button class="btn line small" data-act="toast" data-msg="Timeline editor (not in the prototype)">Edit</button></li>
+      <li><span class="grow"><b>Email wording</b><br><span class="small muted">Vet reminders, birthdays, milestones, retention warnings</span></span><button class="btn line small" data-act="toast" data-msg="Email editor (not in the prototype)">Edit</button></li>
+    </ul></section>`;
+}
+function admPage(route) {
+  const [r, arg] = route.split('/');
+  const c = counts();
+  const pages = { today: admToday, vet: admVet, families: admFamilies, fam: () => admFamily(arg), drafts: admDrafts, content: admContent };
+  const nav = [['today', 'Today', 'today', c.proofs.length + c.bounced.length || ''], ['families', 'Families', 'people', ''], ['drafts', 'Drafts', 'draft', c.drafts || ''], ['content', 'Content', 'pages', '']];
+  const cur = r === 'fam' ? 'families' : r === 'vet' ? 'today' : (pages[r] ? r : 'today');
+  const body = (pages[r] || admToday)();
+  return `<div class="adm">${header('Site Manager · Family portal')}<div class="shell">
+    <aside aria-label="Family portal">${nav.map(([k, l, ic, n]) => `<a href="#a/${k}" ${k === cur ? 'aria-current="page"' : ''}>${icon(ic)}${l}${n ? `<span class="cnt">${n}</span>` : ''}</a>`).join('')}</aside>
+    <main id="main">${body}</main></div>
+    <nav class="tabs" aria-label="Family portal"><div class="in">${nav.map(([k, l, ic]) => `<a href="#a/${k}" ${k === cur ? 'aria-current="page"' : ''}>${icon(ic)}${l}</a>`).join('')}</div></nav></div>`;
+}
+
+// ---------- Render and events ----------
+const app = document.getElementById('app');
+function route() { const h = location.hash.slice(1); const [v, ...rest] = h.split('/'); return { v: v === 'a' ? 'admin' : 'family', r: rest.join('/') || (v === 'a' ? 'today' : 'home') }; }
+function render(keepScroll) {
+  const { v, r } = route();
+  S.view = v;
+  const y = window.scrollY;
+  app.innerHTML = v === 'admin' ? admPage(r) : famPage(r);
+  document.querySelectorAll('#pv button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.view === S.view));
+  document.querySelectorAll('#ps button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.stage === S.stage));
+  document.querySelectorAll('#pt button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.theme === S.theme));
+  if (keepScroll) window.scrollTo(0, y);
+}
+let toastT;
+function toast(msg) { document.querySelector('.toast')?.remove(); const t = document.createElement('div'); t.className = 'toast'; t.role = 'status'; t.textContent = msg; document.body.appendChild(t); clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2600); }
+const dlg = document.getElementById('dlg'), dlgIn = document.getElementById('dlgIn');
+function openDialog(html) { dlgIn.innerHTML = html; dlg.showModal(); }
+
+document.querySelector('.proto').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.view) { location.hash = b.dataset.view === 'admin' ? '#a/today' : '#f/home'; return; }
+  if (b.dataset.stage) { S.stage = b.dataset.stage; reset(); render(); window.scrollTo(0, 0); }
+  if (b.dataset.theme) { S.theme = b.dataset.theme; if (S.theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = S.theme; render(true); }
+});
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act]'); if (!el || el.closest('.proto')) return;
+  const a = el.dataset.act, id = el.dataset.id;
+  if (el.tagName === 'INPUT' || el.tagName === 'SELECT') return;
+  if (a === 'go') { e.preventDefault(); const p = S.programs.find((x) => x.id === el.dataset.prog); toast(`Opens ${p ? p.name : 'the link'} in a new tab (click counted)`); return; }
+  if (a === 'toast') { e.preventDefault(); toast(el.dataset.msg); return; }
+  if (a === 'done') { S.taskDone[id] = true; render(true); toast('Marked done. Reminders for this step stop.'); return; }
+  if (a === 'book') { openDialog(`<h2>When is Opal’s vet visit?</h2><form class="stack" method="dialog" data-act="booksave"><label>Date and time<input type="datetime-local" name="at" required value="${toLocalInput(S.booked.opal || D(2026, 12, 24, 10, 30))}"></label><label>Vet (optional)<input name="vet" placeholder="Clinic name"></label><div class="row"><button class="btn solid">Save</button><button type="button" class="btn text small" data-act="closedlg">Cancel</button></div></form>`); return; }
+  if (a === 'closedlg') { dlg.close(); return; }
+  if (a === 'account') { openDialog(`<h2>Your account</h2><dl class="kv"><dt>Signed in</dt><dd>sam.reed@example.com</dd><dt>Also</dt><dd>jo.reed@example.com</dd></dl>
+      <fieldset class="stack"><legend class="eyebrow">Emails</legend><label class="check"><input type="checkbox" checked disabled>Vet and go-home reminders (always on: they’re about your contract)</label><label class="check"><input type="checkbox" checked>Opal’s birthday</label><label class="check"><input type="checkbox" checked>Monthly “what’s next” tips</label></fieldset>
+      <div class="stack"><button class="btn line" data-act="toast" data-msg="A zip of your photos and entries is on its way">Download everything</button><button class="btn line" data-act="toast" data-msg="Signed out">Sign out</button><button class="btn text small" data-act="toast" data-msg="Asks to confirm, then deletes your account (A-K keeps the sale records the contract needs)">Delete our account</button></div>
+      <p class="small muted">Accounts with no activity for 12 months are deleted, after two warning emails with a download link.</p><button class="btn text small" data-act="closedlg">Close</button>`); return; }
+  if (a === 'account-admin') { toast('The manage app’s own menu'); return; }
+  if (a === 'openbook') { S.bookOpen = true; if (route().r !== 'book') { location.hash = '#f/book'; } else render(true); e.preventDefault(); return; }
+  if (a === 'closebook') { S.bookOpen = false; render(true); return; }
+  if (a === 'filter') { S.bookFilter = el.dataset.f; render(true); return; }
+  if (a === 'pickup') { S.pickup[id] = new Date(Math.max(S.now, LITTER.goHome - 0)); if (S.stage === 'before') S.pickup[id] = new Date(S.now); render(true); toast(`${PUPS.find((p) => p.id === id).name} picked up. The vet clock is running; reminder sent.`); return; }
+  if (a === 'accept') { S.proof[id].ok = true; render(true); toast('Accepted. The family sees it on their page.'); return; }
+  if (a === 'del') { S.deleted[id] = true; location.hash = '#a/fam/' + id; render(); toast('Deleted. Undo for 30 days.'); return; }
+  if (a === 'undel') { delete S.deleted[id]; render(); return; }
+  if (a === 'editdraft') { S.editing = id; render(true); return; }
+  if (a === 'canceldraft') { S.editing = null; render(true); return; }
+  if (a === 'dismiss') { S.drafts = S.drafts.filter((d) => d.id !== id); render(true); toast('Dismissed. It won’t come back on the next sync.'); return; }
+  if (a === 'up' || a === 'down') { const i = +el.dataset.i, j = a === 'up' ? i - 1 : i + 1; [S.chapters[i], S.chapters[j]] = [S.chapters[j], S.chapters[i]]; render(true); return; }
+});
+document.addEventListener('change', (e) => {
+  const el = e.target, a = el.dataset.act, id = el.dataset.id;
+  if (a === 'check') { S.check[id] = el.checked; render(true); }
+  if (a === 'proof' && el.files[0]) { S.proof.opal = { file: el.files[0].name, at: new Date(S.now), ok: false }; render(true); toast('Uploaded. A-K will check it; see the Breeder view.'); }
+  if (a === 'keep') { S.keep[id] = el.checked; render(true); }
+  if (a === 'pickuptime' && el.value) { S.pickup[id] = fromLocalInput(el.value); render(true); toast('Pickup time corrected. Deadline and reminders moved with it.'); }
+  if (a === 'chon') { S.chapters[+el.dataset.i].on = el.checked; render(true); }
+  if (a === 'progon') { S.programs[+el.dataset.i].on = el.checked; }
+});
+document.addEventListener('input', (e) => {
+  if (e.target.dataset.act === 'search') { S.q = e.target.value; const pos = e.target.selectionStart; render(true); const n = document.getElementById('hq'); n.focus(); n.setSelectionRange(pos, pos); }
+});
+document.addEventListener('submit', (e) => {
+  const f = e.target, a = f.dataset.act; if (!a) return;
+  e.preventDefault();
+  const fd = new FormData(f);
+  if (a === 'booksave') { S.booked.opal = fromLocalInput(fd.get('at')); S.taskDone['t-book'] = true; dlg.close(); render(true); toast('Booking saved. Thank you!'); }
+  if (a === 'addentry') { const [y, m, d] = String(fd.get('date')).split('-').map(Number); S.familyEntries.push({ id: 'f' + Date.now(), date: D(y, m, d), title: fd.get('title'), body: fd.get('body'), who: 'Reed family', vis: fd.get('vis') }); S.bookOpen = false; S.bookFilter = 'all'; render(true); toast('Added to Opal’s baby book'); }
+  if (a === 'publishdraft') { const d = S.drafts.find((x) => x.id === f.dataset.id); S.breederEntries.push({ id: 'b' + Date.now(), date: d.date, title: fd.get('title'), body: fd.get('body'), who: 'A-K' }); S.drafts = S.drafts.filter((x) => x.id !== d.id); S.editing = null; render(true); toast('Added to the baby book. Families see it now.'); }
+});
+window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
+reset();
+if (!location.hash) history.replaceState(null, '', '#f/home');
+render();
+})();
+</script>
+</body>
+</html>

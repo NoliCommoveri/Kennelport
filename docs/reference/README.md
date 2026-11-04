@@ -38,3 +38,17 @@ In `ak-sample.html`:
 artwork with its outer border removed (phones round icons themselves). The app's icon
 sizes in `worker/public/_kp/m/icon-*.png` are made from it; the maskable one keeps the
 art in Android's middle 80%.
+
+**`portal-prototype.html`** is a clickable prototype of the Puppy Parent Portal
+([`../Puppy_Parent_Portal_Plan.md`](../Puppy_Parent_Portal_Plan.md) section 7): the family
+pages and her manage-app screens, in the AK sample's Lawn scheme, light and dark. A bar at
+the top switches between the Family and Breeder views and four dates (before go-home, the
+vet window, weeks 1–8, the first birthday); everything is in memory and resets when
+the date changes. Open it straight from the file; it has its own `<html>` wrapper.
+
+- **Real:** the kennel name, the Gem litter, its birth date and go-home date, Willow, and
+  the puppies Opal, Onyx and Diamond.
+- **Made up:** every family and email, Boone (as in the AK sample), pickup and booking
+  times, the microchip, the food, the programs and their wording, the discount code,
+  health records, the weights and the baby book text. Photos are placeholders (this
+  repository is public).

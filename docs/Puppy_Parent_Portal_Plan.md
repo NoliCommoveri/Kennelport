@@ -77,7 +77,7 @@ KennelPort's own rule for linked sites (plan 5.3) makes KennelOS fields read-onl
 site is linked. **The portal's own tables use the opposite rule.** Every portal record is
 the portal's own; KennelOS only suggests. (The site's litters, puppies and dogs, which
 the portal points at, keep KennelPort's rule; nothing family-facing is stored on them,
-section 7.)
+section 8.)
 
 ### 3.1 How imported data behaves
 
@@ -143,7 +143,7 @@ Everything families see is content she edits in the manage app:
   added by the template and can't be removed.
 - **Kennel info, FAQ, upcoming litters.**
 - **Baby book:** her entries, photos and order; which family entries she reposts (with
-  their permission, section 7).
+  their permission, section 8).
 - **Families:** add, edit, resend invite, Keep (pauses retention deletion), delete.
 
 **Deleting is undoable** for 30 days (the same pattern as KennelPort's litters and
@@ -200,7 +200,7 @@ The revenue placements and the vet countdown, and nothing else:
   first-weeks timeline (AKC registration, insurance activation, vaccines, deworming),
   with each family's program status
 - Click tracking and the affiliate disclosure
-- Retention basics: invite expiry, the activity date, erase on request (section 8)
+- Retention basics: invite expiry, the activity date, erase on request (section 9)
 
 **Gate:** one litter run from invite to the vet visit with no fixes by hand.
 
@@ -227,7 +227,81 @@ retention warning has gone out correctly (send one to a test family first).
 **Fallback:** if a litter goes home before phase 1 is done, ship sign-in, My Puppy, the
 vet countdown and the program links on the go-home page alone.
 
-## 7. Data model
+## 7. Look and screens
+
+The look follows her site: the Lawn scheme of the AK sample (ivory ground, tuxedo ink,
+lawn-green accent, brass labels; Fraunces, Mulish and Pinyon Script) and the design
+direction's rules (`KennelPort_Design_Direction.md`). Mockups from Nov 4, 2026 set the
+starting point; the clickable prototype is
+[`reference/portal-prototype.html`](reference/portal-prototype.html).
+
+### 7.1 Style rules
+
+- **Corners square or barely rounded** (2–4px) on cards, photos, buttons and inputs.
+  Buttons are rectangles: one solid button for the main action on a screen, outlined or
+  text-with-arrow for the rest. No pills.
+- **Status is a word with a small mark** (Done, Next, Booked, Overdue), not a coloured
+  lozenge. Red means trouble (overdue, bounced, no proof near the deadline), never
+  "coming up".
+- **Script lettering once a page at most.** The kennel name in the header is set in the
+  display serif.
+- **Links look like text or the accent colour**, with a small arrow when they leave the
+  portal. No raw addresses.
+- **Light and dark**, following the device, like her site.
+- **Icons from one free set** (Lucide or Tabler), served from the site.
+- **Real photos** from her albums, one set per puppy. No stock photos.
+
+### 7.2 Family home: it changes with the puppy's stage
+
+One page, four states, worked out from the go-home date, pickup time and today:
+
+| Stage | Top of the page | Below it |
+|---|---|---|
+| **Before go-home** | "Opal comes home in 5 days", the pickup day and time | **Book your vet visit now** (with the deadline it will have), the go-home checklist, **What she's eating now** |
+| **Pickup to vet deadline** | The vet visit: hours left, the deadline's date and time, booked or not, **Upload vet record** (the page's one solid button) | Insurance activation and its deadline, the food, the next timeline tasks |
+| **Weeks 1–8 and on** | The next task or two ("Register Opal with AKC by Jan 22"), each with its link | A prompt to add to the baby book, the vet visit shown as done |
+| **Later** | Birthdays (littermates by call name, with permission), "a year ago today" from the baby book | Monthly milestone, the printable book (phase 3) |
+
+- **No generic welcome banner** pushing the puppy below the fold on a phone.
+- **No "Referral program" or "Affiliate deals" tiles,** and no shop page. Links sit inside
+  the checklist, timeline, food card and handbook.
+- **The food card names the exact food** (brand, formula, bag size, how much and how
+  often), not "the same food we send home".
+- **Insurance wording comes from the program** ("Activate Opal's free trial by Dec 28"),
+  never "Get a quote" or "peace of mind".
+- **The affiliate disclosure** sits at the foot of every page with program links.
+- **Bottom navigation: five tabs,** each with its own icon: Home, Timeline, Records, Baby
+  book, Handbook. Account (email choices, download everything, sign out) opens from the
+  header.
+
+### 7.3 Her screens in the manage app
+
+The portal's admin is a section of the manage app she already has, not a second app.
+
+- **Today** leads with what needs her, and shows only the items that are there:
+  - **Mark picked up** on any puppy going home today: the main action on the screen;
+  - vet proof to review, with **Accept**;
+  - emails that bounced (so she can text the family);
+  - invites not accepted;
+  - KennelOS drafts to review;
+  - families due for deletion in the next 30 days.
+  
+  Totals such as "62 families" are not on Today.
+- **Vet visits** list each placement with its status in words: Not booked, Booked, Record
+  uploaded, Accepted, and time left. Only the ones in trouble are red.
+- **Activity** shows actions (completed the checklist, uploaded a record, shared
+  photos), not page views. If page views are ever shown, the privacy page says so.
+- **Families:** each family's emails, puppy, pickup time (editable; the deadline
+  moves with it), vet proof, reminder log, program status, **Keep**, resend invite,
+  delete (undoable for 30 days) and erase.
+- **Drafts:** KennelOS milestones to turn into baby book entries, or dismiss.
+- **Content:** handbook chapters (order, on/off, edit), programs and where each appears,
+  checklist and timeline templates, email wording.
+- **Setup progress** shows only while something is unfinished.
+- **No free-form email to all families** in phase 1. If it is added, it is commercial
+  email and carries the unsubscribe link and mailing address (section 10).
+
+## 8. Data model
 
 New tables, all with `site_id` like the rest of KennelPort. Imported tables also carry
 `source`, `kennelos_id` and `edited_fields` (section 3.1).
@@ -257,7 +331,7 @@ dogs already have `remembered` and `died_on`), and
 **Migrations:** following `CLAUDE.md`, the branch that builds phase 1 adds one migration
 for all of this.
 
-## 8. Retention and deletion
+## 9. Retention and deletion
 
 Two kinds of data, kept on different clocks:
 
@@ -267,7 +341,7 @@ Two kinds of data, kept on different clocks:
   reminder log. She needs these for any health guarantee claim, so they are kept for
   the guarantee period, not deleted with the account.
 
-### 8.1 The rules
+### 9.1 The rules
 
 | What | When it goes |
 |---|---|
@@ -281,7 +355,7 @@ Two kinds of data, kept on different clocks:
 
 These numbers are a starting proposal for her to confirm (open question 9).
 
-### 8.2 What counts as activity
+### 9.2 What counts as activity
 
 `last_activity_at` updates on any portal visit by a signed-in family, any click on a
 link in a portal email, any upload, and **Keep my account**. It does not update when an
@@ -291,7 +365,7 @@ Note: a family that ignores a year of emails, birthday emails included, is delet
 the birthday emails stop with it. That is the intended trade: less data kept on families
 who have moved on.
 
-### 8.3 Before deleting
+### 9.3 Before deleting
 
 - **Warnings** at 30 and 7 days, each with:
   - **Keep my account**, which counts as activity;
@@ -303,7 +377,7 @@ who have moved on.
   automatically. She is asked in the manage app first and can Keep the family, or send
   gentler wording.
 
-### 8.4 What deletion does
+### 9.4 What deletion does
 
 - Deletes the family row's emails, preferences and sessions, and their entries,
   uploads and the R2 files behind them (through the existing photo purge, which waits
@@ -313,13 +387,13 @@ who have moved on.
   record stays as long as she uses the photo.
 - Sets `family` to null on clicks and program status rows.
 - Leaves the placement, health records, contract and email log until their own date
-  (8.1), with the family reduced to a name she can read.
+  (9.1), with the family reduced to a name she can read.
 - If the family came from KennelOS, writes a tombstone with the KennelOS ID only.
 
 The rules run in the existing daily cleanup (`cleanup.js`), each with a test, and are
 listed in its header comment with the others.
 
-## 9. Program rules, disclosure and email
+## 10. Program rules, disclosure and email
 
 - **Read each program's terms before building the placements.** Some restrict where
   links may appear. Amazon Associates, for example, bans affiliate links in emails and
@@ -338,7 +412,7 @@ listed in its header comment with the others.
 - **Deliverability:** Resend with her domain verified (SPF, DKIM, DMARC), already set up
   for KennelPort's sign-in codes.
 
-## 10. Measuring it
+## 11. Measuring it
 
 - **Before launch:** from her program dashboards, record what share of families enrolled
   in each program for her recent litters.
@@ -348,24 +422,24 @@ listed in its header comment with the others.
 - 3–4 litters is roughly 20–30 families, so only large changes will be clear. Keep
   measuring for the full first year.
 
-## 11. Risks and safeguards
+## 12. Risks and safeguards
 
 | Risk | Safeguard |
 |---|---|
 | A family misses the vet visit and says the portal never told them | Contract states the requirement; deadline counted exactly as the contract words it; booking reminder before pickup; reminder log with delivery results; bounce alerts (section 5) |
-| Birthday email to a family whose dog has died | Life status on every placement, `remembered` on her dogs; families can tell her from the portal; a status change stops all birthday emails at once; retention warnings held for deceased dogs (8.3) |
+| Birthday email to a family whose dog has died | Life status on every placement, `remembered` on her dogs; families can tell her from the portal; a status change stops all birthday emails at once; retention warnings held for deceased dogs (9.3) |
 | A KennelOS sync overwrites her edits or brings back something she deleted | Edited fields never overwritten; tombstones; tests for both (section 3.1) |
-| Deleting a family loses guarantee evidence | Sale records and reminder log on their own retention clock (section 8) |
-| Deleting a family loses photos she has reposted | Shared photos copied to her albums; consent records kept (8.4) |
+| Deleting a family loses guarantee evidence | Sale records and reminder log on their own retention clock (section 9) |
+| Deleting a family loses photos she has reposted | Shared photos copied to her albums; consent records kept (9.4) |
 | Family emails exposed | Encrypted at rest, never logged, deleted with the account |
 | The portal reads as an ad funnel and costs her trust | Handbook and records lead; links sit where they answer a need; no standalone shop page |
-| A program's link rules broken | Terms checked before building; direct links where redirects are banned (section 9) |
+| A program's link rules broken | Terms checked before building; direct links where redirects are banned (section 10) |
 | Reposting families' photos without permission | Explicit "OK to post" level, asked per photo, recorded |
 | Other families' details in banners | Call names only, with permission; never owner names or contact details |
 | Admin work falls on her | Every screen usable on her phone; adding a litter takes a few minutes; KennelOS import saves retyping |
 | Sign-in emails land in spam | Resend with her domain verified; the code works across devices and in-app email browsers |
 
-## 12. Before building
+## 13. Before building
 
 - [ ] Confirm whether her public site is (or will be) a KennelPort site; decides the
       address (section 2)
@@ -379,7 +453,7 @@ listed in its header comment with the others.
       portal needs added (families, emails, pickup dates, health records)
 - [ ] Reword KennelPort plan decision 20 (section 2)
 
-## 13. Open questions
+## 14. Open questions
 
 1. Is her public site a KennelPort site? A path on it or a subdomain?
 2. Which programs does she use, and do any give family-specific codes or certificates?
