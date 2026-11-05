@@ -61,16 +61,18 @@ const productPic = (snap, x, { cls = '', lazy = true } = {}) => (x.image_url && 
   ? `<img src="${attr(x.image_url)}" alt="${attr(x.name)}"${cls ? ` class="${cls}"` : ''}${lazy ? ' loading="lazy"' : ''}>`
   : img(snap, x.photo_id, { alt: x.name, cls, lazy }));
 
-// One badge: the logo, and its web address under it (badgeAddress), both linked
-// to the product's link when it has one. A transport service with no picture yet
-// shows its name in the logo's place, so it isn't left off its page; a code shows
-// under the address.
+// One badge: the logo, then its name and web address under it (badgeAddress), the
+// logo and address linked to the product's link when it has one. A transport
+// service with no picture yet shows its name in the logo's place (and not again
+// under it), so it isn't left off its page; a code shows under the address.
 function badgeItem(snap, x, { lazy = true, withCode = false, nameIfNoPic = false } = {}) {
-  const pic = productPic(snap, x, { lazy }) ?? (nameIfNoPic ? `<span class="badge-name">${esc(x.name)}</span>` : null);
+  const logo = productPic(snap, x, { lazy });
+  const pic = logo ?? (nameIfNoPic ? `<span class="badge-name">${esc(x.name)}</span>` : null);
   if (!pic) return '';
   const addr = badgeAddress(x);
+  const name = logo ? `<span class="badge-label">${esc(x.name)}</span>` : '';
   const code = withCode && x.code ? `<span class="badge-code">Use code <b>${esc(x.code)}</b></span>` : '';
-  return `<li>${x.link_url ? outLink(x.link_url, pic, 'badge-pic') : pic}${addr ? (x.link_url ? outLink(x.link_url, esc(addr), 'badge-addr') : `<span class="badge-addr">${esc(addr)}</span>`) : ''}${code}</li>`;
+  return `<li>${x.link_url ? outLink(x.link_url, pic, 'badge-pic') : pic}${name}${addr ? (x.link_url ? outLink(x.link_url, esc(addr), 'badge-addr') : `<span class="badge-addr">${esc(addr)}</span>`) : ''}${code}</li>`;
 }
 const badgeList = (items, cls = '') => {
   const html = items.filter(Boolean);

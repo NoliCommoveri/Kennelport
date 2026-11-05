@@ -385,11 +385,11 @@ accounts marked Show on website (the bundle's `transport` section: each product'
 `website` and `transport`, KennelOS-owned), or a hand-made product she ticks **This is a
 transport service**. They show as badges under her Transport words (or in their own band
 when she wrote none), headed `badges_heading` ("Transport we trust") with an optional
-`badges_note`: logo, web address under it, and the code; one with no picture shows its
+`badges_note`: logo, its name and web address under it, and the code; one with no picture shows its
 name in the logo's place. They are never on Recommended products.
 
-**Badges on more pages.** Every badge, Home's included, is the logo with its web address
-under it (`badgeAddress`: the product's `website_url`, else its link, as a bare host),
+**Badges on more pages.** Every badge, Home's included, is the logo with its name and web
+address under it (`badgeAddress`: the product's `website_url`, else its link, as a bare host),
 both linked to the referral link. Beside **Show as a badge on my home page**, a product has
 **Also show its badge on** (`badge_places`, `BADGE_PLACES`): Getting your pup home,
 Puppies, every litter, every puppy, Extras, The steps, Waitlist, Our story, Contact; at most

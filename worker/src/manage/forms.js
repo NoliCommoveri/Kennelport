@@ -101,9 +101,9 @@ const LABELS = {
     image_url: ['The brand\'s picture', 'Filled in from the embed code, and shown straight from the brand, as their referral program intends. Only some brands\' addresses can be shown this way; for others, the picture is copied into Picture above. Empty it to use your own picture instead.'],
     link_url: ['Your referral link', 'Where tapping it goes, in a new tab.'], link_label: ['Button wording', 'Leave empty for "Shop now".'],
     code: ['Discount or referral code', 'For example "AKBOSTON10". Shown as "Use code …".'], code_note: ['Line after the code', 'For example "for 10% off your first order".'],
-    home_badge: ['Show as a badge on my home page', 'Its picture shows right under your banner, with its web address under it, linked to your referral link. Up to 2; they sit side by side, on phones too.'],
+    home_badge: ['Show as a badge on my home page', 'Its picture shows right under your banner, with its name and web address under it, linked to your referral link. Up to 2; they sit side by side, on phones too.'],
     website_url: ['Its website', 'Shown under its badge as a short address, like "skynanny.com". Leave empty to show your referral link\'s.'],
-    badge_places: ['Also show its badge on', 'Its picture and web address, in a "We recommend" row on each page you tick. Up to 2 per page.'],
+    badge_places: ['Also show its badge on', 'Its picture, name and web address, in a "We recommend" row on each page you tick. Up to 2 per page.'],
     transport: ['This is a transport service', 'A flight nanny or ground transporter: it shows as a badge on your Getting your pup home page, and not on Recommended products.'],
   },
   pickup: {

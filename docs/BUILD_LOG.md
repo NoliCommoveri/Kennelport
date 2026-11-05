@@ -1501,12 +1501,12 @@ answers to plan 15.
 
 - New page **Getting your pup home** at `/pickup` (plan 3.5): her Pickup, Transport and Travel
   day sections (Site Manager › Pages), shown once one has words; her transport services as
-  badges under her Transport words (logo, web address, code; a name tile without a picture).
+  badges under her Transport words (logo, name, web address, code; a name tile without a picture).
   No prototype screen for it: built from the template's own parts.
 - Products: `transport` (from a KennelOS transport account, or ticked by her; never on
   Recommended products), `website_url` (the address under its badge), `badge_places` (pages
-  besides Home that show its badge, two per page). Every badge now shows its web address under
-  the logo. Spots per page in `render/pages.js` `badgeRow`. Migration 0026.
+  besides Home that show its badge, two per page). Every badge now shows its name and web
+  address under the logo. Spots per page in `render/pages.js` `badgeRow`. Migration 0026.
 - KennelOS bundle: new section `transport` (a product's `website`, `transport`), both
   KennelOS-owned.
 - Tests: `pickup.test.js` (new); `kennelos`, `products` updated. Checked rendered at 390px and

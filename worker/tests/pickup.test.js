@@ -62,9 +62,9 @@ test('the page shows once she has words; transport services are badges there, no
   assert.match(html, /Picking up your puppy<\/h2>[\s\S]*Pickup is at our home on a Saturday\.<\/p><p>Allow an hour\.<\/p>/);
   assert.match(html, /id="transport"[\s\S]*We work with a flight nanny[\s\S]*Who we fly with/, 'the services sit under her transport words');
   assert.ok(!/id="travel"/.test(html), 'a section with no words is left out');
-  assert.match(html, /<a class="badge-addr" href="https:\/\/skynanny\.example\/r\/ak"[^>]*>skynanny\.example<\/a>/, 'the address under the logo, from its website');
+  assert.match(html, /<span class="badge-label">Sky Nanny<\/span><a class="badge-addr" href="https:\/\/skynanny\.example\/r\/ak"[^>]*>skynanny\.example<\/a>/, 'its name, then the address from its website, under the logo');
   assert.match(html, /Use code <b>AK5<\/b>/);
-  assert.match(html, /<span class="badge-name">Pup Van<\/span><span class="badge-addr">pupvan\.example<\/span>/, 'no picture: its name in the logo\'s place');
+  assert.match(html, /<span class="badge-name">Pup Van<\/span><span class="badge-addr">pupvan\.example<\/span>/, 'no picture: its name in the logo\'s place, not twice');
   const rec = await b.page('/recommended');
   if (rec.status === 200) assert.ok(!/Sky Nanny|Pup Van/.test(await rec.text()), 'never on Recommended products');
   const menu = await (await b.page('/')).text();
@@ -83,7 +83,7 @@ test('badges on other pages: the pages she ticks, a picture needed, two per page
   await b.post('/publish');
   const extras = await (await b.page('/extras')).text();
   assert.match(extras, /class="badges badges-row"[^>]*><span class="eyebrow">We recommend<\/span><ul class="badges-1"><li><a class="badge-pic" href="https:\/\/kong\.example\/r"/);
-  assert.match(extras, /<a class="badge-addr" href="https:\/\/kong\.example\/r"[^>]*>kong\.example<\/a>/);
+  assert.match(extras, /<span class="badge-label">Kong<\/span><a class="badge-addr" href="https:\/\/kong\.example\/r"[^>]*>kong\.example<\/a>/);
   const home = await (await b.page('/')).text();
   assert.ok(!home.includes('kong.example'), 'Home only with its own switch');
   assert.ok(productId(b, 'Kong'));
