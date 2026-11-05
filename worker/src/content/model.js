@@ -400,7 +400,7 @@ export const PAGES = {
   privacy:        { path: '/privacy', group: null, label: 'Privacy', canHide: false, fields: {} },
 };
 
-// A page the owner adds (docs/Site_Builder_Plan.md, step 2; content/blocks.js): its
+// A page the owner adds (docs/Site_Builder_Plan.md, step 3; content/blocks.js): its
 // key is x-<name>, so it never meets a page of the code's. The breeder switches it
 // on or off, names it in the menu and words its heading, as for any page; its
 // blocks are the owner's. A block the owner adds to any page has the same words,

@@ -1,11 +1,14 @@
 # Site builder: plan
 
-This is the plan from the owner's talk on 2026-11-05. Step 1 is built: the owner's admin
-view with Pups, Dogs, Wording, Formats, From KennelOS and Timing for each site
-(`content/rules.js`, `manage/builder.js`, `admin.js`). Step 2 has begun: every page but Privacy
-is a list of blocks (`content/blocks.js`; Pages in the admin view), each data block with its
-records and what its cards show, and each page drawn exactly as before until the owner
-changes it; the owner adds pages, and the breeder switches and words what the owner adds. The rest of step 2 is below (Building it, in steps); steps 3 to 5 aren't built yet.
+This is the plan from the owner's talk on 2026-11-05, with her additions of the same day
+(decisions 16 to 19). Step 1 is built: the owner's admin view with Pups, Dogs, Wording,
+Formats, From KennelOS and Timing for each site (`content/rules.js`, `manage/builder.js`,
+`admin.js`). Step 2, the breeder's instructions, isn't built yet. Step 3 has begun: every
+page but Privacy is a list of blocks (`content/blocks.js`; Pages in the admin view), each
+data block with its records and what its cards show, and each page drawn exactly as
+before until the owner changes it; the owner adds pages, and the breeder switches and
+words what the owner adds. The rest of step 3 is below (Building it, in steps); steps 4
+to 7 aren't built yet.
 
 Today a site's pages, menu, sections, and the rules for how KennelOS data shows are
 written into the code. Changing one means a code change, for every site at once. This
@@ -53,13 +56,37 @@ switches.
     data lands on the site, and the contact and review forms. Each starts as today's
     behaviour (decision 14).
 
+Added by the owner on 2026-11-05:
+
+16. **The editor limits the owner only for function, never for looks.** It doesn't
+    narrow what she can choose just to keep a site tasteful; that's her call. A limit
+    stays only where something would break or stop working: text a visitor can't read,
+    a link that goes nowhere, a page too slow to load, a file the site can't serve
+    safely. A choice that is just unusual is allowed. A choice that is risky but breaks
+    nothing (a slow page) gets a warning and is still allowed.
+17. **The owner adds her own blocks to any page:** buttons, banners, dividers, spacers,
+    collages, photos, videos, and photos with text over them (The owner's own blocks,
+    below). Colours come only from the template's colours; fonts come from a font
+    library.
+18. **What the breeder can do with the owner's buttons:** reword a button, switch it
+    off, change an outside link, and change the phone number or email address it uses.
+    She can't add buttons. A button that links to a place on the site is the owner's:
+    the breeder can reword it or switch it off, but can't change where it goes.
+19. **The owner writes all of the breeder's instructions.** Every help line, hint,
+    label, empty-screen message and explanation the breeder reads in the Site Manager
+    is wording the owner sets, not text fixed in the code. Today's wording is the
+    default (decision 14). This is the owner's top priority among these additions.
+
 ## Who controls what
 
 | | The owner (per site, or in a template) | The breeder (Site Manager) |
 |---|---|---|
 | **Pages** | which pages exist, including new ones (a Dams page, a Sires page); their place and order in the menu | turn a page on or off; rename its menu item; rename its address |
 | **Menu** | groups, their names and order; which items are in each, in what order; outside links | — |
-| **Home and page blocks** | which blocks a page has, and their order | turn any block on or off; choose the Home collage layout and its photos |
+| **Home and page blocks** | which blocks a page has, and their order; adding her own blocks (decision 17); each block's background, padding, text size and fonts | turn any block on or off; choose the Home collage layout and its photos |
+| **Buttons the owner adds** | type, colour, link, wording | reword; switch off; change an outside link, phone or email (decision 18) |
+| **Fonts** | the site's fonts and any block's, from the library | — |
+| **The breeder's instructions** | all of it (decision 19) | — |
 | **FAQ questions and badges** | which pages *can* show them, and where on the page they sit | which of those pages *do* show each one |
 | **Data sections** | which records each section shows (filters), their order, the card style | — |
 | **Display rules** | how every value from KennelOS reads and behaves (below) | hide prices across the whole site |
@@ -143,10 +170,11 @@ portal plan's decision (its section 1), not this one.
   dogs of both sexes, and Available and Upcoming litters only with such litters. An item
   can be set to **show only when the items before it hide**, which keeps today's
   Puppies item, shown only when neither Available nor Upcoming litters is.
-- **Built from the prototypes.** Blocks are drawn only from the components in
+- **Built in the prototypes' style.** Blocks are drawn from the components in
   `docs/reference/`: bands, headings, photo and text, facts, steps, highlight rows, the
-  collage, sliders, cards and the call-to-action band. This keeps every site in the
-  owner's look. There is no free-form layout.
+  collage, sliders, cards and the call-to-action band, and the owner's own blocks
+  (below). A page is a stack of blocks in order. The owner's choices are limited only
+  for function (decision 16).
 
 **FAQ and badge spots** (built for today's pages): each page's FAQ spot and badge row
 are blocks keyed by today's places (`model.js` `FAQ_PLACES`, `BADGE_PLACES`), so the
@@ -338,6 +366,84 @@ fixed unless the owner asks.
   A renamed `/dogs` list page leaves profiles at `/dogs/<name>`.
 - **A page the owner removes** answers "not found" at its address; nothing redirects.
 
+### The owner's own blocks
+
+Decisions 16 to 18. She can put each one on any page, anywhere in its block list, as
+many times as she likes.
+
+| Block | The owner sets | The breeder can |
+|---|---|---|
+| **Button** | type: small, medium or large; colour (template colours); where it links; wording; alignment | reword; switch off; change an outside link, phone or email |
+| **Banner** | a full-width strip across the page: heading, a line, one or more buttons; its colour | reword it and its buttons; switch off; change outside links, phone or email |
+| **Divider** | style (thin line, brass rule, the scheme's ornament); colour; width | switch off |
+| **Spacer** | height: very small, small, medium, large | — |
+| **Collage** | the same layouts, frames and "which part to keep" as Home's collage (`COLLAGE_LAYOUTS` in `content/model.js`); its photos | switch off; change photos if the owner allows it |
+| **Photo** | photo, shape (wide, tall, square, full width), which part to keep, optional caption | switch off; change photo and caption if the owner allows it |
+| **Video** | a video from the approved embed list, click to load (plan 3.3) | switch off; change the video if the owner allows it |
+| **Text over a photo** | photo; heading, line and optional button over it; where the text sits (top, middle or bottom; left, centre or right); a shade behind the text | reword; switch off; change the photo if the owner allows it |
+
+**Where a button can link:**
+- a page on the site, or a place on a page;
+- a dog, litter or puppy;
+- the waitlist, family login or contact form;
+- an outside site (opens in a new tab);
+- a phone number (call), a text message, or an email address. These start as the
+  kennel's phone and email from Kennel details and follow them when they change,
+  unless a different number or address is typed in for that button.
+
+These checks are functional (decision 16):
+- A button whose page is switched off or deleted, or whose dog or litter has left the
+  site, hides itself instead of going nowhere. The Site Manager says it's hidden and why.
+- A phone number or email address has to look like one.
+
+**Settings every block gets:**
+- **Background:** none, or one of the template's colours.
+- **Padding** around the content: none, small, medium, large. Top and bottom can
+  differ from the sides.
+- **Text size:** very small, small, medium, large. Medium is today's size.
+- **Fonts:** the site's fonts by default, or any font from the library, for headings
+  and body text.
+
+### Template colours
+
+- The colours to choose from are the scheme's own: page background, surface, band,
+  accent, brass, ink, the footer colours and the rest in `_kp/t/ak/scheme-*.css`.
+- Each choice is stored by its colour's name ("accent"), not its value, so it follows
+  the light and dark versions and changes when the scheme changes.
+- Readability is functional (decision 16), so:
+  - text and buttons on a coloured background use the scheme's matching ink
+    automatically (at least 4.5:1 contrast, plan 3.13);
+  - the owner can pick a different text colour, but if the pair fails the contrast
+    check in light or dark, the editor shows that and won't save it;
+  - text over a photo gets a shade. She chooses how dark, down to the lightest shade
+    that still reads.
+
+### Font library
+
+- Open-licence fonts, served from the site like today's (`/_kp/fonts/`), so no outside
+  font service sees visitors. The scheme's fonts are the default.
+- The owner picks each site's heading, body and script fonts, and any block's fonts.
+  The preview shows each font in the site's own wording.
+- The only limit is speed: every extra font is another file for visitors to load. The
+  editor warns when a page uses more than a few, and still allows it (decision 16).
+
+### The breeder's instructions
+
+Decision 19, the owner's first ask among the additions.
+
+- All the wording the breeder sees in the Site Manager goes in one list the owner
+  edits: help lines, field hints, labels, button wording, empty-screen messages,
+  confirmations, errors that tell her what to do, and each screen's instructions.
+- It's set once for every site, and can be overridden per template and per site.
+  Today's wording is the default.
+- The list is grouped by screen, and each item shows where it appears. Wording can
+  include the breeder's names (her kennel name, a dog's name) where the screen has them.
+- **From now on, new breeder-facing text goes in that list, not only in the code**
+  (`CLAUDE.md`). Until the list exists, each screen's wording is kept in one place and
+  noted in the build log, so it's easy to move later.
+- Left out of the list: the owner's own admin screens, and messages about KennelPort
+  itself failing (a lost connection).
+
 ## The family portal (in the portal template)
 
 The family portal (`docs/Puppy_Parent_Portal_Plan.md`) is on for one breeder's site,
@@ -432,7 +538,10 @@ Each step is its own branch and can be released on its own.
    tools per site: the pup, registration, price and date rules and the timing rules
    (built); then the dog rules, the fixed wording, the formats, and how KennelOS data
    lands. This is the smallest step, and the first one the owner would use.
-2. **Pages, blocks and the menu as settings.** Today's site becomes the **Website** template.
+2. **The breeder's instructions** (decision 19): every line of wording she reads in the
+   Site Manager in one list the owner edits, set for every site and overridable per
+   template and per site. It's small and it's the owner's first ask, so it goes next.
+3. **Pages, blocks and the menu as settings.** Today's site becomes the **Website** template.
    Add new pages and data blocks (Dams and Sires), the menu editor, and the breeder's
    address renaming with redirects. FAQ and badge places become block settings. Each
    block gets its fixed counts as settings and what its cards show; each profile page,
@@ -449,11 +558,14 @@ Each step is its own branch and can be released on its own.
    6. FAQ and badge spots as block settings, on new pages too;
    7. what each profile page shows;
    8. the contact and review forms' fields.
-3. **Templates.** Save as template, Apply, Reset to template.
-4. **The family portal's build:** the **Website and family portal** template; the
+4. **The owner's own blocks and styling** (decisions 16 to 18): buttons, banners and
+   their links; dividers, spacers, collages, photos, videos, text over a photo; every
+   block's background, padding, text size and fonts; template colours; the font library.
+5. **Templates.** Save as template, Apply, Reset to template.
+6. **The family portal's build:** the **Website and family portal** template; the
    portal's timing and display rules; then moving its family and breeder components,
    and what each of its cards shows.
-5. **After the KennelOS review:** the new raw fields, as rule and filter inputs, for the
+7. **After the KennelOS review:** the new raw fields, as rule and filter inputs, for the
    website and the portal's feed.
 
 The editor screens follow the site builder prototype (`docs/reference/site-builder-prototype.html`),

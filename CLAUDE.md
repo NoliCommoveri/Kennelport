@@ -42,6 +42,15 @@ side with the prototype at phone width (390px) and on a computer. Any change fro
 prototype should add pleasing variety, never remove it. If a screen has no prototype,
 build it from the prototype's existing components, and say so.
 
+## Breeder-facing wording goes in the owner's list
+
+The owner writes every line the breeder reads in the Site Manager: help lines, hints,
+labels, button wording, empty-screen messages, confirmations and errors that tell her
+what to do (`docs/Site_Builder_Plan.md`, decision 19). From now on, put new
+breeder-facing text in that list, not only in the code. Until the list exists, keep each
+screen's wording in one place and note it in the build log, so it's easy to move later.
+The owner's own admin screens and messages about KennelPort itself failing are left out.
+
 ## Migrations: one per merge
 
 A branch adds at most one migration file. Before adding one, check what the branch

@@ -1,4 +1,4 @@
-// Pages as blocks (docs/Site_Builder_Plan.md, step 2; content/blocks.js): with no
+// Pages as blocks (docs/Site_Builder_Plan.md, step 3; content/blocks.js): with no
 // build, Home and every other page are today's; the owner's admin view places, orders, adds
 // and removes its blocks, sets each data block's records and what its cards show;
 // the breeder's switches keep working. Checked on the demo site (linked sample).

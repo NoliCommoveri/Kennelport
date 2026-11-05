@@ -1,4 +1,4 @@
-// Pages as blocks (docs/Site_Builder_Plan.md, step 2): Home and the other pages
+// Pages as blocks (docs/Site_Builder_Plan.md, step 3): Home and the other pages
 // (PAGE_DEFAULTS): which blocks each has, in what order, each data block's records (filters, order, how
 // many, style) and what its cards show. The owner sets these per site in her admin
 // view (manage/builder.js); the breeder still switches Home's blocks on or off and
@@ -12,7 +12,7 @@
 // Today's Home has blocks the prototype's Home doesn't (the badge row, a question
 // she placed there, videos and posts) and draws a few differently (the facts sit in
 // the top block, two litters at most). Those stay as today on every existing site;
-// the prototype's Home goes into the Website template for new sites (step 3).
+// the prototype's Home goes into the Website template for new sites (step 5).
 import { PAGES, MENU_GROUPS, CUSTOM_KEY, slugify } from './model.js';
 
 export class BlockError extends Error {}

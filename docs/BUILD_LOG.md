@@ -1527,3 +1527,27 @@ answers to plan 15.
   in you agree…") and every site's footer ("Made with KennelPort · Terms").
 - `/privacy`: KennelPort's privacy policy (15 sections, written from the migrations and
   `cleanup.js`), linked from the terms and the footer. Wording waiting for the owner's approval.
+
+## 2026-11-05: site builder, the owner's additions
+
+From the owner, added to [`Site_Builder_Plan.md`](Site_Builder_Plan.md) as decisions 16 to 19,
+with new sections and a new building order. Docs only; nothing built yet.
+
+- Decision 16: the editor limits the owner only for function (unreadable text, dead
+  links, pages too slow to load, files the site can't serve safely), never for looks;
+  risky-but-working choices get a warning and are allowed.
+- Decision 17: the owner adds her own blocks to any page: buttons, banners, dividers,
+  spacers, collages, photos, videos, text over a photo. Colours only from the template's
+  scheme, stored by name; fonts from an open-licence library served from the site.
+  Every block gets background, padding, text size and fonts.
+- Decision 18: the breeder can reword or switch off the owner's buttons and change an
+  outside link, phone or email; she can't add buttons or change where an on-site link goes.
+- Decision 19 (the owner's top priority): every line of wording the breeder reads in the
+  Site Manager is the owner's, in one list set for every site and overridable per
+  template and per site. `CLAUDE.md` now says new breeder-facing text goes in that list.
+- Building order: 1 display and timing rules; 2 the breeder's instructions; 3 pages,
+  blocks and the menu (was step 2, under way); 4 the owner's own blocks and styling;
+  5 templates; 6 the family portal's build; 7 after the KennelOS review.
+- Older lines brought in line: `KennelPort_Plan.md` 3.12 (no free look controls and
+  "fixed" now mean for the breeder; the owner has them), `KennelPort_Design_Direction.md`
+  section 2 (buttons) and Decided (scheme colours and the font library for the owner).

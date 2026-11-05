@@ -7,7 +7,7 @@
 // the pinned action bar to save.
 //
 //   GET  /admin                     Every site
-//   GET  /admin/<sub>/pages         Pages: the list (step 2)
+//   GET  /admin/<sub>/pages         Pages: the list (step 3)
 //   GET  /admin/<sub>/pages/<page>  a page's blocks, top to bottom, and what each data block's cards show
 //   GET  /admin/<sub>/rules         Pups: status, registration and price rules
 //   GET  /admin/<sub>/dogs          Dogs: the Dogs page's wording, adults' prices
@@ -49,7 +49,7 @@ const svg = (n) => `<svg class="i" aria-hidden="true"><use href="#i-${n}"/></svg
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 // Today's two starting templates (plan, decision 12), as the site's build stands
-// until templates are built (step 3): with the portal or without.
+// until templates are built (step 5): with the portal or without.
 const startingTemplate = (site) => (site.portal_on ? 'Website and family portal' : 'Website');
 const isDemo = (site) => site.demo_step != null;
 // Where a site is, in words: its address, or Demo (it has none).

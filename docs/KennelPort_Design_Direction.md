@@ -69,7 +69,9 @@ front too, so nobody falls for a puppy that's taken.
 - **Corners:** square or barely rounded (2–4px) on photos, cards, buttons and inputs.
 - **Buttons:** rectangles: solid in the accent colour for the one main action on a
   screen (Apply, Join the waitlist), outlined or plain text with an arrow for the rest.
-  No pill shapes, no stacks of coloured buttons.
+  No pill shapes, no stacks of coloured buttons. That is the template's default: in
+  the site builder the owner can add buttons of any type and any template colour
+  ([`Site_Builder_Plan.md`](Site_Builder_Plan.md), decisions 16 and 17).
 - **Links:** no raw blue underlined links and no visible web addresses. Links look like
   the surrounding text or the accent colour; navigation and buttons carry no underline.
 - **Badges and labels:** small caps text, or a thin outlined tag, not coloured lozenges.
@@ -194,4 +196,6 @@ where they add something.
 - The AK sample ([`reference/ak-sample.html`](reference/ak-sample.html)) is the reference
   for the first template: its layout, cards, sliding sets, expanders and Lawn scheme.
 - Breeders choose a colour scheme, not individual colours; all six schemes in section 7
-  ship (section 7).
+  ship (section 7). The owner can colour blocks and buttons from the scheme's colours,
+  and choose fonts from the font library, in the site builder
+  ([`Site_Builder_Plan.md`](Site_Builder_Plan.md), Template colours, Font library).
