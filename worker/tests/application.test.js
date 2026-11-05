@@ -123,7 +123,7 @@ test('editing questions: a choice needs two options; the change list names them'
   assert.equal(row.options, null, 'only a choice keeps options');
   assert.match(await (await b.get('/publish')).text(), /Application form: Where did you hear about us\? added/);
   const list = await (await b.get('/lists/questions')).text();
-  assert.match(list, /always asks for the family's name and email/);
+  assert.match(list, /always asks for the family&#39;s name and email/);
   assert.match(list, /Where did you hear about us\?<\/b><span>Short answer · optional/);
   assert.match(await (await b.get('/pages/waitlist')).text(), /Edit the application questions on this page/);
   assert.match(await (await b.get('')).text(), /Waitlist and application/);

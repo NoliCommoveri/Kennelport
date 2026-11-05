@@ -259,8 +259,8 @@ test("an album's screen tags several photos at once with who's in them, its litt
   const id = b.env.DB.raw.prepare("SELECT id FROM albums WHERE title = 'Gem week 5'").get().id;
   const opal = b.env.DB.raw.prepare("SELECT id FROM puppies WHERE slug = 'opal'").get().id;
   const screen = await (await b.get(`/lists/albums/${id}`)).text();
-  assert.match(screen, /<h2>Who's in these photos<\/h2>/);
-  assert.match(screen, /<option value="">Who's in them…<\/option><optgroup label="Puppies of its litter"><option value="puppy:[^"]+">/);
+  assert.match(screen, /<h2>Who&#39;s in these photos<\/h2>/);
+  assert.match(screen, /<option value="">Who&#39;s in them…<\/option><optgroup label="Puppies of its litter"><option value="puppy:[^"]+">/);
   assert.equal((screen.match(/name="photos" value="[^"]+" form="tag-many"/g) ?? []).length, 3);
   assert.match(screen, new RegExp(`<option value="puppy:${opal}">Opal</option>`), 'its own litter\'s puppies by name alone');
 

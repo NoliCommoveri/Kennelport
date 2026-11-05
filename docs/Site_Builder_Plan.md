@@ -547,7 +547,10 @@ Each step is its own branch and can be released on its own.
    1. the list, its editor for every site and per site, and the structured wording:
       every field's label and help, the choices in lists, the notes after a change, the
       lists' names and buttons, her home screen (built; per template comes with step 5);
-   2. each screen's own instructions and empty-screen messages, screen by screen;
+   2. each screen's own instructions and empty-screen messages, screen by screen (built
+      for the website's screens: headings, instructions, buttons, links, empty
+      messages and the lines a screen picks between; the sign-in and Notifications
+      screens, before a site is chosen, come with the next part);
    3. the errors that tell her what to do (the content model's checks);
    4. the family portal's screens for the breeder (`portal/admin.js`), and Today.
 3. **Pages, blocks and the menu as settings.** Today's site becomes the **Website** template.

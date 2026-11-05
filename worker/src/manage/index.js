@@ -189,7 +189,7 @@ async function siteHome(env, user, site, view = 'today', page = plainPage, say =
   ].filter(Boolean);
   const sub = esc(site.subdomain);
   const notesHtml = `${matches ? matchesWaiting(site.subdomain, matches) : ''}
-  ${notices.map((n) => `<section class="card notice-card" role="status"><p>${esc(n.message)}</p><p class="row">${demo ? `<a class="button" href="/admin/${sub}/site/">Open it in your admin view</a>` : `<a class="button" href="/s/${sub}/publish">Review and publish</a>`}<form method="post" action="/s/${sub}/notices/${esc(n.id)}/read"><button class="link">Done</button></form></p></section>`).join('')}`;
+  ${notices.map((n) => `<section class="card notice-card" role="status"><p>${esc(n.message)}</p><p class="row">${demo ? `<a class="button" href="/admin/${sub}/site/">Open it in your admin view</a>` : `<a class="button" href="/s/${sub}/publish">${esc(say('home.review_and_publish_3'))}</a>`}<form method="post" action="/s/${sub}/notices/${esc(n.id)}/read"><button class="link">${esc(say('home.done_2'))}</button></form></p></section>`).join('')}`;
   // With the puppy portal, the app is one app for the website and the families
   // (plan 7.3): Today holds what needs her from both; the website's screens are
   // under Website.
@@ -208,21 +208,21 @@ async function siteHome(env, user, site, view = 'today', page = plainPage, say =
       leaving ? need(sub, { href: '/litters#leaving', label: say.n('home.needs.leaving', leaving), note: say('home.needs.leaving.note') }) : '',
     ].filter(Boolean);
     const kennel = site.kennel_name || site.subdomain;
-    return page('Today', `<section class="sec deep bleed todayband"><span class="eyebrow">${esc(kennel)}</span><h1>Today</h1>
+    return page(say('home.today_2'), `<section class="sec deep bleed todayband"><span class="eyebrow">${esc(kennel)}</span><h1>${esc(say('home.today'))}</h1>
         <p class="small">${esc(now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: tz }))}${home.count ? ` · ${home.today ? `${home.today} going home today${home.count > home.today ? `, ${home.count - home.today} more this week` : ''}` : `${home.count} going home ${inDays === 1 ? 'tomorrow' : `in ${inDays} days`}`}` : ''}</p>
         ${await lastFromKennelos(env, site)}</section>
       ${demo ? `<section class="card status band"><p><span class="st warn">Demo</span> Step ${esc(site.demo_step)} of the linked sample · never published</p><p class="row"><a class="button" href="/admin/${esc(site.subdomain)}/site/">Open it in your admin view</a><a class="button" href="/ops/sites/${esc(site.id)}">Its steps, in ops</a></p></section>` : ''}
       ${notesHtml}
       ${home.html}
-      ${changed ? `<section class="card status"><div class="between"><p><span class="st warn">Website</span> Changes not published yet</p><a class="button small" href="/s/${sub}/publish">Review and publish</a></div></section>` : ''}
-      ${needs.length ? `<section id="needs-you" class="stack"><h2>Needs you</h2><div class="needs">${needs.join('')}</div></section>`
-        : !changed && !home.count && !notices.length ? '<section class="card band"><p><span class="st ok">All caught up</span> Nothing needs you right now.</p><p class="muted small">Pickups this week, vet records, messages and anything else waiting will show here.</p></section>' : ''}
+      ${changed ? `<section class="card status"><div class="between"><p><span class="st warn">${esc(say('home.website'))}</span> ${esc(say('home.changes_not_published_yet'))}</p><a class="button small" href="/s/${sub}/publish">${esc(say('home.review_and_publish_2'))}</a></div></section>` : ''}
+      ${needs.length ? `<section id="needs-you" class="stack"><h2>${esc(say('home.needs_you'))}</h2><div class="needs">${needs.join('')}</div></section>`
+        : !changed && !home.count && !notices.length ? `<section class="card band"><p><span class="st ok">${esc(say('home.all_caught_up'))}</span> ${esc(say('home.nothing_needs_you_right'))}</p><p class="muted small">${esc(say('home.pickups_this_week_vet'))}</p></section>` : ''}
       ${await todayLists(env, site)}
       <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}${user.admin ? ` <a href="/admin/${esc(site.subdomain)}/rules">This site's build</a>.` : ''}</p>`, { nav: { sub: site.subdomain, tab: 'today' } });
   }
-  return page(portalOn ? 'Website' : site.kennel_name || site.subdomain, `
+  return page(portalOn ? say('home.website_2') : site.kennel_name || site.subdomain, `
   ${portalOn ? '' : notesHtml}
-  ${notices.map((n) => `<section class="card notice-card" role="status"><p>${esc(n.message)}</p><p class="row">${demo ? `<a class="button" href="/admin/${esc(site.subdomain)}/site/">Open it in your admin view</a>` : `<a class="button" href="/s/${esc(site.subdomain)}/publish">Review and publish</a>`}<form method="post" action="/s/${esc(site.subdomain)}/notices/${esc(n.id)}/read"><button class="link">Done</button></form></p></section>`).join('')}
+  ${notices.map((n) => `<section class="card notice-card" role="status"><p>${esc(n.message)}</p><p class="row">${demo ? `<a class="button" href="/admin/${esc(site.subdomain)}/site/">Open it in your admin view</a>` : `<a class="button" href="/s/${esc(site.subdomain)}/publish">${esc(say('home.review_and_publish'))}</a>`}<form method="post" action="/s/${esc(site.subdomain)}/notices/${esc(n.id)}/read"><button class="link">${esc(say('home.done'))}</button></form></p></section>`).join('')}
   ${demo ? `<section class="card status band">
     <p><span class="st warn">Demo</span> Step ${esc(site.demo_step)} of the linked sample · never published</p>
     <p class="muted small">${esc(NOT_FOR_DEMO)}</p>

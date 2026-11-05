@@ -101,6 +101,11 @@ test('the owner sets it in her admin view; the breeder reads it in her Site Mana
   await save('/admin/wording/notes', { 'w.note.saved': 'Got it, {kennel}. Publish when ready.' });
   const saved = await call(env, M, '/s/akbostons/details?note=saved', { headers: { cookie: breeder } });
   assert.match(text(await saved.text()), /Got it, AK Boston Terriers\. Publish when ready\./);
+  // A screen's own lines too: the Inbox's help line and the empty review queue.
+  await save('/admin/wording/inbox', { 'w.inbox.messages_are_kept_for': 'We keep messages 90 days. Reply opens your email.' });
+  await save('/admin/wording/queue', { 'w.queue.no_reviews_waiting_families': 'Nothing to approve, {kennel}.' });
+  assert.match(await as(breeder, '/s/akbostons/inbox'), /We keep messages 90 days\. Reply opens your email\./);
+  assert.match(await as(breeder, '/s/akbostons/reviews-queue'), /Nothing to approve, AK Boston Terriers\./);
   // Back to today's: empty lines.
   await save('/admin/akbostons/instructions/home', { 'w.home.tile.dogs': '' });
   await save('/admin/wording/home', { 'w.home.tile.dogs': '' });

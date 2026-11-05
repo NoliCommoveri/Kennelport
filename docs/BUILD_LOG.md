@@ -1579,3 +1579,25 @@ with new sections and a new building order. Docs only; nothing built yet.
   (`portal/admin.js`).
 - Her Site Manager reads exactly as before with no wording set (45 screens of the AK
   sample drawn before and after). Tests: `wording.test.js`.
+
+## 2026-11-05: the breeder's instructions: each screen's own wording
+
+- Each screen of the website side of the Site Manager now reads its own wording from
+  the list (`manage/wording.js` SCREEN_LINES): headings, instructions, buttons, links,
+  field labels of its own, empty messages, and the lines a screen picks between (linked
+  to KennelOS or not, a list empty or not). New screens in the editor: Puppies at a
+  glance, Litters, Dogs, Photos and albums, Waitlist and application, Your waitlist,
+  Inbox, Reviews to approve, Publish, Share, KennelOS, Your site. The list now has 790
+  lines.
+- Moved by a script over `screens.js` and her home screen in `index.js`, each line keyed
+  by its screen and first words; where a sentence runs round a link or bold words, each
+  part is its own line ("Part of a line"). The owner's own links (her admin view, ops,
+  This site's build) stay out of the list.
+- Her screens read as before with no wording set (45 screens compared, entities read
+  once; an apostrophe is now written `&#39;`, the same on screen). Four tests that looked
+  for an apostrophe in the raw HTML now look for `&#39;`.
+- Still in the code, each in one place: the sign-in, code, Notifications and offline
+  screens (`index.js`, before a site is chosen); the lists' second lines and the
+  application question kinds (`screens.js` LISTS, QUESTION_WORDS, BLOCK_TITLES, above
+  `createScreens`); the match waiting card (`matchesWaiting`); the content model's error
+  messages; the family portal's breeder screens (`portal/admin.js`).

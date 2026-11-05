@@ -810,7 +810,7 @@ async function wordingRoute({ env, request, url, page, site, build = null, scree
       return `<li><a class="rowlink grow" href="${base}/${k}"><b>${esc(name)}</b><br><span class="small muted">${list.length} line${list.length === 1 ? '' : 's'}${n ? ` · <span class="chg">${n} changed</span>` : ''}</span></a><span class="go" aria-hidden="true">›</span></li>`;
     });
     const body = `${head}${search}<section class="card"><div class="between"><h2>${CATALOG.size} lines, by screen</h2></div><ul class="list pages">${rows.join('')}</ul></section>
-      <section class="card band"><p class="small">So far the list holds every field's label and help, the choices in lists, the notes after a change, the lists' names and her home screen. Each screen's own instructions and the family portal's screens join it next.</p></section>`;
+      <section class="card band"><p class="small">The list holds every field's label and help, the choices in lists, the notes after a change, and each screen's own headings, instructions, buttons and empty messages. Still to join it: the sign-in screens, the errors that tell her what to fix, and the family portal's screens.</p></section>`;
     return page(site ? 'Her instructions' : 'Site Manager wording', body, nav);
   }
   if (screen !== 'all' && !Object.hasOwn(WORD_SCREENS, screen)) return null;
