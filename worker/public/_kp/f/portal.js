@@ -20,6 +20,8 @@
     });
     let zone = null;
     try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { /* old browser */ }
+    // UTC isn't a family's own time (it's a server's, or a zone the phone didn't say): no note.
+    if (/^(Etc\/)?(UTC|GMT|UCT|Universal|Zulu)([+-]0)?$/i.test(zone ?? '')) zone = null;
     for (const t of document.querySelectorAll('time[data-local]')) {
       const at = new Date(t.dataset.local);
       if (!zone || zone === t.dataset.tz || Number.isNaN(at.getTime())) continue;

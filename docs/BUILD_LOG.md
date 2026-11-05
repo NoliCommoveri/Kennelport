@@ -1456,6 +1456,8 @@ answers to plan 15.
   - Quick links as six small tiles, three across; the pinned bar as a full-width strip
     with an icon and two lines.
 - Cards now have the prototype's thin border instead of a shadow, on every portal page.
+- Deadlines no longer add "(… UTC your time)" on a phone or browser set to UTC (a server's
+  zone, never a family's); a phone in another real zone still gets its own time.
 - `CLAUDE.md`: future screens, every phase, are built from and checked against the
   prototypes in `docs/reference/`.
 - Portal files changed (`portal.css`, `portal.js`): `PORTAL_VERSION` needs its bump.
