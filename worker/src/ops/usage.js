@@ -26,8 +26,9 @@ export async function usageNumbers(env, now = new Date()) {
   const all = async (sql, ...args) => (await env.DB.prepare(sql).bind(...args).all()).results;
 
   const [sites, sitesNew, photos, photosNew, removed, snaps, mailMonth, mailToday, messages, messagesNew, accounts, push] = await Promise.all([
-    all('SELECT status, COUNT(*) AS n FROM sites GROUP BY status'),
-    one('SELECT COUNT(*) AS n FROM sites WHERE created_at >= ?', monthStart),
+    // Demo sites (kennelos/demo.js) aren't breeders' sites: not counted.
+    all('SELECT status, COUNT(*) AS n FROM sites WHERE demo_step IS NULL GROUP BY status'),
+    one('SELECT COUNT(*) AS n FROM sites WHERE created_at >= ? AND demo_step IS NULL', monthStart),
     one('SELECT COUNT(*) AS n, COALESCE(SUM(bytes), 0) AS bytes FROM photos WHERE removed_at IS NULL'),
     one('SELECT COUNT(*) AS n, COALESCE(SUM(bytes), 0) AS bytes FROM photos WHERE created_at >= ?', monthStart),
     one('SELECT COUNT(*) AS n, COALESCE(SUM(bytes), 0) AS bytes FROM photos WHERE removed_at IS NOT NULL AND purged_at IS NULL'),

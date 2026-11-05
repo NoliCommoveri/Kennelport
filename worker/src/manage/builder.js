@@ -13,6 +13,9 @@
 //   GET  /admin/<sub>/formats       Formats: dates, sex words, money
 //   GET  /admin/<sub>/kennelos      From KennelOS: how its data lands
 //   GET  /admin/<sub>/timing        Timing
+//   GET  /admin/<sub>/site/<path>   The whole site, as it stands in the draft: the
+//                                   demo's only view (kennelos/demo.js), and any site's
+//                                   without a preview link
 // Each POSTs to itself: save, or one part back to default.
 //
 // Only for admin (admin.js); a breeder never reaches these.
@@ -27,7 +30,9 @@ import {
   olderPuppies, depositsAhead, puppyStatus, puppyPriceText, regText, statusRule, sortPuppies, fullRegHref, rulesOf,
   useFormats, word, litterRows, dogGroups, sitePrice, pricesOff, fmtDate, sexWord,
 } from '../render/parts.js';
-import { makePreviewToken } from '../site.js';
+import { makePreviewToken, servePhoto, SITE_CSP } from '../site.js';
+import { renderPage } from '../render/index.js';
+import { DEMO_STEPS } from '../kennelos/demo.js';
 import { siteLink } from '../ops/sites.js';
 
 const redirect = (location) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store' } });
@@ -38,6 +43,9 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 // Today's two starting templates (plan, decision 12), as the site's build stands
 // until templates are built (step 3): with the portal or without.
 const startingTemplate = (site) => (site.portal_on ? 'Website and family portal' : 'Website');
+const isDemo = (site) => site.demo_step != null;
+// Where a site is, in words: its address, or Demo (it has none).
+const whereIs = (site, path = '') => (isDemo(site) ? `Demo${path ? ` · ${path}` : ''}` : `${site.subdomain}.kennelport.com${path}`);
 
 // A site's screens: [path, title, icon, short name for the phone's tabs].
 const SCREENS = [
@@ -51,22 +59,22 @@ export function adminNav(site, cur) {
   const items = site ? SCREENS.map(([k, l, i, short]) => [k, l, i, short]) : [];
   const link = (href, label, icon, on, short = label) => `<a href="${href}"${on ? ' aria-current="page"' : ''}>${svg(icon)}<span class="lg">${esc(label)}</span><span class="sm">${esc(short)}</span></a>`;
   return `<nav class="apptabs adm" aria-label="Site builder">${link('/admin', 'Every site', 'globe', !site, 'Sites')}
-    ${site ? `<span class="lbl">Building</span><span class="site">${esc(site.kennel_name || site.subdomain)}<small>${esc(startingTemplate(site))}</small></span>` : ''}
+    ${site ? `<span class="lbl">Building</span><span class="site">${esc(site.kennel_name || site.subdomain)}<small>${isDemo(site) ? '<span class="spill brass">Demo</span> ' : ''}${esc(startingTemplate(site))}</small></span>` : ''}
     ${items.map(([k, l, i, short]) => link(`/admin/${esc(site.subdomain)}/${k}`, l, i, cur === k, short)).join('')}</nav>`;
 }
 
 // ---------- Every site ----------
 
 async function everySite(env) {
-  const { results: sites } = await env.DB.prepare(`SELECT s.id, s.subdomain, s.kennel_name, s.status, s.portal_on, b.build FROM sites s
-    LEFT JOIN site_builds b ON b.site_id = s.id WHERE s.status != 'closed' ORDER BY s.kennel_name, s.subdomain`).all();
+  const { results: sites } = await env.DB.prepare(`SELECT s.id, s.subdomain, s.kennel_name, s.status, s.portal_on, s.demo_step, b.build FROM sites s
+    LEFT JOIN site_builds b ON b.site_id = s.id WHERE s.status != 'closed' ORDER BY s.demo_step IS NOT NULL, s.kennel_name, s.subdomain`).all();
   const tile = (s) => {
     let build = {};
     try { build = s.build ? JSON.parse(s.build) : {}; } catch { /* the defaults */ }
     const n = changedCount(build);
     const changed = n.rules + n.timing;
     return `<a class="tile s2${s.portal_on ? ' green' : ''}" href="/admin/${esc(s.subdomain)}/rules">
-      <span class="eyebrow">${esc(startingTemplate(s))}</span><h2>${esc(s.kennel_name || s.subdomain)}</h2><span class="meta">${esc(s.subdomain)}.kennelport.com · ${esc({ draft: 'Not published yet', live: 'Live', suspended: 'Switched off' }[s.status] ?? s.status)}</span>
+      <span class="eyebrow">${esc(startingTemplate(s))}</span>${isDemo(s) ? '<span class="spill brass">Demo</span>' : ''}<h2>${esc(s.kennel_name || s.subdomain)}</h2><span class="meta">${isDemo(s) ? `Made from the linked sample · step ${esc(s.demo_step)} of ${DEMO_STEPS} · only in your admin view` : `${esc(s.subdomain)}.kennelport.com · ${esc({ draft: 'Not published yet', live: 'Live', suspended: 'Switched off' }[s.status] ?? s.status)}`}</span>
       <span class="meta">${changed ? `${changed} setting${changed === 1 ? '' : 's'} changed from today's behaviour` : 'Today\'s behaviour, unchanged'}</span></a>`;
   };
   return `<span class="eyebrow">Admin</span><h1>Every site</h1><p class="muted">Signed in as admin: every breeder's site is here, with no invites or codes.</p>
@@ -80,11 +88,46 @@ const SPILL = { avail: 'green', res: 'brass' };
 const sexMark = (sex) => `<span class="sex ${sex === 'female' ? 'girl' : 'boy'}" aria-label="${sex === 'female' ? 'Girl' : 'Boy'}">${sex === 'female' ? '♀' : '♂'}</span>`;
 
 const phone = (site, snap, path, cap, blocks) => `<span class="cap">${esc(cap)}</span>
-    <div class="phone"><div class="pv-url">${esc(site.subdomain)}.kennelport.com${esc(path)}</div><div class="scr">
+    <div class="phone"><div class="pv-url">${esc(whereIs(site, path))}</div><div class="scr">
       <div class="pv-top"><div class="nm">${esc(snap.site.kennel_name)}</div></div>
       ${blocks.join('') || '<div class="pvb ghost">Nothing to show yet</div>'}
       <div class="pv-foot"><b>${esc(snap.site.kennel_name)}</b><span>${esc(word(snap, 'copyright', { year: new Date().getUTCFullYear(), kennel: snap.site.kennel_name }))}</span><span>Made with KennelPort</span></div></div></div>`;
-const previewLink = async (env, site) => `<a class="small" href="${esc(siteLink(env, site.subdomain, `/__preview?t=${encodeURIComponent(await makePreviewToken(env, site.id, 1))}`))}" target="_blank" rel="noopener">Their whole site, as a preview ›</a>`;
+// The demo has no preview link (it can't be shared): its whole site opens here, in the admin view.
+const previewLink = async (env, site) => (isDemo(site)
+  ? `<a class="small" href="/admin/${esc(site.subdomain)}/site/">The whole demo site, in your admin view ›</a>`
+  : `<a class="small" href="${esc(siteLink(env, site.subdomain, `/__preview?t=${encodeURIComponent(await makePreviewToken(env, site.id, 1))}`))}" target="_blank" rel="noopener">Their whole site, as a preview ›</a>`);
+
+// ---------- the whole site, in the admin view ----------
+
+// The draft rendered as the site renders it, on this host, under /admin/<sub>/site:
+// its own links, forms and photos are moved under that address (the template's
+// files under /_kp/ stay where they are, the same on every host). Never cached,
+// never indexed, framed by nobody, and only for admin. Forms don't send from here.
+async function siteView(env, site, rest, url) {
+  const prefix = `/admin/${site.subdomain}/site`;
+  const snap = await buildSnapshot(env, site.id);
+  const path = rest || '/';
+  if (path.startsWith('/_kp/p/')) return servePhoto(env, site, snap, new URL(`${path}${url.search}`, url.origin), { preview: true });
+  const ctx = {
+    path, origin: `${url.origin}${prefix}`, today: new Date().toISOString().slice(0, 10), preview: true, portal: Boolean(site.portal_on),
+    adminBar: {
+      text: isDemo(site) ? `Demo: made from the linked sample, step ${site.demo_step} of ${DEMO_STEPS}. Only you see it, in your admin view.`
+        : 'Admin view: the draft, not what visitors see. Only you see it here.',
+      back: `/admin/${site.subdomain}/rules`,
+    },
+  };
+  const { status, html } = renderPage(snap, ctx);
+  const moved = html
+    .replace(/\b(href|action|src)="\/(?!\/)(?!admin\/)(?!_kp\/(?!p\/))/g, `$1="${prefix}/`)
+    .replace(/\bsrcset="([^"]*)"/g, (m, v) => `srcset="${v.replace(/(^|,\s*)\/_kp\/p\//g, `$1${prefix}/_kp/p/`)}"`);
+  return new Response(moved, {
+    status,
+    headers: {
+      'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': SITE_CSP, 'x-robots-tag': 'noindex',
+      'x-content-type-options': 'nosniff', 'referrer-policy': 'same-origin', 'x-frame-options': 'DENY',
+    },
+  });
+}
 
 // Their Dogs page: its sections in its words, a small card per dog.
 async function dogsPreview(env, site) {
@@ -160,13 +203,12 @@ async function preview(env, site) {
   if (planned) blocks.push(`<div class="pvb ghost">And ${planned} upcoming litter${planned === 1 ? '' : 's'} with no puppies yet</div>`);
   const hidden = await env.DB.prepare("SELECT COUNT(*) AS n FROM puppies WHERE site_id = ? AND hidden_by_kennelos = 0 AND status = 'hidden'").bind(site.id).first('n');
   if (hidden && !rulesOf(snap).status.hidden.show) blocks.push(`<div class="pvb ghost">${hidden} pup${hidden === 1 ? '' : 's'} on a health hold, not shown</div>`);
-  const link = siteLink(env, site.subdomain, `/__preview?t=${encodeURIComponent(await makePreviewToken(env, site.id, 1))}`);
   return `<div class="pvwrap" id="preview"><span class="cap">Their Puppies page, with these rules</span>
-    <div class="phone"><div class="pv-url">${esc(site.subdomain)}.kennelport.com/litters</div><div class="scr">
+    <div class="phone"><div class="pv-url">${esc(whereIs(site, '/litters'))}</div><div class="scr">
       <div class="pv-top"><div class="nm">${esc(snap.site.kennel_name)}</div></div>
       ${blocks.join('') || '<div class="pvb ghost">No litters with puppies yet</div>'}
       <div class="pv-foot"><b>${esc(snap.site.kennel_name)}</b><span>Made with KennelPort</span></div></div></div>
-    <a class="small" href="${esc(link)}" target="_blank" rel="noopener">Their whole site, as a preview ›</a></div>`;
+    ${await previewLink(env, site)}</div>`;
 }
 
 // ---------- Display rules ----------
@@ -318,10 +360,15 @@ export async function handleBuilder({ env, request, url, user, page }) {
   if (!user?.admin) return null;
   const path = url.pathname;
   if (path === '/admin' || path === '/admin/') return page('Every site', await everySite(env), { admin: { nav: adminNav(null, 'sites') } });
-  const m = path.match(/^\/admin\/([a-z0-9-]+)\/(rules|dogs|wording|formats|kennelos|timing)$/);
+  const sv = path.match(/^\/admin\/([a-z0-9-]+)\/site(\/.*)?$/);
+  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(rules|dogs|wording|formats|kennelos|timing)$/);
   if (!m) return null;
-  const site = await env.DB.prepare("SELECT id, subdomain, kennel_name, status, portal_on FROM sites WHERE subdomain = ? AND status != 'closed'").bind(m[1]).first();
+  const site = await env.DB.prepare("SELECT id, subdomain, kennel_name, status, portal_on, demo_step FROM sites WHERE subdomain = ? AND status != 'closed'").bind(m[1]).first();
   if (!site) return null;
+  if (sv) {
+    if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Forms don\'t send from the admin view.', { status: 405, headers: { allow: 'GET, HEAD', 'cache-control': 'no-store' } });
+    return siteView(env, site, sv[2] ?? '', url);
+  }
   const screen = m[2];
   const build = await loadBuild(env, site.id);
   let { rules, timing } = rulesFor(build);
@@ -373,7 +420,7 @@ export async function handleBuilder({ env, request, url, user, page }) {
   const side = screen === 'dogs' ? await dogsPreview(env, site)
     : screen === 'wording' || screen === 'formats' ? await littersPreview(env, site, 'Their litter cards, with these rules')
       : screen === 'kennelos' ? landingPreview(rules) : screen === 'timing' ? '' : await preview(env, site);
-  const body = `<p class="crumb"><a href="/admin">‹ Every site</a></p><span class="eyebrow">${esc(site.kennel_name || site.subdomain)}</span><h1>${title}</h1>
+  const body = `<p class="crumb"><a href="/admin">‹ Every site</a></p><span class="eyebrow">${esc(site.kennel_name || site.subdomain)}</span>${isDemo(site) ? ' <span class="spill brass">Demo</span>' : ''}<h1>${title}</h1>
     ${lede ? `<p class="muted">${lede}</p>` : ''}
     ${saved ? '<p class="notice" role="status">Saved. The site shows it once the breeder (or you) publishes.</p>' : ''}
     <form method="post" id="build" class="build${side ? '' : ' solo'}"><button class="sr" tabindex="-1" aria-hidden="true">Save</button>${editor}${side}

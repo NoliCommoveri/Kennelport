@@ -16,6 +16,7 @@ import { HOME_BLOCK_ORDER, PAGES, PAYMENT_KINDS, ALBUM_PHOTOS_MAX } from './cont
 import { kennelosOrigin } from './feed.js';
 import { chunks, placeholders } from './lib/sql.js';
 import { rulesFor, loadBuild, ruleKey } from './content/rules.js';
+import { NOT_FOR_DEMO } from './lib/demo.js';
 
 export const SNAPSHOT_VERSION = 1;
 export const KEEP = 10;
@@ -244,9 +245,11 @@ export function forgetSnapshots() { memory.clear(); }
 
 export async function publish(env, siteId, publishedBy) {
   const db = env.DB;
-  const site = await db.prepare('SELECT id, status, published_snapshot_id FROM sites WHERE id = ?').bind(siteId).first();
+  const site = await db.prepare('SELECT id, status, published_snapshot_id, demo_step FROM sites WHERE id = ?').bind(siteId).first();
   if (!site) throw new Error('no such site');
   if (site.status === 'closed') throw new Error('this site is closed');
+  // The demo is never published (docs/Linked_Sample_Plan.md): it has no real address.
+  if (site.demo_step != null) throw new Error(NOT_FOR_DEMO);
 
   const snap = await buildSnapshot(env, siteId);
   const body = JSON.stringify(snap);

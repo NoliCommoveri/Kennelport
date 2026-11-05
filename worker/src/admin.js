@@ -31,7 +31,7 @@ export async function isAdmin(env, request) {
 // one, 'admin' elsewhere. Without a breeder sign-in on this device she has no
 // email here; what the screens record as hers says "admin".
 export async function asAdmin(env, user) {
-  const { results } = await env.DB.prepare("SELECT id, subdomain, kennel_name, status FROM sites WHERE status != 'closed' ORDER BY kennel_name, subdomain").all();
+  const { results } = await env.DB.prepare("SELECT id, subdomain, kennel_name, status, demo_step FROM sites WHERE status != 'closed' ORDER BY demo_step IS NOT NULL, kennel_name, subdomain").all();
   const mine = new Map((user?.sites ?? []).map((s) => [s.id, s.role]));
   return {
     tokenHash: user?.tokenHash ?? null,

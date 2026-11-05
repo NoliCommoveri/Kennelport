@@ -23,6 +23,7 @@ import { localParts } from '../portal/vet.js';
 import { vapidConfig, subscribe, unsubscribe, testPush, pendingPush, subscriptionFor } from '../push.js';
 import { isAdmin, asAdmin, clearAdminCookie } from '../admin.js';
 import { handleBuilder } from './builder.js';
+import { NOT_FOR_DEMO } from '../lib/demo.js';
 
 export const MANAGE_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
 const HEADERS = {
@@ -149,7 +150,7 @@ async function siteHome(env, user, site, view = 'today', page = plainPage) {
   const snaps = await listSnapshots(env, site.id);
   const full = await env.DB.prepare('SELECT draft_changed_at, published_snapshot_id FROM sites WHERE id = ?').bind(site.id).first();
   const live = snaps.find((x) => x.id === full.published_snapshot_id);
-  const changed = full.draft_changed_at && (!live || full.draft_changed_at > live.published_at);
+  const changed = full.draft_changed_at && (!live || full.draft_changed_at > live.published_at) && site.demo_step == null;
   const unread = await env.DB.prepare('SELECT COUNT(*) AS n FROM inquiries WHERE site_id = ? AND read_at IS NULL').bind(site.id).first('n');
   const pending = await env.DB.prepare("SELECT COUNT(*) AS n FROM stories WHERE site_id = ? AND status = 'pending'").bind(site.id).first('n');
   const listed = await env.DB.prepare("SELECT COUNT(*) AS n FROM waitlist_entries WHERE site_id = ? AND status = 'waiting'").bind(site.id).first('n');
@@ -158,7 +159,9 @@ async function siteHome(env, user, site, view = 'today', page = plainPage) {
   // Linked to a KennelOS waitlist (plan 3.8): the simple waitlist isn't used, and
   // while KennelOS takes applications online, neither are the site's questions.
   const kos = await kennelosState(env, site.id);
-  const previewLink = siteLink(env, site.subdomain, `/__preview?t=${encodeURIComponent(await makePreviewToken(env, site.id, 1))}`);
+  // The demo (kennelos/demo.js): no preview link, nothing to publish; it opens in the admin view.
+  const demo = site.demo_step != null;
+  const previewLink = demo ? null : siteLink(env, site.subdomain, `/__preview?t=${encodeURIComponent(await makePreviewToken(env, site.id, 1))}`);
   // The KennelOS link (plan 5): what the last Update website brought, until read.
   const linkRow = await env.DB.prepare('SELECT MAX(last_bundle_at) AS at, COUNT(*) AS n FROM links WHERE site_id = ? AND revoked_at IS NULL').bind(site.id).first();
   const matches = await env.DB.prepare('SELECT COUNT(*) AS n FROM link_pending WHERE site_id = ?').bind(site.id).first('n');
@@ -179,7 +182,7 @@ async function siteHome(env, user, site, view = 'today', page = plainPage) {
   ].filter(Boolean);
   const sub = esc(site.subdomain);
   const notesHtml = `${matches ? matchesWaiting(site.subdomain, matches) : ''}
-  ${notices.map((n) => `<section class="card notice-card" role="status"><p>${esc(n.message)}</p><p class="row"><a class="button" href="/s/${sub}/publish">Review and publish</a><form method="post" action="/s/${sub}/notices/${esc(n.id)}/read"><button class="link">Done</button></form></p></section>`).join('')}`;
+  ${notices.map((n) => `<section class="card notice-card" role="status"><p>${esc(n.message)}</p><p class="row">${demo ? `<a class="button" href="/admin/${sub}/site/">Open it in your admin view</a>` : `<a class="button" href="/s/${sub}/publish">Review and publish</a>`}<form method="post" action="/s/${sub}/notices/${esc(n.id)}/read"><button class="link">Done</button></form></p></section>`).join('')}`;
   // With the puppy portal, the app is one app for the website and the families
   // (plan 7.3): Today holds what needs her from both; the website's screens are
   // under Website.
@@ -201,6 +204,7 @@ async function siteHome(env, user, site, view = 'today', page = plainPage) {
     return page('Today', `<section class="sec deep bleed todayband"><span class="eyebrow">${esc(kennel)}</span><h1>Today</h1>
         <p class="small">${esc(now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: tz }))}${home.count ? ` · ${home.today ? `${home.today} going home today${home.count > home.today ? `, ${home.count - home.today} more this week` : ''}` : `${home.count} going home ${inDays === 1 ? 'tomorrow' : `in ${inDays} days`}`}` : ''}</p>
         ${await lastFromKennelos(env, site)}</section>
+      ${demo ? `<section class="card status band"><p><span class="st warn">Demo</span> Step ${esc(site.demo_step)} of the linked sample · never published</p><p class="row"><a class="button" href="/admin/${esc(site.subdomain)}/site/">Open it in your admin view</a><a class="button" href="/ops/sites/${esc(site.id)}">Its steps, in ops</a></p></section>` : ''}
       ${notesHtml}
       ${home.html}
       ${changed ? `<section class="card status"><div class="between"><p><span class="st warn">Website</span> Changes not published yet</p><a class="button small" href="/s/${sub}/publish">Review and publish</a></div></section>` : ''}
@@ -211,12 +215,16 @@ async function siteHome(env, user, site, view = 'today', page = plainPage) {
   }
   return page(portalOn ? 'Website' : site.kennel_name || site.subdomain, `
   ${portalOn ? '' : notesHtml}
-  ${notices.map((n) => `<section class="card notice-card" role="status"><p>${esc(n.message)}</p><p class="row"><a class="button" href="/s/${esc(site.subdomain)}/publish">Review and publish</a><form method="post" action="/s/${esc(site.subdomain)}/notices/${esc(n.id)}/read"><button class="link">Done</button></form></p></section>`).join('')}
-  <section class="card status">
+  ${notices.map((n) => `<section class="card notice-card" role="status"><p>${esc(n.message)}</p><p class="row">${demo ? `<a class="button" href="/admin/${esc(site.subdomain)}/site/">Open it in your admin view</a>` : `<a class="button" href="/s/${esc(site.subdomain)}/publish">Review and publish</a>`}<form method="post" action="/s/${esc(site.subdomain)}/notices/${esc(n.id)}/read"><button class="link">Done</button></form></p></section>`).join('')}
+  ${demo ? `<section class="card status band">
+    <p><span class="st warn">Demo</span> Step ${esc(site.demo_step)} of the linked sample · never published</p>
+    <p class="muted small">${esc(NOT_FOR_DEMO)}</p>
+    <p class="row"><a class="button" href="/admin/${esc(site.subdomain)}/site/">Open it in your admin view</a><a class="button" href="/ops/sites/${esc(site.id)}">Its steps, in ops</a></p>
+  </section>` : `<section class="card status">
     <p><span class="dot ${site.status}"></span>${esc(STATUS_WORDS[site.status] ?? site.status)}${changed ? ' · <strong>changes not published yet</strong>' : ''}</p>
     <p class="row"><a class="button" href="${esc(siteLink(env, site.subdomain))}">View my site</a><a class="button" href="${esc(previewLink)}">Preview changes</a><a class="button" href="/s/${esc(site.subdomain)}/share">Share</a></p>
     <p><a class="button primary" href="/s/${esc(site.subdomain)}/publish">${changed ? 'Review and publish' : 'Publish'}</a></p>
-  </section>
+  </section>`}
   ${waiting.length && !portalOn ? `<section class="card" id="needs-you"><h2>Needs you</h2><ul class="items">${waiting.join('')}</ul></section>` : ''}
   <ul class="tiles">
     ${tile('/puppies', 'Puppies', 'Statuses at a glance')}

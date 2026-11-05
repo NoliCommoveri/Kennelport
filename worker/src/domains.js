@@ -6,6 +6,8 @@
 // the row here says which site it is. 'pending' serves the site on the domain so
 // it can be checked; 'active' makes it the main address, and the kennelport.com
 // address redirects there with the same path.
+import { isDemoSite, NOT_FOR_DEMO } from './lib/demo.js';
+
 export class DomainError extends Error {}
 
 const NAME = /^(?=.{4,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
@@ -30,6 +32,7 @@ export async function domainFor(env, siteId) {
 }
 
 export async function setDomain(env, siteId, raw) {
+  if (await isDemoSite(env, siteId)) throw new DomainError(NOT_FOR_DEMO);
   const hostname = normalizeHostname(raw);
   const root = String(env.ROOT_DOMAIN ?? '').toLowerCase();
   if (!NAME.test(hostname) || hostname.split('.').some((l) => l.startsWith('xn--'))) throw new DomainError('That isn\'t a domain name, such as www.thornfieldkennels.com.');

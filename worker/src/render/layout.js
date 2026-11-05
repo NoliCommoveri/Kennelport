@@ -112,7 +112,8 @@ ${noindex || ctx.preview ? '<meta name="robots" content="noindex">\n' : ''}${og.
 <script src="/_kp/t/ak/site.js?v=${ASSET_VERSION}" defer></script>
 ${ctx.path === '/' ? structuredData(snap, ctx) : ''}
 </head><body>
-${ctx.preview ? '<div class="preview-bar" role="status">Preview: this is the draft, not what visitors see. Publish from /ops to make it live.</div>' : ''}<a class="skip" href="#main">Skip to content</a>
+${ctx.adminBar ? `<div class="preview-bar" role="status">${esc(ctx.adminBar.text)} <a href="${attr(ctx.adminBar.back)}"><u>Back to the build</u></a></div>`
+  : ctx.preview ? '<div class="preview-bar" role="status">Preview: this is the draft, not what visitors see. Publish from /ops to make it live.</div>' : ''}<a class="skip" href="#main">Skip to content</a>
 ${SPRITES(snap)}
 ${header(snap, { ...ctx, section })}
 <main id="main">${body}</main>

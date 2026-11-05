@@ -9,6 +9,7 @@
 //   last copy is shown with its date, and KennelOS is asked again at most once a
 //   minute.
 // - Nothing is ever sent to KennelOS but the kennel id in the address.
+import { isDemoSite } from './lib/demo.js';
 export const FEED_FRESH_MS = 5 * 60 * 1000;
 export const FEED_RETRY_MS = 60 * 1000;
 export const FEED_TIMEOUT_MS = 4000;
@@ -50,6 +51,8 @@ const decode = (row, extra = {}) => {
 export async function readFeed(env, siteId, publicId, { now = Date.now() } = {}) {
   const origin = kennelosOrigin(env);
   if (!origin || !publicId || !PUBLIC_ID.test(publicId)) return null;
+  // The demo's waitlist id is the sample's, made up: KennelOS is never asked for it.
+  if (await isDemoSite(env, siteId)) return null;
   const where = { origin, publicId };
   const row = await env.DB.prepare('SELECT state, body, fetched_at, checked_at FROM feed_cache WHERE site_id = ?').bind(siteId).first();
   if (row) {

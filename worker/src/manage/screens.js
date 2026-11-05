@@ -31,6 +31,7 @@ import { makeLinkCode, showCode, devices, stopDevice, unlinkSite, setKennelosPri
 import { OWNED, OWNED_PRICES } from '../kennelos/bundle.js';
 import { pendingMatches, matchChanges, confirmMatch, declineMatch, MatchError } from '../kennelos/match.js';
 import { leavingLitters, keepLitter, deleteLitter } from '../kennelos/clock.js';
+import { NOT_FOR_DEMO } from '../lib/demo.js';
 import { litterDaysFor } from '../content/rules.js';
 
 export const FRESH_SIGN_IN_MS = 15 * 60 * 1000;
@@ -272,8 +273,8 @@ export function createScreens({ env, request, url, site, user, page }) {
           ? 'When you press Update website in KennelOS, your dogs, litters, puppy statuses and health results arrive here in your draft. Nothing changes on your site until you Publish.'
           : 'Keep your dogs and litters in KennelOS Pro? Link it, and Update website in KennelOS sends them here, so you type them only once. In KennelOS, tick Show on website on the dogs, litters and pairings you want on your site.'}</p>
         ${code ? `<p class="notice" role="status">Your code: <strong class="code">${esc(showCode(code))}</strong><br>In KennelOS, open Settings, then Connect website, and type it in. It works once, for ${CODE_TTL_MS / 60000} minutes${expiresAt ? ` (until ${esc(when(expiresAt))})` : ''}.</p>` : ''}
-        <form method="post" action="${base}/kennelos/code"><button class="${linked ? '' : 'primary'}">${linked ? 'Link another device' : 'Show a link code'}</button></form>
-        <p class="muted small">Each phone or computer you use KennelOS on links once, with its own code.</p></section>`);
+        ${site.demo_step != null ? '<p class="muted small">This demo is linked to the linked sample, not to a KennelOS device. Its steps are sent from /ops.</p>' : `<form method="post" action="${base}/kennelos/code"><button class="${linked ? '' : 'primary'}">${linked ? 'Link another device' : 'Show a link code'}</button></form>
+        <p class="muted small">Each phone or computer you use KennelOS on links once, with its own code.</p>`}</section>`);
       if (linked) {
         parts.push(`<section class="card"><h2>Devices</h2><ul class="items">${list.map((d) => `<li class="item"><span><b>${esc(d.device_label || 'A KennelOS device')}</b><span class="muted small"> · ${d.last_bundle_at ? `last update ${esc(when(d.last_bundle_at))}` : `linked ${esc(when(d.linked_at))}, no update yet`}</span>${d.summary?.text ? `<br><span class="muted small">${esc(d.summary.text)}</span>` : ''}</span>
           ${owner ? `<form method="post" action="${base}/kennelos/devices/${d.id}/stop"><button class="link">Stop this device</button></form>` : ''}</li>`).join('')}</ul></section>`);
@@ -349,6 +350,8 @@ export function createScreens({ env, request, url, site, user, page }) {
   // The site and its litters and albums, as visitors see them: published ones only.
   async function shareScreen() {
     const rest = url.pathname.slice(`${base}/share`.length);
+    // The demo has nothing to share: no address, no preview link.
+    if (site.demo_step != null) return { title: 'Share', back: base, body: `<section class="card band"><p><strong>Demo site.</strong> ${esc(NOT_FOR_DEMO)}</p><p class="row"><a class="button" href="/admin/${esc(site.subdomain)}/site/">Open it in your admin view</a></p></section>` };
     if (request.method !== 'GET') return null;
     const row = await env.DB.prepare('SELECT published_snapshot_id FROM sites WHERE id = ?').bind(site.id).first();
     const live = await loadSnapshot(env, site.id, row.published_snapshot_id);
@@ -846,6 +849,8 @@ export function createScreens({ env, request, url, site, user, page }) {
   // ---------- publish ----------
   async function publishScreen() {
     const rest = url.pathname.slice(`${base}/publish`.length);
+    // The demo is never published (kennelos/demo.js).
+    if (site.demo_step != null) return { title: 'Publish', back: base, body: `<section class="card band"><p><strong>Demo site.</strong> ${esc(NOT_FOR_DEMO)}</p><p class="row"><a class="button" href="/admin/${esc(site.subdomain)}/site/">Open it in your admin view</a></p></section>` };
     if (request.method === 'POST') {
       try {
         if (rest === '/undo') { await undoPublish(env, site.id); return redirect(`${base}/publish?note=undone`); }

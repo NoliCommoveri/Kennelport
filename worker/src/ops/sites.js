@@ -14,6 +14,7 @@ import { savePhoto, PhotoError } from '../photos.js';
 import { APP_VERSION } from '../manage/version.js';
 import { inviteToSite, removeFromSite, AuthError } from '../auth.js';
 import { domainFor, setDomain, activateDomain, removeDomain, DomainError } from '../domains.js';
+import { makeDemoSite, sendNextStep, backToStepOne, DemoError, DEMO_STEPS, STEP_NOTES, NOT_FOR_DEMO } from '../kennelos/demo.js';
 
 const TITLE = 'KennelPort ops';
 // The site page loads one script of our own (photo resizing); nothing else.
@@ -43,6 +44,9 @@ const NOTES = {
   domain_removed: 'Domain removed. The kennelport.com address is the main one again.',
   portal_on: 'The puppy portal is on for this site.',
   portal_off: 'The puppy portal is off for this site. Nothing was deleted.',
+  demo_made: 'Demo site made from the linked sample, with step 1 in. It opens only in your admin view.',
+  demo_sent: 'Sent. The demo now holds the next step of the series.',
+  demo_reset: 'Back to step 1, as of today. Your rules for it are kept.',
 };
 
 // Where to see a site from here. Staging can't receive real hostnames, so its
@@ -56,15 +60,28 @@ export function siteLink(env, subdomain, path = '/') {
 // ---------- the list on /ops ----------
 
 export async function sitesSection(env) {
-  const { results } = await env.DB.prepare('SELECT id, subdomain, kennel_name, status, created_at FROM sites ORDER BY created_at DESC').all();
-  const rows = results.map((s) => `<tr><td><a href="/ops/sites/${esc(s.id)}">${esc(s.subdomain)}</a></td><td>${esc(s.kennel_name ?? '')}</td><td>${esc(s.status)}</td></tr>`).join('');
+  const { results } = await env.DB.prepare('SELECT id, subdomain, kennel_name, status, created_at, demo_step FROM sites ORDER BY created_at DESC').all();
+  const rows = results.map((s) => `<tr><td><a href="/ops/sites/${esc(s.id)}">${esc(s.subdomain)}</a></td><td>${esc(s.kennel_name ?? '')}${s.demo_step != null && s.status !== 'closed' ? ' <strong>Demo</strong>' : ''}</td><td>${esc(s.demo_step != null && s.status !== 'closed' ? `demo, step ${s.demo_step} of ${DEMO_STEPS}` : s.status)}</td></tr>`).join('');
   return `<h2>Sites</h2>
 ${rows ? `<table><tr><th>Subdomain</th><th>Kennel</th><th>Status</th></tr>${rows}</table>` : '<p class="muted">No sites yet.</p>'}
 <form method="post" action="/ops/sites">
   <p><label>Subdomain<br><input name="subdomain" required pattern="[a-z0-9-]{1,63}" placeholder="akbostons"></label></p>
   <p><label>Kennel name<br><input name="kennel_name" required maxlength="80" placeholder="AK Boston Terriers"></label></p>
   <p><button>Create site</button></p>
-</form>`;
+</form>
+<form method="post" action="/ops/sites/demo"><p><button>Make a demo site from the sample</button> <span class="muted">Tuxedo Lane Bostons*, the made-up kennel in the linked sample, linked to the sample instead of a KennelOS device, with step 1 in. Marked Demo; never published or indexed, no preview link, nobody can be invited. It opens only in your admin view.</span></p></form>`;
+}
+
+// The demo's own section (kennelos/demo.js): where it is in the series, and its buttons.
+function demoSection(site) {
+  const step = site.demo_step;
+  const rows = Object.entries(STEP_NOTES).map(([n, note]) => `<tr><td>${Number(n) === step ? '<strong>' : ''}${n}${Number(n) === step ? ' (in now)</strong>' : ''}</td><td class="${Number(n) > step ? 'muted' : ''}">${esc(note)}</td></tr>`).join('');
+  return `<h2>Demo</h2>
+<p><strong>Demo site</strong>, linked to the sample (no KennelOS device). Step ${step} of ${DEMO_STEPS} is in. Each step is sent as of today, so its expect file reads true now.</p>
+<p><a href="/admin/${esc(site.subdomain)}/site/">Open it in your admin view</a> · <a href="/admin/${esc(site.subdomain)}/rules">Its build</a> · <a href="/s/${esc(site.subdomain)}">Its Site Manager</a></p>
+<table><tr><th>Step</th><th>What it brings</th></tr>${rows}</table>
+${step < DEMO_STEPS ? `<form method="post" action="/ops/sites/${esc(site.id)}/demo/next"><p><button>Send bundle and feed ${step + 1}</button></p></form>` : `<p class="muted">All ${DEMO_STEPS} steps are in.</p>`}
+<form method="post" action="/ops/sites/${esc(site.id)}/demo/reset"><p><button>Back to step 1</button> <span class="muted">Deletes everything in the demo, its photos too, and sends step 1 again. Your rules for it stay.</span></p></form>`;
 }
 
 // ---------- one site ----------
@@ -73,7 +90,7 @@ async function sitePage(env, siteId, { note, error, previewLink, content } = {})
   const site = await env.DB.prepare('SELECT * FROM sites WHERE id = ?').bind(siteId).first();
   if (!site) return page('<h1>Not found</h1><p><a href="/ops">Back to ops</a></p>', 404);
   const top = `<p><a href="/ops">← Ops</a></p><h1>${esc(site.kennel_name || site.subdomain)}</h1>
-<p class="muted"><code>${esc(site.subdomain)}.${esc(env.ROOT_DOMAIN)}</code> · ${esc(site.status)}</p>
+<p class="muted">${site.demo_step != null && site.status !== 'closed' ? `<strong>Demo</strong> · no address of its own (<code>${esc(site.subdomain)}</code> answers "not found")` : `<code>${esc(site.subdomain)}.${esc(env.ROOT_DOMAIN)}</code> · ${esc(site.status)}`}</p>
 ${note ? `<p class="ok">${esc(NOTES[note] ?? note)}</p>` : ''}${error ? `<p class="bad">${esc(error)}</p>` : ''}`;
 
   if (site.status === 'closed') {
@@ -164,6 +181,8 @@ ${domain ? `<p><a href="https://${esc(domain.hostname)}/"><code>${esc(domain.hos
   <p><button>Close and delete everything</button></p>
 </form>`;
 
+  // The demo: no publishing, preview link, people, domain, AK sample or portal switch.
+  if (site.demo_step != null) return page(`${top}${demoSection(site)}${photoSection}${lifecycle.replace(/<form method="post" action="[^"]*\/(suspend|resume)">[\s\S]*?<\/form>\n/, '').replace('<h2>Suspend or close</h2>', '<h2>Close the demo</h2>')}`);
   return page(`${top}${publishing}${peopleSection}${contentSection}${photoSection}${limitsSection}${domainSection}${portalSection}${lifecycle}`);
 }
 
@@ -179,6 +198,10 @@ export async function handleSites(request, env, url) {
   try {
     if (!siteId) {
       if (!post) return null;
+      if (action === 'demo') {
+        const { id } = await makeDemoSite(env);
+        return redirect(`/ops/sites/${id}?note=demo_made`);
+      }
       const form = await request.formData();
       try {
         const { id } = await createSite(env, { subdomain: form.get('subdomain'), kennel_name: form.get('kennel_name') });
@@ -209,7 +232,22 @@ export async function handleSites(request, env, url) {
 
     if (!post) return null;
 
+    // Nothing on the demo can make a link to share, load other content or switch the portal off.
+    if (['preview', 'sample', 'portal/off', 'portal/on', 'people'].includes(action)) {
+      const demo = await env.DB.prepare('SELECT demo_step FROM sites WHERE id = ?').bind(siteId).first('demo_step');
+      if (demo != null) return sitePage(env, siteId, { error: NOT_FOR_DEMO });
+    }
+
     switch (action) {
+      case 'demo/next':
+      case 'demo/reset':
+        try {
+          if (action === 'demo/next') await sendNextStep(env, siteId); else await backToStepOne(env, siteId);
+        } catch (err) {
+          if (err instanceof DemoError) return sitePage(env, siteId, { error: err.message });
+          throw err;
+        }
+        return back(action === 'demo/next' ? 'demo_sent' : 'demo_reset');
       case 'publish': await publish(env, siteId, 'operator'); return back('published');
       case 'undo': await undoPublish(env, siteId); return back('undone');
       case 'preview': {
@@ -308,7 +346,7 @@ export async function handleSites(request, env, url) {
         return null;
     }
   } catch (err) {
-    if (err instanceof SiteError || /no earlier version|this site is closed|too large to publish/.test(err.message)) {
+    if (err instanceof SiteError || err.message === NOT_FOR_DEMO || /no earlier version|this site is closed|too large to publish/.test(err.message)) {
       return sitePage(env, siteId, { error: err.message });
     }
     throw err;

@@ -14,6 +14,7 @@
 import { hmacHex, sha256Hex, randomHex } from '../lib/crypto.js';
 import { SECTIONS } from './bundle.js';
 import { ApiError } from '../lib/http.js';
+import { isDemoSite, NOT_FOR_DEMO } from '../lib/demo.js';
 
 export const CODE_TTL_MS = 15 * 60 * 1000;
 export const CODE_LENGTH = 8;
@@ -56,6 +57,8 @@ const codeHash = (env, code) => hmacHex(key(env), `link:${code}`);
 // A new code for this site. Earlier unused ones stop working: one at a time.
 export async function makeLinkCode(env, siteId, createdBy) {
   key(env);
+  // The demo is linked to the sample only (kennelos/demo.js).
+  if (await isDemoSite(env, siteId)) throw new LinkError(NOT_FOR_DEMO);
   if (await bump(env, `linkcode:${siteId}`) > LIMITS.codes) throw new LinkError('Too many codes asked for. Try again in an hour.');
   const code = randomLinkCode();
   const t = Date.now();

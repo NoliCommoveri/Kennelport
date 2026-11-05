@@ -401,9 +401,12 @@ Each step is its own branch and can be released on its own.
 5. **After the KennelOS review:** the new raw fields, as rule and filter inputs, for the
    website and the portal's feed.
 
-The editor screens have no prototype. They will be built from the portal prototype's
-existing components (tiles, highlight rows, pills, numbered steps, the pinned action
-bar), and checked at 390px and on a computer before going further. The template, the
+The editor screens follow the site builder prototype (`docs/reference/site-builder-prototype.html`),
+built from the portal prototype's components (tiles, highlight rows, pills, numbered steps,
+the pinned action bar), and are checked at 390px and on a computer before going further.
+Where today's site and the prototype differ, the prototype goes into the **Website**
+template for new sites; existing sites keep today's until the owner applies or resets
+them (decided 2026-11-05). The template, the
 manage app and possibly the portal change in every step, so versions are bumped only
 after asking (CLAUDE.md).
 
