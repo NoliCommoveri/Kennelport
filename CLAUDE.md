@@ -46,10 +46,13 @@ build it from the prototype's existing components, and say so.
 
 The owner writes every line the breeder reads in the Site Manager: help lines, hints,
 labels, button wording, empty-screen messages, confirmations and errors that tell her
-what to do (`docs/Site_Builder_Plan.md`, decision 19). From now on, put new
-breeder-facing text in that list, not only in the code. Until the list exists, keep each
-screen's wording in one place and note it in the build log, so it's easy to move later.
-The owner's own admin screens and messages about KennelPort itself failing are left out.
+what to do (`docs/Site_Builder_Plan.md`, decision 19). The list is
+`worker/src/manage/wording.js` (the field labels and hints stay in `manage/forms.js`
+LABELS and are listed from there); screens read it with `say('key')`. From now on, put
+new breeder-facing text in that list, not only in the code. For a screen not moved into
+it yet, keep its wording in one place and note it in the build log, so it's easy to move
+later. The owner's own admin screens and messages about KennelPort itself failing are
+left out.
 
 ## Migrations: one per merge
 

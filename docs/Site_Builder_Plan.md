@@ -3,7 +3,9 @@
 This is the plan from the owner's talk on 2026-11-05, with her additions of the same day
 (decisions 16 to 19). Step 1 is built: the owner's admin view with Pups, Dogs, Wording,
 Formats, From KennelOS and Timing for each site (`content/rules.js`, `manage/builder.js`,
-`admin.js`). Step 2, the breeder's instructions, isn't built yet. Step 3 has begun: every
+`admin.js`). Step 2, the breeder's instructions, has begun: the list
+(`manage/wording.js`), the owner's editor (Site Manager wording, and each site's Her
+instructions), and the first of her screens' wording moved into it. Step 3 has begun: every
 page but Privacy is a list of blocks (`content/blocks.js`; Pages in the admin view), each
 data block with its records and what its cards show, and each page drawn exactly as
 before until the owner changes it; the owner adds pages, and the breeder switches and
@@ -541,6 +543,13 @@ Each step is its own branch and can be released on its own.
 2. **The breeder's instructions** (decision 19): every line of wording she reads in the
    Site Manager in one list the owner edits, set for every site and overridable per
    template and per site. It's small and it's the owner's first ask, so it goes next.
+   In this order:
+   1. the list, its editor for every site and per site, and the structured wording:
+      every field's label and help, the choices in lists, the notes after a change, the
+      lists' names and buttons, her home screen (built; per template comes with step 5);
+   2. each screen's own instructions and empty-screen messages, screen by screen;
+   3. the errors that tell her what to do (the content model's checks);
+   4. the family portal's screens for the breeder (`portal/admin.js`), and Today.
 3. **Pages, blocks and the menu as settings.** Today's site becomes the **Website** template.
    Add new pages and data blocks (Dams and Sires), the menu editor, and the breeder's
    address renaming with redirects. FAQ and badge places become block settings. Each

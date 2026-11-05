@@ -24,6 +24,8 @@ import { vapidConfig, subscribe, unsubscribe, testPush, pendingPush, subscriptio
 import { isAdmin, asAdmin, clearAdminCookie } from '../admin.js';
 import { handleBuilder } from './builder.js';
 import { NOT_FOR_DEMO } from '../lib/demo.js';
+import { sayer, everyWording, siteWording, defaultSay } from './wording.js';
+import { loadBuild } from '../content/rules.js';
 
 export const MANAGE_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
 const HEADERS = {
@@ -150,9 +152,8 @@ function sitesPage(user) {
     <form method="post" action="/signout"><button class="link">Sign out</button></form>`);
 }
 
-const STATUS_WORDS = { draft: 'Not published yet', live: 'Live', suspended: 'Switched off by KennelPort' };
 
-async function siteHome(env, user, site, view = 'today', page = plainPage) {
+async function siteHome(env, user, site, view = 'today', page = plainPage, say = defaultSay) {
   const snaps = await listSnapshots(env, site.id);
   const full = await env.DB.prepare('SELECT draft_changed_at, published_snapshot_id FROM sites WHERE id = ?').bind(site.id).first();
   const live = snaps.find((x) => x.id === full.published_snapshot_id);
@@ -182,9 +183,9 @@ async function siteHome(env, user, site, view = 'today', page = plainPage) {
   // Needs you: what came in and is waiting, shown only while something is.
   const waiting = [
     ...portal.map((x) => item(x.href, x.label, x.note)),
-    unread ? item('/inbox', `${unread} new message${unread === 1 ? '' : 's'}`, 'In your inbox') : '',
-    pending ? item('/reviews-queue', `${pending} review${pending === 1 ? '' : 's'} to approve`, 'From families') : '',
-    leaving ? item('/litters#leaving', `${leaving} litter${leaving === 1 ? '' : 's'} leaving your site`, 'Keep or remove') : '',
+    unread ? item('/inbox', say.n('home.needs.messages', unread), say('home.needs.messages.note')) : '',
+    pending ? item('/reviews-queue', say.n('home.needs.reviews', pending), say('home.needs.reviews.note')) : '',
+    leaving ? item('/litters#leaving', say.n('home.needs.leaving', leaving), say('home.needs.leaving.note')) : '',
   ].filter(Boolean);
   const sub = esc(site.subdomain);
   const notesHtml = `${matches ? matchesWaiting(site.subdomain, matches) : ''}
@@ -202,9 +203,9 @@ async function siteHome(env, user, site, view = 'today', page = plainPage) {
     // what's gone wrong, amber for what's running late), what it is, and a line more.
     const needs = [
       ...portal.map((x) => need(sub, x)),
-      unread ? need(sub, { href: '/inbox', label: `${unread} new message${unread === 1 ? '' : 's'} from your website`, note: 'In your inbox' }) : '',
-      pending ? need(sub, { href: '/reviews-queue', label: `${pending} review${pending === 1 ? '' : 's'} to approve`, note: 'From families' }) : '',
-      leaving ? need(sub, { href: '/litters#leaving', label: `${leaving} litter${leaving === 1 ? '' : 's'} leaving your site`, note: 'Keep or remove' }) : '',
+      unread ? need(sub, { href: '/inbox', label: say.n('home.needs.site_messages', unread), note: say('home.needs.messages.note') }) : '',
+      pending ? need(sub, { href: '/reviews-queue', label: say.n('home.needs.reviews', pending), note: say('home.needs.reviews.note') }) : '',
+      leaving ? need(sub, { href: '/litters#leaving', label: say.n('home.needs.leaving', leaving), note: say('home.needs.leaving.note') }) : '',
     ].filter(Boolean);
     const kennel = site.kennel_name || site.subdomain;
     return page('Today', `<section class="sec deep bleed todayband"><span class="eyebrow">${esc(kennel)}</span><h1>Today</h1>
@@ -227,32 +228,32 @@ async function siteHome(env, user, site, view = 'today', page = plainPage) {
     <p class="muted small">${esc(NOT_FOR_DEMO)}</p>
     <p class="row"><a class="button" href="/admin/${esc(site.subdomain)}/site/">Open it in your admin view</a><a class="button" href="/ops/sites/${esc(site.id)}">Its steps, in ops</a></p>
   </section>` : `<section class="card status">
-    <p><span class="dot ${site.status}"></span>${esc(STATUS_WORDS[site.status] ?? site.status)}${changed ? ' · <strong>changes not published yet</strong>' : ''}</p>
-    <p class="row"><a class="button" href="${esc(siteLink(env, site.subdomain))}">View my site</a><a class="button" href="${esc(previewLink)}">Preview changes</a><a class="button" href="/s/${esc(site.subdomain)}/share">Share</a></p>
-    <p><a class="button primary" href="/s/${esc(site.subdomain)}/publish">${changed ? 'Review and publish' : 'Publish'}</a></p>
+    <p><span class="dot ${site.status}"></span>${esc(['draft', 'live', 'suspended'].includes(site.status) ? say(`home.status.${site.status}`) : site.status)}${changed ? ` · <strong>${esc(say('home.unpublished'))}</strong>` : ''}</p>
+    <p class="row"><a class="button" href="${esc(siteLink(env, site.subdomain))}">${esc(say('home.view'))}</a><a class="button" href="${esc(previewLink)}">${esc(say('home.preview'))}</a><a class="button" href="/s/${esc(site.subdomain)}/share">${esc(say('home.share'))}</a></p>
+    <p><a class="button primary" href="/s/${esc(site.subdomain)}/publish">${esc(say(changed ? 'home.review_publish' : 'home.publish'))}</a></p>
   </section>`}
-  ${waiting.length && !portalOn ? `<section class="card" id="needs-you"><h2>Needs you</h2><ul class="items">${waiting.join('')}</ul></section>` : ''}
+  ${waiting.length && !portalOn ? `<section class="card" id="needs-you"><h2>${esc(say('home.needs'))}</h2><ul class="items">${waiting.join('')}</ul></section>` : ''}
   <ul class="tiles">
-    ${tile('/puppies', 'Puppies', 'Statuses at a glance')}
-    ${tile('/litters', 'Litters', leaving ? `${leaving} leaving your site` : 'Planned, current, past', leaving)}
-    ${tile('/photos', 'Photos and albums', 'Camera roll, galleries')}
-    ${kos.linked ? '' : tile('/waitlist', 'Your waitlist', listed ? `${listed} famil${listed === 1 ? 'y' : 'ies'} waiting` : 'Families in order, offer pups', listed)}
-    ${tile('/inbox', 'Inbox', 'Messages from your site', unread)}
-    ${tile('/dogs', 'Dogs', 'Cards, health results')}
+    ${tile('/puppies', say('home.tile.puppies'), say('home.tile.puppies.note'))}
+    ${tile('/litters', say('home.tile.litters'), leaving ? say('home.tile.litters.leaving', { n: leaving }) : say('home.tile.litters.note'), leaving)}
+    ${tile('/photos', say('home.tile.photos'), say('home.tile.photos.note'))}
+    ${kos.linked ? '' : tile('/waitlist', say('home.tile.waitlist'), listed ? say.n('home.tile.waitlist', listed) : say('home.tile.waitlist.note'), listed)}
+    ${tile('/inbox', say('home.tile.inbox'), say('home.tile.inbox.note'), unread)}
+    ${tile('/dogs', say('home.tile.dogs'), say('home.tile.dogs.note'))}
   </ul>
-  <section class="card" id="set-up"><h2>Set up your site</h2><p class="muted small">Set once, change now and then.</p><ul class="items">
-    ${item('/pages', 'Pages and wording', 'Home, about, policies, FAQ…')}
-    ${item('/pages/waitlist', 'Waitlist and application', kos.linked ? (kos.online ? 'Linked to KennelOS, which takes your applications' : 'Linked to KennelOS · your questions') : kos.offered ? 'Your questions, or link KennelOS' : 'Open or closed, your questions')}
-    ${item('/payment', 'How to pay', 'Fee, deposit, scam warning')}
-    ${item('/lists/extras', 'Extras', 'Packages and prices')}
-    ${item('/lists/products', 'Recommended products', 'Referral links, codes, home badges')}
-    ${item('/lists/reviews', 'Reviews', 'Add or hide')}
-    ${item('/details', 'Kennel details', 'Name, contact, town')}
-    ${item('/kennelos', 'KennelOS', linkRow?.n ? (linkRow.at ? `Linked · last update ${day(linkRow.at)}` : 'Linked · no update yet') : 'Link your dogs and litters')}
+  <section class="card" id="set-up"><h2>${esc(say('home.setup'))}</h2><p class="muted small">${esc(say('home.setup.note'))}</p><ul class="items">
+    ${item('/pages', say('home.setup.pages'), say('home.setup.pages.note'))}
+    ${item('/pages/waitlist', say('home.setup.waitlist'), say(kos.linked ? (kos.online ? 'home.setup.waitlist.online' : 'home.setup.waitlist.linked') : kos.offered ? 'home.setup.waitlist.offered' : 'home.setup.waitlist.note'))}
+    ${item('/payment', say('home.setup.payment'), say('home.setup.payment.note'))}
+    ${item('/lists/extras', say('home.setup.extras'), say('home.setup.extras.note'))}
+    ${item('/lists/products', say('home.setup.products'), say('home.setup.products.note'))}
+    ${item('/lists/reviews', say('home.setup.reviews'), say('home.setup.reviews.note'))}
+    ${item('/details', say('home.setup.details'), say('home.setup.details.note'))}
+    ${item('/kennelos', say('home.setup.kennelos'), linkRow?.n ? (linkRow.at ? say('home.setup.kennelos.linked', { date: day(linkRow.at) }) : say('home.setup.kennelos.waiting')) : say('home.setup.kennelos.note'))}
   </ul></section>
-  <p class="row"><a class="button" href="/notifications">Notifications on this device</a><a class="button" href="/s/${esc(site.subdomain)}/account">Your site: storage, copy, delete</a></p>
-  <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}${user.admin ? ` <a href="/admin/${esc(site.subdomain)}/rules">This site's build</a>.` : ''}</p>
-  <form method="post" action="/signout"><button class="link">Sign out</button></form>`, portalOn ? { nav: { sub: site.subdomain, tab: 'website' } } : {});
+  <p class="row"><a class="button" href="/notifications">${esc(say('home.notifications'))}</a><a class="button" href="/s/${esc(site.subdomain)}/account">${esc(say('home.account'))}</a></p>
+  <p class="muted small">${esc(say('home.role', { role: site.role }))}${user.sites.length > 1 ? ` <a href="/">${esc(say('home.other_sites'))}</a>.` : ''}${user.admin ? ` <a href="/admin/${esc(site.subdomain)}/rules">This site's build</a>.` : ''}</p>
+  <form method="post" action="/signout"><button class="link">${esc(say('home.signout'))}</button></form>`, portalOn ? { nav: { sub: site.subdomain, tab: 'website' } } : {});
 }
 
 // A Needs you tile: its icon and tone from what it is (portal/admin.js portalNeedsYou).
@@ -389,14 +390,16 @@ export async function handleManage(request, env, url) {
     const portalOn = row?.portal_on;
     const brand = portalOn ? { sub: site.subdomain, name: row.kennel_name || site.subdomain, logo: row.logo_photo_id, monogram: row.monogram } : null;
     const sitePage = brand ? (t, b, o = {}) => page(t, b, { ...o, brand }) : page;
-    if (!m[2] && !post) return siteHome(env, user, site, 'today', sitePage);
-    if (portalOn && !post && m[2] === '/website') return siteHome(env, user, site, 'website', sitePage);
+    // Her wording: the owner's, for this site, else for every site, else today's (wording.js).
+    const say = sayer({ every: await everyWording(env), site: siteWording(await loadBuild(env, site.id)) }, { kennel: row?.kennel_name || site.subdomain });
+    if (!m[2] && !post) return siteHome(env, user, site, 'today', sitePage, say);
+    if (portalOn && !post && m[2] === '/website') return siteHome(env, user, site, 'website', sitePage, say);
     if (portalOn && !post && m[2] === '/kennel') return sitePage('Dogs', await dogsTab(env, site), { nav: { sub: site.subdomain, tab: 'dogs' } });
     if (m[2]?.startsWith('/portal')) {
       const res = await handlePortalAdmin({ env, request, url, site, page: sitePage });
       if (res) return res;
     } else if (m[2]) {
-      const res = await createScreens({ env, request, url, site, user, page: sitePage })();
+      const res = await createScreens({ env, request, url, site, user, page: sitePage, say })();
       if (res) return res;
     }
   }

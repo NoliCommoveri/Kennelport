@@ -42,6 +42,7 @@ import {
 } from '../content/blocks.js';
 import { PAGES, MENU_GROUPS } from '../content/model.js';
 import { siteLink } from '../ops/sites.js';
+import { SCREENS as WORD_SCREENS, CATALOG, itemsOn, everyWording, saveEveryWording, siteWording, withWording, WordingError } from './wording.js';
 
 const redirect = (location) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store' } });
 const ic = (n) => `<span class="ic" aria-hidden="true"><svg class="i"><use href="#i-${n}"/></svg></span>`;
@@ -59,6 +60,7 @@ const whereIs = (site, path = '') => (isDemo(site) ? `Demo${path ? ` · ${path}`
 const SCREENS = [
   ['pages', 'Pages', 'pages', 'Pages'], ['rules', 'Pups', 'paw', 'Pups'], ['dogs', 'Dogs', 'star', 'Dogs'], ['wording', 'Wording', 'pages', 'Words'],
   ['formats', 'Formats', 'cal', 'Formats'], ['kennelos', 'From KennelOS', 'link', 'KennelOS'], ['timing', 'Timing', 'clock', 'Timing'],
+  ['instructions', 'Her instructions', 'book', 'Help'],
 ];
 
 // The admin nav: Every site, then this site's screens (bottom on a phone, down the
@@ -66,7 +68,7 @@ const SCREENS = [
 export function adminNav(site, cur) {
   const items = site ? SCREENS.map(([k, l, i, short]) => [k, l, i, short]) : [];
   const link = (href, label, icon, on, short = label) => `<a href="${href}"${on ? ' aria-current="page"' : ''}>${svg(icon)}<span class="lg">${esc(label)}</span><span class="sm">${esc(short)}</span></a>`;
-  return `<nav class="apptabs adm" aria-label="Site builder">${link('/admin', 'Every site', 'globe', !site, 'Sites')}
+  return `<nav class="apptabs adm" aria-label="Site builder">${link('/admin', 'Every site', 'globe', !site && cur !== 'wording', 'Sites')}${site ? '' : link('/admin/wording', 'Site Manager wording', 'book', cur === 'wording', 'Wording')}
     ${site ? `<span class="lbl">Building</span><span class="site">${esc(site.kennel_name || site.subdomain)}<small>${isDemo(site) ? '<span class="spill brass">Demo</span> ' : ''}${esc(startingTemplate(site))}</small></span>` : ''}
     ${items.map(([k, l, i, short]) => link(`/admin/${esc(site.subdomain)}/${k}`, l, i, cur === k, short)).join('')}</nav>`;
 }
@@ -644,8 +646,10 @@ export async function handleBuilder({ env, request, url, user, page }) {
   if (!user?.admin) return null;
   const path = url.pathname;
   if (path === '/admin' || path === '/admin/') return page('Every site', await everySite(env), { admin: { nav: adminNav(null, 'sites') } });
+  const wm = path.match(/^\/admin\/wording(?:\/([a-z]+))?$/);
+  if (wm) return wordingRoute({ env, request, url, page, site: null, screen: wm[1] ?? null });
   const sv = path.match(/^\/admin\/([a-z0-9-]+)\/site(\/.*)?$/);
-  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z0-9_-]+|rules|dogs|wording|formats|kennelos|timing)$/);
+  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z0-9_-]+|rules|dogs|wording|formats|kennelos|timing|instructions|instructions\/[a-z]+)$/);
   if (!m) return null;
   const site = await env.DB.prepare("SELECT id, subdomain, kennel_name, status, portal_on, demo_step FROM sites WHERE subdomain = ? AND status != 'closed'").bind(m[1]).first();
   if (!site) return null;
@@ -655,6 +659,7 @@ export async function handleBuilder({ env, request, url, user, page }) {
   }
   const screen = m[2];
   const build = await loadBuild(env, site.id);
+  if (screen === 'instructions' || screen.startsWith('instructions/')) return wordingRoute({ env, request, url, page, site, build, screen: screen.split('/')[1] ?? null });
   if (screen === 'pages' || screen.startsWith('pages/')) return pagesRoute({ env, request, url, site, build, page, screen });
   let { rules, timing } = rulesFor(build);
   let error = null;
@@ -775,4 +780,75 @@ async function pagesRoute({ env, request, url, site, build, page, screen }) {
     <form method="post" id="build" class="build"><button class="sr" tabindex="-1" aria-hidden="true">Save</button>${await pageScreen(env, site, build, key, { open, error })}
       <div class="actionbar"><div class="in"><span class="ico">${ic('eye')}</span><p><b>Their ${esc(title)} page</b>Save, then the preview shows it. Publishing puts it live.</p><a class="button small seeit" href="#preview">See it</a><button class="primary small">Save</button></div></div></form>`;
   return page(`${title} · ${site.kennel_name || site.subdomain}`, body, { admin: { nav: adminNav(site, 'pages'), site } });
+}
+
+// ---------- the breeder's instructions (step 2, decision 19) ----------
+
+// Her Site Manager's wording: for every site (/admin/wording), or one site's own
+// (/admin/<sub>/instructions). Grouped by screen, each line with where it shows,
+// today's wording and the names it can use. No prototype screen for it: built from
+// the prototype's lists, cards, pills and the pinned action bar.
+async function wordingRoute({ env, request, url, page, site, build = null, screen }) {
+  const every = await everyWording(env);
+  const own = site ? siteWording(build) : {};
+  const base = site ? `/admin/${esc(site.subdomain)}/instructions` : '/admin/wording';
+  const nav = { admin: { nav: site ? adminNav(site, 'instructions') : adminNav(null, 'wording'), ...(site ? { site } : {}) } };
+  const q = String(url.searchParams.get('q') ?? '').trim();
+  const changed = (it) => (site ? own[it.key] != null : every[it.key] != null);
+  const head = site
+    ? `<p class="crumb"><a href="/admin">‹ Every site</a></p><span class="eyebrow">${esc(site.kennel_name || site.subdomain)}</span>${isDemo(site) ? ' <span class="spill brass">Demo</span>' : ''}<h1>Her instructions</h1>
+      <p class="muted">The wording she reads in her Site Manager, for this site only. Empty lines follow <a href="/admin/wording">the wording for every site</a>.</p>`
+    : `<p class="crumb"><a href="/admin">‹ Every site</a></p><h1>Site Manager wording</h1>
+      <p class="muted">Every line the breeder reads in her Site Manager, for every site. A site can have its own, on its Her instructions tab. Empty lines are today's wording.</p>`;
+  const search = `<form method="get" action="${base}/all" class="card"><div class="fgrid"><label class="half">Find a line<input type="search" name="q" value="${esc(q)}" placeholder="like &quot;Publish&quot; or &quot;litter&quot;"></label></div></form>`;
+
+  if (!screen) {
+    if (request.method !== 'GET') return null;
+    const rows = Object.entries(WORD_SCREENS).map(([k, name]) => {
+      const list = itemsOn(k);
+      const n = list.filter(changed).length;
+      return `<li><a class="rowlink grow" href="${base}/${k}"><b>${esc(name)}</b><br><span class="small muted">${list.length} line${list.length === 1 ? '' : 's'}${n ? ` · <span class="chg">${n} changed</span>` : ''}</span></a><span class="go" aria-hidden="true">›</span></li>`;
+    });
+    const body = `${head}${search}<section class="card"><div class="between"><h2>${CATALOG.size} lines, by screen</h2></div><ul class="list pages">${rows.join('')}</ul></section>
+      <section class="card band"><p class="small">So far the list holds every field's label and help, the choices in lists, the notes after a change, the lists' names and her home screen. Each screen's own instructions and the family portal's screens join it next.</p></section>`;
+    return page(site ? 'Her instructions' : 'Site Manager wording', body, nav);
+  }
+  if (screen !== 'all' && !Object.hasOwn(WORD_SCREENS, screen)) return null;
+  const list = screen === 'all'
+    ? [...CATALOG.values()].filter((it) => q && [it.key, it.where, it.text, every[it.key], own[it.key]].some((x) => String(x ?? '').toLowerCase().includes(q.toLowerCase()))).slice(0, 200)
+    : itemsOn(screen);
+  let error = null;
+  if (request.method === 'POST') {
+    const form = await request.formData();
+    const changes = {};
+    for (const it of list) if (form.has(`w.${it.key}`)) changes[it.key] = String(form.get(`w.${it.key}`));
+    try {
+      if (site) await saveBuild(env, site.id, withWording(build, changes, every));
+      else await saveEveryWording(env, changes);
+      return redirect(`${base}/${screen}${q ? `?q=${encodeURIComponent(q)}&saved=1` : '?saved=1'}`);
+    } catch (err) {
+      if (!(err instanceof WordingError)) throw err;
+      error = err.message;
+    }
+  }
+  const fresh = site ? siteWording(await loadBuild(env, site.id)) : await everyWording(env);
+  const rows = list.map((it) => {
+    const mine = fresh[it.key] ?? '';
+    const follows = site ? every[it.key] ?? it.text : it.text;
+    const long = follows.length > 70 || mine.length > 70;
+    const input = long ? `<textarea name="w.${esc(it.key)}" rows="3" placeholder="${esc(follows)}">${esc(mine)}</textarea>` : `<input type="text" name="w.${esc(it.key)}" value="${esc(mine)}" placeholder="${esc(follows)}">`;
+    return `<li class="wline${mine ? ' on' : ''}"><label><span class="where"><b>${esc(it.where)}</b>${mine ? ' <span class="chg">changed</span>' : ''}</span>${input}
+      <span class="hint">${follows ? `${site && every[it.key] != null ? 'Every site' : 'Today'}: “${esc(follows)}”` : 'Empty today.'}${` Can use ${['kennel', ...it.vars.filter((v) => v !== 'kennel')].map((v) => `{${v}}`).join(', ')}.`}</span></label></li>`;
+  }).join('');
+  const title = screen === 'all' ? (q ? `Lines with “${q}”` : 'Find a line') : WORD_SCREENS[screen];
+  const saved = url.searchParams.get('saved') && !error;
+  const body = `<p class="crumb"><a href="${base}">‹ ${site ? 'Her instructions' : 'Site Manager wording'}</a></p>${site ? `<span class="eyebrow">${esc(site.kennel_name || site.subdomain)}</span>` : ''}<h1>${esc(title)}</h1>
+    ${screen === 'all' ? search : ''}
+    ${saved ? `<p class="notice" role="status">Saved. ${site ? 'Her Site Manager shows it now.' : 'Every site\'s Site Manager shows it now, except where a site has its own.'}</p>` : ''}
+    ${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
+    <form method="post" class="build solo"><button class="sr" tabindex="-1" aria-hidden="true">Save</button><div class="stack">
+      <section class="card"><p class="small muted">${site ? 'Leave a line empty to follow the wording for every site.' : 'Leave a line empty for today\'s wording.'} Names in braces are filled in, like {kennel} with her kennel's name.</p>
+      ${rows ? `<ul class="list wlines">${rows}</ul>` : `<p class="muted">${q ? 'No line has that.' : 'Type a word to find the lines that have it.'}</p>`}</section></div>
+      <div class="actionbar"><div class="in"><span class="ico">${ic('book')}</span><p><b>${site ? 'Her instructions' : 'Every site'}</b>Saved lines show in the Site Manager straight away, no publish needed.</p><button class="primary small">Save</button></div></div></form>`;
+  return page(`${title} · ${site ? 'Her instructions' : 'Site Manager wording'}`, body, nav);
 }

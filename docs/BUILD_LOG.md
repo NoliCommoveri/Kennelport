@@ -1551,3 +1551,31 @@ with new sections and a new building order. Docs only; nothing built yet.
 - Older lines brought in line: `KennelPort_Plan.md` 3.12 (no free look controls and
   "fixed" now mean for the breeder; the owner has them), `KennelPort_Design_Direction.md`
   section 2 (buttons) and Decided (scheme colours and the font library for the owner).
+
+## 2026-11-05: site builder step 2 begins: the breeder's instructions
+
+- `worker/src/manage/wording.js`: the list of wording the breeder reads in the Site
+  Manager. Each line has a key, its screen, where it appears, its default (today's
+  wording) and the names it can use ({kennel} everywhere; {n}, {date}, {role}, {one},
+  {error} where the screen has them). `say(key)` gives the site's own wording, else every
+  site's, else the default; `say.n()` picks the one or many line.
+- Stored: every site's in a new `wording` table (added to `0028_demo.sql`, the branch's
+  one migration); a site's own in its build (`wording`), so Reset to template will treat
+  it as the owner's build. Per template comes with templates (step 5).
+- The owner's editor: **Site Manager wording** (`/admin/wording`) and each site's **Her
+  instructions** tab: grouped by screen, a search across all of it, each line with where
+  it shows, today's wording and the names it can use; a line with a name it can't use is
+  refused. No prototype screen for it: built from the prototype's lists, cards and pinned
+  bar. Saved lines show straight away, no publish.
+- In the list so far (521 lines): every form field's label and help (`forms.js` LABELS,
+  SHARED, listed from there, so a field's hint she has none of today can be added), the
+  choices in lists (ENUM_WORDS, not the schemes' names), the notes after a change (were
+  `screens.js` NOTES), the lists' names, Add, New, Save and "None yet", and her home
+  screen (`index.js` siteHome: status, buttons, tiles, set-up rows, Needs you).
+- Not in it yet, each kept in one place to move next: each screen's own instructions and
+  empty messages (`screens.js`, inline in each screen's function), the content model's
+  error messages (`content/model.js`, `records.js`), Today with the family portal
+  (`index.js` siteHome, the portal branch) and the portal's breeder screens
+  (`portal/admin.js`).
+- Her Site Manager reads exactly as before with no wording set (45 screens of the AK
+  sample drawn before and after). Tests: `wording.test.js`.
