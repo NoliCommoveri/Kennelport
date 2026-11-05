@@ -539,7 +539,34 @@ function expanderPage(snap, key, fallback) {
     body: `${pagehead(p, fallback)}<section class="section tight"><div class="wrap"><div class="acc">${expanders(snap.expanders[key] ?? [])}</div></div></section>`,
   };
 }
-export const policies = (snap) => expanderPage(snap, 'policies', { eyebrow: 'Our promises', heading: 'Policies' });
+// Policies: hers, then (with a KennelOS waitlist linked) her KennelOS waitlist
+// policies under their own heading, read from the feed so a change there shows here
+// without a publish (KennelOS Waitlist Policies plan §4). They're edited in KennelOS.
+export function policies(snap, ctx = {}) {
+  const page = expanderPage(snap, 'policies', { eyebrow: 'Our promises', heading: 'Policies' });
+  const wl = ctx.feed?.feed?.kennel;
+  if (!wl?.policies?.length) return page;
+  const closed = closedDatesText(wl.closed_dates ?? []);
+  const rows = wl.policies.map((x) => ({ heading: x.heading, body: x.body + (x.topic === 'days' && closed ? `\n\nUpcoming closed dates: ${closed}` : '') }));
+  // A second page head, in the page's own look (eyebrow, heading, lede), as an h2.
+  page.body += `<section id="waitlist-policies"><div class="wrap pagehead"><span class="eyebrow">Our waitlist</span><h2 class="pagehead-h">Waitlist policies</h2>
+    <p class="lede">How our waitlist runs. Families tick that they've read these when they apply.${wl.policies_updated ? ` Updated ${esc(fmtDate(wl.policies_updated))}.` : ''}</p></div>
+    <section class="section tight"><div class="wrap"><div class="acc">${expanders(rows)}</div></div></section></section>`;
+  return page;
+}
+
+// Closed dates in words, runs of days together: "Dec 24–26, Jan 1".
+function closedDatesText(dates) {
+  const days = [...new Set(dates.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d))))].sort();
+  const label = (ymd) => new Date(`${ymd}T12:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
+  const next = (ymd) => new Date(Date.parse(`${ymd}T12:00:00Z`) + 86400000).toISOString().slice(0, 10);
+  const runs = [];
+  for (const d of days) {
+    const last = runs.at(-1);
+    if (last && next(last.to) === d) last.to = d; else runs.push({ from: d, to: d });
+  }
+  return runs.map((r) => (r.from === r.to ? label(r.from) : `${label(r.from)}–${r.from.slice(0, 7) === r.to.slice(0, 7) ? Number(r.to.slice(8)) : label(r.to)}`)).join(', ');
+}
 export const faq = (snap) => expanderPage(snap, 'faq', { eyebrow: 'Questions', heading: 'FAQ' });
 // /family-login, only on a site with the family portal on and a KennelOS
 // waitlist linked: the one Family login button asks which the family wants.
@@ -652,10 +679,16 @@ function kosPreference(q, form) {
   }
 }
 
-function kosQuestion(q, form) {
+function kosQuestion(q, form, policiesHref = null) {
   const id = kosId(q);
   const data = `data-q="${attr(q.id)}" data-type="${attr(q.type)}"${q.key ? ` data-key="${attr(q.key)}"` : ''}${q.required ? ' data-required' : ''} data-label="${attr(q.label)}"`;
-  const label = `<span>${esc(q.label)}${kosReq(q)}</span>${kosHelp(q)}`;
+  // "I've read the policies" (KennelOS): the word "policies" links to them.
+  let text = esc(q.label);
+  if (q.link === 'policies' && policiesHref) {
+    const a = (w) => `<a href="${attr(policiesHref)}"${/^https?:/.test(policiesHref) ? ' rel="noopener" target="_blank"' : ''}>${w}</a>`;
+    text = /\bpolicies\b/i.test(text) ? text.replace(/\bpolicies\b/i, (w) => a(w)) : `${text} ${a('Read our policies')}`;
+  }
+  const label = `<span>${text}${kosReq(q)}</span>${kosHelp(q)}`;
   switch (q.type) {
     case 'notice':
       return `<div class="kq notice-q" ${data}><b>${esc(q.label)}</b><div class="small">${paras(q.help)}</div>
@@ -680,9 +713,13 @@ function kennelosForm(snap, ctx) {
   const form = feed.form;
   const applyUrl = `${origin}${feed.links?.apply ?? `/apply/${encodeURIComponent(publicId)}`}`;
   const firstMatch = (form.questions ?? []).find((q) => (form.matching_keys ?? []).includes(q.key));
+  // Where "policies" in the application goes: her Policies page's waitlist part, or
+  // KennelOS's list page when her Policies page is off.
+  const policiesHref = !feed.kennel?.policies?.length ? null
+    : pageOn(snap, 'policies', ctx) ? '/policies#waitlist-policies' : `${origin}${feed.links?.list ?? `/list/${encodeURIComponent(publicId)}`}#policies`;
   const questions = (form.questions ?? []).map((q) => {
     const notice = q === firstMatch && form.matching_notice ? `<div class="kq notice-q"><b>Matching you with a pup</b><p class="small">${esc(form.matching_notice)}</p></div>` : '';
-    return notice + kosQuestion(q, form);
+    return notice + kosQuestion(q, form, policiesHref);
   }).join('\n');
   const faq = form.faq?.length ? `<div class="kos-faq"><b>Before you apply</b><div class="acc">${form.faq.map((x) => `<details class="x"><summary>${esc(x.question || 'Question')}</summary><div class="body">${paras(x.answer)}</div></details>`).join('')}</div></div>` : '';
   const turnstile = form.turnstile_site_key ? `<div class="cf-turnstile" data-sitekey="${attr(form.turnstile_site_key)}"></div><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>` : '';

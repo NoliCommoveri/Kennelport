@@ -1482,3 +1482,17 @@ answers to plan 15.
   invited, Invite to send, Invite not accepted, No puppy yet). The waitlist side lists the
   website's list in order, or says it's in KennelOS.
 - App files changed (`app.css`): `APP_VERSION` needs its bump, held with the portal's.
+
+## 2026-11-05: Her KennelOS waitlist policies on her website
+
+- With a KennelOS waitlist linked, her **Policies** page shows her own policies and then
+  **Waitlist policies** (eyebrow "Our waitlist", in the page's own heading look, the same
+  expanders), read from the KennelOS feed like the waitlist page (`/policies` is live, so a
+  change in KennelOS shows within minutes, no publish), with her upcoming closed dates under
+  a business-days policy (KennelOS `docs/KennelOS_Waitlist_Policies_Plan.md` §4).
+- KennelOS's application on her waitlist page: the "I've read the policies" box's word
+  "policies" links to `/policies#waitlist-policies` (or KennelOS's list page while her
+  Policies page is off).
+- Site Manager › Policies: a read-only **Waitlist policies from KennelOS** card above her own,
+  saying where to change them; her own list stays for everything beyond the waitlist.
+- No site template file changed (drawn on the server), so no `ASSET_VERSION` bump.
