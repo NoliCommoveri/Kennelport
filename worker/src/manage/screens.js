@@ -30,7 +30,8 @@ import {
 import { makeLinkCode, showCode, devices, stopDevice, unlinkSite, setKennelosPrices, LinkError, CODE_TTL_MS } from '../kennelos/link.js';
 import { OWNED, OWNED_PRICES } from '../kennelos/bundle.js';
 import { pendingMatches, matchChanges, confirmMatch, declineMatch, MatchError } from '../kennelos/match.js';
-import { leavingLitters, keepLitter, deleteLitter, LITTER_DAYS } from '../kennelos/clock.js';
+import { leavingLitters, keepLitter, deleteLitter } from '../kennelos/clock.js';
+import { litterDaysFor } from '../content/rules.js';
 
 export const FRESH_SIGN_IN_MS = 15 * 60 * 1000;
 
@@ -191,7 +192,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     const list = await leavingLitters(env, site.id);
     if (!list.length) return '';
     return `<section class="card" id="leaving"><h2>Leaving your site</h2>
-      <p class="muted small">Litters off your site are deleted ${LITTER_DAYS} days after they left, with their puppies, albums and the photos nothing else uses. Keep one to have it stay as a past litter, or Remove now to delete it today instead of waiting. Removing can't be undone.</p>
+      <p class="muted small">Litters off your site are deleted ${await litterDaysFor(env, site.id)} days after they left, with their puppies, albums and the photos nothing else uses. Keep one to have it stay as a past litter, or Remove now to delete it today instead of waiting. Removing can't be undone.</p>
       <ul class="items">${list.map((l) => `<li class="item"><a href="${base}/litters/${l.id}"><b>${esc(l.name)}</b><span>Deleted on ${esc(day(l.deletes_on))}</span></a>
         <form method="post" action="${base}/litters/${l.id}/keep"><button>Keep</button></form>
         <form method="post" action="${base}/litters/${l.id}/remove-now"><button class="link">Remove now</button></form></li>`).join('')}</ul></section>`;

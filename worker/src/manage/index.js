@@ -21,6 +21,8 @@ import { nav, goingHome, dogsTab, lastFromKennelos } from './hub.js';
 import { getSettings } from '../portal/store.js';
 import { localParts } from '../portal/vet.js';
 import { vapidConfig, subscribe, unsubscribe, testPush, pendingPush, subscriptionFor } from '../push.js';
+import { isAdmin, asAdmin, clearAdminCookie } from '../admin.js';
+import { handleBuilder } from './builder.js';
 
 export const MANAGE_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
 const HEADERS = {
@@ -56,12 +58,21 @@ const SPRITE = `<svg class="sprite" width="0" height="0" aria-hidden="true">${Ob
   vet: '<path d="M6 3v6a5 5 0 0 0 10 0V3"/><path d="M11 14v2a5 5 0 0 0 10 0v-2"/><circle cx="21" cy="12" r="1.5"/>',
   cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
   draft: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
+  sliders: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',
+  clock: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2.5h6"/>',
+  eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  layers: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
 }).map(([k, d]) => `<symbol id="i-${k}" viewBox="0 0 24 24">${d}</symbol>`).join('')}</svg>`;
 const ic = (n) => `<span class="ic" aria-hidden="true"><svg class="i"><use href="#i-${n}"/></svg></span>`;
 
 // nav: { sub, tab } puts her tabs on the page (sites with the puppy portal, plan 7.3).
-function page(title, body, { status = 200, back = null, headers = {}, nav: tabs = null, brand = null, backLabel = 'Back' } = {}) {
-  const header = brand
+// admin: { nav, site } is the owner's build view (builder.js): the site builder's
+// header with the Admin pill, and its own nav.
+function page(title, body, { status = 200, back = null, headers = {}, nav: tabs = null, brand = null, backLabel = 'Back', admin = null } = {}) {
+  const header = admin
+    ? `<header class="top adminhead"><a class="brand" href="/admin"><img class="mark" src="/_kp/m/icon-64.png" alt="" width="32" height="32"><span class="title"><b>KennelPort</b><small><svg class="i" aria-hidden="true"><use href="#i-sliders"/></svg>Site builder</small></span></a>
+<span class="adminpill">Admin</span>${admin.site ? `<a class="button small onfill" href="/s/${esc(admin.site.subdomain)}"><svg class="i" aria-hidden="true"><use href="#i-eye"/></svg>As ${esc((admin.site.kennel_name || admin.site.subdomain).split(' ')[0])}</a>` : ''}</header>`
+    : brand
     ? `<header class="top brandhead"><a class="brand" href="/s/${esc(brand.sub)}"><span class="logo">${brand.logo ? `<img src="/s/${esc(brand.sub)}/photos/${esc(brand.logo)}/thumb" alt="">` : ''}<span class="mono">${esc(brand.monogram || (brand.name || '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2))}</span></span><span class="title"><b>${esc(brand.name)}</b><small><svg class="i" aria-hidden="true"><use href="#i-globe"/></svg>Site Manager</small></span></a>
 <a class="hb" href="/s/${esc(brand.sub)}/account" aria-label="Your account and site"><svg class="i" aria-hidden="true"><use href="#i-user"/></svg></a></header>`
     : `<header class="top">${back ? `<a class="back" href="${esc(back)}" aria-label="Back">‹</a>` : '<img class="mark" src="/_kp/m/icon-64.png" alt="" width="32" height="32">'}<span class="title"><small>Site Manager</small><b>${esc(title)}</b></span></header>`;
@@ -81,9 +92,9 @@ function page(title, body, { status = 200, back = null, headers = {}, nav: tabs 
 <link rel="stylesheet" href="/_kp/m/app.css?v=${APP_VERSION}">
 <script src="/_kp/m/app.js?v=${APP_VERSION}" defer></script>
 <script src="/_kp/m/photos.js?v=${APP_VERSION}" defer></script>
-</head><body${tabs ? ' class="tabbed"' : ''}>
+</head><body${admin ? ' class="tabbed admin"' : tabs ? ' class="tabbed"' : ''}>
 ${SPRITE}
-${tabs ? nav(tabs.sub, tabs.tab) : ''}
+${admin ? admin.nav : tabs ? nav(tabs.sub, tabs.tab) : ''}
 ${header}
 <main>${crumb}${head}${body}</main>
 <p class="offline-note" id="offline-note" hidden role="status">You're offline. You can look around, but saving needs a connection.</p>
@@ -196,7 +207,7 @@ async function siteHome(env, user, site, view = 'today', page = plainPage) {
       ${needs.length ? `<section id="needs-you" class="stack"><h2>Needs you</h2><div class="needs">${needs.join('')}</div></section>`
         : !changed && !home.count && !notices.length ? '<section class="card band"><p><span class="st ok">All caught up</span> Nothing needs you right now.</p><p class="muted small">Pickups this week, vet records, messages and anything else waiting will show here.</p></section>' : ''}
       ${await todayLists(env, site)}
-      <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}</p>`, { nav: { sub: site.subdomain, tab: 'today' } });
+      <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}${user.admin ? ` <a href="/admin/${esc(site.subdomain)}/rules">This site's build</a>.` : ''}</p>`, { nav: { sub: site.subdomain, tab: 'today' } });
   }
   return page(portalOn ? 'Website' : site.kennel_name || site.subdomain, `
   ${portalOn ? '' : notesHtml}
@@ -226,7 +237,7 @@ async function siteHome(env, user, site, view = 'today', page = plainPage) {
     ${item('/kennelos', 'KennelOS', linkRow?.n ? (linkRow.at ? `Linked · last update ${day(linkRow.at)}` : 'Linked · no update yet') : 'Link your dogs and litters')}
   </ul></section>
   <p class="row"><a class="button" href="/notifications">Notifications on this device</a><a class="button" href="/s/${esc(site.subdomain)}/account">Your site: storage, copy, delete</a></p>
-  <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}</p>
+  <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}${user.admin ? ` <a href="/admin/${esc(site.subdomain)}/rules">This site's build</a>.` : ''}</p>
   <form method="post" action="/signout"><button class="link">Sign out</button></form>`, portalOn ? { nav: { sub: site.subdomain, tab: 'website' } } : {});
 }
 
@@ -324,10 +335,15 @@ export async function handleManage(request, env, url) {
     throw err;
   }
 
-  const user = await currentUser(env, request);
+  // Admin (admin.js): signed in to /ops on this device, so every site is hers.
+  const breeder = await currentUser(env, request);
+  const user = await isAdmin(env, request) ? await asAdmin(env, breeder) : breeder;
   if (pathname === '/signout' && post) {
-    if (user) await signOut(env, user);
-    return redirect('/', { 'set-cookie': clearSessionCookie() });
+    if (breeder) await signOut(env, breeder);
+    const headers = new Headers({ location: '/', 'cache-control': 'no-store' });
+    headers.append('set-cookie', clearSessionCookie());
+    if (user?.admin) headers.append('set-cookie', clearAdminCookie());
+    return new Response(null, { status: 303, headers });
   }
   if (!user) return pathname === '/' ? signInPage() : redirect('/');
 
@@ -341,6 +357,10 @@ export async function handleManage(request, env, url) {
     if (pathname === '/push/status') return reply({ on: Boolean(await subscriptionFor(env, user, body.endpoint)) });
   }
   if (pathname === '/notifications') return notificationsPage(env, user);
+  if (user.admin && (pathname === '/' || pathname.startsWith('/admin'))) {
+    const res = await handleBuilder({ env, request, url: pathname === '/' ? new URL('/admin', url) : url, user, page });
+    if (res) return res;
+  }
   if (pathname === '/') return user.sites.length === 1 ? redirect(`/s/${user.sites[0].subdomain}`) : sitesPage(user);
   // KennelOS's "get a link code" link: straight to Link KennelOS with one site,
   // else the list of sites to pick from.

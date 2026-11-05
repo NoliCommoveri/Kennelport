@@ -1,6 +1,8 @@
 # Site builder: plan
 
-Nothing here is built yet. This is the plan from the owner's talk on 2026-11-05.
+This is the plan from the owner's talk on 2026-11-05. Step 1 is built (display and timing
+rules, below; `content/rules.js`, `manage/builder.js`, `admin.js`), except the dog rules and
+the fixed wording, which follow once the owner has seen the screens.
 
 Today a site's pages, menu, sections, and the rules for how KennelOS data shows are
 written into the code. Changing one means a code change, for every site at once. This

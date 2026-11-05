@@ -1,6 +1,7 @@
 // A litter isn't an archive (plan 5.3, decision 28). A litter off the site —
 // switched off, unticked or gone from a KennelOS bundle, or marked Past without
-// Keep — is kept LITTER_DAYS in case it was a mistake, listed in the manage app
+// Keep — is kept for the site's timing rule's days (content/rules.js, today
+// LITTER_DAYS) in case it was a mistake, listed in the manage app
 // with the day it goes and a Keep button. Then the daily cleanup deletes it with
 // its puppies, its albums, and the photos nothing else uses.
 //
@@ -11,7 +12,9 @@
 // can take a litter off or put it back (a save, a bundle, Unlink), and by the
 // daily cleanup, which also starts the clock for litters already off the site on
 // the day this ships.
-export const LITTER_DAYS = 30;
+import { DEFAULT_TIMING, litterDaysFor, rulesFor } from '../content/rules.js';
+
+export const LITTER_DAYS = DEFAULT_TIMING.litter_days;
 const DAY = 86400000;
 
 const OFF = "kept_at IS NULL AND (show_on_site = 0 OR hidden_by_kennelos = 1 OR stage = 'past')";
@@ -29,12 +32,13 @@ export async function syncLitterClocks(env, siteId) {
   await env.DB.batch(litterClockStatements(env, siteId));
 }
 
-export const deletesOn = (leftAt) => new Date(Date.parse(leftAt) + LITTER_DAYS * DAY).toISOString().slice(0, 10);
+export const deletesOn = (leftAt, days = LITTER_DAYS) => new Date(Date.parse(leftAt) + days * DAY).toISOString().slice(0, 10);
 
 // What the manage app lists: litters about to go, soonest first.
 export async function leavingLitters(env, siteId) {
+  const days = await litterDaysFor(env, siteId);
   const { results } = await env.DB.prepare('SELECT id, name, stage, left_site_at, source FROM litters WHERE site_id = ? AND left_site_at IS NOT NULL ORDER BY left_site_at').bind(siteId).all();
-  return results.map((l) => ({ ...l, deletes_on: deletesOn(l.left_site_at) }));
+  return results.map((l) => ({ ...l, deletes_on: deletesOn(l.left_site_at, days) }));
 }
 
 // Keep (plan 5.3): the litter stays, as Past (off Home and the Puppies page, its
@@ -109,17 +113,27 @@ export async function deleteLitter(env, siteId, litterId) {
   return photos;
 }
 
-// The daily cleanup's part: start clocks, then delete litters past their 30 days,
-// except a litter whose puppy has an open placement in the family portal.
-// Returns the ids of the photos removed with them, so their files go tonight.
+// The daily cleanup's part: start clocks, then delete litters past their site's
+// days (today 30), except a litter whose puppy has an open placement in the
+// family portal. Returns the ids of the photos removed with them, so their files
+// go tonight.
 export async function expireLitters(env, now = new Date(), limit = 50) {
   await env.DB.batch(litterClockStatements(env, null, now.toISOString()));
-  const cutoff = new Date(now.getTime() - LITTER_DAYS * DAY).toISOString();
-  const { results } = await env.DB.prepare(`SELECT l.id, l.site_id FROM litters l JOIN sites s ON s.id = l.site_id
+  // The shortest any site keeps them: only litters past that can be due.
+  const builds = (await env.DB.prepare('SELECT site_id, build FROM site_builds').all()).results;
+  const daysBySite = new Map(builds.map((b) => {
+    let build = {};
+    try { build = JSON.parse(b.build); } catch { /* the defaults */ }
+    return [b.site_id, rulesFor(build).timing.litter_days];
+  }));
+  const fewest = Math.min(LITTER_DAYS, ...daysBySite.values());
+  const cutoff = new Date(now.getTime() - fewest * DAY).toISOString();
+  const { results } = await env.DB.prepare(`SELECT l.id, l.site_id, l.left_site_at FROM litters l JOIN sites s ON s.id = l.site_id
     WHERE l.left_site_at IS NOT NULL AND l.left_site_at < ? AND l.kept_at IS NULL AND s.status != 'closed'
       AND NOT EXISTS (SELECT 1 FROM portal_placements pp JOIN puppies p ON p.id = pp.puppy_id WHERE p.litter_id = l.id AND pp.status = 'open')
-    ORDER BY l.left_site_at LIMIT ?`).bind(cutoff, limit).all();
+    ORDER BY l.left_site_at`).bind(cutoff).all();
+  const due = results.filter((l) => Date.parse(l.left_site_at) < now.getTime() - (daysBySite.get(l.site_id) ?? LITTER_DAYS) * DAY).slice(0, limit);
   const photos = [];
-  for (const l of results) photos.push(...await deleteLitter(env, l.site_id, l.id));
-  return { litters: results.length, photos };
+  for (const l of due) photos.push(...await deleteLitter(env, l.site_id, l.id));
+  return { litters: due.length, photos };
 }

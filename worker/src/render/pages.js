@@ -5,7 +5,7 @@ import {
   esc, attr, fmtDate, priceText, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, parentName,
   litterCard, parentCards, litterFacts, dogCard, coCard, partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
   paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
-  dogGroups, depositsAhead, puppyStatus, puppyPriceText, regText, fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
+  dogGroups, depositsAhead, puppyStatus, puppyPriceText, regText, statusRule, rulesOf, pricesOff, sitePrice, fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
   faqBlock, familyLogin as familyLoginLink,
 } from './parts.js';
 import { embedView } from '../embeds.js';
@@ -334,7 +334,7 @@ export function contact(snap, ctx) {
 const askHref = (snap, ctx) => (pageOn(snap, 'contact', ctx) ? '/contact' : '/');
 function saleOf(snap, ctx, d) {
   if (!d.for_sale) return null;
-  return { price: snap.site.show_other_prices ? (d.price != null ? priceText(d.price) : '') : 'Contact us for pricing', ask: askHref(snap, ctx) };
+  return { price: snap.site.show_other_prices ? (d.price != null ? priceText(d.price) : '') : pricesOff(snap), ask: askHref(snap, ctx) };
 }
 
 export function dogs(snap, ctx) {
@@ -416,15 +416,15 @@ export function dog(snap, ctx, slug) {
 export function litters(snap, ctx) {
   const p = snap.pages.litters;
   const older = new Set(olderPuppies(snap, ctx.today).map((o) => o.litter.id));
-  const current = snap.litters.filter((l) => l.stage === 'current' && !depositsAhead(l, ctx.today) && !older.has(l.id) && l.puppies.length);
+  const current = snap.litters.filter((l) => l.stage === 'current' && !depositsAhead(snap, l, ctx.today) && !older.has(l.id) && l.puppies.length);
   // Coming up: planned litters, and born ones whose deposits date is still ahead.
-  const planned = snap.litters.filter((l) => l.stage === 'planned' || depositsAhead(l, ctx.today));
+  const planned = snap.litters.filter((l) => l.stage === 'planned' || depositsAhead(snap, l, ctx.today));
   const sections = [];
   current.forEach((l, i) => {
     const lede = [pairNames(snap, l) && `${pairNames(snap, l)}.`, l.summary, l.ready_on && `Ready to go home ${fmtDate(l.ready_on)}.`, l.show_prices && l.price_note].filter(Boolean).join(' ');
     sections.push(`<section class="section${i ? '' : ' tight'}"${i ? '' : ' id="available"'}><div class="wrap">
       ${head(l.born_on ? `Born ${fmtDate(l.born_on)}` : 'Current litter', l.name, lede)}
-      ${slider(sortPuppies(l.puppies).map((pup) => puppyCard(snap, l, pup, ctx)), { cls: 'three', ctl: `<a class="more" href="/litters/${attr(l.slug)}">The ${esc(l.name.replace(/^the /i, ''))} page</a>` })}
+      ${slider(sortPuppies(snap, l.puppies).map((pup) => puppyCard(snap, l, pup, ctx)), { cls: 'three', ctl: `<a class="more" href="/litters/${attr(l.slug)}">The ${esc(l.name.replace(/^the /i, ''))} page</a>` })}
     </div></section>`);
   });
   // Her badges after the puppies on offer, before older and upcoming ones.
@@ -464,7 +464,7 @@ export function older(snap, ctx) {
 export function litter(snap, ctx, slug) {
   const l = snap.litters.find((x) => x.slug === slug);
   if (!l) return null;
-  const pups = sortPuppies(l.puppies);
+  const pups = sortPuppies(snap, l.puppies);
   // The parents' names under the litter's own, unless they are its name.
   const pair = pairNames(snap, l);
   const lede = [pair !== l.name ? pair : null, l.summary].filter(Boolean).join('. ');
@@ -476,7 +476,7 @@ export function litter(snap, ctx, slug) {
       <section class="section tight"><div class="wrap">
         <p class="breadcrumb center"><a href="/litters">${esc(label(snap, 'litters'))}</a></p>
         ${faqs}
-        ${[parentCards(snap, l), litterFacts(l, ctx)].filter(Boolean).map((x, i) => (i || faqs ? `<div class="mt-26">${x}</div>` : x)).join('\n        ')}${note}
+        ${[parentCards(snap, l), litterFacts(snap, l, ctx)].filter(Boolean).map((x, i) => (i || faqs ? `<div class="mt-26">${x}</div>` : x)).join('\n        ')}${note}
         ${fullRegLink(snap, l, null, ctx, 'btn line') ? `<div class="litters mt-20" id="full-registration"><div><p class="btn-row">${fullRegLink(snap, l, null, ctx, 'btn line')}</p>${fullRegSurchargeRow(snap, l, null, ctx) ? `<div class="mt-20">${fullRegSurchargeRow(snap, l, null, ctx)}</div>` : ''}</div></div>` : ''}${shareRow(true)}
         ${pups.length ? `<div class="mt-26 grid">${pups.map((pup) => puppyCard(snap, l, pup, ctx)).join('')}</div>` : ''}
         ${badgeRow(snap, 'litter', { inWrap: true })}
@@ -532,10 +532,11 @@ export function puppy(snap, ctx, litterSlug, slug) {
   const p = l?.puppies.find((x) => x.slug === slug);
   if (!p) return null;
   const photo = img(snap, p.photo_id, { alt: p.name, cls: 'photo', lazy: false }) ?? '<div class="photo" aria-hidden="true"></div>';
-  const status = puppyStatus(l, p, ctx.today);
-  const price = puppyPriceText(l, p);
-  const reg = regText(p);
-  const facts = [['Sex', p.sex === 'female' ? 'Female' : 'Male'], ['Color', p.color], ['Collar', p.collar], ['Status', status], ['Price', price], ['Registration', reg], ['Registry', p.registry], ['Parents', pairNames(snap, l)], ['Born', fmtDate(l.born_on)]].filter(([, v]) => v);
+  const rule = statusRule(snap, p);
+  const status = puppyStatus(snap, l, p, ctx.today);
+  const price = puppyPriceText(snap, l, p);
+  const reg = regText(snap, p);
+  const facts = [['Sex', p.sex === 'female' ? 'Female' : 'Male'], ['Color', p.color], ['Collar', p.collar], ['Status', status], [rulesOf(snap).price.price_label, price], ['Registration', reg], ['Registry', p.registry], ['Parents', pairNames(snap, l)], ['Born', fmtDate(l.born_on)]].filter(([, v]) => v);
   // Its own photos, where the litter publishes its puppies' tagged ones, and its own
   // "See more photos" link where she set one (its gallery elsewhere, never the
   // litter's). Either alone is enough for the block. Then the litter's albums: its
@@ -551,10 +552,10 @@ export function puppy(snap, ctx, litterSlug, slug) {
       <p class="breadcrumb"><a href="/litters/${attr(l.slug)}">${esc(l.name)}</a></p>
       ${faqs}
       <div class="dogpage${faqs ? ' mt-26' : ''}">${photo}<div class="info">
-        <span class="status ${p.status === 'available' ? 'avail' : 'res'}">${esc(status)}</span><h1>${esc(p.name)}</h1>
+        ${status ? `<span class="status ${attr(rule.pill)}">${esc(status)}</span>` : ''}<h1>${esc(p.name)}</h1>
         <dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
         ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}
-        ${p.status === 'available' || fullRegLink(snap, l, p, ctx, '') ? `<p>${p.status === 'available' ? `<a class="btn solid" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">Ask about ${esc(p.name)}</a> ` : ''}${fullRegLink(snap, l, p, ctx, 'btn line')}</p>` : ''}${fullRegSurchargeRow(snap, l, p, ctx, 'kv')}
+        ${rule.ask || fullRegLink(snap, l, p, ctx, '') ? `<p>${rule.ask ? `<a class="btn solid" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">Ask about ${esc(p.name)}</a> ` : ''}${fullRegLink(snap, l, p, ctx, 'btn line')}</p>` : ''}${fullRegSurchargeRow(snap, l, p, ctx, 'kv')}
         ${safeNotice(snap, ctx)}${shareRow()}
       </div></div>
       ${badgeRow(snap, 'puppy', { inWrap: true })}${pupGallery}${litterAlbums(snap, ctx, l, { eyebrow: 'Albums', heading: `From ${l.name}` })}
@@ -581,7 +582,7 @@ export function extras(snap, ctx) {
   const ask = pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact';
   const pkgs = snap.extras.filter((x) => x.kind === 'homegoing').sort((a, b) => (a.weeks ?? 0) - (b.weeks ?? 0));
   const items = snap.extras.filter((x) => x.kind === 'item');
-  const price = (x) => (prices && x.price_from != null ? `<div class="price">${esc(priceText(x.price_from, x.price_to))}</div>` : `<div class="price">Contact us for pricing</div>`);
+  const price = (x) => (prices && x.price_from != null ? `<div class="price">${esc(sitePrice(snap, x.price_from, x.price_to))}</div>` : `<div class="price">${esc(pricesOff(snap))}</div>`);
   const pkgHtml = pkgs.map((x) => `<article class="pkg${x.featured ? ' top' : ''}">
       ${x.weeks ? `<div class="weeks"><b>${x.weeks}</b><span>weeks${x.featured ? ' · most complete' : ''}</span></div>` : ''}<h3>${esc(x.name)}</h3>${price(x)}
       ${x.description ? `<p>${esc(x.description)}</p>` : ''}
