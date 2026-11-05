@@ -1078,7 +1078,7 @@ waitlist settings:
 ### 5.2 Linking
 
 1. **The code.** In KennelPort's manage app, **Link KennelOS** shows a one-time code:
-   eight characters, a quarter of an hour, single use, owners only, rate-limited like a
+   eight characters, a quarter of an hour, single use, owners and editors, rate-limited like a
    sign-in code (section 4).
 2. **Connect website.** In KennelOS (Settings or Import/Export, Pro only), **Connect
    website** takes the code and posts it to `api.kennelport.com`, which answers with a

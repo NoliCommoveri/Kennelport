@@ -98,12 +98,16 @@ test('a link code: owners only, once, a quarter of an hour; the token works and 
   assert.equal(other.status, 409);
   assert.equal((await other.json()).error, 'other_kennel');
 
-  // An editor can't make a code.
+  // An editor can make a code too; unlinking and stopping a device stay the owner's.
   await inviteToSite(b.env, b.site.id, 'e@example.com', 'editor', { manageUrl: 'x', siteUrl: 'y' });
   const ec = await signIn(b.env, 'e@example.com');
-  const er = await call(b.env, M, '/s/akbostons/kennelos', { headers: { cookie: ec } });
-  assert.match(await er.text(), /Only the site's owner can link KennelOS/);
-  assert.equal((await call(b.env, M, '/s/akbostons/kennelos/code', { method: 'POST', headers: { cookie: ec, origin: `https://${M}` } })).status, 404);
+  const er = await (await call(b.env, M, '/s/akbostons/kennelos', { headers: { cookie: ec } })).text();
+  assert.doesNotMatch(er, /owner can link/);
+  assert.match(er, /Link another device/);
+  assert.doesNotMatch(er, /Unlink KennelOS/);
+  const eh = await (await call(b.env, M, '/s/akbostons/kennelos/code', { method: 'POST', headers: { cookie: ec, origin: `https://${M}` } })).text();
+  assert.match(eh, /class="code">[A-Z0-9]{4}-[A-Z0-9]{4}</);
+  assert.equal((await call(b.env, M, '/s/akbostons/kennelos/unlink', { method: 'POST', headers: { cookie: ec, origin: `https://${M}` } })).status, 404);
 });
 
 test('the KennelOS screens open, with no inline styles', async () => {

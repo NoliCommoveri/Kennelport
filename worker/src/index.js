@@ -6,6 +6,7 @@
 // placeholder until the template (phase 1) and the manage app (phase 2) exist.
 //
 // Never logged: an email address, a code, a token or a request body.
+import { handleFront } from './front.js';
 import { handleOps } from './ops.js';
 import { schemaReady } from './gate.js';
 import { classifyHost, effectiveHost, HOST_COOKIE } from './hosts.js';
@@ -79,7 +80,7 @@ export default {
 
     switch (target.kind) {
       case 'home':
-        return htmlPage('KennelPort', '<h1>KennelPort</h1><p>Websites for dog breeders.</p>', { noindex: false });
+        return handleFront(url);
 
       case 'manage':
         if (url.pathname === '/ops' || url.pathname.startsWith('/ops/')) return handleOps(request, env);

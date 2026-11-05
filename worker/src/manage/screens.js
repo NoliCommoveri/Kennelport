@@ -220,7 +220,6 @@ export function createScreens({ env, request, url, site, user, page }) {
       let fd;
       try { fd = await request.formData(); } catch { fd = new FormData(); }
       if (rest === '/code') {
-        if (!owner) return null;
         try {
           const { code, expiresAt } = await makeLinkCode(env, site.id, user.emailHash.slice(0, 12));
           return render({ code, expiresAt });
@@ -272,7 +271,7 @@ export function createScreens({ env, request, url, site, user, page }) {
           ? 'When you press Update website in KennelOS, your dogs, litters, puppy statuses and health results arrive here in your draft. Nothing changes on your site until you Publish.'
           : 'Keep your dogs and litters in KennelOS Pro? Link it, and Update website in KennelOS sends them here, so you type them only once. In KennelOS, tick Show on website on the dogs, litters and pairings you want on your site.'}</p>
         ${code ? `<p class="notice" role="status">Your code: <strong class="code">${esc(showCode(code))}</strong><br>In KennelOS, open Settings, then Connect website, and type it in. It works once, for ${CODE_TTL_MS / 60000} minutes${expiresAt ? ` (until ${esc(when(expiresAt))})` : ''}.</p>` : ''}
-        ${owner ? `<form method="post" action="${base}/kennelos/code"><button class="${linked ? '' : 'primary'}">${linked ? 'Link another device' : 'Show a link code'}</button></form>` : '<p class="muted small">Only the site\'s owner can link KennelOS.</p>'}
+        <form method="post" action="${base}/kennelos/code"><button class="${linked ? '' : 'primary'}">${linked ? 'Link another device' : 'Show a link code'}</button></form>
         <p class="muted small">Each phone or computer you use KennelOS on links once, with its own code.</p></section>`);
       if (linked) {
         parts.push(`<section class="card"><h2>Devices</h2><ul class="items">${list.map((d) => `<li class="item"><span><b>${esc(d.device_label || 'A KennelOS device')}</b><span class="muted small"> · ${d.last_bundle_at ? `last update ${esc(when(d.last_bundle_at))}` : `linked ${esc(when(d.linked_at))}, no update yet`}</span>${d.summary?.text ? `<br><span class="muted small">${esc(d.summary.text)}</span>` : ''}</span>
