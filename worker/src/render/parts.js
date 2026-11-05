@@ -1,5 +1,6 @@
 // Pieces of the "ak" template shared by its pages: formatting, photos, cards and
 // the menu. Every value from a snapshot passes through esc() (or attr()) here.
+import { SHOW_DEFAULT } from '../content/blocks.js';
 import { escapeHtml as esc } from '../lib/html.js';
 import { MENU_GROUPS, PAGES } from '../content/model.js';
 import { puppyPrice, litterPriceRange, depositRange } from '../content/prices.js';
@@ -196,6 +197,19 @@ export function dogGroups(snap) {
   };
 }
 
+// A Dog cards block's dogs (content/blocks.js): its filters, then its order. The
+// default (active, at home, not up and coming, not for sale) is dogGroups' breeding.
+export function dogsFor(snap, b) {
+  const flag = (v, has) => v === 'any' || (v === 'only' ? has : !has);
+  const list = snap.dogs.filter((d) => b.f.status.includes(d.status) && (b.f.sex === 'any' || d.sex === b.f.sex)
+    && flag(b.f.upcoming, Boolean(d.upcoming)) && flag(b.f.sale, Boolean(d.for_sale)) && flag(b.f.away, Boolean(d.lives_away)));
+  const born = (d) => d.date_of_birth || '9999';
+  if (b.order === 'name') return [...list].sort((a, c) => a.call_name.localeCompare(c.call_name));
+  if (b.order === 'age') return [...list].sort((a, c) => born(a).localeCompare(born(c)));
+  if (b.order === 'young') return [...list].sort((a, c) => (c.date_of_birth || '').localeCompare(a.date_of_birth || ''));
+  return list;
+}
+
 // A dog's partner kennels, as the site may name them: the one it lives with, and
 // the kennels of its co-owners. Older snapshots have none.
 export const partnerOf = (snap, id) => (id ? (snap.partners ?? []).find((x) => x.id === id) ?? null : null);
@@ -252,13 +266,15 @@ function parentPhoto(snap, l, role) {
 }
 
 // A litter's facts, as its card lists them: [label, value] rows, blanks included.
-export function litterRows(snap, l, ctx) {
+// Each row's third item is its key, for the card's "what it shows" (content/blocks.js
+// LITTER_ROWS). namesMax: how many pups it names before counting them.
+export function litterRows(snap, l, ctx, { namesMax = 2 } = {}) {
   const ahead = depositsAhead(snap, l, ctx.today);
   const older = pastReady(snap, l, ctx.today);
   return (l.stage === 'planned'
-    ? [['Expected', l.expected_label], ['Going home', l.ready_label]]
-    : [['Born', fmtDate(l.born_on)], ['Deposits from', ahead ? fmtDate(depositsOpen(snap, l)) : null], ['Puppies', l.puppies.length ? l.puppies.map((p) => p.name).length <= 2 ? l.puppies.map((p) => p.name).join(', ') : counts(l.puppies) : null],
-      ['Going home', older ? word(snap, 'ready_now') : fmtDate(l.ready_on)]]).concat(litterPriceRows(snap, l));
+    ? [['Expected', l.expected_label, 'expected'], ['Going home', l.ready_label, 'going']]
+    : [['Born', fmtDate(l.born_on), 'born'], ['Deposits from', ahead ? fmtDate(depositsOpen(snap, l)) : null, 'deposits'], ['Puppies', l.puppies.length ? l.puppies.length <= namesMax ? l.puppies.map((p) => p.name).join(', ') : counts(l.puppies) : null, 'puppies'],
+      ['Going home', older ? word(snap, 'ready_now') : fmtDate(l.ready_on), 'going']]).concat(litterPriceRows(snap, l).map(([k, v], i) => [k, v, i ? 'deposit' : 'price']));
 }
 
 const kvList = (rows) => `<dl class="kv">${rows.filter(([, v]) => v).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`;
@@ -306,25 +322,35 @@ export function litterFacts(snap, l, ctx) {
   return rows.length ? `<div class="litter litter-facts">${kvList(rows)}</div>` : '';
 }
 
-export function litterCard(snap, l, ctx, { link = true } = {}) {
+// show: what the card shows (content/blocks.js SHOW_DEFAULT.litters is today's).
+export function litterCard(snap, l, ctx, { link = true, show = SHOW_DEFAULT.litters } = {}) {
   const parent = (role) => parentPhoto(snap, l, role);
   const ahead = depositsAhead(snap, l, ctx.today);
   const older = pastReady(snap, l, ctx.today);
   const eyebrow = l.stage === 'planned' ? (l.plan_label || word(snap, 'litter_planned')) : l.stage === 'past' ? word(snap, 'litter_past')
     : ahead ? word(snap, 'litter_coming') : older ? word(snap, 'litter_older') : word(snap, 'litter_current');
-  const rows = litterRows(snap, l, ctx);
+  const rows = litterRows(snap, l, ctx, { namesMax: show.names }).filter(([, , key]) => show.rows.includes(key));
   const more = !link ? '' : l.stage === 'planned'
     ? (pageOn(snap, 'waitlist', ctx) ? `<a class="more" href="/waitlist">${esc(word(snap, 'see_waitlist'))}</a>` : '')
     : `<a class="more" href="/litters/${attr(l.slug)}">${esc(word(snap, 'meet_puppies'))}</a>`;
-  return `<article class="litter"><span class="eyebrow">${esc(eyebrow)}</span>
-    <div class="pair">${parent('dam')}<span class="x">×</span>${parent('sire')}<div class="names"><b>${esc(l.name)}</b><span class="small muted">${esc(pairNames(snap, l))}</span></div></div>
-    ${kvList(rows)}${l.summary && l.stage === 'planned' ? `<p class="small muted">${esc(l.summary)}</p>` : ''}${more}</article>`;
+  const has = (k) => show.pair.includes(k);
+  const names = [has('name') ? `<b>${esc(l.name)}</b>` : '', has('parents') ? `<span class="small muted">${esc(pairNames(snap, l))}</span>` : ''].join('');
+  const pair = (has('photos') || names) ? `<div class="pair">${has('photos') ? `${parent('dam')}<span class="x">×</span>${parent('sire')}` : ''}${names ? `<div class="names">${names}</div>` : ''}</div>` : '';
+  const item = {
+    eyebrow: () => `<span class="eyebrow">${esc(eyebrow)}</span>\n    `,
+    pair: () => (pair ? `${pair}\n    ` : ''),
+    facts: () => kvList(rows),
+    summary: () => (l.summary && l.stage === 'planned' ? `<p class="small muted">${esc(l.summary)}</p>` : ''),
+    link: () => more,
+  };
+  return `<article class="litter">${show.items.map((k) => item[k]()).join('')}</article>`;
 }
 
 // ---------- flip cards ----------
 
-// sale: { price, ask } for a dog looking for a home (plan 3.7).
-export function dogCard(snap, d, { sale = null } = {}) {
+// sale: { price, ask } for a dog looking for a home (plan 3.7). show: what each face
+// shows, in order (content/blocks.js SHOW_DEFAULT.dogs is today's card).
+export function dogCard(snap, d, { sale = null, show = SHOW_DEFAULT.dogs } = {}) {
   const photo = img(snap, d.photo_id, { alt: d.call_name }) ?? '<div class="ph-photo">Photos coming soon</div>';
   const bg = img(snap, d.photo_id, { alt: '', cls: 'bg', thumb: true }) ?? '';
   const registry = d.registry ? `<li><span>Registry</span><span>${esc(d.registry)}</span></li>` : '';
@@ -335,12 +361,40 @@ export function dogCard(snap, d, { sale = null } = {}) {
     ? `${registry || weight ? `<ul class="tests">${registry}${weight}</ul>` : ''}<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${esc(h.result)}</span></li>`).join('')}</ul>`
     : `<span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sexWord(d.sex)}</span></li>${d.color ? `<li><span>Color</span><span>${esc(d.color)}</span></li>` : ''}${weight}${registry}</ul>`;
   const line = [snap.site.breed, d.role].filter(Boolean).join(' · ');
+  const item = {
+    call: () => `<span class="call">${esc(d.call_name)}</span>`,
+    reg: () => (d.registered_name ? `<span class="reg">${esc(d.registered_name)}</span>` : ''),
+    role: () => `<span>${esc(line)}</span>`,
+    titles: () => (d.titles ? `<span>${esc(d.titles)}</span>` : ''),
+    tests: () => tests,
+    bio: () => (d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''),
+    ask: () => (sale ? `${sale.price ? `<p class="small">${esc(sale.price)}</p>` : ''}<a class="more" href="${attr(sale.ask)}">${esc(word(snap, 'ask_dog', { name: d.call_name }))}</a>` : ''),
+    profile: () => `<a class="more" href="/dogs/${attr(d.slug)}">View profile</a>`,
+    photo: () => '',
+  };
+  // A face's items in order; breed and role, and titles, next to each other share a line.
+  const face = (items) => {
+    let out = '';
+    for (let i = 0; i < items.length; i++) {
+      if (items[i] === 'role' || items[i] === 'titles') {
+        let run = '';
+        while (items[i] === 'role' || items[i] === 'titles') run += item[items[i++]]();
+        i--;
+        out += `<span class="line1">${run}</span>`;
+      } else out += item[items[i]]();
+    }
+    return out;
+  };
+  const front = show.front.filter((k) => k !== 'photo');
+  const back = show.back.filter((k) => k !== 'photo');
+  // On the back, the name heads it; the rest starts on its own line.
+  const head = back.findIndex((k) => k !== 'call' && k !== 'reg');
+  const backHtml = head < 0 ? face(back) : `${face(back.slice(0, head))}\n        ${face(back.slice(head))}`;
   return `<div class="flip" tabindex="0" role="button" aria-label="${attr(d.call_name)}: turn the card over">
     <div class="flip-in">
-      <div class="face front">${photo}<span class="turn" aria-hidden="true">↻</span>
-        <div class="cap"><span class="call">${esc(d.call_name)}</span>${d.registered_name ? `<span class="reg">${esc(d.registered_name)}</span>` : ''}<span class="line1"><span>${esc(line)}</span>${d.titles ? `<span>${esc(d.titles)}</span>` : ''}</span></div></div>
-      <div class="face back">${bg}<span class="call">${esc(d.call_name)}</span>${d.registered_name ? `<span class="reg">${esc(d.registered_name)}</span>` : ''}
-        ${tests}${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''}${sale ? `${sale.price ? `<p class="small">${esc(sale.price)}</p>` : ''}<a class="more" href="${attr(sale.ask)}">${esc(word(snap, 'ask_dog', { name: d.call_name }))}</a>` : ''}<a class="more" href="/dogs/${attr(d.slug)}">View profile</a></div>
+      <div class="face front">${show.front.includes('photo') ? photo : ''}<span class="turn" aria-hidden="true">↻</span>
+        <div class="cap">${face(front)}</div></div>
+      <div class="face back">${show.back.includes('photo') || show.front.includes('photo') ? bg : ''}${backHtml}</div>
     </div></div>`;
 }
 
@@ -473,12 +527,20 @@ export function slider(items, { cls = '', ctl = '' } = {}) {
     <div class="slider-ctl">${ctl || '<span></span>'}<div class="arrows"><span class="count"></span><button class="arrow prev" type="button" aria-label="Previous">←</button><button class="arrow next" type="button" aria-label="Next">→</button></div></div></div>`;
 }
 
-export function reviewCard(snap, r) {
+// show: what the card shows (content/blocks.js SHOW_DEFAULT.reviews is today's).
+export function reviewCard(snap, r, { show = SHOW_DEFAULT.reviews } = {}) {
   const stars = r.rating ? `<span class="stars" aria-label="${r.rating} stars">${'★'.repeat(r.rating)}</span>` : '';
   const who = [r.first_name, r.town].filter(Boolean).join(', ');
   const sub = r.puppy_name ? `${r.puppy_name}'s family${r.home_month ? `, home ${fmtMonth(r.home_month)}` : ''}` : `${snap.site.monogram || snap.site.kennel_name} family`;
   const photo = img(snap, r.photo_id, { alt: '', thumb: true }) ?? '';
-  return `<article class="review"${r.topic ? ` data-topic="${attr(r.topic)}"` : ''}>${stars}<blockquote>${esc(r.quote)}</blockquote><div class="who">${photo}<div><b>${esc(who)}</b><div class="muted small">${esc(sub)}</div></div></div></article>`;
+  const w = (k) => show.who.includes(k);
+  const words = `${w('name') ? `<b>${esc(who)}</b>` : ''}${w('family') ? `<div class="muted small">${esc(sub)}</div>` : ''}`;
+  const item = {
+    stars: () => stars,
+    quote: () => `<blockquote>${esc(r.quote)}</blockquote>`,
+    who: () => (w('photo') && photo) || words ? `<div class="who">${w('photo') ? photo : ''}${words ? `<div>${words}</div>` : ''}</div>` : '',
+  };
+  return `<article class="review"${r.topic ? ` data-topic="${attr(r.topic)}"` : ''}>${show.items.map((k) => item[k]()).join('')}</article>`;
 }
 
 export const expanders = (rows) => rows.map((e) => `<details class="x"${e.start_open ? ' open' : ''}><summary>${esc(e.heading)}</summary><div class="body">${paras(e.body)}</div></details>`).join('');

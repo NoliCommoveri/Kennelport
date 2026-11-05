@@ -17,6 +17,7 @@ import { kennelosOrigin } from './feed.js';
 import { chunks, placeholders } from './lib/sql.js';
 import { rulesFor, loadBuild, ruleKey } from './content/rules.js';
 import { NOT_FOR_DEMO } from './lib/demo.js';
+import { layoutFor } from './content/blocks.js';
 
 export const SNAPSHOT_VERSION = 1;
 export const KEEP = 10;
@@ -84,7 +85,8 @@ export async function buildSnapshot(env, siteId) {
   const dogById = Object.fromEntries(dogs.map((d) => [d.id, d]));
 
   const littersRaw = await all('SELECT * FROM litters WHERE site_id = ? AND show_on_site = 1 AND hidden_by_kennelos = 0 ORDER BY sort, name');
-  const { rules, timing } = rulesFor(await loadBuild(env, siteId));
+  const build = await loadBuild(env, siteId);
+  const { rules, timing } = rulesFor(build);
   const puppies = (await all('SELECT * FROM puppies WHERE site_id = ? AND hidden_by_kennelos = 0 ORDER BY sort, name'))
     .filter((p) => rules.status[ruleKey(p.status)]?.show);
   // Every dog's call name, shown or not, for parents who aren't on the site.
@@ -221,6 +223,8 @@ export async function buildSnapshot(env, siteId) {
     },
     pages, home, dogs, litters, reviews, steps, expanders, extras, products, partners, payment, questions, albums, embeds, photos,
     rules, timing,
+    // Her build's pages as blocks (content/blocks.js): Home, so far.
+    layout: layoutFor(build),
   };
 }
 

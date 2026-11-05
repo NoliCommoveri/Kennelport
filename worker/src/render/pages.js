@@ -5,10 +5,11 @@ import {
   esc, attr, fmtDate, priceText, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, parentName,
   litterCard, parentCards, litterFacts, dogCard, coCard, partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
   paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
-  dogGroups, depositsAhead, puppyStatus, puppyPriceText, regText, statusRule, rulesOf, pricesOff, sitePrice, word, sexWord, fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
+  dogGroups, dogsFor, depositsAhead, puppyStatus, puppyPriceText, regText, statusRule, rulesOf, pricesOff, sitePrice, word, sexWord, fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
   faqBlock, familyLogin as familyLoginLink,
 } from './parts.js';
 import { embedView } from '../embeds.js';
+import { homeBlocks, BREEDER_SWITCH } from '../content/blocks.js';
 import { COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk, badgeAddress } from '../content/model.js';
 
 // A question from her FAQ, where she has placed it (plan 3.9): its own band under
@@ -158,86 +159,131 @@ function transportBadges(snap, p, list, { own = false } = {}) {
 
 // ---------- Home ----------
 
+// Home, as its blocks in order (content/blocks.js): the owner's build, or today's
+// Home (HOME_DEFAULT), which this draws exactly as before blocks. The breeder's
+// switches and words for each block are home_blocks, as always.
 export function home(snap, ctx) {
   const h = snap.home;
+  const blocks = snap.layout?.home ?? homeBlocks(null);
   const parts = [];
   const waitlistOn = pageOn(snap, 'waitlist', ctx);
+  const on = (b) => !BREEDER_SWITCH.includes(b.id) || Boolean(h[b.id]?.enabled);
+  const factsRow = () => (h.facts.enabled && h.facts.items?.length
+    ? `<div class="facts">${h.facts.items.map(([v, l]) => `<div><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join('')}</div>` : '');
 
-  if (h.hero.enabled) {
-    // The collage: the breeder's layout, each box its own shape with her photo in it
-    // and the part she chose to keep; never an empty box (collageLayout).
-    const chosen = (h.hero.photos ?? []).map((id, i) => ({ id, focus: h.hero.focus?.[i] ?? 'middle' })).filter((x) => snap.photos[x.id]);
-    const layout = collageLayout(h.hero.layout, chosen.length);
-    const boxes = layout ? COLLAGE_LAYOUTS[layout].boxes : [];
-    const frame = h.hero.frame ?? 'mat';
-    const photos = chosen.map((x, i) => `<div class="box ${boxes[i]} f-${x.focus}">${img(snap, x.id, { lazy: i > 0 })}${frame === 'sprig' ? VINE : ''}</div>`);
-    const banner = h.hero.banner_photo_id && snap.photos[h.hero.banner_photo_id]
-      ? `<div class="banner f-${h.hero.banner_focus ?? 'middle'}">${img(snap, h.hero.banner_photo_id, { lazy: false })}</div>` : '';
-    const facts = h.facts.enabled && h.facts.items?.length
-      ? `<div class="facts">${h.facts.items.map(([v, l]) => `<div><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join('')}</div>` : '';
-    const buttons = [
-      waitlistOn ? `<a class="btn solid" href="/waitlist">${esc(h.hero.primary_label || 'Join the waitlist')}</a>` : '',
-      pageOn(snap, 'litters', ctx) ? `<a class="btn line" href="/litters">${esc(h.hero.secondary_label || 'See our puppies')}</a>` : '',
-    ].join('');
-    parts.push(`${banner}${homeBadges(snap)}<section class="wrap hero${layout ? '' : ' no-photos'}"><div class="hero-copy">
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i];
+    if (b.type === 'hero') {
+      // The facts row and the badge row right after the top block sit in it, as
+      // they always have: the badges under the banner, the facts under the words.
+      const inside = new Set();
+      while (['facts', 'badges'].includes(blocks[i + 1]?.type) && !inside.has(blocks[i + 1].type)) inside.add(blocks[++i].type);
+      // As before, the top block's place is kept even when it draws nothing.
+      parts.push(heroBlock(snap, ctx, { facts: inside.has('facts') ? factsRow() : '', badges: inside.has('badges'), waitlistOn }));
+      continue;
+    }
+    // The question spot and videos keep their place too; the rest only when they draw.
+    if (b.type === 'faq') { parts.push(faqSection(snap, 'home')); continue; }
+    if (b.type === 'embeds') { parts.push(embedsBlock(snap, 'home')); continue; }
+    if (!on(b)) continue;
+    let html = '';
+    if (b.type === 'facts') {
+      const row = factsRow();
+      html = row ? `<section class="section tight"><div class="wrap">${row}</div></section>` : '';
+    } else if (b.type === 'badges') html = homeBadges(snap);
+    else if (b.type === 'text') html = storyBlock(snap, ctx);
+    else if (b.type === 'band') {
+      html = waitlistOn ? `<section class="cta"><div class="wrap"><div><h2>${esc(h.waitlist.heading || 'Hoping for a puppy of your own?')}</h2>${h.waitlist.line ? `<p>${esc(h.waitlist.line)}</p>` : ''}</div><a class="btn" href="/waitlist">${esc(h.waitlist.button_label || 'Join the waitlist')}</a></div></section>` : '';
+    } else if (b.type === 'dogs') html = dogsBlock(snap, ctx, b);
+    else if (b.type === 'litters') html = littersBlock(snap, ctx, b);
+    else if (b.type === 'reviews') html = reviewsBlock(snap, ctx, b);
+    if (html) parts.push(html);
+  }
+
+  return { title: null, section: '/', image: h.hero.photos?.[0] ?? h.hero.banner_photo_id, body: parts.join('\n') };
+}
+
+// A data block's words: hers (home_blocks) for the block she has a switch for,
+// else the owner's starting wording (the breeder rewords added blocks later).
+const blockWords = (snap, b) => (BREEDER_SWITCH.includes(b.id) ? snap.home[b.id] ?? {} : { ...b.w, link_label: null });
+const limited = (rows, b) => (b.limit ? rows.slice(0, b.limit) : rows);
+
+function heroBlock(snap, ctx, { facts, badges, waitlistOn }) {
+  const h = snap.home;
+  // With the top block off, the badges still lead the page.
+  if (!h.hero.enabled) return badges ? homeBadges(snap) : '';
+  // The collage: the breeder's layout, each box its own shape with her photo in it
+  // and the part she chose to keep; never an empty box (collageLayout).
+  const chosen = (h.hero.photos ?? []).map((id, i) => ({ id, focus: h.hero.focus?.[i] ?? 'middle' })).filter((x) => snap.photos[x.id]);
+  const layout = collageLayout(h.hero.layout, chosen.length);
+  const boxes = layout ? COLLAGE_LAYOUTS[layout].boxes : [];
+  const frame = h.hero.frame ?? 'mat';
+  const photos = chosen.map((x, i) => `<div class="box ${boxes[i]} f-${x.focus}">${img(snap, x.id, { lazy: i > 0 })}${frame === 'sprig' ? VINE : ''}</div>`);
+  const banner = h.hero.banner_photo_id && snap.photos[h.hero.banner_photo_id]
+    ? `<div class="banner f-${h.hero.banner_focus ?? 'middle'}">${img(snap, h.hero.banner_photo_id, { lazy: false })}</div>` : '';
+  const buttons = [
+    waitlistOn ? `<a class="btn solid" href="/waitlist">${esc(h.hero.primary_label || 'Join the waitlist')}</a>` : '',
+    pageOn(snap, 'litters', ctx) ? `<a class="btn line" href="/litters">${esc(h.hero.secondary_label || 'See our puppies')}</a>` : '',
+  ].join('');
+  return `${banner}${badges ? homeBadges(snap) : ''}<section class="wrap hero${layout ? '' : ' no-photos'}"><div class="hero-copy">
       ${h.hero.eyebrow ? `<span class="eyebrow">${esc(h.hero.eyebrow)}</span>` : ''}
       <h1>${scriptLine(h.hero.headline || snap.site.kennel_name, h.hero.script)}</h1>
       ${h.hero.intro ? `<p>${esc(h.hero.intro)}</p>` : ''}
       ${buttons ? `<div class="hero-actions">${buttons}</div>` : ''}${facts}
-    </div>${layout ? `<div class="hero-photos ${layout} frame-${frame}">${photos.join('')}</div>` : ''}</section>`);
-  }
+    </div>${layout ? `<div class="hero-photos ${layout} frame-${frame}">${photos.join('')}</div>` : ''}</section>`;
+}
 
-  // With the top block off, the badges still lead the page.
-  if (!h.hero.enabled) parts.push(homeBadges(snap));
-
-  // A question she has placed on Home: under the top block, above her story.
-  parts.push(faqSection(snap, 'home'));
-
-  if (h.story.enabled && (h.story.text || h.story.heading)) {
-    // No photo (or "No photo" in the manage app): the words take the whole width.
-    // An empty box was drawn here before, in flat grey.
-    const photo = img(snap, h.story.photo_id) ?? '';
-    const features = (h.story.features ?? []).map((f) => `<div class="feature"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">${ICONS[f.icon] ?? ICONS.heart}</svg><b>${esc(f.title)}</b><p>${esc(f.text)}</p></div>`).join('');
-    parts.push(`<section class="section band"><div class="wrap story${photo ? '' : ' no-photo'}">${photo}<div class="story-copy">
-      ${h.story.eyebrow ? `<span class="eyebrow">${esc(h.story.eyebrow)}</span>` : ''}
-      <h2>${scriptLine(h.story.heading, h.story.script)}</h2>
-      ${h.story.text ? `<p>${esc(h.story.text)}</p>` : ''}
+function storyBlock(snap, ctx) {
+  const s = snap.home.story;
+  if (!(s.text || s.heading)) return '';
+  // No photo (or "No photo" in the manage app): the words take the whole width.
+  const photo = img(snap, s.photo_id) ?? '';
+  const features = (s.features ?? []).map((f) => `<div class="feature"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">${ICONS[f.icon] ?? ICONS.heart}</svg><b>${esc(f.title)}</b><p>${esc(f.text)}</p></div>`).join('');
+  return `<section class="section band"><div class="wrap story${photo ? '' : ' no-photo'}">${photo}<div class="story-copy">
+      ${s.eyebrow ? `<span class="eyebrow">${esc(s.eyebrow)}</span>` : ''}
+      <h2>${scriptLine(s.heading, s.script)}</h2>
+      ${s.text ? `<p>${esc(s.text)}</p>` : ''}
       ${features ? `<div class="features">${features}</div>` : ''}
-      ${pageOn(snap, 'about', ctx) ? `<div><a class="more" href="/about">${esc(h.story.link_label || 'Read our full story')}</a></div>` : ''}
-    </div></div></section>`);
-  }
+      ${pageOn(snap, 'about', ctx) ? `<div><a class="more" href="/about">${esc(s.link_label || 'Read our full story')}</a></div>` : ''}
+    </div></div></section>`;
+}
 
-  const dogs = dogGroups(snap).breeding;
-  if (h.dogs.enabled && dogs.length) {
-    parts.push(`<section class="section"><div class="wrap">
-      ${head(h.dogs.eyebrow ?? 'Our dogs', h.dogs.heading || 'Meet our dogs', h.dogs.lede, { ornament: true })}
-      ${slider(dogs.map((d) => dogCard(snap, d)), { ctl: pageOn(snap, 'dogs', ctx) ? `<a class="more" href="/dogs">${esc(h.dogs.link_label || 'See all our dogs')}</a>` : '' })}
-    </div></section>`);
-  }
+function dogsBlock(snap, ctx, b) {
+  const list = limited(dogsFor(snap, b), b);
+  if (!list.length) return '';
+  const w = blockWords(snap, b);
+  const ctl = pageOn(snap, 'dogs', ctx) ? `<a class="more" href="/dogs">${esc(w.link_label || 'See all our dogs')}</a>` : '';
+  const card = (d) => dogCard(snap, d, { sale: saleOf(snap, ctx, d), show: b.show });
+  const body = b.style === 'light' ? slider(list.map((d) => coCard(snap, d)), { cls: 'light', ctl })
+    : b.style === 'flip' ? `<div class="grid${list.length === 1 ? ' narrow-grid' : ''}">${list.map(card).join('')}</div>${ctl ? `<p class="center mt-26">${ctl}</p>` : ''}`
+      : slider(list.map(card), { ctl });
+  return `<section class="section"><div class="wrap">
+      ${head(w.eyebrow ?? 'Our dogs', w.heading || 'Meet our dogs', w.lede, { ornament: true })}
+      ${body}
+    </div></section>`;
+}
 
-  const litters = snap.litters.filter((l) => l.stage !== 'past').slice(0, 2);
-  if (h.litters.enabled && litters.length) {
-    parts.push(`<section class="section band"><div class="wrap">
-      ${head(h.litters.eyebrow ?? 'Litters', h.litters.heading || 'Current and upcoming')}
-      <div class="litters">${litters.map((l) => litterCard(snap, l, ctx)).join('')}</div>
-      <p class="center mt-26"><a class="btn line" href="/litters">${esc(h.litters.link_label || 'View all puppies')}</a></p>
-    </div></section>`);
-  }
+function littersBlock(snap, ctx, b) {
+  const list = limited(snap.litters.filter((l) => b.f.stage.includes(l.stage)), b);
+  if (!list.length) return '';
+  const w = blockWords(snap, b);
+  return `<section class="section band"><div class="wrap">
+      ${head(w.eyebrow ?? 'Litters', w.heading || 'Current and upcoming')}
+      <div class="litters">${list.map((l) => litterCard(snap, l, ctx, { show: b.show })).join('')}</div>
+      <p class="center mt-26"><a class="btn line" href="/litters">${esc(w.link_label || 'View all puppies')}</a></p>
+    </div></section>`;
+}
 
-  if (h.reviews.enabled && snap.reviews.length) {
-    parts.push(`<section class="section"><div class="wrap">
-      ${head(h.reviews.eyebrow ?? 'Families', h.reviews.heading || 'What our families say')}
-      ${slider(snap.reviews.map((r) => reviewCard(snap, r)), { cls: 'three', ctl: pageOn(snap, 'reviews', ctx) ? `<a class="more" href="/reviews">${esc(h.reviews.link_label || 'All reviews')}</a>` : '' })}
-    </div></section>`);
-  }
-
-  parts.push(embedsBlock(snap, 'home'));
-
-  if (h.waitlist.enabled && waitlistOn) {
-    parts.push(`<section class="cta"><div class="wrap"><div><h2>${esc(h.waitlist.heading || 'Hoping for a puppy of your own?')}</h2>${h.waitlist.line ? `<p>${esc(h.waitlist.line)}</p>` : ''}</div><a class="btn" href="/waitlist">${esc(h.waitlist.button_label || 'Join the waitlist')}</a></div></section>`);
-  }
-
-  return { title: null, section: '/', image: h.hero.photos?.[0] ?? h.hero.banner_photo_id, body: parts.join('\n') };
+function reviewsBlock(snap, ctx, b) {
+  const list = limited(snap.reviews, b);
+  if (!list.length) return '';
+  const w = blockWords(snap, b);
+  const ctl = pageOn(snap, 'reviews', ctx) ? `<a class="more" href="/reviews">${esc(w.link_label || 'All reviews')}</a>` : '';
+  const cards = list.map((r) => reviewCard(snap, r, { show: b.show }));
+  return `<section class="section"><div class="wrap">
+      ${head(w.eyebrow ?? 'Families', w.heading || 'What our families say')}
+      ${b.style === 'grid' ? `<div class="grid">${cards.join('')}</div>${ctl ? `<p class="center mt-26">${ctl}</p>` : ''}` : slider(cards, { cls: 'three', ctl })}
+    </div></section>`;
 }
 
 // ---------- About us ----------
