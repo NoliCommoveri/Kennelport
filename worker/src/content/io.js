@@ -172,9 +172,13 @@ export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = ne
       photo(product.photo_id, `products[${i}].photo_id`);
       if (product.image_url && !brandImageOk(product.image_url)) throw new ContentError(`products[${i}].image_url`, 'not from an approved brand address');
       if (product.home_badge && !product.photo_id && !product.image_url) throw new ContentError(`products[${i}].home_badge`, 'a home page badge needs a photo_id or image_url');
+      if (product.badge_places?.length && !product.photo_id && !product.image_url) throw new ContentError(`products[${i}].badge_places`, 'a badge needs a photo_id or image_url');
       return product;
     });
     if (out.products.filter((x) => x.home_badge).length > HOME_BADGES_MAX) throw new ContentError('products', `at most ${HOME_BADGES_MAX} with home_badge`);
+    for (const place of new Set(out.products.flatMap((x) => x.badge_places ?? []))) {
+      if (out.products.filter((x) => (x.badge_places ?? []).includes(place)).length > HOME_BADGES_MAX) throw new ContentError('products', `at most ${HOME_BADGES_MAX} with the badge place ${place}`);
+    }
   }
   if ('payment' in doc) {
     if (!doc.payment || typeof doc.payment !== 'object' || Array.isArray(doc.payment)) throw new ContentError('payment', 'must be an object');
@@ -396,7 +400,10 @@ export async function importContent(env, siteId, doc) {
   }
   if (clean.products) {
     s.push(db.prepare('DELETE FROM products WHERE site_id = ?').bind(siteId));
-    clean.products.forEach((x, i) => s.push(insert(db, 'products', { id: uuid(), site_id: siteId, ...x, home_badge: x.home_badge ?? 0, sort: i })));
+    clean.products.forEach((x, i) => s.push(insert(db, 'products', {
+      id: uuid(), site_id: siteId, ...x, home_badge: x.home_badge ?? 0, transport: x.transport ?? 0,
+      badge_places: x.badge_places?.length ? JSON.stringify(x.badge_places) : null, sort: i,
+    })));
   }
 
   s.push(db.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(t, siteId));
@@ -468,7 +475,11 @@ export async function exportContent(env, siteId) {
     return out;
   });
   doc.products = (await all('SELECT * FROM products WHERE site_id = ? ORDER BY sort', siteId))
-    .map((x) => bools(pick(strip(x, SYSTEM), Object.keys(PRODUCT_FIELDS)), ['home_badge']));
+    .map((x) => {
+      const out = bools(pick(strip(x, SYSTEM), Object.keys(PRODUCT_FIELDS)), ['home_badge', 'transport']);
+      if (out.badge_places) out.badge_places = JSON.parse(out.badge_places);
+      return out;
+    });
   doc.questions = (await all("SELECT * FROM form_fields WHERE site_id = ? AND form = 'application' ORDER BY sort", siteId)).map((q) => {
     const out = bools(pick(strip(q, SYSTEM), Object.keys(QUESTION_FIELDS)), ['required']);
     if (out.options) out.options = JSON.parse(out.options);

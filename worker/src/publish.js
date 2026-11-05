@@ -138,6 +138,7 @@ export async function buildSnapshot(env, siteId) {
   }));
   const products = (await all('SELECT * FROM products WHERE site_id = ? ORDER BY sort')).map((x) => ({
     ...keep(x, ['site_id', 'sort', 'source']), home_badge: Boolean(x.home_badge),
+    transport: Boolean(x.transport), badge_places: json(x.badge_places, []),
   }));
 
   // Albums (phase 5): shown ones, their photos still on the site. Newest album

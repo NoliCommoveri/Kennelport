@@ -369,11 +369,36 @@ the breeder's own page (`extras_info_url`).
 - KennelOS can fill `extras_info_url` with the site's `/extras` address, so the status
   page links straight to it.
 
-### 3.5 Pickup and delivery page
+### 3.5 Getting your pup home (`/pickup`)
 
-Backlog ([`KennelPort_Backlog.md`](KennelPort_Backlog.md) section 4). Version 1 shows
-no pickup page; the address and the fields KennelOS fills are kept here so the link is
-designed once.
+**Built (2026-11-05).** Page key `pickup` (menu group How it works, "Getting your pup
+home"), her words in `site_pages` like every page: three optional sections, **Pickup**
+("Picking up your puppy"), **Transport** ("If you can't come to us") and **Travel day**
+("On the way home"), each a heading (blank = that default) and paragraphs, alternating
+bands. The page shows once one section has words; transport services alone don't make a
+page. A FAQ question can be placed on it (`FAQ_PLACES.pickup`). No prototype screen exists
+for it: it is built from the template's own parts (pagehead, head + prose, bands, the badge
+row).
+
+**Transport services** are products with `transport` on: from KennelOS, her transport
+accounts marked Show on website (the bundle's `transport` section: each product's
+`website` and `transport`, KennelOS-owned), or a hand-made product she ticks **This is a
+transport service**. They show as badges under her Transport words (or in their own band
+when she wrote none), headed `badges_heading` ("Transport we trust") with an optional
+`badges_note`: logo, web address under it, and the code; one with no picture shows its
+name in the logo's place. They are never on Recommended products.
+
+**Badges on more pages.** Every badge, Home's included, is the logo with its web address
+under it (`badgeAddress`: the product's `website_url`, else its link, as a bare host),
+both linked to the referral link. Beside **Show as a badge on my home page**, a product has
+**Also show its badge on** (`badge_places`, `BADGE_PLACES`): Getting your pup home,
+Puppies, every litter, every puppy, Extras, The steps, Waitlist, Our story, Contact; at most
+two per page, a picture required. Each page has its spot (`badgeRow`, a "We recommend"
+row): after the available litters on Puppies, after the puppies on a litter, under a
+puppy's profile, under the packages on Extras, under the steps, under the form on
+Waitlist, after the story on Our story, between the details and the form on Contact, at
+the foot of Getting your pup home. Migration 0026 (`transport`, `website_url`,
+`badge_places` on products).
 
 ### 3.6 Puppy statuses
 

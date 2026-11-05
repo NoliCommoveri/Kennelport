@@ -174,6 +174,7 @@ export const FAQ_PLACES = {
   how_it_works: 'The steps page',
   waitlist: 'Waitlist page',
   contact: 'Contact page',
+  pickup: 'Getting your pup home page',
 };
 export const FAQ_PLACE_KEYS = Object.keys(FAQ_PLACES);
 // A question she has placed everywhere still fits in one list; the cap is only
@@ -209,6 +210,23 @@ export const EXTRA_FIELDS = {
 // picture from anywhere else is copied onto the site as photo_id (badgeCode.js).
 // Adding a brand means adding its address here.
 export const HOME_BADGES_MAX = 2;
+// Badges on other pages (her ask, 2026-11-05): a product's logo, with its web
+// address under it, in a badge row on the pages she ticks. At most
+// HOME_BADGES_MAX per page, like Home. The key is the page or the kind of page;
+// the words are what the manage app calls it. Where each page puts its row is
+// in render/pages.js (badgeRow).
+export const BADGE_PLACES = {
+  pickup: 'Getting your pup home page',
+  litters: 'Puppies page',
+  litter: "Every litter's page",
+  puppy: "Every puppy's profile",
+  extras: 'Extras page',
+  how_it_works: 'The steps page',
+  waitlist: 'Waitlist page',
+  about: 'Our story page',
+  contact: 'Contact page',
+};
+export const BADGE_PLACE_KEYS = Object.keys(BADGE_PLACES);
 export const BRAND_IMAGE_ORIGINS = ['https://tlcpetpro.com'];
 export const brandImageOk = (url) => {
   try { return BRAND_IMAGE_ORIGINS.includes(new URL(url).origin); } catch { return false; }
@@ -223,8 +241,19 @@ export const PRODUCT_FIELDS = {
   link_label: S(40),
   code: S(40),
   code_note: S(120),
+  website_url: URL_,
   home_badge: BOOL,
+  badge_places: { type: 'list', item: 'enum', values: BADGE_PLACE_KEYS, max: BADGE_PLACE_KEYS.length, words: BADGE_PLACES },
+  transport: BOOL,
 };
+// A product's address under its badge: its website, else its link, as a bare
+// host ("skynanny.com"). null when neither reads as a web address.
+export function badgeAddress(x) {
+  for (const v of [x?.website_url, x?.link_url]) {
+    try { if (v) return new URL(v).hostname.replace(/^www\./, ''); } catch { /* next */ }
+  }
+  return null;
+}
 
 // The Home collage (top of the page): pre-drawn layouts, each a list of box
 // shapes in box order. The breeder picks a layout, then a photo for each box, so
@@ -354,6 +383,15 @@ export const PAGES = {
   how_it_works:   { path: '/how-it-works', group: 'how', label: 'The steps', canHide: true, fields: { ...HEAD } },
   extras:         { path: '/extras', group: 'how', label: 'Extras', canHide: true, fields: { ...HEAD, note: ML(300) } },
   products:       { path: '/recommended', group: 'how', label: 'Recommended products', canHide: true, fields: { ...HEAD, note: ML(300) } },
+  // Getting your pup home (plan 3.5): her words on pickup and transport, and her
+  // transport services as badges. Shown once one of her sections has words.
+  pickup:         { path: '/pickup', group: 'how', label: 'Getting your pup home', canHide: true, fields: {
+    ...HEAD,
+    pickup_heading: S(80), pickup_text: ML(2000),
+    transport_heading: S(80), transport_text: ML(2000),
+    travel_heading: S(80), travel_text: ML(2000),
+    badges_heading: S(80), badges_note: ML(300),
+  } },
   policies:       { path: '/policies', group: 'how', label: 'Policies', canHide: true, fields: { ...HEAD } },
   faq:            { path: '/faq', group: 'how', label: 'FAQ', canHide: true, fields: { ...HEAD } },
   waitlist:       { path: '/waitlist', group: 'waitlist', label: 'Waitlist', canHide: true, fields: { ...HEAD, closed: BOOL, closed_message: ML(400), form_heading: S(80), form_intro: ML(300), offer_message: ML(600) } },

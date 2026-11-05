@@ -1496,3 +1496,19 @@ answers to plan 15.
 - Site Manager › Policies: a read-only **Waitlist policies from KennelOS** card above her own,
   saying where to change them; her own list stays for everything beyond the waitlist.
 - No site template file changed (drawn on the server), so no `ASSET_VERSION` bump.
+
+## 2026-11-05: Getting your pup home, and badges on more pages
+
+- New page **Getting your pup home** at `/pickup` (plan 3.5): her Pickup, Transport and Travel
+  day sections (Site Manager › Pages), shown once one has words; her transport services as
+  badges under her Transport words (logo, web address, code; a name tile without a picture).
+  No prototype screen for it: built from the template's own parts.
+- Products: `transport` (from a KennelOS transport account, or ticked by her; never on
+  Recommended products), `website_url` (the address under its badge), `badge_places` (pages
+  besides Home that show its badge, two per page). Every badge now shows its web address under
+  the logo. Spots per page in `render/pages.js` `badgeRow`. Migration 0026.
+- KennelOS bundle: new section `transport` (a product's `website`, `transport`), both
+  KennelOS-owned.
+- Tests: `pickup.test.js` (new); `kennelos`, `products` updated. Checked rendered at 390px and
+  1280px.
+- `site.css` changed: `ASSET_VERSION` bump asked, not done.

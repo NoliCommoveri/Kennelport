@@ -9,7 +9,7 @@ import {
   faqBlock, familyLogin as familyLoginLink,
 } from './parts.js';
 import { embedView } from '../embeds.js';
-import { COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk } from '../content/model.js';
+import { COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk, badgeAddress } from '../content/model.js';
 
 // A question from her FAQ, where she has placed it (plan 3.9): its own band under
 // the page's heading, so it sits above what the page is about and takes the
@@ -61,21 +61,44 @@ const productPic = (snap, x, { cls = '', lazy = true } = {}) => (x.image_url && 
   ? `<img src="${attr(x.image_url)}" alt="${attr(x.name)}"${cls ? ` class="${cls}"` : ''}${lazy ? ' loading="lazy"' : ''}>`
   : img(snap, x.photo_id, { alt: x.name, cls, lazy }));
 
-// Up to two logos right under the banner, side by side even on a phone, each
-// linked to its product's link when it has one.
+// One badge: the logo, and its web address under it (badgeAddress), both linked
+// to the product's link when it has one. A transport service with no picture yet
+// shows its name in the logo's place, so it isn't left off its page; a code shows
+// under the address.
+function badgeItem(snap, x, { lazy = true, withCode = false, nameIfNoPic = false } = {}) {
+  const pic = productPic(snap, x, { lazy }) ?? (nameIfNoPic ? `<span class="badge-name">${esc(x.name)}</span>` : null);
+  if (!pic) return '';
+  const addr = badgeAddress(x);
+  const code = withCode && x.code ? `<span class="badge-code">Use code <b>${esc(x.code)}</b></span>` : '';
+  return `<li>${x.link_url ? outLink(x.link_url, pic, 'badge-pic') : pic}${addr ? (x.link_url ? outLink(x.link_url, esc(addr), 'badge-addr') : `<span class="badge-addr">${esc(addr)}</span>`) : ''}${code}</li>`;
+}
+const badgeList = (items, cls = '') => {
+  const html = items.filter(Boolean);
+  return html.length ? `<ul class="badges-${Math.min(html.length, 2)}${cls}">${html.join('')}</ul>` : '';
+};
+
+// Up to two logos right under the banner, side by side even on a phone.
 export function homeBadges(snap) {
   const list = (snap.products ?? []).filter((x) => x.home_badge && productPic(snap, x)).slice(0, HOME_BADGES_MAX);
-  if (!list.length) return '';
-  const one = (x) => {
-    const pic = productPic(snap, x, { lazy: false });
-    return `<li>${x.link_url ? outLink(x.link_url, pic) : pic}</li>`;
-  };
-  return `<section class="wrap badges" aria-label="Recommended"><ul class="badges-${list.length}">${list.map(one).join('')}</ul></section>`;
+  const ul = badgeList(list.map((x) => badgeItem(snap, x, { lazy: false })));
+  return ul ? `<section class="wrap badges" aria-label="Recommended">${ul}</section>` : '';
+}
+
+// The badge row on another page (model.js BADGE_PLACES), where that page puts it:
+// her products with the place ticked, at most two. `inWrap`: inside the page's
+// own wrap (a record's page), else its own section.
+export function badgeRow(snap, place, { inWrap = false } = {}) {
+  const list = (snap.products ?? []).filter((x) => (x.badge_places ?? []).includes(place) && productPic(snap, x)).slice(0, HOME_BADGES_MAX);
+  const ul = badgeList(list.map((x) => badgeItem(snap, x)));
+  if (!ul) return '';
+  const inner = `<div class="badges badges-row" role="group" aria-label="We recommend"><span class="eyebrow">We recommend</span>${ul}</div>`;
+  return inWrap ? `<div class="mt-26">${inner}</div>` : `<section class="section tight"><div class="wrap">${inner}</div></section>`;
 }
 
 export function products(snap, ctx) {
   const p = snap.pages.products;
-  const list = snap.products ?? [];
+  // Transport services are on Getting your pup home, never here.
+  const list = (snap.products ?? []).filter((x) => !x.transport);
   const card = (x) => {
     const pic = productPic(snap, x, { cls: 'prod-pic' });
     const code = x.code ? `<p class="prod-code">Use code <b>${esc(x.code)}</b>${x.code_note ? ` <span class="small muted">${esc(x.code_note)}</span>` : ''}</p>` : '';
@@ -92,6 +115,43 @@ export function products(snap, ctx) {
         ${p.note ? `<p class="small muted center mt-20">${esc(p.note)}</p>` : ''}
       </div></section>`,
   };
+}
+
+// ---------- Getting your pup home (plan 3.5) ----------
+// Her words on picking up, transport and travel day, each its own band when it has
+// words; then her transport services as badges (logo, address, code), and any
+// other product she ticked for this page. Built from the template's own parts (no
+// prototype screen for it): pagehead, head + prose, the badge row.
+export function pickup(snap, ctx) {
+  const p = snap.pages.pickup;
+  const blocks = [
+    ['pickup', 'Pickup', 'Picking up your puppy'],
+    ['transport', 'Transport', 'If you can\'t come to us'],
+    ['travel', 'Travel day', 'On the way home'],
+  ].filter(([k]) => p[`${k}_text`]);
+  const transport = (snap.products ?? []).filter((x) => x.transport);
+  const sections = blocks.map(([k, eyebrow, fallback], i) => {
+    const band = i % 2 === 1;
+    const inner = `${head(eyebrow, p[`${k}_heading`] || fallback, null)}<div class="prose">${paras(p[`${k}_text`])}</div>`;
+    // The transport services sit with her transport words when she has some.
+    const services = k === 'transport' ? transportBadges(snap, p, transport) : '';
+    return `<section class="section${i ? '' : ' tight'}${band ? ' band' : ''}" id="${k}"><div class="wrap">${inner}${services}</div></section>`;
+  });
+  const placed = blocks.some(([k]) => k === 'transport');
+  if (!placed && transport.length) sections.push(`<section class="section band" id="transport"><div class="wrap">${transportBadges(snap, p, transport, { own: true })}</div></section>`);
+  return {
+    title: p.heading || label(snap, 'pickup'), section: '/pickup', description: p.lede,
+    body: `${pagehead(p, { eyebrow: 'Going home', heading: 'Getting your pup home' })}${faqSection(snap, 'pickup')}${sections.join('\n')}${badgeRow(snap, 'pickup')}`,
+  };
+}
+
+// Her transport services, as badges under her transport words (or as their own
+// band when she wrote none).
+function transportBadges(snap, p, list, { own = false } = {}) {
+  const ul = badgeList(list.map((x) => badgeItem(snap, x, { withCode: true, nameIfNoPic: true })), ' badges-wrap');
+  if (!ul) return '';
+  const heading = p.badges_heading || 'Transport we trust';
+  return `<div class="badges badges-row${own ? '' : ' mt-26'}" role="group" aria-label="${attr(heading)}">${own ? head('Transport', heading, p.badges_note || null) : `<span class="eyebrow">${esc(heading)}</span>${p.badges_note ? `<p class="small muted">${esc(p.badges_note)}</p>` : ''}`}${ul}</div>`;
 }
 
 // ---------- Home ----------
@@ -188,7 +248,7 @@ export function about(snap, ctx) {
   return {
     title: snap.pages.about.heading || label(snap, 'about'), section: '/about', description: p.lede, image: p.photo_id,
     body: `${pagehead(p, { eyebrow: 'About us', heading: 'Our story' })}
-      <section class="section tight"><div class="wrap ${photo ? 'story' : 'prose'}">${photo}${text}</div></section>${embedsBlock(snap, 'about', { band: true })}`,
+      <section class="section tight"><div class="wrap ${photo ? 'story' : 'prose'}">${photo}${text}</div></section>${badgeRow(snap, 'about')}${embedsBlock(snap, 'about', { band: true })}`,
   };
 }
 
@@ -261,7 +321,7 @@ export function contact(snap, ctx) {
   return {
     title: snap.pages.contact.heading || label(snap, 'contact'), section: '/contact', description: p.lede,
     body: `${pagehead(p, { eyebrow: 'Contact', heading: 'Say hello' })}${faqSection(snap, 'contact')}
-      <section class="section tight"><div class="wrap"><div class="contact">${cards.map(([h, val]) => `<div><b>${esc(h)}</b><p class="muted small">${val}</p></div>`).join('')}</div>${contactForm(snap, ctx)}</div></section>`,
+      <section class="section tight"><div class="wrap"><div class="contact">${cards.map(([h, val]) => `<div><b>${esc(h)}</b><p class="muted small">${val}</p></div>`).join('')}</div>${badgeRow(snap, 'contact', { inWrap: true })}${contactForm(snap, ctx)}</div></section>`,
   };
 }
 
@@ -365,6 +425,9 @@ export function litters(snap, ctx) {
       ${slider(sortPuppies(l.puppies).map((pup) => puppyCard(snap, l, pup, ctx)), { cls: 'three', ctl: `<a class="more" href="/litters/${attr(l.slug)}">The ${esc(l.name.replace(/^the /i, ''))} page</a>` })}
     </div></section>`);
   });
+  // Her badges after the puppies on offer, before older and upcoming ones.
+  const row = badgeRow(snap, 'litters');
+  if (row) sections.push(row);
   const olderList = olderPuppies(snap, ctx.today);
   if (olderList.length && pageOn(snap, 'older', ctx)) {
     sections.push(`<section class="section band" id="older"><div class="wrap">
@@ -414,6 +477,7 @@ export function litter(snap, ctx, slug) {
         ${[parentCards(snap, l), litterFacts(l, ctx)].filter(Boolean).map((x, i) => (i || faqs ? `<div class="mt-26">${x}</div>` : x)).join('\n        ')}${note}
         ${fullRegLink(snap, l, null, ctx, 'btn line') ? `<div class="litters mt-20" id="full-registration"><div><p class="btn-row">${fullRegLink(snap, l, null, ctx, 'btn line')}</p>${fullRegSurchargeRow(snap, l, null, ctx) ? `<div class="mt-20">${fullRegSurchargeRow(snap, l, null, ctx)}</div>` : ''}</div></div>` : ''}${shareRow(true)}
         ${pups.length ? `<div class="mt-26 grid">${pups.map((pup) => puppyCard(snap, l, pup, ctx)).join('')}</div>` : ''}
+        ${badgeRow(snap, 'litter', { inWrap: true })}
         ${embedsBlock(snap, `litter:${l.id}`, { inWrap: true })}
         ${litterAlbums(snap, ctx, l)}
       </div></section>`,
@@ -491,7 +555,7 @@ export function puppy(snap, ctx, litterSlug, slug) {
         ${p.status === 'available' || fullRegLink(snap, l, p, ctx, '') ? `<p>${p.status === 'available' ? `<a class="btn solid" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">Ask about ${esc(p.name)}</a> ` : ''}${fullRegLink(snap, l, p, ctx, 'btn line')}</p>` : ''}${fullRegSurchargeRow(snap, l, p, ctx, 'kv')}
         ${safeNotice(snap, ctx)}${shareRow()}
       </div></div>
-      ${pupGallery}${litterAlbums(snap, ctx, l, { eyebrow: 'Albums', heading: `From ${l.name}` })}
+      ${badgeRow(snap, 'puppy', { inWrap: true })}${pupGallery}${litterAlbums(snap, ctx, l, { eyebrow: 'Albums', heading: `From ${l.name}` })}
     </div></section>${pupGallery ? viewerHtml() : ''}`,
   };
 }
@@ -505,7 +569,7 @@ export function howItWorks(snap, ctx) {
   return {
     title: snap.pages.how_it_works.heading || label(snap, 'how_it_works'), section: '/how-it-works', description: p.lede,
     body: `${pagehead(p, { eyebrow: 'How it works', heading: 'From application to home' })}${faqSection(snap, 'how_it_works')}
-      <section class="section tight" id="steps"><div class="wrap">${slider(items, { cls: 'three', ctl: '<span class="muted small">Swipe or use the arrows.</span>' })}</div></section>`,
+      <section class="section tight" id="steps"><div class="wrap">${slider(items, { cls: 'three', ctl: '<span class="muted small">Swipe or use the arrows.</span>' })}${badgeRow(snap, 'how_it_works', { inWrap: true })}</div></section>`,
   };
 }
 
@@ -528,6 +592,7 @@ export function extras(snap, ctx) {
       <section class="section tight"><div class="wrap">
         ${pkgHtml ? `<div class="pkgs">${pkgHtml}</div>${p.note && prices ? `<p class="small muted center mt-20">${esc(p.note)}</p>` : ''}` : ''}
         ${itemHtml ? `<div class="pkgs mt-26">${itemHtml}</div>` : ''}
+        ${badgeRow(snap, 'extras', { inWrap: true })}
       </div></section>`,
   };
 }
@@ -847,7 +912,7 @@ export function waitlist(snap, ctx) {
   return {
     title: snap.pages.waitlist.heading || label(snap, 'waitlist'), section: '/waitlist', description: p.lede,
     body: `${pagehead(p, { eyebrow: 'Waitlist', heading: 'Our waitlist' })}${faqSection(snap, 'waitlist')}
-      <section class="section tight"><div class="wrap">${list}${main}${help}</div>${pay ? `<div class="wrap">${pay}</div>` : ''}</section>`,
+      <section class="section tight"><div class="wrap">${list}${main}${help}${badgeRow(snap, 'waitlist', { inWrap: true })}</div>${pay ? `<div class="wrap">${pay}</div>` : ''}</section>`,
   };
 }
 

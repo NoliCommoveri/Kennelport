@@ -79,7 +79,7 @@ const LISTS = {
   steps: { title: 'How it works', one: 'step', name: (r) => r.heading, sub: () => '' },
   extras: { title: 'Extras', one: 'extra', name: (r) => r.name, sub: (r) => (r.kind === 'homegoing' ? `${r.weeks ?? ''}-week package` : r.grp ?? '') },
   partners: { title: 'Partner kennels', one: 'kennel', name: (r) => r.name, sub: (r) => (r.hidden_by_kennelos ? 'Not sent by KennelOS · not shown' : r.url ? r.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : '') },
-  products: { title: 'Recommended products', one: 'product', name: (r) => r.name, sub: (r) => [r.grp, r.code ? `code ${r.code}` : null, r.home_badge ? 'home page badge' : null].filter(Boolean).join(' · ') },
+  products: { title: 'Recommended products', one: 'product', name: (r) => r.name, sub: (r) => [r.grp, r.code ? `code ${r.code}` : null, r.transport ? 'transport service' : null, r.home_badge ? 'home page badge' : null].filter(Boolean).join(' · ') },
   policies: { title: 'Policies', one: 'policy', name: (r) => r.heading, sub: () => '' },
   // A question also placed elsewhere says so here, so she can see at a glance
   // which ones her pages are carrying (model.js FAQ_PLACES).
@@ -665,7 +665,7 @@ export function createScreens({ env, request, url, site, user, page }) {
   }
 
   const listLinkFor = (key) => {
-    const kind = { reviews: 'reviews', how_it_works: 'steps', extras: 'extras', products: 'products', policies: 'policies', faq: 'faq', waitlist_help: 'waitlist_help', dogs: 'dogs', litters: 'litters', waitlist: 'questions', albums: 'albums' }[key];
+    const kind = { reviews: 'reviews', how_it_works: 'steps', extras: 'extras', products: 'products', pickup: 'products', policies: 'policies', faq: 'faq', waitlist_help: 'waitlist_help', dogs: 'dogs', litters: 'litters', waitlist: 'questions', albums: 'albums' }[key];
     if (!kind) return '';
     const href = ['dogs', 'litters'].includes(kind) ? `${base}/${kind}` : `${base}/lists/${kind}`;
     return `<p><a class="button" href="${esc(href)}">Edit the ${esc(LISTS[kind].title.toLowerCase())} on this page</a></p>`;
