@@ -6,10 +6,10 @@ import {
   litterCard, parentCards, litterFacts, dogCard, coCard, partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
   paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
   dogGroups, dogsFor, depositsAhead, puppyStatus, puppyPriceText, regText, statusRule, rulesOf, pricesOff, sitePrice, word, sexWord, fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
-  faqBlock, familyLogin as familyLoginLink,
+  faqBlock, familyLogin as familyLoginLink, addedOn, addedWords, customPage,
 } from './parts.js';
 import { embedView } from '../embeds.js';
-import { homeBlocks, pageBlocks, hersOn, BREEDER_SWITCH, PAGE_PARTS, PAGE_HEADS } from '../content/blocks.js';
+import { homeBlocks, pageBlocks, hersOn, BREEDER_SWITCH, PAGE_PARTS, PAGE_HEADS, headFor } from '../content/blocks.js';
 import { COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk, badgeAddress } from '../content/model.js';
 
 // A question from her FAQ, where she has placed it (plan 3.9): its own band under
@@ -190,11 +190,24 @@ function assemble(snap, ctx, key, parts) {
 }
 const has = (snap, key, id) => (snap.layout?.[key] ?? pageBlocks(null, key)).some((b) => b.id === id);
 
+// A block the owner added shows only while the breeder has it on.
 function dataBlock(snap, ctx, b, key) {
+  if (!addedOn(snap, key, b)) return '';
   if (b.type === 'dogs') return dogsBlock(snap, ctx, b, key);
   if (b.type === 'litters') return littersBlock(snap, ctx, b, key);
   if (b.type === 'reviews') return reviewsBlock(snap, ctx, b, key);
   return '';
+}
+
+// A page the owner added: its heading (her words, or the page's name) and its blocks.
+export function custom(snap, ctx, key) {
+  const c = customPage(snap, key);
+  if (!c) return null;
+  const p = snap.pages[key] ?? {};
+  return {
+    title: p.heading || label(snap, key), section: c.path, description: p.lede,
+    body: assemble(snap, ctx, key, { head: pagehead(p, headFor(key, c)) }),
+  };
 }
 
 // ---------- Home ----------
@@ -241,10 +254,13 @@ export function home(snap, ctx) {
   return { title: null, section: '/', image: h.hero.photos?.[0] ?? h.hero.banner_photo_id, body: parts.join('\n') };
 }
 
-// A data block's words: hers (home_blocks) for the block she has a switch for,
-// else the owner's starting wording (the breeder rewords added blocks later).
-const blockWords = (snap, b, key) => (hersOn(key, b) ? snap.home[b.id] ?? {} : { ...b.w, link_label: null });
+// A data block's words: hers (home_blocks) for Home's own blocks; for a block the
+// owner added, hers (block_switches) over the owner's starting wording.
+const blockWords = (snap, b, key) => (hersOn(key, b) ? snap.home[b.id] ?? {} : { ...addedWords(snap, key, b), link_label: null });
 const limited = (rows, b) => (b.limit ? rows.slice(0, b.limit) : rows);
+// Its heading: Home's own fall back to today's words; a block the owner added
+// shows none when its heading is left empty (a page's heading may lead it).
+const blockHead = (key, b, w, dflt) => (hersOn(key, b) ? w.heading || dflt : w.heading ?? dflt);
 
 function heroBlock(snap, ctx, { facts, badges, waitlistOn }) {
   const h = snap.home;
@@ -296,7 +312,7 @@ function dogsBlock(snap, ctx, b, key = 'home') {
     : b.style === 'flip' ? `<div class="grid${list.length === 1 ? ' narrow-grid' : ''}">${list.map(card).join('')}</div>${ctl ? `<p class="center mt-26">${ctl}</p>` : ''}`
       : slider(list.map(card), { ctl });
   return `<section class="section"><div class="wrap">
-      ${head(w.eyebrow ?? 'Our dogs', w.heading || 'Meet our dogs', w.lede, { ornament: true })}
+      ${head(w.eyebrow ?? 'Our dogs', blockHead(key, b, w, 'Meet our dogs'), w.lede, { ornament: true })}
       ${body}
     </div></section>`;
 }
@@ -306,7 +322,7 @@ function littersBlock(snap, ctx, b, key = 'home') {
   if (!list.length) return '';
   const w = blockWords(snap, b, key);
   return `<section class="section band"><div class="wrap">
-      ${head(w.eyebrow ?? 'Litters', w.heading || 'Current and upcoming')}
+      ${head(w.eyebrow ?? 'Litters', blockHead(key, b, w, 'Current and upcoming'))}
       <div class="litters">${list.map((l) => litterCard(snap, l, ctx, { show: b.show })).join('')}</div>
       <p class="center mt-26"><a class="btn line" href="/litters">${esc(w.link_label || 'View all puppies')}</a></p>
     </div></section>`;
@@ -319,7 +335,7 @@ function reviewsBlock(snap, ctx, b, key = 'home') {
   const ctl = pageOn(snap, 'reviews', ctx) ? `<a class="more" href="/reviews">${esc(w.link_label || 'All reviews')}</a>` : '';
   const cards = list.map((r) => reviewCard(snap, r, { show: b.show }));
   return `<section class="section"><div class="wrap">
-      ${head(w.eyebrow ?? 'Families', w.heading || 'What our families say')}
+      ${head(w.eyebrow ?? 'Families', blockHead(key, b, w, 'What our families say'))}
       ${b.style === 'grid' ? `<div class="grid">${cards.join('')}</div>${ctl ? `<p class="center mt-26">${ctl}</p>` : ''}` : slider(cards, { cls: 'three', ctl })}
     </div></section>`;
 }

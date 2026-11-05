@@ -30,7 +30,7 @@ import {
 import { buildSnapshot } from '../publish.js';
 import {
   olderPuppies, depositsAhead, puppyStatus, puppyPriceText, regText, statusRule, sortPuppies, fullRegHref, rulesOf,
-  useFormats, word, litterRows, dogGroups, sitePrice, pricesOff, fmtDate, sexWord, dogsFor, label, placedFaqs,
+  useFormats, word, litterRows, dogGroups, sitePrice, pricesOff, fmtDate, sexWord, dogsFor, label, placedFaqs, addedOn, addedWords, customPage,
 } from '../render/parts.js';
 import { makePreviewToken, servePhoto, SITE_CSP } from '../site.js';
 import { renderPage } from '../render/index.js';
@@ -38,9 +38,9 @@ import { DEMO_STEPS } from '../kennelos/demo.js';
 import {
   BLOCK_TYPES, DOG_STATUS, ANY3, DOG_FLAGS, DOG_ORDER, DOG_STYLE, STAGES, REVIEW_STYLE, SEXES, DOG_ITEMS, LITTER_ITEMS, LITTER_PAIR,
   LITTER_ROWS, REVIEW_ITEMS, REVIEW_WHO, BlockError, blocksFromForm, moved, newBlock,
-  pageBlocks, pageChanged, pagesChanged, withPage, addable, fits, hersOn, blockName, blockHint, isBuilt, BUILT_PAGES, PAGE_PARTS, PAGE_HEADS,
+  pageBlocks, pageChanged, pagesChanged, withPage, addable, fits, hersOn, blockName, blockHint, isBuilt, BUILT_PAGES, PAGE_PARTS, headFor, isCustom, customPages, addPage, withPageInfo, withoutPage, pathFor, STARTS,
 } from '../content/blocks.js';
-import { PAGES } from '../content/model.js';
+import { PAGES, MENU_GROUPS } from '../content/model.js';
 import { siteLink } from '../ops/sites.js';
 
 const redirect = (location) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store' } });
@@ -375,8 +375,9 @@ const resultLine = (names, what) => (names.length
   : '<p class="result none"><b>Nothing matches</b>, so this block hides itself on the site.</p>');
 
 // A page's name and address as the breeder's site has them (Home is not in PAGES).
-const pageLabel = (snap, key) => (key === 'home' ? 'Home' : label(snap, key) || PAGES[key].label);
-const pagePath = (key) => (key === 'home' ? '/' : PAGES[key].path);
+const pageLabel = (snap, key) => (key === 'home' ? 'Home' : label(snap, key));
+const pagePath = (snap, key) => (key === 'home' ? '/' : PAGES[key]?.path ?? customPage(snap, key)?.path ?? '');
+const headOf = (snap, key) => headFor(key, customPage(snap, key));
 // Where she words a page: her Site Manager, Pages and wording.
 const hersAt = (snap, key) => `her Site Manager, under Pages and wording, ${pageLabel(snap, key)}`;
 // Her products with a badge on this page (Home's are her Home badges).
@@ -408,7 +409,7 @@ function blockSummary(snap, key, b) {
   if (b.type === 'embeds') return `Her videos and posts on ${pageLabel(snap, key)}`;
   if (b.type === 'head') {
     const p = snap.pages[key] ?? {};
-    return [p.eyebrow ?? PAGE_HEADS[key].eyebrow, p.heading || PAGE_HEADS[key].heading].filter(Boolean).join(' · ');
+    return [p.eyebrow ?? headOf(snap, key).eyebrow, p.heading || headOf(snap, key).heading].filter(Boolean).join(' · ');
   }
   const h = snap.home;
   const said = { hero: h.hero.headline || snap.site.kennel_name, facts: (h.facts.items ?? []).map(([v, l]) => `${v} ${l}`).join(' · '), text: h.story.heading,
@@ -464,7 +465,7 @@ function blockSettings(snap, key, b) {
     show = `${showList(b, 'items', REVIEW_ITEMS, 'Top to bottom')}${showSwitches(b, 'who', REVIEW_WHO, 'Who it is from')}`;
   }
   const words = ownWords(key, b)
-    ? `<div class="fgroup"><h2>Starting wording</h2><p class="small muted">The breeder can reword it once her side of added blocks comes.</p><div class="fgrid">
+    ? `<div class="fgroup"><h2>Starting wording</h2><p class="small muted">The breeder can reword it, and switch the block off, in ${esc(hersAt(snap, key))}.</p><div class="fgrid">
       ${field(k('w.eyebrow'), b.w.eyebrow ?? '', { label: 'Eyebrow' })}${field(k('w.heading'), b.w.heading ?? '', { label: 'Heading' })}${field(k('w.lede'), b.w.lede ?? '', { label: 'Line under it', cls: '' })}</div></div>`
     : '<p class="small muted">Its words are hers: she words this block in her Site Manager, under Pages and wording, Home.</p>';
   return `<div class="set"><input type="hidden" name="${k('present')}" value="1">
@@ -477,7 +478,7 @@ function blockSettings(snap, key, b) {
 
 function blockRow(snap, key, b, i, n, open) {
   const T = BLOCK_TYPES[b.type];
-  const off = hersOn(key, b) && !snap.home[b.id]?.enabled;
+  const off = hersOn(key, b) ? !snap.home[b.id]?.enabled : !addedOn(snap, key, b);
   const isOpen = open === b.id;
   return `<li class="mvr${isData(b) ? ' data' : ''}${b.type === 'builtin' ? ' fixed' : ''}${off ? ' off' : ''}" id="b-${esc(b.id)}">${mvBtns(`mv:${b.id}`, i, n)}<span class="ico">${svg(T.ic)}</span>
     <span class="ttl">${esc(blockName(key, b))}${isData(b) ? ` <span class="kos-tag">${b.type === 'reviews' ? 'Records' : 'KennelOS'}</span>` : ''}${b.type === 'builtin' ? ' <span class="kos-tag">Built-in</span>' : ''}${off ? ' <span class="chg">off by the breeder</span>' : ''}<small>${esc(blockSummary(snap, key, b))}</small></span>
@@ -489,19 +490,19 @@ function blockRow(snap, key, b, i, n, open) {
 function pagePreview(snap, key, blocks, site) {
   const h = snap.home;
   const ghost = (b, why) => `<div class="pvb ghost">${esc(blockName(key, b))}: ${why}</div>`;
-  const headOf = (w, eb, hd) => `${(w.eyebrow ?? eb) ? `<span class="eyebrow">${esc(w.eyebrow ?? eb)}</span>` : ''}<h3>${esc(w.heading || hd)}</h3>`;
-  const wordsOf = (b) => (hersOn(key, b) ? h[b.id] ?? {} : b.w);
+  const headOf = (w, eb, hd) => `${(w.eyebrow ?? eb) ? `<span class="eyebrow">${esc(w.eyebrow ?? eb)}</span>` : ''}${(w.heading ?? hd) ? `<h3>${esc(w.heading || hd)}</h3>` : ''}`;
+  const wordsOf = (b) => (hersOn(key, b) ? { ...h[b.id], heading: h[b.id]?.heading || undefined } : addedWords(snap, key, b));
   const out = [];
   for (const b of blocks) {
-    if (hersOn(key, b) && !h[b.id]?.enabled) { out.push(ghost(b, 'switched off by the breeder')); continue; }
+    if (hersOn(key, b) ? !h[b.id]?.enabled : !addedOn(snap, key, b)) { out.push(ghost(b, 'switched off by the breeder')); continue; }
     const names = blockRecords(snap, b);
     if (isData(b) && !names.length) { out.push(ghost(b, 'nothing matches, so it hides')); continue; }
     if (b.type === 'hero') out.push(`<div class="pv-hero"><span class="ph"></span><div>${h.hero.eyebrow ? `<span class="eyebrow">${esc(h.hero.eyebrow)}</span>` : ''}<h3>${esc(h.hero.headline || snap.site.kennel_name)}</h3>${h.hero.script ? `<span class="script">${esc(h.hero.script)}</span>` : ''}</div></div>`);
     else if (b.type === 'head') {
       const p = snap.pages[key] ?? {};
-      const eb = p.eyebrow ?? PAGE_HEADS[key].eyebrow;
-      const lede = p.lede ?? PAGE_HEADS[key].lede;
-      out.push(`<div class="pvb sand">${eb ? `<span class="eyebrow">${esc(eb)}</span>` : ''}<h3>${esc(p.heading || PAGE_HEADS[key].heading)}</h3>${lede ? `<p class="small muted">${esc(lede)}</p>` : ''}</div>`);
+      const eb = p.eyebrow ?? headOf(snap, key).eyebrow;
+      const lede = p.lede ?? headOf(snap, key).lede;
+      out.push(`<div class="pvb sand">${eb ? `<span class="eyebrow">${esc(eb)}</span>` : ''}<h3>${esc(p.heading || headOf(snap, key).heading)}</h3>${lede ? `<p class="small muted">${esc(lede)}</p>` : ''}</div>`);
     }
     else if (b.type === 'builtin') out.push(`<div class="pvb"><div class="pv-row pv-built">${svg('lock')}<b>${esc(blockName(key, b))}</b></div></div>`);
     else if (b.type === 'facts') out.push(h.facts.items?.length ? `<div class="pvb"><div class="pv-facts">${h.facts.items.slice(0, 3).map(([v, l]) => `<div><b>${esc(v)}</b>${esc(l)}</div>`).join('')}</div></div>` : ghost(b, 'no facts yet, so it hides'));
@@ -514,37 +515,61 @@ function pagePreview(snap, key, blocks, site) {
     else if (b.type === 'litters') out.push(`<div class="pvb sand">${headOf(wordsOf(b), 'Litters', 'Current and upcoming')}${names.map((nm) => `<div class="pv-row"><b>${esc(nm)}</b></div>`).join('')}</div>`);
     else if (b.type === 'reviews') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Families', 'What our families say')}${snap.reviews.slice(0, 1).map((r) => `<div class="pv-row" style="display:block"><span class="stars">★★★★★</span><br>“${esc(r.quote.slice(0, 90))}${r.quote.length > 90 ? '…' : ''}”</div>`).join('')}</div>`);
   }
-  return phone(site, snap, pagePath(key), `Their ${key === 'home' ? 'Home' : pageLabel(snap, key)} page, as you build it`, out);
+  return phone(site, snap, pagePath(snap, key), `Their ${key === 'home' ? 'Home' : pageLabel(snap, key)} page, as you build it`, out);
 }
 
-// The Pages list: every page the builder has, in today's menu order, and Privacy,
-// which stays fixed.
-async function pagesScreen(env, site, build) {
+// The Pages list: every page the builder has, in today's menu order, then the pages
+// she added, and Privacy, which stays fixed. ?new=1 opens New page.
+// Waitlist is the menu's button, one link, so a page can't go under it (yet: the menu editor).
+const GROUPS = { '': 'Not in the menu', ...Object.fromEntries(MENU_GROUPS.filter((g) => g.key !== 'waitlist').map((g) => [g.key, g.label])) };
+function newPageCard(input = {}, error = null) {
+  return `<section class="card" id="new-page"><div class="fgroup"><h2>New page</h2>${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
+      <ol class="numsteps"><li><span class="num">1</span><div><div class="fgrid">
+        ${field('page.name', input.name ?? '', { label: 'Name', ph: 'Our dams', hint: 'In the menu and as its heading. The breeder can rename both.' })}
+        ${field('page.path', input.path ?? '', { label: 'Address', ph: '/our-dams', hint: 'Leave empty to make it from the name.' })}</div></div></li>
+      <li><span class="num">2</span><div><div class="fgrid">${select('page.start', input.start ?? 'blank', STARTS, 'Start with')}${select('page.group', input.group ?? '', GROUPS, 'Put it in the menu under')}</div></div></li></ol>
+      <div class="row"><button class="primary small" name="act" value="newpage">Make the page</button><a class="link small" href="?">Cancel</a></div></div></section>`;
+}
+
+async function pagesScreen(env, site, build, { adding = false, input = {}, error = null } = {}) {
   const snap = await buildSnapshot(env, site.id);
   useFormats(snap);
   const sub = esc(site.subdomain);
-  const row = (key, path, name, href, note) => `<li>${href ? `<a class="rowlink grow" href="${href}">` : '<span class="grow">'}<b>${esc(name)}</b><br><span class="small muted"><span class="code">${esc(path)}</span> · ${note}</span>${href ? '</a><span class="go" aria-hidden="true">›</span>' : '</span>'}</li>`;
-  const rows = BUILT_PAGES.map((k) => {
-    const n = pageBlocks(build, k).length;
-    const off = k !== 'home' && snap.pages[k]?.enabled === false ? ' · <span class="chg">off by the breeder</span>' : '';
-    return row(k, pagePath(k), pageLabel(snap, k), `/admin/${sub}/pages/${k}`, `${n} block${n === 1 ? '' : 's'}${pageChanged(build, k) ? ' · <span class="chg">changed</span>' : ' · as today'}${off}`);
-  }).concat(row('privacy', PAGES.privacy.path, PAGES.privacy.label, null, 'written for her by KennelPort, fixed'));
+  const row = (path, name, href, note) => `<li>${href ? `<a class="rowlink grow" href="${href}">` : '<span class="grow">'}<b>${esc(name)}</b><br><span class="small muted"><span class="code">${esc(path)}</span> · ${note}</span>${href ? '</a><span class="go" aria-hidden="true">›</span>' : '</span>'}</li>`;
+  const offNote = (k) => (k !== 'home' && snap.pages[k]?.enabled === false ? ' · <span class="chg">off by the breeder</span>' : '');
+  const count = (k) => { const n = pageBlocks(build, k).length; return `${n} block${n === 1 ? '' : 's'}`; };
+  const rows = BUILT_PAGES.map((k) => row(pagePath(snap, k), pageLabel(snap, k), `/admin/${sub}/pages/${k}`, `${count(k)}${pageChanged(build, k) ? ' · <span class="chg">changed</span>' : ' · as today'}${offNote(k)}`));
+  const mine = customPages(build).map((c) => row(c.path, pageLabel(snap, c.id), `/admin/${sub}/pages/${c.id}`, `${count(c.id)} · <span class="spill brass">Added</span> · ${c.group ? `in ${esc(GROUPS[c.group])}` : 'not in the menu'}${offNote(c.id)}`));
+  const fixed = row(PAGES.privacy.path, PAGES.privacy.label, null, 'written for her by KennelPort, fixed');
   return `<div class="build"><div class="stack">
-    <section class="card"><div class="between"><h2>${rows.length} pages</h2></div><ul class="list pages">${rows.join('')}</ul></section>
-    <section class="card band"><p class="small">New pages (a Dams page, a Sires page), the breeder's side of the blocks you add, and the menu come next.</p></section>
+    ${adding ? `<form method="post" class="stack">${newPageCard(input, error)}</form>` : ''}
+    <section class="card"><div class="between"><h2>${rows.length + mine.length + 1} pages</h2>${adding ? '' : '<a class="button small primary" href="?new=1#new-page">' + svg('plus') + ' New page</a>'}</div><ul class="list pages">${rows.join('')}</ul>
+      ${mine.length ? `<h2 class="mt">Pages you added</h2><ul class="list pages">${mine.join('')}</ul>` : ''}<ul class="list pages">${fixed}</ul></section>
+    <section class="card band"><p class="small">A page you add is the breeder's to switch on or off, name in her menu and word, like any page. The menu editor, page addresses for the breeder, and FAQ and badge spots on your pages come next.</p></section>
   </div><div class="pvwrap" id="preview">${pagePreview(snap, 'home', pageBlocks(build, 'home'), site)}${await previewLink(env, site)}</div></div>`;
 }
 
-// What "The page" says about switching it off and its address.
+// What "The page" says about switching it off and its address. A page of hers
+// has its name, address and menu group here, and can be removed.
 const FIXED_PATHS = ['waitlist', 'waitlist_help'];
 function pageCard(snap, key) {
+  const c = customPage(snap, key);
+  if (c) {
+    return `<section class="card"><div class="fgroup"><h2>The page <span class="spill brass">Added</span></h2><input type="hidden" name="page.present" value="1"><div class="fgrid">
+      ${field('page.name', c.name, { label: 'Starting name', hint: 'The breeder can rename it in her menu.' })}
+      ${field('page.path', c.path, { label: 'Address', hint: 'Letters, numbers and hyphens. Renaming it for the breeder comes with the menu.' })}
+      ${select('page.group', c.group ?? '', GROUPS, 'In the menu under')}</div>
+      <div class="switches boxed"><label class="check"><input type="checkbox" disabled checked aria-describedby="page-on">The breeder can switch this page off</label></div>
+      <p class="small muted" id="page-on">${esc(`She switches it off in ${hersAt(snap, key)}. It hides by itself while nothing on it has anything to show.`)}</p>
+      <div class="row"><button class="link small danger" name="act" value="delpage">${svg('trash')} Remove this page</button></div></div></section>`;
+  }
   const canHide = key !== 'home' && PAGES[key].canHide;
   const hideNote = key === 'home' ? 'Home is always on: she can switch its blocks off, not the page.'
     : canHide ? `She switches it off in ${hersAt(snap, key)}.` : `${pageLabel(snap, key)} is always on.`;
   const pathNote = key === 'home' ? "Fixed: it is the site's own address." : FIXED_PATHS.includes(key) ? 'Fixed: other systems link to it.' : 'Its address today. Renaming comes with the menu.';
   return `<section class="card"><div class="fgroup"><h2>The page</h2><div class="fgrid">
       <label class="half">Starting name<span class="hint">The breeder can rename it in her menu.</span><input type="text" value="${esc(key === 'home' ? 'Home' : PAGES[key].label)}" disabled></label>
-      <label class="half">Address<span class="hint">${esc(pathNote)}</span><input type="text" value="${esc(pagePath(key))}" disabled></label></div>
+      <label class="half">Address<span class="hint">${esc(pathNote)}</span><input type="text" value="${esc(pagePath(snap, key))}" disabled></label></div>
       <div class="switches boxed"><label class="check"><input type="checkbox" disabled${canHide ? ' checked' : ''} aria-describedby="page-on">The breeder can switch this page off</label></div>
       <p class="small muted" id="page-on">${esc(hideNote)}</p></div></section>`;
 }
@@ -567,7 +592,7 @@ async function pageScreen(env, site, build, key, { open = null, error = null } =
     ${pageCard(snap, key)}
     <section class="card"><div class="between"><h2>Blocks, top to bottom</h2>${adds.length ? `<button class="button small primary" name="act" value="${open === 'add' ? 'close' : 'adding'}" aria-expanded="${open === 'add'}">${svg('plus')} Add a block</button>` : ''}</div>
       ${open === 'add' ? `<div class="addblock"><p class="small muted">It goes at the bottom; move it up from there.</p>${group(true, 'From KennelOS and her records')}${group(false, key === 'home' ? 'Her words and photos' : 'This page\'s own')}</div>` : ''}
-      <p class="small muted">You place and order them. The breeder can switch each one off and reword it, never move it.${changed ? '' : ` This is today's ${key === 'home' ? 'Home' : 'page'}.`}</p>
+      <p class="small muted">You place and order them. The breeder can switch each one off and reword it, never move it.${changed || isCustom(key) ? '' : ` This is today's ${key === 'home' ? 'Home' : 'page'}.`}</p>
       <ul class="mvl">${blocks.map((b, i) => blockRow(snap, key, b, i, blocks.length, open)).join('')}</ul>
       ${changed ? `<div class="row"><button class="link small" name="act" value="default">Back to today's ${key === 'home' ? 'Home' : 'page'}</button></div>` : ''}
     </section></div>
@@ -620,7 +645,7 @@ export async function handleBuilder({ env, request, url, user, page }) {
   const path = url.pathname;
   if (path === '/admin' || path === '/admin/') return page('Every site', await everySite(env), { admin: { nav: adminNav(null, 'sites') } });
   const sv = path.match(/^\/admin\/([a-z0-9-]+)\/site(\/.*)?$/);
-  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z_]+|rules|dogs|wording|formats|kennelos|timing)$/);
+  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z0-9_-]+|rules|dogs|wording|formats|kennelos|timing)$/);
   if (!m) return null;
   const site = await env.DB.prepare("SELECT id, subdomain, kennel_name, status, portal_on, demo_step FROM sites WHERE subdomain = ? AND status != 'closed'").bind(m[1]).first();
   if (!site) return null;
@@ -692,20 +717,48 @@ async function pagesRoute({ env, request, url, site, build, page, screen }) {
   const sub = esc(site.subdomain);
   const name = esc(site.kennel_name || site.subdomain);
   const demo = isDemo(site) ? ' <span class="spill brass">Demo</span>' : '';
+  const str = (form, k) => String(form.get(k) ?? '');
   if (screen === 'pages') {
-    if (request.method !== 'GET') return null;
+    let error = null;
+    let input = {};
+    if (request.method === 'POST') {
+      // New page: made, then opened.
+      const form = await request.formData();
+      input = { name: str(form, 'page.name'), path: str(form, 'page.path'), start: str(form, 'page.start'), group: str(form, 'page.group') };
+      try {
+        const out = addPage(build, input);
+        await saveBuild(env, site.id, out.build);
+        return redirect(`/admin/${site.subdomain}/pages/${out.id}?saved=made`);
+      } catch (err) {
+        if (!(err instanceof BlockError)) throw err;
+        error = err.message;
+      }
+    }
+    const adding = url.searchParams.has('new') || Boolean(error);
     const body = `<p class="crumb"><a href="/admin">‹ Every site</a></p><span class="eyebrow">${name}</span>${demo}<h1>Pages</h1>
-      <p class="muted">Each page is a list of blocks you place. With nothing changed, each is today's page.</p>${await pagesScreen(env, site, build)}`;
+      <p class="muted">Each page is a list of blocks you place. With nothing changed, each is today's page.</p>${await pagesScreen(env, site, build, { adding, input, error })}`;
     return page(`Pages · ${site.kennel_name || site.subdomain}`, body, { admin: { nav: adminNav(site, 'pages'), site } });
   }
   const key = screen.slice('pages/'.length);
-  if (!isBuilt(key)) return null;
+  if (!isBuilt(key, build)) return null;
   let error = null;
   let open = url.searchParams.get('open');
   if (request.method === 'POST') {
     const form = await request.formData();
     try {
-      const out = pageFromForm(build, key, form);
+      if (isCustom(key) && form.get('act') === 'delpage') {
+        await saveBuild(env, site.id, withoutPage(build, key));
+        // Her switch and words for it go too, so a new page of the same name starts fresh.
+        await env.DB.batch([
+          env.DB.prepare('DELETE FROM site_pages WHERE site_id = ? AND page = ?').bind(site.id, key),
+          env.DB.prepare('DELETE FROM block_switches WHERE site_id = ? AND page = ?').bind(site.id, key),
+        ]);
+        return redirect(`/admin/${site.subdomain}/pages?removed=1`);
+      }
+      // Her page's name, address and menu group, saved with whatever was pressed.
+      const info = isCustom(key) && form.get('page.present') != null
+        ? withPageInfo(build, key, { name: str(form, 'page.name'), path: str(form, 'page.path'), group: str(form, 'page.group') }) : build;
+      const out = pageFromForm(info, key, form);
       await saveBuild(env, site.id, out.build);
       return redirect(`/admin/${site.subdomain}/pages/${key}?saved=1${out.open ? `&open=${encodeURIComponent(out.open)}#b-${encodeURIComponent(out.open)}` : ''}`);
     } catch (err) {
@@ -716,8 +769,9 @@ async function pagesRoute({ env, request, url, site, build, page, screen }) {
   const snap = key === 'home' ? null : await buildSnapshot(env, site.id);
   const title = key === 'home' ? 'Home' : pageLabel(snap, key);
   const saved = url.searchParams.get('saved') && !error;
+  const made = url.searchParams.get('saved') === 'made';
   const body = `<p class="crumb"><a href="/admin/${sub}/pages">‹ Pages</a></p><span class="eyebrow">${name}</span>${demo}<h1>${esc(title)}</h1>
-    ${saved ? '<p class="notice" role="status">Saved. The site shows it once the breeder (or you) publishes.</p>' : ''}
+    ${saved ? `<p class="notice" role="status">${made ? 'Page made. It goes live, and into the menu, once the breeder (or you) publishes.' : 'Saved. The site shows it once the breeder (or you) publishes.'}</p>` : ''}
     <form method="post" id="build" class="build"><button class="sr" tabindex="-1" aria-hidden="true">Save</button>${await pageScreen(env, site, build, key, { open, error })}
       <div class="actionbar"><div class="in"><span class="ico">${ic('eye')}</span><p><b>Their ${esc(title)} page</b>Save, then the preview shows it. Publishing puts it live.</p><a class="button small seeit" href="#preview">See it</a><button class="primary small">Save</button></div></div></form>`;
   return page(`${title} · ${site.kennel_name || site.subdomain}`, body, { admin: { nav: adminNav(site, 'pages'), site } });

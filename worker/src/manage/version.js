@@ -9,4 +9,4 @@
 // then run `node worker/scripts/fingerprint.mjs` and paste its APP_FILES value here.
 // Ask the owner before bumping (CLAUDE.md).
 export const APP_VERSION = '16';
-export const APP_FILES = '9b9a7675057374ed';
+export const APP_FILES = 'f8626ea71b6afff4';

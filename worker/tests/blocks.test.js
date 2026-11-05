@@ -239,3 +239,106 @@ test('a badge row right after its page\'s built-in sits inside it, as today; any
   assert.match(draw({}, '/litters'), /badges-row/);
   assert.doesNotMatch(draw({ litters: pageBlocks(null, 'litters').filter((b) => b.id !== 'badges') }, '/litters'), /badges-row/);
 });
+
+// ---------- pages the owner adds, and the breeder's side of added blocks ----------
+
+const { addPage, withPageInfo, withoutPage, customPages } = await import('../src/content/blocks.js');
+const { exportContent } = await import('../src/content/io.js');
+
+test('a new page: its address from its name, never one that is taken; renamed, moved and removed', () => {
+  let { build, id } = addPage({}, { name: 'Our dams', start: 'dams', group: 'residents' });
+  assert.equal(id, 'x-our-dams');
+  assert.deepEqual(customPages(build), [{ id, name: 'Our dams', path: '/our-dams', group: 'residents' }]);
+  assert.deepEqual(pageBlocks(build, id).map((b) => [b.type, b.f?.sex ?? null]), [['head', null], ['dogs', 'female']]);
+  for (const [path, why] of [['/dogs', /taken/], ['/family', /taken/], ['privacy', /taken/], ['/our-dams', /Another page/], ['/a/b', /one word/], ['/Ünïcode!', /one word/]]) {
+    assert.throws(() => addPage(build, { name: 'X', path }), why, path);
+  }
+  assert.throws(() => addPage(build, { name: '  ' }), /Give the page a name/);
+  // The same name again: its own id; an address made from the name.
+  const two = addPage(build, { name: 'Our dams!', path: '/our-girls' });
+  assert.equal(two.id, 'x-our-dams-2');
+  build = withPageInfo(two.build, 'x-our-dams-2', { name: 'Girls', path: 'girls', group: 'nope' });
+  assert.deepEqual(customPages(build)[1], { id: 'x-our-dams-2', name: 'Girls', path: '/girls', group: null });
+  build = withoutPage(build, id);
+  assert.deepEqual(customPages(build).map((c) => c.id), ['x-our-dams-2']);
+  assert.equal(build.pages[id], undefined);
+  // A saved page that isn't valid is dropped.
+  assert.deepEqual(customPages({ custom: [{ id: 'dogs', name: 'x', path: '/x' }, { id: 'x-a', name: 'A', path: '/litters' }, { id: 'x-b', name: 'B', path: '/b' }] }).map((c) => c.id), ['x-b']);
+});
+
+test('New page in the admin view: made, live at its address and in its menu group; the breeder switches it off and renames it; removed', async (t) => {
+  const { env, id, sub, admin, get, render, at, build } = await demo(t);
+  const asAdmin = (p, body) => call(env, M, p, { method: 'POST', headers: { cookie: admin, origin: `https://${M}` }, body: body && form(body) });
+  assert.match(text(await get(`/admin/${sub}/pages?new=1`)), /New page 1 Name .* Address .* 2 Start with .* Put it in the menu under/);
+  // Refused, kept as typed.
+  let r = await asAdmin(`/admin/${sub}/pages`, { act: 'newpage', 'page.name': 'Our dogs', 'page.path': '/dogs' });
+  assert.equal(r.status, 200);
+  assert.match(text(await r.text()), /\/dogs is taken .* value="Our dogs"|\/dogs is taken/);
+  r = await asAdmin(`/admin/${sub}/pages`, { act: 'newpage', 'page.name': 'Our dams', 'page.path': '', 'page.start': 'dams', 'page.group': 'residents' });
+  assert.equal(r.headers.get('location'), `/admin/${sub}/pages/x-our-dams?saved=made`);
+  assert.match(text(await get(at('x-our-dams'))), /Our dams .* The page Added .* Dog cards KennelOS Girls · Active · flip cards .* Demo · \/our-dams/);
+  assert.match(text(await get(`/admin/${sub}/pages`)), /Pages you added Our dams \/our-dams · 2 blocks · Added · in Kennel residents/);
+
+  const h = await render('/our-dams');
+  assert.match(text(h), /Our dams .*Clover\*/);
+  assert.doesNotMatch(text(h.slice(h.indexOf('<main'))), /Atlas\*/, 'girls only');
+  assert.match(await render('/'), /<a href="\/our-dams">Our dams<\/a>/);
+  // In the footer too, under Dogs and puppies, after All our dogs (not Girls and Boys).
+  const foot = (await render('/')).split('<footer')[1];
+  assert.ok(order(foot, ['Dogs and puppies', 'href="/dogs"', 'href="/our-dams"']));
+  assert.doesNotMatch(foot, /dogs#girls/);
+  // Never under Waitlist: that is the menu's one button.
+  assert.equal(customPages(withPageInfo(await build(), 'x-our-dams', { name: 'Our dams', path: '/our-dams', group: 'waitlist' }))[0].group, null);
+  assert.ok((await buildSnapshot(env, id)).layout.custom.length === 1);
+
+  // The breeder's side: listed, switched off (gone from the menu and its address), renamed.
+  const page = await get(`/s/${sub}/pages`);
+  assert.match(text(page), /Our dams \/our-dams/);
+  const save = (body) => call(env, M, `/s/${sub}/pages/x-our-dams`, { method: 'POST', headers: { cookie: admin, origin: `https://${M}` }, body: form(body) });
+  assert.equal((await save({ menu_label: 'Dams', heading: 'Our girls' })).status, 303);
+  assert.doesNotMatch(await render('/'), /href="\/our-dams"/);
+  assert.match(await render('/our-dams'), /This page isn|not available|<title>/);
+  assert.notEqual((await renderPage(await buildSnapshot(env, id), { path: '/our-dams', origin: 'https://x', today: '2027-03-10', preview: true })).status, 200);
+  await save({ enabled: '1', menu_label: 'Dams', heading: 'Our girls' });
+  assert.match(await render('/'), /<a href="\/our-dams">Dams<\/a>/);
+  assert.match(text(await render('/our-dams')), /Our girls/);
+
+  // Its name, address and group from the admin view; then removed, and her words with it.
+  await asAdmin(at('x-our-dams'), { 'page.present': '1', 'page.name': 'Our dams', 'page.path': '/dams', 'page.group': 'puppies' });
+  assert.equal(customPages(await build())[0].path, '/dams');
+  assert.equal((await renderPage(await buildSnapshot(env, id), { path: '/our-dams', origin: 'https://x', today: '2027-03-10', preview: true })).status, 404);
+  assert.match(text(await render('/dams')), /Our girls/);
+  await asAdmin(at('x-our-dams'), { act: 'delpage' });
+  assert.equal((await build()).custom, undefined);
+  assert.equal(env.DB.raw.prepare("SELECT COUNT(*) AS n FROM site_pages WHERE site_id = ? AND page = 'x-our-dams'").get(id).n, 0);
+  assert.equal((await renderPage(await buildSnapshot(env, id), { path: '/dams', origin: 'https://x', today: '2027-03-10', preview: true })).status, 404);
+});
+
+test('a block the owner added is the breeder\'s to switch off and reword, on Home and any page; content.json carries it', async (t) => {
+  const { env, id, sub, admin, post, render, at } = await demo(t);
+  await post({}, { act: 'add:dogs' });
+  await post({ 'b.dogs-2.f.sex': 'female', 'b.dogs-2.w.heading': 'Our girls' }, { open: 'dogs-2' });
+  await post({}, { page: 'about', act: 'add:reviews' });
+  // Her Home screen and the About page's list it under Blocks KennelPort added.
+  const homeScreen = text(await (await call(env, M, `/s/${sub}/home`, { headers: { cookie: admin } })).text());
+  assert.match(homeScreen, /Blocks KennelPort added .* Our girls Show it Your dogs from KennelOS: Clover\*, Maple\*, Juniper\*, Wren\*/);
+  assert.match(text(await (await call(env, M, `/s/${sub}/pages/about`, { headers: { cookie: admin } })).text()), /Blocks KennelPort added .* What our families say Show it Your reviews: none right now, so it hides/);
+  const hers = (page, block, body) => call(env, M, `/s/${sub}/blocks/${page}/${block}`, { method: 'POST', headers: { cookie: admin, origin: `https://${M}` }, body: form(body) });
+  assert.equal((await hers('home', 'dogs-2', { enabled: '1', heading: 'Meet the girls' })).headers.get('location'), `/s/${sub}/home?note=saved#b-dogs-2`);
+  assert.match(text(await render('/')), /Meet the girls/);
+  assert.doesNotMatch(await render('/'), /Our girls/);
+  await hers('home', 'dogs-2', { heading: 'Meet the girls' });
+  assert.doesNotMatch(await render('/'), /Meet the girls/);
+  // The admin view shows it off; a block that isn't one of hers is refused.
+  assert.match(text(await (await call(env, M, at('home'), { headers: { cookie: admin } })).text()), /Dog cards KennelOS off by the breeder Girls/);
+  assert.equal((await hers('home', 'dogs', { heading: 'x' })).status, 404);
+  assert.equal((await hers('about', 'nope', { heading: 'x' })).status, 404);
+  // Exported and imported back as they are.
+  const doc = await exportContent(env, id);
+  assert.deepEqual(doc.blocks, { 'home/dogs-2': { enabled: false, heading: 'Meet the girls' } });
+  await importContent(env, id, { blocks: { 'home/dogs-2': { enabled: true, heading: 'Back again' }, 'x-dams/dogs-2': { eyebrow: 'Hi' } }, pages: { 'x-dams': { enabled: false, heading: 'Dams' } } });
+  assert.match(text(await render('/')), /Back again/);
+  assert.deepEqual((await exportContent(env, id)).pages['x-dams'], { enabled: false, heading: 'Dams' });
+  await assert.rejects(importContent(env, id, { pages: { 'x-': {} } }), /not a page/);
+  await assert.rejects(importContent(env, id, { blocks: { nope: {} } }), /<page>\/<block>/);
+});

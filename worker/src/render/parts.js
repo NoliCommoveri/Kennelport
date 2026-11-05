@@ -1,6 +1,6 @@
 // Pieces of the "ak" template shared by its pages: formatting, photos, cards and
 // the menu. Every value from a snapshot passes through esc() (or attr()) here.
-import { SHOW_DEFAULT } from '../content/blocks.js';
+import { SHOW_DEFAULT, isCustom, hersOn, BLOCK_TYPES } from '../content/blocks.js';
 import { escapeHtml as esc } from '../lib/html.js';
 import { MENU_GROUPS, PAGES } from '../content/model.js';
 import { puppyPrice, litterPriceRange, depositRange } from '../content/prices.js';
@@ -89,6 +89,7 @@ export function img(snap, id, { alt, cls = '', thumb = false, lazy = true } = {}
 export function pageOn(snap, key, ctx) {
   const page = snap.pages[key];
   if (!page || !page.enabled) return false;
+  if (isCustom(key)) return customHas(snap, key);
   switch (key) {
     case 'dogs': return snap.dogs.some((d) => d.status === 'active');
     case 'reviews': return true; // the page carries the Share your review form even before the first review
@@ -108,7 +109,37 @@ export function pageOn(snap, key, ctx) {
   }
 }
 
-export const label = (snap, key) => snap.pages[key]?.menu_label || PAGES[key].label;
+export const label = (snap, key) => snap.pages[key]?.menu_label || PAGES[key]?.label || customPage(snap, key)?.name || '';
+
+// ---------- pages and blocks the owner added (content/blocks.js) ----------
+
+export const customPage = (snap, key) => (snap.layout?.custom ?? []).find((c) => c.id === key) ?? null;
+
+// A block the owner added (not one of Home's own): the breeder's switch, and her
+// words over the owner's starting ones.
+const addedRow = (snap, key, b) => (BLOCK_TYPES[b.type].kind === 'data' && !hersOn(key, b) ? snap.added?.[key]?.[b.id] ?? null : null);
+export const addedOn = (snap, key, b) => addedRow(snap, key, b)?.enabled !== false;
+export function addedWords(snap, key, b) {
+  const her = addedRow(snap, key, b) ?? {};
+  const w = { ...b.w };
+  for (const k of ['eyebrow', 'heading', 'lede']) if (her[k]) w[k] = her[k];
+  return w;
+}
+
+// The records a data block would show (before its limit).
+export function blockRows(snap, b) {
+  if (b.type === 'dogs') return dogsFor(snap, b);
+  if (b.type === 'litters') return snap.litters.filter((l) => b.f.stage.includes(l.stage));
+  if (b.type === 'reviews') return snap.reviews;
+  return [];
+}
+
+// A page of hers shows while something on it does: a data block with records
+// (and switched on), or, with no data blocks, its heading alone.
+function customHas(snap, key) {
+  const data = (snap.layout?.[key] ?? []).filter((b) => BLOCK_TYPES[b.type].kind === 'data' && addedOn(snap, key, b));
+  return !data.length ? (snap.layout?.[key] ?? []).length > 0 : data.some((b) => blockRows(snap, b).length > 0);
+}
 
 export function menuGroups(snap, ctx) {
   const groups = [];
@@ -130,6 +161,9 @@ export function menuGroups(snap, ctx) {
         if (planned) links.push({ key, href: '/litters#upcoming', text: 'Upcoming litters' });
         if (!current && !planned) links.push({ key, href: '/litters', text: label(snap, key) });
       }
+    }
+    for (const c of snap.layout?.custom ?? []) {
+      if (c.group === g.key && pageOn(snap, c.id, ctx)) links.push({ key: c.id, href: c.path, text: label(snap, c.id) });
     }
     if (links.length) groups.push({ ...g, links });
   }

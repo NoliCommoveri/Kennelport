@@ -68,7 +68,8 @@ function footer(snap, ctx) {
   const year = ctx.today.slice(0, 4);
   const cols = [
     ['About us', groups.find((g) => g.key === 'about')?.links ?? []],
-    ['Dogs and puppies', [...(groups.find((g) => g.key === 'residents')?.links.slice(0, 1) ?? []), ...(groups.find((g) => g.key === 'puppies')?.links ?? [])]],
+    // Kennel residents' pages, not its places on a page (Girls, Boys).
+    ['Dogs and puppies', [...(groups.find((g) => g.key === 'residents')?.links.filter((l) => !l.href.includes('#')) ?? []), ...(groups.find((g) => g.key === 'puppies')?.links ?? [])]],
     ['Buying a puppy', [...(groups.find((g) => g.key === 'how')?.links ?? []), ...(pageOn(snap, 'waitlist', ctx) ? [{ href: '/waitlist', text: label(snap, 'waitlist') }] : []), ...(payShown(snap, ctx) ? [{ href: '/waitlist#how-to-pay', text: 'How to pay' }] : []), ...(familyLogin(snap, ctx) ? [{ ...familyLogin(snap, ctx), text: word(snap, 'family_login') }] : [])]],
   ].filter(([, links]) => links.length);
   return `<footer class="site"><div class="wrap">

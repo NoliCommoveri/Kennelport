@@ -5,7 +5,7 @@ view with Pups, Dogs, Wording, Formats, From KennelOS and Timing for each site
 (`content/rules.js`, `manage/builder.js`, `admin.js`). Step 2 has begun: every page but Privacy
 is a list of blocks (`content/blocks.js`; Pages in the admin view), each data block with its
 records and what its cards show, and each page drawn exactly as before until the owner
-changes it. The rest of step 2 is below (Building it, in steps); steps 3 to 5 aren't built yet.
+changes it; the owner adds pages, and the breeder switches and words what the owner adds. The rest of step 2 is below (Building it, in steps); steps 3 to 5 aren't built yet.
 
 Today a site's pages, menu, sections, and the rules for how KennelOS data shows are
 written into the code. Changing one means a code change, for every site at once. This
@@ -136,7 +136,8 @@ portal plan's decision (its section 1), not this one.
 - **Menu:** the owner sets groups and items. An item can be a page, a place on a page
   (like today's Girls and Boys links), or an outside link. The footer follows the menu,
   with a switch per group to leave it out of the footer, and a switch to show a group as
-  a button (today's Waitlist).
+  a button (today's Waitlist). Until the menu editor, a new page goes at the end of the
+  group the owner picks, never under Waitlist (one button, one link).
 - **Items show and hide on their own, as today** (decided 2026-11-05). An item hides when
   what it points to has nothing to show: today Girls and Boys show only with breeding
   dogs of both sexes, and Available and Upcoming litters only with such litters. An item
@@ -438,7 +439,11 @@ Each step is its own branch and can be released on its own.
    what it shows; and the contact and review forms, their fields. In this order:
    1. Home as blocks (built);
    2. the other pages as blocks (built);
-   3. new pages, with the breeder's switches and words for the blocks the owner adds;
+   3. new pages, with the breeder's switches and words for the blocks the owner adds
+      (built: New page in Pages, at its own address and in the menu group the owner picks;
+      the breeder switches it on or off, names it and words it, and switches off and
+      rewords each block the owner added, on any page; `block_switches`; content.json
+      carries both);
    4. the menu editor;
    5. page addresses and their redirects;
    6. FAQ and badge spots as block settings, on new pages too;

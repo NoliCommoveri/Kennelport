@@ -17,7 +17,7 @@ import { kennelosOrigin } from './feed.js';
 import { chunks, placeholders } from './lib/sql.js';
 import { rulesFor, loadBuild, ruleKey } from './content/rules.js';
 import { NOT_FOR_DEMO } from './lib/demo.js';
-import { layoutFor } from './content/blocks.js';
+import { layoutFor, customPages } from './content/blocks.js';
 
 export const SNAPSHOT_VERSION = 1;
 export const KEEP = 10;
@@ -56,6 +56,18 @@ export async function buildSnapshot(env, siteId) {
     pages[key] = { enabled: row ? Boolean(row.enabled) || !PAGES[key].canHide : true, menu_label: row?.menu_label ?? null, ...json(row?.content, {}) };
   }
 
+  // The pages the owner added (content/blocks.js), with her switch, menu name and
+  // heading for each; and her switch and words for each block the owner added.
+  const build = await loadBuild(env, siteId);
+  for (const c of customPages(build)) {
+    const row = pageRows[c.id];
+    pages[c.id] = { enabled: row ? Boolean(row.enabled) : true, menu_label: row?.menu_label ?? null, ...json(row?.content, {}) };
+  }
+  const added = {};
+  for (const r of await all('SELECT * FROM block_switches WHERE site_id = ?')) {
+    (added[r.page] ??= {})[r.block] = { enabled: Boolean(r.enabled), ...json(r.content, {}) };
+  }
+
   const blockRows = Object.fromEntries((await all('SELECT * FROM home_blocks WHERE site_id = ?')).map((b) => [b.block, b]));
   const home = {};
   for (const key of HOME_BLOCK_ORDER) {
@@ -85,7 +97,6 @@ export async function buildSnapshot(env, siteId) {
   const dogById = Object.fromEntries(dogs.map((d) => [d.id, d]));
 
   const littersRaw = await all('SELECT * FROM litters WHERE site_id = ? AND show_on_site = 1 AND hidden_by_kennelos = 0 ORDER BY sort, name');
-  const build = await loadBuild(env, siteId);
   const { rules, timing } = rulesFor(build);
   const puppies = (await all('SELECT * FROM puppies WHERE site_id = ? AND hidden_by_kennelos = 0 ORDER BY sort, name'))
     .filter((p) => rules.status[ruleKey(p.status)]?.show);
@@ -223,8 +234,9 @@ export async function buildSnapshot(env, siteId) {
     },
     pages, home, dogs, litters, reviews, steps, expanders, extras, products, partners, payment, questions, albums, embeds, photos,
     rules, timing,
-    // Her build's pages as blocks (content/blocks.js): Home, so far.
+    // Her build's pages as blocks (content/blocks.js), and the pages she added.
     layout: layoutFor(build),
+    added,
   };
 }
 

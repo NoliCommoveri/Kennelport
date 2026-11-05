@@ -400,6 +400,15 @@ export const PAGES = {
   privacy:        { path: '/privacy', group: null, label: 'Privacy', canHide: false, fields: {} },
 };
 
+// A page the owner adds (docs/Site_Builder_Plan.md, step 2; content/blocks.js): its
+// key is x-<name>, so it never meets a page of the code's. The breeder switches it
+// on or off, names it in the menu and words its heading, as for any page; its
+// blocks are the owner's. A block the owner adds to any page has the same words,
+// and its own switch (block_switches).
+export const CUSTOM_KEY = /^x-[a-z0-9](?:[a-z0-9-]{0,40}[a-z0-9])?$/;
+export const CUSTOM_PAGE = { canHide: true, fields: { ...HEAD } };
+export const ADDED_BLOCK_FIELDS = { ...HEAD };
+
 // The menu's five groups (plan 3.12), fixed.
 export const MENU_GROUPS = [
   { key: 'about', label: 'About us' },

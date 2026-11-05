@@ -3,11 +3,12 @@
 // a problem comes back with what was typed and the reason.
 import { escapeHtml as esc } from '../lib/html.js';
 import { json } from '../lib/http.js';
-import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, FAQ_PLACES } from '../content/model.js';
+import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, FAQ_PLACES, CUSTOM_PAGE, ADDED_BLOCK_FIELDS } from '../content/model.js';
 import {
   KINDS, listRecords, getRecord, saveRecord, setField, removeRecord, moveRecord,
-  saveSite, getPage, savePage, getBlock, saveBlock, getPayment, savePayment,
+  saveSite, getPage, savePage, getBlock, saveBlock, getPayment, savePayment, getAddedBlock, saveAddedBlock,
 } from '../content/records.js';
+import { pageBlocks, customPages, addedBlocks, BLOCK_TYPES, isCustom } from '../content/blocks.js';
 import { fields, parseForm } from './forms.js';
 import { savePhoto, PhotoError } from '../photos.js';
 import { subjects, isSubject, tagPhotos, untagPhoto, tagsByPhoto } from '../photoTags.js';
@@ -16,7 +17,7 @@ import { changes } from '../diff.js';
 import { makePreviewToken } from '../site.js';
 import { siteLink } from '../ops/sites.js';
 import { APP_VERSION } from './version.js';
-import { STATUS_TEXT, SAFE_NOTICE_TEXT } from '../render/parts.js';
+import { STATUS_TEXT, SAFE_NOTICE_TEXT, blockRows } from '../render/parts.js';
 import { exportContent } from '../content/io.js';
 import { closeSite, SiteError } from '../sites.js';
 import { listEmbeds, addEmbed, removeEmbed, moveEmbed, EmbedError, EMBEDS_PER_PLACE } from '../embedStore.js';
@@ -32,7 +33,7 @@ import { OWNED, OWNED_PRICES } from '../kennelos/bundle.js';
 import { pendingMatches, matchChanges, confirmMatch, declineMatch, MatchError } from '../kennelos/match.js';
 import { leavingLitters, keepLitter, deleteLitter } from '../kennelos/clock.js';
 import { NOT_FOR_DEMO } from '../lib/demo.js';
-import { litterDaysFor } from '../content/rules.js';
+import { litterDaysFor, loadBuild } from '../content/rules.js';
 
 export const FRESH_SIGN_IN_MS = 15 * 60 * 1000;
 
@@ -41,6 +42,7 @@ const redirect = (location) => new Response(null, { status: 303, headers: { loca
 
 const NOTES = {
   saved: 'Saved to your draft. Publish when you\'re ready.',
+  not_saved: 'Not saved: one of the lines is too long.',
   added: 'Added to your draft.',
   removed: 'Removed from your draft.',
   moved: 'Moved.',
@@ -68,6 +70,7 @@ const NOTES = {
   unlinked: 'Unlinked. Everything from KennelOS is now yours to edit here.',
 };
 const day = (ymd) => new Date(`${ymd}T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
+const ic = (n) => `<span class="ic" aria-hidden="true"><svg class="i"><use href="#i-${n}"/></svg></span>`;
 const note = (url) => (NOTES[url.searchParams.get('note')] ? `<p class="notice" role="status">${esc(NOTES[url.searchParams.get('note')])}</p>` : '');
 const errorBox = (err) => (err ? `<p class="error" role="alert">Not saved: ${esc(err)}</p>` : '');
 
@@ -628,20 +631,27 @@ export function createScreens({ env, request, url, site, user, page }) {
         const v = await getPage(env, site.id, k);
         rows.push(`<li class="item"><a href="${base}/pages/${k}"><b>${esc(v.menu_label || p.label)}</b><span>${esc(p.path)}${p.canHide && !v.enabled ? ' · off' : ''}</span></a></li>`);
       }
+      // The pages KennelPort added to her site: hers to switch on or off and word.
+      for (const c of customPages(await loadBuild(env, site.id))) {
+        const v = await getPage(env, site.id, c.id);
+        rows.push(`<li class="item"><a href="${base}/pages/${c.id}"><b>${esc(v.menu_label || c.name)}</b><span>${esc(c.path)}${!v.enabled ? ' · off' : ''}</span></a></li>`);
+      }
       return { title: 'Pages', back: base, body: `${note(url)}<ul class="items"><li class="item"><a href="${base}/home"><b>Home</b><span>/ · block by block</span></a></li>${rows.join('')}</ul>` };
     }
-    const p = PAGES[key];
+    const custom = isCustom(key) ? customPages(await loadBuild(env, site.id)).find((c) => c.id === key) : null;
+    const p = custom ? { ...CUSTOM_PAGE, label: custom.name, path: custom.path } : PAGES[key];
     if (!p || key === 'privacy') return null;
     const all = { ...(p.canHide ? { enabled: { type: 'bool' } } : {}), menu_label: { type: 'text', max: 40 }, ...p.fields };
     const current = await getPage(env, site.id, key);
     const subject = key === 'about' ? 'page:about' : null;
+
     const pick = subject ? { groups: [{ label: `Photos for ${p.label}`, subject }], tags: [subject], alt: '' } : undefined;
     const render = async (err, values) => ({
       title: p.label, back: `${base}/pages`,
       body: `${note(url)}${key === 'waitlist' ? kennelos ?? await kennelosCard() : ''}${errorBox(err)}<form method="post" action="${base}/pages/${key}" data-save class="card">
         ${p.canHide ? fieldsWithLabel(all, values ?? current, await ctxFor(key === 'extras' ? 'extras_page' : key === 'products' ? 'products_page' : key, pick), { enabled: ['This page is on', 'Off: it leaves the menu and its address says "This page isn\'t available". Its words are kept.'], menu_label: ['Name in the menu', `Leave empty for "${p.label}".`] }) : fieldsWithLabel(all, values ?? current, await ctxFor(key, pick), { menu_label: ['Name in the menu', `Leave empty for "${p.label}".`] })}
         <button class="primary">Save</button></form>
-        ${key === 'waitlist' ? await waitlistLinks() : listLinkFor(key)}${key === 'about' ? await embedsCard('about', `${base}/pages/about`, embedErr()) : ''}`,
+        ${key === 'waitlist' ? await waitlistLinks() : listLinkFor(key)}${key === 'about' ? await embedsCard('about', `${base}/pages/about`, embedErr()) : ''}${await addedCards(key)}`,
     });
     if (request.method !== 'POST' || show) return render();
     const fd = await request.formData();
@@ -684,6 +694,47 @@ export function createScreens({ env, request, url, site, user, page }) {
     }).join('\n');
   }
 
+  // Blocks KennelPort placed on a page (content/blocks.js addedBlocks): hers to
+  // switch off and reword, never to move. Each is its own small form.
+  async function addedCards(key) {
+    const blocks = addedBlocks(key, pageBlocks(await loadBuild(env, site.id), key));
+    if (!blocks.length) return '';
+    const snap = await buildSnapshot(env, site.id);
+    const what = { dogs: 'Your dogs from KennelOS', litters: 'Your litters from KennelOS', reviews: 'Your reviews' };
+    const nameOf = { dogs: (d) => d.call_name, litters: (l) => l.name, reviews: (r) => r.first_name || 'A family' };
+    const icon = { dogs: 'paw', litters: 'heart', reviews: 'star' };
+    const cards = [];
+    for (const b of blocks) {
+      const cur = await getAddedBlock(env, site.id, key, b.id);
+      const rows = blockRows(snap, b);
+      const names = (b.limit ? rows.slice(0, b.limit) : rows).map(nameOf[b.type]);
+      const input = (n, label, max, half) => `<div class="f${half ? ' half' : ''}"><label>${esc(label)}<input name="${n}" value="${esc(cur[n] ?? '')}" maxlength="${max}" placeholder="${esc(b.w[n] ?? '')}">${b.w[n] ? `<span class="hint">Empty: "${esc(b.w[n])}".</span>` : ''}</label></div>`;
+      cards.push(`<form method="post" action="${base}/blocks/${esc(key)}/${esc(b.id)}" data-save class="card added${cur.enabled ? '' : ' off'}" id="b-${esc(b.id)}">
+        <div class="between"><h2 class="added-h">${ic(icon[b.type])}${esc(cur.heading || b.w.heading || BLOCK_TYPES[b.type].name)}</h2>
+          <div class="switches"><label class="check">Show it<input type="checkbox" name="enabled" value="1"${cur.enabled ? ' checked' : ''}></label></div></div>
+        <p class="muted small">${esc(what[b.type])}: ${names.length ? esc(names.join(', ')) : 'none right now, so it hides'}.</p>
+        <div class="fgrid">${input('eyebrow', 'Eyebrow', ADDED_BLOCK_FIELDS.eyebrow.max, true)}${input('heading', 'Heading', ADDED_BLOCK_FIELDS.heading.max, true)}${input('lede', 'Line under it', ADDED_BLOCK_FIELDS.lede.max, false)}</div>
+        <button class="primary">Save</button></form>`);
+    }
+    return `<h2>Blocks KennelPort added</h2><p class="muted small">Placed with you by KennelPort: switch each off or reword it here. To move one, ask.</p>${cards.join('')}`;
+  }
+
+  async function addedAction() {
+    const [, , , , page, block] = url.pathname.split('/');
+    if (request.method !== 'POST') return null;
+    const b = addedBlocks(page, pageBlocks(await loadBuild(env, site.id), page)).find((x) => x.id === block);
+    if (!b) return null;
+    const back = page === 'home' ? `${base}/home` : `${base}/pages/${page}`;
+    const fd = await request.formData();
+    try {
+      await saveAddedBlock(env, site.id, page, block, { enabled: fd.get('enabled') != null, eyebrow: fd.get('eyebrow'), heading: fd.get('heading'), lede: fd.get('lede') });
+    } catch (err) {
+      if (!(err instanceof ContentError)) throw err;
+      return redirect(`${back}?note=not_saved#b-${block}`);
+    }
+    return redirect(`${back}?note=saved#b-${block}`);
+  }
+
   async function home() {
     const key = url.pathname.split('/')[4];
     if (!key) {
@@ -692,7 +743,7 @@ export function createScreens({ env, request, url, site, user, page }) {
         const v = await getBlock(env, site.id, b);
         rows.push(`<li class="item"><a href="${base}/home/${b}"><b>${esc(BLOCK_TITLES[b])}</b><span>${v.enabled ? 'on' : 'off'}</span></a></li>`);
       }
-      return { title: 'Home page', back: `${base}/pages`, body: `${note(url)}<p class="muted">Home is a fixed sequence of blocks. Switch each on or off and change its words.</p><ul class="items">${rows.join('')}</ul>${await embedsCard('home', `${base}/home`, embedErr())}` };
+      return { title: 'Home page', back: `${base}/pages`, body: `${note(url)}<p class="muted">Your Home page's blocks, top to bottom, as KennelPort set them up with you. Switch each on or off and change its words.</p><ul class="items">${rows.join('')}</ul>${await embedsCard('home', `${base}/home`, embedErr())}${await addedCards('home')}` };
     }
     const flds = HOME_BLOCKS[key];
     if (!flds) return null;
@@ -1135,6 +1186,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     else if (p === '/details') view = await details();
     else if (p.startsWith('/pages')) view = await pages();
     else if (p.startsWith('/home')) view = await home();
+    else if (p.startsWith('/blocks/')) view = await addedAction();
     else if (p.startsWith('/photos')) view = await photosScreen();
     else if (p === '/payment' || /^\/payment\/(application_fee|deposit|safe_notice)$/.test(p)) view = await payment();
     else if (p.startsWith('/publish')) view = await publishScreen();

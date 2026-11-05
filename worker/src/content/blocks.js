@@ -13,6 +13,8 @@
 // she placed there, videos and posts) and draws a few differently (the facts sit in
 // the top block, two litters at most). Those stay as today on every existing site;
 // the prototype's Home goes into the Website template for new sites (step 3).
+import { PAGES, MENU_GROUPS, CUSTOM_KEY, slugify } from './model.js';
+
 export class BlockError extends Error {}
 
 // The block types, as the prototype names them. `once`: it draws the breeder's one
@@ -176,7 +178,6 @@ export const PAGE_DEFAULTS = Object.freeze(Object.fromEntries(Object.entries({
   waitlist_help: [H, part('list')],
 }).map(([k, v]) => [k, Object.freeze(v.map((b) => Object.freeze({ ...b })))])));
 export const BUILT_PAGES = Object.freeze(['home', ...Object.keys(PAGE_DEFAULTS)]);
-export const isBuilt = (key) => BUILT_PAGES.includes(key);
 
 // What a block is called in the editor: a built-in by its part's name.
 export const blockName = (key, b) => (b.type === 'builtin' ? PAGE_PARTS[key]?.[b.id]?.name ?? 'Built-in' : BLOCK_TYPES[b.type].name);
@@ -226,6 +227,7 @@ export function cleanBlock(b) {
 // Home; a page's spots and built-ins on that page.
 export function fits(key, b) {
   if (BLOCK_TYPES[b.type].kind === 'data') return true;
+  if (isCustom(key)) return b.type === 'head';
   if (key === 'home') return b.type !== 'builtin' && b.type !== 'head';
   if (HOME_ONLY.includes(b.type)) return false;
   if (b.type === 'head') return true;
@@ -233,7 +235,7 @@ export function fits(key, b) {
   return (PAGE_SPOTS[key] ?? []).includes(b.type) && b.id === b.type;
 }
 
-const defaultsOf = (key) => (key === 'home' ? HOME_DEFAULT : PAGE_DEFAULTS[key] ?? []);
+const defaultsOf = (key) => (key === 'home' ? HOME_DEFAULT : isCustom(key) ? [{ id: 'head', type: 'head' }] : PAGE_DEFAULTS[key] ?? []);
 
 // A page's blocks for a build: the owner's, cleaned, or today's.
 export function pageBlocks(build, key) {
@@ -255,11 +257,14 @@ export const homeBlocks = (build) => pageBlocks(build, 'home');
 export function layoutFor(build) {
   const out = { home: homeBlocks(build) };
   for (const key of Object.keys(PAGE_DEFAULTS)) if (Array.isArray(build?.pages?.[key]?.blocks)) out[key] = pageBlocks(build, key);
+  const custom = customPages(build);
+  if (custom.length) out.custom = custom;
+  for (const c of custom) out[c.id] = pageBlocks(build, c.id);
   return out;
 }
 
 // Is the page as today's? (For Every site's count and Back to today's.)
-export const pageChanged = (build, key) => Array.isArray(build?.pages?.[key]?.blocks)
+export const pageChanged = (build, key) => !isCustom(key) && Array.isArray(build?.pages?.[key]?.blocks)
   && JSON.stringify(pageBlocks(build, key)) !== JSON.stringify(pageBlocks(null, key));
 export const homeChanged = (build) => pageChanged(build, 'home');
 export const pagesChanged = (build) => BUILT_PAGES.filter((k) => pageChanged(build, k)).length;
@@ -342,3 +347,92 @@ export function withPage(build, key, blocks) {
   return next;
 }
 export const withHome = (build, blocks) => withPage(build, 'home', blocks);
+
+// ---------- pages the owner adds ----------
+
+export const isCustom = (key) => CUSTOM_KEY.test(String(key ?? ''));
+
+// Addresses no page of hers can take (plan, Page addresses): every page of the
+// code's, the portal's and the system's own, as a first part of the address.
+const TAKEN = new Set(['family', 'family-login', 'privacy', 'ops', 'health', 'v1', 'admin', 'api', 'apply', 'list', 's', 'f',
+  ...Object.values(PAGES).map((p) => p.path.split('/')[1])]);
+const PATH = /^\/[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$/;
+export const pathFor = (name) => `/${slugify(name) || 'page'}`;
+
+// Her pages, as the build keeps them (build.custom), every field present.
+export function customPages(build) {
+  const seen = new Set();
+  const paths = new Set();
+  return (Array.isArray(build?.custom) ? build.custom : []).flatMap((c) => {
+    if (!c || !isCustom(c.id) || seen.has(c.id) || !PATH.test(c.path ?? '') || TAKEN.has(c.path.slice(1)) || paths.has(c.path)) return [];
+    seen.add(c.id);
+    paths.add(c.path);
+    const group = c.group !== 'waitlist' && MENU_GROUPS.some((g) => g.key === c.group) ? c.group : null;
+    return [{ id: c.id, name: String(c.name ?? '').trim().slice(0, 40) || 'New page', path: c.path, group }];
+  });
+}
+export const customOf = (build, key) => customPages(build).find((c) => c.id === key) ?? null;
+export const isBuilt = (key, build = null) => BUILT_PAGES.includes(key) || Boolean(customOf(build, key));
+
+// A page's starting heading when the breeder has written none: the code's, or a
+// page of the owner's, its name.
+export const headFor = (key, custom) => PAGE_HEADS[key] ?? { eyebrow: null, heading: custom?.name ?? '' };
+
+function checkPage(build, id, { name, path, group }) {
+  const clean = String(name ?? '').trim().replace(/\s+/g, ' ');
+  if (!clean) throw new BlockError('Give the page a name.');
+  if (clean.length > 40) throw new BlockError('A page name is 40 characters at most.');
+  const p = String(path ?? '').trim().toLowerCase() || pathFor(clean);
+  const at = p.startsWith('/') ? p : `/${p}`;
+  if (!PATH.test(at)) throw new BlockError('An address is one word or a few joined by hyphens, like /our-dams: letters, numbers and hyphens.');
+  if (TAKEN.has(at.slice(1))) throw new BlockError(`${at} is taken by a page of the site's own. Choose another address.`);
+  if (customPages(build).some((c) => c.path === at && c.id !== id)) throw new BlockError(`Another page already has ${at}.`);
+  const g = group && group !== 'waitlist' && MENU_GROUPS.some((x) => x.key === group) ? group : null;
+  return { name: clean, path: at, group: g };
+}
+
+// Start shapes for a new page (the prototype's "Start with").
+export const STARTS = Object.freeze({ blank: 'A page heading only', dams: 'Dog cards: girls, active', sires: 'Dog cards: boys, active' });
+
+// A new page of hers: in the build, with its blocks. Returns the build and its id.
+export function addPage(build, input) {
+  const next = structuredClone(build ?? {});
+  const page = checkPage(next, null, input);
+  const taken = new Set(customPages(next).map((c) => c.id));
+  const base = `x-${slugify(page.name).slice(0, 38).replace(/-+$/, '') || 'page'}`;
+  let id = base;
+  for (let n = 2; taken.has(id); n++) id = `${base}-${n}`;
+  const blocks = [{ id: 'head', type: 'head' }];
+  if (input.start === 'dams' || input.start === 'sires') {
+    const b = newBlock('dogs', 'dogs-2');
+    b.f.sex = input.start === 'dams' ? 'female' : 'male';
+    b.style = 'flip';
+    b.w = { eyebrow: '', heading: '' };
+    blocks.push(b);
+  }
+  next.custom = [...customPages(next), { id, ...page }];
+  next.pages = { ...(next.pages ?? {}), [id]: { blocks: blocks.map(cleanBlock) } };
+  return { build: next, id };
+}
+
+// Her page's name, address or menu group changed.
+export function withPageInfo(build, id, input) {
+  const next = structuredClone(build ?? {});
+  const page = checkPage(next, id, input);
+  next.custom = customPages(next).map((c) => (c.id === id ? { id, ...page } : c));
+  return next;
+}
+
+// Her page gone, with its blocks.
+export function withoutPage(build, id) {
+  const next = structuredClone(build ?? {});
+  next.custom = customPages(next).filter((c) => c.id !== id);
+  if (!next.custom.length) delete next.custom;
+  if (next.pages) delete next.pages[id];
+  if (next.pages && !Object.keys(next.pages).length) delete next.pages;
+  return next;
+}
+
+// The blocks on a page whose switch and words are the breeder's in block_switches:
+// the data blocks the owner added (Home's own are home_blocks).
+export const addedBlocks = (key, blocks) => blocks.filter((b) => BLOCK_TYPES[b.type].kind === 'data' && !hersOn(key, b));

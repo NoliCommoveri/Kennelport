@@ -5,6 +5,7 @@
 import {
   DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, FAQ_FIELDS, EXTRA_FIELDS, PRODUCT_FIELDS, PARTNER_FIELDS, PARTNERS_PER_DOG, PARTNERS_MAX, HOME_BADGES_MAX, BADGE_PLACES, brandImageOk,
   EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue, slugify,
+  CUSTOM_KEY, CUSTOM_PAGE, ADDED_BLOCK_FIELDS,
 } from './model.js';
 import { untagStatements } from '../photoTags.js';
 import { chunks, placeholders } from '../lib/sql.js';
@@ -299,7 +300,8 @@ export async function getPage(env, siteId, key) {
 }
 
 export async function savePage(env, siteId, key, input) {
-  const page = PAGES[key];
+  // A page the owner added (x-…): its switch, menu name and heading.
+  const page = PAGES[key] ?? (CUSTOM_KEY.test(key) ? CUSTOM_PAGE : null);
   if (!page) throw new ContentError(key, 'not a page');
   const enabled = page.canHide ? (input.enabled ? 1 : 0) : 1;
   const menu_label = cleanValue({ type: 'text', max: 40 }, input.menu_label, 'menu_label');
@@ -309,6 +311,22 @@ export async function savePage(env, siteId, key, input) {
     env.DB.prepare(`INSERT INTO site_pages (site_id, page, enabled, menu_label, content) VALUES (?, ?, ?, ?, ?)
       ON CONFLICT (site_id, page) DO UPDATE SET enabled = excluded.enabled, menu_label = excluded.menu_label, content = excluded.content`)
       .bind(siteId, key, enabled, menu_label, JSON.stringify(stripNulls(content))),
+    touch(env, siteId),
+  ]);
+}
+
+// A block the owner added to a page: the breeder's switch and words for it.
+export async function getAddedBlock(env, siteId, page, block) {
+  const row = await env.DB.prepare('SELECT * FROM block_switches WHERE site_id = ? AND page = ? AND block = ?').bind(siteId, page, block).first();
+  return { enabled: row ? Boolean(row.enabled) : true, ...(row ? JSON.parse(row.content) : {}) };
+}
+
+export async function saveAddedBlock(env, siteId, page, block, input) {
+  const content = cleanRecord(ADDED_BLOCK_FIELDS, omit(input, ['enabled']), `${page}.${block}`);
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO block_switches (site_id, page, block, enabled, content) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT (site_id, page, block) DO UPDATE SET enabled = excluded.enabled, content = excluded.content`)
+      .bind(siteId, page, block, input.enabled ? 1 : 0, JSON.stringify(stripNulls(content))),
     touch(env, siteId),
   ]);
 }
