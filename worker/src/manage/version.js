@@ -8,5 +8,5 @@
 // changes, tests/versions.test.js fails until both are updated: bump APP_VERSION,
 // then run `node worker/scripts/fingerprint.mjs` and paste its APP_FILES value here.
 // Ask the owner before bumping (CLAUDE.md).
-export const APP_VERSION = '13';
-export const APP_FILES = '39829db4ee37a7f6';
+export const APP_VERSION = '14';
+export const APP_FILES = 'f590839412cbb44a';

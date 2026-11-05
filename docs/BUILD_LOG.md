@@ -1512,3 +1512,5 @@ answers to plan 15.
 - Tests: `pickup.test.js` (new); `kennelos`, `products` updated. Checked rendered at 390px and
   1280px.
 - `site.css` changed: `ASSET_VERSION` bump asked, not done.
+
+- Versions bumped (2026-11-05, owner's yes): `APP_VERSION` 14, `ASSET_VERSION` 16, `PORTAL_VERSION` 3, each with its fingerprint.
