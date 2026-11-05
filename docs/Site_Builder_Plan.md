@@ -28,6 +28,11 @@ switches.
 8. **The KennelOS side is planned later.** Everything in the package, its raw value,
    and how each should be configurable, comes in a later session with a KennelOS code
    review. This plan covers what KennelPort receives today, and leaves room for more.
+9. **The litter switches stay with the breeder:** Show placed puppies, and Families can
+   ask about full registration.
+10. **Reset to template resets only the owner's build,** never the breeder's switches.
+11. **The owner's tools live in her own view of the Site Manager,** as admin, with every
+    site open to her automatically (below).
 
 ## Who controls what
 
@@ -42,10 +47,23 @@ switches.
 | **Timing rules** | every built-in "how long" and "when" (below) | — |
 | **Content** | starting wording in a template | all wording and headings; photos; dogs, litters, pups, reviews and the rest |
 
-**Assumed, to confirm:** the litter switches **Show placed puppies** and **Families can
-ask about full registration** stay with the breeder, since they are on/off switches.
+The litter switches **Show placed puppies** and **Families can ask about full
+registration** stay with the breeder (decision 9).
 
 ## The owner's tools
+
+### Where they live: the Site Manager, as admin
+
+- **One app.** The owner uses the same Site Manager as breeders, with an admin view on
+  top: the build tools below appear for her only.
+- **Every site, automatically.** As admin she sees every site in the list, with no
+  invite and no code email per site. Today she would have to invite her own address to
+  each site (`auth.js` `inviteToSite`), and that goes away for her.
+- **Signing in as admin.** Today `/ops` is opened with the `OPS_TOKEN` secret, and the
+  Site Manager with an emailed code. Signing in to `/ops` will also make her admin in the
+  Site Manager on that device, so there is still no code email. `/ops` keeps its own jobs
+  (migrations, creating, suspending and closing sites).
+- **Breeders see none of it.** Their roles and invites work as now.
 
 ### Templates
 
@@ -56,9 +74,9 @@ ask about full registration** stay with the breeder, since they are on/off switc
 - **Apply** a template to a new site, then adjust it for that breeder. From then on the
   site is its own copy.
 - **Reset to template:** one touch on an active site puts its build back to the
-  template's. It never touches the breeder's content: records, photos and wording they
-  have typed stay. Whether it also resets the breeder's switches (pages on or off, menu
-  names, block switches) is an open question below.
+  template's. It resets only the owner's build (decision 10). The breeder's content and
+  switches stay as they are: records, photos, wording, pages on or off, menu names,
+  addresses, block switches.
 
 ### Pages, menu and blocks
 
@@ -190,7 +208,7 @@ match the contract. The breeder can't switch them off for a family.
 **The same rule as the website:** the owner places the Home sections, tabs and quick
 links; the breeder switches on or off the ones the owner allows, and words them.
 
-What makes her portal special is still to be listed, with the owner (open question 5).
+What makes her portal special is still to be listed, with the owner (open question 2).
 
 ## KennelOS data (for the later review)
 
@@ -210,8 +228,8 @@ default, without changing the editor screens.
 - **A site's build:** the same JSON, per site, copied from its template on Apply, with a
   note of which template it came from.
 - **The breeder's switches** (pages on or off, menu names, addresses, block switches,
-  FAQ and badge pages) are kept apart from the build, so Reset to template can choose
-  whether to keep them.
+  FAQ and badge pages) are kept apart from the build, so Reset to template leaves them
+  alone.
 - **`page_redirects`:** an old address, the page it now points to, and the date it
   moved.
 - **The published snapshot carries the build and rules,** so rendering stays pure
@@ -243,14 +261,9 @@ after asking (CLAUDE.md).
 
 ## Open questions
 
-1. **The litter switches** (Show placed puppies, Families can ask about full
-   registration): do they stay with the breeder? Assumed yes.
-2. **Reset to template:** does it also reset the breeder's switches (pages on or off,
-   menu names, addresses, block switches), or only the owner's build? Or offer both?
-3. **Where the owner's tools live:** in `/ops` beside the site list, or in the Site
-   Manager with an owner-only view of each breeder's site?
-4. **Defaults for new rules:** when a later build adds a rule, existing sites get its
-   default (today's behaviour). Is that right, or should new rules start off until the
-   owner sets them?
-5. **The family portal:** what does her portal need that the portal plan doesn't cover
-   yet? And should its build be in templates too, or only ever set for her site?
+1. **Defaults for new rules.** Proposed: when a later build adds a rule for something
+   sites already do, existing sites keep today's behaviour as its default. When it adds
+   something new, it arrives switched off on existing sites until the owner turns it on,
+   and on in templates. Awaiting the owner's yes.
+2. **The family portal:** what does her portal need that the portal plan doesn't cover
+   yet? And should a portal's build be in templates too, or only ever set for her site?
