@@ -101,7 +101,16 @@ const LABELS = {
     image_url: ['The brand\'s picture', 'Filled in from the embed code, and shown straight from the brand, as their referral program intends. Only some brands\' addresses can be shown this way; for others, the picture is copied into Picture above. Empty it to use your own picture instead.'],
     link_url: ['Your referral link', 'Where tapping it goes, in a new tab.'], link_label: ['Button wording', 'Leave empty for "Shop now".'],
     code: ['Discount or referral code', 'For example "AKBOSTON10". Shown as "Use code …".'], code_note: ['Line after the code', 'For example "for 10% off your first order".'],
-    home_badge: ['Show as a badge on my home page', 'Its picture shows right under your banner, linked to your referral link. Up to 2; they sit side by side, on phones too.'],
+    home_badge: ['Show as a badge on my home page', 'Its picture shows right under your banner, with its name and web address under it, linked to your referral link. Up to 2; they sit side by side, on phones too.'],
+    website_url: ['Its website', 'Shown under its badge as a short address, like "skynanny.com". Leave empty to show your referral link\'s.'],
+    badge_places: ['Also show its badge on', 'Its picture, name and web address, in a "We recommend" row on each page you tick. Up to 2 per page.'],
+    transport: ['This is a transport service', 'A flight nanny or ground transporter: it shows as a badge on your Getting your pup home page, and not on Recommended products.'],
+  },
+  pickup: {
+    pickup_heading: ['Pickup: heading', 'Leave empty for "Picking up your puppy".'], pickup_text: ['How pickup works', 'Where and when families collect their puppy, what to bring, how long to allow. Leave a blank line between paragraphs.'],
+    transport_heading: ['Transport: heading', 'Leave empty for "If you can\'t come to us".'], transport_text: ['How transport works', 'Flight nanny, ground transport, meeting halfway, fees and booking. Your transport services show as badges under this.'],
+    travel_heading: ['Travel day: heading', 'Leave empty for "On the way home".'], travel_text: ['On travel day', 'What comes with the puppy, the health certificate, tips for the ride.'],
+    badges_heading: ['Above your transport services', 'Leave empty for "Transport we trust".'], badges_note: ['Line under it', 'Optional, for example "We may earn a small commission when you book through these links."'],
   },
   products_page: { note: ['Note under the products', 'For example "We may earn a small commission when you order through these links."'] },
   hero: {
@@ -277,7 +286,8 @@ export function field(name, f, value, ctx) {
       // order, with the words the manage app calls those pages.
       if (f.item === 'enum') {
         const on = new Set(value ?? []);
-        return `<fieldset><legend>${esc(label)}${h}</legend>${f.values.map((x) => `<label class="check"><input type="checkbox" name="${name}" value="${esc(x)}"${on.has(x) ? ' checked' : ''}> <span>${esc(FAQ_PLACES[x] ?? x)}</span></label>`).join('')}</fieldset>`;
+        const words = f.words ?? FAQ_PLACES;
+        return `<fieldset><legend>${esc(label)}${h}</legend>${f.values.map((x) => `<label class="check"><input type="checkbox" name="${name}" value="${esc(x)}"${on.has(x) ? ' checked' : ''}> <span>${esc(words[x] ?? x)}</span></label>`).join('')}</fieldset>`;
       }
       if (f.item === 'photo' && f.boxes) {
         // One photo per box, in box order, each with which part to keep. Boxes the
@@ -365,7 +375,7 @@ const GROUPS = {
   health: [['The result', ['test', 'result', 'date', 'verify_url']]],
   reviews: [['The review', ['quote', 'first_name', 'rating', 'town', 'puppy_name', 'home_month', 'topic', 'photo_id']], ['Shown', ['status']]],
   extras: [['The extra', ['kind', 'name', 'grp', 'description', 'photo_id']], ['Price and length', ['price_from', 'price_to', 'weeks']], ['What\u2019s included', ['lead_in', 'checklist', 'closing']]],
-  products: [['The product', ['name', 'grp', 'description', 'photo_id', 'image_url']], ['Link and code', ['link_url', 'link_label', 'code', 'code_note']]],
+  products: [['The product', ['name', 'grp', 'description', 'photo_id', 'image_url', 'website_url']], ['Link and code', ['link_url', 'link_label', 'code', 'code_note']], ['Badges on other pages', ['badge_places']]],
   albums: [['The album', ['title', 'litter_id', 'litter', 'description', 'cover_photo_id']], ['Photos', ['photos', 'more_photos_url']]],
 };
 const SWITCHES_TITLE = { site: 'Prices', health: 'This result' };

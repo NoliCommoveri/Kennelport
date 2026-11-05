@@ -9,7 +9,7 @@ import {
   faqBlock, familyLogin as familyLoginLink,
 } from './parts.js';
 import { embedView } from '../embeds.js';
-import { COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk } from '../content/model.js';
+import { COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk, badgeAddress } from '../content/model.js';
 
 // A question from her FAQ, where she has placed it (plan 3.9): its own band under
 // the page's heading, so it sits above what the page is about and takes the
@@ -61,21 +61,46 @@ const productPic = (snap, x, { cls = '', lazy = true } = {}) => (x.image_url && 
   ? `<img src="${attr(x.image_url)}" alt="${attr(x.name)}"${cls ? ` class="${cls}"` : ''}${lazy ? ' loading="lazy"' : ''}>`
   : img(snap, x.photo_id, { alt: x.name, cls, lazy }));
 
-// Up to two logos right under the banner, side by side even on a phone, each
-// linked to its product's link when it has one.
+// One badge: the logo, then its name and web address under it (badgeAddress), the
+// logo and address linked to the product's link when it has one. A transport
+// service with no picture yet shows its name in the logo's place (and not again
+// under it), so it isn't left off its page; a code shows under the address.
+function badgeItem(snap, x, { lazy = true, withCode = false, nameIfNoPic = false } = {}) {
+  const logo = productPic(snap, x, { lazy });
+  const pic = logo ?? (nameIfNoPic ? `<span class="badge-name">${esc(x.name)}</span>` : null);
+  if (!pic) return '';
+  const addr = badgeAddress(x);
+  const name = logo ? `<span class="badge-label">${esc(x.name)}</span>` : '';
+  const code = withCode && x.code ? `<span class="badge-code">Use code <b>${esc(x.code)}</b></span>` : '';
+  return `<li>${x.link_url ? outLink(x.link_url, pic, 'badge-pic') : pic}${name}${addr ? (x.link_url ? outLink(x.link_url, esc(addr), 'badge-addr') : `<span class="badge-addr">${esc(addr)}</span>`) : ''}${code}</li>`;
+}
+const badgeList = (items, cls = '') => {
+  const html = items.filter(Boolean);
+  return html.length ? `<ul class="badges-${Math.min(html.length, 2)}${cls}">${html.join('')}</ul>` : '';
+};
+
+// Up to two logos right under the banner, side by side even on a phone.
 export function homeBadges(snap) {
   const list = (snap.products ?? []).filter((x) => x.home_badge && productPic(snap, x)).slice(0, HOME_BADGES_MAX);
-  if (!list.length) return '';
-  const one = (x) => {
-    const pic = productPic(snap, x, { lazy: false });
-    return `<li>${x.link_url ? outLink(x.link_url, pic) : pic}</li>`;
-  };
-  return `<section class="wrap badges" aria-label="Recommended"><ul class="badges-${list.length}">${list.map(one).join('')}</ul></section>`;
+  const ul = badgeList(list.map((x) => badgeItem(snap, x, { lazy: false })));
+  return ul ? `<section class="wrap badges" aria-label="Recommended">${ul}</section>` : '';
+}
+
+// The badge row on another page (model.js BADGE_PLACES), where that page puts it:
+// her products with the place ticked, at most two. `inWrap`: inside the page's
+// own wrap (a record's page), else its own section.
+export function badgeRow(snap, place, { inWrap = false } = {}) {
+  const list = (snap.products ?? []).filter((x) => (x.badge_places ?? []).includes(place) && productPic(snap, x)).slice(0, HOME_BADGES_MAX);
+  const ul = badgeList(list.map((x) => badgeItem(snap, x)));
+  if (!ul) return '';
+  const inner = `<div class="badges badges-row" role="group" aria-label="We recommend"><span class="eyebrow">We recommend</span>${ul}</div>`;
+  return inWrap ? `<div class="mt-26">${inner}</div>` : `<section class="section tight"><div class="wrap">${inner}</div></section>`;
 }
 
 export function products(snap, ctx) {
   const p = snap.pages.products;
-  const list = snap.products ?? [];
+  // Transport services are on Getting your pup home, never here.
+  const list = (snap.products ?? []).filter((x) => !x.transport);
   const card = (x) => {
     const pic = productPic(snap, x, { cls: 'prod-pic' });
     const code = x.code ? `<p class="prod-code">Use code <b>${esc(x.code)}</b>${x.code_note ? ` <span class="small muted">${esc(x.code_note)}</span>` : ''}</p>` : '';
@@ -92,6 +117,43 @@ export function products(snap, ctx) {
         ${p.note ? `<p class="small muted center mt-20">${esc(p.note)}</p>` : ''}
       </div></section>`,
   };
+}
+
+// ---------- Getting your pup home (plan 3.5) ----------
+// Her words on picking up, transport and travel day, each its own band when it has
+// words; then her transport services as badges (logo, address, code), and any
+// other product she ticked for this page. Built from the template's own parts (no
+// prototype screen for it): pagehead, head + prose, the badge row.
+export function pickup(snap, ctx) {
+  const p = snap.pages.pickup;
+  const blocks = [
+    ['pickup', 'Pickup', 'Picking up your puppy'],
+    ['transport', 'Transport', 'If you can\'t come to us'],
+    ['travel', 'Travel day', 'On the way home'],
+  ].filter(([k]) => p[`${k}_text`]);
+  const transport = (snap.products ?? []).filter((x) => x.transport);
+  const sections = blocks.map(([k, eyebrow, fallback], i) => {
+    const band = i % 2 === 1;
+    const inner = `${head(eyebrow, p[`${k}_heading`] || fallback, null)}<div class="prose">${paras(p[`${k}_text`])}</div>`;
+    // The transport services sit with her transport words when she has some.
+    const services = k === 'transport' ? transportBadges(snap, p, transport) : '';
+    return `<section class="section${i ? '' : ' tight'}${band ? ' band' : ''}" id="${k}"><div class="wrap">${inner}${services}</div></section>`;
+  });
+  const placed = blocks.some(([k]) => k === 'transport');
+  if (!placed && transport.length) sections.push(`<section class="section band" id="transport"><div class="wrap">${transportBadges(snap, p, transport, { own: true })}</div></section>`);
+  return {
+    title: p.heading || label(snap, 'pickup'), section: '/pickup', description: p.lede,
+    body: `${pagehead(p, { eyebrow: 'Going home', heading: 'Getting your pup home' })}${faqSection(snap, 'pickup')}${sections.join('\n')}${badgeRow(snap, 'pickup')}`,
+  };
+}
+
+// Her transport services, as badges under her transport words (or as their own
+// band when she wrote none).
+function transportBadges(snap, p, list, { own = false } = {}) {
+  const ul = badgeList(list.map((x) => badgeItem(snap, x, { withCode: true, nameIfNoPic: true })), ' badges-wrap');
+  if (!ul) return '';
+  const heading = p.badges_heading || 'Transport we trust';
+  return `<div class="badges badges-row${own ? '' : ' mt-26'}" role="group" aria-label="${attr(heading)}">${own ? head('Transport', heading, p.badges_note || null) : `<span class="eyebrow">${esc(heading)}</span>${p.badges_note ? `<p class="small muted">${esc(p.badges_note)}</p>` : ''}`}${ul}</div>`;
 }
 
 // ---------- Home ----------
@@ -188,7 +250,7 @@ export function about(snap, ctx) {
   return {
     title: snap.pages.about.heading || label(snap, 'about'), section: '/about', description: p.lede, image: p.photo_id,
     body: `${pagehead(p, { eyebrow: 'About us', heading: 'Our story' })}
-      <section class="section tight"><div class="wrap ${photo ? 'story' : 'prose'}">${photo}${text}</div></section>${embedsBlock(snap, 'about', { band: true })}`,
+      <section class="section tight"><div class="wrap ${photo ? 'story' : 'prose'}">${photo}${text}</div></section>${badgeRow(snap, 'about')}${embedsBlock(snap, 'about', { band: true })}`,
   };
 }
 
@@ -261,7 +323,7 @@ export function contact(snap, ctx) {
   return {
     title: snap.pages.contact.heading || label(snap, 'contact'), section: '/contact', description: p.lede,
     body: `${pagehead(p, { eyebrow: 'Contact', heading: 'Say hello' })}${faqSection(snap, 'contact')}
-      <section class="section tight"><div class="wrap"><div class="contact">${cards.map(([h, val]) => `<div><b>${esc(h)}</b><p class="muted small">${val}</p></div>`).join('')}</div>${contactForm(snap, ctx)}</div></section>`,
+      <section class="section tight"><div class="wrap"><div class="contact">${cards.map(([h, val]) => `<div><b>${esc(h)}</b><p class="muted small">${val}</p></div>`).join('')}</div>${badgeRow(snap, 'contact', { inWrap: true })}${contactForm(snap, ctx)}</div></section>`,
   };
 }
 
@@ -365,6 +427,9 @@ export function litters(snap, ctx) {
       ${slider(sortPuppies(l.puppies).map((pup) => puppyCard(snap, l, pup, ctx)), { cls: 'three', ctl: `<a class="more" href="/litters/${attr(l.slug)}">The ${esc(l.name.replace(/^the /i, ''))} page</a>` })}
     </div></section>`);
   });
+  // Her badges after the puppies on offer, before older and upcoming ones.
+  const row = badgeRow(snap, 'litters');
+  if (row) sections.push(row);
   const olderList = olderPuppies(snap, ctx.today);
   if (olderList.length && pageOn(snap, 'older', ctx)) {
     sections.push(`<section class="section band" id="older"><div class="wrap">
@@ -414,6 +479,7 @@ export function litter(snap, ctx, slug) {
         ${[parentCards(snap, l), litterFacts(l, ctx)].filter(Boolean).map((x, i) => (i || faqs ? `<div class="mt-26">${x}</div>` : x)).join('\n        ')}${note}
         ${fullRegLink(snap, l, null, ctx, 'btn line') ? `<div class="litters mt-20" id="full-registration"><div><p class="btn-row">${fullRegLink(snap, l, null, ctx, 'btn line')}</p>${fullRegSurchargeRow(snap, l, null, ctx) ? `<div class="mt-20">${fullRegSurchargeRow(snap, l, null, ctx)}</div>` : ''}</div></div>` : ''}${shareRow(true)}
         ${pups.length ? `<div class="mt-26 grid">${pups.map((pup) => puppyCard(snap, l, pup, ctx)).join('')}</div>` : ''}
+        ${badgeRow(snap, 'litter', { inWrap: true })}
         ${embedsBlock(snap, `litter:${l.id}`, { inWrap: true })}
         ${litterAlbums(snap, ctx, l)}
       </div></section>`,
@@ -491,7 +557,7 @@ export function puppy(snap, ctx, litterSlug, slug) {
         ${p.status === 'available' || fullRegLink(snap, l, p, ctx, '') ? `<p>${p.status === 'available' ? `<a class="btn solid" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">Ask about ${esc(p.name)}</a> ` : ''}${fullRegLink(snap, l, p, ctx, 'btn line')}</p>` : ''}${fullRegSurchargeRow(snap, l, p, ctx, 'kv')}
         ${safeNotice(snap, ctx)}${shareRow()}
       </div></div>
-      ${pupGallery}${litterAlbums(snap, ctx, l, { eyebrow: 'Albums', heading: `From ${l.name}` })}
+      ${badgeRow(snap, 'puppy', { inWrap: true })}${pupGallery}${litterAlbums(snap, ctx, l, { eyebrow: 'Albums', heading: `From ${l.name}` })}
     </div></section>${pupGallery ? viewerHtml() : ''}`,
   };
 }
@@ -505,7 +571,7 @@ export function howItWorks(snap, ctx) {
   return {
     title: snap.pages.how_it_works.heading || label(snap, 'how_it_works'), section: '/how-it-works', description: p.lede,
     body: `${pagehead(p, { eyebrow: 'How it works', heading: 'From application to home' })}${faqSection(snap, 'how_it_works')}
-      <section class="section tight" id="steps"><div class="wrap">${slider(items, { cls: 'three', ctl: '<span class="muted small">Swipe or use the arrows.</span>' })}</div></section>`,
+      <section class="section tight" id="steps"><div class="wrap">${slider(items, { cls: 'three', ctl: '<span class="muted small">Swipe or use the arrows.</span>' })}${badgeRow(snap, 'how_it_works', { inWrap: true })}</div></section>`,
   };
 }
 
@@ -528,6 +594,7 @@ export function extras(snap, ctx) {
       <section class="section tight"><div class="wrap">
         ${pkgHtml ? `<div class="pkgs">${pkgHtml}</div>${p.note && prices ? `<p class="small muted center mt-20">${esc(p.note)}</p>` : ''}` : ''}
         ${itemHtml ? `<div class="pkgs mt-26">${itemHtml}</div>` : ''}
+        ${badgeRow(snap, 'extras', { inWrap: true })}
       </div></section>`,
   };
 }
@@ -539,7 +606,34 @@ function expanderPage(snap, key, fallback) {
     body: `${pagehead(p, fallback)}<section class="section tight"><div class="wrap"><div class="acc">${expanders(snap.expanders[key] ?? [])}</div></div></section>`,
   };
 }
-export const policies = (snap) => expanderPage(snap, 'policies', { eyebrow: 'Our promises', heading: 'Policies' });
+// Policies: hers, then (with a KennelOS waitlist linked) her KennelOS waitlist
+// policies under their own heading, read from the feed so a change there shows here
+// without a publish (KennelOS Waitlist Policies plan §4). They're edited in KennelOS.
+export function policies(snap, ctx = {}) {
+  const page = expanderPage(snap, 'policies', { eyebrow: 'Our promises', heading: 'Policies' });
+  const wl = ctx.feed?.feed?.kennel;
+  if (!wl?.policies?.length) return page;
+  const closed = closedDatesText(wl.closed_dates ?? []);
+  const rows = wl.policies.map((x) => ({ heading: x.heading, body: x.body + (x.topic === 'days' && closed ? `\n\nUpcoming closed dates: ${closed}` : '') }));
+  // A second page head, in the page's own look (eyebrow, heading, lede), as an h2.
+  page.body += `<section id="waitlist-policies"><div class="wrap pagehead"><span class="eyebrow">Our waitlist</span><h2 class="pagehead-h">Waitlist policies</h2>
+    <p class="lede">How our waitlist runs. Families tick that they've read these when they apply.${wl.policies_updated ? ` Updated ${esc(fmtDate(wl.policies_updated))}.` : ''}</p></div>
+    <section class="section tight"><div class="wrap"><div class="acc">${expanders(rows)}</div></div></section></section>`;
+  return page;
+}
+
+// Closed dates in words, runs of days together: "Dec 24–26, Jan 1".
+function closedDatesText(dates) {
+  const days = [...new Set(dates.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d))))].sort();
+  const label = (ymd) => new Date(`${ymd}T12:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
+  const next = (ymd) => new Date(Date.parse(`${ymd}T12:00:00Z`) + 86400000).toISOString().slice(0, 10);
+  const runs = [];
+  for (const d of days) {
+    const last = runs.at(-1);
+    if (last && next(last.to) === d) last.to = d; else runs.push({ from: d, to: d });
+  }
+  return runs.map((r) => (r.from === r.to ? label(r.from) : `${label(r.from)}–${r.from.slice(0, 7) === r.to.slice(0, 7) ? Number(r.to.slice(8)) : label(r.to)}`)).join(', ');
+}
 export const faq = (snap) => expanderPage(snap, 'faq', { eyebrow: 'Questions', heading: 'FAQ' });
 // /family-login, only on a site with the family portal on and a KennelOS
 // waitlist linked: the one Family login button asks which the family wants.
@@ -652,10 +746,16 @@ function kosPreference(q, form) {
   }
 }
 
-function kosQuestion(q, form) {
+function kosQuestion(q, form, policiesHref = null) {
   const id = kosId(q);
   const data = `data-q="${attr(q.id)}" data-type="${attr(q.type)}"${q.key ? ` data-key="${attr(q.key)}"` : ''}${q.required ? ' data-required' : ''} data-label="${attr(q.label)}"`;
-  const label = `<span>${esc(q.label)}${kosReq(q)}</span>${kosHelp(q)}`;
+  // "I've read the policies" (KennelOS): the word "policies" links to them.
+  let text = esc(q.label);
+  if (q.link === 'policies' && policiesHref) {
+    const a = (w) => `<a href="${attr(policiesHref)}"${/^https?:/.test(policiesHref) ? ' rel="noopener" target="_blank"' : ''}>${w}</a>`;
+    text = /\bpolicies\b/i.test(text) ? text.replace(/\bpolicies\b/i, (w) => a(w)) : `${text} ${a('Read our policies')}`;
+  }
+  const label = `<span>${text}${kosReq(q)}</span>${kosHelp(q)}`;
   switch (q.type) {
     case 'notice':
       return `<div class="kq notice-q" ${data}><b>${esc(q.label)}</b><div class="small">${paras(q.help)}</div>
@@ -680,9 +780,13 @@ function kennelosForm(snap, ctx) {
   const form = feed.form;
   const applyUrl = `${origin}${feed.links?.apply ?? `/apply/${encodeURIComponent(publicId)}`}`;
   const firstMatch = (form.questions ?? []).find((q) => (form.matching_keys ?? []).includes(q.key));
+  // Where "policies" in the application goes: her Policies page's waitlist part, or
+  // KennelOS's list page when her Policies page is off.
+  const policiesHref = !feed.kennel?.policies?.length ? null
+    : pageOn(snap, 'policies', ctx) ? '/policies#waitlist-policies' : `${origin}${feed.links?.list ?? `/list/${encodeURIComponent(publicId)}`}#policies`;
   const questions = (form.questions ?? []).map((q) => {
     const notice = q === firstMatch && form.matching_notice ? `<div class="kq notice-q"><b>Matching you with a pup</b><p class="small">${esc(form.matching_notice)}</p></div>` : '';
-    return notice + kosQuestion(q, form);
+    return notice + kosQuestion(q, form, policiesHref);
   }).join('\n');
   const faq = form.faq?.length ? `<div class="kos-faq"><b>Before you apply</b><div class="acc">${form.faq.map((x) => `<details class="x"><summary>${esc(x.question || 'Question')}</summary><div class="body">${paras(x.answer)}</div></details>`).join('')}</div></div>` : '';
   const turnstile = form.turnstile_site_key ? `<div class="cf-turnstile" data-sitekey="${attr(form.turnstile_site_key)}"></div><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>` : '';
@@ -810,7 +914,7 @@ export function waitlist(snap, ctx) {
   return {
     title: snap.pages.waitlist.heading || label(snap, 'waitlist'), section: '/waitlist', description: p.lede,
     body: `${pagehead(p, { eyebrow: 'Waitlist', heading: 'Our waitlist' })}${faqSection(snap, 'waitlist')}
-      <section class="section tight"><div class="wrap">${list}${main}${help}</div>${pay ? `<div class="wrap">${pay}</div>` : ''}</section>`,
+      <section class="section tight"><div class="wrap">${list}${main}${help}${badgeRow(snap, 'waitlist', { inWrap: true })}</div>${pay ? `<div class="wrap">${pay}</div>` : ''}</section>`,
   };
 }
 

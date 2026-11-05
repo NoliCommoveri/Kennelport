@@ -173,7 +173,8 @@ export async function serveSite(request, env, ctxWorker, subdomain, { onDomain =
   // The waitlist page is drawn from the snapshot and the list as it is now: the
   // KennelOS feed's five-minute copy, or the simple waitlist the breeder keeps (no
   // publish needed), so it isn't cached with the snapshot.
-  const live = url.pathname === '/waitlist';
+  // Policies too, with a KennelOS waitlist linked: its waitlist policies come from the feed.
+  const live = url.pathname === '/waitlist' || (url.pathname === '/policies' && Boolean(site.kennelos_public_id));
   if (live && site.kennelos_public_id) ctx.feed = await readFeed(env, site.id, site.kennelos_public_id);
   else if (live) ctx.waitlist = await publicRows(env, site.id);
 

@@ -79,7 +79,7 @@ const LISTS = {
   steps: { title: 'How it works', one: 'step', name: (r) => r.heading, sub: () => '' },
   extras: { title: 'Extras', one: 'extra', name: (r) => r.name, sub: (r) => (r.kind === 'homegoing' ? `${r.weeks ?? ''}-week package` : r.grp ?? '') },
   partners: { title: 'Partner kennels', one: 'kennel', name: (r) => r.name, sub: (r) => (r.hidden_by_kennelos ? 'Not sent by KennelOS · not shown' : r.url ? r.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : '') },
-  products: { title: 'Recommended products', one: 'product', name: (r) => r.name, sub: (r) => [r.grp, r.code ? `code ${r.code}` : null, r.home_badge ? 'home page badge' : null].filter(Boolean).join(' · ') },
+  products: { title: 'Recommended products', one: 'product', name: (r) => r.name, sub: (r) => [r.grp, r.code ? `code ${r.code}` : null, r.transport ? 'transport service' : null, r.home_badge ? 'home page badge' : null].filter(Boolean).join(' · ') },
   policies: { title: 'Policies', one: 'policy', name: (r) => r.heading, sub: () => '' },
   // A question also placed elsewhere says so here, so she can see at a glance
   // which ones her pages are carrying (model.js FAQ_PLACES).
@@ -421,7 +421,7 @@ export function createScreens({ env, request, url, site, user, page }) {
       const items = rows.map((r, i) => `<li class="item"><a href="${esc(`${path}/${r.id}`)}"><b>${esc(L.name(r))}</b><span>${esc(L.sub(r) ?? '')}</span></a>
         <span class="order">${i ? `<form method="post" action="${esc(`${path}/${r.id}/up`)}"><button aria-label="Move ${esc(L.name(r))} up">↑</button></form>` : ''}${i < rows.length - 1 ? `<form method="post" action="${esc(`${path}/${r.id}/down`)}"><button aria-label="Move ${esc(L.name(r))} down">↓</button></form>` : ''}</span></li>`).join('');
       const intro = kind === 'questions' ? `${(await kos()).online ? '<p class="error">Not used right now: KennelOS takes your applications online, so your website shows your KennelOS form. These questions come back if you turn online applications off in KennelOS or remove the link.</p>' : ''}<p class="muted">The application form on your waitlist page always asks for the family's name and email. These questions come after, in this order. With none, it asks for a few lines about their family.</p>` : '';
-      const extra = kind === 'litters' ? await leavingCard() : kind === 'dogs' ? `${await offSiteDogsCard(rows)}${partnersLink()}` : kind === 'partners' ? await partnersIntro() : kind === 'reviews' ? '<p><a class="button" href="' + base + '/reviews-queue">Reviews families sent</a></p>' : '';
+      const extra = kind === 'policies' ? await waitlistPoliciesCard() : kind === 'litters' ? await leavingCard() : kind === 'dogs' ? `${await offSiteDogsCard(rows)}${partnersLink()}` : kind === 'partners' ? await partnersIntro() : kind === 'reviews' ? '<p><a class="button" href="' + base + '/reviews-queue">Reviews families sent</a></p>' : '';
       return { title: parentTitle ? `${parentTitle}: ${L.title}` : L.title, back: back ?? base, body: `${note(url)}${intro}${extra}<ul class="items">${items || `<li class="muted">None yet.</li>`}</ul><p><a class="button primary" href="${esc(`${path}/new`)}">Add ${L.one}</a></p>` };
     }
     if (rest === 'new') {
@@ -564,6 +564,22 @@ export function createScreens({ env, request, url, site, user, page }) {
     return redirect(`${base}/details?note=saved`);
   }
 
+  // Her KennelOS waitlist policies (KennelOS Waitlist Policies plan §4), above her own
+  // Policies: shown on that page under their own heading, read-only here, changed in KennelOS.
+  async function waitlistPoliciesCard() {
+    const row = await env.DB.prepare('SELECT kennelos_public_id FROM sites WHERE id = ?').bind(site.id).first();
+    if (!row?.kennelos_public_id) return '';
+    const f = await readFeed(env, site.id, row.kennelos_public_id);
+    const list = f.state === 'ok' ? f.feed?.kennel?.policies ?? [] : [];
+    if (!list.length) {
+      return f.state === 'ok' ? '<section class="card"><h2>Waitlist policies</h2><p class="muted small">None in KennelOS yet. Add them in KennelOS, in your kennel\'s Waitlist settings under Policies, and they show on your Policies page under their own heading, below the ones here.</p></section>' : '';
+    }
+    return `<section class="card" id="waitlist-policies"><h2>Waitlist policies <span class="muted small">from KennelOS</span></h2>
+      <p class="muted small">Shown on your Policies page under their own heading, below the ones here. Change them in KennelOS (your kennel's Waitlist settings, Policies); your website shows the change within a few minutes, no publish needed.</p>
+      <ul class="items">${list.map((x) => `<li class="item"><details><summary><b>${esc(x.heading)}</b></summary><p class="small">${esc(x.body)}</p></details></li>`).join('')}</ul>
+      <p class="muted small">Add your own policies below: your health guarantee, spay and neuter, take-back, anything beyond the waitlist.</p></section>`;
+  }
+
   // The KennelOS website feed (plan 3.8): pasted on the waitlist page's screen.
   async function kennelosCard(err, typed) {
     const row = await env.DB.prepare('SELECT kennelos_public_id FROM sites WHERE id = ?').bind(site.id).first();
@@ -649,7 +665,7 @@ export function createScreens({ env, request, url, site, user, page }) {
   }
 
   const listLinkFor = (key) => {
-    const kind = { reviews: 'reviews', how_it_works: 'steps', extras: 'extras', products: 'products', policies: 'policies', faq: 'faq', waitlist_help: 'waitlist_help', dogs: 'dogs', litters: 'litters', waitlist: 'questions', albums: 'albums' }[key];
+    const kind = { reviews: 'reviews', how_it_works: 'steps', extras: 'extras', products: 'products', pickup: 'products', policies: 'policies', faq: 'faq', waitlist_help: 'waitlist_help', dogs: 'dogs', litters: 'litters', waitlist: 'questions', albums: 'albums' }[key];
     if (!kind) return '';
     const href = ['dogs', 'litters'].includes(kind) ? `${base}/${kind}` : `${base}/lists/${kind}`;
     return `<p><a class="button" href="${esc(href)}">Edit the ${esc(LISTS[kind].title.toLowerCase())} on this page</a></p>`;

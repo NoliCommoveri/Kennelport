@@ -18,7 +18,7 @@
 //     pairings: [{ id, heat_id, dam_id, sire_id, dam_name, sire_name, planned_on, expected_on }],
 //     heats: [{ id, dam_id, dam_name, month }],
 //     extras?: [{ id, name, group, description, price_from, price_to }],
-//     products?: [{ id, name, link_url, code, code_note }],
+//     products?: [{ id, name, link_url, code, code_note, website?, transport? }],
 //     steps?: [{ id, heading, body }],
 //     partner_kennels?: [{ id, name, website }],
 //     payment?: { application_fee?: {…}, deposit?: {…} } }
@@ -57,7 +57,9 @@ export const MAX = { dogs: 200, litters: 100, puppies: 30, pairings: 50, heats: 
 // the whole bundle refused.
 // 'heat_id': a pairing's and a litter's heat_id, the heat it uses.
 // 'partner_kennels': the list, and the co-owned fields on each dog.
-export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels'];
+// 'transport': a product's website and transport flag (her KennelOS transport
+// accounts, for the Getting your pup home page).
+export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport'];
 
 // ---------- checking ----------
 
@@ -89,7 +91,9 @@ const SHAPES = {
   step: { id: ID, heading: S(80, true), body: ML(400) },
   // A Recommended product from one of her KennelOS Accounts she marked Show on
   // website: its referral link and code (meant to be handed out), never a login.
-  product: { id: ID, name: S(80, true), link_url: { type: 'url' }, code: S(40), code_note: S(120) },
+  // A transport account (flight nanny, ground transport) comes as one too, flagged
+  // `transport`, with its website for the address under its badge.
+  product: { id: ID, name: S(80, true), link_url: { type: 'url' }, code: S(40), code_note: S(120), website: { type: 'url' }, transport: { type: 'bool' } },
   pay: Object.fromEntries(Object.entries(PAYMENT_FIELDS).filter(([k]) => k !== 'show_on_site')),
 };
 
@@ -182,7 +186,7 @@ export const OWNED = {
   puppies: ['name', 'collar', 'sex', 'color', 'status', 'registration', 'registry'],
   health: ['test', 'result', 'normal', 'date', 'verify_url'],
   extras: ['name', 'grp', 'description'],
-  products: ['name', 'link_url', 'code', 'code_note'],
+  products: ['name', 'link_url', 'code', 'code_note', 'website_url', 'transport'],
   steps: ['heading', 'body'],
 };
 export const OWNED_PRICES = { litters: LITTER_PRICE_FIELDS, extras: ['price_from', 'price_to'] };
@@ -584,8 +588,9 @@ export async function applyBundle(env, device, body) {
     for (const x of st.extras) if (x.source === 'kennelos' && !sent.has(x.kennelos_id)) w.s.push(env.DB.prepare('DELETE FROM extras WHERE id = ?').bind(x.id));
   }
 
-  // Recommended products from her Accounts: name, link, code and its note. The
-  // picture, Home badge, button wording, group, description and order stay hers. A
+  // Recommended products from her Accounts: name, link, code and its note, and
+  // (transport section) its website and whether it's a transport service. The
+  // picture, its badges, button wording, group, description and order stay hers. A
   // product she made by hand with the same name is taken over (extras and products
   // match by name, 5.2), keeping its picture. One KennelOS stops sending leaves;
   // its picture stays in her photos.
@@ -595,7 +600,9 @@ export async function applyBundle(env, device, body) {
     const free = products.filter((x) => !x.kennelos_id);
     let sort = Math.max(-1, ...products.map((x) => x.sort));
     for (const x of clean.products) {
-      const values = { name: x.name, link_url: x.link_url, code: x.code, code_note: x.code_note };
+      // Its website and transport flag are KennelOS's too (OWNED); a KennelOS from
+      // before the 'transport' section sends neither, and never a transport account.
+      const values = { name: x.name, link_url: x.link_url, code: x.code, code_note: x.code_note, website_url: x.website, transport: x.transport ? 1 : 0 };
       let cur = byKos.get(x.id);
       if (!cur) {
         const j = free.findIndex((p) => lower(p.name) === lower(x.name));

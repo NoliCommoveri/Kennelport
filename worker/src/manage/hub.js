@@ -30,26 +30,50 @@ export function nav(sub, current) {
   return `<nav class="apptabs" aria-label="Site Manager">${TABS.map(([key, path, label, icon]) => `<a href="/s/${esc(sub)}${path}"${key === current ? ' aria-current="page"' : ''}><svg class="i" aria-hidden="true"><use href="#i-${icon}"/></svg><span>${label}</span></a>`).join('')}</nav>`;
 }
 
-// Today: puppies going home in the next 7 days, each with its pickup time, whether
-// the vet visit is booked, and Mark picked up (the main action on the day itself).
+// Today: puppies going home in the next 7 days, each as the prototype's pup card: its
+// photo, name and family, a calendar page with the pickup time, whether the vet visit
+// is booked, and Mark picked up (the main action, on the day itself).
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+export const calPage = (ymd) => `<span class="calpage" aria-hidden="true"><b>${MON[Number(ymd.slice(5, 7)) - 1]}</b><span>${Number(ymd.slice(8, 10))}</span><i>${DOW[new Date(`${ymd}T12:00:00Z`).getUTCDay()]}</i></span>`;
+const clock = (hm) => { const [h, m] = hm.split(':').map(Number); return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`; };
+const SEX = { female: ['♀', 'girl'], male: ['♂', 'boy'] };
+// A round photo, or a paw on sand when there's none.
+export const roundPhoto = (sub, photoId, alt) => (photoId
+  ? `<img class="round" src="/s/${esc(sub)}/photos/${esc(photoId)}/thumb" alt="${esc(alt)}" loading="lazy">`
+  : '<span class="round ph" aria-hidden="true"><svg class="i"><use href="#i-paw"/></svg></span>');
+
 export async function goingHome(env, site, now = new Date()) {
   const s = await getSettings(env, site.id);
   const today = localParts(now, s.time_zone).ymd;
-  const { results } = await env.DB.prepare(`SELECT p.*, f.name AS family FROM portal_placements p JOIN portal_families f ON f.id = p.family_id
+  const { results } = await env.DB.prepare(`SELECT p.*, f.name AS family, pu.photo_id, pu.sex FROM portal_placements p JOIN portal_families f ON f.id = p.family_id LEFT JOIN puppies pu ON pu.id = p.puppy_id
     WHERE p.site_id = ? AND p.status = 'open' AND p.life_status = 'with_family' AND p.picked_up_at IS NULL AND p.pickup_state != 'not_yet'
       AND f.status = 'active' AND f.deleted_at IS NULL AND (p.pickup_booked_at IS NOT NULL OR p.go_home_on IS NOT NULL)`).bind(site.id).all();
   const soon = results.map((p) => ({ ...p, day: p.pickup_booked_at ? localParts(p.pickup_booked_at, s.time_zone).ymd : p.go_home_on }))
     .filter((p) => p.day <= new Date(Date.parse(`${today}T12:00:00Z`) + 7 * DAY).toISOString().slice(0, 10))
     .sort((a, b) => a.day.localeCompare(b.day));
-  if (!soon.length) return '';
-  const base = `/s/${esc(site.subdomain)}/portal/f`;
-  return `<section class="card" id="going-home"><h2>Going home this week</h2><ul class="items">${soon.map((p) => {
+  if (!soon.length) return { html: '', count: 0 };
+  const sub = esc(site.subdomain);
+  const base = `/s/${sub}/portal/f`;
+  const anyToday = soon.some((p) => p.day <= today);
+  const cards = soon.map((p) => {
     const name = p.call_name || p.puppy_name;
-    const when = p.pickup_booked_at ? formatAt(p.pickup_booked_at, s.time_zone) : `${formatDay(p.go_home_on)}, no time booked`;
+    const sex = SEX[p.sex];
     const isToday = p.day <= today;
-    return `<li class="item going"><a href="${base}/${esc(p.family_id)}"><b>${esc(name)} · ${esc(p.family)}</b><span>${esc(when)} · vet visit ${p.vet_booked_at ? 'booked' : 'not booked yet'}</span></a>
-      ${isToday ? `<form method="post" action="${base}/${esc(p.family_id)}/picked-up"><button class="primary">Mark picked up</button></form>` : ''}</li>`;
-  }).join('')}</ul></section>`;
+    return `<div class="pupcard">${roundPhoto(site.subdomain, p.photo_id, name)}
+      <a class="pname" href="${base}/${esc(p.family_id)}">${esc(name)}${sex ? `<span class="sex ${sex[1]}" aria-label="${sex[1]}">${sex[0]}</span>` : ''}</a>
+      <span class="small muted"><span class="sr">${esc(name)} · </span>${esc(p.family)}</span>
+      <div class="calrow">${calPage(p.day)}<span class="when">${isToday ? '<b>Today</b>' : ''}${p.pickup_booked_at ? esc(clock(localParts(p.pickup_booked_at, s.time_zone).hm)) : 'No time booked'}</span></div>
+      <span class="st ${p.vet_booked_at ? 'ok' : 'warn'}">Vet ${p.vet_booked_at ? 'booked' : 'not booked'}</span>
+      ${isToday ? `<form method="post" action="${base}/${esc(p.family_id)}/picked-up"><button class="primary small">Mark picked up</button></form>` : `<a class="button small" href="${base}/${esc(p.family_id)}">Their screen</a>`}</div>`;
+  }).join('');
+  return {
+    count: soon.length,
+    today: soon.filter((p) => p.day <= today).length,
+    first: soon[0].day,
+    html: `<section id="going-home" class="stack"><h2>Going home this week</h2><div class="bento">${cards}</div>
+      ${anyToday ? '<p class="small muted">Mark picked up starts the vet clock. You can correct the time afterwards.</p>' : ''}</section>`,
+  };
 }
 
 export async function lastFromKennelos(env, site, now = new Date()) {
@@ -57,7 +81,7 @@ export async function lastFromKennelos(env, site, now = new Date()) {
   if (!at) return '';
   const m = Math.round((now.getTime() - Date.parse(at)) / 60000);
   const ago = m < 2 ? 'just now' : m < 60 ? `${m} minutes ago` : m < 36 * 60 ? `${Math.round(m / 60)} hours ago` : `${Math.round(m / 1440)} days ago`;
-  return `<p class="muted small">Last from KennelOS: ${esc(ago)}</p>`;
+  return `<span class="feedline"><svg class="i" aria-hidden="true"><use href="#i-globe"/></svg>Last from KennelOS: ${esc(ago)}</span>`;
 }
 
 // Dogs: each litter's puppies with their family, go-home, extras and website

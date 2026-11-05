@@ -1431,3 +1431,86 @@ answers to plan 15.
 - The page cache keys on the portal switch too, so turning it on or off shows at once.
 - Built from the template's existing How to pay card styles: no site template file
   changed, so no version bump.
+
+## 2026-11-05: Puppy parent portal, family Home in the prototype's look
+
+- Compared against `docs/reference/portal-prototype.html` at phone width, the built family
+  Home had lost most of the prototype's variety (plain cards, one-column checklist, large
+  link tiles). Home now carries the prototype's pieces over, with every built feature kept:
+  - the header: her logo (or monogram) in a white circle, and "Puppy Parent Portal" under
+    her name;
+  - an edge-to-edge photo hero with a script line ("Welcome!", "Welcome home", "Hello
+    again", or the stay's week) over the serif heading; after pickup, "N weeks home";
+  - the pup card (framed round photo, script name with a sex badge, the breed,
+    born and home facts) beside a calendar tile: a calendar page (month on red, day,
+    weekday) with days to go and the pickup time and **What to do first**; in the vet
+    window a red tile with hours left and **Upload record**; after, the next task; during
+    a stay, a dark tile with the week and a week bar;
+  - Book the vet visit as a warm tile with a large icon;
+  - the vet visit, What's next and the stay's skills as mint bands with numbered blobs;
+  - the go-home checklist in two columns on a phone;
+  - before pickup, with a status page, a paper band: pickup, extras and messages stay
+    there;
+  - the food band edge to edge on deep green ("Keep X on the same food", the food on a
+    cream box, a round Order button), and Included with X as round outlined badges;
+  - Quick links as six small tiles, three across; the pinned bar as a full-width strip
+    with an icon and two lines.
+- Cards now have the prototype's thin border instead of a shadow, on every portal page.
+- Deadlines no longer add "(… UTC your time)" on a phone or browser set to UTC (a server's
+  zone, never a family's); a phone in another real zone still gets its own time.
+- `CLAUDE.md`: future screens, every phase, are built from and checked against the
+  prototypes in `docs/reference/`.
+- Portal files changed (`portal.css`, `portal.js`): `PORTAL_VERSION` needs its bump.
+
+## 2026-11-05: Site Manager, Today and Families in the prototype's look
+
+- On a site with the puppy portal, every Site Manager screen has the prototype's header:
+  her logo (or monogram) in a white circle, her kennel's name, and "Site Manager" under
+  it, with her account at the right. The screen's title moves onto the page, under the
+  kennel's name; a sub-screen has a crumb back ("‹ Families"). Sites without the portal
+  keep the header they had.
+- **Today:** a deep-teal band with the date, how many go home today and this week, and
+  Last from KennelOS; this week's pickups as pup cards (round photo, script name with a
+  sex badge, the family, a calendar page with the pickup time, the vet visit's status,
+  and Mark picked up on the day or Their screen before it); Needs you as small tiles with
+  an icon, red for what's gone wrong and amber for what's late; and, as the prototype has
+  them, **Vet visits** (round photos, status pills) beside **Recent activity**, moved here
+  from Families.
+- **Families:** the kennel's name and Families, with **Puppy families** and **Waitlist
+  (n)** pills (`?show=waitlist`); each family a row with the puppy's round photo, its
+  litter, going home and last active, its extras as tags, and a status pill (Active, Not
+  invited, Invite to send, Invite not accepted, No puppy yet). The waitlist side lists the
+  website's list in order, or says it's in KennelOS.
+- App files changed (`app.css`): `APP_VERSION` needs its bump, held with the portal's.
+
+## 2026-11-05: Her KennelOS waitlist policies on her website
+
+- With a KennelOS waitlist linked, her **Policies** page shows her own policies and then
+  **Waitlist policies** (eyebrow "Our waitlist", in the page's own heading look, the same
+  expanders), read from the KennelOS feed like the waitlist page (`/policies` is live, so a
+  change in KennelOS shows within minutes, no publish), with her upcoming closed dates under
+  a business-days policy (KennelOS `docs/KennelOS_Waitlist_Policies_Plan.md` §4).
+- KennelOS's application on her waitlist page: the "I've read the policies" box's word
+  "policies" links to `/policies#waitlist-policies` (or KennelOS's list page while her
+  Policies page is off).
+- Site Manager › Policies: a read-only **Waitlist policies from KennelOS** card above her own,
+  saying where to change them; her own list stays for everything beyond the waitlist.
+- No site template file changed (drawn on the server), so no `ASSET_VERSION` bump.
+
+## 2026-11-05: Getting your pup home, and badges on more pages
+
+- New page **Getting your pup home** at `/pickup` (plan 3.5): her Pickup, Transport and Travel
+  day sections (Site Manager › Pages), shown once one has words; her transport services as
+  badges under her Transport words (logo, name, web address, code; a name tile without a picture).
+  No prototype screen for it: built from the template's own parts.
+- Products: `transport` (from a KennelOS transport account, or ticked by her; never on
+  Recommended products), `website_url` (the address under its badge), `badge_places` (pages
+  besides Home that show its badge, two per page). Every badge now shows its name and web
+  address under the logo. Spots per page in `render/pages.js` `badgeRow`. Migration 0026.
+- KennelOS bundle: new section `transport` (a product's `website`, `transport`), both
+  KennelOS-owned.
+- Tests: `pickup.test.js` (new); `kennelos`, `products` updated. Checked rendered at 390px and
+  1280px.
+- `site.css` changed: `ASSET_VERSION` bump asked, not done.
+
+- Versions bumped (2026-11-05, owner's yes): `APP_VERSION` 14, `ASSET_VERSION` 16, `PORTAL_VERSION` 3, each with its fingerprint.

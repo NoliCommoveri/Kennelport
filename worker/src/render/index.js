@@ -18,6 +18,7 @@ const FIXED = {
   '/how-it-works': ['how_it_works', P.howItWorks],
   '/extras': ['extras', P.extras],
   '/recommended': ['products', P.products],
+  '/pickup': ['pickup', P.pickup],
   '/policies': ['policies', P.policies],
   '/faq': ['faq', P.faq],
   '/waitlist': ['waitlist', P.waitlist],

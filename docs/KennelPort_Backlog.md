@@ -12,7 +12,7 @@ Rough order of likely need; any item can go first.
 
 | Item | Delivers |
 |---|---|
-| **The rest of section 3.9** | Pickup page (3.5), waitlist page with outside forms (3.8), announcement banner, families' stories, past litters, news, adults, stud dogs, going home, the breed, downloads, events |
+| **The rest of section 3.9** | Waitlist page with outside forms (3.8), announcement banner, families' stories, past litters, news, adults, stud dogs, going home, the breed, downloads, events |
 | **Survey pages (3.11)** | Programs, how we raise puppies, how to pay safely as a page, retired and in-memory dogs, show results, litter diary, planned-litter status (no pick counts, plan decision 18), the three-generation pedigree |
 | **Requests** | Public request form on `kennelport.com`, email alert, ops inbox; KennelOS's **Request a website** button |
 | **Guided custom domains** | **Your own domain** with registrar detection, guided steps and automatic checks (section 3) |

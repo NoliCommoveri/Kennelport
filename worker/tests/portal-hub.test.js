@@ -61,31 +61,36 @@ test('with the portal: five tabs; Today holds what needs her, Website holds the 
   assert.doesNotMatch(await (await her('/portal/settings')).text(), /class="apptabs"/);
 });
 
-test('Today: going home this week, with Mark picked up on the day; Families: vet visits, activity, the waitlist', async () => {
+test('Today: going home this week, with Mark picked up on the day, vet visits and activity; Families: the list and the waitlist', async () => {
   const { env, her } = await setup();
   const id = (await her('/portal/new', { name: 'The Reed family', emails: 'sam@example.com', puppy_id: 'pup1', go_home_on: ymd(new Date()) })).headers.get('location').match(/\/f\/([0-9a-f-]{36})/)[1];
   await her('/portal/new', { name: 'The Diaz family', emails: 'lee@example.com', puppy_id: 'pup2', go_home_on: ymd(new Date(Date.now() + 20 * DAY)) });
   let today = await (await her('')).text();
   assert.match(today, /Going home this week/);
-  assert.match(today, /Opal · The Reed family/);
-  assert.doesNotMatch(today, /Ruby · The Diaz family/);
-  assert.match(today, new RegExp(`action="/s/akbostons/portal/f/${id}/picked-up"><button class="primary">Mark picked up`));
+  const card = /<div class="pupcard">[\s\S]*?>Opal<[\s\S]*?The Reed family</;
+  assert.match(today, card);
+  assert.doesNotMatch(today, /The Diaz family<\/span><div class="calrow">/, 'not going home this week');
+  assert.match(today, new RegExp(`action="/s/akbostons/portal/f/${id}/picked-up"><button class="primary small">Mark picked up`));
   assert.equal((await her(`/portal/f/${id}/picked-up`, {})).status, 303);
   today = await (await her('')).text();
-  assert.doesNotMatch(today, /Opal · The Reed family/);
+  assert.doesNotMatch(today, card);
 
-  // The family books the vet: Activity shows it on Families.
+  // The family books the vet: Today's activity shows it.
   await call(env, H, '/family/signin', { method: 'POST', body: form({ email: 'sam@example.com' }), headers: { origin: `https://${H}` } });
   const code = outbox(env).at(-1).subject.match(/(\d{6})/)[1];
   const fc = (await call(env, H, '/family/signin/verify', { method: 'POST', body: form({ email: 'sam@example.com', code }), headers: { origin: `https://${H}` } })).headers.get('set-cookie').split(';')[0];
   await call(env, H, '/family/vet/booked', { method: 'POST', body: form({ day: ymd(new Date(Date.now() + DAY)), time: '10:00' }), headers: { cookie: fc, origin: `https://${H}` } });
+  today = await (await her('')).text();
+  assert.match(today, /<h2>Vet visits<\/h2>/);
+  assert.match(today, /Due [^<]+ · 2 days[^<]* left<\/span><\/span><span class="st">Booked<\/span>/);
+  assert.match(today, /<span class="st">Not booked<\/span>/, 'the Diaz family, clock not started');
+  assert.match(today, /<b>The Reed family<\/b><\/a><br><span class="small">Booked the vet visit/);
   const families = await (await her('/portal')).text();
   assert.match(families, /<a href="\/s\/akbostons\/portal" aria-current="page">/);
-  assert.match(families, /Vet visits/);
-  assert.match(families, /Booked<\/span> · 2 days/);
-  assert.match(families, /Not booked/);
-  assert.match(families, /The Reed family<\/a> booked the vet visit/);
-  assert.match(families, /<h2>Waitlist<\/h2>/);
+  assert.match(families, /<b>The Reed family<\/b>[\s\S]*?<span class="st ok">Active<\/span>/);
+  assert.match(families, /<b>The Diaz family<\/b>[\s\S]*?<span class="st next">Not invited<\/span>/);
+  assert.match(families, /<nav class="filters"[^>]*><a href="\/s\/akbostons\/portal" aria-current="page">Puppy families<\/a><a href="\/s\/akbostons\/portal\?show=waitlist">Waitlist \(0\)<\/a>/);
+  assert.match(await (await her('/portal?show=waitlist')).text(), /<h2>Waitlist<\/h2>/);
 });
 
 test('Dogs: each puppy with its website status, family, go-home and extras, and the stay update to write', async () => {

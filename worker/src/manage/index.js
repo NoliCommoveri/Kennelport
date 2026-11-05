@@ -16,8 +16,10 @@ import { listSnapshots } from '../publish.js';
 import { siteLink } from '../ops/sites.js';
 import { createScreens, matchesWaiting } from './screens.js';
 import { kennelosState } from '../feed.js';
-import { handlePortalAdmin, portalNeedsYou } from '../portal/admin.js';
+import { handlePortalAdmin, portalNeedsYou, todayLists } from '../portal/admin.js';
 import { nav, goingHome, dogsTab, lastFromKennelos } from './hub.js';
+import { getSettings } from '../portal/store.js';
+import { localParts } from '../portal/vet.js';
 import { vapidConfig, subscribe, unsubscribe, testPush, pendingPush, subscriptionFor } from '../push.js';
 
 export const MANAGE_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
@@ -49,11 +51,24 @@ const SPRITE = `<svg class="sprite" width="0" height="0" aria-hidden="true">${Ob
   home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>',
   link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
   list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',
+  vet: '<path d="M6 3v6a5 5 0 0 0 10 0V3"/><path d="M11 14v2a5 5 0 0 0 10 0v-2"/><circle cx="21" cy="12" r="1.5"/>',
+  cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  draft: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
 }).map(([k, d]) => `<symbol id="i-${k}" viewBox="0 0 24 24">${d}</symbol>`).join('')}</svg>`;
 const ic = (n) => `<span class="ic" aria-hidden="true"><svg class="i"><use href="#i-${n}"/></svg></span>`;
 
 // nav: { sub, tab } puts her tabs on the page (sites with the puppy portal, plan 7.3).
-function page(title, body, { status = 200, back = null, headers = {}, nav: tabs = null } = {}) {
+function page(title, body, { status = 200, back = null, headers = {}, nav: tabs = null, brand = null, backLabel = 'Back' } = {}) {
+  const header = brand
+    ? `<header class="top brandhead"><a class="brand" href="/s/${esc(brand.sub)}"><span class="logo">${brand.logo ? `<img src="/s/${esc(brand.sub)}/photos/${esc(brand.logo)}/thumb" alt="">` : ''}<span class="mono">${esc(brand.monogram || (brand.name || '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2))}</span></span><span class="title"><b>${esc(brand.name)}</b><small><svg class="i" aria-hidden="true"><use href="#i-globe"/></svg>Site Manager</small></span></a>
+<a class="hb" href="/s/${esc(brand.sub)}/account" aria-label="Your account and site"><svg class="i" aria-hidden="true"><use href="#i-user"/></svg></a></header>`
+    : `<header class="top">${back ? `<a class="back" href="${esc(back)}" aria-label="Back">‹</a>` : '<img class="mark" src="/_kp/m/icon-64.png" alt="" width="32" height="32">'}<span class="title"><small>Site Manager</small><b>${esc(title)}</b></span></header>`;
+  // With her header, the title opens the page (unless the screen has its own), and
+  // a sub-screen's way back is a crumb above it.
+  const head = brand && !/<h1[\s>]/.test(body) ? `<div class="pagehead">${back ? '' : `<span class="eyebrow">${esc(brand.name)}</span>`}<h1>${esc(title)}</h1></div>` : '';
+  const crumb = brand && back ? `<p class="crumb"><a href="${esc(back)}">‹ ${esc(backLabel)}</a></p>` : '';
   return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
@@ -69,8 +84,8 @@ function page(title, body, { status = 200, back = null, headers = {}, nav: tabs 
 </head><body${tabs ? ' class="tabbed"' : ''}>
 ${SPRITE}
 ${tabs ? nav(tabs.sub, tabs.tab) : ''}
-<header class="top">${back ? `<a class="back" href="${esc(back)}" aria-label="Back">‹</a>` : '<img class="mark" src="/_kp/m/icon-64.png" alt="" width="32" height="32">'}<span class="title"><small>Site Manager</small><b>${esc(title)}</b></span></header>
-<main>${body}</main>
+${header}
+<main>${crumb}${head}${body}</main>
 <p class="offline-note" id="offline-note" hidden role="status">You're offline. You can look around, but saving needs a connection.</p>
 </body></html>`, { status, headers: { ...HEADERS, ...headers } });
 }
@@ -105,6 +120,8 @@ function codePage({ email, error } = {}) {
 
 // ---------- signed in ----------
 
+const plainPage = page;
+
 function sitesPage(user) {
   if (!user.sites.length) {
     return page('No sites', `<section class="card"><h1>No website here yet</h1><p class="muted">This email isn't on any KennelPort site right now. If you think it should be, ask whoever set up your site.</p>
@@ -116,7 +133,7 @@ function sitesPage(user) {
 
 const STATUS_WORDS = { draft: 'Not published yet', live: 'Live', suspended: 'Switched off by KennelPort' };
 
-async function siteHome(env, user, site, view = 'today') {
+async function siteHome(env, user, site, view = 'today', page = plainPage) {
   const snaps = await listSnapshots(env, site.id);
   const full = await env.DB.prepare('SELECT draft_changed_at, published_snapshot_id FROM sites WHERE id = ?').bind(site.id).first();
   const live = snaps.find((x) => x.id === full.published_snapshot_id);
@@ -156,12 +173,28 @@ async function siteHome(env, user, site, view = 'today') {
   // under Website.
   if (portalOn && view === 'today') {
     const home = await goingHome(env, site);
-    return page('Today', `${notesHtml}
-      ${changed ? `<section class="card status"><p><strong>Website changes not published</strong></p><p><a class="button primary" href="/s/${sub}/publish">Review and publish</a></p></section>` : ''}
-      ${home}
-      ${waiting.length ? `<section class="card" id="needs-you"><h2>Needs you</h2><ul class="items">${waiting.join('')}</ul></section>` : ''}
-      ${!changed && !home && !waiting.length && !notices.length ? '<section class="card"><h2>Nothing needs you right now</h2><p class="muted small">Pickups this week, vet records, messages and anything else waiting will show here.</p></section>' : ''}
-      ${await lastFromKennelos(env, site)}
+    const tz = (await getSettings(env, site.id)).time_zone;
+    const now = new Date();
+    const todayYmd = localParts(now, tz).ymd;
+    const inDays = home.count ? Math.round((Date.parse(`${home.first}T12:00:00Z`) - Date.parse(`${todayYmd}T12:00:00Z`)) / 86400000) : null;
+    // Needs you, as the prototype's small tiles: an icon in a tinted square (red for
+    // what's gone wrong, amber for what's running late), what it is, and a line more.
+    const needs = [
+      ...portal.map((x) => need(sub, x)),
+      unread ? need(sub, { href: '/inbox', label: `${unread} new message${unread === 1 ? '' : 's'} from your website`, note: 'In your inbox' }) : '',
+      pending ? need(sub, { href: '/reviews-queue', label: `${pending} review${pending === 1 ? '' : 's'} to approve`, note: 'From families' }) : '',
+      leaving ? need(sub, { href: '/litters#leaving', label: `${leaving} litter${leaving === 1 ? '' : 's'} leaving your site`, note: 'Keep or remove' }) : '',
+    ].filter(Boolean);
+    const kennel = site.kennel_name || site.subdomain;
+    return page('Today', `<section class="sec deep bleed todayband"><span class="eyebrow">${esc(kennel)}</span><h1>Today</h1>
+        <p class="small">${esc(now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: tz }))}${home.count ? ` · ${home.today ? `${home.today} going home today${home.count > home.today ? `, ${home.count - home.today} more this week` : ''}` : `${home.count} going home ${inDays === 1 ? 'tomorrow' : `in ${inDays} days`}`}` : ''}</p>
+        ${await lastFromKennelos(env, site)}</section>
+      ${notesHtml}
+      ${home.html}
+      ${changed ? `<section class="card status"><div class="between"><p><span class="st warn">Website</span> Changes not published yet</p><a class="button small" href="/s/${sub}/publish">Review and publish</a></div></section>` : ''}
+      ${needs.length ? `<section id="needs-you" class="stack"><h2>Needs you</h2><div class="needs">${needs.join('')}</div></section>`
+        : !changed && !home.count && !notices.length ? '<section class="card band"><p><span class="st ok">All caught up</span> Nothing needs you right now.</p><p class="muted small">Pickups this week, vet records, messages and anything else waiting will show here.</p></section>' : ''}
+      ${await todayLists(env, site)}
       <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}</p>`, { nav: { sub: site.subdomain, tab: 'today' } });
   }
   return page(portalOn ? 'Website' : site.kennel_name || site.subdomain, `
@@ -194,6 +227,24 @@ async function siteHome(env, user, site, view = 'today') {
   <p class="row"><a class="button" href="/notifications">Notifications on this device</a><a class="button" href="/s/${esc(site.subdomain)}/account">Your site: storage, copy, delete</a></p>
   <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}</p>
   <form method="post" action="/signout"><button class="link">Sign out</button></form>`, portalOn ? { nav: { sub: site.subdomain, tab: 'website' } } : {});
+}
+
+// A Needs you tile: its icon and tone from what it is (portal/admin.js portalNeedsYou).
+function need(sub, x) {
+  const t = `${x.href} ${x.label}`;
+  const [icon, tone] = /#loss/.test(t) ? ['heart', 'bad']
+    : /not delivered/.test(t) ? ['mail', 'bad']
+    : /vet visit missed/i.test(t) ? ['vet', 'bad']
+    : /vet visit/i.test(t) ? ['vet', 'warn']
+    : /Vet record/.test(t) ? ['vet', '']
+    : /#messages|inbox|message|Invite|invited/i.test(t) ? ['mail', '']
+    : /#stay/.test(t) ? ['star', 'warn']
+    : /#extras/.test(t) ? ['gift', '']
+    : /review/i.test(t) ? ['star', '']
+    : /leaving|backed out|closed/.test(t) ? ['heart', 'warn']
+    : /KennelOS/.test(t) ? ['draft', '']
+    : /go home at/.test(t) ? ['cal', 'warn'] : ['paw', ''];
+  return `<a class="need${tone ? ` ${tone}` : ''}" href="/s/${esc(sub)}${esc(x.href)}">${ic(icon)}<b>${esc(x.label)}</b><span>${esc(x.note)}</span></a>`;
 }
 
 function notificationsPage(env, user) {
@@ -298,16 +349,19 @@ export async function handleManage(request, env, url) {
   if (m) {
     const site = user.sites.find((s) => s.subdomain === m[1]);
     if (!site) return page('Not found', '<section class="card"><p>You don\'t manage a site at this address.</p><p><a href="/">Your sites</a></p></section>', { status: 404 });
-    if (!m[2] && !post) return siteHome(env, user, site);
-    // Her tabs, with the puppy portal on (plan 7.3).
-    const portalOn = await env.DB.prepare('SELECT portal_on FROM sites WHERE id = ?').bind(site.id).first('portal_on');
-    if (portalOn && !post && m[2] === '/website') return siteHome(env, user, site, 'website');
-    if (portalOn && !post && m[2] === '/kennel') return page('Dogs', await dogsTab(env, site), { nav: { sub: site.subdomain, tab: 'dogs' } });
+    // Her tabs and her own header, with the puppy portal on (plan 7.3).
+    const row = await env.DB.prepare('SELECT portal_on, kennel_name, logo_photo_id, monogram FROM sites WHERE id = ?').bind(site.id).first();
+    const portalOn = row?.portal_on;
+    const brand = portalOn ? { sub: site.subdomain, name: row.kennel_name || site.subdomain, logo: row.logo_photo_id, monogram: row.monogram } : null;
+    const sitePage = brand ? (t, b, o = {}) => page(t, b, { ...o, brand }) : page;
+    if (!m[2] && !post) return siteHome(env, user, site, 'today', sitePage);
+    if (portalOn && !post && m[2] === '/website') return siteHome(env, user, site, 'website', sitePage);
+    if (portalOn && !post && m[2] === '/kennel') return sitePage('Dogs', await dogsTab(env, site), { nav: { sub: site.subdomain, tab: 'dogs' } });
     if (m[2]?.startsWith('/portal')) {
-      const res = await handlePortalAdmin({ env, request, url, site, page });
+      const res = await handlePortalAdmin({ env, request, url, site, page: sitePage });
       if (res) return res;
     } else if (m[2]) {
-      const res = await createScreens({ env, request, url, site, user, page })();
+      const res = await createScreens({ env, request, url, site, user, page: sitePage })();
       if (res) return res;
     }
   }

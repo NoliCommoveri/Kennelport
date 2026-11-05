@@ -3,7 +3,7 @@
 // can't disagree about what a field may hold. Every write marks the draft as
 // changed; nothing is live until Publish.
 import {
-  DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, FAQ_FIELDS, EXTRA_FIELDS, PRODUCT_FIELDS, PARTNER_FIELDS, PARTNERS_PER_DOG, PARTNERS_MAX, HOME_BADGES_MAX, brandImageOk,
+  DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, FAQ_FIELDS, EXTRA_FIELDS, PRODUCT_FIELDS, PARTNER_FIELDS, PARTNERS_PER_DOG, PARTNERS_MAX, HOME_BADGES_MAX, BADGE_PLACES, brandImageOk,
   EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue, slugify,
 } from './model.js';
 import { untagStatements } from '../photoTags.js';
@@ -32,7 +32,7 @@ export const KINDS = {
   reviews: { table: 'stories', fields: omit(REVIEW_FIELDS, []), label: 'first_name', where: "kind = 'review'", fixed: { kind: 'review', submitted_by: 'breeder' }, defaults: { status: 'approved' } },
   steps: { table: 'steps', fields: STEP_FIELDS, label: 'heading', where: "page = 'how_it_works'", fixed: { page: 'how_it_works' }, defaults: { pay_link: 0 } },
   extras: { table: 'extras', fields: EXTRA_FIELDS, label: 'name', defaults: { featured: 0 }, json: ['checklist'] },
-  products: { table: 'products', fields: PRODUCT_FIELDS, label: 'name', defaults: { home_badge: 0 } },
+  products: { table: 'products', fields: PRODUCT_FIELDS, label: 'name', defaults: { home_badge: 0, transport: 0 }, json: ['badge_places'] },
   partners: { table: 'partner_kennels', fields: PARTNER_FIELDS, label: 'name', created: true },
   albums: { table: 'albums', fields: ALBUM_RECORD_FIELDS, slug: 'title', label: 'title', defaults: { show_on_site: 1 }, json: ['photos'], stamps: true },
   questions: { table: 'form_fields', fields: QUESTION_FIELDS, label: 'label', where: "form = 'application'", fixed: { form: 'application' }, defaults: { required: 0 }, json: ['options'] },
@@ -155,6 +155,16 @@ export async function saveRecord(env, siteId, kind, id, input, scopeId = null) {
     if (!clean.photo_id && !clean.image_url) throw new ContentError('home_badge', 'a home page badge needs a picture: choose one, or paste the embed code');
     const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM products WHERE site_id = ? AND home_badge = 1 AND id != ?').bind(siteId, id ?? '').first('n');
     if (n >= HOME_BADGES_MAX) throw new ContentError('home_badge', `the home page shows at most ${HOME_BADGES_MAX} badges: turn one off first`);
+  }
+  if (kind === 'products' && clean.badge_places?.length) {
+    // Badges on other pages (model.js BADGE_PLACES): a picture, and at most
+    // HOME_BADGES_MAX per page, as on Home.
+    if (!clean.photo_id && !clean.image_url) throw new ContentError('badge_places', 'a badge needs a picture: choose one, or paste the embed code');
+    const others = (await env.DB.prepare('SELECT badge_places FROM products WHERE site_id = ? AND id != ? AND badge_places IS NOT NULL').bind(siteId, id ?? '').all()).results;
+    for (const place of clean.badge_places) {
+      const n = others.filter((r) => { try { return JSON.parse(r.badge_places).includes(place); } catch { return false; } }).length;
+      if (n >= HOME_BADGES_MAX) throw new ContentError('badge_places', `the ${BADGE_PLACES[place]} shows at most ${HOME_BADGES_MAX} badges: take one off it first`);
+    }
   }
   if (kind === 'albums' && clean.photos) clean.photos = [...new Set(clean.photos)];
   if (kind === 'dogs') coOwnedRules(clean);

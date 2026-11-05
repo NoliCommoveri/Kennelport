@@ -95,7 +95,7 @@ test('pasting the embed code fills in the product; it shows on its page and as a
 
   await b.post('/publish');
   const home = await (await b.page('/')).text();
-  assert.ok(home.includes('<section class="wrap badges" aria-label="Recommended"><ul class="badges-1"><li><a href="https://tlcpetfood.com/nutrition/akbostonterriers" target="_blank" rel="noopener sponsored"><img src="https://tlcpetpro.com/api/Files/file-by-guid?guid=29e343b1-6389-40a2-bb1b-1bdba5c30981&amp;size=2" alt="TLC Pet Food Heritage Green Logo">'));
+  assert.ok(home.includes('<section class="wrap badges" aria-label="Recommended"><ul class="badges-1"><li><a class="badge-pic" href="https://tlcpetfood.com/nutrition/akbostonterriers" target="_blank" rel="noopener sponsored"><img src="https://tlcpetpro.com/api/Files/file-by-guid?guid=29e343b1-6389-40a2-bb1b-1bdba5c30981&amp;size=2" alt="TLC Pet Food Heritage Green Logo">'));
   assert.match((await b.page('/')).headers.get('content-security-policy'), /img-src 'self' https:\/\/tlcpetpro\.com;/);
   assert.ok(home.indexOf('class="banner') < 0 || home.indexOf('class="banner') < home.indexOf('class="wrap badges"'), 'under the banner');
   assert.ok(home.indexOf('class="wrap badges"') < home.indexOf('class="wrap hero'), 'above the rest of the top block');
@@ -145,7 +145,7 @@ test('products go out in the content document and come back in', async () => {
   const b = await breeder();
   await b.post('/lists/products/new', { name: 'Kong', link_url: 'https://kong.example/', code: 'AK5' });
   const doc = await exportContent(b.env, b.site.id);
-  assert.deepEqual(doc.products, [{ name: 'Kong', link_url: 'https://kong.example/', code: 'AK5', home_badge: false }]);
+  assert.deepEqual(doc.products, [{ name: 'Kong', link_url: 'https://kong.example/', code: 'AK5', home_badge: false, transport: false }]);
   await importContent(b.env, b.site.id, { products: [...doc.products, { name: 'Bed' }] });
   assert.deepEqual(b.env.DB.raw.prepare('SELECT name FROM products ORDER BY sort').all().map((x) => x.name), ['Kong', 'Bed']);
   await assert.rejects(importContent(b.env, b.site.id, { products: [{ name: 'X', home_badge: true }] }), /needs a photo_id or image_url/);

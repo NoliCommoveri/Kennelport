@@ -377,3 +377,41 @@ test('the manage app steers by the KennelOS link: says it can be linked, then le
   const msg = b.env.DB.raw.prepare('SELECT id FROM inquiries').get();
   assert.doesNotMatch(await (await b.get(`/inbox/${msg.id}`)).text(), /Add to waitlist/);
 });
+
+test('her KennelOS waitlist policies: on her Policies page under their own heading, read-only in the Site Manager, linked from the form', async () => {
+  const POLICIES = [
+    { id: 'pol_a', heading: 'Applications', body: 'Approval is at our discretion.', topic: 'applications' },
+    { id: 'pol_d', heading: 'Business days', body: 'Deadlines count Monday through Friday.', topic: 'days' },
+  ];
+  const withPolicies = (form) => {
+    const f = feed(form);
+    f.kennel = { ...f.kennel, policies: POLICIES, policies_updated: '2026-11-05', closed_dates: ['2999-12-24', '2999-12-25', '2999-12-26'] };
+    if (f.form) f.form = { ...f.form, policies: POLICIES, questions: [...f.form.questions, { id: 'policies_read', key: 'policies_read', label: 'Please read our waitlist policies.', type: 'checkboxes', required: true, options: ["I've read and agree to the policies"], link: 'policies' }] };
+    return f;
+  };
+  const k = kennelos(withPolicies());
+  const b = await breeder(k);
+  // Her own Policies page, before linking: only hers.
+  let page = await (await call(b.env, SITE, '/policies')).text();
+  assert.doesNotMatch(page, /Waitlist policies/);
+  await b.post('/pages/waitlist/kennelos', { feed: FEED_URL });
+  await b.post('/publish');
+  page = await (await call(b.env, SITE, '/policies')).text();
+  assert.match(page, /Health guarantee/, 'hers still there');
+  assert.match(page, /<section id="waitlist-policies"><div class="wrap pagehead"><span class="eyebrow">Our waitlist<\/span><h2 class="pagehead-h">Waitlist policies<\/h2>/);
+  assert.match(page, /Updated November 5, 2026\./);
+  assert.match(page, /<summary>Applications<\/summary>/);
+  assert.match(page, /Upcoming closed dates: Dec 24–26/, 'under the business-days policy');
+  // The application's box links to them.
+  const wl = await (await call(b.env, SITE, '/waitlist')).text();
+  assert.match(wl, /Please read our waitlist <a href="\/policies#waitlist-policies">policies<\/a>\./);
+  // Read-only above her own in the Site Manager.
+  const screen = await (await b.get('/lists/policies')).text();
+  assert.match(screen, /Waitlist policies <span class="muted small">from KennelOS<\/span>/);
+  assert.match(screen, /Change them in KennelOS/);
+  assert.match(screen, /<b>Applications<\/b>/);
+  // None in KennelOS: nothing added to the page.
+  k.answer = feed();
+  b.env.DB.raw.prepare("UPDATE feed_cache SET checked_at = '2000-01-01T00:00:00Z'").run();
+  assert.doesNotMatch(await (await call(b.env, SITE, '/policies')).text(), /id="waitlist-policies"/);
+});

@@ -165,7 +165,7 @@ test('picked up: the clock starts, every address gets the deadline, Home turns t
   assert.equal(outbox(env).filter((m) => m.kind === 'vet_pickup').length, 2);
   const reed = fam(await familySignIn(env, 'sam@example.com'));
   const home = await (await reed('/family')).text();
-  assert.match(home, /Welcome home, Opal/);
+  assert.match(home, /<span class="script">Welcome home<\/span><h1>Opal is home<\/h1>/);
   assert.match(home, /(2 days 23 hours|3 days) left/);
   assert.match(home, /Upload vet record/);
   // She corrects the time: the deadline moves, the old one stays in history.
