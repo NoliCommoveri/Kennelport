@@ -2,10 +2,10 @@
 
 This is the plan from the owner's talk on 2026-11-05. Step 1 is built: the owner's admin
 view with Pups, Dogs, Wording, Formats, From KennelOS and Timing for each site
-(`content/rules.js`, `manage/builder.js`, `admin.js`). Step 2 has begun: Home as blocks
-(`content/blocks.js`; Pages and Home in the admin view), each data block's records and what its
-cards show, with today's Home as the default, drawn exactly as before. Its other pages, new
-pages, the menu, addresses and forms come next; steps 3 to 5 aren't built yet.
+(`content/rules.js`, `manage/builder.js`, `admin.js`). Step 2 has begun: every page but Privacy
+is a list of blocks (`content/blocks.js`; Pages in the admin view), each data block with its
+records and what its cards show, and each page drawn exactly as before until the owner
+changes it. The rest of step 2 is below (Building it, in steps); steps 3 to 5 aren't built yet.
 
 Today a site's pages, menu, sections, and the rules for how KennelOS data shows are
 written into the code. Changing one means a code change, for every site at once. This
@@ -118,16 +118,40 @@ portal plan's decision (its section 1), not this one.
 
 ### Pages, menu and blocks
 
-- **Every page becomes a list of blocks in order.** Today's 16 pages become the first
-  template's pages, built from blocks that draw exactly what they draw now.
+- **Every page becomes a list of blocks in order.** Today's 16 pages (Home and 15 others)
+  become the first template's pages, built from blocks that draw exactly what they draw
+  now. **Privacy** and **Family login** stay fixed, outside the builder (decided
+  2026-11-05).
+- **What a page is for stays whole** (built): each page's own sections (its form, its
+  list, the Dogs page's four groups, the Puppies page's three bands) are its built-in
+  blocks, drawn as today. The owner moves or removes them and can put a removed one back;
+  she can add Dog cards, Litter cards and Reviews blocks to any page. A badge row placed
+  right after a built-in that holds one today sits inside it, as today.
+- **Words and photos on blocks the owner adds** are kept with that block. The owner's
+  words are the starting wording; the breeder rewords them, and changes the photo, in her
+  Website tab (decided 2026-11-05).
+- **A block or page the owner adds starts on** for the breeder: she placed it on purpose.
+  Decision 14 is about features arriving on existing sites, not what the owner places.
 - **New pages:** the owner adds a page and stacks blocks on it.
 - **Menu:** the owner sets groups and items. An item can be a page, a place on a page
   (like today's Girls and Boys links), or an outside link. The footer follows the menu,
-  with a switch per group to leave it out of the footer.
+  with a switch per group to leave it out of the footer, and a switch to show a group as
+  a button (today's Waitlist).
+- **Items show and hide on their own, as today** (decided 2026-11-05). An item hides when
+  what it points to has nothing to show: today Girls and Boys show only with breeding
+  dogs of both sexes, and Available and Upcoming litters only with such litters. An item
+  can be set to **show only when the items before it hide**, which keeps today's
+  Puppies item, shown only when neither Available nor Upcoming litters is.
 - **Built from the prototypes.** Blocks are drawn only from the components in
   `docs/reference/`: bands, headings, photo and text, facts, steps, highlight rows, the
   collage, sliders, cards and the call-to-action band. This keeps every site in the
   owner's look. There is no free-form layout.
+
+**FAQ and badge spots** (built for today's pages): each page's FAQ spot and badge row
+are blocks keyed by today's places (`model.js` `FAQ_PLACES`, `BADGE_PLACES`), so the
+questions and badges the breeder placed carry over with no data change. On a profile
+page (every dog, litter, puppy) the spot becomes an item in what that profile shows. A
+spot the owner adds to a new page is new, and starts empty.
 
 ### Data sections (what KennelOS data goes where)
 
@@ -154,6 +178,9 @@ itself, and a page with nothing on it drops out of the menu, as now (plan 3.12).
 
 Dog, litter and pup profiles keep their own addresses (`/dogs/<name>`,
 `/litters/<litter>/<pup>`), whichever page lists them. Shared links never break.
+
+**"See all"** on a block with a limit goes to the page the owner picks for that block
+(decided 2026-11-05), since the same records can be listed on several pages.
 
 **Fixed counts and selections become block settings** (decision 15):
 
@@ -277,6 +304,12 @@ email, phone, town, the pup or litter it's about, rating, topic, photo, and her 
 questions), which are required, and their order and wording (decision 15). Today's
 fields are the default.
 
+- **The contact form always has name, email and message, required,** so she can reply.
+  The rest are saved with the message; that needs one column on `inquiries`, in the
+  branch's one migration (decided 2026-11-05).
+- **Answers to her own questions on the review form** are for the breeder only; the
+  review card shows what it shows today.
+
 ### Timing rules
 
 | Rule | Today | In the code |
@@ -297,6 +330,12 @@ fixed unless the owner asks.
 - Every old address is kept and redirects (301) to the new one.
 - These addresses stay fixed because other systems link to them: `/waitlist` and
   `/waitlist/help`, `/family-login`, `/privacy`. Their menu names can still change.
+- **No page can take** those addresses, anything under `/dogs/`, `/litters/` or
+  `/albums/` (profiles and albums), the sitemap, `robots.txt`, or the system's own paths
+  (decided 2026-11-05).
+- **Each page's address is its own:** renaming `/litters` doesn't move `/litters/older`.
+  A renamed `/dogs` list page leaves profiles at `/dogs/<name>`.
+- **A page the owner removes** answers "not found" at its address; nothing redirects.
 
 ## The family portal (in the portal template)
 
@@ -375,8 +414,8 @@ default, without changing the editor screens.
 - **The breeder's switches** (pages on or off, menu names, addresses, block switches,
   FAQ and badge pages) are kept apart from the build, so Reset to template leaves them
   alone.
-- **`page_redirects`:** an old address, the page it now points to, and the date it
-  moved.
+- **Redirects:** the existing `redirects` table (old path, new path, date), already used
+  for album addresses, also holds renamed page addresses. No new table.
 - **The published snapshot carries the build and rules,** so rendering stays pure
   (`render/index.js`): no D1 at render time, and the tests render any build.
 - **Existing sites get a starting template applied,** with every setting unchanged:
@@ -396,7 +435,15 @@ Each step is its own branch and can be released on its own.
    Add new pages and data blocks (Dams and Sires), the menu editor, and the breeder's
    address renaming with redirects. FAQ and badge places become block settings. Each
    block gets its fixed counts as settings and what its cards show; each profile page,
-   what it shows; and the contact and review forms, their fields.
+   what it shows; and the contact and review forms, their fields. In this order:
+   1. Home as blocks (built);
+   2. the other pages as blocks (built);
+   3. new pages, with the breeder's switches and words for the blocks the owner adds;
+   4. the menu editor;
+   5. page addresses and their redirects;
+   6. FAQ and badge spots as block settings, on new pages too;
+   7. what each profile page shows;
+   8. the contact and review forms' fields.
 3. **Templates.** Save as template, Apply, Reset to template.
 4. **The family portal's build:** the **Website and family portal** template; the
    portal's timing and display rules; then moving its family and breeder components,

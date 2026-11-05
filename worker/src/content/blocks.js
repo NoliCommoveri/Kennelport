@@ -1,11 +1,11 @@
-// Pages as blocks (docs/Site_Builder_Plan.md, step 2), starting with Home: which
-// blocks it has, in what order, each data block's records (filters, order, how
+// Pages as blocks (docs/Site_Builder_Plan.md, step 2): Home and the other pages
+// (PAGE_DEFAULTS): which blocks each has, in what order, each data block's records (filters, order, how
 // many, style) and what its cards show. The owner sets these per site in her admin
 // view (manage/builder.js); the breeder still switches Home's blocks on or off and
 // words them (home_blocks), as before.
 //
-// A site keeps only what the owner changed (site_builds.build.pages.home); with
-// nothing there, Home is today's Home exactly (HOME_DEFAULT), so no site looks
+// A site keeps only what the owner changed (site_builds.build.pages.<page>); with
+// nothing there, a page is today's exactly (HOME_DEFAULT, PAGE_DEFAULTS), so no site looks
 // different the day this ships (decision 14). The published snapshot carries the
 // result (snap.layout), so rendering stays pure.
 //
@@ -19,6 +19,8 @@ export class BlockError extends Error {}
 // piece of content (her story, her facts), so a page has it at most once.
 // `switch`: the breeder's switch for it (home_blocks), on Home.
 export const BLOCK_TYPES = Object.freeze({
+  head: { name: 'Page heading', ic: 'pages', kind: 'content', once: true, hint: "The page's eyebrow, heading and line under it, in her words for this page." },
+  builtin: { name: 'Built-in', ic: 'lock', kind: 'fixed', hint: "What this page is for, drawn as today's site draws it." },
   hero: { name: 'Banner and collage', ic: 'camera', kind: 'content', once: true, hint: 'Her banner, collage, headline and buttons.' },
   facts: { name: 'Facts row', ic: 'star', kind: 'content', once: true, hint: 'Right after the banner it sits in it, as today; anywhere else, on its own.' },
   badges: { name: 'Badge row', ic: 'gift', kind: 'content', once: true, hint: 'The products she shows as a badge on Home, two at most. Right after the banner it sits under it.' },
@@ -30,6 +32,9 @@ export const BLOCK_TYPES = Object.freeze({
   embeds: { name: 'Videos and posts', ic: 'camera', kind: 'content', once: true, hint: 'The videos and posts she puts on Home.' },
   band: { name: 'Call-to-action band', ic: 'heart', kind: 'content', once: true, hint: 'Her waitlist band. Shows only while the waitlist page is on.' },
 });
+
+// Blocks that draw her Home content (home_blocks): on Home only.
+export const HOME_ONLY = Object.freeze(['hero', 'facts', 'text', 'band']);
 
 // Filters and choices, with the editor's words.
 export const DOG_STATUS = Object.freeze({ active: 'Active', retired: 'Retired', remembered: 'In memory' });
@@ -90,6 +95,96 @@ export const HOME_DEFAULT = Object.freeze([
 // The breeder's switches on Home (home_blocks), by block id.
 export const BREEDER_SWITCH = Object.freeze(['hero', 'facts', 'story', 'dogs', 'litters', 'reviews', 'waitlist']);
 
+// The other pages (model.js PAGES; Privacy stays fixed, outside the builder), each
+// as today's site draws it, top to bottom. What a page is for is its built-in
+// blocks (PAGE_PARTS): today's sections, kept whole so they draw exactly as before;
+// the owner moves or removes them, and can put a removed one back. `inside`: a
+// badge row placed right after it sits inside it, as today. The FAQ spot, the badge
+// row and videos and posts are that page's place (model.js FAQ_PLACES,
+// BADGE_PLACES; embeds' 'about'), so the questions and badges she has placed there
+// carry over: a page has them only where today's has a place for them.
+export const PAGE_PARTS = Object.freeze({
+  about: { story: { name: 'Her story', hint: 'Her photo, her words and her facts.' } },
+  reviews: { list: { name: 'Every review and the review form', hint: 'With the topic filter when her reviews have more than one topic.' } },
+  contact: { main: { name: 'Her contact details and the contact form', inside: true } },
+  dogs: {
+    all: { name: 'Girls and boys', hint: 'Her breeding dogs as flip cards, with the Show filter when there are both.' },
+    upcoming: { name: 'Up and coming', hint: 'Young dogs she has kept.' },
+    for_sale: { name: 'Looking for a home', hint: 'Adults for sale, with their price by the rules.' },
+    co_owned: { name: 'Shared with friends', hint: 'Co-owned dogs living with a partner kennel, and the kennels.' },
+  },
+  litters: {
+    current: { name: 'Litters taking deposits', hint: "Each born litter whose deposits are open, with its pups. With nothing on the page, it says there are no litters." },
+    older: { name: 'Older puppies', hint: 'Shows while the Older puppies page is on.' },
+    upcoming: { name: 'Coming up', hint: 'Planned litters, and born ones whose deposits open later.' },
+  },
+  older: { list: { name: 'Every older puppy' } },
+  how_it_works: { steps: { name: 'Her steps', inside: true } },
+  extras: { list: { name: 'Her go-home packages and extras', inside: true } },
+  products: { list: { name: 'Her recommended products' } },
+  pickup: { words: { name: 'Pickup, transport and travel day', hint: 'Her words for each, and her transport services.' } },
+  policies: { list: { name: 'Her policies', hint: 'Then her KennelOS waitlist policies, when her waitlist is linked.' } },
+  faq: { list: { name: 'Every question' } },
+  waitlist: { main: { name: 'The waitlist and application form', hint: 'Or her closed message; the list, the help link and how to pay.', inside: true } },
+  albums: { list: { name: 'Every album' } },
+  waitlist_help: { list: { name: 'Her help, as expanders', hint: 'And the sign-in and back-to-the-waitlist buttons.' } },
+});
+// Each page's heading when she has written none (render/pages.js pagehead).
+export const PAGE_HEADS = Object.freeze({
+  products: Object.freeze({ eyebrow: 'What we use', heading: 'Recommended products' }),
+  pickup: Object.freeze({ eyebrow: 'Going home', heading: 'Getting your pup home' }),
+  about: Object.freeze({ eyebrow: 'About us', heading: 'Our story' }),
+  reviews: Object.freeze({ eyebrow: 'Reviews', heading: 'From our families' }),
+  contact: Object.freeze({ eyebrow: 'Contact', heading: 'Say hello' }),
+  dogs: Object.freeze({ eyebrow: 'Kennel residents', heading: 'Our dogs' }),
+  litters: Object.freeze({ eyebrow: 'Puppies', heading: 'Puppies' }),
+  older: Object.freeze({ eyebrow: 'Puppies', heading: 'Older puppies', lede: 'Puppies still looking for a home after their going-home date.' }),
+  albums: Object.freeze({ eyebrow: 'Puppies', heading: 'Photo albums' }),
+  how_it_works: Object.freeze({ eyebrow: 'How it works', heading: 'From application to home' }),
+  extras: Object.freeze({ eyebrow: 'Extras', heading: 'Extras' }),
+  policies: Object.freeze({ eyebrow: 'Our promises', heading: 'Policies' }),
+  faq: Object.freeze({ eyebrow: 'Questions', heading: 'FAQ' }),
+  waitlist_help: Object.freeze({ eyebrow: 'Waitlist', heading: 'Using your status page' }),
+  waitlist: Object.freeze({ eyebrow: 'Waitlist', heading: 'Our waitlist' }),
+});
+const spots = (...t) => Object.freeze(t);
+export const PAGE_SPOTS = Object.freeze({
+  about: spots('badges', 'embeds'), reviews: spots(), contact: spots('faq', 'badges'), dogs: spots('faq'),
+  litters: spots('faq', 'badges'), older: spots(), how_it_works: spots('faq', 'badges'), extras: spots('faq', 'badges'),
+  products: spots(), pickup: spots('faq', 'badges'), policies: spots(), faq: spots(), waitlist: spots('faq', 'badges'),
+  albums: spots(), waitlist_help: spots(),
+});
+const H = { id: 'head', type: 'head' };
+const F = { id: 'faq', type: 'faq' };
+const BG = { id: 'badges', type: 'badges' };
+const part = (id) => ({ id, type: 'builtin' });
+export const PAGE_DEFAULTS = Object.freeze(Object.fromEntries(Object.entries({
+  about: [H, part('story'), BG, { id: 'embeds', type: 'embeds' }],
+  reviews: [H, part('list')],
+  contact: [H, F, part('main'), BG],
+  dogs: [H, F, part('all'), part('upcoming'), part('for_sale'), part('co_owned')],
+  litters: [H, F, part('current'), BG, part('older'), part('upcoming')],
+  older: [H, part('list')],
+  how_it_works: [H, F, part('steps'), BG],
+  extras: [H, F, part('list'), BG],
+  products: [H, part('list')],
+  pickup: [H, F, part('words'), BG],
+  policies: [H, part('list')],
+  faq: [H, part('list')],
+  waitlist: [H, F, part('main'), BG],
+  albums: [H, part('list')],
+  waitlist_help: [H, part('list')],
+}).map(([k, v]) => [k, Object.freeze(v.map((b) => Object.freeze({ ...b })))])));
+export const BUILT_PAGES = Object.freeze(['home', ...Object.keys(PAGE_DEFAULTS)]);
+export const isBuilt = (key) => BUILT_PAGES.includes(key);
+
+// What a block is called in the editor: a built-in by its part's name.
+export const blockName = (key, b) => (b.type === 'builtin' ? PAGE_PARTS[key]?.[b.id]?.name ?? 'Built-in' : BLOCK_TYPES[b.type].name);
+export const blockHint = (key, b) => (b.type === 'builtin' ? PAGE_PARTS[key]?.[b.id]?.hint ?? BLOCK_TYPES.builtin.hint : BLOCK_TYPES[b.type].hint);
+
+// A block whose words and switch are the breeder's own (home_blocks): Home's.
+export const hersOn = (key, b) => key === 'home' && BREEDER_SWITCH.includes(b.id);
+
 // ---------- reading a saved build ----------
 
 const pick = (v, opts, dflt) => (Object.hasOwn(opts, v) ? v : dflt);
@@ -101,7 +196,7 @@ const words = (w) => Object.fromEntries(Object.entries(w && typeof w === 'object
 export function cleanBlock(b) {
   if (!b || typeof b !== 'object' || !Object.hasOwn(BLOCK_TYPES, b.type)) return null;
   const id = String(b.id ?? '').slice(0, 40);
-  if (!/^[a-z][a-z0-9-]*$/.test(id)) return null;
+  if (!/^[a-z][a-z0-9_-]*$/.test(id)) return null;
   const out = { id, type: b.type };
   if (b.type === 'dogs') {
     const D = SHOW_DEFAULT.dogs;
@@ -127,32 +222,71 @@ export function cleanBlock(b) {
   return out;
 }
 
-// Home's blocks for a build: hers, cleaned, or today's.
-export function homeBlocks(build) {
-  const saved = build?.pages?.home?.blocks;
-  if (!Array.isArray(saved)) return HOME_DEFAULT.map((b) => cleanBlock(b));
+// Can this block sit on this page? Data blocks anywhere; Home's own content on
+// Home; a page's spots and built-ins on that page.
+export function fits(key, b) {
+  if (BLOCK_TYPES[b.type].kind === 'data') return true;
+  if (key === 'home') return b.type !== 'builtin' && b.type !== 'head';
+  if (HOME_ONLY.includes(b.type)) return false;
+  if (b.type === 'head') return true;
+  if (b.type === 'builtin') return Object.hasOwn(PAGE_PARTS[key] ?? {}, b.id);
+  return (PAGE_SPOTS[key] ?? []).includes(b.type) && b.id === b.type;
+}
+
+const defaultsOf = (key) => (key === 'home' ? HOME_DEFAULT : PAGE_DEFAULTS[key] ?? []);
+
+// A page's blocks for a build: the owner's, cleaned, or today's.
+export function pageBlocks(build, key) {
+  const saved = build?.pages?.[key]?.blocks;
+  if (!Array.isArray(saved)) return defaultsOf(key).map((b) => cleanBlock(b));
   const seen = new Set();
   const once = new Set();
   return saved.map(cleanBlock).filter((b) => {
-    if (!b || seen.has(b.id)) return false;
+    if (!b || seen.has(b.id) || !fits(key, b)) return false;
     seen.add(b.id);
     if (BLOCK_TYPES[b.type].once) { if (once.has(b.type)) return false; once.add(b.type); }
     return true;
   });
 }
+export const homeBlocks = (build) => pageBlocks(build, 'home');
 
-export const layoutFor = (build) => ({ home: homeBlocks(build) });
+// What the snapshot carries: Home always, and each other page the owner changed
+// (the renderer draws the rest as today's).
+export function layoutFor(build) {
+  const out = { home: homeBlocks(build) };
+  for (const key of Object.keys(PAGE_DEFAULTS)) if (Array.isArray(build?.pages?.[key]?.blocks)) out[key] = pageBlocks(build, key);
+  return out;
+}
 
-// Is Home as today's? (For Every site's count and Back to today's Home.)
-export const homeChanged = (build) => Array.isArray(build?.pages?.home?.blocks)
-  && JSON.stringify(homeBlocks(build)) !== JSON.stringify(homeBlocks(null));
+// Is the page as today's? (For Every site's count and Back to today's.)
+export const pageChanged = (build, key) => Array.isArray(build?.pages?.[key]?.blocks)
+  && JSON.stringify(pageBlocks(build, key)) !== JSON.stringify(pageBlocks(null, key));
+export const homeChanged = (build) => pageChanged(build, 'home');
+export const pagesChanged = (build) => BUILT_PAGES.filter((k) => pageChanged(build, k)).length;
+
+// What Add a block offers on this page: data blocks always; content the page
+// can have and doesn't (her one story, a removed built-in, its spots).
+export function addable(key, blocks) {
+  const have = new Set(blocks.map((b) => (b.type === 'builtin' ? `builtin:${b.id}` : b.type)));
+  const out = [];
+  for (const [t, T] of Object.entries(BLOCK_TYPES)) {
+    if (t === 'builtin') {
+      for (const id of Object.keys(PAGE_PARTS[key] ?? {})) if (!have.has(`builtin:${id}`)) out.push({ type: t, id });
+      continue;
+    }
+    const b = { id: t === 'text' ? 'story' : t === 'band' ? 'waitlist' : t, type: t };
+    if (T.kind !== 'data' && (!fits(key, b) || have.has(t))) continue;
+    out.push({ type: t, id: null });
+  }
+  return out;
+}
 
 // ---------- the editor's form ----------
 
 // The block settings form (manage/builder.js): fields named b.<id>.<field>, and the
 // show lists as b.<id>.show.<face>.<item> checkboxes plus b.<id>.show.<face> holding
 // the order ("photo,call,…").
-export function blocksFromForm(blocks, get, getAll) {
+export function blocksFromForm(blocks, get, getAll, key = 'home') {
   return blocks.map((b) => {
     const k = (f) => `b.${b.id}.${f}`;
     if (get(k('present')) == null) return b;
@@ -177,7 +311,7 @@ export function blocksFromForm(blocks, get, getAll) {
       next.limit = get(k('limit'));
       next.show = { items: order('items', REVIEW_ITEMS), who: order('who', REVIEW_WHO) };
     }
-    if (BLOCK_TYPES[b.type].kind === 'data' && !BREEDER_SWITCH.includes(b.id)) {
+    if (BLOCK_TYPES[b.type].kind === 'data' && !hersOn(key, b)) {
       next.w = { eyebrow: String(get(k('w.eyebrow')) ?? ''), heading: String(get(k('w.heading')) ?? ''), lede: String(get(k('w.lede')) ?? '') };
     }
     if (b.type === 'dogs' && !next.f.status.length) throw new BlockError('A Dog cards block needs at least one status.');
@@ -195,15 +329,16 @@ export function moved(arr, i, dir) {
   return out;
 }
 
-// The build with Home's blocks set; back to today's when they are today's.
-export function withHome(build, blocks) {
+// The build with a page's blocks set; back to today's when they are today's.
+export function withPage(build, key, blocks) {
   const next = structuredClone(build ?? {});
-  const same = JSON.stringify(blocks.map(cleanBlock)) === JSON.stringify(homeBlocks(null));
+  const same = JSON.stringify(blocks.map(cleanBlock)) === JSON.stringify(pageBlocks(null, key));
   if (same) {
-    if (next.pages) delete next.pages.home;
+    if (next.pages) delete next.pages[key];
     if (next.pages && !Object.keys(next.pages).length) delete next.pages;
   } else {
-    next.pages = { ...(next.pages ?? {}), home: { blocks: blocks.map(cleanBlock) } };
+    next.pages = { ...(next.pages ?? {}), [key]: { blocks: blocks.map(cleanBlock) } };
   }
   return next;
 }
+export const withHome = (build, blocks) => withPage(build, 'home', blocks);
