@@ -38,6 +38,10 @@ switches.
     portal. Both start with today's behaviour exactly (below).
 13. **The portal's build is part of a template.** In the portal template the owner can
     move the family-facing (puppy parent) components and the breeder-facing ones.
+14. **New settings in later builds change nothing on their own.** A new setting for
+    something sites already do starts with today's behaviour on existing sites. A
+    brand-new feature arrives switched off on existing sites until the owner turns it
+    on, and on in templates.
 
 ## Who controls what
 
@@ -307,7 +311,4 @@ after asking (CLAUDE.md).
 
 ## Open questions
 
-1. **Defaults for new rules.** Proposed: when a later build adds a rule for something
-   sites already do, existing sites keep today's behaviour as its default. When it adds
-   something new, it arrives switched off on existing sites until the owner turns it on,
-   and on in templates. Awaiting the owner's yes.
+None. The KennelOS package review (decision 8) is its own session.
