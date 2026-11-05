@@ -21,6 +21,7 @@ import {
 import { sendDueFor } from './reminders.js';
 import { vetStatus, formatAt, formatDay, localParts, timeLeft, clockRunning, VET_RULES } from './vet.js';
 import { MailError } from '../mail.js';
+import { roundPhoto } from '../manage/hub.js';
 import {
   catalog, saveDelivery, extrasFor, addExtra, confirmExtra, removeExtra, setStayStart, skillsFor, addSkill, removeSkill, updatesFor, writeUpdate, removeUpdate,
   updatesDue, stayWeeks, updateDue, LEVELS, MAX_PHOTOS,
@@ -157,36 +158,51 @@ export async function portalNeedsYou(env, siteId, now = new Date()) {
 
 // ---------- screens ----------
 
-function familiesScreen(site, families, s, url, { deleted = [], erased = [] } = {}, now = new Date()) {
+// A family's state, as a status pill (plan 7.3).
+function familyPill(f) {
+  if (f.first_signed_in_at) return f.placement_id ? '<span class="st ok">Active</span>' : '<span class="st">No puppy yet</span>';
+  if (!f.invited_at) return f.kennelos_id ? '<span class="st next">Invite to send</span>' : '<span class="st next">Not invited</span>';
+  return '<span class="st warn">Invite not accepted</span>';
+}
+const shortDay = (iso, tz) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: tz });
+
+function familiesScreen(site, families, s, url, { deleted = [], erased = [], waitlistCount = null, kennel } = {}, now = new Date()) {
   // site.portalUrl: set by handlePortalAdmin.
   const base = `/s/${esc(site.subdomain)}/portal`;
   const rows = families.map((f) => {
     const p = f.placement_id ? f : null;
     const bits = [];
     if (p) {
-      if (p.picked_up_at) bits.push(`Went home ${formatAt(p.picked_up_at, s.time_zone, { weekday: false })}`);
-      else if (p.pickup_booked_at) bits.push(`Going home ${formatAt(p.pickup_booked_at, s.time_zone, { weekday: false })}`);
-      else if (p.go_home_on) bits.push(`Going home ${formatDay(p.go_home_on)}`);
-      bits.push(`Vet: ${vetStatus(p, now).word}`);
-    } else bits.push('No puppy yet');
-    if (!f.invited_at) bits.push('not invited');
-    else if (!f.first_signed_in_at) bits.push('invite not accepted');
+      bits.push(`${pupName(p)}${p.litter_name ? ` · ${p.litter_name}` : ''}`);
+      if (p.picked_up_at) bits.push(`went home ${formatAt(p.picked_up_at, s.time_zone, { weekday: false })}`);
+      else if (p.pickup_booked_at) bits.push(`going home ${formatAt(p.pickup_booked_at, s.time_zone, { weekday: false })}`);
+      else if (p.go_home_on) bits.push(`going home ${formatDay(p.go_home_on)}`);
+    }
+    bits.push(f.last_activity_at ? `last active ${shortDay(f.last_activity_at, s.time_zone)}` : 'never signed in');
     if (f.kennelos_id) bits.push('from KennelOS');
-    return `<li class="item"><a href="${base}/f/${esc(f.id)}"><b>${esc(f.name)}${p ? ` · ${esc(pupName(p))}` : ''}</b><span>${esc(bits.join(' · '))}</span></a></li>`;
+    const tags = (f.extras ?? '').split('|').filter(Boolean).map((x) => `<span class="tag">${esc(x)}</span>`).join('');
+    return `<li>${roundPhoto(site.subdomain, p?.photo_id, p ? pupName(p) : f.name)}<span class="grow"><a class="rowlink" href="${base}/f/${esc(f.id)}"><b>${esc(f.name)}</b></a><br><span class="small muted">${esc(bits.join(' · '))}</span>${tags ? `<br>${tags}` : ''}</span>${familyPill(f)}</li>`;
   }).join('');
   return `${note(url)}
-  <section class="card"><h1>Puppy families</h1>
-    <p class="muted small">Families who've signed their contract, and their puppy portal. Families see it at <strong>${esc(site.portalUrl)}</strong>.</p>
-    ${site.feedAt ? `<p class="muted small">Last from KennelOS: ${esc(ago(site.feedAt, now))}</p>` : ''}
-    <p><a class="button primary" href="${base}/new">Add a family</a></p>
-    ${rows ? `<ul class="items">${rows}</ul>` : '<p class="muted">No families yet.</p>'}
+  <span class="eyebrow">${esc(kennel)}</span><h1>Families</h1>
+  ${familyFilters(site, 'puppy', waitlistCount)}
+  <section class="card"><div class="between"><p class="muted small">Families who've signed their contract see their puppy portal at <strong>${esc(site.portalUrl)}</strong>.</p><a class="button primary small" href="${base}/new">Add a family</a></div>
+    ${site.feedAt ? `<span class="feedline muted"><svg class="i" aria-hidden="true"><use href="#i-globe"/></svg>Last from KennelOS: ${esc(ago(site.feedAt, now))}</span>` : ''}
+    ${rows ? `<ul class="list">${rows}</ul>` : '<p class="muted">No families yet.</p>'}
   </section>
+  <p class="small muted">Accounts are deleted after 12 months with no activity, with warnings at 30 and 7 days. Sale records and reminder logs have their own clocks.</p>
 
   ${deleted.length ? `<section class="card" id="deleted"><h2>Recently deleted</h2><p class="hint">Their portal is closed. Each is deleted for good ${UNDO_DAYS} days after, unless you undo it.</p>
     <dl class="kv">${deleted.map((f) => `<dt>${esc(formatDay(new Date(Date.parse(f.deleted_at) + UNDO_DAYS * 86400000).toISOString().slice(0, 10)))}</dt><dd><b>${esc(f.name)}</b>${f.pup ? ` · ${esc(f.pup)}` : ''}${f.delete_reason === 'backed_out' ? ' <span class="hint">backed out (KennelOS)</span>' : ''}
       <form method="post" action="${base}/undo/${esc(f.id)}" class="inline"><button class="link">Undo</button></form></dd>`).join('')}</dl></section>` : ''}
   ${erased.length ? `<details class="card"><summary>Erased at the family's request (${erased.length})</summary><p class="hint">Their accounts are gone; the sale records stay for your guarantee.</p>
     <dl class="kv">${erased.map((r) => `<dt>${esc(r.name)}</dt><dd><b>${esc(r.call_name || r.puppy_name)}</b>${r.picked_up_at ? ` · went home ${esc(formatAt(r.picked_up_at, s.time_zone, { weekday: false }))}` : ''}${r.proof_file_id ? ` · <a href="${base}/file/${esc(r.proof_file_id)}">vet record</a>${r.proof_accepted_at ? ' (accepted)' : ''}` : ''}${r.contract_file_id ? ` · <a href="${base}/file/${esc(r.contract_file_id)}">contract</a>` : ''} <span class="hint">erased ${esc(formatAt(r.erased_at, s.time_zone, { weekday: false }))}</span></dd>`).join('')}</dl></details>` : ''}`;
+}
+
+function familyFilters(site, on, waitlistCount) {
+  const base = `/s/${esc(site.subdomain)}/portal`;
+  return `<nav class="filters" aria-label="Show">${[['puppy', base, 'Puppy families'], ['wait', `${base}?show=waitlist`, `Waitlist${waitlistCount === null ? '' : ` (${waitlistCount})`}`]]
+    .map(([k, href, label]) => `<a href="${href}"${k === on ? ' aria-current="page"' : ''}>${label}</a>`).join('')}</nav>`;
 }
 
 function puppyOptions(puppies, current) {
@@ -540,14 +556,18 @@ function templateScreen(site, kind, items, products, url, { error } = {}) {
 // ---------- the Families and Portal tabs (plan 7.3, build chunk 6) ----------
 
 // Vet visits: each placement's status in words and time left; red only in trouble.
+// Vet visits: each placement with its status in words, red only when in trouble.
 function vetVisits(site, families, s, now = new Date()) {
   const rows = families.filter((f) => f.placement_id && f.status === 'open' && f.life_status === 'with_family');
-  if (!rows.length) return '';
-  return `<section class="card" id="vet-visits"><h2>Vet visits</h2><dl class="kv">${rows.map((f) => {
+  if (!rows.length) return '<section class="card" id="vet-visits"><h2>Vet visits</h2><p class="muted">None running. The clock starts when you mark a puppy picked up.</p></section>';
+  return `<section class="card" id="vet-visits"><h2>Vet visits</h2><ul class="list">${rows.map((f) => {
     const v = vetStatus(f, now);
-    const left = f.vet_deadline_at && clockRunning(f) && Date.parse(f.vet_deadline_at) > now.getTime() && !f.proof_uploaded_at ? ` · ${timeLeft(f.vet_deadline_at, now)} left` : '';
-    return `<dt><a href="/s/${esc(site.subdomain)}/portal/f/${esc(f.id)}">${esc(pupName(f))}</a></dt><dd><span${v.trouble ? ' class="error"' : ''}>${esc(v.word)}</span>${esc(left)} <span class="hint">${esc(f.name)}</span></dd>`;
-  }).join('')}</dl></section>`;
+    const tone = v.trouble ? 'bad' : v.word === 'Accepted' ? 'ok' : v.word === 'Record uploaded' ? 'next' : v.word === 'Not booked' && clockRunning(f) ? 'warn' : '';
+    const running = f.vet_deadline_at && clockRunning(f);
+    const when = running ? `Due ${formatAt(f.vet_deadline_at, s.time_zone, { weekday: false })}${Date.parse(f.vet_deadline_at) > now.getTime() && !f.proof_uploaded_at ? ` · ${timeLeft(f.vet_deadline_at, now)} left` : ''}`
+      : f.pickup_booked_at ? `Clock starts at pickup, ${formatAt(f.pickup_booked_at, s.time_zone, { weekday: false })}` : 'Clock starts at pickup';
+    return `<li>${roundPhoto(site.subdomain, f.photo_id, pupName(f))}<span class="grow"><a class="rowlink" href="/s/${esc(site.subdomain)}/portal/f/${esc(f.id)}"><b>${esc(pupName(f))}</b></a> · <span class="small">${esc(f.name)}</span><br><span class="small muted">${esc(when)}</span></span><span class="st${tone ? ` ${tone}` : ''}">${esc(v.word)}</span></li>`;
+  }).join('')}</ul></section>`;
 }
 
 // Activity: what families did (ticks, uploads, bookings, programs), not page views.
@@ -558,18 +578,37 @@ async function activity(env, site, s, now = new Date()) {
     WHERE h.site_id = ? AND h.changed_by = 'family' AND h.changed_at > ? AND h.new_value IS NOT NULL AND f.status = 'active' AND f.deleted_at IS NULL
     ORDER BY h.id DESC LIMIT 60`).bind(site.id, new Date(now.getTime() - 14 * 86400000).toISOString()).all();
   const rows = results.filter((h) => ACTIVITY[h.field]).slice(0, 15);
-  if (!rows.length) return '';
   const what = (h) => (h.field === 'checklist' || h.field === 'task' ? `${ACTIVITY[h.field]} ${h.new_value}` : h.field === 'program' ? h.new_value : ACTIVITY[h.field]);
-  return `<section class="card" id="activity"><h2>Activity</h2><p class="hint">What families did in the last two weeks.</p><dl class="kv">${rows.map((h) => `<dt>${esc(formatAt(h.changed_at, s.time_zone, { weekday: false }))}</dt><dd><a href="/s/${esc(site.subdomain)}/portal/f/${esc(h.family_id)}">${esc(h.name)}</a> ${esc(what(h))}</dd>`).join('')}</dl></section>`;
+  return `<section class="card" id="activity"><h2>Recent activity</h2>${rows.length
+    ? `<ul class="list">${rows.map((h) => `<li><span class="grow"><a class="rowlink" href="/s/${esc(site.subdomain)}/portal/f/${esc(h.family_id)}"><b>${esc(h.name)}</b></a><br><span class="small">${esc(what(h)).replace(/^./, (c) => c.toUpperCase())}</span></span><span class="small muted">${esc(formatAt(h.changed_at, s.time_zone, { weekday: false }))}</span></li>`).join('')}</ul>`
+    : '<p class="muted">What families do in their portal (ticks, bookings, uploads) shows here for two weeks.</p>'}</section>`;
+}
+
+// Today's lower half (the prototype's): vet visits beside recent activity.
+export async function todayLists(env, site, now = new Date()) {
+  const s = await getSettings(env, site.id);
+  const families = await listFamilies(env, site.id);
+  return `<div class="cols">${vetVisits(site, families, s, now)}${await activity(env, site, s, now)}</div>`;
 }
 
 // The Waitlist side of Families: the website's list, in order (offering a puppy stays in KennelOS).
-async function waitlistPart(env, site) {
+async function waitlistCount(env, site) {
   const linked = await env.DB.prepare('SELECT 1 FROM links WHERE site_id = ? AND revoked_at IS NULL LIMIT 1').bind(site.id).first();
-  const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM waitlist_entries WHERE site_id = ? AND status = 'waiting'").bind(site.id).first('n');
-  return `<section class="card" id="waitlist"><h2>Waitlist</h2>${linked
-    ? '<p class="muted small">Your waitlist is in KennelOS. When a family\'s contract is signed there, they arrive here to invite.</p>'
-    : `<p class="muted small">${n ? `${n} famil${n === 1 ? 'y' : 'ies'} waiting.` : 'No families waiting.'} When one signs their contract, add them as a puppy family.</p><p><a class="button" href="/s/${esc(site.subdomain)}/waitlist">Your waitlist</a></p>`}</section>`;
+  if (linked) return { linked: true, n: null };
+  return { linked: false, n: await env.DB.prepare("SELECT COUNT(*) AS n FROM waitlist_entries WHERE site_id = ? AND status = 'waiting'").bind(site.id).first('n') };
+}
+async function waitlistPart(env, site, kennel, w) {
+  const sub = esc(site.subdomain);
+  if (w.linked) {
+    return `<span class="eyebrow">${esc(kennel)}</span><h1>Families</h1>${familyFilters(site, 'wait', null)}
+      <section class="card band" id="waitlist"><h2>Waitlist</h2><p>Your waitlist is in KennelOS. When a family's contract is signed there, they arrive under Puppy families to invite.</p></section>`;
+  }
+  const { results } = await env.DB.prepare("SELECT id, name, wants, added_on FROM waitlist_entries WHERE site_id = ? AND status = 'waiting' ORDER BY sort LIMIT 100").bind(site.id).all();
+  return `<span class="eyebrow">${esc(kennel)}</span><h1>Families</h1>${familyFilters(site, 'wait', w.n)}
+    <section class="card" id="waitlist"><div class="between"><h2>Waitlist</h2><a class="button small" href="/s/${sub}/waitlist">Your waitlist</a></div>
+    ${results.length ? `<ul class="list">${results.map((x, i) => `<li><span class="grow"><b>${i + 1}. ${esc(x.name)}</b><br><span class="small muted">${x.wants ? `${esc(x.wants)} · ` : ''}on the list since ${esc(formatDay(x.added_on))}</span></span></li>`).join('')}</ul>`
+      : '<p class="muted">No families waiting.</p>'}</section>
+    <p class="small muted">The same list your website's Waitlist page shows. When a family signs their contract, add them as a puppy family and send their invite.</p>`;
 }
 
 function setupScreen(site, s) {
@@ -605,9 +644,11 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
 
   const tabs = (tab) => ({ nav: { sub: site.subdomain, tab } });
   if (!rest && !post) {
+    const kennel = full.kennel_name || site.subdomain;
+    const w = await waitlistCount(env, site);
+    if (url.searchParams.get('show') === 'waitlist') return page('Families', await waitlistPart(env, site, kennel, w), tabs('families'));
     const families = await listFamilies(env, site.id);
-    return page('Families', familiesScreen(site, families, s, url, { deleted: await recentlyDeleted(env, site.id), erased: await erasedRecords(env, site.id) })
-      + vetVisits(site, families, s) + await activity(env, site, s) + await waitlistPart(env, site), tabs('families'));
+    return page('Families', familiesScreen(site, families, s, url, { deleted: await recentlyDeleted(env, site.id), erased: await erasedRecords(env, site.id), waitlistCount: w.n, kennel }), tabs('families'));
   }
   // The Portal tab (plan 7.3): what families see, in one place.
   if (rest === '/setup' && !post) return page('Portal', setupScreen(site, s), tabs('portal'));
@@ -677,7 +718,7 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
 
   if (rest === '/new') {
     const puppies = await placeablePuppies(env, site.id);
-    if (!post) return page('Add a family', newScreen(site, puppies, s), { back: home });
+    if (!post) return page('Add a family', newScreen(site, puppies, s), { back: home, backLabel: 'Families' });
     const form = await request.formData();
     const values = Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
     let familyId = null;
@@ -698,7 +739,7 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   const [, familyId, action] = fm;
   const show = async (opts) => {
     const body = await familyScreen(env, site, familyId, url, opts);
-    return body ? page('Family', body, { back: home, status: opts?.error ? 400 : 200 }) : page('Not found', '<section class="card"><p>No such family.</p></section>', { status: 404, back: home });
+    return body ? page('Family', body, { back: home, backLabel: 'Families', status: opts?.error ? 400 : 200 }) : page('Not found', '<section class="card"><p>No such family.</p></section>', { status: 404, back: home });
   };
   if (!post) return action ? null : show();
 

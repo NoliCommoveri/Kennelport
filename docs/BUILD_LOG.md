@@ -1461,3 +1461,24 @@ answers to plan 15.
 - `CLAUDE.md`: future screens, every phase, are built from and checked against the
   prototypes in `docs/reference/`.
 - Portal files changed (`portal.css`, `portal.js`): `PORTAL_VERSION` needs its bump.
+
+## 2026-11-05: Site Manager, Today and Families in the prototype's look
+
+- On a site with the puppy portal, every Site Manager screen has the prototype's header:
+  her logo (or monogram) in a white circle, her kennel's name, and "Site Manager" under
+  it, with her account at the right. The screen's title moves onto the page, under the
+  kennel's name; a sub-screen has a crumb back ("‹ Families"). Sites without the portal
+  keep the header they had.
+- **Today:** a deep-teal band with the date, how many go home today and this week, and
+  Last from KennelOS; this week's pickups as pup cards (round photo, script name with a
+  sex badge, the family, a calendar page with the pickup time, the vet visit's status,
+  and Mark picked up on the day or Their screen before it); Needs you as small tiles with
+  an icon, red for what's gone wrong and amber for what's late; and, as the prototype has
+  them, **Vet visits** (round photos, status pills) beside **Recent activity**, moved here
+  from Families.
+- **Families:** the kennel's name and Families, with **Puppy families** and **Waitlist
+  (n)** pills (`?show=waitlist`); each family a row with the puppy's round photo, its
+  litter, going home and last active, its extras as tags, and a status pill (Active, Not
+  invited, Invite to send, Invite not accepted, No puppy yet). The waitlist side lists the
+  website's list in order, or says it's in KennelOS.
+- App files changed (`app.css`): `APP_VERSION` needs its bump, held with the portal's.

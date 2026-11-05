@@ -7,6 +7,7 @@
 @font-face { font-family: "Mulish"; src: url("/_kp/fonts/mulish-400.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
 @font-face { font-family: "Mulish"; src: url("/_kp/fonts/mulish-600.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
 @font-face { font-family: "Mulish"; src: url("/_kp/fonts/mulish-700.woff2") format("woff2"); font-weight: 700 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "Pinyon Script"; src: url("/_kp/fonts/pinyon-script-400.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
 :root { --bg: #F5F2EA; --surface: #FFFDF8; --ink: #1E1D1A; --muted: #625C51; --line: #DED7C8; --band: #ECE6D8; --accent: #34523C; --accent-ink: #fff; --brass: #7E632A; --head: #034655; --head-ink: #F5F2EA; --head-muted: #A9C9CE; --error: #A3261E; --ok: #3E7A4B; --warn: #8A5A1E; --r: 8px; --rc: 14px; --accent-soft: #E3EADF; --warn-soft: #F3E6D3; --shadow: 0 1px 2px rgba(30,29,26,.06), 0 8px 24px rgba(30,29,26,.08); --f-display: "Fraunces", Georgia, "Times New Roman", serif; --f-body: "Mulish", system-ui, -apple-system, "Segoe UI", sans-serif; color-scheme: light; }
 @media (prefers-color-scheme: dark) { :root { --bg: #141412; --surface: #1D1C19; --ink: #ECE7DC; --muted: #A9A294; --line: #35332D; --band: #1A1916; --accent: #8FB998; --accent-ink: #0F1A12; --brass: #CFAE66; --head: #0A2A31; --head-ink: #ECE7DC; --head-muted: #8FB0B5; --error: #F08A80; --ok: #86C495; --warn: #E0A65A; --accent-soft: #233127; --warn-soft: #33281A; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35); color-scheme: dark; } }
 * { box-sizing: border-box; }
@@ -199,3 +200,96 @@ body.tabbed { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   .apptabs a { flex: 0 0 auto; max-width: none; grid-template-columns: 24px 1fr; justify-items: start; align-items: center; gap: 10px; padding: 10px 12px; font-size: .9rem; }
   body.tabbed { padding-bottom: 0; padding-left: 180px; }
 }
+
+/* The portal prototype's look for her screens (docs/reference/portal-prototype.html):
+   her own header on a site with the portal, the page title on the page, Today's deep
+   band, pup cards with a calendar page, Needs you tiles, lists with round photos and
+   status pills, and Families' filters. */
+:root { --cal: #B5462F; --girl: #A8456F; --girl-soft: #F6E1EA; --boy: #2F6690; --boy-soft: #DDEAF5; --bad-soft: #F6DEDB; --tab-on: #CFE6EA; }
+@media (prefers-color-scheme: dark) { :root { --cal: #C9583F; --girl: #E79BBB; --girl-soft: #3A2430; --boy: #8DB8DE; --boy-soft: #1F2C3A; --bad-soft: #3A2220; --tab-on: #1F4A52; } }
+.brandhead { gap: 10px; }
+.brandhead .brand { display: flex; align-items: center; gap: 10px; min-width: 0; margin-right: auto; color: inherit; text-decoration: none; }
+.brandhead .logo { position: relative; width: 40px; height: 40px; flex: none; border-radius: 50%; overflow: hidden; background: #fff; color: #1E1D1A; display: grid; place-items: center; }
+.brandhead .logo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #fff; }
+.brandhead .logo .mono { font: italic 500 1rem/1 var(--f-display); letter-spacing: -.02em; }
+.brandhead .title b { font-size: 1.05rem; }
+.brandhead .title small { display: flex; align-items: center; gap: 4px; order: 2; margin-top: 2px; font-size: .62rem; letter-spacing: .13em; }
+.brandhead .title small svg.i { width: 13px; height: 13px; }
+.brandhead .hb { flex: none; width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; border: 1px solid transparent; color: var(--head-ink); }
+.brandhead .hb:hover { border-color: var(--head-muted); }
+.brandhead .hb svg.i { width: 26px; height: 26px; }
+.pagehead { display: grid; gap: 2px; padding-top: 4px; }
+.pagehead h1, main > h1 { margin: 0; font-size: 1.7rem; }
+main > .eyebrow { margin-bottom: -8px; }
+.crumb { font-size: .86rem; font-weight: 700; margin: 0; }
+.crumb a { text-decoration: none; }
+.stack { display: grid; gap: 8px; }
+.between { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.between > p { flex: 1 1 14rem; }
+.card.band { background: var(--band); border-color: transparent; }
+.button.small, button.small { min-height: 36px; padding: 5px 12px; font-size: .82rem; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.st { display: inline-flex; align-items: center; gap: 5px; font-size: .7rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.st::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.st.ok { color: var(--ok); } .st.warn { color: var(--warn); } .st.bad { color: var(--error); } .st.next { color: var(--accent); }
+.feedline { display: inline-flex; align-items: center; gap: 5px; font-size: .78rem; }
+.feedline svg.i { width: 15px; height: 15px; }
+
+/* Today: the deep band, edge to edge on a phone. */
+.sec.deep { background: var(--head); color: var(--head-ink); padding: 18px max(10px, env(safe-area-inset-left, 0px)) 20px; display: grid; gap: 6px; }
+.sec.deep .eyebrow { color: #E9C77E; }
+.sec.deep h1 { margin: 0; font-size: 2rem; color: inherit; }
+.sec.deep .small, .sec.deep .feedline { opacity: .85; }
+.bleed { margin: -12px calc(-1 * max(10px, env(safe-area-inset-left, 0px))) 0; }
+@media (min-width: 760px) { .bleed { margin: 0; border-radius: var(--rc); } }
+
+/* Pup cards: a framed round photo, the name in script with a sex badge, the family,
+   a calendar page with the pickup time and the vet visit, and Mark picked up. */
+.bento { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 900px) { .bento { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.pupcard { min-width: 0; display: grid; justify-items: center; align-content: start; gap: 5px; text-align: center; padding: 14px 10px; border-radius: var(--rc); background: var(--surface); border: 1px solid var(--line); }
+.round { width: 4.4rem; height: 4.4rem; border-radius: 50%; object-fit: cover; flex: none; }
+.round.ph { display: grid; place-items: center; background: var(--band); color: var(--brass); }
+.round.ph svg.i { width: 40%; height: 40%; }
+.pupcard .round { border: 3px solid var(--surface); box-shadow: 0 0 0 2px var(--line); }
+.pname { font-family: "Pinyon Script", var(--f-display); font-size: 1.7rem; line-height: 1.05; display: inline-flex; align-items: center; gap: 6px; color: var(--ink); text-decoration: none; }
+.sex { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font: 700 .85rem/1 var(--f-body); }
+.sex.girl { background: var(--girl-soft); color: var(--girl); } .sex.boy { background: var(--boy-soft); color: var(--boy); }
+.calrow { display: flex; gap: 10px; align-items: center; text-align: left; }
+.calpage { width: 3.4rem; flex: none; border-radius: 10px; overflow: hidden; background: var(--surface); color: var(--ink); text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,.18); display: grid; }
+.calpage b { background: var(--cal); color: #fff; font-size: .64rem; letter-spacing: .12em; text-transform: uppercase; padding: 3px 0; }
+.calpage span { font: 500 1.6rem/1.1 var(--f-display); padding-top: 2px; }
+.calpage i { font-style: normal; font-size: .6rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding-bottom: 4px; }
+.pupcard form { display: block; }
+.pupcard .when { display: grid; font-size: .9rem; font-weight: 600; }
+.pupcard .when b { font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--cal); }
+.pupcard .st { white-space: normal; }
+main { overflow-x: clip; }
+
+/* Needs you: small tiles, an icon in a tinted square, red or amber when it's late. */
+.needs { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 8px; }
+#needs-you.stack { border-left: 0; }
+.need { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: center; padding: 11px; border-radius: var(--rc); background: var(--surface); border: 1px solid var(--line); color: var(--ink); text-decoration: none; }
+.need:hover { box-shadow: var(--shadow); }
+.need .ic { grid-row: span 2; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.need.warn .ic { background: var(--warn-soft); color: var(--warn); }
+.need.bad .ic { background: var(--bad-soft); color: var(--error); }
+.need b { font-size: .86rem; line-height: 1.2; }
+.need span:last-child { font-size: .76rem; color: var(--muted); line-height: 1.25; }
+.cols { display: grid; gap: 10px; }
+@media (min-width: 1100px) { .cols { grid-template-columns: 3fr 2fr; align-items: start; } }
+
+/* Lists with round photos and a status pill (Families, vet visits, activity). */
+.list { list-style: none; margin: 0; padding: 0; }
+.list > li { padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.list > li:last-child { border-bottom: 0; }
+.list .grow { flex: 1 1 11rem; min-width: 0; }
+.list .round { width: 2.8rem; height: 2.8rem; }
+.list a.rowlink { color: inherit; text-decoration: none; }
+.list a.rowlink:hover b { text-decoration: underline; }
+.tag { display: inline-block; font-size: .68rem; font-weight: 800; letter-spacing: .04em; padding: 2px 8px; border-radius: 20px; background: var(--band); color: var(--brass); margin: 4px 4px 0 0; }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.filters a { font-weight: 700; font-size: .84rem; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 20px; padding: 7px 14px; text-decoration: none; }
+.filters a[aria-current] { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.apptabs a[aria-current] { background: var(--tab-on); color: var(--head); }
+@media (prefers-color-scheme: dark) { .apptabs a[aria-current] { color: var(--head-ink); } }

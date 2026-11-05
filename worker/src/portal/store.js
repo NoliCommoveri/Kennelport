@@ -194,8 +194,11 @@ export async function familyEmails(env, familyId) {
 export async function listFamilies(env, siteId) {
   const { results } = await env.DB.prepare(`SELECT f.id, f.name, f.invited_at, f.first_signed_in_at, f.last_activity_at, f.kennelos_id,
       p.id AS placement_id, p.puppy_name, p.call_name, p.go_home_on, p.pickup_booked_at, p.picked_up_at, p.pickup_state, p.vet_deadline_at,
-      p.vet_booked_at, p.proof_uploaded_at, p.proof_accepted_at, p.status, p.life_status
+      p.vet_booked_at, p.proof_uploaded_at, p.proof_accepted_at, p.status, p.life_status, p.vet_booked_for,
+      pu.photo_id, pu.sex, l.name AS litter_name,
+      (SELECT GROUP_CONCAT(x.name, '|') FROM portal_placement_extras x WHERE x.placement_id = p.id AND x.confirmed_at IS NOT NULL) AS extras
     FROM portal_families f LEFT JOIN portal_placements p ON p.family_id = f.id AND p.status = 'open'
+      LEFT JOIN puppies pu ON pu.id = p.puppy_id LEFT JOIN litters l ON l.id = pu.litter_id
     WHERE f.site_id = ? AND f.status = 'active' AND f.deleted_at IS NULL ORDER BY COALESCE(p.go_home_on, '9999'), f.name`).bind(siteId).all();
   return results;
 }
