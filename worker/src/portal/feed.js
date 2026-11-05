@@ -139,6 +139,9 @@ function list(name, v, path, max) {
 
 const TOP = ['format', 'feed_id', 'kennel_id', 'sent_at', 'families', 'vet', 'removed'];
 
+// For the linked sample's coverage test (tests/fixtures/linked-sample).
+export { SHAPES as FEED_SHAPES, TOP as FEED_TOP };
+
 export function cleanFeed(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw bad('feed', 'must be an object');
   if (body.format !== FEED_FORMAT) throw new ApiError(400, 'bad_format', { message: `KennelPort takes family feed format ${FEED_FORMAT}.` });
