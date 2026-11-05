@@ -1,6 +1,6 @@
 // The page around every "ak" page: <head> with title, description, share
 // preview (Open Graph) and structured data; the header and menu; the footer.
-import { esc, attr, menuGroups, photoUrl, label, pageOn, payShown, familyLogin } from './parts.js';
+import { esc, attr, menuGroups, photoUrl, label, pageOn, payShown, familyLogin, word } from './parts.js';
 
 import { ASSET_VERSION } from './version.js';
 import { schemeOf, schemeFile, preloadFont, ORNAMENTS } from './schemes.js';
@@ -54,7 +54,7 @@ function header(snap, ctx) {
   }).join('');
   // Family login (plan 3.8): beside the Waitlist button (familyLogin says where).
   const fl = familyLogin(snap, ctx);
-  const login = fl ? `<li><a class="navtop" href="${attr(fl.href)}"${fl.external ? ' rel="noopener noreferrer" target="_blank"' : ''}>Family login</a></li>` : '';
+  const login = fl ? `<li><a class="navtop" href="${attr(fl.href)}"${fl.external ? ' rel="noopener noreferrer" target="_blank"' : ''}>${esc(word(snap, 'family_login'))}</a></li>` : '';
   const withLogin = login && items.includes('class="btn solid"') ? items.replace(/<li><a class="btn solid"/, `${login}<li><a class="btn solid"`) : items + login;
   return `<header class="site"><div class="wrap bar">
     ${headerBrand(snap)}
@@ -69,12 +69,12 @@ function footer(snap, ctx) {
   const cols = [
     ['About us', groups.find((g) => g.key === 'about')?.links ?? []],
     ['Dogs and puppies', [...(groups.find((g) => g.key === 'residents')?.links.slice(0, 1) ?? []), ...(groups.find((g) => g.key === 'puppies')?.links ?? [])]],
-    ['Buying a puppy', [...(groups.find((g) => g.key === 'how')?.links ?? []), ...(pageOn(snap, 'waitlist', ctx) ? [{ href: '/waitlist', text: label(snap, 'waitlist') }] : []), ...(payShown(snap, ctx) ? [{ href: '/waitlist#how-to-pay', text: 'How to pay' }] : []), ...(familyLogin(snap, ctx) ? [{ ...familyLogin(snap, ctx), text: 'Family login' }] : [])]],
+    ['Buying a puppy', [...(groups.find((g) => g.key === 'how')?.links ?? []), ...(pageOn(snap, 'waitlist', ctx) ? [{ href: '/waitlist', text: label(snap, 'waitlist') }] : []), ...(payShown(snap, ctx) ? [{ href: '/waitlist#how-to-pay', text: 'How to pay' }] : []), ...(familyLogin(snap, ctx) ? [{ ...familyLogin(snap, ctx), text: word(snap, 'family_login') }] : [])]],
   ].filter(([, links]) => links.length);
   return `<footer class="site"><div class="wrap">
     <div class="foot-brand">${footerBrand(snap)}${snap.site.blurb ? `<p class="small">${esc(snap.site.blurb)}</p>` : ''}</div>
     ${cols.map(([h, links]) => `<div><h4>${esc(h)}</h4><ul>${links.map((l) => `<li><a href="${attr(l.href)}"${l.external ? ' rel="noopener noreferrer" target="_blank"' : ''}>${esc(l.text)}</a></li>`).join('')}</ul></div>`).join('')}
-    <div class="fine"><span>© ${esc(year)} ${esc(snap.site.kennel_name)} · <a href="/privacy">Privacy</a></span><span>Made with <a href="https://kennelport.com/">KennelPort</a> · <a href="https://kennelport.com/terms">Terms</a></span></div>
+    <div class="fine"><span>${esc(word(snap, 'copyright', { year, kennel: snap.site.kennel_name }))} · <a href="/privacy">Privacy</a></span><span>Made with <a href="https://kennelport.com/">KennelPort</a> · <a href="https://kennelport.com/terms">Terms</a></span></div>
   </div></footer>`;
 }
 

@@ -3,32 +3,69 @@
 import { escapeHtml as esc } from '../lib/html.js';
 import { MENU_GROUPS, PAGES } from '../content/model.js';
 import { puppyPrice, litterPriceRange, depositRange } from '../content/prices.js';
+import { DEFAULT_RULES, DEFAULT_TIMING, ruleKey, addDays } from '../content/rules.js';
 
 export { esc };
 export const attr = esc;
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+// The site's formats (content/rules.js, rules.format): dates, sex words, money.
+// Rendering is synchronous, so renderPage sets them once per page (useFormats)
+// rather than passing the snapshot to every date; with none set, today's.
+let F = DEFAULT_RULES.format;
+export function useFormats(snap) { F = { ...DEFAULT_RULES.format, ...(snap?.rules?.format ?? {}) }; }
+
 export function fmtDate(ymd) {
   if (!ymd) return '';
   const [y, m, d] = ymd.split('-').map(Number);
-  return `${MONTHS[m - 1]} ${d}, ${y}`;
+  if (F.date === 'dmy') return `${d} ${MONTHS[m - 1]} ${y}`;
+  return `${F.date === 'short' ? MONTHS[m - 1].slice(0, 3) : MONTHS[m - 1]} ${d}, ${y}`;
 }
 // "December 12": a date this year or next, where the year goes without saying.
 export function fmtDay(ymd) {
   if (!ymd) return '';
   const [, m, d] = ymd.split('-').map(Number);
-  return `${MONTHS[m - 1]} ${d}`;
+  if (F.day === 'dm') return `${d} ${MONTHS[m - 1]}`;
+  return `${F.day === 'short' ? MONTHS[m - 1].slice(0, 3) : MONTHS[m - 1]} ${d}`;
 }
 export function fmtMonth(ym) {
   if (!ym) return '';
   const [y, m] = ym.split('-').map(Number);
-  return `${MONTHS[m - 1]} ${y}`;
+  return `${F.date === 'short' ? MONTHS[m - 1].slice(0, 3) : MONTHS[m - 1]} ${y}`;
 }
-const money = (n) => `$${Number(n).toLocaleString('en-US')}`;
-export function priceText(from, to) {
+// A dog's or pup's sex, and a count of them ("2 girls, 1 boy").
+export const sexWord = (sex) => (F.sex === 'girl_boy' ? (sex === 'female' ? 'Girl' : 'Boy') : (sex === 'female' ? 'Female' : 'Male'));
+const sexCount = (sex, n) => {
+  const w = F.counts === 'females_males' ? (sex === 'female' ? 'female' : 'male') : (sex === 'female' ? 'girl' : 'boy');
+  return `${n} ${w}${n === 1 ? '' : 's'}`;
+};
+const money = (n) => {
+  const num = Number(n).toLocaleString('en-US', F.cents ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : {});
+  return F.currency_after ? `${num} ${F.currency}` : `${F.currency}${num}`;
+};
+// A price, or a range: "$2,500–$3,000", or "From $2,500" with the site's rule.
+export function priceText(from, to, style = 'range') {
   if (from == null) return '';
-  return to != null && to !== from ? `${money(from)}–${money(to)}` : money(from);
+  if (to == null || to === from) return money(from);
+  return style === 'from' ? `From ${money(from)}` : `${money(from)}–${money(to)}`;
 }
+
+// ---------- the site's display and timing rules (content/rules.js) ----------
+
+// From the snapshot; one built before rules existed shows today's behaviour.
+export const rulesOf = (snap) => snap.rules ?? DEFAULT_RULES;
+// A line of the site's fixed wording (rules.words), with its {name} and the like
+// filled in. Escape it like any other text.
+export function word(snap, key, vars = {}) {
+  const w = rulesOf(snap).words?.[key] ?? DEFAULT_RULES.words[key] ?? '';
+  return w.replace(/\{(\w+)\}/g, (m, v) => (v in vars ? String(vars[v]) : m));
+}
+export const timingOf = (snap) => snap.timing ?? DEFAULT_TIMING;
+// The rule for a puppy's status.
+export const statusRule = (snap, p) => rulesOf(snap).status[ruleKey(p.status)] ?? DEFAULT_RULES.status.hidden;
+// What replaces a price where prices are off.
+export const pricesOff = (snap) => rulesOf(snap).price.off;
+export const sitePrice = (snap, from, to) => priceText(from, to, rulesOf(snap).price.style);
 
 // Paragraphs from multi-line text.
 export const paras = (text) => String(text ?? '').split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)
@@ -82,11 +119,11 @@ export function menuGroups(snap, ctx) {
       // Sub-links that are places within a page.
       const breeding = dogGroups(snap).breeding;
       if (key === 'dogs' && breeding.some((d) => d.sex === 'female') && breeding.some((d) => d.sex === 'male')) {
-        links.push({ key, href: '/dogs#girls', text: 'Girls' }, { key, href: '/dogs#boys', text: 'Boys' });
+        links.push({ key, href: '/dogs#girls', text: word(snap, 'girls') }, { key, href: '/dogs#boys', text: word(snap, 'boys') });
       }
       if (key === 'litters') {
-        const current = snap.litters.some((l) => l.stage === 'current' && !depositsAhead(l, ctx.today));
-        const planned = snap.litters.some((l) => l.stage === 'planned' || depositsAhead(l, ctx.today));
+        const current = snap.litters.some((l) => l.stage === 'current' && !depositsAhead(snap, l, ctx.today));
+        const planned = snap.litters.some((l) => l.stage === 'planned' || depositsAhead(snap, l, ctx.today));
         links.pop();
         if (current) links.push({ key, href: '/litters#available', text: 'Available' });
         if (planned) links.push({ key, href: '/litters#upcoming', text: 'Upcoming litters' });
@@ -102,39 +139,45 @@ export function menuGroups(snap, ctx) {
 
 // 'coming_soon' is stored, and reads "Still deciding" (plan 3.6, decision 32): she
 // may keep the puppy, place it privately or never offer it, so the site promises
-// nothing.
+// nothing. The Site Manager's own words for a status; the site reads its rules.
 export const STATUS_TEXT = { available: 'Available', reserved: 'Reserved', placed: 'Reserved', staying: 'Joining our program', coming_soon: 'Still deciding' };
 
-const isPast = (ymd, today) => Boolean(ymd) && ymd < today;
+// The day deposits open: the litter's deposits date, moved by the site's timing rule.
+const depositsOpen = (snap, l) => (l.deposits_on ? addDays(l.deposits_on, timingOf(snap).deposits_after) : null);
 
-// A born litter whose deposits date is still ahead (plan 5.3): it sits under
-// Coming up, and its Available puppies read "Available on <date>". The site moves
-// it on the day, from the published snapshot.
-export const depositsAhead = (l, today) => l.stage === 'current' && Boolean(l.deposits_on) && l.deposits_on > today;
+// A born litter whose deposits don't open yet (plan 5.3): it sits under Coming up,
+// and its Available puppies read "Available on <date>". The site moves it on the
+// day, from the published snapshot.
+export const depositsAhead = (snap, l, today) => l.stage === 'current' && Boolean(l.deposits_on) && depositsOpen(snap, l) > today;
+
+// A current litter past its going-home date, by the site's timing rule (today: from
+// the day after): its available puppies are older puppies, and it is "Ready now".
+const pastReady = (snap, l, today) => l.stage === 'current' && Boolean(l.ready_on) && !depositsAhead(snap, l, today)
+  && addDays(l.ready_on, timingOf(snap).older_after) <= today;
 
 // What a puppy's status says, on its card and page.
-export function puppyStatus(l, p, today) {
-  if (p.status === 'available' && depositsAhead(l, today)) return `Available on ${fmtDay(l.deposits_on)}`;
-  return STATUS_TEXT[p.status] ?? '';
+export function puppyStatus(snap, l, p, today) {
+  if (p.status === 'available' && depositsAhead(snap, l, today)) return rulesOf(snap).price.before.replace('{date}', fmtDay(depositsOpen(snap, l)));
+  return statusRule(snap, p).words;
 }
 
-// A puppy's price line: only an Available one, and only with the litter's Show
-// prices on (plan 3.2). Reserved, placed, staying and still-deciding puppies show
-// none.
-export function puppyPriceText(l, p) {
-  if (p.status !== 'available') return '';
-  if (!l.show_prices) return 'Contact us for pricing';
+// A puppy's price line: only for a status whose rule shows a price (today
+// Available only), and only with the litter's Show prices on (plan 3.2).
+export function puppyPriceText(snap, l, p) {
+  if (!statusRule(snap, p).price) return '';
+  if (!l.show_prices) return pricesOff(snap);
   const r = puppyPrice(l, p);
-  return r ? priceText(r.from, r.to) : '';
+  return r ? sitePrice(snap, r.from, r.to) : '';
 }
 
 // The litter's own price rows: a range across its sexes, and the deposit.
-export function litterPriceRows(l) {
+export function litterPriceRows(snap, l) {
+  const P = rulesOf(snap).price;
   if (l.stage === 'past') return [];
-  if (!l.show_prices) return [['Price', 'Contact us for pricing']];
+  if (!l.show_prices) return [[P.price_label, P.off]];
   const r = litterPriceRange(l);
   const d = depositRange(l);
-  return [['Price', r && priceText(r.from, r.to)], ['Deposit', d && priceText(d.from, d.to)]];
+  return [[P.price_label, r && sitePrice(snap, r.from, r.to)], [P.deposit_label, d && sitePrice(snap, d.from, d.to)]];
 }
 
 // The Dogs page's groups (plan 3.7), from each dog's status: the breeding dogs
@@ -165,18 +208,20 @@ export function partnerLogo(snap, k, cls = 'plogo') {
 // Its name, linked to its website when it has one.
 export const partnerLink = (k) => (k.url ? `<a href="${attr(k.url)}" rel="noopener">${esc(k.name)}</a>` : esc(k.name));
 
-// Available puppies past their litter's going-home date (plan 3.11).
+// Available puppies past their litter's going-home date (plan 3.11): the statuses
+// whose rule lets them be older puppies (today Available only).
 export function olderPuppies(snap, today) {
   const out = [];
   for (const l of snap.litters) {
-    if (l.stage !== 'current' || !isPast(l.ready_on, today) || depositsAhead(l, today)) continue;
-    for (const p of l.puppies) if (p.status === 'available') out.push({ litter: l, puppy: p });
+    if (!pastReady(snap, l, today)) continue;
+    for (const p of l.puppies) if (statusRule(snap, p).older) out.push({ litter: l, puppy: p });
   }
   return out;
 }
 
-const HELD = ['reserved', 'placed'];
-export const sortPuppies = (pups) => [...pups].sort((a, b) => HELD.includes(a.status) - HELD.includes(b.status));
+// A litter's puppies in the order its rules give their statuses (today reserved
+// and placed last); equal keeps the breeder's order.
+export const sortPuppies = (snap, pups) => [...pups].sort((a, b) => statusRule(snap, a).order - statusRule(snap, b).order);
 
 export function parentName(snap, l, role) {
   const id = l[`${role}_id`];
@@ -195,8 +240,7 @@ export function pairNames(snap, l) {
 function counts(pups) {
   const g = pups.filter((p) => p.sex === 'female').length;
   const b = pups.filter((p) => p.sex === 'male').length;
-  const part = (n, one, many) => (n ? `${n} ${n === 1 ? one : many}` : null);
-  return [part(g, 'girl', 'girls'), part(b, 'boy', 'boys')].filter(Boolean).join(', ') || 'Expected';
+  return [g && sexCount('female', g), b && sexCount('male', b)].filter(Boolean).join(', ') || 'Expected';
 }
 
 // A parent's picture, or its initial in a circle.
@@ -208,13 +252,13 @@ function parentPhoto(snap, l, role) {
 }
 
 // A litter's facts, as its card lists them: [label, value] rows, blanks included.
-export function litterRows(l, ctx) {
-  const ahead = depositsAhead(l, ctx.today);
-  const older = l.stage === 'current' && !ahead && isPast(l.ready_on, ctx.today);
+export function litterRows(snap, l, ctx) {
+  const ahead = depositsAhead(snap, l, ctx.today);
+  const older = pastReady(snap, l, ctx.today);
   return (l.stage === 'planned'
     ? [['Expected', l.expected_label], ['Going home', l.ready_label]]
-    : [['Born', fmtDate(l.born_on)], ['Deposits from', ahead ? fmtDate(l.deposits_on) : null], ['Puppies', l.puppies.length ? l.puppies.map((p) => p.name).length <= 2 ? l.puppies.map((p) => p.name).join(', ') : counts(l.puppies) : null],
-      ['Going home', older ? 'Ready now' : fmtDate(l.ready_on)]]).concat(litterPriceRows(l));
+    : [['Born', fmtDate(l.born_on)], ['Deposits from', ahead ? fmtDate(depositsOpen(snap, l)) : null], ['Puppies', l.puppies.length ? l.puppies.map((p) => p.name).length <= 2 ? l.puppies.map((p) => p.name).join(', ') : counts(l.puppies) : null],
+      ['Going home', older ? word(snap, 'ready_now') : fmtDate(l.ready_on)]]).concat(litterPriceRows(snap, l));
 }
 
 const kvList = (rows) => `<dl class="kv">${rows.filter(([, v]) => v).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`;
@@ -246,16 +290,17 @@ export function parentCards(snap, l) {
 // The litter's facts on its page: its card's (deposits, going home, prices), less
 // the birth date, which heads the page. Its puppies, which have their own cards
 // below, are counted by sex under Going home ("2 girls, 1 boy").
-export function litterFacts(l, ctx) {
+export function litterFacts(snap, l, ctx) {
+  const P = rulesOf(snap).price;
   const rows = [];
-  for (const [k, v] of litterRows(l, ctx)) {
+  for (const [k, v] of litterRows(snap, l, ctx)) {
     if (!v || k === 'Born' || k === 'Puppies') continue;
     rows.push([k, v]);
     if (k === 'Going home' && l.puppies.length) rows.push(['Puppies', counts(l.puppies)]);
   }
   // No going-home date yet: the count goes before the prices.
   if (l.puppies.length && !rows.some(([k]) => k === 'Puppies')) {
-    const at = rows.findIndex(([k]) => k === 'Price' || k === 'Deposit');
+    const at = rows.findIndex(([k]) => k === P.price_label || k === P.deposit_label);
     rows.splice(at < 0 ? rows.length : at, 0, ['Puppies', counts(l.puppies)]);
   }
   return rows.length ? `<div class="litter litter-facts">${kvList(rows)}</div>` : '';
@@ -263,13 +308,14 @@ export function litterFacts(l, ctx) {
 
 export function litterCard(snap, l, ctx, { link = true } = {}) {
   const parent = (role) => parentPhoto(snap, l, role);
-  const ahead = depositsAhead(l, ctx.today);
-  const older = l.stage === 'current' && !ahead && isPast(l.ready_on, ctx.today);
-  const eyebrow = l.stage === 'planned' ? (l.plan_label || 'Planned litter') : l.stage === 'past' ? 'Past litter' : ahead ? 'Coming up' : older ? 'Older puppies' : 'Current litter';
-  const rows = litterRows(l, ctx);
+  const ahead = depositsAhead(snap, l, ctx.today);
+  const older = pastReady(snap, l, ctx.today);
+  const eyebrow = l.stage === 'planned' ? (l.plan_label || word(snap, 'litter_planned')) : l.stage === 'past' ? word(snap, 'litter_past')
+    : ahead ? word(snap, 'litter_coming') : older ? word(snap, 'litter_older') : word(snap, 'litter_current');
+  const rows = litterRows(snap, l, ctx);
   const more = !link ? '' : l.stage === 'planned'
-    ? (pageOn(snap, 'waitlist', ctx) ? '<a class="more" href="/waitlist">See the waitlist</a>' : '')
-    : `<a class="more" href="/litters/${attr(l.slug)}">Meet the puppies</a>`;
+    ? (pageOn(snap, 'waitlist', ctx) ? `<a class="more" href="/waitlist">${esc(word(snap, 'see_waitlist'))}</a>` : '')
+    : `<a class="more" href="/litters/${attr(l.slug)}">${esc(word(snap, 'meet_puppies'))}</a>`;
   return `<article class="litter"><span class="eyebrow">${esc(eyebrow)}</span>
     <div class="pair">${parent('dam')}<span class="x">×</span>${parent('sire')}<div class="names"><b>${esc(l.name)}</b><span class="small muted">${esc(pairNames(snap, l))}</span></div></div>
     ${kvList(rows)}${l.summary && l.stage === 'planned' ? `<p class="small muted">${esc(l.summary)}</p>` : ''}${more}</article>`;
@@ -287,14 +333,14 @@ export function dogCard(snap, d, { sale = null } = {}) {
   // set), else its details.
   const tests = d.health.length
     ? `${registry || weight ? `<ul class="tests">${registry}${weight}</ul>` : ''}<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${esc(h.result)}</span></li>`).join('')}</ul>`
-    : `<span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${d.sex === 'female' ? 'Female' : 'Male'}</span></li>${d.color ? `<li><span>Color</span><span>${esc(d.color)}</span></li>` : ''}${weight}${registry}</ul>`;
+    : `<span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sexWord(d.sex)}</span></li>${d.color ? `<li><span>Color</span><span>${esc(d.color)}</span></li>` : ''}${weight}${registry}</ul>`;
   const line = [snap.site.breed, d.role].filter(Boolean).join(' · ');
   return `<div class="flip" tabindex="0" role="button" aria-label="${attr(d.call_name)}: turn the card over">
     <div class="flip-in">
       <div class="face front">${photo}<span class="turn" aria-hidden="true">↻</span>
         <div class="cap"><span class="call">${esc(d.call_name)}</span>${d.registered_name ? `<span class="reg">${esc(d.registered_name)}</span>` : ''}<span class="line1"><span>${esc(line)}</span>${d.titles ? `<span>${esc(d.titles)}</span>` : ''}</span></div></div>
       <div class="face back">${bg}<span class="call">${esc(d.call_name)}</span>${d.registered_name ? `<span class="reg">${esc(d.registered_name)}</span>` : ''}
-        ${tests}${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''}${sale ? `${sale.price ? `<p class="small">${esc(sale.price)}</p>` : ''}<a class="more" href="${attr(sale.ask)}">Ask about ${esc(d.call_name)}</a>` : ''}<a class="more" href="/dogs/${attr(d.slug)}">View profile</a></div>
+        ${tests}${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''}${sale ? `${sale.price ? `<p class="small">${esc(sale.price)}</p>` : ''}<a class="more" href="${attr(sale.ask)}">${esc(word(snap, 'ask_dog', { name: d.call_name }))}</a>` : ''}<a class="more" href="/dogs/${attr(d.slug)}">View profile</a></div>
     </div></div>`;
 }
 
@@ -303,29 +349,33 @@ export function dogCard(snap, d, { sale = null } = {}) {
 export function coCard(snap, d) {
   const photo = img(snap, d.photo_id, { alt: d.call_name, thumb: true }) ?? '<div class="ph-photo">Photo coming soon</div>';
   const k = partnerOf(snap, d.lives_with_kennel_id);
-  const line = [d.sex === 'female' ? 'Female' : 'Male', d.role].filter(Boolean).join(' · ');
+  const line = [sexWord(d.sex), d.role].filter(Boolean).join(' · ');
   return `<a class="cocard" href="/dogs/${attr(d.slug)}">${photo}<span class="cobody"><span class="call">${esc(d.call_name)}</span><span class="small muted">${esc(line)}</span>
     <span class="cowith">${k ? `${partnerLogo(snap, k)}<span>with ${esc(k.name)}</span>` : '<span>Lives with a partner kennel</span>'}</span></span></a>`;
 }
 
-export const REG_WORDS = { limited: 'Limited', full: 'Full' };
-
 // A litter with "Families can ask about full registration" on (its own setting):
 // each of its undecided puppies (no registration set: she'd sell it either way)
 // links to the contact form with it filled in, and so does the litter while it has
-// one. Never for a puppy staying here, and only while the contact page is on.
-const undecided = (p) => !p.registration && p.status !== 'staying';
+// one. Only for statuses whose rule allows it (today all but staying: a puppy
+// staying here is for no one), and only while the contact page is on.
+const undecided = (snap, p) => !p.registration && statusRule(snap, p).fullreg;
 
-// What a puppy's Registration line says. A puppy she hasn't settled reads
-// **Limited**, like the limited puppy it will almost certainly be, and is priced
-// that way (content/prices.js): a blank line told a family nothing, and a range
-// to full read as a higher price they might have to pay. She can still be asked
-// about full registration, where the litter's tick allows it, and the surcharge
-// shows under that link. A puppy staying here is for no one, so it says nothing.
-export const regText = (p) => (p.registration ? REG_WORDS[p.registration] : (undecided(p) ? REG_WORDS.limited : null));
+// What a puppy's Registration line says, in the site's words. A puppy she hasn't
+// settled reads **Limited** by default, like the limited puppy it will almost
+// certainly be, and is priced that way (content/prices.js): a blank line told a
+// family nothing, and a range to full read as a higher price they might have to
+// pay. She can still be asked about full registration, where the litter's tick
+// allows it, and the surcharge shows under that link. A puppy of a status that
+// can't be asked about it (staying, by default) says nothing.
+export function regText(snap, p) {
+  const R = rulesOf(snap).reg;
+  if (p.registration) return R[p.registration] ?? null;
+  return undecided(snap, p) ? R.unset || null : null;
+}
 export function fullRegHref(snap, l, p, ctx) {
   if (!l.ask_full_reg || !pageOn(snap, 'contact', ctx)) return null;
-  if (p ? !undecided(p) : !l.puppies.some(undecided)) return null;
+  if (p ? !undecided(snap, p) : !l.puppies.some((x) => undecided(snap, x))) return null;
   return `/contact?full-reg=${encodeURIComponent(l.slug)}${p ? `&puppy=${encodeURIComponent(p.slug)}` : ''}#message`;
 }
 // The litter's full-registration surcharge, shown under those links while its Show
@@ -351,7 +401,7 @@ export function fullRegSurchargeRow(snap, l, p, ctx, style = 'tests') {
 
 export function fullRegLink(snap, l, p, ctx, cls) {
   const href = fullRegHref(snap, l, p, ctx);
-  return href ? `<a class="${cls}" href="${attr(href)}">Ask about full registration</a>` : '';
+  return href ? `<a class="${cls}" href="${attr(href)}">${esc(rulesOf(snap).reg.ask)}</a>` : '';
 }
 
 // The contact form's About line from a full-registration link, made from the
@@ -367,14 +417,15 @@ export function fullRegTopic(snap, ctx, params) {
 export function puppyCard(snap, l, p, ctx) {
   const photo = img(snap, p.photo_id, { alt: p.name }) ?? '<div class="ph-photo">Photos coming soon</div>';
   const bg = img(snap, p.photo_id, { alt: '', cls: 'bg', thumb: true }) ?? '';
-  const sex = p.sex === 'female' ? 'Female' : 'Male';
-  const held = HELD.includes(p.status);
-  const status = puppyStatus(l, p, ctx.today);
-  const price = puppyPriceText(l, p);
+  const sex = sexWord(p.sex);
+  const rule = statusRule(snap, p);
+  const status = puppyStatus(snap, l, p, ctx.today);
+  const price = puppyPriceText(snap, l, p);
+  const priceLabel = rulesOf(snap).price.price_label;
   const reg = [l.name, p.collar].filter(Boolean).join(' · ');
-  const regWord = regText(p);
-  const action = (p.status === 'available'
-    ? (pageOn(snap, 'waitlist', ctx) ? '<a class="more" href="/waitlist">Ask about this puppy</a>' : '<a class="more" href="/contact">Ask about this puppy</a>')
+  const regWord = regText(snap, p);
+  const action = (rule.ask
+    ? `<a class="more" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">${esc(word(snap, 'ask_puppy'))}</a>`
     : '') + fullRegLink(snap, l, p, ctx, 'more') + fullRegSurchargeRow(snap, l, p, ctx);
   // Its own page, whatever its status, the way a dog card links to its profile. Only
   // with the Puppies page on, which the puppy route needs (render/index.js): the
@@ -383,10 +434,10 @@ export function puppyCard(snap, l, p, ctx) {
     ? `<a class="more" href="/litters/${attr(l.slug)}/${attr(p.slug)}">View profile</a>` : '';
   return `<div class="flip" tabindex="0" role="button" aria-label="${attr(p.name)}: turn the card over">
     <div class="flip-in">
-      <div class="face front">${held ? `<span class="ribbon">${esc(status)}</span>` : ''}${photo}<span class="turn" aria-hidden="true">↻</span>
-        <div class="cap"><span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span><span class="line1"><span>${esc([sex, p.color].filter(Boolean).join(' · '))}</span><span class="status ${p.status === 'available' ? 'avail' : 'res'}">${esc(status)}</span></span></div></div>
+      <div class="face front">${rule.ribbon && status ? `<span class="ribbon">${esc(status)}</span>` : ''}${photo}<span class="turn" aria-hidden="true">↻</span>
+        <div class="cap"><span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span><span class="line1"><span>${esc([sex, p.color].filter(Boolean).join(' · '))}</span><span class="status ${attr(rule.pill)}">${esc(status)}</span></span></div></div>
       <div class="face back">${bg}<span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span>
-        <span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li>${regWord ? `<li><span>Registration</span><span>${regWord}</span></li>` : ''}${p.registry ? `<li><span>Registry</span><span>${esc(p.registry)}</span></li>` : ''}${price ? `<li><span>Price</span><span>${esc(price)}</span></li>` : ''}</ul>
+        <span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li>${regWord ? `<li><span>Registration</span><span>${esc(regWord)}</span></li>` : ''}${p.registry ? `<li><span>Registry</span><span>${esc(p.registry)}</span></li>` : ''}${price ? `<li><span>${esc(priceLabel)}</span><span>${esc(price)}</span></li>` : ''}</ul>
         ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}${action}${profile}</div>
     </div></div>`;
 }
@@ -478,14 +529,14 @@ export const ICONS = {
 // ---------- how to pay, and the safe-payment notice (plan 3.9) ----------
 
 export const SAFE_NOTICE_TEXT = "We'll never ask you to pay by gift card, wire transfer or into anyone else's account, and we only contact you from the details on this website. If someone asks you to, please tell us.";
-const PAY_TITLES = { application_fee: 'Application fee', deposit: 'Puppy deposit' };
+const PAY_WORDS = { application_fee: 'pay_fee', deposit: 'pay_deposit' };
 
 // The cards switched on, in order: [kind, content].
 export const payCards = (snap) => ['application_fee', 'deposit'].map((k) => [k, snap.payment?.[k]]).filter(([, v]) => v);
 // How to pay lives on the waitlist page, so links to it need that page on.
 export const payShown = (snap, ctx) => pageOn(snap, 'waitlist', ctx) && payCards(snap).length > 0;
 const noticeOn = (snap) => snap.payment?.safe_notice?.enabled ?? true;
-const noticeText = (snap) => snap.payment?.safe_notice?.text || SAFE_NOTICE_TEXT;
+const noticeText = (snap) => snap.payment?.safe_notice?.text || word(snap, 'safe_notice');
 
 // "Venmo, Zelle or PayPal": every method on the cards shown.
 function methodList(snap) {
@@ -500,13 +551,13 @@ function copyable(detail) {
   return m ? m[0] : null;
 }
 
-function payCard([kind, c]) {
+function payCard(snap, [kind, c]) {
   const methods = (c.methods ?? []).map(([m, d]) => {
     const copy = copyable(d);
     return `<li><span class="m">${esc(m)}</span><span class="d">${esc(d)}</span>${copy ? `<button type="button" class="copy" data-copy="${attr(copy)}" hidden>Copy</button>` : '<span></span>'}</li>`;
   }).join('');
   return `<article class="pay-card">
-    <h3>${esc(c.title || PAY_TITLES[kind])}</h3>
+    <h3>${esc(c.title || word(snap, PAY_WORDS[kind]))}</h3>
     ${c.due_note ? `<p class="pay-when"><b>When:</b> ${esc(c.due_note)}</p>` : ''}
     ${methods ? `<ul class="methods">${methods}</ul>` : ''}
     ${c.note ? `<p class="pay-note"><b>In the note:</b> ${esc(c.note)}</p>` : ''}
@@ -519,10 +570,10 @@ export function paySection(snap) {
   const cards = payCards(snap);
   const notice = noticeOn(snap) ? noticeText(snap) : '';
   if (!cards.length && !notice) return '';
-  const heading = cards.length === 2 ? 'Paying your fee and deposit' : cards.length ? `Paying your ${(cards[0][1].title || PAY_TITLES[cards[0][0]]).toLowerCase()}` : 'Paying safely';
+  const heading = cards.length === 2 ? 'Paying your fee and deposit' : cards.length ? `Paying your ${(cards[0][1].title || word(snap, PAY_WORDS[cards[0][0]])).toLowerCase()}` : 'Paying safely';
   return `<section class="pay" id="how-to-pay" aria-labelledby="pay-h">
     <header class="center"><span class="eyebrow">How to pay</span><h2 id="pay-h">${esc(heading)}</h2>${cards.length ? '<p class="muted">Use any of the ways below. Put the note shown in your payment so we can match it to you.</p>' : ''}</header>
-    ${cards.length ? `<div class="pay-grid${cards.length === 1 ? ' one' : ''}">${cards.map(payCard).join('')}</div>` : ''}
+    ${cards.length ? `<div class="pay-grid${cards.length === 1 ? ' one' : ''}">${cards.map((c) => payCard(snap, c)).join('')}</div>` : ''}
     ${notice ? `<p class="pay-safe" role="note">${cards.length ? 'These are our only payment details. ' : ''}${esc(notice)}</p>` : ''}
   </section>`;
 }

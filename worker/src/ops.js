@@ -16,6 +16,7 @@ import { usageSection } from './ops/usage.js';
 import { mailMode, outboxRecent } from './mail.js';
 import { vapidConfig, generateVapidKeys } from './push.js';
 import { turnstileOn } from './siteforms.js';
+import { adminCookie, clearAdminCookie } from './admin.js';
 
 const COOKIE = 'ops_session';
 const SESSION_SECONDS = 12 * 60 * 60;
@@ -35,6 +36,13 @@ async function cookieValid(secret, value) {
 }
 
 const redirect = (location, headers = {}) => new Response(null, { status: 303, headers: { location, ...headers } });
+// Ops's own cookie, and the one that makes this device admin in the Site Manager
+// (admin.js): signing in to /ops does both, signing out undoes both.
+const redirectWithCookies = (location, cookies) => {
+  const headers = new Headers({ location });
+  for (const c of cookies) headers.append('set-cookie', c);
+  return new Response(null, { status: 303, headers });
+};
 
 function loginPage(error) {
   return htmlPage(TITLE, `<h1>${TITLE}</h1>
@@ -95,6 +103,7 @@ async function statusPage(env, log = null, note = null, keys = null) {
 
   return htmlPage(TITLE, `<h1>${TITLE}</h1>
 <p class="muted">Environment: <strong>${esc(envName)}</strong></p>
+<p>You're admin in the Site Manager on this device: <a href="/">open every site's build</a>.</p>
 ${note === 'released' ? '<p class="ok">Subdomain released.</p>' : ''}
 ${usage}
 ${sites}
@@ -121,15 +130,16 @@ add <code>OPS_TOKEN</code> as a <em>Secret</em> (a long random string). Ops is c
   if (url.pathname === '/ops/login' && request.method === 'POST') {
     const form = await request.formData();
     if (!timingSafeEqual(String(form.get('token') ?? ''), env.OPS_TOKEN)) return loginPage('That token is not right.');
-    return redirect('/ops', {
-      'set-cookie': `${COOKIE}=${await mintCookie(env.OPS_TOKEN)}; Path=/ops; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_SECONDS}`,
-    });
+    return redirectWithCookies('/ops', [
+      `${COOKIE}=${await mintCookie(env.OPS_TOKEN)}; Path=/ops; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_SECONDS}`,
+      await adminCookie(env),
+    ]);
   }
 
   if (!(await cookieValid(env.OPS_TOKEN, readCookie(request, COOKIE)))) return loginPage(null);
 
   if (url.pathname === '/ops/logout' && request.method === 'POST') {
-    return redirect('/ops', { 'set-cookie': `${COOKIE}=; Path=/ops; HttpOnly; Secure; SameSite=Strict; Max-Age=0` });
+    return redirectWithCookies('/ops', [`${COOKIE}=; Path=/ops; HttpOnly; Secure; SameSite=Strict; Max-Age=0`, clearAdminCookie()]);
   }
 
   if (url.pathname === '/ops/migrate' && request.method === 'POST') {

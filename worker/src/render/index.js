@@ -2,7 +2,7 @@
 // for a page that's switched off or empty. Pure: no D1, R2 or network, so the
 // same function renders the live site, a preview and the tests.
 import { layout } from './layout.js';
-import { pageOn } from './parts.js';
+import { pageOn, useFormats } from './parts.js';
 import * as P from './pages.js';
 import { PAGES } from '../content/model.js';
 
@@ -49,6 +49,7 @@ function pick(snap, ctx) {
 
 // ctx: { path, origin, today (YYYY-MM-DD), preview, portal (the family portal is on) }
 export function renderPage(snap, ctx) {
+  useFormats(snap);
   const page = pick(snap, ctx);
   if (!page) return { status: 404, html: layout(snap, ctx, P.unavailable(snap, ctx)) };
   return { status: 200, html: layout(snap, ctx, page) };

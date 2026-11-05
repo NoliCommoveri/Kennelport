@@ -1,0 +1,468 @@
+{
+ "format": 1,
+ "bundle_id": "sample-bundle-4",
+ "kennel_id": "kennel-sample",
+ "sent_at": "2027-01-15T15:00:00Z",
+ "waitlist_public_id": "kos1_5a1e0000-0000-4000-8000-00000000cafe",
+ "dogs": [
+  {
+   "id": "dog-clover",
+   "call_name": "Clover*",
+   "registered_name": "Tuxedo Lane Four Leaf Clover*",
+   "registry": "AKC",
+   "sex": "female",
+   "date_of_birth": "2021-04-12",
+   "color": "Black & white",
+   "status": "active_breeding",
+   "titles": [
+    "CGC",
+    "TKN",
+    "CH"
+   ],
+   "health": [
+    {
+     "id": "h-clover-1",
+     "test": "BAER hearing",
+     "result": "Normal, both ears",
+     "normal": true,
+     "date": "2021-06-10",
+     "verify_url": "https://www.ofa.org/advanced-search?q=clover"
+    },
+    {
+     "id": "h-clover-2",
+     "test": "Patellas (OFA)",
+     "result": "Normal",
+     "normal": true,
+     "date": "2022-05-02"
+    },
+    {
+     "id": "h-clover-3",
+     "test": "JHC (HSF4 DNA)",
+     "result": "Carrier",
+     "normal": false,
+     "date": "2021-07-19"
+    }
+   ]
+  },
+  {
+   "id": "dog-maple",
+   "call_name": "Maple*",
+   "registered_name": "Tuxedo Lane Maple Leaf*",
+   "registry": "UKC",
+   "sex": "female",
+   "date_of_birth": "2022-02-03",
+   "color": "Seal & white",
+   "status": "active_breeding",
+   "titles": [],
+   "health": [
+    {
+     "id": "h-maple-1",
+     "test": "Eyes (CAER)",
+     "result": "Normal",
+     "normal": true
+    },
+    {
+     "id": "h-maple-2",
+     "test": "Patellas (OFA)",
+     "result": "Normal",
+     "normal": true,
+     "date": "2026-11-12"
+    }
+   ]
+  },
+  {
+   "id": "dog-juniper",
+   "call_name": "Juniper*",
+   "registered_name": "Tuxedo Lane Juniper Berry*",
+   "registry": "AKC",
+   "sex": "female",
+   "date_of_birth": "2022-09-21",
+   "color": "Brindle & white",
+   "status": "active_breeding",
+   "titles": [
+    "CGC"
+   ],
+   "health": [],
+   "co_owned": true,
+   "lives_away": false,
+   "co_owner_kennel_ids": [
+    "pk-ridge",
+    "pk-harbor"
+   ]
+  },
+  {
+   "id": "dog-wren",
+   "call_name": "Wren*",
+   "sex": "female",
+   "status": "active_breeding"
+  },
+  {
+   "id": "dog-atlas",
+   "call_name": "Atlas*",
+   "registered_name": "Tuxedo Lane Atlas Shrugged*",
+   "registry": "AKC",
+   "sex": "male",
+   "date_of_birth": "2020-11-30",
+   "color": "Black & white",
+   "status": "active_breeding",
+   "titles": [
+    "CH",
+    "GCH"
+   ],
+   "health": [
+    {
+     "id": "h-atlas-1",
+     "test": "BAER hearing",
+     "result": "Normal, both ears",
+     "normal": true,
+     "date": "2021-01-15"
+    },
+    {
+     "id": "h-atlas-2",
+     "test": "Cardiac (OFA)",
+     "result": "Normal",
+     "normal": true,
+     "date": "2022-03-08"
+    }
+   ]
+  },
+  {
+   "id": "dog-bishop",
+   "call_name": "Bishop*",
+   "registered_name": "Ridgeview Bishop's Gambit*",
+   "registry": "AKC",
+   "sex": "male",
+   "date_of_birth": "2021-08-14",
+   "color": "Seal & white",
+   "status": "active_breeding",
+   "titles": [],
+   "health": [],
+   "co_owned": true,
+   "lives_away": true,
+   "lives_with_kennel_id": "pk-ridge",
+   "co_owner_kennel_ids": [
+    "pk-ridge"
+   ]
+  },
+  {
+   "id": "dog-pippa",
+   "call_name": "Pippa*",
+   "registered_name": "Tuxedo Lane Pip Pip Hooray*",
+   "registry": "AKC",
+   "sex": "female",
+   "date_of_birth": "2026-03-02",
+   "color": "Black & white",
+   "status": "puppy",
+   "titles": [],
+   "health": []
+  },
+  {
+   "id": "dog-rocco",
+   "call_name": "Rocco*",
+   "registered_name": "Tuxedo Lane Rocco Road*",
+   "registry": "AKC",
+   "sex": "male",
+   "date_of_birth": "2024-05-18",
+   "color": "Brindle & white",
+   "status": "for_sale",
+   "titles": [
+    "CGC"
+   ],
+   "health": [
+    {
+     "id": "h-rocco-1",
+     "test": "Patellas (OFA)",
+     "result": "Grade 1",
+     "normal": false,
+     "date": "2025-06-01"
+    }
+   ]
+  },
+  {
+   "id": "dog-hazel",
+   "call_name": "Hazel*",
+   "registered_name": "Tuxedo Lane Witch Hazel*",
+   "registry": "AKC",
+   "sex": "female",
+   "date_of_birth": "2016-10-09",
+   "color": "Black & white",
+   "status": "retired_breeding",
+   "titles": [
+    "CH"
+   ],
+   "health": []
+  }
+ ],
+ "litters": [
+  {
+   "id": "lit-b",
+   "name": "The Spice litter*",
+   "dam_id": "dog-maple",
+   "sire_id": "dog-atlas",
+   "born_on": "2026-10-25",
+   "ready_on": "2026-12-20",
+   "deposits_on": "2026-11-22",
+   "prices": {
+    "price_female": 3400,
+    "deposit_female": 500
+   },
+   "puppies": [
+    {
+     "id": "dog-sage",
+     "name": "Sage*",
+     "sex": "female",
+     "status": "available",
+     "collar": "Teal"
+    },
+    {
+     "id": "dog-basil",
+     "name": "Basil*",
+     "sex": "male",
+     "status": "undecided",
+     "collar": "Lime"
+    }
+   ]
+  },
+  {
+   "id": "lit-c",
+   "name": "The Summer litter*",
+   "dam_id": "dog-hazel",
+   "sire_id": "dog-atlas",
+   "born_on": "2026-07-01",
+   "ready_on": "2026-08-26",
+   "deposits_on": "2026-07-29",
+   "prices": {
+    "price_female": 2900,
+    "price_male": 2600,
+    "deposit_female": 400,
+    "deposit_male": 400
+   },
+   "puppies": [
+    {
+     "id": "dog-sunny",
+     "name": "Sunny*",
+     "sex": "male",
+     "status": "available",
+     "collar": "Orange",
+     "registration": "limited",
+     "registry": "AKC"
+    },
+    {
+     "id": "dog-skye",
+     "name": "Skye*",
+     "sex": "female",
+     "status": "placed",
+     "collar": "Blue"
+    }
+   ]
+  },
+  {
+   "id": "lit-d",
+   "pairing_id": "pr-p1",
+   "name": "The Forest litter*",
+   "dam_id": "dog-juniper",
+   "sire_id": "dog-atlas",
+   "born_on": "2026-12-05",
+   "ready_on": "2027-01-30",
+   "deposits_on": "2027-01-02",
+   "prices": {
+    "price_female": 3200,
+    "price_male": 2800,
+    "full_reg_female": 1500,
+    "full_reg_male": 1500,
+    "deposit_female": 500,
+    "deposit_male": 500
+   },
+   "puppies": [
+    {
+     "id": "dog-aspen",
+     "name": "Aspen*",
+     "sex": "female",
+     "status": "available",
+     "collar": "Red"
+    },
+    {
+     "id": "dog-birch",
+     "name": "Birch*",
+     "sex": "male",
+     "status": "available",
+     "collar": "Blue"
+    },
+    {
+     "id": "dog-cedar",
+     "name": "Cedar*",
+     "sex": "female",
+     "status": "undecided",
+     "collar": "Green"
+    },
+    {
+     "id": "dog-rowan",
+     "name": "Rowan*",
+     "sex": "male",
+     "status": "available",
+     "collar": "Yellow"
+    }
+   ]
+  },
+  {
+   "id": "lit-e",
+   "name": "Wren* × Moose*",
+   "dam_id": "dog-wren",
+   "sire_name": "Moose* (outside sire)",
+   "expected_on": "2026-12-28",
+   "puppies": [],
+   "heat_id": "heat-wren-old",
+   "dam_name": "Wren*"
+  }
+ ],
+ "pairings": [
+  {
+   "id": "pr-p2",
+   "heat_id": "heat-h1",
+   "dam_id": "dog-maple",
+   "sire_id": "dog-bishop",
+   "dam_name": "Maple*",
+   "sire_name": "Bishop*",
+   "planned_on": "2027-02-10",
+   "expected_on": "2027-04-14"
+  }
+ ],
+ "heats": [
+  {
+   "id": "heat-h2",
+   "dam_name": "Lulu* (a friend's girl)",
+   "month": "2027-03"
+  }
+ ],
+ "extras": [
+  {
+   "id": "x-10wk",
+   "name": "10-Week Homegoing",
+   "group": "Extended homegoing",
+   "description": "Two more weeks with us: crate starts, first car rides, and more people.",
+   "price_from": 600,
+   "price_to": 600
+  },
+  {
+   "id": "x-12wk",
+   "name": "12-Week Extended Homegoing",
+   "group": "Extended homegoing",
+   "description": "Four more weeks: potty-pad training, handling, and household routines.",
+   "price_from": 1000,
+   "price_to": 1200
+  },
+  {
+   "id": "x-photo",
+   "name": "Photo & video package",
+   "group": "Keepsakes",
+   "description": "An 8-week session: 25+ edited photos and 3 short videos.",
+   "price_from": 150
+  },
+  {
+   "id": "x-pack",
+   "name": "Puppy starter pack",
+   "group": "Go-home",
+   "description": "A bed, two toys, a week of food and a blanket that smells like home."
+  }
+ ],
+ "products": [
+  {
+   "id": "prod-food",
+   "name": "Puppy food program*",
+   "link_url": "https://food.example.com/r/tuxedo",
+   "code": "TUXEDO15",
+   "code_note": "15% off your first order"
+  },
+  {
+   "id": "prod-ins",
+   "name": "Pet insurance trial*",
+   "link_url": "https://insure.example.com/r/tuxedo"
+  },
+  {
+   "id": "prod-nanny",
+   "name": "Sky Nanny Flights*",
+   "link_url": "https://skynanny.example.com/book",
+   "website": "https://skynanny.example.com",
+   "transport": true
+  },
+  {
+   "id": "prod-ground",
+   "name": "Paws on the Road*",
+   "website": "https://pawsroad.example.com",
+   "transport": true,
+   "code": "TL-RIDE"
+  }
+ ],
+ "steps": [
+  {
+   "id": "st-1",
+   "heading": "Apply",
+   "body": "Tell us about your home and what you hope for in a puppy."
+  },
+  {
+   "id": "st-2",
+   "heading": "Join the waitlist",
+   "body": "A refundable fee holds your place in line."
+  },
+  {
+   "id": "st-3",
+   "heading": "Pick your puppy",
+   "body": "In waitlist order, at about six weeks, with photos and video."
+  },
+  {
+   "id": "st-4",
+   "heading": "Pay your deposit",
+   "body": "Within 48 hours of your pick."
+  },
+  {
+   "id": "st-5",
+   "heading": "Bring your puppy home",
+   "body": "At eight weeks or later, with a go-home bag and a folder of records."
+  }
+ ],
+ "payment": {
+  "application_fee": {
+   "title": "Application fee",
+   "due_note": "Due when you apply; refunded if we can't place a puppy with you.",
+   "methods": [
+    [
+     "Venmo",
+     "@TuxedoLane-Sample"
+    ],
+    [
+     "Zelle",
+     "pay@tuxedolane.example"
+    ]
+   ],
+   "note": "Put your last name in the memo.",
+   "pay_url": "https://pay.example.com/tuxedolane",
+   "pay_label": "Pay online"
+  },
+  "deposit": {
+   "title": "Deposit",
+   "due_note": "Within 48 hours of your pick.",
+   "methods": [
+    [
+     "Zelle",
+     "pay@tuxedolane.example"
+    ]
+   ]
+  }
+ },
+ "partner_kennels": [
+  {
+   "id": "pk-ridge",
+   "name": "Ridgeview Bostons*",
+   "website": "https://ridgeview.example.com"
+  },
+  {
+   "id": "pk-harbor",
+   "name": "Harbor Light Bostons*"
+  },
+  {
+   "id": "pk-unused",
+   "name": "Prairie Wind Bostons*",
+   "website": "https://prairiewind.example.com"
+  }
+ ]
+}

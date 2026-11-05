@@ -1,0 +1,12 @@
+{
+ "format": 1,
+ "feed_id": "sample-feed-4",
+ "kennel_id": "kennel-sample",
+ "sent_at": "2027-01-15T15:05:00Z",
+ "removed": [
+  {
+   "type": "family",
+   "id": "fam-cho"
+  }
+ ]
+}

@@ -222,7 +222,7 @@
      "id": "dog-ruby",
      "name": "Ruby*",
      "sex": "female",
-     "status": "available",
+     "status": "reserved",
      "collar": "Red",
      "color": "Black & white",
      "registry": "AKC"
@@ -356,20 +356,13 @@
  "pairings": [
   {
    "id": "pr-p1",
+   "heat_id": "heat-juniper-old",
    "dam_id": "dog-juniper",
    "sire_id": "dog-atlas",
+   "dam_name": "Juniper*",
+   "sire_name": "Atlas*",
    "planned_on": "2026-10-05",
    "expected_on": "2026-12-07"
-  },
-  {
-   "id": "pr-p2",
-   "heat_id": "heat-h1",
-   "dam_id": "dog-maple",
-   "sire_name": "Bishop*",
-   "dam_name": "Maple*",
-   "sire_id": "dog-bishop",
-   "planned_on": "2027-02-10",
-   "expected_on": "2027-04-14"
   }
  ],
  "heats": [

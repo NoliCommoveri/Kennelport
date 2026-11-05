@@ -2,9 +2,11 @@
 //
 // buildSnapshot() reads the draft tables and returns the whole visible site as one
 // object: only what visitors may see (plan 3.7: health results ticked Show on
-// site, as the dog's setting allows; no hidden puppies or records; approved
-// reviews only), and only the content model's fields. Preview renders it as is;
-// publish() also writes it to R2 and points the site at it.
+// site, as the dog's setting allows; no hidden records; puppies only of the
+// statuses the site's display rules show (content/rules.js: all but hidden, by
+// default); approved reviews only), and only the content model's fields. It
+// carries the site's display and timing rules, so rendering needs nothing else.
+// Preview renders it as is; publish() also writes it to R2 and points the site at it.
 //
 // publish(): JSON to R2 first, then one D1 batch that adds the snapshot row,
 // points the site at it, and records redirects for any address that changed. If
@@ -13,6 +15,7 @@
 import { HOME_BLOCK_ORDER, PAGES, PAYMENT_KINDS, ALBUM_PHOTOS_MAX } from './content/model.js';
 import { kennelosOrigin } from './feed.js';
 import { chunks, placeholders } from './lib/sql.js';
+import { rulesFor, loadBuild, ruleKey } from './content/rules.js';
 
 export const SNAPSHOT_VERSION = 1;
 export const KEEP = 10;
@@ -80,7 +83,9 @@ export async function buildSnapshot(env, siteId) {
   const dogById = Object.fromEntries(dogs.map((d) => [d.id, d]));
 
   const littersRaw = await all('SELECT * FROM litters WHERE site_id = ? AND show_on_site = 1 AND hidden_by_kennelos = 0 ORDER BY sort, name');
-  const puppies = await all("SELECT * FROM puppies WHERE site_id = ? AND status != 'hidden' AND hidden_by_kennelos = 0 ORDER BY sort, name");
+  const { rules, timing } = rulesFor(await loadBuild(env, siteId));
+  const puppies = (await all('SELECT * FROM puppies WHERE site_id = ? AND hidden_by_kennelos = 0 ORDER BY sort, name'))
+    .filter((p) => rules.status[ruleKey(p.status)]?.show);
   // Every dog's call name, shown or not, for parents who aren't on the site.
   const callNames = new Map((await all('SELECT id, call_name FROM dogs WHERE site_id = ?')).map((d) => [d.id, d.call_name]));
   // A puppy's own photos, from the photos she tagged as that puppy (0005), for the
@@ -214,6 +219,7 @@ export async function buildSnapshot(env, siteId) {
       family_login: kennelosOrigin(env) && site.kennelos_public_id ? `${kennelosOrigin(env)}/list/${encodeURIComponent(site.kennelos_public_id)}#signin` : null,
     },
     pages, home, dogs, litters, reviews, steps, expanders, extras, products, partners, payment, questions, albums, embeds, photos,
+    rules, timing,
   };
 }
 

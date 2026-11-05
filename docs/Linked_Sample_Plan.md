@@ -1,7 +1,8 @@
 # A linked sample site: plan
 
-Step 1 is built: `worker/tests/fixtures/linked-sample/` (bundle 1, feed 1 and what each
-record is for) and `worker/tests/linked-sample.test.js`. The rest isn't built yet. Decided by the owner, 2026-11-05: the kennel is made up, and
+Steps 1 and 2 are built: `worker/tests/fixtures/linked-sample/` (bundles and feeds 1–5,
+the expect files, and what each record is for) and `worker/tests/linked-sample.test.js`
+(the coverage test and the series test). The demo site (step 3) isn't built yet. Decided by the owner, 2026-11-05: the kennel is made up, and
 the demo site is for her only. This is a plan for a made-up kennel, as KennelOS would send it,
 so the owner can see and test a site linked to KennelOS without a real breeder's data.
 

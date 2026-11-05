@@ -1,0 +1,28 @@
+{
+ "format": 1,
+ "feed_id": "sample-feed-5",
+ "kennel_id": "kennel-sample",
+ "sent_at": "2027-01-20T15:05:00Z",
+ "families": [
+  {
+   "id": "fam-kim",
+   "name": "The Kim family*",
+   "emails": [
+    "kims@example.com"
+   ],
+   "placements": [
+    {
+     "id": "sale-pearl",
+     "puppy_id": "dog-pearl",
+     "puppy_name": "Pearl*",
+     "contract_signed_on": "2026-11-18",
+     "go_home_on": "2026-11-29",
+     "voided": {
+      "reason": "backed_out",
+      "on": "2027-01-19"
+     }
+    }
+   ]
+  }
+ ]
+}

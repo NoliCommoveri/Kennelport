@@ -1,6 +1,8 @@
 # Site builder: plan
 
-Nothing here is built yet. This is the plan from the owner's talk on 2026-11-05.
+This is the plan from the owner's talk on 2026-11-05. Step 1 is built: the owner's admin
+view with Pups, Dogs, Wording, Formats, From KennelOS and Timing for each site
+(`content/rules.js`, `manage/builder.js`, `admin.js`). Steps 2 to 5 aren't built yet.
 
 Today a site's pages, menu, sections, and the rules for how KennelOS data shows are
 written into the code. Changing one means a code change, for every site at once. This
@@ -42,6 +44,11 @@ switches.
     something sites already do starts with today's behaviour on existing sites. A
     brand-new feature arrives switched off on existing sites until the owner turns it
     on, and on in templates.
+15. **What a card or page shows is a setting, not code** (added 2026-11-05). Every card
+    and profile page has a "what it shows" setting: which items, on which face, in what
+    order. So do the fixed wording, formats and counts still in the code, how KennelOS
+    data lands on the site, and the contact and review forms. Each starts as today's
+    behaviour (decision 14).
 
 ## Who controls what
 
@@ -145,6 +152,48 @@ itself, and a page with nothing on it drops out of the menu, as now (plan 3.12).
 Dog, litter and pup profiles keep their own addresses (`/dogs/<name>`,
 `/litters/<litter>/<pup>`), whichever page lists them. Shared links never break.
 
+**Fixed counts and selections become block settings** (decision 15):
+
+| Today, in the code | Becomes |
+|---|---|
+| Home's litters block shows the first 2 litters that aren't past | a Litters block's filters, order and how many it shows |
+| Home's dogs block shows only the breeding dogs | a Dog cards block's filters |
+| A litter page's parent cards show 3 health results, then "and N more" | how many the parent card shows |
+| A litter card names up to 2 pups, then counts them ("2 girls, 1 boy") | how many it names before counting |
+| Retired and remembered dogs show nowhere | Dog cards blocks filtered to them (a page or section the owner places) |
+| A block's how many: all of them | a limit, with "See all" to its page |
+
+### What each card and page shows
+
+Every card and profile page has a **"what it shows"** setting (decision 15): a switch per
+item, its place (the front or back of a flip card; on a page, which part), and the order.
+The default is exactly today's layout, below. It's set per block, so the same dogs can
+show differently on a Dams page and on Home. A profile page has one setting per site.
+The breeder still words her records; the owner decides what a card carries.
+
+**Cards:**
+
+| Card | What it shows today |
+|---|---|
+| Dog card (flip) | Front: photo, call name, registered name, breed and role, titles. Back: registry and weight, then the health tests; a dog with none shows Details instead (sex, colour, weight, registry); bio; "Ask about" (for sale) with its price; View profile |
+| Pup card (flip) | Front: ribbon (by status rule), photo, name, litter and collar, sex and colour, status. Back: sex, colour, status, registration, registry, price; bio; "Ask about this puppy"; the full-registration link and surcharge; View profile |
+| Litter card | eyebrow (Current litter, Coming up, Older puppies, Planned litter, Past litter), the parents' photos, name, the pair's names; rows: Born, Deposits from, Puppies, Going home or Ready now, Price, Deposit (planned: Expected, Going home); the summary (planned only); Meet the puppies or See the waitlist |
+| Co-owned light card | photo, call name, sex and role, "with" its kennel and logo |
+| Parent card (litter page) | photo, call name, registered name, titles, colour and registry, health results, View profile |
+| Review card | stars, the quote, first name and town, "{pup}'s family, home {month}", photo |
+| Extras package card | weeks and "most complete" (featured), name, price, description, "What's included" with its lead-in and closing, "Ask about this package"; packages ordered by weeks |
+| Extras item card | name, group, price, description, "Ask about this" |
+| Album card | cover, title, photo count |
+| Step (How it works) | number, heading, body, "More detail", the pay link |
+
+**Profile pages:**
+
+| Page | What it shows today, in order |
+|---|---|
+| Dog | photo; breed and role; call name; registered name; facts: Sex, Color, Born, Weight, Registry, Titles, Co-owned with, Lives with; bio; for sale and "Ask about"; health testing (with verify links); share row; videos and posts; the dog's litters |
+| Puppy | photo; status; name; facts: Sex, Color, Collar, Status, Price, Registration, Registry, Parents, Born; bio; "Ask about"; the full-registration link and surcharge; the safe-payment notice; share row; badges; its photos; the litter's albums |
+| Litter | eyebrow and name, the pair and summary; placed FAQs; parent cards; facts; price note; the full-registration link; pup cards; badges; videos and posts; albums |
+
 ### Display rules
 
 The site stores what KennelOS sends, unchanged. Display rules decide how each site shows
@@ -187,7 +236,43 @@ default (today each dog's own setting: normal only, all, or none).
 
 **Fixed wording that is in the code today,** for example the flip-card hint and the
 safe-payment notice's default. The owner sets the default; the breeder can still reword
-the ones they reword today.
+the ones they reword today. All of it (decision 15), including:
+- the Dogs page's section headings and lines: Up and coming ("Young dogs we have kept,
+  growing up with us."), Looking for a home, Shared with friends, and the Girls and Boys
+  filter;
+- the litter card's eyebrows and links (above), "Ready now" over older puppies, "Plans can
+  change. Heat dates are estimates.", "No litters to show right now.";
+- "Swipe or use the arrows.", "More detail", "What's included", "Ask about this package";
+- the payment cards' titles ("Application fee", "Puppy deposit"), "Family login", and the
+  footer's copyright line.
+
+**Formats** (decision 15):
+- dates: long ("December 12, 2026") and short ("December 12"), and where each is used;
+- a dog's or pup's sex: Female and Male, or Girl and Boy, and the counts ("2 girls, 1 boy");
+- money: the currency sign and its place, and whether cents show.
+
+### How KennelOS data lands
+
+Defaults for each new record a bundle brings (decision 15), today's as the default.
+After it lands, a record's own switches stay the breeder's, as now.
+
+| Setting | Today (`kennelos/bundle.js`) |
+|---|---|
+| A new dog's health results | Normal results only |
+| A new litter's Show placed puppies | on |
+| A new litter's Show prices | on only with Use my KennelOS prices |
+| A litter KennelOS sends without a name | "{dam} × {sire}"; a heat: "{dam}'s next litter", or "Our next litter" |
+| The planned-litter label | Upcoming heat, Planned pairing |
+| How each KennelOS dog status reads on the site | `puppy` up and coming; `for_sale` looking for a home; `retired_breeding` retired; `deceased` remembered |
+| Where a new dog or litter goes in her order | at the end |
+
+### Forms
+
+The contact form and the review form have fixed fields today; the waitlist application's
+questions are already hers. The owner chooses each form's fields (from a list: name,
+email, phone, town, the pup or litter it's about, rating, topic, photo, and her own
+questions), which are required, and their order and wording (decision 15). Today's
+fields are the default.
 
 ### Timing rules
 
@@ -250,14 +335,17 @@ links; the breeder switches on or off the ones the owner allows, and words them.
 - **the tabs:** which tabs there are and their order;
 - **Quick links:** which links and their order;
 - **Records:** the order of what it holds (the puppy's records, pedigree, contract and
-  health guarantee, contacts).
+  health guarantee, contacts);
+- **what each card shows** (decision 15): the pup card and calendar block, a placement's
+  card, the baby book cards and the records list, item by item, as on the website.
 
 **Breeder-facing components** (her Site Manager, portal plan 7.3):
 - **the tabs:** Today, Families, Dogs, Website, Portal and Reports, their order, and
   what sits under each;
 - **Today:** the order of its lists (pickups this week, families to invite, vet proof
   to review, and the rest);
-- **a family's page and a puppy's card:** the order of their sections.
+- **a family's page and a puppy's card:** the order of their sections, and what each
+  card in them shows (decision 15).
 
 **What can't move:** the safety and contract rules. The vet countdown and its
 reminders always run as her contract sets them, and the affiliate disclosure stays on
@@ -298,13 +386,18 @@ default, without changing the editor screens.
 Each step is its own branch and can be released on its own.
 
 1. **Display and timing rules.** The rules above, with today's defaults, in the owner's
-   tools per site. This is the smallest step, and the first one the owner would use.
+   tools per site: the pup, registration, price and date rules and the timing rules
+   (built); then the dog rules, the fixed wording, the formats, and how KennelOS data
+   lands. This is the smallest step, and the first one the owner would use.
 2. **Pages, blocks and the menu as settings.** Today's site becomes the **Website** template.
    Add new pages and data blocks (Dams and Sires), the menu editor, and the breeder's
-   address renaming with redirects. FAQ and badge places become block settings.
+   address renaming with redirects. FAQ and badge places become block settings. Each
+   block gets its fixed counts as settings and what its cards show; each profile page,
+   what it shows; and the contact and review forms, their fields.
 3. **Templates.** Save as template, Apply, Reset to template.
 4. **The family portal's build:** the **Website and family portal** template; the
-   portal's timing and display rules; then moving its family and breeder components.
+   portal's timing and display rules; then moving its family and breeder components,
+   and what each of its cards shows.
 5. **After the KennelOS review:** the new raw fields, as rule and filter inputs, for the
    website and the portal's feed.
 

@@ -47,6 +47,7 @@ import { loadSnapshot } from '../publish.js';
 import { siteBase, siteFacts } from './link.js';
 import { litterClockStatements } from './clock.js';
 import { coOwnedRules } from '../content/records.js';
+import { DEFAULT_RULES, DOG_PLACES, rulesFor, loadBuild } from '../content/rules.js';
 
 export const BUNDLE_FORMAT = 1;
 export const MAX_BUNDLE_BYTES = 1024 * 1024;
@@ -194,15 +195,17 @@ export const OWNED = {
 };
 export const OWNED_PRICES = { litters: LITTER_PRICE_FIELDS, extras: ['price_from', 'price_to'] };
 
-const DOG_STATUS = {
-  puppy: { status: 'active', upcoming: 1, for_sale: 0 },
-  active_breeding: { status: 'active', upcoming: 0, for_sale: 0 },
-  for_sale: { status: 'active', upcoming: 0, for_sale: 1 },
-  retired_breeding: { status: 'retired', upcoming: 0, for_sale: 0 },
-  deceased: { status: 'remembered', upcoming: 0, for_sale: 0 },
+// How the site's rules land KennelOS data (content/rules.js, rules.landing; today's
+// by default): where each dog status sits, a new record's switches, the names and
+// labels a litter gets when KennelOS sends none, and where new records go.
+export const landingFor = async (env, siteId) => rulesFor(await loadBuild(env, siteId)).rules.landing;
+const dogPlace = (L, status) => {
+  const [s, upcoming, forSale] = DOG_PLACES[L[`dog_${status}`]] ?? DOG_PLACES.breeding;
+  return { status: s, upcoming, for_sale: forSale };
 };
 // A new website litter's label for a planned litter, by its KennelOS kind.
-const PLAN_LABEL = { heat: 'Upcoming heat', pairing: 'Planned pairing', litter: null };
+const planLabel = (L, kind) => (kind === 'heat' ? L.label_heat : kind === 'pairing' ? L.label_pairing : null);
+const DEFAULT_LABELS = [DEFAULT_RULES.landing.label_heat, DEFAULT_RULES.landing.label_pairing];
 const PUPPY_STATUS = { available: 'available', reserved: 'reserved', placed: 'placed', staying: 'staying', undecided: 'coming_soon', hidden: 'hidden' };
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const monthOf = (ymd) => (ymd ? `${MONTHS[Number(ymd.slice(5, 7)) - 1]} ${ymd.slice(0, 4)}` : null);
@@ -215,8 +218,9 @@ const same = (a, b) => (a ?? null) === (b ?? null) || String(a ?? '') === String
 // Everything a bundle (or a confirmed match) writes, built as statements for one
 // batch, against what the site holds now.
 export class Writer {
-  constructor(env, site, state) {
+  constructor(env, site, state, landing = DEFAULT_RULES.landing) {
     this.env = env;
+    this.L = landing;
     this.db = env.DB;
     this.site = site;
     this.siteId = site.id;
@@ -235,6 +239,14 @@ export class Writer {
     // KennelOS dog id → website dog id, for parents.
     this.dogByKos = new Map(state.dogs.filter((d) => d.kennelos_id).map((d) => [d.kennelos_id, d.id]));
     this.sort = { dogs: Math.max(-1, ...state.dogs.map((d) => d.sort)), litters: Math.max(-1, ...state.litters.map((l) => l.sort)) };
+    this.first = { dogs: Math.min(0, ...state.dogs.map((d) => d.sort)), litters: Math.min(0, ...state.litters.map((l) => l.sort)) };
+  }
+
+  // Where a new dog or litter goes in her order: at the end, or first.
+  nextSort(kind) {
+    if (this.L.new_at === 'start') { this.first[kind] -= 1; return this.first[kind]; }
+    this.sort[kind] += 1;
+    return this.sort[kind];
   }
 
   slug(taken, wanted) {
@@ -265,7 +277,7 @@ export class Writer {
   dogValues(bd) {
     const v = {
       call_name: bd.call_name, registered_name: bd.registered_name, registry: bd.registry, sex: bd.sex, date_of_birth: bd.date_of_birth, color: bd.color,
-      ...DOG_STATUS[bd.status], died_on: bd.status === 'deceased' ? bd.died_on : null,
+      ...dogPlace(this.L, bd.status), died_on: bd.status === 'deceased' ? bd.died_on : null,
     };
     if (bd.titles.length) v.titles = bd.titles.join(' ').slice(0, 120);
     // Co-owned, only from a bundle with partner_kennels (this.partnerByKos).
@@ -318,13 +330,14 @@ export class Writer {
 
   createDog(bd, extra = {}) {
     const id = crypto.randomUUID();
-    this.sort.dogs += 1;
+    const sort = this.nextSort('dogs');
+    const display = this.L.health_display;
     this.insert('dogs', {
-      id, site_id: this.siteId, slug: this.slug(this.dogSlugs, bd.call_name), ...this.dogValues(bd), health_display: 'normal_only', show_on_site: 1,
-      sort: this.sort.dogs, source: 'kennelos', kennelos_id: bd.id, hidden_by_kennelos: 0, created_at: this.t, updated_at: this.t, ...extra,
+      id, site_id: this.siteId, slug: this.slug(this.dogSlugs, bd.call_name), ...this.dogValues(bd), health_display: display, show_on_site: 1,
+      sort, source: 'kennelos', kennelos_id: bd.id, hidden_by_kennelos: 0, created_at: this.t, updated_at: this.t, ...extra,
     });
     this.dogByKos.set(bd.id, id);
-    this.health(id, 'normal_only', bd.health);
+    this.health(id, display, bd.health);
     return id;
   }
 
@@ -361,6 +374,10 @@ export class Writer {
   }
 
   // ----- litters -----
+  // A litter's Show prices starts on with Use my KennelOS prices, unless the site's
+  // rule leaves it for the breeder to switch on.
+  pricesOn(kind) { return this.prices && kind === 'litter' && this.L.show_prices === 'kos_prices'; }
+
   parent(kosId) { return kosId ? this.dogByKos.get(kosId) ?? null : null; }
 
   litterValues(e, kind) {
@@ -379,11 +396,12 @@ export class Writer {
     return v;
   }
 
-  litterName(e, kind) {
+  litterName(e, kind, L = this.L) {
     if (e.name) return e.name;
     const dam = e.dam_name; const sire = e.sire_name;
-    if (kind === 'heat') return dam ? `${dam}'s next litter` : 'Our next litter';
-    return dam && sire ? `${dam} × ${sire}` : dam ? `${dam}'s litter` : 'Upcoming litter';
+    const fill = (t) => t.replace('{dam}', dam ?? '').replace('{sire}', sire ?? '');
+    if (kind === 'heat') return dam ? fill(L.name_heat) : L.name_none;
+    return dam && sire ? fill(L.name_pair) : dam ? fill(L.name_dam) : L.name_upcoming;
   }
 
   // A litter's name as KennelOS gave it, and whether the website one is still
@@ -393,7 +411,7 @@ export class Writer {
     if (cur.kennelos_name != null) return cur.name === cur.kennelos_name;
     if (cur.source !== 'kennelos') return false;
     const plain = { ...e, name: null };
-    return ['heat', 'pairing', 'litter'].some((k) => cur.name === this.litterName(plain, k));
+    return [this.L, DEFAULT_RULES.landing].some((L) => ['heat', 'pairing', 'litter'].some((k) => cur.name === this.litterName(plain, k, L)));
   }
 
   // Is this address the one slug() made from that name (with or without a -2)?
@@ -405,11 +423,11 @@ export class Writer {
   createLitter(e, kind) {
     const id = crypto.randomUUID();
     const name = this.litterName(e, kind);
-    this.sort.litters += 1;
+    const sort = this.nextSort('litters');
     this.insert('litters', {
       id, site_id: this.siteId, slug: this.slug(this.litterSlugs, name), name, kennelos_name: name, ...this.litterValues(e, kind),
-      plan_label: PLAN_LABEL[kind],
-      show_on_site: 1, show_prices: this.prices && kind === 'litter' ? 1 : 0, show_placed: 1, sort: this.sort.litters, source: 'kennelos', kennelos_id: e.id, kennelos_kind: kind,
+      plan_label: planLabel(this.L, kind),
+      show_on_site: 1, show_prices: this.pricesOn(kind) ? 1 : 0, show_placed: this.L.show_placed ? 1 : 0, sort, source: 'kennelos', kennelos_id: e.id, kennelos_kind: kind,
       hidden_by_kennelos: 0, created_at: this.t, updated_at: this.t,
     });
     this.puppySlugs.set(id, new Set());
@@ -437,10 +455,10 @@ export class Writer {
       this.litterSlugs.delete(cur.slug);
       values.slug = this.slug(this.litterSlugs, name);
     }
-    if (cur.plan_label == null || Object.values(PLAN_LABEL).includes(cur.plan_label)) values.plan_label = PLAN_LABEL[kind];
+    if (cur.plan_label == null || [...DEFAULT_LABELS, this.L.label_heat, this.L.label_pairing].includes(cur.plan_label)) values.plan_label = planLabel(this.L, kind);
     // With Use my KennelOS prices, Show prices starts on the first time a litter's
     // prices arrive; from then on the switch is hers.
-    if (this.prices && kind === 'litter' && !cur.show_prices && LITTER_PRICE_FIELDS.every((k) => cur[k] == null) && LITTER_PRICE_FIELDS.some((k) => values[k] != null)) values.show_prices = 1;
+    if (this.pricesOn(kind) && !cur.show_prices && LITTER_PRICE_FIELDS.every((k) => cur[k] == null) && LITTER_PRICE_FIELDS.some((k) => values[k] != null)) values.show_prices = 1;
     if (cur.hidden_by_kennelos) this.counts.back++;
     if (this.update('litters', cur, values)) this.counts.updated++;
     if (kind === 'litter') this.puppies(cur.id, e.puppies, this.st.puppies.filter((p) => p.litter_id === cur.id));
@@ -507,7 +525,7 @@ export async function applyBundle(env, device, body) {
   }
 
   const st = await siteState(env, site.id);
-  const w = new Writer(env, site, st);
+  const w = new Writer(env, site, st, await landingFor(env, site.id));
   const declined = (kind, kos, kp) => st.declines.some((d) => d.kind === kind && d.kennelos_id === kos && d.kennelport_id === kp);
   const pending = [];
   const claimed = new Set();
