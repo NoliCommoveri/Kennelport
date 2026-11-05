@@ -65,3 +65,24 @@ the date changes. Like the AK sample it has no `<html>`/`<head>` wrapper (artifa
 - **Not shown:** littermates' birthdays; a family's program status on her side; life
   status after pickup. Its Dogs screen offers **Staying**, KennelPort's word for a puppy
   she keeps, never an extended stay (plan section 7.3).
+
+**`site-builder-prototype.html`** is a clickable prototype of the owner's site builder
+([`../Site_Builder_Plan.md`](../Site_Builder_Plan.md)), the admin view of the Site Manager.
+It has no prototype of its own, so it is built from the portal prototype's components: that
+file's whole stylesheet is copied in unchanged, and the builder's additions follow it. Like
+the others it has no `<html>`/`<head>` wrapper, and everything is in memory, reset on reload.
+A bar at the top switches between **You (admin)** and **The breeder**, between two sites, and
+between Auto, Light and Dark.
+
+- **Admin:** every site with no invites; the two starting templates; per site, Pages (each
+  page's blocks in order, with filters for KennelOS data, and a one-tap Dams and Sires
+  split), Menu, Display rules (one card per pup status KennelOS sends), Timing, the Family
+  portal (Family Home's sections per stage, tabs, quick links, and her Site Manager's tabs
+  and Today lists) and Template (what changed, Reset to template, Save as a template). A
+  phone preview of the breeder's website follows every change.
+- **The breeder:** her Site Manager in the order the owner set, with Pages and wording:
+  each page on or off, its menu name and address (old addresses redirect), each block on
+  or off and reworded, FAQ questions per spot, hide prices, and the litter switches. No
+  moving.
+- **Real:** A-K's name, its dogs from the AK sample and the Gem litter. **Made up:** names
+  marked *, the second kennel (Hollow Creek Goldens*), prices and the FAQ list.

@@ -131,6 +131,9 @@ function cleanList(shape, v, path, max) {
 
 const TOP = ['format', 'bundle_id', 'kennel_id', 'sent_at', 'waitlist_public_id', 'dogs', 'litters', 'pairings', 'heats', 'extras', 'products', 'steps', 'payment', 'partner_kennels'];
 
+// For the linked sample's coverage test (tests/fixtures/linked-sample).
+export { SHAPES as BUNDLE_SHAPES, TOP as BUNDLE_TOP };
+
 export function cleanBundle(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw bad('bundle', 'must be an object');
   if (body.format !== BUNDLE_FORMAT) {

@@ -1,0 +1,210 @@
+{
+ "format": 1,
+ "feed_id": "sample-feed-1",
+ "kennel_id": "kennel-sample",
+ "sent_at": "2026-11-01T15:05:00Z",
+ "families": [
+  {
+   "id": "fam-reed",
+   "name": "The Reed family*",
+   "emails": [
+    "reed.family@example.com",
+    "sam.reed@example.com"
+   ],
+   "status_url": "https://status.kennelos.app/s/sample-reed",
+   "placements": [
+    {
+     "id": "sale-ruby",
+     "puppy_id": "dog-ruby",
+     "puppy_name": "Ruby*",
+     "contract_signed_on": "2026-10-20",
+     "go_home_on": "2026-11-22",
+     "health": [
+      {
+       "id": "ev-r1",
+       "type": "vaccine",
+       "given_on": "2026-10-30",
+       "name": "DHPP, first round"
+      },
+      {
+       "id": "ev-r2",
+       "type": "deworming",
+       "given_on": "2026-11-01",
+       "name": "Pyrantel"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "fam-hale",
+   "name": "The Hale family*",
+   "emails": [
+    "hales@example.com"
+   ],
+   "placements": [
+    {
+     "id": "sale-onyx",
+     "puppy_id": "dog-onyx",
+     "puppy_name": "Onyx*",
+     "contract_signed_on": "2026-10-02",
+     "go_home_on": "2026-10-29",
+     "pickup_at": "2026-10-29T16:00:00Z",
+     "microchip": "985000000000201",
+     "registration_no": "NP12345601",
+     "health": [
+      {
+       "id": "ev-o1",
+       "type": "vet_visit",
+       "given_on": "2026-10-31",
+       "name": "3-day vet visit",
+       "notes": "All clear."
+      }
+     ],
+     "extras": [
+      {
+       "id": "xc-onyx",
+       "extra_id": "x-photo"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "fam-ortega",
+   "name": "The Ortega family*",
+   "emails": [
+    "ortega.home@example.com"
+   ],
+   "placements": [
+    {
+     "id": "sale-jade",
+     "puppy_id": "dog-jade",
+     "puppy_name": "Jade*",
+     "contract_signed_on": "2026-09-01",
+     "go_home_on": "2026-09-20",
+     "pickup_at": "2026-09-20T17:30:00Z",
+     "microchip": "985000000000202",
+     "health": [
+      {
+       "id": "ev-j1",
+       "type": "other",
+       "given_on": "2026-10-04",
+       "name": "Microchip registered"
+      }
+     ],
+     "extras": [
+      {
+       "id": "xc-jade",
+       "extra_id": "x-12wk"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "fam-park",
+   "name": "The Park family*",
+   "emails": [
+    "parks@example.com"
+   ],
+   "placements": [
+    {
+     "id": "sale-skye",
+     "puppy_id": "dog-skye",
+     "puppy_name": "Skye*",
+     "contract_signed_on": "2025-08-01",
+     "go_home_on": "2025-10-30",
+     "pickup_at": "2025-10-30T15:00:00Z"
+    }
+   ]
+  },
+  {
+   "id": "fam-lee",
+   "name": "The Lee family*",
+   "emails": [
+    "lee.house@example.com"
+   ],
+   "placements": [
+    {
+     "id": "sale-garnet",
+     "puppy_id": "dog-garnet",
+     "puppy_name": "Garnet*",
+     "contract_signed_on": "2026-10-10",
+     "voided": {
+      "reason": "failed_health",
+      "on": "2026-10-28"
+     }
+    }
+   ]
+  },
+  {
+   "id": "fam-diaz",
+   "name": "The Diaz family*",
+   "emails": [
+    "diaz@example.com"
+   ],
+   "placements": [
+    {
+     "id": "sale-old1",
+     "puppy_id": "dog-sunny",
+     "puppy_name": "Sunny*",
+     "contract_signed_on": "2026-07-20",
+     "voided": {
+      "reason": "backed_out",
+      "on": "2026-08-02"
+     }
+    },
+    {
+     "id": "sale-old2",
+     "puppy_id": "dog-pearl",
+     "puppy_name": "Pearl*",
+     "contract_signed_on": "2026-10-15",
+     "voided": {
+      "reason": "other",
+      "on": "2026-10-20"
+     }
+    }
+   ]
+  },
+  {
+   "id": "fam-cho",
+   "name": "The Cho family*",
+   "emails": [
+    "cho@example.com"
+   ],
+   "placements": [
+    {
+     "id": "sale-old3",
+     "puppy_id": "dog-topaz",
+     "puppy_name": "Topaz*",
+     "contract_signed_on": "2026-10-01",
+     "voided": {
+      "reason": "died",
+      "on": "2026-10-12"
+     }
+    }
+   ]
+  }
+ ],
+ "vet": {
+  "clinic": "Maple Street Animal Clinic*",
+  "doctor": "Dr. Ana Ruiz*",
+  "phone": "555-0142",
+  "address": "12 Maple St, Springfield"
+ },
+ "removed": [
+  {
+   "type": "family",
+   "id": "fam-gone"
+  },
+  {
+   "type": "placement",
+   "id": "sale-gone"
+  },
+  {
+   "type": "health",
+   "id": "ev-gone"
+  }
+ ]
+}
