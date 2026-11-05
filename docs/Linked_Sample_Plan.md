@@ -1,6 +1,7 @@
 # A linked sample site: plan
 
-Nothing here is built yet. This is a plan for a made-up kennel, as KennelOS would send it,
+Nothing here is built yet. Decided by the owner, 2026-11-05: the kennel is made up, and
+the demo site is for her only. This is a plan for a made-up kennel, as KennelOS would send it,
 so the owner can see and test a site linked to KennelOS without a real breeder's data.
 
 ## What it is for
@@ -144,7 +145,9 @@ values too, so the site builder's rules can be tried on them.
 - **The demo site** (`/ops`): **Make a demo site from the sample** creates a site, links
   it to the sample (no KennelOS device), and loads step 1. Buttons step it forward
   ("Send bundle 2") and back to step 1. It's marked Demo everywhere, can't be published
-  at a real address, and is never indexed by search engines.
+  at a real address, and is never indexed by search engines. **It's for the owner only:**
+  it opens only in her admin view, has no preview link to share, and no breeder can be
+  invited to it.
 - **The site builder prototype:** its sample data is replaced by step 1, so the
   previews show what a linked site really receives.
 
@@ -161,7 +164,4 @@ No migration is needed for the files or the tests. The demo site needs one colum
 
 ## Open questions
 
-1. **The kennel:** a made-up kennel (proposed), or the AK sample's dogs, as the website
-   sample already uses them?
-2. **The demo site:** should a demo site be visible only to the owner, or shareable with
-   a breeder by preview link to show them a template?
+None.
