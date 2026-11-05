@@ -2,7 +2,7 @@
 // the device token KennelOS gets for it, and unlinking.
 //
 // - A code is eight characters from an alphabet with no look-alikes (no 0/O,
-//   1/I/L), good for a quarter of an hour, once. Owners only, and a site may ask
+//   1/I/L), good for a quarter of an hour, once. Owners and editors, and a site may ask
 //   for LIMITS.codes an hour. Kept as a keyed hash, like a sign-in code.
 // - Redeeming one (POST api.kennelport.com/v1/link) is limited per IP, makes a
 //   `links` row for that device and answers its token, which is kept only as its
