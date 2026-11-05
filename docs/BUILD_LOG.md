@@ -1525,4 +1525,5 @@ answers to plan 15.
   allows inline styles and our fonts; nothing in `_kp/m`, `_kp/t` or `_kp/f` changed.
 - The terms are linked from the Site Manager's and the puppy portal's sign-in ("By signing
   in you agree…") and every site's footer ("Made with KennelPort · Terms").
-- Open: the terms refer to KennelPort's privacy policy, which doesn't exist yet.
+- `/privacy`: KennelPort's privacy policy (15 sections, written from the migrations and
+  `cleanup.js`), linked from the terms and the footer. Wording waiting for the owner's approval.

@@ -1,5 +1,5 @@
-// KennelPort's own pages at kennelport.com (hosts.js "home"): a short front page and
-// the terms of use. Built from the portal prototype's components (docs/reference/
+// KennelPort's own pages at kennelport.com (hosts.js "home"): a short front page, the
+// terms of use and the privacy policy. Built from the portal prototype's components (docs/reference/
 // portal-prototype.html: the dark header, the tile grid, numbered steps, the band card);
 // there is no prototype of this page itself. Static: no data, no script, so the CSP
 // allows inline styles and our own fonts only. Not in a cached folder (_kp/m, _kp/t,
@@ -9,6 +9,7 @@ import { SECURITY_HEADERS } from './lib/html.js';
 export const FRONT_CSP = "default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; img-src 'self' data:; form-action 'none'; frame-ancestors 'none'; base-uri 'none'";
 export const CONTACT = 'admin.kennelos@gmail.com';
 export const TERMS_UPDATED = '5 November 2026';
+export const PRIVACY_UPDATED = '5 November 2026';
 
 const STYLE = `
 @font-face { font-family: "Fraunces"; src: url("/_kp/fonts/fraunces-opsz-normal.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
@@ -105,6 +106,7 @@ function page(title, description, main) {
 <footer><div class="in">
   <span>© 2026 KennelPort, by KennelOS</span>
   <a href="/terms">Terms of use</a>
+  <a href="/privacy">Privacy</a>
   <a href="https://kennelos.app/">KennelOS</a>
   <a href="mailto:${CONTACT}">${CONTACT}</a>
 </div></footer>
@@ -183,7 +185,7 @@ export function termsPage() {
 <li><a href="#s22">Contact us</a></li>
 </ol></nav>
 <h2 id="s1">1. This agreement</h2>
-<p>These terms are an agreement between you and KennelOS ("KennelOS", "we", "us"), which runs KennelPort. They cover KennelPort: the breeder websites at kennelport.com addresses and on breeders' own domains, the Site Manager (manage.kennelport.com), the link from KennelOS (api.kennelport.com), and the puppy portal. By using any of them you agree to these terms and to KennelPort's privacy policy. If you use KennelPort for a business, you agree on its behalf.</p>
+<p>These terms are an agreement between you and KennelOS ("KennelOS", "we", "us"), which runs KennelPort. They cover KennelPort: the breeder websites at kennelport.com addresses and on breeders' own domains, the Site Manager (manage.kennelport.com), the link from KennelOS (api.kennelport.com), and the puppy portal. By using any of them you agree to these terms and to KennelPort's <a href="/privacy">privacy policy</a>. If you use KennelPort for a business, you agree on its behalf.</p>
 <p>Different parts apply to different people: sections 2 to 9 to breeders and the editors they bring in, section 10 to families using a puppy portal, and section 11 to anyone sending a form on a breeder's site. The rest applies to everyone.</p>
 <h2 id="s2">2. What KennelPort is</h2>
 <p>KennelPort hosts websites for dog breeders. We set up each site, and the breeder then runs it: the dogs, litters, puppies, photos, pages and messages are theirs. Some sites also have a puppy portal, where the breeder's families follow their puppy from the signed contract to home and beyond. KennelOS is optional: a KennelPort site works fully without it.</p>
@@ -235,15 +237,131 @@ export function termsPage() {
 </article>`);
 }
 
+export function privacyPage() {
+  return page('Privacy policy · KennelPort', 'What KennelPort holds about breeders, site visitors and puppy families, and how to delete it.', `
+<article class="legal">
+<p class="eyebrow">KennelPort</p>
+<h1>Privacy policy</h1>
+<p class="muted">Effective ${PRIVACY_UPDATED}. Last updated ${PRIVACY_UPDATED}.</p>
+<nav class="toc" aria-label="On this page"><b class="small">On this page</b><ol>
+<li><a href="#p1">Who we are, and what this covers</a></li>
+<li><a href="#p2">The short version</a></li>
+<li><a href="#p3">Breeders and editors</a></li>
+<li><a href="#p4">Visitors to a breeder's site</a></li>
+<li><a href="#p5">Families in a puppy portal</a></li>
+<li><a href="#p6">Emails we send</a></li>
+<li><a href="#p7">Who else is involved</a></li>
+<li><a href="#p8">How long we keep things</a></li>
+<li><a href="#p9">Closing a site</a></li>
+<li><a href="#p10">Security</a></li>
+<li><a href="#p11">Your choices and rights</a></li>
+<li><a href="#p12">Where your data is processed</a></li>
+<li><a href="#p13">Children</a></li>
+<li><a href="#p14">Changes to this policy</a></li>
+<li><a href="#p15">Contact us</a></li>
+</ol></nav>
+<h2 id="p1">1. Who we are, and what this covers</h2>
+<p>KennelOS ("KennelOS", "we", "us") runs KennelPort. This policy covers what KennelPort itself holds: the Site Manager (manage.kennelport.com) and the breeders and editors who sign in to it, the breeder websites we host, the link from KennelOS (api.kennelport.com), and the puppy portal. Each breeder's site also has its own privacy page for its visitors. KennelOS's apps have their <a href="https://kennelos.app/privacy.html">own privacy policy</a>.</p>
+<p>A breeder decides what goes on their site, and what they keep about the families and visitors who contact them. For those details the breeder is responsible (in data-protection terms, the controller); we store and send them only to run the breeder's site, and never use them for anything of our own. For breeders' and editors' own accounts, and for this website, we are responsible.</p>
+
+<h2 id="p2">2. The short version</h2>
+<ul>
+<li>Breeders and editors sign in with an email code. We keep a scrambled (keyed-hash) form of your address, not the address.</li>
+<li>Reading a breeder's site collects nothing about you: no accounts, no advertising, no tracking cookies.</li>
+<li>What you send through a breeder's site (a message, an application, a review) goes to that breeder's inbox, and messages are deleted after 90 days.</li>
+<li>In a puppy portal, family email addresses are the one readable personal detail we keep, encrypted, because the portal emails families months later. A family can erase their account from Account at any time.</li>
+<li>We never sell anything about anyone, never use it for advertising, and never use it to train AI models.</li>
+</ul>
+
+<h2 id="p3">3. Breeders and editors</h2>
+<ul>
+<li><strong>Your sign-in:</strong> a keyed hash of your email (never the address), which sites you manage and your role, and for each signed-in browser or installed Site Manager a session, kept as a hash of its token. Sign-in codes are kept hashed and expire. When we invite you, the invitation email is sent once and the address isn't kept.</li>
+<li><strong>Your site:</strong> everything you put on it (pages, dogs, litters, puppies, prices, albums, photos, videos and posts you embed, your contact details) and the published versions Undo publish can go back to. A removed photo's files are deleted a day after nothing kept uses them.</li>
+<li><strong>Notifications</strong>, if you turn them on: the push address your browser gives us for that device, tied to its sign-in so signing out silences it. Each notification carries no text; your device asks us what to show. We keep a line per event (what kind, and the sender's first name, never what they wrote) for 8 days.</li>
+<li><strong>Usage:</strong> how many emails we sent each day by kind, and how much storage your site uses. Counts only.</li>
+<li><strong>The KennelOS link</strong>, if you use it: link codes (kept as a keyed hash, a quarter of an hour, used once), each linked device's label and key (kept as a hash), when it last sent, and what it sent, which becomes your site's content, as section 9a of <a href="https://kennelos.app/privacy.html#website-link">KennelOS's privacy policy</a> describes. For a portal, KennelOS also sends each family with a signed contract (section 5).</li>
+</ul>
+
+<h2 id="p4">4. Visitors to a breeder's site</h2>
+<ul>
+<li><strong>Reading the site:</strong> no accounts, advertising or tracking cookies. Cloudflare, which delivers every page, sees your device's internet address, used only to deliver the page and keep the site safe.</li>
+<li><strong>Embedded videos and posts, and some product logos,</strong> load from the company that hosts them (YouTube's privacy-enhanced player, Vimeo, TikTok, Instagram or Facebook, or a brand's own site), under that company's policy.</li>
+<li><strong>The contact and application forms:</strong> your name, email, phone if you give it, and what you write go to the breeder's inbox. Never emailed anywhere. Deleted after 90 days. Cloudflare Turnstile may check that you're not a bot.</li>
+<li><strong>Reviews:</strong> your name, your words and any photo, held privately until the breeder approves them, and shown only with the consent you tick.</li>
+<li><strong>A waitlist the breeder keeps by hand:</strong> your name, email and phone if you gave them, and what you're hoping for. The site shows only your first name and last initial, what you want and when you were added. Removed 90 days after the breeder marks you done.</li>
+</ul>
+
+<h2 id="p5">5. Families in a puppy portal</h2>
+<p>A portal is switched on for a breeder's site by us. It holds:</p>
+<ul>
+<li><strong>Your account:</strong> your family name; your email addresses, each stored encrypted beside a keyed hash used to find it, never logged; sign-in codes and sessions (hashed); when you last used the portal.</li>
+<li><strong>Your puppy's records, as the breeder keeps them:</strong> the puppy's name, go-home and pickup times, microchip and registration number, vaccinations, preventatives and vet visits, your contract and vet-visit proof, the extras you bought, and an extended stay's weekly updates and photos.</li>
+<li><strong>What you do there:</strong> your checklist and timeline ticks, your messages with the breeder, the photos and notes you add, and clicks on the breeder's recommended products and your status in each (so they know who to remind). A history of changes to these records, with when and by whom.</li>
+<li><strong>Emails:</strong> a log of each one sent to you and whether it was delivered, as the breeder's evidence (for example, of vet-visit reminders). Resend tells us delivered or bounced; we don't keep the address it reports.</li>
+</ul>
+<p><strong>Erasing your account</strong> (Account, in the portal): your addresses, sign-in, messages, ticks and what you added are deleted at once. The breeder keeps their sale records (placement, health records, contract, vet proof and the reminder log) with your name only, because they may need them for a health guarantee. A breeder can also delete a family, undoable for 30 days.</p>
+
+<h2 id="p6">6. Emails we send</h2>
+<p>Sign-in codes, invitations, and the portal's emails to families (sign-in links, reminders, a stay's updates). Plain text, with no tracking pixels. We never send marketing email.</p>
+
+<h2 id="p7">7. Who else is involved</h2>
+<ul>
+<li><strong>Cloudflare:</strong> runs KennelPort, stores its database and files (encrypted at rest), and Turnstile on forms.</li>
+<li><strong>Resend:</strong> sends our emails; it handles each recipient's address and the email.</li>
+<li><strong>Apple, Google and Mozilla:</strong> deliver notifications to breeders' devices that turn them on; each carries no text.</li>
+<li><strong>The companies whose content a breeder embeds</strong> (section 4).</li>
+</ul>
+<p>We'd disclose information only if the law required us to, and we'd tell the person concerned unless we were forbidden to.</p>
+
+<h2 id="p8">8. How long we keep things</h2>
+<ul>
+<li>Site messages and applications: 90 days. A hand-kept waitlist's finished families: 90 days after.</li>
+<li>Notification lines: 8 days. Sign-in codes: until they expire. Request counts used against abuse (per hashed address and hashed internet address): a week.</li>
+<li>Litters that left a site: 30 days, unless the breeder keeps them.</li>
+<li>Portal accounts: until the family erases theirs, or the breeder deletes the family (final 30 days later). The breeder's sale records: until the breeder deletes them.</li>
+<li>Everything on a site: until the site is closed (section 9).</li>
+<li>Our database provider keeps its own recovery copy for up to 30 days, so anything deleted is fully gone within 30 days.</li>
+</ul>
+
+<h2 id="p9">9. Closing a site</h2>
+<p>A breeder can close their site from the Site Manager. Everything on it is deleted at once: pages, dogs, litters, photos, files, messages, sign-ins, link keys and portal records. The address keeps only a closed notice, and is never given to anyone else unless the breeder asks. Emails already sent stay in the inboxes they reached.</p>
+
+<h2 id="p10">10. Security</h2>
+<p>Everything travels over HTTPS and is stored encrypted at rest. Email addresses are kept as keyed hashes, apart from portal families' addresses, which are encrypted. We never log an email address, a code, a token or a message. No system is perfectly secure; if a breach affected your information, we'd tell you and the authorities as the law requires.</p>
+
+<h2 id="p11">11. Your choices and rights</h2>
+<ul>
+<li><strong>Breeders:</strong> change anything in the Site Manager, download a copy of your site, or close it.</li>
+<li><strong>Families:</strong> erase your portal account from Account, or ask the breeder.</li>
+<li><strong>Anyone who contacted a breeder:</strong> ask the breeder first; they decide what they keep.</li>
+<li>Anyone can email us to see, correct or delete what we hold about them, or to complain; we answer within 30 days, and you can also complain to your local data-protection authority. Where a law asks for a legal basis, ours is running the service the breeder asked for, and keeping it secure and free of abuse.</li>
+</ul>
+
+<h2 id="p12">12. Where your data is processed</h2>
+<p>Our providers run worldwide networks, so information may be processed in the United States and other countries with different data-protection laws from yours. We rely on each provider's own data-protection commitments for those transfers.</p>
+
+<h2 id="p13">13. Children</h2>
+<p>KennelPort is for adults. We don't knowingly collect information from anyone under 16; if you think a child has sent us something, email us and we'll delete it.</p>
+
+<h2 id="p14">14. Changes to this policy</h2>
+<p>If what we hold or how we use it changes, we update this page first and change the dates at the top, and tell breeders in the Site Manager (and families in the portal) when it matters to them.</p>
+
+<h2 id="p15">15. Contact us</h2>
+<p>Email <a href="mailto:admin.kennelos@gmail.com">admin.kennelos@gmail.com</a>.</p>
+
+</article>`);
+}
+
 const headers = (status = 200) => ({ status, headers: {
   'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=3600',
   ...SECURITY_HEADERS, 'content-security-policy': FRONT_CSP,
 } });
 
-// kennelport.com: / and /terms; anything else is a 404 with a way home.
+// kennelport.com: /, /terms and /privacy; anything else is a 404 with a way home.
 export function handleFront(url) {
   const path = url.pathname.replace(/\/+$/, '') || '/';
   if (path === '/') return new Response(frontPage(), headers());
   if (path === '/terms') return new Response(termsPage(), headers());
+  if (path === '/privacy') return new Response(privacyPage(), headers());
   return new Response(page('Not found · KennelPort', 'Page not found.', '<div class="legal"><h1>Not found</h1><p>There’s nothing at this address. <a href="/">Go to KennelPort</a>.</p></div>'), headers(404));
 }

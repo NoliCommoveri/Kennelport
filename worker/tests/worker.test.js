@@ -72,6 +72,9 @@ test('kennelport.com: the front page and the terms, linked from the sign-ins and
   assert.equal((terms.match(/<h2 id="s\d+">/g) || []).length, 22);
   assert.match(terms, /which runs\s+KennelPort|which runs KennelPort/);
   assert.equal((await call(env, 'kennelport.com', '/nothing')).status, 404);
+  const privacy = await (await call(env, 'kennelport.com', '/privacy')).text();
+  assert.equal((privacy.match(/<h2 id="p\d+">/g) || []).length, 15);
+  assert.match(terms, /<a href="\/privacy">privacy policy<\/a>/);
   assert.match(await (await call(env, 'manage.kennelport.com', '/')).text(), /kennelport\.com\/terms/);
   const { importContent } = await import('../src/content/io.js');
   const { AK_SAMPLE } = await import('../src/content/akSample.js');
