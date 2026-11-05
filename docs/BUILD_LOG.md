@@ -1441,7 +1441,7 @@ answers to plan 15.
     her name;
   - an edge-to-edge photo hero with a script line ("Welcome!", "Welcome home", "Hello
     again", or the stay's week) over the serif heading; after pickup, "N weeks home";
-  - the pup card (framed round photo, script name with a sex badge, breed and colour,
+  - the pup card (framed round photo, script name with a sex badge, the breed,
     born and home facts) beside a calendar tile: a calendar page (month on red, day,
     weekday) with days to go and the pickup time and **What to do first**; in the vet
     window a red tile with hours left and **Upload record**; after, the next task; during

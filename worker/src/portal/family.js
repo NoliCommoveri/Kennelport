@@ -459,7 +459,7 @@ async function homePage(env, site, fam, now = new Date()) {
   <section class="bento">
     <a class="tile pup" href="/family/records">${photoTag(main ? `${main}?s=t` : null, name, 'round')}
       <span class="pname">${esc(name)}${sex ? `<span class="sex ${sex[1]}" aria-label="${sex[1]}">${sex[0]}</span>` : ''}</span>
-      ${[site.breed, pup?.color, pup?.litter_name].filter(Boolean).length ? `<span class="small muted">${esc([site.breed || pup?.litter_name, pup?.color].filter(Boolean).join(' · '))}</span>` : ''}
+      ${site.breed || pup?.litter_name ? `<span class="small muted">${esc(site.breed || pup.litter_name)}</span>` : ''}
       ${facts ? `<ul class="pfacts">${facts}</ul>` : ''}</a>
     ${calendar}
   </section>
