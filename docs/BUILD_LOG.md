@@ -1514,3 +1514,15 @@ answers to plan 15.
 - `site.css` changed: `ASSET_VERSION` bump asked, not done.
 
 - Versions bumped (2026-11-05, owner's yes): `APP_VERSION` 14, `ASSET_VERSION` 16, `PORTAL_VERSION` 3, each with its fingerprint.
+
+## 2026-11-05: kennelport.com front page and terms of use
+
+- `worker/src/front.js`: kennelport.com's own pages, replacing the one-line placeholder. `/`
+  is a short front page (the dark header, a hero tile, four tiles, three numbered steps,
+  a footer), built from the portal prototype's components; there is no prototype of this
+  page. `/terms` is the terms of use, as approved by the owner (KennelPort is run by
+  KennelOS; any fee agreed separately; contact admin.kennelos@gmail.com). Its own CSP
+  allows inline styles and our fonts; nothing in `_kp/m`, `_kp/t` or `_kp/f` changed.
+- The terms are linked from the Site Manager's and the puppy portal's sign-in ("By signing
+  in you agree…") and every site's footer ("Made with KennelPort · Terms").
+- Open: the terms refer to KennelPort's privacy policy, which doesn't exist yet.

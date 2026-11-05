@@ -74,7 +74,7 @@ function footer(snap, ctx) {
   return `<footer class="site"><div class="wrap">
     <div class="foot-brand">${footerBrand(snap)}${snap.site.blurb ? `<p class="small">${esc(snap.site.blurb)}</p>` : ''}</div>
     ${cols.map(([h, links]) => `<div><h4>${esc(h)}</h4><ul>${links.map((l) => `<li><a href="${attr(l.href)}"${l.external ? ' rel="noopener noreferrer" target="_blank"' : ''}>${esc(l.text)}</a></li>`).join('')}</ul></div>`).join('')}
-    <div class="fine"><span>© ${esc(year)} ${esc(snap.site.kennel_name)} · <a href="/privacy">Privacy</a></span><span>Made with KennelPort</span></div>
+    <div class="fine"><span>© ${esc(year)} ${esc(snap.site.kennel_name)} · <a href="/privacy">Privacy</a></span><span>Made with <a href="https://kennelport.com/">KennelPort</a> · <a href="https://kennelport.com/terms">Terms</a></span></div>
   </div></footer>`;
 }
 

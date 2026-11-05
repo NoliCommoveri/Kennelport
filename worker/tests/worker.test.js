@@ -59,3 +59,26 @@ test('staging: /__host switches which host the browser sees; production ignores 
   const prod = await makeEnv();
   assert.equal((await call(prod, 'kp.workers.dev', '/__host?h=akbostons.kennelport.com')).status, 404);
 });
+
+test('kennelport.com: the front page and the terms, linked from the sign-ins and every site', async () => {
+  const env = await makeEnv();
+  const home = await call(env, 'kennelport.com', '/');
+  assert.equal(home.status, 200);
+  assert.match(home.headers.get('content-security-policy'), /font-src 'self'/);
+  const h = await home.text();
+  assert.match(h, /A website for your kennel/);
+  assert.match(h, /href="\/terms"/);
+  const terms = await (await call(env, 'kennelport.com', '/terms')).text();
+  assert.equal((terms.match(/<h2 id="s\d+">/g) || []).length, 22);
+  assert.match(terms, /which runs\s+KennelPort|which runs KennelPort/);
+  assert.equal((await call(env, 'kennelport.com', '/nothing')).status, 404);
+  assert.match(await (await call(env, 'manage.kennelport.com', '/')).text(), /kennelport\.com\/terms/);
+  const { importContent } = await import('../src/content/io.js');
+  const { AK_SAMPLE } = await import('../src/content/akSample.js');
+  const { publish, forgetSnapshots } = await import('../src/publish.js');
+  forgetSnapshots();
+  const site = await addSite(env, 'akbostons');
+  await importContent(env, site.id, AK_SAMPLE);
+  await publish(env, site.id, 'test');
+  assert.match(await (await call(env, 'akbostons.kennelport.com', '/')).text(), /Made with <a href="https:\/\/kennelport\.com\/">KennelPort<\/a> · <a href="https:\/\/kennelport\.com\/terms">Terms<\/a>/);
+});

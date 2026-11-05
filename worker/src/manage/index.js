@@ -100,7 +100,8 @@ function signInPage({ error, email = '' } = {}) {
   <form method="post" action="/signin" data-save>
     <label>Email<input type="email" name="email" value="${esc(email)}" autocomplete="email" inputmode="email" required></label>
     <button class="primary">Send me a code</button>
-  </form></section>`, { status: error ? 400 : 200 });
+  </form>
+  <p class="muted small">By signing in you agree to KennelPort's <a href="https://kennelport.com/terms">terms of use</a>.</p></section>`, { status: error ? 400 : 200 });
 }
 
 function codePage({ email, error } = {}) {
