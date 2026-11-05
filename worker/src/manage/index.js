@@ -70,7 +70,7 @@ const ic = (n) => `<span class="ic" aria-hidden="true"><svg class="i"><use href=
 // header with the Admin pill, and its own nav.
 function page(title, body, { status = 200, back = null, headers = {}, nav: tabs = null, brand = null, backLabel = 'Back', admin = null } = {}) {
   const header = admin
-    ? `<header class="top adminhead"><a class="brand" href="/admin"><img class="mark" src="/_kp/m/icon-64.png" alt="" width="32" height="32"><span class="title"><b>KennelPort</b><small><svg class="i" aria-hidden="true"><use href="#i-sliders"/></svg>Site builder</small></span></a>
+    ? `<header class="top adminhead"><a class="brand" href="/admin"><span class="logo" aria-hidden="true"><span class="kp">KP</span></span><span class="title"><b>KennelPort</b><small><svg class="i" aria-hidden="true"><use href="#i-sliders"/></svg>Site builder</small></span></a>
 <span class="adminpill">Admin</span>${admin.site ? `<a class="button small onfill" href="/s/${esc(admin.site.subdomain)}"><svg class="i" aria-hidden="true"><use href="#i-eye"/></svg>As ${esc((admin.site.kennel_name || admin.site.subdomain).split(' ')[0])}</a>` : ''}</header>`
     : brand
     ? `<header class="top brandhead"><a class="brand" href="/s/${esc(brand.sub)}"><span class="logo">${brand.logo ? `<img src="/s/${esc(brand.sub)}/photos/${esc(brand.logo)}/thumb" alt="">` : ''}<span class="mono">${esc(brand.monogram || (brand.name || '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2))}</span></span><span class="title"><b>${esc(brand.name)}</b><small><svg class="i" aria-hidden="true"><use href="#i-globe"/></svg>Site Manager</small></span></a>

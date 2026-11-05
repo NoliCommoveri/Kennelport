@@ -24,7 +24,7 @@ export const STATUS_NOTES = {
 };
 
 // The template's two status colours (site.css .status.avail, .status.res).
-export const PILLS = { avail: 'Green', res: 'Held' };
+export const PILLS = { avail: 'Green', res: 'Brass outline' };
 
 const st = (words, pill, ribbon, show, price, ask, fullreg, older, order) => ({ words, pill, ribbon, show, price, ask, fullreg, older, order });
 

@@ -184,10 +184,10 @@ function rulesScreen(site, rules, error) {
     const name = (f) => `status.${k}.${f}`;
     return `<section class="card status-card"><div class="between"><span class="stcode"><span class="code">${k}</span>${r.show && r.words ? `<span class="spill ${SPILL[r.pill]}">${esc(r.words)}</span>` : '<span class="small muted">Not shown</span>'}</span>${same(r, D.status[k]) ? '' : back(`status.${k}`)}</div>
       <p class="small muted">${esc(STATUS_NOTES[k])}</p>
-      <div class="fgrid">${field(name('words'), r.words, { label: 'Shows as', ph: 'Words on the card' })}${select(name('pill'), r.pill, PILLS, 'Colour')}</div>
+      <div class="fgrid">${field(name('words'), r.words, { label: 'Shows as', ph: 'Words on the card' })}${select(name('pill'), r.pill, PILLS, 'Pill')}</div>
       <div class="switches">${toggle(name('show'), r.show, 'Show the pup on the site')}${toggle(name('price'), r.price, 'Show its price')}${toggle(name('ask'), r.ask, '“Ask about this puppy”')}
         ${toggle(name('fullreg'), r.fullreg, `“${rules.reg.ask}” (no registration set)`)}${toggle(name('older'), r.older, 'Can be an older puppy')}${toggle(name('ribbon'), r.ribbon, 'Ribbon across its photo')}</div>
-      ${select(name('order'), r.order, { 1: 'First', 2: 'Second', 3: 'Third', 4: 'Last' }, 'Order on the litter page', '')}<span class="hint">Lower comes first; equal keeps the breeder's order.</span></section>`;
+      <label>Order on the litter page<span class="hint">Lower comes first; equal keeps the breeder's order.</span><select name="${name('order')}">${Object.entries({ 1: 'First', 2: 'Second', 3: 'Third', 4: 'Last' }).map(([v, l]) => `<option value="${v}"${String(v) === String(r.order) ? ' selected' : ''}>${l}</option>`).join('')}</select></label></section>`;
   };
   const changed = (part) => (same(rules[part], D[part]) ? '' : back(part));
   return `<div class="stack">
@@ -220,8 +220,8 @@ function timingScreen(site, timing, error) {
   const row = ([k, lab, sub, unit]) => `<div class="inl"><label class="lab" for="t-${k}">${esc(lab)}<small>${esc(sub)}</small></label><input type="number" inputmode="numeric" min="0" name="timing.${k}" id="t-${k}" value="${esc(timing[k])}">
     <span class="dfl">${esc(unit)} · default ${esc(DEFAULT_TIMING[k])}${timing[k] !== DEFAULT_TIMING[k] ? ` <span class="chg">changed</span> ${back(`timing.${k}`)}` : ''}</span></div>`;
   return `<div class="stack">${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
-    <section class="card"><div class="fgroup"><h2>Website</h2>${TIMING_ROWS.map(row).join('')}</div></section>
-    ${site.portal_on ? '<section class="card band"><h2>Family portal</h2><p class="small">Its timing (the vet reminders, stays, invites and the rest) comes with the portal\'s build, step 4.</p></section>' : ''}</div>`;
+    <div class="twocol"><section class="card"><div class="fgroup"><h2>Website</h2>${TIMING_ROWS.map(row).join('')}</div></section>
+    ${site.portal_on ? '<section class="card band"><div class="fgroup"><h2>Family portal</h2><p class="small">Its timing (the vet reminders, stays, invites and the rest) comes with the portal\'s build, step 4.</p></div></section>' : ''}</div></div>`;
 }
 
 // ---------- Dogs, Wording: the site's fixed lines ----------
@@ -367,16 +367,16 @@ export async function handleBuilder({ env, request, url, user, page }) {
     wording: 'The lines written into the site. The breeder words her own records and pages; these are the rest.',
     formats: 'How dates, girls and boys, and money read across the site.',
     kennelos: 'How what KennelOS sends lands on this site.',
-    timing: 'Every “how long” and “when” that changes what this site shows. Today\'s behaviour is the default.',
+    timing: null,
   }[screen];
   const editor = { rules: rulesScreen, dogs: dogsScreen, wording: wordingScreen, formats: formatsScreen, kennelos: kennelosScreen }[screen]?.(site, rules, error) ?? timingScreen(site, timing, error);
   const side = screen === 'dogs' ? await dogsPreview(env, site)
     : screen === 'wording' || screen === 'formats' ? await littersPreview(env, site, 'Their litter cards, with these rules')
-      : screen === 'kennelos' ? landingPreview(rules) : await preview(env, site);
+      : screen === 'kennelos' ? landingPreview(rules) : screen === 'timing' ? '' : await preview(env, site);
   const body = `<p class="crumb"><a href="/admin">‹ Every site</a></p><span class="eyebrow">${esc(site.kennel_name || site.subdomain)}</span><h1>${title}</h1>
-    <p class="muted">${lede}</p>
+    ${lede ? `<p class="muted">${lede}</p>` : ''}
     ${saved ? '<p class="notice" role="status">Saved. The site shows it once the breeder (or you) publishes.</p>' : ''}
-    <form method="post" id="build" class="build"><button class="sr" tabindex="-1" aria-hidden="true">Save</button>${editor}${side}
-      <div class="actionbar"><div class="in"><span class="ico">${ic('eye')}</span><p><b>Their website</b>Save, then the preview shows it. Publishing puts it live.</p><a class="button small seeit" href="#preview">See it</a><button class="primary small">Save</button></div></div></form>`;
+    <form method="post" id="build" class="build${side ? '' : ' solo'}"><button class="sr" tabindex="-1" aria-hidden="true">Save</button>${editor}${side}
+      <div class="actionbar"><div class="in"><span class="ico">${ic('eye')}</span><p><b>Their website</b>Save, then the preview shows it. Publishing puts it live.</p>${side ? '<a class="button small seeit" href="#preview">See it</a>' : ''}<button class="primary small">Save</button></div></div></form>`;
   return page(`${title} · ${site.kennel_name || site.subdomain}`, body, { admin: { nav: adminNav(site, screen), site } });
 }
