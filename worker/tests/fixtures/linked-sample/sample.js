@@ -34,3 +34,7 @@ export function load(name, today = null) {
 }
 export const bundle = (step, today) => load(`bundle-${step}.json`, today);
 export const feed = (step, today) => load(`feed-${step}.json`, today);
+
+// The series (the plan's table): the day each step is sent. Bundle N and feed N are
+// written as of that day.
+export const SENT = { 1: '2026-11-01', 2: '2026-11-20', 3: '2026-12-10', 4: '2027-01-15', 5: '2027-01-20' };

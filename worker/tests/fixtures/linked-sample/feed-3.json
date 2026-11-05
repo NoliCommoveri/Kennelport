@@ -1,0 +1,48 @@
+{
+ "format": 1,
+ "feed_id": "sample-feed-3",
+ "kennel_id": "kennel-sample",
+ "sent_at": "2026-12-10T15:05:00Z",
+ "families": [
+  {
+   "id": "fam-reed",
+   "name": "The Reed family*",
+   "emails": [
+    "reed.family@example.com",
+    "sam.reed@example.com"
+   ],
+   "status_url": "https://status.kennelos.app/s/sample-reed",
+   "placements": [
+    {
+     "id": "sale-ruby",
+     "puppy_id": "dog-ruby",
+     "puppy_name": "Ruby*",
+     "contract_signed_on": "2026-10-20",
+     "go_home_on": "2026-11-22",
+     "health": [
+      {
+       "id": "ev-r1",
+       "type": "vaccine",
+       "given_on": "2026-10-30",
+       "name": "DHPP, first round"
+      },
+      {
+       "id": "ev-r2",
+       "type": "deworming",
+       "given_on": "2026-11-01",
+       "name": "Pyrantel"
+      },
+      {
+       "id": "ev-r3",
+       "type": "vet_visit",
+       "given_on": "2026-11-24",
+       "name": "3-day vet visit",
+       "notes": "Healthy, 4.1 lb."
+      }
+     ],
+     "pickup_at": "2026-11-22T16:00:00Z"
+    }
+   ]
+  }
+ ]
+}
