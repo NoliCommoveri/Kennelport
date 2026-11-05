@@ -1431,3 +1431,31 @@ answers to plan 15.
 - The page cache keys on the portal switch too, so turning it on or off shows at once.
 - Built from the template's existing How to pay card styles: no site template file
   changed, so no version bump.
+
+## 2026-11-05: Puppy parent portal, family Home in the prototype's look
+
+- Compared against `docs/reference/portal-prototype.html` at phone width, the built family
+  Home had lost most of the prototype's variety (plain cards, one-column checklist, large
+  link tiles). Home now carries the prototype's pieces over, with every built feature kept:
+  - the header: her logo (or monogram) in a white circle, and "Puppy Parent Portal" under
+    her name;
+  - an edge-to-edge photo hero with a script line ("Welcome!", "Welcome home", "Hello
+    again", or the stay's week) over the serif heading; after pickup, "N weeks home";
+  - the pup card (framed round photo, script name with a sex badge, breed and colour,
+    born and home facts) beside a calendar tile: a calendar page (month on red, day,
+    weekday) with days to go and the pickup time and **What to do first**; in the vet
+    window a red tile with hours left and **Upload record**; after, the next task; during
+    a stay, a dark tile with the week and a week bar;
+  - Book the vet visit as a warm tile with a large icon;
+  - the vet visit, What's next and the stay's skills as mint bands with numbered blobs;
+  - the go-home checklist in two columns on a phone;
+  - before pickup, with a status page, a paper band: pickup, extras and messages stay
+    there;
+  - the food band edge to edge on deep green ("Keep X on the same food", the food on a
+    cream box, a round Order button), and Included with X as round outlined badges;
+  - Quick links as six small tiles, three across; the pinned bar as a full-width strip
+    with an icon and two lines.
+- Cards now have the prototype's thin border instead of a shadow, on every portal page.
+- `CLAUDE.md`: future screens, every phase, are built from and checked against the
+  prototypes in `docs/reference/`.
+- Portal files changed (`portal.css`, `portal.js`): `PORTAL_VERSION` needs its bump.

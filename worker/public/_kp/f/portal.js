@@ -7,7 +7,11 @@
   const read = () => { try { return localStorage.getItem(KEY); } catch { return null; } };
   const z = read();
   if (z === '2' || z === '3') root.dataset.zoom = z;
+  // Her logo, when it can't load (a site not yet published): the monogram under it shows.
+  const gone = (img) => img.classList.add('gone');
+  document.addEventListener('error', (e) => { if (e.target.matches?.('.logo img')) gone(e.target); }, true);
   document.addEventListener('DOMContentLoaded', () => {
+    for (const img of document.querySelectorAll('.logo img')) if (img.complete && !img.naturalWidth) gone(img);
     const aa = document.getElementById('aa');
     if (aa) aa.addEventListener('click', () => {
       const next = { 1: '2', 2: '3', 3: '1' }[root.dataset.zoom || '1'];

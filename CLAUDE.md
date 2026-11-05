@@ -30,6 +30,18 @@ not to bump. After a yes: bump the number by one, run
 `node worker/scripts/fingerprint.mjs` from the repo root, and paste the matching
 fingerprint (`APP_FILES` or `TEMPLATE_FILES`) beside the number.
 
+## Look: match the prototypes
+
+The owner worked hard on the styling. The reference builds in `docs/reference/` are the
+target look: `portal-prototype.html` for the family portal and the Site Manager (her
+screens), `ak-sample.html` for her website. Before building or changing any screen,
+including every later phase, open the matching prototype screen and carry over its
+components, classes and CSS (tiles, bands, calendar pages, numbered steps, highlight
+rows, pills, the pinned action bar), not a plainer stand-in. Check the result side by
+side with the prototype at phone width (390px) and on a computer. Any change from the
+prototype should add pleasing variety, never remove it. If a screen has no prototype,
+build it from the prototype's existing components, and say so.
+
 ## Migrations: one per merge
 
 A branch adds at most one migration file. Before adding one, check what the branch
