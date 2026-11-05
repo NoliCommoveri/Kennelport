@@ -838,7 +838,7 @@ async function wordingRoute({ env, request, url, page, site, build = null, scree
     const long = follows.length > 70 || mine.length > 70;
     const input = long ? `<textarea name="w.${esc(it.key)}" rows="3" placeholder="${esc(follows)}">${esc(mine)}</textarea>` : `<input type="text" name="w.${esc(it.key)}" value="${esc(mine)}" placeholder="${esc(follows)}">`;
     return `<li class="wline${mine ? ' on' : ''}"><label><span class="where"><b>${esc(it.where)}</b>${mine ? ' <span class="chg">changed</span>' : ''}</span>${input}
-      <span class="hint">${follows ? `${site && every[it.key] != null ? 'Every site' : 'Today'}: “${esc(follows)}”` : 'Empty today.'}${` Can use ${['kennel', ...it.vars.filter((v) => v !== 'kennel')].map((v) => `{${v}}`).join(', ')}.`}</span></label></li>`;
+      <span class="hint">${follows ? `${site && every[it.key] != null ? 'Every site' : 'Today'}: “${esc(follows)}”.` : 'Empty today.'}${` Can use ${['kennel', ...it.vars.filter((v) => v !== 'kennel')].map((v) => `{${v}}`).join(', ')}.`}</span></label></li>`;
   }).join('');
   const title = screen === 'all' ? (q ? `Lines with “${q}”` : 'Find a line') : WORD_SCREENS[screen];
   const saved = url.searchParams.get('saved') && !error;

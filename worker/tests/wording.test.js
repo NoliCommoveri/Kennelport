@@ -75,7 +75,7 @@ test('the owner sets it in her admin view; the breeder reads it in her Site Mana
   // The list, by screen, and a search across it.
   const list = await as(admin, '/admin/wording');
   assert.match(list, /Site Manager wording .* lines, by screen Her home screen \d+ lines .* A dog \d+ lines/);
-  assert.match(await as(admin, '/admin/wording/all?q=call%20name'), /The "Call name" field \(?.*Today: “Call name”/);
+  assert.match(await as(admin, '/admin/wording/all?q=call%20name'), /The "Call name" field \(?.*Today: “Call name”\./);
   assert.notEqual((await call(env, M, '/admin/wording', { headers: { cookie: breeder } })).status, 200);
 
   // For every site: a dog's Call name, its help (empty today), and a home tile.
@@ -96,7 +96,7 @@ test('the owner sets it in her admin view; the breeder reads it in her Site Mana
   assert.equal(r.headers.get('location'), '/admin/akbostons/instructions/home?saved=1');
   assert.match(await as(breeder, '/s/akbostons'), /The pack Cards/);
   assert.match(await as(admin, '/s/hollow'), /Our dogs Cards/);
-  assert.match(await as(admin, '/admin/akbostons/instructions/home'), /changed .*Every site: “Our dogs”/);
+  assert.match(await as(admin, '/admin/akbostons/instructions/home'), /changed .*Every site: “Our dogs”\./);
   // The note after a save, in her wording.
   await save('/admin/wording/notes', { 'w.note.saved': 'Got it, {kennel}. Publish when ready.' });
   const saved = await call(env, M, '/s/akbostons/details?note=saved', { headers: { cookie: breeder } });
