@@ -159,6 +159,39 @@ fixed unless the owner asks.
 - These addresses stay fixed because other systems link to them: `/waitlist` and
   `/waitlist/help`, `/family-login`, `/privacy`. Their menu names can still change.
 
+## The family portal (one site, configured by the owner)
+
+The family portal (`docs/Puppy_Parent_Portal_Plan.md`) is on for one breeder's site,
+and much of its build is written into the code for her. It gets the same split as the
+website:
+
+- **The owner builds it.** The breeder keeps what the portal plan already gives her
+  (its section 4: products and programs, checklist, timeline tasks, handbook, email
+  wording, contacts, baby book, families).
+- **Its build is per site,** so the portal can stay special to this breeder's site
+  without other sites having to share it. Offering the portal to other breeders is
+  still out of scope (portal plan, section 1). This plan just doesn't make that harder
+  later.
+
+**What becomes the owner's settings for her portal:**
+
+| Area | Written into the code today |
+|---|---|
+| **Family Home, per stage** | the four stages (before go-home, pickup to vet deadline, weeks 1–8, later), and which sections each stage shows, in what order (portal plan 7.2's ten sections) |
+| **Tabs and quick links** | the five tabs (Home, Timeline or Stay, Photos, Baby book, Records), and the quick links and their names ("A-K's picks") |
+| **Display rules** | how what the portal's KennelOS feed carries (`portal/feed.js`) reads to families, like the website's rules above |
+| **Timing rules** | the vet booking reminder 5 days before go-home at 09:00, the deadline morning reminder at 08:00, red under 48 hours left (`portal/vet.js`); when a stay starts, 8 weeks old (`portal/stays.js`); overdue after 14 days (`portal/steps.js`); invite links last 30 days (`portal/auth.js`); undo for 30 days (`portal/account.js`); the retention table (portal plan 10.1) |
+| **The vet deadline rule** | which of the two counts her contract uses (`VET_RULES`: 72 hours from pickup, or the end of the third day after pickup day) |
+
+**What stays fixed for the breeder,** as the portal plan says: the vet countdown follows
+her contract, and its reminders always send. The owner sets those rules for her site to
+match the contract. The breeder can't switch them off for a family.
+
+**The same rule as the website:** the owner places the Home sections, tabs and quick
+links; the breeder switches on or off the ones the owner allows, and words them.
+
+What makes her portal special is still to be listed, with the owner (open question 5).
+
 ## KennelOS data (for the later review)
 
 For now, rules work from what the package carries today (`kennelos/bundle.js`, format
@@ -197,7 +230,10 @@ Each step is its own branch and can be released on its own.
    Add new pages and data blocks (Dams and Sires), the menu editor, and the breeder's
    address renaming with redirects. FAQ and badge places become block settings.
 3. **Templates.** Save as template, Apply, Reset to template.
-4. **After the KennelOS review:** the new raw fields, as rule and filter inputs.
+4. **The family portal's build:** its timing and display rules first, then Family Home's
+   sections per stage, the tabs and quick links.
+5. **After the KennelOS review:** the new raw fields, as rule and filter inputs, for the
+   website and the portal's feed.
 
 The editor screens have no prototype. They will be built from the portal prototype's
 existing components (tiles, highlight rows, pills, numbered steps, the pinned action
@@ -216,3 +252,5 @@ after asking (CLAUDE.md).
 4. **Defaults for new rules:** when a later build adds a rule, existing sites get its
    default (today's behaviour). Is that right, or should new rules start off until the
    owner sets them?
+5. **The family portal:** what does her portal need that the portal plan doesn't cover
+   yet? And should its build be in templates too, or only ever set for her site?
