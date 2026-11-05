@@ -585,6 +585,8 @@ header.app .logo .kp { width: 1.9rem; height: 1.9rem; color: #034655; font: 600 
 .pvb .lines i { height: .42rem; border-radius: 3px; background: var(--line); }
 .pvb .lines i:nth-child(2) { width: 88%; } .pvb .lines i:nth-child(3) { width: 62%; }
 .pvg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
+.pvg.one { grid-template-columns: minmax(0, 1fr); }
+.pvg.one .pvc .t { font-size: .78rem; }
 .pvg.slide { display: flex; overflow-x: auto; scrollbar-width: none; }
 .pvg.slide > * { flex: 0 0 44%; }
 .pvc { background: var(--surface); border: 1px solid var(--line); border-radius: 9px; overflow: hidden; display: grid; }
@@ -748,6 +750,10 @@ const KOS = ['available', 'reserved', 'placed', 'staying', 'undecided', 'hidden'
 const KOS_NOTE = { available: 'Available, no open pick', reserved: 'KennelOS works this out: a pick waiting on its deposit, or sold before delivery', placed: 'Placed with a family', staying: 'Keeping', undecided: 'Undecided, or no plan set', hidden: 'Health hold in KennelOS' };
 const PILLS = { green: 'Green', brass: 'Brass outline', soft: 'Soft green', rose: 'Rose', plain: 'Plain' };
 
+const ACROSS0 = { phone: '1', computer: 'auto' };
+const acrossOf = (b) => ({ ...ACROSS0, ...(b.across || {}) });
+const PHONE_ACROSS = { 1: 'One', 2: 'Two' };
+const COMPUTER_ACROSS = { auto: 'As many as fit', 2: 'Two', 3: 'Three', 4: 'Four' };
 const B = (type, o = {}) => ({ id: nid('b'), type, w: {}, ...o });
 const dogsF = (o) => ({ sex: 'any', status: ['active'], upcoming: 'no', sale: 'no', away: 'no', ...o });
 
@@ -968,13 +974,13 @@ function pvBlock(s, b, page) {
     case 'badges': return admin ? `<div class="pvb ghost">Badge row: shows when the breeder picks badges for it</div>` : '';
     case 'builtin': return `<div class="pvb"><div class="pv-row" style="justify-content:center"><b>${esc(b.label)}</b></div></div>`;
     case 'dogs': {
-      const list = dogsFor(s, b), cls = b.style === 'slider' ? 'pvg slide' : 'pvg';
+      const list = dogsFor(s, b), cls = b.style === 'slider' ? 'pvg slide' : `pvg${acrossOf(b).phone === '1' ? ' one' : ''}`;
       return `<div class="pvb">${head}${word(s, b, 'lede') ? `<p class="small muted">${esc(word(s, b, 'lede'))}</p>` : ''}<div class="${cls}">${list.map((d) => `<div class="pvc ${b.style === 'light' ? 'light' : b.style === 'flip' ? 'flip' : ''}">${photo()}<div class="t"><b>${esc(d.name)} ${sexMark(d.sex)}</b>${d.status !== 'active' ? `<span class="muted">${esc(DOG_STATUS[d.status])}</span>` : ''}</div></div>`).join('')}</div></div>`;
     }
     case 'litters': return `<div class="pvb">${head}${littersFor(s, b).map((l) => `<div class="pv-row"><span><b>${esc(l.name)}</b><br><span class="muted">${esc(l.line)}</span>${litterPriceLine(s, l) ? `<br>${esc(litterPriceLine(s, l))}` : ''}</span></div>`).join('')}</div>`;
     case 'pups': {
       const R = s.build.rules;
-      return `<div class="pvb">${head}<div class="pvg">${pupsFor(s, b).map((p) => {
+      return `<div class="pvb">${head}<div class="pvg${acrossOf(b).phone === '1' ? ' one' : ''}">${pupsFor(s, b).map((p) => {
         const r = R.status[p.st], pr = pupPrice(s, p), rg = regText(s, p);
         const full = r.fullreg && !p.reg && s.sw.litter.askFull;
         return `<div class="pvc">${photo()}<div class="t"><b>${esc(p.name)} ${sexMark(p.sex)}</b>${r.words ? `<span class="spill ${r.pill}">${esc(r.words)}</span>` : ''}${rg ? `<span class="muted">${esc(rg)}</span>` : ''}${pr ? `<span class="price">${esc(pr)}</span>` : ''}${r.ask ? '<span class="lnk">Ask about this puppy ›</span>' : ''}${full ? `<span class="lnk">${esc(R.price.fullBtn)} ›</span>` : ''}</div></div>`;
@@ -1059,6 +1065,9 @@ function aPages(s) {
       ${pageById(s, 'dams') ? '' : `<section class="card band"><h2>Try it: split All our dogs</h2><p class="small">Makes a Dams page and a Sires page from Dog cards, puts them in Kennel residents in place of Girls and Boys, and takes All our dogs out of the menu. You can do the same by hand with New page and Menu.</p><div class="row"><button class="btn line small" data-act="demo-split">Split into Dams and Sires</button></div></section>`}
     </div>${pvWrap(s)}</div>`;
 }
+const sizeSet = (base, b) => `<div class="fgroup"><h2>Card size</h2>${b.style === 'slider' ? '<p class="small muted">A slider shows about two cards at a time on a phone; these apply to the other styles.</p>' : ''}
+  ${fld('Cards across on a phone', seg(`build.${base}.across.phone`, acrossOf(b).phone, PHONE_ACROSS, 'sm'), 'One makes each card the full width of the phone. Today: one.')}
+  ${fld('Cards across on a computer', seg(`build.${base}.across.computer`, acrossOf(b).computer, COMPUTER_ACROSS, 'sm'), 'As many as fit is today’s: about four on a wide screen.')}</div>`;
 function blockRow(s, p, b, i) {
   const T = BLOCKS[b.type], key = b.id, open = S.open[key];
   const base = `pages.${s.build.pages.indexOf(p)}.blocks.${i}`;
@@ -1074,12 +1083,12 @@ function blockRow(s, p, b, i) {
         <div class="fgrid"><label class="half">Up and coming${sel(`build.${base}.f.upcoming`, b.f.upcoming, ANY3, `u-${b.id}`)}</label><label class="half">Looking for a home${sel(`build.${base}.f.sale`, b.f.sale, ANY3, `s-${b.id}`)}</label>
         <label class="half">Lives with a co-owner${sel(`build.${base}.f.away`, b.f.away, ANY3, `a-${b.id}`)}</label><label class="half">Order${sel(`build.${base}.order`, b.order, { own: "The breeder's order", age: 'Oldest first', young: 'Youngest first', name: 'By name' }, `o-${b.id}`)}</label></div>
         ${fld('Style', seg(`build.${base}.style`, b.style, { flip: 'Flip cards', slider: 'Slider', light: 'Light cards' }, 'sm'))}
-        ${resultLine(dogsFor(s, b).map((d) => d.name), 'dog')}</div>`;
+        ${resultLine(dogsFor(s, b).map((d) => d.name), 'dog')}</div>${sizeSet(base, b)}`;
     } else if (b.type === 'litters') {
       data = `<div class="fgroup"><h2>Which litters <span class="kos-tag">${icon('link')}KennelOS</span></h2>${fld('Stage', chipsMulti(`build.${base}.f.stage`, b.f.stage, STAGES))}${resultLine(littersFor(s, b).map((l) => l.name), 'litter')}</div>`;
     } else if (b.type === 'pups') {
       data = `<div class="fgroup"><h2>Which pups <span class="kos-tag">${icon('link')}KennelOS</span></h2>${fld('Statuses', chipsMulti(`build.${base}.f.status`, b.f.status, Object.fromEntries(KOS.map((k) => [k, k]))), 'As KennelOS sends them. How each one reads is in Display rules.')}
-        <label class="check"><input type="checkbox" data-set="build.${base}.f.older" ${b.f.older ? 'checked' : ''}> Older puppies only (past going-home)</label>${resultLine(pupsFor(s, b).map((x) => x.name), 'pup')}</div>`;
+        <label class="check"><input type="checkbox" data-set="build.${base}.f.older" ${b.f.older ? 'checked' : ''}> Older puppies only (past going-home)</label>${resultLine(pupsFor(s, b).map((x) => x.name), 'pup')}</div>${sizeSet(base, b)}`;
     } else if (b.type === 'reviews') {
       data = `<div class="fgroup"><h2>Style</h2>${seg(`build.${base}.style`, b.style || 'grid', { grid: 'Cards', slider: 'Slider' }, 'sm')}</div>`;
     }
@@ -1097,10 +1106,11 @@ function dataSummary(s, b) {
   if (b.type === 'dogs') {
     const f = b.f, bits = [f.sex === 'any' ? 'Girls and boys' : f.sex === 'female' ? 'Girls' : 'Boys', f.status.map((x) => DOG_STATUS[x]).join(', ')];
     for (const [k, l] of [['upcoming', 'up and coming'], ['sale', 'looking for a home'], ['away', 'co-owned away']]) if (f[k] === 'only') bits.push(`only ${l}`);
-    return `${esc(bits.join(' · '))} · ${dogsFor(s, b).length} now`;
+    const a = acrossOf(b);
+    return `${esc(bits.join(' · '))} · ${dogsFor(s, b).length} now${b.style === 'slider' ? ' · slider' : ` · ${a.phone} across on a phone`}`;
   }
   if (b.type === 'litters') return `${esc(b.f.stage.map((x) => STAGES[x]).join(', '))} · ${littersFor(s, b).length} now`;
-  if (b.type === 'pups') return `${b.f.older ? 'Older puppies · ' : ''}${pupsFor(s, b).length} now`;
+  if (b.type === 'pups') return `${b.f.older ? 'Older puppies · ' : ''}${pupsFor(s, b).length} now · ${acrossOf(b).phone} across on a phone`;
   return esc(word(s, b, 'heading'));
 }
 function aPage(s, id) {

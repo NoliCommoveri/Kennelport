@@ -125,13 +125,18 @@ A data block shows records, with the owner's settings:
 
 | Block | Filters | Order | Style |
 |---|---|---|---|
-| Dog cards | sex; status (active, retired, remembered); up and coming; for sale; co-owned; lives away | age, name, or the breeder's own order | flip cards, slider, light cards |
+| Dog cards | sex; status (active, retired, remembered); up and coming; for sale; co-owned; lives away | age, name, or the breeder's own order | flip cards, slider, light cards; cards across |
 | Litters | stage (planned, current, past); deposits open or not yet | due or born date | litter cards |
-| Pups | status (by display rule, below); sex | the rule's order | pup cards |
+| Pups | status (by display rule, below); sex | the rule's order | pup cards; cards across |
 | Reviews | topic; rating | newest, or the breeder's order | quotes, slider |
 | Products and extras | group; transport | the breeder's order | cards, badge row |
 | FAQ | which questions | the breeder's order | expanders |
 | Albums | litter or not | newest | gallery tiles |
+
+**Cards across** (card size): for a block of cards, how many sit side by side on a phone
+(one or two) and on a computer (two, three, four, or as many as fit). Today's is one on a
+phone and as many as fit on a computer (`site.css` `.grid`: cards at least 240px wide),
+so that is the default. A slider keeps its own size.
 
 Example: a **Dams** page is a new page with one Dog cards block, filtered to female and
 active. **Sires** is the same, filtered to male. A block with nothing to show hides
