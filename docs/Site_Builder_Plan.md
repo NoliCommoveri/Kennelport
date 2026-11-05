@@ -33,6 +33,11 @@ switches.
 10. **Reset to template resets only the owner's build,** never the breeder's switches.
 11. **The owner's tools live in her own view of the Site Manager,** as admin, with every
     site open to her automatically (below).
+12. **Two starting templates:** **Website**, today's site with the portal off, and
+    **Website and family portal**, today's site and portal, for the breeder with the
+    portal. Both start with today's behaviour exactly (below).
+13. **The portal's build is part of a template.** In the portal template the owner can
+    move the family-facing (puppy parent) components and the breeder-facing ones.
 
 ## Who controls what
 
@@ -69,7 +74,7 @@ registration** stay with the breeder (decision 9).
 
 - A template is a whole site's build: pages, menu, blocks, data sections, display rules,
   timing rules and starting wording. It contains no breeder content.
-- Start one from scratch, from today's built-in site (the first template), or by saving
+- Start one from scratch, from one of the two starting templates (below), or by saving
   an existing site's build as a template.
 - **Apply** a template to a new site, then adjust it for that breeder. From then on the
   site is its own copy.
@@ -77,6 +82,25 @@ registration** stay with the breeder (decision 9).
   template's. It resets only the owner's build (decision 10). The breeder's content and
   switches stay as they are: records, photos, wording, pages on or off, menu names,
   addresses, block switches.
+
+### The two starting templates
+
+Both are today's behaviour exactly, so applying one changes nothing a visitor, family or
+breeder sees. They are where the owner starts from, not something the owner has to
+keep.
+
+| | **Website** | **Website and family portal** |
+|---|---|---|
+| Website pages, menu, blocks | today's 16 pages, five menu groups, Home's blocks in today's order | the same |
+| Display and timing rules | today's (the tables below) | the same, plus the portal's (below) |
+| Family portal | off | on, as built today (portal plan 7.2) |
+| Site Manager tabs for the breeder | today's | today's with the portal: Today, Families, Dogs, Website, Portal, Reports (portal plan 7.3) |
+| What the owner can move | website pages, menu and blocks | the same, plus the portal's family and breeder components (below) |
+
+The breeder with the portal is set up from **Website and family portal**; every other
+site from **Website**. Turning the portal on for another breeder later means applying
+that template and adjusting it. Offering the portal to more breeders is still the
+portal plan's decision (its section 1), not this one.
 
 ### Pages, menu and blocks
 
@@ -177,19 +201,18 @@ fixed unless the owner asks.
 - These addresses stay fixed because other systems link to them: `/waitlist` and
   `/waitlist/help`, `/family-login`, `/privacy`. Their menu names can still change.
 
-## The family portal (one site, configured by the owner)
+## The family portal (in the portal template)
 
 The family portal (`docs/Puppy_Parent_Portal_Plan.md`) is on for one breeder's site,
-and much of its build is written into the code for her. It gets the same split as the
+and much of its build is written into the code for her. Its build moves into the
+**Website and family portal** template (decision 13), with the same split as the
 website:
 
 - **The owner builds it.** The breeder keeps what the portal plan already gives her
   (its section 4: products and programs, checklist, timeline tasks, handbook, email
   wording, contacts, baby book, families).
-- **Its build is per site,** so the portal can stay special to this breeder's site
-  without other sites having to share it. Offering the portal to other breeders is
-  still out of scope (portal plan, section 1). This plan just doesn't make that harder
-  later.
+- **Applied, it is that site's own copy,** like any template (decision 6), so her
+  portal can be adjusted for her without changing the template.
 
 **What becomes the owner's settings for her portal:**
 
@@ -208,7 +231,29 @@ match the contract. The breeder can't switch them off for a family.
 **The same rule as the website:** the owner places the Home sections, tabs and quick
 links; the breeder switches on or off the ones the owner allows, and words them.
 
-What makes her portal special is still to be listed, with the owner (open question 2).
+### What the owner can move
+
+**Family-facing (puppy parent) components:**
+- **Family Home:** its sections (portal plan 7.2: the photo and greeting, the pup card
+  and calendar block, the stage's steps band, the go-home checklist, the photo package,
+  the food band, the baby book cards, Included with your puppy, Read next, Quick links),
+  their order per stage, and which stages show each one;
+- **the tabs:** which tabs there are and their order;
+- **Quick links:** which links and their order;
+- **Records:** the order of what it holds (the puppy's records, pedigree, contract and
+  health guarantee, contacts).
+
+**Breeder-facing components** (her Site Manager, portal plan 7.3):
+- **the tabs:** Today, Families, Dogs, Website, Portal and Reports, their order, and
+  what sits under each;
+- **Today:** the order of its lists (pickups this week, families to invite, vet proof
+  to review, and the rest);
+- **a family's page and a puppy's card:** the order of their sections.
+
+**What can't move:** the safety and contract rules. The vet countdown and its
+reminders always run as her contract sets them, and the affiliate disclosure stays on
+every page with program links (portal plan 11). The owner sets those rules; moving
+components never removes them.
 
 ## KennelOS data (for the later review)
 
@@ -234,8 +279,9 @@ default, without changing the editor screens.
   moved.
 - **The published snapshot carries the build and rules,** so rendering stays pure
   (`render/index.js`): no D1 at render time, and the tests render any build.
-- **Existing sites become today's built-in template,** applied with every setting
-  unchanged, so no site looks different on the day this ships.
+- **Existing sites get a starting template applied,** with every setting unchanged:
+  the portal site **Website and family portal**, every other site **Website**. No
+  site looks different on the day this ships.
 - **One migration per branch** (CLAUDE.md).
 
 ## Building it, in steps
@@ -244,12 +290,12 @@ Each step is its own branch and can be released on its own.
 
 1. **Display and timing rules.** The rules above, with today's defaults, in the owner's
    tools per site. This is the smallest step, and the first one the owner would use.
-2. **Pages, blocks and the menu as settings.** Today's site becomes the first template.
+2. **Pages, blocks and the menu as settings.** Today's site becomes the **Website** template.
    Add new pages and data blocks (Dams and Sires), the menu editor, and the breeder's
    address renaming with redirects. FAQ and badge places become block settings.
 3. **Templates.** Save as template, Apply, Reset to template.
-4. **The family portal's build:** its timing and display rules first, then Family Home's
-   sections per stage, the tabs and quick links.
+4. **The family portal's build:** the **Website and family portal** template; the
+   portal's timing and display rules; then moving its family and breeder components.
 5. **After the KennelOS review:** the new raw fields, as rule and filter inputs, for the
    website and the portal's feed.
 
@@ -265,5 +311,3 @@ after asking (CLAUDE.md).
    sites already do, existing sites keep today's behaviour as its default. When it adds
    something new, it arrives switched off on existing sites until the owner turns it on,
    and on in templates. Awaiting the owner's yes.
-2. **The family portal:** what does her portal need that the portal plan doesn't cover
-   yet? And should a portal's build be in templates too, or only ever set for her site?
