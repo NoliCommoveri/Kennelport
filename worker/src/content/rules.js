@@ -28,6 +28,57 @@ export const PILLS = { avail: 'Green', res: 'Held' };
 
 const st = (words, pill, ribbon, show, price, ask, fullreg, older, order) => ({ words, pill, ribbon, show, price, ask, fullreg, older, order });
 
+// Fixed wording on the site (plan decision 15), by screen and group: [key, today's
+// words, what it is]. Where the breeder rewords one today (the co-owned heading,
+// the safe-payment notice), hers still wins; this is the default under hers.
+export const WORDS = [
+  ['dogs', 'The Dogs page', [
+    ['dogs_all', 'All dogs', 'The filter: everyone'], ['girls', 'Girls', 'The filter and menu: girls'], ['boys', 'Boys', 'The filter and menu: boys'],
+    ['flip_hint', 'Tap a card to turn it over; tap again to turn it back.', 'Under the cards'],
+  ]],
+  ['dogs', 'Up and coming', [
+    ['upcoming_eyebrow', 'Our next generation', 'Eyebrow'], ['upcoming_heading', 'Up and coming', 'Heading'],
+    ['upcoming_lede', 'Young dogs we have kept, growing up with us.', 'Line under it'],
+  ]],
+  ['dogs', 'Looking for a home', [
+    ['for_sale_eyebrow', 'Ready for a family', 'Eyebrow'], ['for_sale_heading', 'Looking for a home', 'Heading'],
+    ['for_sale_lede', 'Grown dogs we are placing in a loving pet home.', 'Line under it'],
+    ['for_sale_status', 'Looking for a home', 'On the dog\'s own page'], ['ask_dog', 'Ask about {name}', 'Its button ({name} is the dog\'s)'],
+  ]],
+  ['dogs', 'Co-owned', [
+    ['co_owned_eyebrow', 'Co-owned', 'Eyebrow'], ['co_owned_heading', 'Shared with friends', 'Heading (the breeder can reword)'],
+    ['co_owned_lede', 'Dogs we co-own, living with partner kennels.', 'Line under it (the breeder can reword)'],
+  ]],
+  ['wording', 'Litter cards', [
+    ['litter_current', 'Current litter', 'A current litter'], ['litter_coming', 'Coming up', 'Born, deposits not open yet'],
+    ['litter_older', 'Older puppies', 'Past its going-home date'], ['litter_planned', 'Planned litter', 'Planned, with no label'],
+    ['litter_past', 'Past litter', 'A past litter'], ['meet_puppies', 'Meet the puppies', 'Its link'], ['see_waitlist', 'See the waitlist', 'A planned litter\'s link'],
+    ['ready_now', 'Ready now', 'Going home, once it has passed'],
+  ]],
+  ['wording', 'The Puppies page', [
+    ['older_eyebrow', 'Ready now', 'Over the older puppies'], ['upcoming_band_eyebrow', 'Coming up', 'Over upcoming litters'],
+    ['upcoming_band_heading', 'Upcoming litters', 'Their heading'], ['upcoming_band_lede', 'Plans can change. Heat dates are estimates.', 'Their line'],
+    ['no_litters', 'No litters to show right now.', 'With nothing to show'], ['ask_puppy', 'Ask about this puppy', 'On a pup card'],
+    ['ask_pup', 'Ask about {name}', 'On a puppy\'s own page ({name} is the pup\'s)'],
+  ]],
+  ['wording', 'Elsewhere', [
+    ['swipe', 'Swipe or use the arrows.', 'Under How it works'], ['more_detail', 'More detail', 'A step\'s fold'],
+    ['whats_included', 'What\'s included', 'An extras package\'s fold'], ['most_complete', 'most complete', 'The featured package'],
+    ['ask_package', 'Ask about this package', 'A package\'s link'], ['ask_item', 'Ask about this', 'An extra\'s link'],
+    ['pay_fee', 'Application fee', 'Payment card, unless the breeder titles it'], ['pay_deposit', 'Puppy deposit', 'Payment card, unless the breeder titles it'],
+    ['family_login', 'Family login', 'The menu link'], ['copyright', '© {year} {kennel}', 'The footer ({year}, {kennel})'],
+    ['safe_notice', "We'll never ask you to pay by gift card, wire transfer or into anyone else's account, and we only contact you from the details on this website. If someone asks you to, please tell us.", 'The safe-payment notice (the breeder can reword)'],
+  ]],
+];
+const WORD_LIST = WORDS.flatMap(([, , rows]) => rows);
+
+// How KennelOS's dog statuses sit on the site: [site status, up and coming, for sale].
+export const DOG_PLACES = {
+  breeding: ['active', 0, 0], upcoming: ['active', 1, 0], for_sale: ['active', 0, 1], retired: ['retired', 0, 0], remembered: ['remembered', 0, 0],
+};
+export const DOG_PLACE_WORDS = { breeding: 'Breeding dog', upcoming: 'Up and coming', for_sale: 'Looking for a home', retired: 'Retired', remembered: 'In memory' };
+export const KOS_DOG_STATUSES = ['puppy', 'active_breeding', 'for_sale', 'retired_breeding', 'deceased'];
+
 export const DEFAULT_RULES = {
   status: {
     available: st('Available', 'avail', false, true, true, true, true, true, 1),
@@ -39,6 +90,19 @@ export const DEFAULT_RULES = {
   },
   reg: { unset: 'Limited', limited: 'Limited', full: 'Full', ask: 'Ask about full registration' },
   price: { off: 'Contact us for pricing', style: 'range', price_label: 'Price', deposit_label: 'Deposit', before: 'Available on {date}' },
+  // An adult for sale's price: 'site' follows the breeder's "Show prices of extras
+  // and adults"; 'always' or 'never' whatever that says.
+  dogs: { sale_price: 'site' },
+  words: Object.fromEntries(WORD_LIST.map(([k, d]) => [k, d])),
+  format: { date: 'mdy', day: 'md', sex: 'female_male', counts: 'girls_boys', currency: '$', currency_after: false, cents: false },
+  // How KennelOS data lands (kennelos/bundle.js), for each new record.
+  landing: {
+    health_display: 'normal_only', show_placed: true, show_prices: 'kos_prices',
+    name_pair: '{dam} × {sire}', name_dam: "{dam}'s litter", name_heat: "{dam}'s next litter", name_none: 'Our next litter', name_upcoming: 'Upcoming litter',
+    label_heat: 'Upcoming heat', label_pairing: 'Planned pairing',
+    dog_puppy: 'upcoming', dog_active_breeding: 'breeding', dog_for_sale: 'for_sale', dog_retired_breeding: 'retired', dog_deceased: 'remembered',
+    new_at: 'end',
+  },
 };
 
 export const DEFAULT_TIMING = {
@@ -63,6 +127,28 @@ const PRICE_FIELDS = {
   off: TEXT(60, true), style: { t: 'enum', values: ['range', 'from'] }, price_label: TEXT(30, true), deposit_label: TEXT(30, true),
   before: { t: 'text', max: 60, req: true, needs: '{date}' },
 };
+const DOG_FIELDS = { sale_price: { t: 'enum', values: ['site', 'always', 'never'] } };
+const WORD_FIELDS = Object.fromEntries(WORD_LIST.map(([k, d]) => [k, { t: 'text', max: k === 'safe_notice' ? 400 : 120, req: true,
+  needs: d.includes('{name}') ? '{name}' : null }]));
+export const DATE_STYLES = { mdy: 'December 12, 2026', dmy: '12 December 2026', short: 'Dec 12, 2026' };
+export const DAY_STYLES = { md: 'December 12', dm: '12 December', short: 'Dec 12' };
+export const SEX_STYLES = { female_male: 'Female and Male', girl_boy: 'Girl and Boy' };
+export const COUNT_STYLES = { girls_boys: '2 girls, 1 boy', females_males: '2 females, 1 male' };
+const FORMAT_FIELDS = {
+  date: { t: 'enum', values: Object.keys(DATE_STYLES) }, day: { t: 'enum', values: Object.keys(DAY_STYLES) },
+  sex: { t: 'enum', values: Object.keys(SEX_STYLES) }, counts: { t: 'enum', values: Object.keys(COUNT_STYLES) }, currency: TEXT(4, true), currency_after: { t: 'bool' }, cents: { t: 'bool' },
+};
+const PLACE = { t: 'enum', values: Object.keys(DOG_PLACES) };
+const LANDING_FIELDS = {
+  health_display: { t: 'enum', values: ['normal_only', 'all', 'none'] }, show_placed: { t: 'bool' }, show_prices: { t: 'enum', values: ['kos_prices', 'off'] },
+  name_pair: { t: 'text', max: 60, req: true, needs: '{dam}' }, name_dam: { t: 'text', max: 60, req: true, needs: '{dam}' },
+  name_heat: { t: 'text', max: 60, req: true, needs: '{dam}' }, name_none: TEXT(60, true), name_upcoming: TEXT(60, true),
+  label_heat: TEXT(40, true), label_pairing: TEXT(40, true),
+  ...Object.fromEntries(KOS_DOG_STATUSES.map((k) => [`dog_${k}`, PLACE])),
+  new_at: { t: 'enum', values: ['end', 'start'] },
+};
+const PARTS = { dogs: DOG_FIELDS, words: WORD_FIELDS, format: FORMAT_FIELDS, landing: LANDING_FIELDS };
+
 const TIMING_FIELDS = {
   litter_days: { t: 'int', min: 1, max: 365 }, older_after: { t: 'int', min: 0, max: 365 }, deposits_after: { t: 'int', min: 0, max: 90 },
 };
@@ -84,7 +170,7 @@ function clean(f, v, name) {
       const s = String(v ?? '').replace(/\s+/g, ' ').trim();
       if (s.length > f.max) throw new RuleError(`${name}: at most ${f.max} characters.`);
       if (f.req && !s) throw new RuleError(`${name}: can't be empty.`);
-      if (f.needs && !s.includes(f.needs)) throw new RuleError(`${name}: needs ${f.needs} where the date goes.`);
+      if (f.needs && !s.includes(f.needs)) throw new RuleError(`${name}: needs ${f.needs} in it.`);
       return s;
     }
   }
@@ -120,10 +206,27 @@ export function rulesFor(build) {
   return { rules: over(DEFAULT_RULES, b.rules), timing: over(DEFAULT_TIMING, b.timing) };
 }
 
+// One screen's parts from its form (names like words.girls), laid over the site's
+// rules as they stand; a switch missing from the form is off. The Pups screen is
+// rulesFromForm, below.
+export const SCREEN_PARTS = { dogs: ['dogs', 'words'], wording: ['words'], formats: ['format'], kennelos: ['landing'] };
+export function partsFromForm(screen, current, get) {
+  const out = structuredClone(current);
+  const wordsHere = new Set(WORDS.filter(([sc]) => sc === screen).flatMap(([, , rows]) => rows.map(([k]) => k)));
+  for (const part of SCREEN_PARTS[screen]) {
+    for (const [f, spec] of Object.entries(PARTS[part])) {
+      if (part === 'words' && !wordsHere.has(f)) continue;
+      out[part][f] = clean(spec, get(`${part}.${f}`), WORD_LIST.find(([k]) => k === f)?.[2] ?? f);
+    }
+  }
+  return out;
+}
+export const wordsOn = (screen) => WORDS.filter(([sc]) => sc === screen);
+
 // The editor's form, as names like status.reserved.words or timing.litter_days,
 // to the full rules; a switch missing from the form is off.
-export function rulesFromForm(get) {
-  const rules = { status: {}, reg: {}, price: {} };
+export function rulesFromForm(get, current = DEFAULT_RULES) {
+  const rules = { ...structuredClone(current), status: {}, reg: {}, price: {} };
   for (const k of PUP_STATUSES) {
     rules.status[k] = {};
     for (const [f, spec] of Object.entries(STATUS_FIELDS)) rules.status[k][f] = clean(spec, get(`status.${k}.${f}`), `${k}: ${f}`);

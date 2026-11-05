@@ -1,10 +1,8 @@
 # Site builder: plan
 
-This is the plan from the owner's talk on 2026-11-05. Step 1 is partly built: the pup
-status, registration, price and date rules and the timing rules (`content/rules.js`,
-`manage/builder.js`, `admin.js`). The rest of step 1 (the dog rules, fixed wording, formats,
-counts and how KennelOS data lands, added to the plan the same day) follows once the
-owner has seen the screens.
+This is the plan from the owner's talk on 2026-11-05. Step 1 is built: the owner's admin
+view with Pups, Dogs, Wording, Formats, From KennelOS and Timing for each site
+(`content/rules.js`, `manage/builder.js`, `admin.js`). Steps 2 to 5 aren't built yet.
 
 Today a site's pages, menu, sections, and the rules for how KennelOS data shows are
 written into the code. Changing one means a code change, for every site at once. This

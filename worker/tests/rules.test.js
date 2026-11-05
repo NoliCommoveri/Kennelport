@@ -151,3 +151,82 @@ test('only admin reaches the build screens; signing in to /ops makes the device 
   const out = await call(env, M, '/ops/logout', { method: 'POST', headers: { cookie: ops } });
   assert.ok(out.headers.getSetCookie().some((c) => c.startsWith('kp_admin=;')));
 });
+
+// ---------- the rest of step 1: dogs, wording, formats, how KennelOS data lands ----------
+
+test('wording, formats and the adult-for-sale price change the sample site; each screen keeps the others', async (t) => {
+  const { env, admin, page, post } = await sampleSite(t);
+  const formOf = async (screen, changes = {}) => {
+    const html = await (await call(env, M, `/admin/tuxedolane/${screen}`, { headers: { cookie: admin } })).text();
+    const f = {};
+    for (const m of html.matchAll(/<input type="text" name="([^"]+)" value="([^"]*)"/g)) f[m[1]] = m[2].replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+    for (const m of html.matchAll(/<textarea name="([^"]+)"[^>]*>([^<]*)<\/textarea>/g)) f[m[1]] = m[2].replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+    for (const m of html.matchAll(/<input type="checkbox" name="([^"]+)"( checked)?>/g)) if (m[2]) f[m[1]] = 'on';
+    for (const m of html.matchAll(/<input type="radio" name="([^"]+)" value="([^"]+)" checked>/g)) f[m[1]] = m[2];
+    for (const m of html.matchAll(/<select name="([^"]+)"[^>]*>([\s\S]*?)<\/select>/g)) f[m[1]] = m[2].match(/value="([^"]+)" selected/)[1];
+    for (const [k, v] of Object.entries(changes)) if (v === null) delete f[k]; else f[k] = v;
+    return f;
+  };
+  // Every screen saved as it stands changes nothing.
+  for (const s of ['dogs', 'wording', 'formats', 'kennelos']) assert.equal((await post(`/admin/tuxedolane/${s}`, await formOf(s))).status, 303, s);
+  assert.equal(env.DB.raw.prepare('SELECT build FROM site_builds').get().build, '{}');
+
+  await post('/admin/tuxedolane/dogs', await formOf('dogs', { 'words.girls': 'Dams', 'words.for_sale_heading': 'Retiring to a pet home', 'dogs.sale_price': 'always', 'words.ask_dog': 'Meet {name}' }));
+  await post('/admin/tuxedolane/wording', await formOf('wording', { 'words.litter_coming': 'Soon', 'words.copyright': '{kennel}, {year}' }));
+  await post('/admin/tuxedolane/formats', await formOf('formats', { 'format.date': 'dmy', 'format.day': 'short', 'format.sex': 'girl_boy', 'format.counts': 'females_males', 'format.currency': '€', 'format.currency_after': 'on', 'format.cents': 'on' }));
+  const dogs = text((await page('/dogs')).html);
+  assert.match(dogs, /Dams/);
+  assert.match(dogs, /Retiring to a pet home/);
+  assert.match(dogs, /Meet Rocco\*/);
+  assert.match(dogs, /Tuxedo Lane Bostons\*, 2026/);
+  const litters = text((await page('/litters')).html);
+  assert.match(litters, /Soon .*The Spice litter\*/);
+  assert.match(litters, /Born 20 September 2026/);
+  assert.match(text((await page('/litters/the-spice-litter/sage')).html), /Available on Nov 22/);
+  assert.match(text((await page('/litters/the-gem-litter/ruby')).html), /Sex Girl/);
+  assert.match(text((await page('/litters/the-gem-litter')).html), /4 females, 2 males|3 females, 3 males|females/);
+  // The Pups screen saved after: the other screens' rules stay.
+  await post('/admin/tuxedolane/rules', await rulesForm(env, admin));
+  assert.match(text((await page('/dogs')).html), /Dams/);
+  // Back to default, one group.
+  await post('/admin/tuxedolane/formats', { ...(await formOf('formats')), default: 'format' });
+  assert.match(text((await page('/litters')).html), /Born September 20, 2026/);
+  // A line that needs its {name} is refused without it.
+  const bad = await post('/admin/tuxedolane/dogs', await formOf('dogs', { 'words.ask_dog': 'Ask us' }));
+  assert.match(await bad.text(), /needs \{name\}/);
+});
+
+test('how KennelOS data lands follows the site\'s settings, for new records', async () => {
+  const env = await makeEnv();
+  const site = await addSite(env, 'tuxedolane', { kennel_name: 'Tuxedo Lane Bostons*' });
+  const admin = (await call(env, M, '/ops/login', { method: 'POST', body: form({ token: 'ops-token' }) })).headers.getSetCookie().map((c) => c.split(';')[0]).find((c) => c.startsWith('kp_admin='));
+  const html = await (await call(env, M, '/admin/tuxedolane/kennelos', { headers: { cookie: admin } })).text();
+  const f = {};
+  for (const m of html.matchAll(/<input type="text" name="([^"]+)" value="([^"]*)"/g)) f[m[1]] = m[2].replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+  for (const m of html.matchAll(/<input type="radio" name="([^"]+)" value="([^"]+)" checked>/g)) f[m[1]] = m[2];
+  for (const m of html.matchAll(/<select name="([^"]+)"[^>]*>([\s\S]*?)<\/select>/g)) f[m[1]] = m[2].match(/value="([^"]+)" selected/)[1];
+  Object.assign(f, {
+    'landing.health_display': 'all', 'landing.show_prices': 'off', 'landing.dog_deceased': 'retired', 'landing.dog_puppy': 'breeding',
+    'landing.name_heat': 'Coming from {dam}', 'landing.name_none': 'A friend\'s litter', 'landing.label_heat': 'Expected heat', 'landing.new_at': 'start',
+  }); // show_placed left out: off
+  assert.equal((await call(env, M, '/admin/tuxedolane/kennelos', { method: 'POST', headers: { cookie: admin, origin: `https://${M}` }, body: form(f) })).status, 303);
+  // Admin links KennelOS with the KennelOS prices on.
+  env.DB.raw.prepare('UPDATE sites SET use_kennelos_prices = 1 WHERE id = ?').run(site.id);
+  const code = (await (await call(env, M, '/s/tuxedolane/kennelos/code', { method: 'POST', headers: { cookie: admin, origin: `https://${M}` } })).text()).match(/class="code">([A-Z0-9-]+)</)[1];
+  const { token } = await (await call(env, API, '/v1/link', { method: 'POST', body: JSON.stringify({ code, kennel_id: 'kennel-sample' }), headers: { 'content-type': 'application/json' } })).json();
+  assert.equal((await call(env, API, '/v1/bundle', { method: 'POST', body: JSON.stringify(load('bundle-1.json')), headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` } })).status, 200);
+  const row = (sql) => env.DB.raw.prepare(sql).get(site.id);
+  assert.equal(row("SELECT status FROM dogs WHERE site_id = ? AND kennelos_id = 'dog-ginger'").status, 'retired');
+  assert.equal(row("SELECT upcoming FROM dogs WHERE site_id = ? AND kennelos_id = 'dog-pippa'").upcoming, 0);
+  assert.equal(row("SELECT COUNT(*) AS n FROM dogs WHERE site_id = ? AND health_display = 'all'").n, 10);
+  assert.equal(row("SELECT COUNT(*) AS n FROM health_results WHERE site_id = ? AND show = 0").n, 0, 'all results shown, not-normal ones too');
+  const gem = row("SELECT * FROM litters WHERE site_id = ? AND kennelos_id = 'lit-a'");
+  assert.deepEqual([gem.show_placed, gem.show_prices], [0, 0]);
+  assert.ok(gem.price_female != null, 'prices still come; showing them is the breeder\'s switch');
+  assert.equal(row("SELECT name, plan_label FROM litters WHERE site_id = ? AND kennelos_id = 'heat-h2'").name, "Coming from Lulu* (a friend's girl)");
+  assert.equal(row("SELECT plan_label FROM litters WHERE site_id = ? AND kennelos_id = 'heat-h1'").plan_label, 'Expected heat');
+  assert.equal(row("SELECT name FROM litters WHERE site_id = ? AND kennelos_id = 'heat-h1'").name, "A friend's litter");
+  // First in her order: the last one sent has the lowest place.
+  const sorts = env.DB.raw.prepare('SELECT sort FROM dogs WHERE site_id = ?').all(site.id).map((r) => r.sort);
+  assert.ok(Math.max(...sorts) < 0);
+});

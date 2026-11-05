@@ -4,7 +4,7 @@
 // by field, and she confirms (the website record joins KennelOS, keeping its
 // photos, wording and address) or declines (a new one is made, and she isn't
 // asked about that pair again). Nothing is matched without her yes.
-import { Writer, siteState, OWNED, OWNED_PRICES } from './bundle.js';
+import { Writer, siteState, OWNED, OWNED_PRICES, landingFor } from './bundle.js';
 import { litterClockStatements } from './clock.js';
 
 export class MatchError extends Error {}
@@ -33,7 +33,7 @@ async function load(env, siteId, kind, kennelosId) {
   const site = await env.DB.prepare('SELECT * FROM sites WHERE id = ?').bind(siteId).first();
   const st = await siteState(env, siteId);
   const target = st[kind].find((r) => r.id === row.kennelport_id);
-  return { row, data: JSON.parse(row.data), site, st, target, w: new Writer(env, site, st) };
+  return { row, data: JSON.parse(row.data), site, st, target, w: new Writer(env, site, st, await landingFor(env, site.id)) };
 }
 
 // What confirming would change: [{ field, label, from, to, blanking }]. A
