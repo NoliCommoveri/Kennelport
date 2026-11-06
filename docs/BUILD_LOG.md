@@ -1631,7 +1631,7 @@ with new sections and a new building order. Docs only; nothing built yet.
   Delete (`sites.js` closeSite), Publish (`publish.js`: too large, nothing to undo) and
   signing in (`auth.js`). As with the content model's errors, the code that finds the
   problem keeps today's words; each screen says the message in the owner's, matched by
-  its words. 49 new lines; the list now has 931.
+  its words. 45 new lines; the list now has 931.
 - Under Errors, each line says where it shows ("Photos: an empty file"); signing in's
   are on Signing in, with no {kennel}. Names from the message can be used ({max}, {kb},
   {known}...). The waitlist names a family's detail by {what} (and {What}, with a
