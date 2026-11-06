@@ -26,7 +26,7 @@ import { escapeHtml as esc } from '../lib/html.js';
 import {
   PUP_STATUSES, STATUS_NOTES, PILLS, DEFAULT_RULES, DEFAULT_TIMING, RuleError, rulesFor, rulesFromForm, timingFromForm,
   withPart, changedCount, loadBuild, saveBuild, partsFromForm, wordsOn, DATE_STYLES, DAY_STYLES, SEX_STYLES, COUNT_STYLES,
-  DOG_PLACES, DOG_PLACE_WORDS, KOS_DOG_STATUSES,
+  DOG_PLACES, DOG_PLACE_WORDS, KOS_DOG_STATUSES, PUP_DISPOSITIONS, PUP_DISPOSITION_WORDS,
 } from '../content/rules.js';
 import { buildSnapshot } from '../publish.js';
 import {
@@ -333,6 +333,7 @@ function kennelosScreen(site, rules, error) {
   const backFor = (keys) => (keys.some((k) => L[k] !== D[k]) ? back(keys.map((k) => `landing.${k}`).join(',')) : '');
   const nameKeys = ['name_pair', 'name_dam', 'name_heat', 'name_none', 'name_upcoming'];
   const dogKeys = KOS_DOG_STATUSES.map((k) => `dog_${k}`);
+  const pupKeys = PUP_DISPOSITIONS.map((k) => `pup_${k}`);
   return `<div class="stack">${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
     <p class="small muted">For each new record an Update website brings. Once it's on the site, its switches are the breeder's.</p>
     <div class="twocol">
@@ -343,7 +344,10 @@ function kennelosScreen(site, rules, error) {
       ${select('landing.show_prices', L.show_prices, { kos_prices: 'On, with Use my KennelOS prices', off: 'Off: the breeder switches them on' }, 'Show prices', '')}</div></section>
     </div>
     <section class="card"><div class="fgroup"><div class="between"><h2>Where each KennelOS dog status goes</h2>${backFor(dogKeys)}</div>
-      <ul class="list">${KOS_DOG_STATUSES.map((k) => `<li><span class="grow"><span class="code">${k}</span></span><select name="landing.dog_${k}" aria-label="${esc(k)}" class="place">${Object.keys(DOG_PLACES).map((v) => `<option value="${v}"${L[`dog_${k}`] === v ? ' selected' : ''}>${esc(DOG_PLACE_WORDS[v])}</option>`).join('')}</select></li>`).join('')}</ul></div></section>
+      <ul class="list">${KOS_DOG_STATUSES.map((k) => `<li><span class="grow"><span class="code">${k}</span></span><select name="landing.dog_${k}" aria-label="${esc(k)}" class="place">${Object.keys(DOG_PLACES).map((v) => `<option value="${v}"${L[`dog_${k}`] === v ? ' selected' : ''}>${esc(DOG_PLACE_WORDS[v])}</option>`).join('')}</select></li>`).join('')}</ul></div>
+      <div class="fgroup"><div class="between"><h2>Which <span class="code">puppy</span> dogs go on the site</h2>${backFor(pupKeys)}</div>
+      <p class="small muted">A KennelOS puppy shown on the website, by her disposition for it in KennelOS. One left out is off the site, and waits in her draft under Not on your site. Until KennelOS sends dispositions, every one shows.</p>
+      <div class="switches boxed">${PUP_DISPOSITIONS.map((k) => toggle(`landing.pup_${k}`, L[`pup_${k}`], PUP_DISPOSITION_WORDS[k])).join('')}</div></div></section>
     <section class="card"><div class="fgroup"><div class="between"><h2>A litter's name, when KennelOS sends none</h2>${backFor(nameKeys)}</div><div class="fgrid">
       ${field('landing.name_pair', L.name_pair, { label: 'Dam and sire known', hint: '{dam} and {sire} are their names.' })}${field('landing.name_dam', L.name_dam, { label: 'Only the dam' })}
       ${field('landing.name_heat', L.name_heat, { label: 'A heat' })}${field('landing.name_none', L.name_none, { label: 'A heat with no dam named' })}

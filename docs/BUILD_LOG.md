@@ -1762,3 +1762,21 @@ with new sections and a new building order. Docs only; nothing built yet.
 - Tests: `spots.test.js` and `profiles.test.js` (new); `blocks.test.js` (a badge row
   now fits Reviews), `kennelos.test.js` (two patterns allow a line break between the
   ask button and the surcharge row).
+
+## 2026-11-06: which KennelOS puppies go on the site, by disposition
+
+- The owner's ask: Up and coming was meant to carry only puppies she's keeping. Read in
+  KennelOS: its bundle sends any puppy-status dog marked Show on website, whatever its
+  disposition (`siteExport.js` `websiteDogs`); its own prompts only mark keepers, but the
+  mark stays when a disposition changes, and the dog form's box can set it by hand.
+- The bundle now takes a dog's `disposition` (text, so a new KennelOS disposition reads
+  as undecided rather than refusing the bundle). **From KennelOS** has "Which puppy dogs
+  go on the site": a switch per disposition (keeping, available, placed, health hold,
+  undecided or none), all on to start (today's behaviour, decision 14). A puppy left out
+  is treated as not sent: off the site, in her draft under Not on your site, back when
+  it's sent again (`bundle.js` `pupShown`; `rules.landing.pup_*`). A bundle with no
+  dispositions shows every puppy, as before.
+- Needs KennelOS to send `disposition` on puppy-status dogs (`dogEntry`, `DOG_KEYS`);
+  not done here (this session reads KennelOS only).
+- Tests: the linked sample's Pippa* carries `disposition: keeping`; `rules.test.js`
+  ticks Keeping only and checks Pippa* leaves the site once she's Available.
