@@ -9,7 +9,7 @@ import {
   saveSite, getPage, savePage, getBlock, saveBlock, getPayment, savePayment, getAddedBlock, saveAddedBlock,
 } from '../content/records.js';
 import { pageBlocks, customPages, addedBlocks, BLOCK_TYPES, isCustom } from '../content/blocks.js';
-import { fields, parseForm, LABELS, labelFor } from './forms.js';
+import { fields, field, parseForm, LABELS, labelFor } from './forms.js';
 import { savePhoto, PhotoError } from '../photos.js';
 import { subjects, isSubject, tagPhotos, untagPhoto, tagsByPhoto } from '../photoTags.js';
 import { buildSnapshot, loadSnapshot, publish, undoPublish, listSnapshots } from '../publish.js';
@@ -17,8 +17,8 @@ import { changes } from '../diff.js';
 import { makePreviewToken } from '../site.js';
 import { siteLink } from '../ops/sites.js';
 import { APP_VERSION } from './version.js';
-import { defaultSay, NOTE_KEYS, sayError } from './wording.js';
-import { STATUS_TEXT, SAFE_NOTICE_TEXT, blockRows } from '../render/parts.js';
+import { defaultSay, NOTE_KEYS, sayError, sayMessage } from './wording.js';
+import { STATUS_TEXT, SAFE_NOTICE_TEXT, blockRows, pageOn as pageShows, label as pageMenuName } from '../render/parts.js';
 import { exportContent } from '../content/io.js';
 import { closeSite, SiteError } from '../sites.js';
 import { listEmbeds, addEmbed, removeEmbed, moveEmbed, EmbedError, EMBEDS_PER_PLACE } from '../embedStore.js';
@@ -157,7 +157,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       if (image && brandImageOk(image)) { values.image_url = image; values.photo_id = null; }
       else if (image) { values.photo_id = await storeBadgeImage(env, site.id, image, alt ?? values.name ?? ''); values.image_url = null; }
     } catch (err) {
-      if (err instanceof BadgeCodeError) throw new ContentError('embed code', err.message);
+      if (err instanceof BadgeCodeError) throw new ContentError('embed code', sayMessage('badge', err.message, say));
       throw err;
     }
   }
@@ -213,7 +213,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
           const { code, expiresAt } = await makeLinkCode(env, site.id, user.emailHash.slice(0, 12));
           return render({ code, expiresAt });
         } catch (err) {
-          if (err instanceof LinkError) return render({ error: err.message });
+          if (err instanceof LinkError) return render({ error: sayMessage('kennelos', err.message, say) });
           throw err;
         }
       }
@@ -240,7 +240,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
           if (fd.get('answer') === 'yes') await confirmMatch(env, site.id, kind, kid, fd.getAll('keep').map(String));
           else await declineMatch(env, site.id, kind, kid);
         } catch (err) {
-          if (err instanceof MatchError) return render({ error: err.message });
+          if (err instanceof MatchError) return render({ error: sayMessage('kennelos', err.message, say) });
           throw err;
         }
         return here(fd.get('answer') === 'yes' ? 'matched' : 'apart', '#matches');
@@ -325,7 +325,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     else {
       try { await addEmbed(env, site.id, String(fd.get('place') ?? ''), { link: fd.get('link'), title: fd.get('title') }); } catch (err) {
         if (!(err instanceof EmbedError)) throw err;
-        return redirect(`${here}${here.includes('?') ? '&' : '?'}embed_error=${encodeURIComponent(err.message)}#videos`);
+        return redirect(`${here}${here.includes('?') ? '&' : '?'}embed_error=${encodeURIComponent(sayMessage('videos', err.message, say))}#videos`);
       }
       return redirect(`${here}?note=embedded#videos`);
     }
@@ -600,7 +600,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       if (fd.get('remove')) { await setFeed(env, site.id, null); return redirect(`${base}/pages/waitlist?note=saved#kennelos`); }
       try { await setFeed(env, site.id, parseFeedAddress(env, fd.get('feed'))); } catch (err) {
         if (!(err instanceof FeedError)) throw err;
-        return pagesView('waitlist', await kennelosCard(err.message, String(fd.get('feed') ?? '')), { show: true });
+        return pagesView('waitlist', await kennelosCard(sayMessage('feed', err.message, say), String(fd.get('feed') ?? '')), { show: true });
       }
       return redirect(`${base}/pages/waitlist?note=saved#kennelos`);
     }
@@ -689,6 +689,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     const icon = { dogs: 'paw', litters: 'heart', reviews: 'star' };
     const cards = [];
     for (const b of blocks) {
+      if (BLOCK_TYPES[b.type].kind === 'own') { cards.push(await ownCard(key, b, snap)); continue; }
       const cur = await getAddedBlock(env, site.id, key, b.id);
       const rows = blockRows(snap, b);
       const names = (b.limit ? rows.slice(0, b.limit) : rows).map(nameOf[b.type]);
@@ -703,6 +704,41 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     return `<h2>${esc(say('pages.blocks_kennelport_added'))}</h2><p class="muted small">${esc(say('pages.placed_with_you_by'))}</p>${cards.join('')}`;
   }
 
+  // One of the owner's own blocks (content/blocks.js, step 4): hers to switch off and
+  // reword; an outside link, phone or email she can change; a page link is the owner's
+  // (decision 18); the photo, where the owner lets her.
+  async function ownCard(key, b, snap) {
+    const cur = await getAddedBlock(env, site.id, key, b.id);
+    const empty = (t) => (t ? say('pages.own.empty_is', { text: t }) : '');
+    // A button's words post as button_label: the app fills any field named label
+    // with the device's name (the sign-in form's).
+    const input = (n, label, max, half, hint = '', ph = '') => `<div class="f${half ? ' half' : ''}"><label>${esc(label)}<input name="${n === 'label' ? 'button_label' : n}" value="${esc(cur[n] ?? '')}" maxlength="${max}"${ph ? ` placeholder="${esc(ph)}"` : ''}>${hint ? `<span class="hint">${esc(hint)}</span>` : ''}</label></div>`;
+    const F = ADDED_BLOCK_FIELDS;
+    const parts = [];
+    if (b.type === 'banner' || b.type === 'overlay') parts.push(input('heading', say('pages.heading'), F.heading.max, true, empty(b.w.heading), b.w.heading), input('label', say('pages.own.button_words'), F.label.max, true, empty(b.w.label), b.w.label), input('line', say('pages.own.a_line'), F.line.max, false, empty(b.w.line), b.w.line));
+    if (b.type === 'button') parts.push(input('label', say('pages.own.button_words'), F.label.max, true, empty(b.w.label), b.w.label));
+    const l = b.link;
+    let linkNote = '';
+    if (l?.to === 'url') parts.push(input('url', say('pages.own.address'), 300, false, empty(l.value), l.value));
+    if (l?.to === 'tel' || l?.to === 'sms') parts.push(input('phone', say('pages.own.phone'), F.phone.max, true, l.value ? empty(l.value) : say('pages.own.from_details'), l.value || snap.site.contact_phone || ''));
+    if (l?.to === 'email') parts.push(input('email', say('pages.own.email'), 254, true, l.value ? empty(l.value) : say('pages.own.from_details'), l.value || snap.site.contact_email || ''));
+    if (l?.to === 'page') {
+      const name = l.page === 'home' ? 'Home' : pageMenuName(snap, l.page);
+      linkNote = `<p class="muted small">${esc(say('pages.own.goes_to', { page: name }))}${l.page !== 'home' && !pageShows(snap, l.page, { today: new Date().toISOString().slice(0, 10) }) ? ` ${esc(say('pages.own.hidden', { page: name }))}` : ''}</p>`;
+    }
+    let photo = '';
+    if ((b.type === 'photo' || b.type === 'overlay') && b.mayChange) {
+      photo = field('photo_id', { type: 'photo' }, cur.photo_id || b.photo || '', { kind: 'pages', say, photos: await photos(), photoUrl });
+      if (b.type === 'photo') parts.push(input('caption', say('pages.own.caption'), F.caption.max, false, empty(b.w.caption), b.w.caption));
+    } else if ((b.type === 'photo' || b.type === 'overlay') && !b.photo) linkNote += `<p class="muted small">${esc(say('pages.own.no_photo'))}</p>`;
+    return `<form method="post" action="${base}/blocks/${esc(key)}/${esc(b.id)}" data-save class="card added${cur.enabled ? '' : ' off'}" id="b-${esc(b.id)}">
+        <div class="between"><h2 class="added-h">${ic(BLOCK_TYPES[b.type].ic === 'layers' ? 'pages' : BLOCK_TYPES[b.type].ic === 'list' ? 'pages' : BLOCK_TYPES[b.type].ic)}${esc(cur.heading || cur.label || b.w?.heading || b.w?.label || say(`pages.own.${b.type}`))}</h2>
+          <div class="switches"><label class="check">${esc(say('pages.show_it'))}<input type="checkbox" name="enabled" value="1"${cur.enabled ? ' checked' : ''}></label></div></div>
+        <p class="muted small">${esc(say(`pages.own.${b.type}`))}.</p>${linkNote}${photo}
+        ${parts.length ? `<div class="fgrid">${parts.join('')}</div>` : ''}
+        <button class="primary">${esc(say('pages.save'))}</button></form>`;
+  }
+
   async function addedAction() {
     const [, , , , page, block] = url.pathname.split('/');
     if (request.method !== 'POST') return null;
@@ -711,7 +747,11 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     const back = page === 'home' ? `${base}/home` : `${base}/pages/${page}`;
     const fd = await request.formData();
     try {
-      await saveAddedBlock(env, site.id, page, block, { enabled: fd.get('enabled') != null, eyebrow: fd.get('eyebrow'), heading: fd.get('heading'), lede: fd.get('lede') });
+      const own = BLOCK_TYPES[b.type].kind === 'own';
+      const pick = (...ks) => Object.fromEntries(ks.filter((k) => fd.has(k)).map((k) => [k, fd.get(k)]));
+      await saveAddedBlock(env, site.id, page, block, own
+        ? { enabled: fd.get('enabled') != null, ...pick('heading', 'line', 'url', 'phone', 'email', 'caption'), ...(fd.has('button_label') ? { label: fd.get('button_label') } : {}), ...(b.mayChange ? pick('photo_id') : {}) }
+        : { enabled: fd.get('enabled') != null, eyebrow: fd.get('eyebrow'), heading: fd.get('heading'), lede: fd.get('lede') });
     } catch (err) {
       if (!(err instanceof ContentError)) throw err;
       return redirect(`${back}?note=not_saved#b-${block}`);
@@ -799,7 +839,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
         await tagPhotos(env, site.id, [saved.id], String(form.get('tags') ?? '').split(','));
         return json({ id: saved.id, thumb: photoUrl(saved.id) });
       } catch (err) {
-        if (err instanceof PhotoError) return json({ message: err.message }, 400);
+        if (err instanceof PhotoError) return json({ message: sayMessage('photos', err.message, say) }, 400);
         throw err;
       }
     }
@@ -891,7 +931,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
         if (rest === '/undo') { await undoPublish(env, site.id); return redirect(`${base}/publish?note=undone`); }
         if (!rest) { await publish(env, site.id, user.emailHash.slice(0, 12)); return redirect(`${base}/publish?note=published`); }
       } catch (err) {
-        return { title: say('publish.publish_2'), back: base, body: `<p class="error" role="alert">${esc(err.message)}</p><p><a href="${base}/publish">${esc(say('publish.back'))}</a></p>` };
+        return { title: say('publish.publish_2'), back: base, body: `<p class="error" role="alert">${esc(sayMessage('publish', err.message, say))}</p><p><a href="${base}/publish">${esc(say('publish.back'))}</a></p>` };
       }
       return null;
     }
@@ -988,7 +1028,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
         const inquiry = v.inquiry_id ? await env.DB.prepare('SELECT id FROM inquiries WHERE id = ? AND site_id = ?').bind(v.inquiry_id, site.id).first() : null;
         try { await addEntry(env, site.id, v, { inquiryId: inquiry?.id ?? null }); } catch (err) {
           if (!(err instanceof WaitlistError)) throw err;
-          return { title: say('waitlistlist.add_to_waitlist_2'), back: `${base}/waitlist`, body: form(`${base}/waitlist/new`, v, { err: err.message, from: inquiry?.id }) };
+          return { title: say('waitlistlist.add_to_waitlist_2'), back: `${base}/waitlist`, body: form(`${base}/waitlist/new`, v, { err: sayMessage('waitlist', err.message, say), from: inquiry?.id }) };
         }
         return back('listed');
       }
@@ -1020,7 +1060,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
         const v = await values();
         try { await updateEntry(env, site.id, e.id, v); } catch (err) {
           if (!(err instanceof WaitlistError)) throw err;
-          return { title: e.name, back: `${base}/waitlist`, body: form(`${base}/waitlist/${e.id}`, { ...e, ...v }, { err: err.message, edit: true }) };
+          return { title: e.name, back: `${base}/waitlist`, body: form(`${base}/waitlist/${e.id}`, { ...e, ...v }, { err: sayMessage('waitlist', err.message, say), edit: true }) };
         }
         return back('listsaved');
       }
@@ -1153,7 +1193,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       if (!owner) return { title: say('account.your_site'), back: base, body: `<p class="error">${esc(say('account.only_the_owner_can'))}</p>` };
       if (!fresh) return render(say('account.sign_in_again_first'));
       try { await closeSite(env, site.id, (await request.formData()).get('confirm')); } catch (err) {
-        if (err instanceof SiteError) return render(err.message);
+        if (err instanceof SiteError) return render(sayMessage('account', err.message, say));
         throw err;
       }
       return new Response(null, { status: 303, headers: { location: '/deleted', 'cache-control': 'no-store' } });

@@ -551,9 +551,10 @@ Each step is its own branch and can be released on its own.
       for the website's screens: headings, instructions, buttons, links, empty
       messages and the lines a screen picks between; signing in, her sites and
       Notifications, with every site's wording; her lists' second lines);
-   3. the errors that tell her what to do (built for the content model's checks: a
-      line per kind of check, with the field by its label; the waitlist's, photos',
-      videos', KennelOS linking's and sign-in's errors come with the next part);
+   3. the errors that tell her what to do (built: the content model's checks, a line
+      per kind of check with the field by its label; and the errors of the waitlist,
+      photos, videos and posts, badge codes, the KennelOS feed, linking and matches,
+      Delete, Publish and signing in, a line per message);
    4. the family portal's screens for the breeder (`portal/admin.js`), and Today.
 3. **Pages, blocks and the menu as settings.** Today's site becomes the **Website** template.
    Add new pages and data blocks (Dams and Sires), the menu editor, and the breeder's
@@ -567,7 +568,9 @@ Each step is its own branch and can be released on its own.
       the breeder switches it on or off, names it and words it, and switches off and
       rewords each block the owner added, on any page; `block_switches`; content.json
       carries both);
-   4. the menu editor;
+   4. the menu editor (built: Menu in the admin view; groups, their names, order, button
+      and footer switches; pages, places on a page and outside links; the footer follows
+      a changed menu);
    5. page addresses and their redirects;
    6. FAQ and badge spots as block settings, on new pages too;
    7. what each profile page shows;
@@ -575,6 +578,13 @@ Each step is its own branch and can be released on its own.
 4. **The owner's own blocks and styling** (decisions 16 to 18): buttons, banners and
    their links; dividers, spacers, collages, photos, videos, text over a photo; every
    block's background, padding, text size and fonts; template colours; the font library.
+   Built: banners, buttons, dividers, spacers, photos and text over a photo, on any page,
+   with links to a page, an outside site, a call, a text or an email; the breeder's
+   switch, words, outside link, phone, email and (where allowed) photo; every block's
+   background (scheme colours by name, with the scheme's matching ink), space above and
+   below and at the sides; text size on the owner's own blocks. Still to come: collages
+   and videos as the owner's blocks, links to a dog, litter or puppy, fonts and the font
+   library, and text size on the built-in blocks.
 5. **Templates.** Save as template, Apply, Reset to template.
 6. **The family portal's build:** the **Website and family portal** template; the
    portal's timing and display rules; then moving its family and breeder components,

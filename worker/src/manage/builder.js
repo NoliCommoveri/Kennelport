@@ -30,7 +30,7 @@ import {
 import { buildSnapshot } from '../publish.js';
 import {
   olderPuppies, depositsAhead, puppyStatus, puppyPriceText, regText, statusRule, sortPuppies, fullRegHref, rulesOf,
-  useFormats, word, litterRows, dogGroups, sitePrice, pricesOff, fmtDate, sexWord, dogsFor, label, placedFaqs, addedOn, addedWords, customPage,
+  useFormats, word, litterRows, dogGroups, sitePrice, pricesOff, fmtDate, sexWord, dogsFor, label, placedFaqs, addedOn, addedWords, customPage, menuGroups,
 } from '../render/parts.js';
 import { makePreviewToken, servePhoto, SITE_CSP } from '../site.js';
 import { renderPage } from '../render/index.js';
@@ -39,8 +39,10 @@ import {
   BLOCK_TYPES, DOG_STATUS, ANY3, DOG_FLAGS, DOG_ORDER, DOG_STYLE, STAGES, REVIEW_STYLE, SEXES, DOG_ITEMS, LITTER_ITEMS, LITTER_PAIR,
   LITTER_ROWS, REVIEW_ITEMS, REVIEW_WHO, BlockError, blocksFromForm, moved, newBlock,
   pageBlocks, pageChanged, pagesChanged, withPage, addable, fits, hersOn, blockName, blockHint, isBuilt, BUILT_PAGES, PAGE_PARTS, headFor, isCustom, customPages, addPage, withPageInfo, withoutPage, pathFor, STARTS,
+  menuOf, menuChanged, withMenu, groupOf, MenuError, MENU_PLACES, MENU_LIMITS,
+  LINK_TO, BUTTON_SIZE, BUTTON_LOOK, ALIGN, DIVIDER_STYLE, DIVIDER_WIDTH, SPACER_HEIGHT, PHOTO_SHAPE, PHOTO_FOCUS, OVER_V, OVER_SHADE, BG_COLOURS, PAD, TEXT_SIZE,
 } from '../content/blocks.js';
-import { PAGES, MENU_GROUPS } from '../content/model.js';
+import { PAGES } from '../content/model.js';
 import { siteLink } from '../ops/sites.js';
 import { SCREENS as WORD_SCREENS, CATALOG, itemsOn, everyWording, saveEveryWording, siteWording, withWording, WordingError } from './wording.js';
 
@@ -58,7 +60,7 @@ const whereIs = (site, path = '') => (isDemo(site) ? `Demo${path ? ` · ${path}`
 
 // A site's screens: [path, title, icon, short name for the phone's tabs].
 const SCREENS = [
-  ['pages', 'Pages', 'pages', 'Pages'], ['rules', 'Pups', 'paw', 'Pups'], ['dogs', 'Dogs', 'star', 'Dogs'], ['wording', 'Wording', 'pages', 'Words'],
+  ['pages', 'Pages', 'pages', 'Pages'], ['menu', 'Menu', 'list', 'Menu'], ['rules', 'Pups', 'paw', 'Pups'], ['dogs', 'Dogs', 'star', 'Dogs'], ['wording', 'Wording', 'pages', 'Words'],
   ['formats', 'Formats', 'cal', 'Formats'], ['kennelos', 'From KennelOS', 'link', 'KennelOS'], ['timing', 'Timing', 'clock', 'Timing'],
   ['instructions', 'Her instructions', 'book', 'Help'],
 ];
@@ -367,6 +369,7 @@ function landingPreview(rules) {
 // ---------- Pages: the list, and each page's blocks (step 2) ----------
 
 const isData = (b) => BLOCK_TYPES[b.type].kind === 'data';
+const isOwn = (b) => BLOCK_TYPES[b.type].kind === 'own';
 const ownWords = (key, b) => isData(b) && !hersOn(key, b);
 const mvBtns = (act, i, n) => `<div class="mv"><button name="act" value="${esc(act)}:up" aria-label="Move up"${i === 0 ? ' disabled' : ''}>${svg('up1')}</button><button name="act" value="${esc(act)}:down" aria-label="Move down"${i === n - 1 ? ' disabled' : ''}>${svg('down1')}</button></div>`;
 const chips = (name, cur, opts) => `<div class="chips">${Object.entries(opts).map(([v, l]) => `<label><input type="checkbox" name="${name}" value="${esc(v)}"${cur.includes(v) ? ' checked' : ''}>${esc(l)}</label>`).join('')}</div>`;
@@ -404,6 +407,7 @@ function blockSummary(snap, key, b) {
   if (b.type === 'litters') return `${b.f.stage.map((x) => STAGES[x]).join(', ')}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b).length} now`;
   if (b.type === 'reviews') return `${REVIEW_STYLE[b.style]}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b).length} now`;
   if (b.type === 'builtin') return blockHint(key, b) ?? '';
+  if (isOwn(b)) return ownSummary(snap, b);
   const faqs = placedFaqs(snap, key).map((e) => e.heading).join(' · ');
   const badges = badgesOn(snap, key).map((x) => x.name).join(' · ');
   if (b.type === 'faq') return faqs || 'No questions placed here yet';
@@ -444,11 +448,15 @@ function hersLine(snap, key, b) {
   return `Its words and photos are hers: she sets them in ${hersAt(snap, key)}.`;
 }
 
-function blockSettings(snap, key, b) {
+function blockSettings(snap, key, b, pics) {
   const k = (f) => `b.${b.id}.${f}`;
+  if (isOwn(b)) {
+    return `<div class="set"><input type="hidden" name="${k('present')}" value="1">${ownSettings(snap, key, b, pics)}${lookSettings(b)}
+      <div class="row"><button class="link small danger" name="act" value="remove:${esc(b.id)}">${svg('trash')} Remove this block</button></div></div>`;
+  }
   if (!isData(b)) {
-    return `<div class="set"><p class="small">${esc(blockHint(key, b) ?? '')}</p>
-      <p class="small muted">${esc(hersLine(snap, key, b))}</p>
+    return `<div class="set"><input type="hidden" name="${k('present')}" value="1"><p class="small">${esc(blockHint(key, b) ?? '')}</p>
+      <p class="small muted">${esc(hersLine(snap, key, b))}</p>${lookSettings(b)}
       <div class="row"><button class="link small danger" name="act" value="remove:${esc(b.id)}">${svg('trash')} Remove this block</button></div></div>`;
   }
   let data = '';
@@ -474,18 +482,82 @@ function blockSettings(snap, key, b) {
     <div class="fgroup"><h2>Which ${WHAT[b.type]}s <span class="kos-tag">${svg('link')}${b.type === 'reviews' ? 'Her records' : 'KennelOS'}</span></h2>${data}
       <div class="fgrid">${select(k('limit'), b.limit ?? 'all', LIMITS, 'How many')}</div>${resultLine(blockRecords(snap, b), WHAT[b.type])}</div>
     <div class="fgroup"><h2>What its cards show</h2>${show}</div>
-    ${words}
+    ${words}${lookSettings(b)}
     <div class="row"><button class="link small danger" name="act" value="remove:${esc(b.id)}">${svg('trash')} Remove this block</button></div></div>`;
 }
 
-function blockRow(snap, key, b, i, n, open) {
+// Every block's look (decision 17): a scheme colour, space around it, and on her own
+// blocks a text size. Text on a colour takes the scheme's matching ink by itself.
+function lookSettings(b) {
+  const k = (f) => `b.${b.id}.s.${f}`;
+  const st = b.s ?? {};
+  return `<div class="fgroup"><h2>Its look</h2><input type="hidden" name="${k('present')}" value="1"><div class="fgrid">
+    ${select(k('bg'), st.bg ?? '', BG_COLOURS, 'Background')}${isOwn(b) ? select(k('text'), st.text ?? 'm', TEXT_SIZE, 'Text size') : ''}
+    ${select(k('py'), st.py ?? '', PAD, 'Space above and below')}${select(k('px'), st.px ?? '', PAD, 'Space at the sides')}</div>
+    <p class="small muted">Colours are this site's scheme, so they follow its light and dark looks. Words on a colour take the scheme's matching ink.</p></div>`;
+}
+
+// The pages a button can go to: Home, every page (Privacy aside), and hers.
+function pageChoices(snap, build) {
+  return { home: 'Home', ...Object.fromEntries(Object.keys(PAGES).filter((x) => x !== 'privacy').map((x) => [x, pageLabel(snap, x)])), ...Object.fromEntries(customPages(build ?? {}).map((c) => [c.id, c.name])) };
+}
+
+function linkSettings(snap, b, pics, optional) {
+  const k = (f) => `b.${b.id}.${f}`;
+  const l = b.link ?? { to: '' };
+  const to = optional ? { '': 'No button', ...LINK_TO } : LINK_TO;
+  return `<div class="fgrid">${select(k('link.to'), l.to ?? '', to, 'The button goes to')}${select(k('link.page'), l.page ?? 'waitlist', pageChoices(snap, pics.build), 'The page (for a page)')}
+    ${field(k('link.value'), l.value ?? '', { label: 'Address, number or email', cls: '', hint: 'An outside site needs its address. For a call, a text or an email, leave it empty to use the phone and email in Kennel details, and follow them when they change.' })}</div>
+    <p class="small muted">The breeder can reword the button, switch it off, and change an outside link, phone number or email address. A link to a page is yours. A button whose page is off hides by itself.</p>`;
+}
+
+// A photo picker from her photos (the manage app's own picker's look).
+function photoChoice(b, pics) {
+  const n = `b.${b.id}.photo`;
+  const opt = (p) => `<label class="ph-opt"><input type="radio" name="${n}" value="${esc(p.id)}"${b.photo === p.id ? ' checked' : ''}><img src="${esc(pics.url(p.id))}" alt="${esc(p.alt || 'Photo')}" loading="lazy"></label>`;
+  return `<fieldset class="photos"><legend>Photo<span class="hint">From the breeder's photos. She adds photos in her Site Manager, under Photos.</span></legend>
+    <div class="ph-grid"><label class="ph-opt none"><input type="radio" name="${n}" value=""${b.photo ? '' : ' checked'}><span>No photo</span></label>${pics.list.map(opt).join('')}</div></fieldset>`;
+}
+
+function ownSettings(snap, key, b, pics) {
+  const k = (f) => `b.${b.id}.${f}`;
+  const w = (f, label, cls = 'half', hint = '') => field(k(`w.${f}`), b.w?.[f] ?? '', { label, cls, hint });
+  const her = `The breeder can switch it off${b.type === 'divider' ? '' : ' and reword it'} in ${hersAt(snap, key)}.`;
+  if (b.type === 'banner') return `<div class="fgroup"><h2>Starting wording</h2><p class="small muted">${esc(her)}</p><div class="fgrid">${w('heading', 'Heading')}${w('label', 'Button words')}${w('line', 'A line', '')}</div></div>
+    <div class="fgroup"><h2>The button</h2>${linkSettings(snap, b, pics, true)}</div>`;
+  if (b.type === 'button') return `<div class="fgroup"><h2>The button</h2><p class="small muted">${esc(her)}</p><div class="fgrid">${w('label', 'Its words')}</div>
+    ${fld('Size', seg(k('size'), b.size, BUTTON_SIZE))}${fld('Look', seg(k('look'), b.look, BUTTON_LOOK))}${fld('Where it sits', seg(k('align'), b.align, ALIGN))}${linkSettings(snap, b, pics, false)}</div>`;
+  if (b.type === 'divider') return `<div class="fgroup"><h2>The divider</h2><p class="small muted">${esc(her)}</p>${fld('Style', seg(k('style'), b.style, DIVIDER_STYLE))}${fld('Width', seg(k('width'), b.width, DIVIDER_WIDTH))}</div>`;
+  if (b.type === 'spacer') return `<div class="fgroup"><h2>The space</h2>${fld('Height', seg(k('height'), b.height, SPACER_HEIGHT))}</div>`;
+  const change = `<div class="switches boxed">${toggle(k('mayChange'), b.mayChange, b.type === 'photo' ? 'The breeder can change the photo and its caption' : 'The breeder can change the photo')}</div>`;
+  if (b.type === 'photo') return `<div class="fgroup"><h2>The photo</h2><p class="small muted">${esc(her.replace(' and reword it', ''))}</p>${photoChoice(b, pics)}
+    ${fld('Shape', seg(k('shape'), b.shape, PHOTO_SHAPE))}${fld('Which part to keep', seg(k('focus'), b.focus, PHOTO_FOCUS))}<div class="fgrid">${w('caption', 'Caption', '', 'Optional.')}</div>${change}</div>`;
+  if (b.type === 'overlay') return `<div class="fgroup"><h2>The photo</h2>${photoChoice(b, pics)}${fld('Which part to keep', seg(k('focus'), b.focus, PHOTO_FOCUS))}${change}</div>
+    <div class="fgroup"><h2>The words over it</h2><p class="small muted">${esc(her)}</p><div class="fgrid">${w('heading', 'Heading')}${w('label', 'Button words')}${w('line', 'A line', '')}</div>
+      ${fld('Up and down', seg(k('v'), b.v, OVER_V))}${fld('Across', seg(k('h'), b.h, ALIGN))}${fld('Shade behind the words', seg(k('shade'), b.shade, OVER_SHADE), 'Even the lightest keeps white words readable.')}</div>
+    <div class="fgroup"><h2>The button</h2>${linkSettings(snap, b, pics, true)}</div>`;
+  return '';
+}
+
+// One line under her own block's name.
+function ownSummary(snap, b) {
+  const to = (l) => (!l ? 'no button' : l.to === 'page' ? `to ${l.page === 'home' ? 'Home' : pageLabel(snap, l.page)}` : l.to === 'url' ? `to ${l.value || '(no address yet)'}` : `${LINK_TO[l.to].toLowerCase()}${l.value ? ` to ${l.value}` : ', from Kennel details'}`);
+  if (b.type === 'banner') return [b.w.heading, b.w.label && `“${b.w.label}” ${to(b.link)}`].filter(Boolean).join(' · ') || 'No words yet';
+  if (b.type === 'button') return `“${b.w.label || '(no words)'}” ${to(b.link)} · ${BUTTON_SIZE[b.size].toLowerCase()}`;
+  if (b.type === 'divider') return `${DIVIDER_STYLE[b.style]} · ${DIVIDER_WIDTH[b.width].toLowerCase()}`;
+  if (b.type === 'spacer') return SPACER_HEIGHT[b.height];
+  if (!b.photo) return 'No photo chosen yet, so it hides';
+  return b.type === 'photo' ? `${PHOTO_SHAPE[b.shape]}${b.w.caption ? ` · ${b.w.caption}` : ''}` : [b.w.heading, `words ${OVER_V[b.v].toLowerCase()} ${ALIGN[b.h].toLowerCase()}`].filter(Boolean).join(' · ');
+}
+
+function blockRow(snap, key, b, i, n, open, pics) {
   const T = BLOCK_TYPES[b.type];
   const off = hersOn(key, b) ? !snap.home[b.id]?.enabled : !addedOn(snap, key, b);
   const isOpen = open === b.id;
   return `<li class="mvr${isData(b) ? ' data' : ''}${b.type === 'builtin' ? ' fixed' : ''}${off ? ' off' : ''}" id="b-${esc(b.id)}">${mvBtns(`mv:${b.id}`, i, n)}<span class="ico">${svg(T.ic)}</span>
     <span class="ttl">${esc(blockName(key, b))}${isData(b) ? ` <span class="kos-tag">${b.type === 'reviews' ? 'Records' : 'KennelOS'}</span>` : ''}${b.type === 'builtin' ? ' <span class="kos-tag">Built-in</span>' : ''}${off ? ' <span class="chg">off by the breeder</span>' : ''}<small>${esc(blockSummary(snap, key, b))}</small></span>
     <span class="end"><button class="button small" name="act" value="${isOpen ? 'close' : `open:${esc(b.id)}`}" aria-expanded="${isOpen}">${isOpen ? 'Done' : 'Settings'}</button></span>
-    ${isOpen ? blockSettings(snap, key, b) : ''}</li>`;
+    ${isOpen ? blockSettings(snap, key, b, pics) : ''}</li>`;
 }
 
 // The phone beside it: the page's blocks as the prototype sketches them, with her words.
@@ -515,6 +587,11 @@ function pagePreview(snap, key, blocks, site) {
     else if (b.type === 'band') out.push(`<div class="pvb deep"><h3>${esc(h.waitlist.heading || 'Hoping for a puppy of your own?')}</h3><span class="pv-pill">${esc(h.waitlist.button_label || 'Join the waitlist')}</span></div>`);
     else if (b.type === 'dogs') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Our dogs', 'Meet our dogs')}<div class="pvg${b.style === 'flip' ? '' : ' slide'}">${names.map((nm) => `<div class="pvc${b.style === 'light' ? ' light' : ' flip'}"><span class="ph"></span><div class="t"><b>${esc(nm)}</b></div></div>`).join('')}</div></div>`);
     else if (b.type === 'litters') out.push(`<div class="pvb sand">${headOf(wordsOf(b), 'Litters', 'Current and upcoming')}${names.map((nm) => `<div class="pv-row"><b>${esc(nm)}</b></div>`).join('')}</div>`);
+    else if (b.type === 'banner') out.push(`<div class="pvb deep">${b.w.heading ? `<h3>${esc(addedWords(snap, key, b).heading)}</h3>` : ''}${b.w.label && b.link ? `<span class="pv-pill">${esc(addedWords(snap, key, b).label)}</span>` : ''}</div>`);
+    else if (b.type === 'button') out.push(`<div class="pvb"><div class="pv-row"><span class="pv-pill">${esc(addedWords(snap, key, b).label || 'Button')}</span></div></div>`);
+    else if (b.type === 'divider') out.push(`<div class="pvb"><div class="pv-row small muted">${esc(DIVIDER_STYLE[b.style])}</div></div>`);
+    else if (b.type === 'spacer') out.push(`<div class="pvb ghost">Space: ${esc(SPACER_HEIGHT[b.height].toLowerCase())}</div>`);
+    else if (b.type === 'photo' || b.type === 'overlay') out.push(b.photo ? `<div class="pv-hero"><span class="ph"></span>${b.type === 'overlay' && b.w.heading ? `<div><h3>${esc(addedWords(snap, key, b).heading)}</h3></div>` : ''}</div>` : ghost(b, 'no photo chosen yet, so it hides'));
     else if (b.type === 'reviews') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Families', 'What our families say')}${snap.reviews.slice(0, 1).map((r) => `<div class="pv-row" style="display:block"><span class="stars">★★★★★</span><br>“${esc(r.quote.slice(0, 90))}${r.quote.length > 90 ? '…' : ''}”</div>`).join('')}</div>`);
   }
   return phone(site, snap, pagePath(snap, key), `Their ${key === 'home' ? 'Home' : pageLabel(snap, key)} page, as you build it`, out);
@@ -523,8 +600,9 @@ function pagePreview(snap, key, blocks, site) {
 // The Pages list: every page the builder has, in today's menu order, then the pages
 // she added, and Privacy, which stays fixed. ?new=1 opens New page.
 // Waitlist is the menu's button, one link, so a page can't go under it (yet: the menu editor).
-const GROUPS = { '': 'Not in the menu', ...Object.fromEntries(MENU_GROUPS.filter((g) => g.key !== 'waitlist').map((g) => [g.key, g.label])) };
-function newPageCard(input = {}, error = null) {
+// The groups a page of hers can go in: the menu's, but not a button (one button, one link).
+const groupsOf = (build) => ({ '': 'Not in the menu', ...Object.fromEntries(menuOf(build).filter((g) => !g.button).map((g) => [g.id, g.label || 'A group with no name'])) });
+function newPageCard(GROUPS, input = {}, error = null) {
   return `<section class="card" id="new-page"><div class="fgroup"><h2>New page</h2>${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
       <ol class="numsteps"><li><span class="num">1</span><div><div class="fgrid">
         ${field('page.name', input.name ?? '', { label: 'Name', ph: 'Our dams', hint: 'In the menu and as its heading. The breeder can rename both.' })}
@@ -541,26 +619,28 @@ async function pagesScreen(env, site, build, { adding = false, input = {}, error
   const offNote = (k) => (k !== 'home' && snap.pages[k]?.enabled === false ? ' · <span class="chg">off by the breeder</span>' : '');
   const count = (k) => { const n = pageBlocks(build, k).length; return `${n} block${n === 1 ? '' : 's'}`; };
   const rows = BUILT_PAGES.map((k) => row(pagePath(snap, k), pageLabel(snap, k), `/admin/${sub}/pages/${k}`, `${count(k)}${pageChanged(build, k) ? ' · <span class="chg">changed</span>' : ' · as today'}${offNote(k)}`));
-  const mine = customPages(build).map((c) => row(c.path, pageLabel(snap, c.id), `/admin/${sub}/pages/${c.id}`, `${count(c.id)} · <span class="spill brass">Added</span> · ${c.group ? `in ${esc(GROUPS[c.group])}` : 'not in the menu'}${offNote(c.id)}`));
+  const menu = menuOf(build);
+  const inGroup = (k) => { const id = groupOf(menu, k); return id ? menu.find((g) => g.id === id).label : null; };
+  const mine = customPages(build).map((c) => row(c.path, pageLabel(snap, c.id), `/admin/${sub}/pages/${c.id}`, `${count(c.id)} · <span class="spill brass">Added</span> · ${inGroup(c.id) ? `in ${esc(inGroup(c.id))}` : 'not in the menu'}${offNote(c.id)}`));
   const fixed = row(PAGES.privacy.path, PAGES.privacy.label, null, 'written for her by KennelPort, fixed');
   return `<div class="build"><div class="stack">
-    ${adding ? `<form method="post" class="stack">${newPageCard(input, error)}</form>` : ''}
+    ${adding ? `<form method="post" class="stack">${newPageCard(groupsOf(build), input, error)}</form>` : ''}
     <section class="card"><div class="between"><h2>${rows.length + mine.length + 1} pages</h2>${adding ? '' : '<a class="button small primary" href="?new=1#new-page">' + svg('plus') + ' New page</a>'}</div><ul class="list pages">${rows.join('')}</ul>
       ${mine.length ? `<h2 class="mt">Pages you added</h2><ul class="list pages">${mine.join('')}</ul>` : ''}<ul class="list pages">${fixed}</ul></section>
-    <section class="card band"><p class="small">A page you add is the breeder's to switch on or off, name in her menu and word, like any page. The menu editor, page addresses for the breeder, and FAQ and badge spots on your pages come next.</p></section>
+    <section class="card band"><p class="small">A page you add is the breeder's to switch on or off, name in her menu and word, like any page. Where each page sits in the menu is in <a href="/admin/${sub}/menu">Menu</a>. Page addresses for the breeder, and FAQ and badge spots on your pages, come next.</p></section>
   </div><div class="pvwrap" id="preview">${pagePreview(snap, 'home', pageBlocks(build, 'home'), site)}${await previewLink(env, site)}</div></div>`;
 }
 
 // What "The page" says about switching it off and its address. A page of hers
 // has its name, address and menu group here, and can be removed.
 const FIXED_PATHS = ['waitlist', 'waitlist_help'];
-function pageCard(snap, key) {
+function pageCard(snap, key, build) {
   const c = customPage(snap, key);
   if (c) {
     return `<section class="card"><div class="fgroup"><h2>The page <span class="spill brass">Added</span></h2><input type="hidden" name="page.present" value="1"><div class="fgrid">
       ${field('page.name', c.name, { label: 'Starting name', hint: 'The breeder can rename it in her menu.' })}
       ${field('page.path', c.path, { label: 'Address', hint: 'Letters, numbers and hyphens. Renaming it for the breeder comes with the menu.' })}
-      ${select('page.group', c.group ?? '', GROUPS, 'In the menu under')}</div>
+      ${select('page.group', groupOf(menuOf(build), key) ?? '', groupsOf(build), 'In the menu under')}</div>
       <div class="switches boxed"><label class="check"><input type="checkbox" disabled checked aria-describedby="page-on">The breeder can switch this page off</label></div>
       <p class="small muted" id="page-on">${esc(`She switches it off in ${hersAt(snap, key)}. It hides by itself while nothing on it has anything to show.`)}</p>
       <div class="row"><button class="link small danger" name="act" value="delpage">${svg('trash')} Remove this page</button></div></div></section>`;
@@ -581,9 +661,13 @@ async function pageScreen(env, site, build, key, { open = null, error = null } =
   useFormats(snap);
   const blocks = pageBlocks(build, key);
   const adds = addable(key, blocks);
+  // Her photos, for a photo block's picker (served through the admin view of her site).
+  const pics = { build, list: open && blocks.some((b) => b.id === open && (b.type === 'photo' || b.type === 'overlay'))
+    ? (await env.DB.prepare('SELECT id, alt FROM photos WHERE site_id = ? AND removed_at IS NULL ORDER BY created_at DESC').bind(site.id).all()).results : [],
+  url: (id) => `/admin/${site.subdomain}/site/_kp/p/${encodeURIComponent(id)}?s=t` };
   const changed = pageChanged(build, key);
   const group = (data, title) => {
-    const rows = adds.filter((x) => (BLOCK_TYPES[x.type].kind === 'data') === data);
+    const rows = adds.filter((x) => (data === 'own' ? BLOCK_TYPES[x.type].kind === 'own' : BLOCK_TYPES[x.type].kind !== 'own' && (BLOCK_TYPES[x.type].kind === 'data') === data));
     return rows.length ? `<div class="fgroup"><h2>${title}</h2><ul class="list">${rows.map((x) => {
       const b = { type: x.type, id: x.id };
       const T = BLOCK_TYPES[x.type];
@@ -591,11 +675,11 @@ async function pageScreen(env, site, build, key, { open = null, error = null } =
     }).join('')}</ul></div>` : '';
   };
   return `<div class="stack">${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
-    ${pageCard(snap, key)}
+    ${pageCard(snap, key, build)}
     <section class="card"><div class="between"><h2>Blocks, top to bottom</h2>${adds.length ? `<button class="button small primary" name="act" value="${open === 'add' ? 'close' : 'adding'}" aria-expanded="${open === 'add'}">${svg('plus')} Add a block</button>` : ''}</div>
-      ${open === 'add' ? `<div class="addblock"><p class="small muted">It goes at the bottom; move it up from there.</p>${group(true, 'From KennelOS and her records')}${group(false, key === 'home' ? 'Her words and photos' : 'This page\'s own')}</div>` : ''}
+      ${open === 'add' ? `<div class="addblock"><p class="small muted">It goes at the bottom; move it up from there.</p>${group(true, 'From KennelOS and her records')}${group('own', 'Your own blocks')}${group(false, key === 'home' ? 'Her words and photos' : 'This page\'s own')}</div>` : ''}
       <p class="small muted">You place and order them. The breeder can switch each one off and reword it, never move it.${changed || isCustom(key) ? '' : ` This is today's ${key === 'home' ? 'Home' : 'page'}.`}</p>
-      <ul class="mvl">${blocks.map((b, i) => blockRow(snap, key, b, i, blocks.length, open)).join('')}</ul>
+      <ul class="mvl">${blocks.map((b, i) => blockRow(snap, key, b, i, blocks.length, open, pics)).join('')}</ul>
       ${changed ? `<div class="row"><button class="link small" name="act" value="default">Back to today's ${key === 'home' ? 'Home' : 'page'}</button></div>` : ''}
     </section></div>
     <div class="pvwrap" id="preview">${pagePreview(snap, key, blocks, site)}${await previewLink(env, site)}</div>`;
@@ -640,6 +724,156 @@ function pageFromForm(build, key, form) {
   return { build: withPage(build, key, blocks), open };
 }
 
+// ---------- the menu (step 3.4) ----------
+
+// One item's title and the line under it.
+function itemLine(snap, it) {
+  if (it.type === 'link') return [it.text || 'An outside link', `Outside link · ${it.url}`];
+  if (it.type === 'place') {
+    const P = MENU_PLACES[it.place];
+    return [it.text || P.name, `A place on ${pageLabel(snap, P.page)} · #${it.place.split('#')[1]} · shows ${P.when}`];
+  }
+  const off = snap.pages[it.page]?.enabled === false ? ' · off by the breeder' : '';
+  return [pageLabel(snap, it.page), `Page · ${pagePath(snap, it.page)}${it.fallback ? ' · only while no other link to it here shows' : ''}${off}`];
+}
+
+// What can be added to a group: every page (Privacy aside), the places, an outside link.
+function addOptions(snap, build) {
+  const pages = [...Object.keys(PAGES).filter((k) => k !== 'privacy'), ...customPages(build).map((c) => c.id)];
+  return {
+    '': 'Choose…',
+    ...Object.fromEntries(pages.map((k) => [`page:${k}`, `Page: ${pageLabel(snap, k)}`])),
+    ...Object.fromEntries(Object.entries(MENU_PLACES).map(([k, P]) => [`place:${k}`, `Place: ${P.name} (${pageLabel(snap, P.page)})`])),
+    link: 'An outside link (words and address below)',
+  };
+}
+
+// The phone beside it: each group as the site shows it today, with what hides.
+function menuPreview(snap, site, menu) {
+  const today = new Date().toISOString().slice(0, 10);
+  const shown = menuGroups({ ...snap, layout: { ...snap.layout, menu } }, { today, origin: '', path: '/', preview: true, portal: Boolean(site.portal_on) });
+  const out = menu.map((g) => {
+    const s = shown.find((x) => x.key === g.id);
+    if (!s) return `<div class="pvb ghost">${esc(g.label || 'A group with no name')}: nothing in it shows right now, so it hides</div>`;
+    if (g.button) return `<div class="pvb"><div class="pv-row"><span class="pv-pill">${esc(s.links[0].text)}</span><span class="small muted">a button${g.footer ? '' : ' · not in the footer'}</span></div></div>`;
+    return `<div class="pvb"><span class="eyebrow">${esc(g.label)}${g.footer ? '' : ' · not in the footer'}</span>${s.links.map((l) => `<div class="pv-row">${esc(l.text)}</div>`).join('')}</div>`;
+  });
+  return phone(site, snap, '/', 'Their menu, as it shows today', out);
+}
+
+function menuScreen(snap, build, site, menu, { open = null, error = null } = {}) {
+  const groupOpts = Object.fromEntries(menu.map((g, gi) => [String(gi), g.label || 'A group with no name']));
+  const adds = addOptions(snap, build);
+  const listed = new Set(menu.flatMap((g) => g.items.filter((it) => it.type === 'page').map((it) => it.page)));
+  const out = [...Object.keys(PAGES).filter((k) => k !== 'privacy'), ...customPages(build).map((c) => c.id)].filter((k) => !listed.has(k));
+  const item = (g, gi, it, ii) => {
+    const [title, line] = itemLine(snap, it);
+    const id = `${gi}.${ii}`;
+    const isOpen = open === id;
+    const pre = `i.${gi}.${ii}`;
+    const twin = it.type === 'page' && g.items.some((x, xi) => xi !== ii && (x.page === it.page || MENU_PLACES[x.place]?.page === it.page));
+    const set = !isOpen ? '' : `<div class="set"><input type="hidden" name="${pre}.present" value="1"><div class="fgrid">
+        ${select(`${pre}.to`, String(gi), groupOpts, 'In the group')}
+        ${it.type === 'link' ? `${field(`${pre}.text`, it.text, { label: 'Its words' })}${field(`${pre}.url`, it.url, { label: 'Its address', ph: 'https://', hint: 'Opens in a new tab.' })}` : ''}
+        ${it.type === 'place' ? field(`${pre}.text`, it.text ?? '', { label: 'Its words', ph: MENU_PLACES[it.place].name, hint: 'Leave empty for the site\'s own.' }) : ''}</div>
+        ${it.type === 'page' ? `<div class="switches boxed">${toggle(`${pre}.fallback`, it.fallback, 'Show only while no other link to this page in the group shows')}</div>${twin ? '' : '<p class="small muted">Only matters with another link to the same page in this group, like today\'s Puppies after Available and Upcoming litters.</p>'}` : ''}
+        ${it.type === 'page' ? '<p class="small muted">The breeder names it in her menu.</p>' : ''}</div>`;
+    return `<li class="mvr item" id="i-${gi}-${ii}">${mvBtns(`imv:${gi}:${ii}`, ii, g.items.length)}<span class="ttl">${esc(title)}<small>${esc(line)}</small></span>
+      <span class="end"><button class="button small" name="act" value="${isOpen ? 'close' : `iopen:${id}`}" aria-expanded="${isOpen}">${isOpen ? 'Done' : 'Settings'}</button><button class="ib" name="act" value="idel:${gi}:${ii}" aria-label="Take ${esc(title)} out of the menu">${svg('trash')}</button></span>${set}</li>`;
+  };
+  const group = (g, gi) => `<section class="card" id="g-${gi}"><input type="hidden" name="g.${gi}.present" value="1">
+      <div class="mvr item">${mvBtns(`gmv:${gi}`, gi, menu.length)}<label><span class="sr">Group name</span><input type="text" name="g.${gi}.label" value="${esc(g.label)}" maxlength="${MENU_LIMITS.label}" placeholder="Group name"></label>
+        <span class="end"><button class="ib" name="act" value="gdel:${gi}" aria-label="Remove the ${esc(g.label)} group">${svg('trash')}</button></span></div>
+      <ul class="mvl mt">${g.items.map((it, ii) => item(g, gi, it, ii)).join('') || '<li class="small muted">Nothing in it yet, so the site leaves it out.</li>'}</ul>
+      <div class="switches boxed">${toggle(`g.${gi}.button`, g.button, 'Show it as a button, like Waitlist: its first link that shows')}${toggle(`g.${gi}.footer`, g.footer, 'Show it in the footer')}</div>
+      <details class="fgroup fold"><summary>Add to ${esc(g.label || 'this group')}</summary><div class="fgrid">${select(`add.${gi}`, '', adds, 'A page, a place on a page, or an outside link', '')}
+        ${field(`addtext.${gi}`, '', { label: 'An outside link\'s words' })}${field(`addurl.${gi}`, '', { label: 'Its address', ph: 'https://' })}</div>
+      <div class="row"><button class="button small" name="act" value="add:${gi}">${svg('plus')} Add</button></div></details></section>`;
+  return `<div class="stack">${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
+      <p class="small muted">Groups and their links in your order. The breeder names her pages and switches them off; she never moves them. A link hides by itself while what it points to has nothing to show, and a group with nothing showing hides.</p>
+      ${menu.map(group).join('')}
+      <div class="row"><button class="button small primary" name="act" value="newgroup"${menu.length >= MENU_LIMITS.groups ? ' disabled' : ''}>${svg('plus')} New group</button>${menuChanged(build) ? '<button class="link small" name="act" value="default">Back to today\'s menu</button>' : ''}</div>
+      ${out.length ? `<section class="card band"><h2>Not in the menu</h2><p class="small">${out.map((k) => esc(pageLabel(snap, k))).join(' · ')}</p><p class="small muted">These pages keep their addresses; links to them work.</p></section>` : ''}
+      <section class="card band"><p class="small">${menuChanged(build) ? 'The footer follows this menu: a column per group shown in the footer, its pages and outside links.' : 'Today\'s menu. The footer keeps today\'s three columns until you change the menu; then it follows it, a column per group.'}</p></section>
+    </div>`;
+}
+
+// The menu as the form has it, then what was pressed.
+function menuFromForm(menu, form, snap) {
+  const get = (k) => form.get(k);
+  let groups = menu.map((g, gi) => {
+    if (get(`g.${gi}.present`) == null) return structuredClone(g);
+    return { ...structuredClone(g), label: String(get(`g.${gi}.label`) ?? ''), button: get(`g.${gi}.button`) != null, footer: get(`g.${gi}.footer`) != null };
+  });
+  // The open item's settings, and a move to another group.
+  const moves = [];
+  groups.forEach((g, gi) => g.items.forEach((it, ii) => {
+    const pre = `i.${gi}.${ii}`;
+    if (get(`${pre}.present`) == null) return;
+    if (it.type === 'link') { it.text = String(get(`${pre}.text`) ?? ''); it.url = String(get(`${pre}.url`) ?? ''); }
+    if (it.type === 'place') { const t = String(get(`${pre}.text`) ?? '').trim(); if (t) it.text = t; else delete it.text; }
+    if (it.type === 'page') { if (get(`${pre}.fallback`) != null) it.fallback = true; else delete it.fallback; }
+    const to = Number(get(`${pre}.to`));
+    if (Number.isInteger(to) && to !== gi && groups[to]) moves.push([gi, ii, to]);
+  }));
+  for (const [gi, ii, to] of moves) groups[to].items.push(groups[gi].items[ii]);
+  for (const [gi, ii] of moves.sort((a, b) => b[1] - a[1])) groups[gi].items.splice(ii, 1);
+  const act = String(get('act') ?? '');
+  const [verb, a, b, dir] = act.split(':');
+  let open = null;
+  const gi = Number(a);
+  if (verb === 'gmv' && groups[gi]) groups = moved(groups, gi, b);
+  else if (verb === 'gdel' && groups[gi]) groups = groups.filter((_, i) => i !== gi);
+  else if (verb === 'imv' && groups[gi]?.items[Number(b)]) groups[gi].items = moved(groups[gi].items, Number(b), dir);
+  else if (verb === 'idel' && groups[gi]) groups[gi].items = groups[gi].items.filter((_, i) => i !== Number(b));
+  else if (verb === 'iopen') open = a;
+  else if (verb === 'newgroup' && groups.length < MENU_LIMITS.groups) {
+    const ids = new Set(groups.map((g) => g.id));
+    let n = 2;
+    while (ids.has(`group-${n}`)) n++;
+    groups.push({ id: `group-${n}`, label: 'New group', button: false, footer: true, items: [] });
+  } else if (verb === 'add' && groups[gi]) {
+    const what = String(get(`add.${gi}`) ?? '');
+    const [kind, ref] = what.split(/:(.+)/);
+    const items = groups[gi].items;
+    if (kind === 'page' && ref) items.push({ type: 'page', page: ref });
+    else if (kind === 'place' && Object.hasOwn(MENU_PLACES, ref)) items.push({ type: 'place', place: ref });
+    else if (kind === 'link') items.push({ type: 'link', text: String(get(`addtext.${gi}`) ?? ''), url: String(get(`addurl.${gi}`) ?? '') });
+    else throw new MenuError('Choose what to add first.');
+    if (items.length > MENU_LIMITS.items) throw new MenuError(`A group holds ${MENU_LIMITS.items} links at most.`);
+  }
+  return { menu: groups, open, reset: verb === 'default', where: Number.isInteger(gi) && groups[gi] ? `#g-${gi}` : '' };
+}
+
+async function menuRoute({ env, request, url, site, build, page }) {
+  const snap = await buildSnapshot(env, site.id);
+  useFormats(snap);
+  let menu = menuOf(build);
+  let error = null;
+  let open = url.searchParams.get('open');
+  if (request.method === 'POST') {
+    const form = await request.formData();
+    try {
+      const out = menuFromForm(menu, form, snap);
+      menu = out.menu;
+      open = out.open;
+      const next = out.reset ? (({ menu: _, ...rest }) => rest)(build) : withMenu(build, menu);
+      await saveBuild(env, site.id, next);
+      return redirect(`/admin/${site.subdomain}/menu?saved=1${open ? `&open=${encodeURIComponent(open)}#i-${open.replace('.', '-')}` : out.where}`);
+    } catch (err) {
+      if (!(err instanceof MenuError)) throw err;
+      error = err.message;
+    }
+  }
+  const saved = url.searchParams.get('saved') && !error;
+  const body = `<p class="crumb"><a href="/admin">‹ Every site</a></p><span class="eyebrow">${esc(site.kennel_name || site.subdomain)}</span>${isDemo(site) ? ' <span class="spill brass">Demo</span>' : ''}<h1>Menu</h1>
+    ${saved ? '<p class="notice" role="status">Saved. The site shows it once the breeder (or you) publishes.</p>' : ''}
+    <form method="post" id="build" class="build"><button class="sr" tabindex="-1" aria-hidden="true">Save</button>${menuScreen(snap, build, site, menu, { open, error })}
+      <div class="pvwrap" id="preview">${menuPreview(snap, site, menu)}${await previewLink(env, site)}</div>
+      <div class="actionbar"><div class="in"><span class="ico">${ic('eye')}</span><p><b>Their menu</b>Save, then the preview shows it. Publishing puts it live.</p><a class="button small seeit" href="#preview">See it</a><button class="primary small">Save</button></div></div></form>`;
+  return page(`Menu · ${site.kennel_name || site.subdomain}`, body, { admin: { nav: adminNav(site, 'menu'), site } });
+}
+
 // ---------- routes ----------
 
 export async function handleBuilder({ env, request, url, user, page }) {
@@ -649,7 +883,7 @@ export async function handleBuilder({ env, request, url, user, page }) {
   const wm = path.match(/^\/admin\/wording(?:\/([a-z]+))?$/);
   if (wm) return wordingRoute({ env, request, url, page, site: null, screen: wm[1] ?? null });
   const sv = path.match(/^\/admin\/([a-z0-9-]+)\/site(\/.*)?$/);
-  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z0-9_-]+|rules|dogs|wording|formats|kennelos|timing|instructions|instructions\/[a-z]+)$/);
+  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z0-9_-]+|menu|rules|dogs|wording|formats|kennelos|timing|instructions|instructions\/[a-z]+)$/);
   if (!m) return null;
   const site = await env.DB.prepare("SELECT id, subdomain, kennel_name, status, portal_on, demo_step FROM sites WHERE subdomain = ? AND status != 'closed'").bind(m[1]).first();
   if (!site) return null;
@@ -661,6 +895,7 @@ export async function handleBuilder({ env, request, url, user, page }) {
   const build = await loadBuild(env, site.id);
   if (screen === 'instructions' || screen.startsWith('instructions/')) return wordingRoute({ env, request, url, page, site, build, screen: screen.split('/')[1] ?? null });
   if (screen === 'pages' || screen.startsWith('pages/')) return pagesRoute({ env, request, url, site, build, page, screen });
+  if (screen === 'menu') return menuRoute({ env, request, url, site, build, page });
   let { rules, timing } = rulesFor(build);
   let error = null;
   if (request.method === 'POST') {

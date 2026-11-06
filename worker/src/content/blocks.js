@@ -33,7 +33,47 @@ export const BLOCK_TYPES = Object.freeze({
   reviews: { name: 'Reviews', ic: 'star', kind: 'data' },
   embeds: { name: 'Videos and posts', ic: 'camera', kind: 'content', once: true, hint: 'The videos and posts she puts on Home.' },
   band: { name: 'Call-to-action band', ic: 'heart', kind: 'content', once: true, hint: 'Her waitlist band. Shows only while the waitlist page is on.' },
+  // The owner's own blocks (decision 17): on any page, as many as she likes.
+  banner: { name: 'Banner', ic: 'layers', kind: 'own', hint: 'A full-width strip: a heading, a line and a button, in a scheme colour.' },
+  button: { name: 'Button', ic: 'link', kind: 'own', hint: 'One button, to a page, an outside site, a phone number or an email address.' },
+  divider: { name: 'Divider', ic: 'list', kind: 'own', hint: 'A line, a brass rule or the scheme\'s ornament between blocks.' },
+  spacer: { name: 'Spacer', ic: 'sliders', kind: 'own', hint: 'Empty space between blocks.' },
+  photo: { name: 'Photo', ic: 'camera', kind: 'own', hint: 'One photo, with an optional caption.' },
+  overlay: { name: 'Text over a photo', ic: 'camera', kind: 'own', hint: 'A photo with a heading, a line and a button over it.' },
 });
+
+// ---------- the owner's own blocks and every block's look (step 4) ----------
+
+// Where a button goes. A page on the site, an outside site, or the kennel's phone
+// (a call or a text) or email: those follow Kennel details unless a number or
+// address is typed in for the button. The breeder can change an outside link, a
+// phone number or an email address; a page link is the owner's (decision 18).
+export const LINK_TO = Object.freeze({ page: 'A page', url: 'An outside site', tel: 'A phone call', sms: 'A text message', email: 'An email' });
+export const BUTTON_SIZE = Object.freeze({ s: 'Small', m: 'Medium', l: 'Large' });
+export const BUTTON_LOOK = Object.freeze({ solid: 'Filled', line: 'Outline' });
+export const ALIGN = Object.freeze({ left: 'Left', center: 'Centre', right: 'Right' });
+export const DIVIDER_STYLE = Object.freeze({ line: 'Thin line', brass: 'Brass rule', ornament: "The scheme's ornament" });
+export const DIVIDER_WIDTH = Object.freeze({ narrow: 'Narrow', wide: 'Wide', full: 'Full width' });
+export const SPACER_HEIGHT = Object.freeze({ xs: 'Very small', s: 'Small', m: 'Medium', l: 'Large' });
+export const PHOTO_SHAPE = Object.freeze({ wide: 'Wide', tall: 'Tall', square: 'Square', full: 'Full width' });
+export const PHOTO_FOCUS = Object.freeze({ top: 'The top', middle: 'The middle', bottom: 'The bottom' });
+export const OVER_V = Object.freeze({ top: 'Top', middle: 'Middle', bottom: 'Bottom' });
+export const OVER_SHADE = Object.freeze({ light: 'Light', medium: 'Medium', dark: 'Dark' });
+// Every block's look. Colours are the scheme's, by name, so they follow light and
+// dark and the scheme; text on them takes the scheme's matching ink.
+export const BG_COLOURS = Object.freeze({ '': 'None', surface: 'Surface', band: 'Band', accent: 'Accent', foot: 'Footer colour' });
+export const PAD = Object.freeze({ '': 'None added', s: 'Small', m: 'Medium', l: 'Large' });
+export const TEXT_SIZE = Object.freeze({ xs: 'Very small', s: 'Small', m: 'Medium', l: 'Large' });
+export const OWN_WORDS = Object.freeze({
+  banner: { heading: 'Hoping for a puppy of your own?', line: '', label: 'Join the waitlist' },
+  button: { label: 'Join the waitlist' },
+  overlay: { heading: '', line: '', label: '' },
+  photo: { caption: '' },
+});
+const PHONE = /^[+()\d][\d\s().-]{5,24}$/;
+const EMAIL = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+export const looksLikePhone = (v) => PHONE.test(String(v ?? '').trim());
+export const looksLikeEmail = (v) => EMAIL.test(String(v ?? '').trim());
 
 // Blocks that draw her Home content (home_blocks): on Home only.
 export const HOME_ONLY = Object.freeze(['hero', 'facts', 'text', 'band']);
@@ -67,6 +107,7 @@ export const SHOW_DEFAULT = Object.freeze({
   reviews: { items: ['stars', 'quote', 'who'], who: ['photo', 'name', 'family'] },
 });
 
+const linkDefault = () => ({ to: 'page', page: 'waitlist' });
 const dogsF = (o = {}) => ({ sex: 'any', status: ['active'], upcoming: 'no', sale: 'no', away: 'no', ...o });
 
 // A new block of a type, as Add a block makes it.
@@ -75,6 +116,12 @@ export function newBlock(type, id) {
   if (type === 'dogs') Object.assign(b, { f: dogsF(), order: 'own', style: 'slider', limit: null, show: structuredClone(SHOW_DEFAULT.dogs), w: { eyebrow: 'Our dogs', heading: 'Meet our dogs' } });
   if (type === 'litters') Object.assign(b, { f: { stage: ['current', 'planned'] }, limit: null, show: structuredClone(SHOW_DEFAULT.litters), w: { eyebrow: 'Litters', heading: 'Current and upcoming' } });
   if (type === 'reviews') Object.assign(b, { style: 'slider', limit: null, show: structuredClone(SHOW_DEFAULT.reviews), w: { eyebrow: 'Families', heading: 'What our families say' } });
+  if (type === 'banner') Object.assign(b, { w: { ...OWN_WORDS.banner }, link: linkDefault(), s: { bg: 'accent' } });
+  if (type === 'button') Object.assign(b, { w: { ...OWN_WORDS.button }, link: linkDefault(), size: 'm', look: 'solid', align: 'center' });
+  if (type === 'divider') Object.assign(b, { style: 'line', width: 'wide' });
+  if (type === 'spacer') Object.assign(b, { height: 'm' });
+  if (type === 'photo') Object.assign(b, { photo: null, shape: 'wide', focus: 'middle', w: { caption: '' }, mayChange: true });
+  if (type === 'overlay') Object.assign(b, { photo: null, focus: 'middle', w: { heading: 'Raised with love', line: '', label: '' }, link: null, v: 'bottom', h: 'left', shade: 'medium', mayChange: true });
   return b;
 }
 
@@ -191,7 +238,28 @@ export const hersOn = (key, b) => key === 'home' && BREEDER_SWITCH.includes(b.id
 const pick = (v, opts, dflt) => (Object.hasOwn(opts, v) ? v : dflt);
 const list = (v, opts) => (Array.isArray(v) ? [...new Set(v.filter((x) => Object.hasOwn(opts, x)))] : null);
 const limitOf = (v) => (v == null || v === '' ? null : Number.isInteger(Number(v)) && Number(v) >= 1 && Number(v) <= LIMIT_MAX ? Number(v) : null);
-const words = (w) => Object.fromEntries(Object.entries(w && typeof w === 'object' ? w : {}).filter(([k, v]) => ['eyebrow', 'heading', 'lede'].includes(k) && typeof v === 'string').map(([k, v]) => [k, v.slice(0, 200)]));
+const words = (w, keys = ['eyebrow', 'heading', 'lede']) => Object.fromEntries(Object.entries(w && typeof w === 'object' ? w : {}).filter(([k, v]) => keys.includes(k) && typeof v === 'string').map(([k, v]) => [k, v.trim().slice(0, k === 'label' ? 40 : 200)]));
+const PHOTO_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
+// A button's link, as the build keeps it, or null (no button).
+export function cleanLink(l) {
+  if (!l || typeof l !== 'object' || !Object.hasOwn(LINK_TO, l.to)) return null;
+  if (l.to === 'page') return /^[a-z][a-z0-9_-]{0,44}$/.test(String(l.page ?? '')) ? { to: 'page', page: l.page } : null;
+  const value = String(l.value ?? '').trim().slice(0, 300);
+  if (l.to === 'url') return { to: 'url', value };
+  return value ? { to: l.to, value } : { to: l.to };
+}
+
+// Every block's look: only what's set, so a block nobody styled reads as before.
+function cleanStyle(st) {
+  if (!st || typeof st !== 'object') return null;
+  const out = {};
+  if (Object.hasOwn(BG_COLOURS, st.bg) && st.bg) out.bg = st.bg;
+  if (Object.hasOwn(PAD, st.py) && st.py) out.py = st.py;
+  if (Object.hasOwn(PAD, st.px) && st.px) out.px = st.px;
+  if (Object.hasOwn(TEXT_SIZE, st.text) && st.text !== 'm') out.text = st.text;
+  return Object.keys(out).length ? out : null;
+}
 
 // One block, every field present and in range: what the renderer and the editor use.
 export function cleanBlock(b) {
@@ -220,13 +288,38 @@ export function cleanBlock(b) {
     out.show = { items: list(b.show?.items, REVIEW_ITEMS) ?? [...D.items], who: list(b.show?.who, REVIEW_WHO) ?? [...D.who] };
   }
   if (BLOCK_TYPES[b.type].kind === 'data') out.w = words(b.w);
+  if (b.type === 'banner') { out.w = words(b.w, ['heading', 'line', 'label']); out.link = cleanLink(b.link); }
+  if (b.type === 'button') {
+    out.w = words(b.w, ['label']);
+    out.link = cleanLink(b.link);
+    out.size = pick(b.size, BUTTON_SIZE, 'm');
+    out.look = pick(b.look, BUTTON_LOOK, 'solid');
+    out.align = pick(b.align, ALIGN, 'center');
+  }
+  if (b.type === 'divider') { out.style = pick(b.style, DIVIDER_STYLE, 'line'); out.width = pick(b.width, DIVIDER_WIDTH, 'wide'); }
+  if (b.type === 'spacer') out.height = pick(b.height, SPACER_HEIGHT, 'm');
+  if (b.type === 'photo' || b.type === 'overlay') {
+    out.photo = PHOTO_ID.test(String(b.photo ?? '')) ? b.photo : null;
+    out.focus = pick(b.focus, PHOTO_FOCUS, 'middle');
+    out.mayChange = b.mayChange !== false;
+  }
+  if (b.type === 'photo') { out.shape = pick(b.shape, PHOTO_SHAPE, 'wide'); out.w = words(b.w, ['caption']); }
+  if (b.type === 'overlay') {
+    out.w = words(b.w, ['heading', 'line', 'label']);
+    out.link = cleanLink(b.link);
+    out.v = pick(b.v, OVER_V, 'bottom');
+    out.h = pick(b.h, ALIGN, 'left');
+    out.shade = pick(b.shade, OVER_SHADE, 'medium');
+  }
+  const st = cleanStyle(b.s);
+  if (st) out.s = st;
   return out;
 }
 
 // Can this block sit on this page? Data blocks anywhere; Home's own content on
 // Home; a page's spots and built-ins on that page.
 export function fits(key, b) {
-  if (BLOCK_TYPES[b.type].kind === 'data') return true;
+  if (BLOCK_TYPES[b.type].kind === 'data' || BLOCK_TYPES[b.type].kind === 'own') return true;
   if (isCustom(key)) return b.type === 'head';
   if (key === 'home') return b.type !== 'builtin' && b.type !== 'head';
   if (HOME_ONLY.includes(b.type)) return false;
@@ -260,6 +353,7 @@ export function layoutFor(build) {
   const custom = customPages(build);
   if (custom.length) out.custom = custom;
   for (const c of custom) out[c.id] = pageBlocks(build, c.id);
+  if (menuChanged(build)) out.menu = menuOf(build);
   return out;
 }
 
@@ -280,7 +374,7 @@ export function addable(key, blocks) {
       continue;
     }
     const b = { id: t === 'text' ? 'story' : t === 'band' ? 'waitlist' : t, type: t };
-    if (T.kind !== 'data' && (!fits(key, b) || have.has(t))) continue;
+    if (T.kind !== 'data' && T.kind !== 'own' && (!fits(key, b) || have.has(t))) continue;
     out.push({ type: t, id: null });
   }
   return out;
@@ -292,6 +386,7 @@ export function addable(key, blocks) {
 // show lists as b.<id>.show.<face>.<item> checkboxes plus b.<id>.show.<face> holding
 // the order ("photo,call,…").
 export function blocksFromForm(blocks, get, getAll, key = 'home') {
+  const str2 = (n) => String(get(n) ?? '');
   return blocks.map((b) => {
     const k = (f) => `b.${b.id}.${f}`;
     if (get(k('present')) == null) return b;
@@ -319,6 +414,21 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
     if (BLOCK_TYPES[b.type].kind === 'data' && !hersOn(key, b)) {
       next.w = { eyebrow: String(get(k('w.eyebrow')) ?? ''), heading: String(get(k('w.heading')) ?? ''), lede: String(get(k('w.lede')) ?? '') };
     }
+    if (BLOCK_TYPES[b.type].kind === 'own') {
+      const str = (f) => String(get(k(f)) ?? '');
+      if (b.w) next.w = Object.fromEntries(Object.keys(b.w).map((x) => [x, str(`w.${x}`)]));
+      if ('link' in b) {
+        const to = str('link.to');
+        next.link = !to ? null : to === 'page' ? { to, page: str('link.page') } : { to, value: str('link.value') };
+        if (next.link && next.link.to === 'url' && next.link.value && !/^https?:\/\//i.test(next.link.value)) throw new BlockError('A button\'s outside link needs an address starting https://');
+        if (next.link && ['tel', 'sms'].includes(to) && next.link.value && !looksLikePhone(next.link.value)) throw new BlockError('That phone number doesn\'t look like one.');
+        if (next.link && to === 'email' && next.link.value && !looksLikeEmail(next.link.value)) throw new BlockError('That email address doesn\'t look like one.');
+        if (next.link && to === 'url' && !next.link.value) throw new BlockError('A button to an outside site needs its address.');
+      }
+      for (const f of ['size', 'look', 'align', 'style', 'width', 'height', 'shape', 'focus', 'v', 'h', 'shade']) if (f in b) next[f] = str(f);
+      if ('photo' in b) { next.photo = str('photo') || null; next.mayChange = get(k('mayChange')) != null; }
+    }
+    if (get(k('s.present')) != null) next.s = { bg: str2(k('s.bg')), py: str2(k('s.py')), px: str2(k('s.px')), text: str2(k('s.text')) };
     if (b.type === 'dogs' && !next.f.status.length) throw new BlockError('A Dog cards block needs at least one status.');
     if (b.type === 'litters' && !next.f.stage.length) throw new BlockError('A Litter cards block needs at least one stage.');
     return cleanBlock(next);
@@ -367,7 +477,7 @@ export function customPages(build) {
     if (!c || !isCustom(c.id) || seen.has(c.id) || !PATH.test(c.path ?? '') || TAKEN.has(c.path.slice(1)) || paths.has(c.path)) return [];
     seen.add(c.id);
     paths.add(c.path);
-    const group = c.group !== 'waitlist' && MENU_GROUPS.some((g) => g.key === c.group) ? c.group : null;
+    const group = typeof c.group === 'string' && GROUP_ID.test(c.group) ? c.group : null;
     return [{ id: c.id, name: String(c.name ?? '').trim().slice(0, 40) || 'New page', path: c.path, group }];
   });
 }
@@ -387,7 +497,7 @@ function checkPage(build, id, { name, path, group }) {
   if (!PATH.test(at)) throw new BlockError('An address is one word or a few joined by hyphens, like /our-dams: letters, numbers and hyphens.');
   if (TAKEN.has(at.slice(1))) throw new BlockError(`${at} is taken by a page of the site's own. Choose another address.`);
   if (customPages(build).some((c) => c.path === at && c.id !== id)) throw new BlockError(`Another page already has ${at}.`);
-  const g = group && group !== 'waitlist' && MENU_GROUPS.some((x) => x.key === group) ? group : null;
+  const g = group && menuOf(build).some((x) => x.id === group && !x.button) ? group : null;
   return { name: clean, path: at, group: g };
 }
 
@@ -412,7 +522,7 @@ export function addPage(build, input) {
   }
   next.custom = [...customPages(next), { id, ...page }];
   next.pages = { ...(next.pages ?? {}), [id]: { blocks: blocks.map(cleanBlock) } };
-  return { build: next, id };
+  return { build: placePage(next, id, page.group), id };
 }
 
 // Her page's name, address or menu group changed.
@@ -420,12 +530,13 @@ export function withPageInfo(build, id, input) {
   const next = structuredClone(build ?? {});
   const page = checkPage(next, id, input);
   next.custom = customPages(next).map((c) => (c.id === id ? { id, ...page } : c));
-  return next;
+  return placePage(next, id, page.group);
 }
 
 // Her page gone, with its blocks.
 export function withoutPage(build, id) {
   const next = structuredClone(build ?? {});
+  if (menuChanged(next)) next.menu = menuOf(next).map((g) => ({ ...g, items: g.items.filter((it) => !(it.type === 'page' && it.page === id)) }));
   next.custom = customPages(next).filter((c) => c.id !== id);
   if (!next.custom.length) delete next.custom;
   if (next.pages) delete next.pages[id];
@@ -435,4 +546,128 @@ export function withoutPage(build, id) {
 
 // The blocks on a page whose switch and words are the breeder's in block_switches:
 // the data blocks the owner added (Home's own are home_blocks).
-export const addedBlocks = (key, blocks) => blocks.filter((b) => BLOCK_TYPES[b.type].kind === 'data' && !hersOn(key, b));
+export const addedBlocks = (key, blocks) => blocks.filter((b) => (BLOCK_TYPES[b.type].kind === 'data' && !hersOn(key, b)) || (BLOCK_TYPES[b.type].kind === 'own' && b.type !== 'spacer'));
+
+// ---------- the menu (step 3.4) ----------
+//
+// The owner's menu: groups in order, each with its name, its items in order, and two
+// switches: show it as a button (today's Waitlist) and show it in the footer. An item
+// is a page, a place on a page (today's Girls, Boys, Available and Upcoming litters),
+// or an outside link. The breeder names her pages in the menu, and switches them off,
+// as before; she can't move anything.
+//
+// A site keeps a menu only once the owner changes it (build.menu); until then it is
+// today's menu (defaultMenu), built from where each page sits today, with the pages
+// she added in the groups she picked for them. The footer stays today's three
+// columns until the menu is changed; then it follows the menu, a column per group.
+
+export class MenuError extends Error {}
+
+// The places on a page an item can point to, each showing only while it has
+// something to show, as today.
+export const MENU_PLACES = Object.freeze({
+  'dogs#girls': { page: 'dogs', name: 'Girls', when: 'while there are breeding dogs of both sexes' },
+  'dogs#boys': { page: 'dogs', name: 'Boys', when: 'while there are breeding dogs of both sexes' },
+  'litters#available': { page: 'litters', name: 'Available', when: 'while a litter has puppies to choose from' },
+  'litters#upcoming': { page: 'litters', name: 'Upcoming litters', when: 'while a litter is planned, or its deposits haven\'t opened' },
+});
+// Pages that can't be in the menu: Privacy sits in the footer's fine print.
+const MENU_PAGES = Object.keys(PAGES).filter((k) => k !== 'privacy');
+export const MENU_LIMITS = Object.freeze({ groups: 8, items: 20, label: 30, text: 40 });
+const GROUP_ID = /^[a-z0-9][a-z0-9-]{0,39}$/;
+
+// Today's menu, with her pages (customPages) in the groups she put them in.
+export function defaultMenu(custom = []) {
+  return MENU_GROUPS.map((g) => {
+    const items = [];
+    for (const [key, p] of Object.entries(PAGES)) {
+      if (p.group !== g.key) continue;
+      if (key === 'litters') {
+        items.push({ type: 'place', place: 'litters#available' }, { type: 'place', place: 'litters#upcoming' }, { type: 'page', page: 'litters', fallback: true });
+        continue;
+      }
+      items.push({ type: 'page', page: key });
+      if (key === 'dogs') items.push({ type: 'place', place: 'dogs#girls' }, { type: 'place', place: 'dogs#boys' });
+    }
+    for (const c of custom) if (c.group === g.key) items.push({ type: 'page', page: c.id });
+    return { id: g.key, label: g.label, button: g.key === 'waitlist', footer: true, items };
+  });
+}
+
+const cleanText = (v, max) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+
+// One item as the build keeps it, or null (a page that's gone, a place that isn't one).
+function cleanItem(it, pages) {
+  if (!it || typeof it !== 'object') return null;
+  if (it.type === 'page') {
+    if (!pages.has(it.page)) return null;
+    return { type: 'page', page: it.page, ...(it.fallback ? { fallback: true } : {}) };
+  }
+  if (it.type === 'place') {
+    if (!Object.hasOwn(MENU_PLACES, it.place)) return null;
+    const text = cleanText(it.text, MENU_LIMITS.text);
+    return { type: 'place', place: it.place, ...(text ? { text } : {}) };
+  }
+  if (it.type === 'link') return { type: 'link', text: cleanText(it.text, MENU_LIMITS.text), url: String(it.url ?? '').trim().slice(0, 500) };
+  return null;
+}
+
+// The owner's menu as the build keeps it: what's usable, quietly (a page she removed
+// drops out). Null when the build has none.
+export function cleanMenu(menu, custom = []) {
+  if (!Array.isArray(menu)) return null;
+  const pages = new Set([...MENU_PAGES, ...custom.map((c) => c.id)]);
+  const seen = new Set();
+  return menu.slice(0, MENU_LIMITS.groups).flatMap((g) => {
+    if (!g || !GROUP_ID.test(String(g.id ?? '')) || seen.has(g.id)) return [];
+    seen.add(g.id);
+    const items = (Array.isArray(g.items) ? g.items : []).map((it) => cleanItem(it, pages)).filter(Boolean).slice(0, MENU_LIMITS.items);
+    return [{ id: g.id, label: cleanText(g.label, MENU_LIMITS.label), button: Boolean(g.button), footer: g.footer !== false, items }];
+  });
+}
+
+// The menu a build has: the owner's, or today's.
+export const menuOf = (build) => cleanMenu(build?.menu, customPages(build)) ?? defaultMenu(customPages(build));
+export const menuChanged = (build) => Array.isArray(build?.menu);
+
+// What would stop it working (decision 16): a group with no name, an outside link
+// that goes nowhere. An unusual menu is allowed.
+function checkMenu(menu) {
+  for (const g of menu) {
+    if (!g.label) throw new MenuError('Give every group a name.');
+    for (const it of g.items) {
+      if (it.type !== 'link') continue;
+      if (!it.text) throw new MenuError(`An outside link in ${g.label} needs its words.`);
+      let u = null;
+      try { u = new URL(it.url); } catch { /* below */ }
+      if (!u || (u.protocol !== 'https:' && u.protocol !== 'http:')) throw new MenuError(`The outside link "${it.text}" needs a web address starting https://`);
+      it.url = u.toString();
+    }
+  }
+}
+
+// The build with the owner's menu: kept only while it differs from today's.
+export function withMenu(build, menu) {
+  const next = structuredClone(build ?? {});
+  const custom = customPages(next);
+  const m = cleanMenu(menu, custom) ?? [];
+  checkMenu(m);
+  if (JSON.stringify(m) === JSON.stringify(defaultMenu(custom))) delete next.menu;
+  else next.menu = m;
+  return next;
+}
+
+// Which group a page is in (the first that lists it), or null.
+export const groupOf = (menu, key) => menu.find((g) => g.items.some((it) => it.type === 'page' && it.page === key))?.id ?? null;
+
+// A page of hers put in a group of the owner's menu (or none), at the end; where it
+// already is, it stays where it is.
+function placePage(build, id, group) {
+  if (!menuChanged(build)) return build;
+  const menu = menuOf(build);
+  if (groupOf(menu, id) === (group || null)) return build;
+  const out = menu.map((g) => ({ ...g, items: g.items.filter((it) => !(it.type === 'page' && it.page === id)) }));
+  const g = out.find((x) => x.id === group);
+  if (g) g.items.push({ type: 'page', page: id });
+  return { ...build, menu: out };
+}

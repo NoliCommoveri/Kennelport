@@ -1,8 +1,8 @@
 // Pieces of the "ak" template shared by its pages: formatting, photos, cards and
 // the menu. Every value from a snapshot passes through esc() (or attr()) here.
-import { SHOW_DEFAULT, isCustom, hersOn, BLOCK_TYPES } from '../content/blocks.js';
+import { SHOW_DEFAULT, isCustom, hersOn, BLOCK_TYPES, defaultMenu, MENU_PLACES } from '../content/blocks.js';
 import { escapeHtml as esc } from '../lib/html.js';
-import { MENU_GROUPS, PAGES } from '../content/model.js';
+import { PAGES } from '../content/model.js';
 import { puppyPrice, litterPriceRange, depositRange } from '../content/prices.js';
 import { DEFAULT_RULES, DEFAULT_TIMING, ruleKey, addDays } from '../content/rules.js';
 
@@ -117,12 +117,12 @@ export const customPage = (snap, key) => (snap.layout?.custom ?? []).find((c) =>
 
 // A block the owner added (not one of Home's own): the breeder's switch, and her
 // words over the owner's starting ones.
-const addedRow = (snap, key, b) => (BLOCK_TYPES[b.type].kind === 'data' && !hersOn(key, b) ? snap.added?.[key]?.[b.id] ?? null : null);
+export const addedRow = (snap, key, b) => ((BLOCK_TYPES[b.type].kind === 'data' && !hersOn(key, b)) || BLOCK_TYPES[b.type].kind === 'own' ? snap.added?.[key]?.[b.id] ?? null : null);
 export const addedOn = (snap, key, b) => addedRow(snap, key, b)?.enabled !== false;
 export function addedWords(snap, key, b) {
   const her = addedRow(snap, key, b) ?? {};
   const w = { ...b.w };
-  for (const k of ['eyebrow', 'heading', 'lede']) if (her[k]) w[k] = her[k];
+  for (const k of ['eyebrow', 'heading', 'lede', 'line', 'label', 'caption']) if (her[k]) w[k] = her[k];
   return w;
 }
 
@@ -141,31 +141,37 @@ function customHas(snap, key) {
   return !data.length ? (snap.layout?.[key] ?? []).length > 0 : data.some((b) => blockRows(snap, b).length > 0);
 }
 
+// The menu: the owner's (snap.layout.menu), or today's. Each item shows while what it
+// points to does: a page while it's on; a place while it has something to show (Girls
+// and Boys with breeding dogs of both sexes; Available and Upcoming litters with such
+// litters); a page marked fallback only while no other link to it in its group shows
+// (today's Puppies, shown when neither Available nor Upcoming is).
 export function menuGroups(snap, ctx) {
+  const menu = snap.layout?.menu ?? defaultMenu(snap.layout?.custom ?? []);
+  const placeShows = {
+    'dogs#girls': () => { const b = dogGroups(snap).breeding; return b.some((d) => d.sex === 'female') && b.some((d) => d.sex === 'male'); },
+    'litters#available': () => snap.litters.some((l) => l.stage === 'current' && !depositsAhead(snap, l, ctx.today)),
+    'litters#upcoming': () => snap.litters.some((l) => l.stage === 'planned' || depositsAhead(snap, l, ctx.today)),
+  };
+  placeShows['dogs#boys'] = placeShows['dogs#girls'];
+  const placeText = { 'dogs#girls': () => word(snap, 'girls'), 'dogs#boys': () => word(snap, 'boys') };
+  const pathOf = (key) => PAGES[key]?.path ?? customPage(snap, key)?.path ?? null;
   const groups = [];
-  for (const g of MENU_GROUPS) {
+  for (const g of menu) {
     const links = [];
-    for (const [key, page] of Object.entries(PAGES)) {
-      if (page.group !== g.key || !pageOn(snap, key, ctx)) continue;
-      links.push({ key, href: page.path, text: label(snap, key) });
-      // Sub-links that are places within a page.
-      const breeding = dogGroups(snap).breeding;
-      if (key === 'dogs' && breeding.some((d) => d.sex === 'female') && breeding.some((d) => d.sex === 'male')) {
-        links.push({ key, href: '/dogs#girls', text: word(snap, 'girls') }, { key, href: '/dogs#boys', text: word(snap, 'boys') });
-      }
-      if (key === 'litters') {
-        const current = snap.litters.some((l) => l.stage === 'current' && !depositsAhead(snap, l, ctx.today));
-        const planned = snap.litters.some((l) => l.stage === 'planned' || depositsAhead(snap, l, ctx.today));
-        links.pop();
-        if (current) links.push({ key, href: '/litters#available', text: 'Available' });
-        if (planned) links.push({ key, href: '/litters#upcoming', text: 'Upcoming litters' });
-        if (!current && !planned) links.push({ key, href: '/litters', text: label(snap, key) });
+    for (const it of g.items) {
+      if (it.type === 'link') { links.push({ key: null, href: it.url, text: it.text, external: true }); continue; }
+      const key = it.type === 'page' ? it.page : MENU_PLACES[it.place].page;
+      const path = pathOf(key);
+      if (!path || !pageOn(snap, key, ctx)) continue;
+      if (it.type === 'page') {
+        if (it.fallback && links.some((l) => l.key === key)) continue;
+        links.push({ key, href: path, text: label(snap, key) });
+      } else if (placeShows[it.place]()) {
+        links.push({ key, href: `${path}#${it.place.split('#')[1]}`, text: it.text || placeText[it.place]?.() || MENU_PLACES[it.place].name });
       }
     }
-    for (const c of snap.layout?.custom ?? []) {
-      if (c.group === g.key && pageOn(snap, c.id, ctx)) links.push({ key: c.id, href: c.path, text: label(snap, c.id) });
-    }
-    if (links.length) groups.push({ ...g, links });
+    if (links.length) groups.push({ key: g.id, label: g.label, button: g.button, footer: g.footer, links });
   }
   return groups;
 }

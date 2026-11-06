@@ -24,7 +24,7 @@ import { vapidConfig, subscribe, unsubscribe, testPush, pendingPush, subscriptio
 import { isAdmin, asAdmin, clearAdminCookie } from '../admin.js';
 import { handleBuilder } from './builder.js';
 import { NOT_FOR_DEMO } from '../lib/demo.js';
-import { sayer, everyWording, siteWording, defaultSay } from './wording.js';
+import { sayer, everyWording, siteWording, defaultSay, sayMessage } from './wording.js';
 import { loadBuild } from '../content/rules.js';
 
 export const MANAGE_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
@@ -345,12 +345,12 @@ export async function handleManage(request, env, url) {
         const { cookie } = await verifySignIn(env, form.get('email'), form.get('code'), request.headers.get('user-agent')?.slice(0, 80));
         return redirect('/', { 'set-cookie': cookie });
       } catch (err) {
-        if (err instanceof AuthError) return codePage({ email: String(form.get('email') ?? ''), error: err.message }, await every());
+        if (err instanceof AuthError) { const say = await every(); return codePage({ email: String(form.get('email') ?? ''), error: sayMessage('signin', err.message, say) }, say); }
         throw err;
       }
     }
   } catch (err) {
-    if (err instanceof AuthError) return signInPage({ error: err.message }, await every());
+    if (err instanceof AuthError) { const say = await every(); return signInPage({ error: sayMessage('signin', err.message, say) }, say); }
     throw err;
   }
 

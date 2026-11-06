@@ -138,3 +138,79 @@ test('the errors that tell her what to fix: today\'s wording by default, the own
   assert.equal(sayError('dogs[0].call_name: required', say, label), 'Call name needs filling in.');
   assert.throws(() => cleanWording('error.required', '{nope} is needed'), /can't use \{nope\}/);
 });
+
+test('the errors from her other screens: today\'s words by default, the owner\'s line by kind', async () => {
+  const { sayMessage } = await import('../src/manage/wording.js');
+  const { addEntry, updateEntry } = await import('../src/waitlist.js');
+  const { checkPhoto } = await import('../src/photos.js');
+  const { readEmbedLink } = await import('../src/embeds.js');
+  const { readBadgeCode } = await import('../src/badgeCode.js');
+  const { parseFeedAddress } = await import('../src/feed.js');
+  const caught = async (fn) => { try { await fn(); } catch (e) { return e.message; } return null; };
+  const env = await makeEnv();
+  const ak = await addSite(env, 'akbostons', { kennel_name: 'AK Boston Terriers' });
+  // What each screen's code says today, and the messages it can say.
+  const said = {
+    waitlist: [
+      await caught(() => addEntry(env, ak.id, { name: '' })),
+      await caught(() => addEntry(env, ak.id, { name: 'x'.repeat(81) })),
+      await caught(() => addEntry(env, ak.id, { name: 'Megan', list_name: 'x'.repeat(41) })),
+      await caught(() => addEntry(env, ak.id, { name: 'Megan', email: 'nope' })),
+      await caught(() => updateEntry(env, ak.id, 'x', { name: 'Megan', added_on: 'May 2' })),
+    ],
+    photos: [await caught(() => checkPhoto(new Uint8Array())), await caught(() => checkPhoto(new Uint8Array([1, 2, 3]))),
+      'The photo is too large (4000 KB; at most 3072 KB).', 'The photo is 3000×2000; at most 2400 pixels a side.', 'This site has reached its limit of 500 photos.'],
+    videos: [await caught(() => readEmbedLink('nope')), await caught(() => readEmbedLink('https://example.com/v')), 'At most 12 videos and posts in one place.', "That one's already here."],
+    badge: [await caught(() => readBadgeCode('<p>hi</p>')), "Your link is filled in, but the picture in that code can't be copied (The file is empty). Download the logo from their page, choose it as the picture above, and save."],
+    feed: [await caught(() => parseFeedAddress(env, 'nope'))],
+    kennelos: ['Too many codes asked for. Try again in an hour.', 'That match has already been answered.'],
+    account: ['Type akbostons to confirm.'],
+    publish: ['there is no earlier version to go back to'],
+    signin: ["That code isn't right. Check the latest email, or ask for a new code.", 'That code has expired. Ask for a new one.', "That isn't an email address."],
+  };
+  for (const [group, msgs] of Object.entries(said)) {
+    for (const m of msgs) {
+      assert.ok(m, `${group}: a message`);
+      assert.equal(sayMessage(group, m, defaultSay), m);
+      assert.notEqual(sayMessage(group, m, () => 'OWNER'), m, `${group}: "${m}" is in the list`);
+    }
+  }
+  assert.equal(sayMessage('photos', 'Something else.', defaultSay), 'Something else.');
+  assert.equal(sayMessage('signin', 'That match has already been answered.', defaultSay), 'That match has already been answered.');
+  // The owner's lines: names filled in, the waitlist's detail by her words, a photo error inside a badge's.
+  const say = sayer({ every: {
+    'error.waitlist.too_long': '{What} can be {max} characters at most.', 'error.waitlist.what.list_name': 'the waitlist name',
+    'error.photos.empty': 'That file has nothing in it.', 'error.photos.too_large': 'Too big: {kb} KB, the most is {max} KB.',
+    'error.signin.expired': 'Old code, ask again.',
+  } });
+  assert.equal(sayMessage('waitlist', said.waitlist[2], say), 'The waitlist name can be 40 characters at most.');
+  assert.equal(sayMessage('waitlist', said.waitlist[0], say), 'Please fill in their name.');
+  assert.equal(sayMessage('photos', said.photos[2], say), 'Too big: 4000 KB, the most is 3072 KB.');
+  assert.match(sayMessage('badge', said.badge[1], say), /can't be copied \(That file has nothing in it\)\./);
+  assert.equal(sayMessage('signin', 'That code has expired. Ask for a new one.', say), 'Old code, ask again.');
+  assert.ok(CATALOG.get('error.signin.expired').vars.length === 0, 'no {kennel} before a site is chosen');
+  assert.ok(CATALOG.get('error.waitlist.too_long').vars.includes('what'));
+});
+
+test('her waitlist and sign-in errors, in the owner\'s words on her screens', async () => {
+  const env = await makeEnv();
+  const ak = await addSite(env, 'akbostons', { kennel_name: 'AK Boston Terriers' });
+  const login = await call(env, M, '/ops/login', { method: 'POST', body: form({ token: 'ops-token' }) });
+  const cookies = login.headers.getSetCookie().map((c) => c.split(';')[0]);
+  const ops = cookies.find((c) => c.startsWith('ops_session='));
+  const admin = cookies.find((c) => c.startsWith('kp_admin='));
+  await call(env, M, `/ops/sites/${ak.id}/people`, { method: 'POST', headers: { cookie: ops }, body: form({ email: 'b@example.com', role: 'owner' }) });
+  const save = (p, body) => call(env, M, p, { method: 'POST', headers: { cookie: admin, origin: ORIGIN }, body: form(body) });
+  await save('/admin/wording/errors', { 'w.error.waitlist.required': 'Add {what} first, {kennel}.', 'w.error.waitlist.what.name': 'the family\'s name' });
+  await save('/admin/wording/signin', { 'w.error.signin.wrong': 'Not that code. Try the newest email.' });
+  // Signing in with a wrong code.
+  await call(env, M, '/signin', { method: 'POST', body: form({ email: 'b@example.com' }), headers: { origin: ORIGIN } });
+  const code = lastOutbox(env).subject.match(/(\d{6})/)[1];
+  const wrong = String((Number(code) + 1) % 1000000).padStart(6, '0');
+  const r = await call(env, M, '/signin/verify', { method: 'POST', body: form({ email: 'b@example.com', code: wrong }), headers: { origin: ORIGIN } });
+  assert.match(text(await r.text()), /Not that code\. Try the newest email\./);
+  const breeder = (await call(env, M, '/signin/verify', { method: 'POST', body: form({ email: 'b@example.com', code }), headers: { origin: ORIGIN } })).headers.get('set-cookie').split(';')[0];
+  // A family added with no name.
+  const w = await call(env, M, '/s/akbostons/waitlist/new', { method: 'POST', headers: { cookie: breeder, origin: ORIGIN }, body: form({ name: '' }) });
+  assert.match(text(await w.text()), /Add the family's name first, AK Boston Terriers\./);
+});

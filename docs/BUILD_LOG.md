@@ -1621,3 +1621,101 @@ with new sections and a new building order. Docs only; nothing built yet.
   breeder screens (`portal/admin.js`).
 - Her screens read as before with no wording set (51 screens compared, sign-in and
   Notifications among them).
+
+## 2026-11-06: the breeder's instructions: the rest of her errors (step 2.3)
+
+- The errors from her other screens are in the list (`wording.js` MESSAGES, read with
+  `sayMessage(group, message, say)`): the waitlist (`waitlist.js`), photos (`photos.js`),
+  videos and posts (`embeds.js`, `embedStore.js`), badge codes (`badgeCode.js`), the
+  KennelOS feed (`feed.js`), link codes and matches (`kennelos/link.js`, `match.js`),
+  Delete (`sites.js` closeSite), Publish (`publish.js`: too large, nothing to undo) and
+  signing in (`auth.js`). As with the content model's errors, the code that finds the
+  problem keeps today's words; each screen says the message in the owner's, matched by
+  its words. 45 new lines; the list now has 931.
+- Under Errors, each line says where it shows ("Photos: an empty file"); signing in's
+  are on Signing in, with no {kennel}. Names from the message can be used ({max}, {kb},
+  {known}...). The waitlist names a family's detail by {what} (and {What}, with a
+  capital), and how it names each detail is its own line ("the name on the list").
+  A badge code's "can't be copied (…)" carries the Photos error in the owner's words.
+- Left out, as the plan says: KennelPort itself failing (sign-in or linking not set up,
+  an email that couldn't be sent, "No such site"), the demo site's message, the owner's
+  own screens (/ops, inviting), what KennelOS's app shows when it links (`link.js`
+  ApiError) and the visitors' review form (`siteforms.js`).
+- Still in the code: a few lines the manage app's own scripts write in the browser
+  (`_kp/m/app.js`: "Copied", "Saving…", "Add Site Manager to your home screen first.";
+  `_kp/m/photos.js`: "upload failed"). Moving them changes `_kp/m`, so it waits for a
+  version bump. Then step 2.4: the family portal's breeder screens and Today.
+- Today's wording reads exactly as before (each message checked against what the code
+  throws). Tests: `wording.test.js` (two new). Nothing in `_kp/` changed: no version bump.
+
+## 2026-11-06: site builder step 3.4: the menu editor
+
+- The menu is the owner's setting (`content/blocks.js`: `menuOf`, `defaultMenu`,
+  `withMenu`, `MENU_PLACES`). Groups in order, each with a name, a **Show it as a
+  button** switch (today's Waitlist: its first link that shows) and a **Show it in
+  the footer** switch; items are a page, a place on a page (Girls, Boys, Available,
+  Upcoming litters, each showing only while it has something to show, as today), or an
+  outside link (opens in a new tab). A page item can be set to show only while no
+  other link to that page in its group shows (today's Puppies).
+- Stored in the build (`build.menu`) only once it differs from today's; the snapshot
+  carries it (`layout.menu`). No migration. `render/parts.js` `menuGroups` draws any
+  menu; with none, today's, which reads exactly as before (413 pages of the demo, the
+  AK sample and the AK sample with five added pages, on four dates, compared before and
+  after: identical but for the application form's random question ids).
+- The footer keeps today's three columns until the menu is changed; then it is a
+  column per group shown in the footer, its pages and outside links (not places on a
+  page), with How to pay and Family login in the last column.
+- **Menu** in the admin view (`manage/builder.js` menuRoute), from the prototype's
+  `aMenu`: each group a card with its name, move and remove; its links as movable rows
+  with Settings (which group, a link's words and address, a place's own words, the
+  only-while switch); the two switches; **Add to …** folded (a page, a place, or an
+  outside link); New group; Back to today's menu; Not in the menu; the phone beside it
+  shows each group as the site shows it today. Checked at 390px and 1280px. No new CSS,
+  so no version bump.
+- Pages she adds: New page and a page's own "In the menu under" list the menu's groups
+  (not a button group); in a changed menu the page goes at the end of that group, and
+  leaves the menu when removed. Pages lists where each sits.
+- Functional checks only (decision 16): every group needs a name; an outside link needs
+  words and an http(s) address. 8 groups, 20 links a group.
+- The owner's screen: its wording stays in the code (her own screens are left out of
+  the breeder's list).
+- Tests: `menu.test.js` (new).
+
+## 2026-11-06: site builder step 4: the owner's own blocks, and every block's look
+
+- Six new blocks the owner adds to any page, as many as she likes (`content/blocks.js`
+  BLOCK_TYPES kind `own`; drawn by `render/pages.js` ownBlock): **Banner** (heading, a
+  line, a button; Accent background to start), **Button** (small, medium or large;
+  filled or outline; left, centre or right), **Divider** (thin line, brass rule, the
+  scheme's ornament; narrow, wide or full), **Spacer** (four heights), **Photo** (wide,
+  tall, square or full width; which part to keep; a caption) and **Text over a photo**
+  (heading, line and button; top, middle or bottom; left, centre or right; light,
+  medium or dark shade).
+- A button goes to a page (Home, any page, hers), an outside site (new tab), a call, a
+  text or an email. A call, text or email uses Kennel details' phone or email, and
+  follows it, unless a number or address is typed in. A button whose page is off, or
+  with no number or address to use, hides itself (decision 16); a phone or email has to
+  look like one; an outside link needs an https address.
+- The breeder (block_switches, no migration: its content is JSON): switches each off
+  (not a spacer), rewords it, changes an outside link, phone or email, and the photo and
+  caption where the owner ticks "The breeder can change the photo". A link to a page is
+  the owner's: her card says where it goes, and when it's hidden (decision 18). Her
+  lines are in the wording list (`pages.own.*`, 17 lines; an error kind for a phone
+  number). Her button's words post as `button_label`: the app fills any field named
+  `label` with the device's name.
+- **Every block's look** (the owner's, in each block's settings, Its look): a
+  background from the scheme (Surface, Band, Accent, Footer colour, stored by name),
+  space above and below, space at the sides, and on her own blocks a text size. On
+  Accent or the footer colour the block's own colours swap to the scheme's matching
+  ink (`site.css` `.kb`), so text stays readable (decision 16). A block with none set
+  is drawn exactly as before: 413 pages compared, identical.
+- The published snapshot carries the photos her blocks use. Checked at 390px and
+  1280px (the site, the owner's settings, the breeder's cards). No prototype screen for
+  these blocks: built from the template's band, buttons, ornament and photo boxes, and
+  the manage app's cards, pills and photo picker.
+- `site.css` changed: `ASSET_VERSION` bump asked, not done.
+- Still to come in step 4: collages and videos as her blocks, links to a dog, litter or
+  puppy, fonts and the font library, text size on the built-in blocks.
+- Tests: `ownblocks.test.js` (new); `blocks.test.js` (Add a block lists them).
+
+- Version bumped (2026-11-06, owner's yes): `ASSET_VERSION` 17, with its fingerprint.

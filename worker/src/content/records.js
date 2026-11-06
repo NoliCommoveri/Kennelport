@@ -323,6 +323,8 @@ export async function getAddedBlock(env, siteId, page, block) {
 
 export async function saveAddedBlock(env, siteId, page, block, input) {
   const content = cleanRecord(ADDED_BLOCK_FIELDS, omit(input, ['enabled']), `${page}.${block}`);
+  // A phone number for a button has to look like one (decision 16).
+  if (content.phone && !/^[+()\d][\d\s().-]{5,24}$/.test(content.phone)) throw new ContentError(`${page}.${block}.phone`, 'not a phone number');
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO block_switches (site_id, page, block, enabled, content) VALUES (?, ?, ?, ?, ?)
       ON CONFLICT (site_id, page, block) DO UPDATE SET enabled = excluded.enabled, content = excluded.content`)
