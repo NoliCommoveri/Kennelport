@@ -9,7 +9,7 @@ import {
   saveSite, getPage, savePage, getBlock, saveBlock, getPayment, savePayment, getAddedBlock, saveAddedBlock,
 } from '../content/records.js';
 import { pageBlocks, customPages, addedBlocks, BLOCK_TYPES, isCustom } from '../content/blocks.js';
-import { fields, parseForm } from './forms.js';
+import { fields, parseForm, LABELS, labelFor } from './forms.js';
 import { savePhoto, PhotoError } from '../photos.js';
 import { subjects, isSubject, tagPhotos, untagPhoto, tagsByPhoto } from '../photoTags.js';
 import { buildSnapshot, loadSnapshot, publish, undoPublish, listSnapshots } from '../publish.js';
@@ -17,7 +17,7 @@ import { changes } from '../diff.js';
 import { makePreviewToken } from '../site.js';
 import { siteLink } from '../ops/sites.js';
 import { APP_VERSION } from './version.js';
-import { defaultSay, NOTE_KEYS } from './wording.js';
+import { defaultSay, NOTE_KEYS, sayError } from './wording.js';
 import { STATUS_TEXT, SAFE_NOTICE_TEXT, blockRows } from '../render/parts.js';
 import { exportContent } from '../content/io.js';
 import { closeSite, SiteError } from '../sites.js';
@@ -45,26 +45,32 @@ const day = (ymd) => new Date(`${ymd}T12:00:00Z`).toLocaleDateString('en-US', { 
 const ic = (n) => `<span class="ic" aria-hidden="true"><svg class="i"><use href="#i-${n}"/></svg></span>`;
 // The note after a change, and a form's error, in the owner's wording (wording.js).
 const noteFor = (url, say) => (NOTE_KEYS.includes(url.searchParams.get('note')) ? `<p class="notice" role="status">${esc(say(`note.${url.searchParams.get('note')}`))}</p>` : '');
-const errorFor = (err, say) => (err ? `<p class="error" role="alert">${esc(say('list.error', { error: err }))}</p>` : '');
+const errorFor = (err, say) => (err ? `<p class="error" role="alert">${esc(say('list.error', { error: sayError(err, say, fieldLabel(say)) }))}</p>` : '');
+// A field's label on her forms, by its name, for {field} in an error.
+const fieldLabel = (say) => (name) => {
+  const kind = Object.keys(LABELS).find((k) => LABELS[k][name]);
+  return labelFor(kind ?? null, name, say)[0];
+};
 
-// How one item reads in each list; the lists' names are the owner's wording (wording.js).
+// How one item reads in each list: its name, and the line under it in the owner's
+// wording (wording.js, lists.sub.*), as are the lists' names.
 const LISTS = {
-  dogs: { name: (r) => r.call_name, sub: (r) => [r.role, r.show_on_site ? null : 'hidden'].filter(Boolean).join(' · ') },
-  litters: { name: (r) => r.name, sub: (r) => ({ planned: 'Planned', current: 'Born', past: 'Past' })[r.stage] },
-  puppies: { name: (r) => r.name, sub: (r) => STATUS_TEXT[r.status] ?? 'Hidden' },
-  health: { name: (r) => r.test, sub: (r) => `${r.result}${r.show ? '' : ' · not shown'}` },
-  reviews: { name: (r) => r.first_name, sub: (r) => (r.status === 'hidden' ? 'hidden' : r.quote.slice(0, 60)) },
+  dogs: { name: (r) => r.call_name, sub: (r, say) => [r.role, r.show_on_site ? null : say('lists.sub.hidden')].filter(Boolean).join(' · ') },
+  litters: { name: (r) => r.name, sub: (r, say) => (['planned', 'current', 'past'].includes(r.stage) ? say(`lists.sub.stage.${r.stage}`) : '') },
+  puppies: { name: (r) => r.name, sub: (r, say) => STATUS_TEXT[r.status] ?? say('lists.sub.hidden_puppy') },
+  health: { name: (r) => r.test, sub: (r, say) => `${r.result}${r.show ? '' : ` · ${say('lists.sub.not_shown')}`}` },
+  reviews: { name: (r) => r.first_name, sub: (r, say) => (r.status === 'hidden' ? say('lists.sub.hidden') : r.quote.slice(0, 60)) },
   steps: { name: (r) => r.heading, sub: () => '' },
-  extras: { name: (r) => r.name, sub: (r) => (r.kind === 'homegoing' ? `${r.weeks ?? ''}-week package` : r.grp ?? '') },
-  partners: { name: (r) => r.name, sub: (r) => (r.hidden_by_kennelos ? 'Not sent by KennelOS · not shown' : r.url ? r.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : '') },
-  products: { name: (r) => r.name, sub: (r) => [r.grp, r.code ? `code ${r.code}` : null, r.transport ? 'transport service' : null, r.home_badge ? 'home page badge' : null].filter(Boolean).join(' · ') },
+  extras: { name: (r) => r.name, sub: (r, say) => (r.kind === 'homegoing' ? say('lists.sub.package', { weeks: r.weeks ?? '' }) : r.grp ?? '') },
+  partners: { name: (r) => r.name, sub: (r, say) => (r.hidden_by_kennelos ? say('lists.sub.not_sent') : r.url ? r.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : '') },
+  products: { name: (r) => r.name, sub: (r, say) => [r.grp, r.code ? say('lists.sub.code', { code: r.code }) : null, r.transport ? say('lists.sub.transport') : null, r.home_badge ? say('lists.sub.home_badge') : null].filter(Boolean).join(' · ') },
   policies: { name: (r) => r.heading, sub: () => '' },
   // A question also placed elsewhere says so here, so she can see at a glance
   // which ones her pages are carrying (model.js FAQ_PLACES).
-  faq: { name: (r) => r.heading, sub: (r) => ((r.places ?? []).length ? `also on ${(r.places ?? []).map((x) => (FAQ_PLACES[x] ?? x).toLowerCase()).join(', ')}` : '') },
+  faq: { name: (r) => r.heading, sub: (r, say) => ((r.places ?? []).length ? say('lists.sub.also_on', { places: (r.places ?? []).map((x) => (FAQ_PLACES[x] ?? x).toLowerCase()).join(', ') }) : '') },
   waitlist_help: { name: (r) => r.heading, sub: () => '' },
-  albums: { name: (r) => r.title, sub: (r) => [`${(r.photos ?? []).length} photo${(r.photos ?? []).length === 1 ? '' : 's'}`, r.show_on_site ? null : 'hidden'].filter(Boolean).join(' · ') },
-  questions: { name: (r) => r.label, sub: (r) => [QUESTION_WORDS[r.type], r.required ? 'must answer' : 'optional'].join(' · ') },
+  albums: { name: (r) => r.title, sub: (r, say) => [say.n('lists.sub.photos', (r.photos ?? []).length), r.show_on_site ? null : say('lists.sub.hidden')].filter(Boolean).join(' · ') },
+  questions: { name: (r) => r.label, sub: (r, say) => [QUESTION_TYPES.includes(r.type) ? say(`lists.qtype.${r.type}`) : r.type, say(r.required ? 'lists.sub.must_answer' : 'lists.sub.optional')].join(' · ') },
 };
 // Under a product's fields: the brand's embed code, read for its link and picture
 // (badgeCode.js), never kept.
@@ -72,17 +78,17 @@ const BADGE_CODE_FIELD = (say) => `<label for="f-badge_code">${esc(say('products
 // Under a partner kennel's fields: the badge code a kennel hands out, read for its
 // link and logo (badgeCode.js), never kept.
 const PARTNER_BADGE_FIELD = (say) => `<label for="f-badge_code">${esc(say('partners.or_paste_the_badge'))}<span class="hint">${esc(say('partners.the_html_for_their'))}</span><textarea id="f-badge_code" name="_badge_code" rows="4" autocapitalize="none" spellcheck="false" placeholder="&lt;a href=&quot;https://…&quot;&gt;&lt;img src=&quot;https://…&quot;&gt;&lt;/a&gt;"></textarea></label>`;
-const QUESTION_WORDS = { text: 'Short answer', paragraph: 'Longer answer', choice: 'Choice', yes_no: 'Yes or no', litter: 'Which litter', phone: 'Phone', town: 'Town' };
+// The kinds of application question (their words: wording.js lists.qtype.*).
+const QUESTION_TYPES = ['text', 'paragraph', 'choice', 'yes_no', 'litter', 'phone', 'town'];
 const FORM_KIND = { policies: 'expander', faq: 'expander', waitlist_help: 'expander' };
 // The kinds whose records a photo can be of (photoTags.js).
 const SUBJECT_OF = { dogs: 'dog', litters: 'litter', puppies: 'puppy', extras: 'extra', products: 'product' };
-const BLOCK_TITLES = { hero: 'Top of the page', facts: 'Facts row', story: 'Story', dogs: 'Dogs row', litters: 'Litters', reviews: 'Reviews', waitlist: 'Waitlist band' };
 
 // Records from KennelOS that share a name with one already on the site wait for
 // her yes; until then the site keeps showing her own version, so this sits at the
 // top of Home and Publish, not only on the KennelOS screen.
-export function matchesWaiting(subdomain, n) {
-  return `<section class="card notice-card" role="status" id="matches-waiting"><p><strong>${n} from KennelOS ${n === 1 ? 'is' : 'are'} waiting for you to match.</strong> ${n === 1 ? 'It has' : 'They have'} the same name as one already on your website. Until you answer, your website keeps showing your own version, without what KennelOS sent (its sex, health results and so on).</p><p class="row"><a class="button primary" href="/s/${esc(subdomain)}/kennelos#matches">Answer ${n === 1 ? 'it' : 'them'}</a></p></section>`;
+export function matchesWaiting(subdomain, n, say = defaultSay) {
+  return `<section class="card notice-card" role="status" id="matches-waiting"><p><strong>${esc(say.n('kennelos.waiting', n))}</strong> ${esc(say.n('kennelos.waiting.text', n))}</p><p class="row"><a class="button primary" href="/s/${esc(subdomain)}/kennelos#matches">${esc(say.n('kennelos.waiting.answer', n))}</a></p></section>`;
 }
 
 export function createScreens({ env, request, url, site, user, page, say = defaultSay }) {
@@ -402,7 +408,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     if (!rest) {
       if (post) return null;
       const rows = await listRecords(env, site.id, kind, scopeId);
-      const items = rows.map((r, i) => `<li class="item"><a href="${esc(`${path}/${r.id}`)}"><b>${esc(L.name(r))}</b><span>${esc(L.sub(r) ?? '')}</span></a>
+      const items = rows.map((r, i) => `<li class="item"><a href="${esc(`${path}/${r.id}`)}"><b>${esc(L.name(r))}</b><span>${esc(L.sub(r, say) ?? '')}</span></a>
         <span class="order">${i ? `<form method="post" action="${esc(`${path}/${r.id}/up`)}"><button aria-label="Move ${esc(L.name(r))} up">↑</button></form>` : ''}${i < rows.length - 1 ? `<form method="post" action="${esc(`${path}/${r.id}/down`)}"><button aria-label="Move ${esc(L.name(r))} down">↓</button></form>` : ''}</span></li>`).join('');
       const intro = kind === 'questions' ? `${(await kos()).online ? `<p class="error">${esc(say('lists.not_used_right_now'))}</p>` : ''}<p class="muted">${esc(say('lists.the_application_form_on'))}</p>` : '';
       const extra = kind === 'policies' ? await waitlistPoliciesCard() : kind === 'litters' ? await leavingCard() : kind === 'dogs' ? `${await offSiteDogsCard(rows)}${partnersLink()}` : kind === 'partners' ? await partnersIntro() : kind === 'reviews' ? '<p><a class="button" href="' + base + '/reviews-queue">Reviews families sent</a></p>' : '';
@@ -484,7 +490,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     if (!view?.rec) return view;
     const rows = await listRecords(env, site.id, childKind, view.rec.id);
     const L = LISTS[childKind];
-    view.body += `<section class="card"><h2>${esc(label)}</h2><ul class="items">${rows.map((r) => `<li class="item"><a href="${esc(`${childPath}/${r.id}`)}"><b>${esc(L.name(r))}</b><span>${esc(L.sub(r) ?? '')}</span></a></li>`).join('') || `<li class="muted">${esc(say('lists.none_yet'))}</li>`}</ul>
+    view.body += `<section class="card"><h2>${esc(label)}</h2><ul class="items">${rows.map((r) => `<li class="item"><a href="${esc(`${childPath}/${r.id}`)}"><b>${esc(L.name(r))}</b><span>${esc(L.sub(r, say) ?? '')}</span></a></li>`).join('') || `<li class="muted">${esc(say('lists.none_yet'))}</li>`}</ul>
       <p><a class="button" href="${esc(childPath)}">${esc(say('lists.edit_the_list'))}</a> <a class="button" href="${esc(`${childPath}/new`)}">${esc(say('list.add', { one: oneOf(childKind) }))}</a></p></section>`;
     return view;
   }
@@ -719,7 +725,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       const rows = [];
       for (const b of HOME_BLOCK_ORDER) {
         const v = await getBlock(env, site.id, b);
-        rows.push(`<li class="item"><a href="${base}/home/${b}"><b>${esc(BLOCK_TITLES[b])}</b><span>${v.enabled ? 'on' : 'off'}</span></a></li>`);
+        rows.push(`<li class="item"><a href="${base}/home/${b}"><b>${esc(say(`homeblocks.title.${b}`))}</b><span>${esc(say(v.enabled ? 'homeblocks.on' : 'homeblocks.off'))}</span></a></li>`);
       }
       return { title: say('homeblocks.home_page'), back: `${base}/pages`, body: `${note(url)}<p class="muted">${esc(say('homeblocks.your_home_page_s'))}</p><ul class="items">${rows.join('')}</ul>${await embedsCard('home', `${base}/home`, embedErr())}${await addedCards('home')}` };
     }
@@ -729,7 +735,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     const current = await getBlock(env, site.id, key);
     const pick = { groups: [{ label: say('homeblocks.photos_for_the_home'), subject: 'page:home' }], tags: ['page:home'], alt: '' };
     const render = async (err, values) => ({
-      title: BLOCK_TITLES[key], back: `${base}/home`,
+      title: say(`homeblocks.title.${key}`), back: `${base}/home`,
       body: `${note(url)}${errorBox(err)}<form method="post" action="${base}/home/${key}" data-save class="card">${fieldsWithLabel(all, values ?? current, await ctxFor(key, pick), { enabled: [say('homeblocks.this_block_is_on'), say('homeblocks.off_it_leaves_the')] })}<button class="primary">${esc(say('homeblocks.save'))}</button></form>`,
     });
     if (request.method !== 'POST') return render();
@@ -900,7 +906,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     const matches = await env.DB.prepare('SELECT COUNT(*) AS n FROM link_pending WHERE site_id = ?').bind(site.id).first('n');
     return {
       title: say('publish.publish'), back: base,
-      body: `${note(url)}${matches ? matchesWaiting(site.subdomain, matches) : ''}<section class="card"><h2>${list.length ? esc(say('publish.changes_since_your_last')) : esc(say('publish.nothing_to_publish'))}</h2>
+      body: `${note(url)}${matches ? matchesWaiting(site.subdomain, matches, say) : ''}<section class="card"><h2>${list.length ? esc(say('publish.changes_since_your_last')) : esc(say('publish.nothing_to_publish'))}</h2>
         ${list.length ? `<ul class="changes">${list.map((c) => `<li><span>${esc(c.text)}</span>${c.path ? `<a href="${esc(prev(c.path))}">${esc(say('publish.preview'))}</a>` : ''}</li>`).join('')}</ul>` : `<p class="muted">${esc(say('publish.your_website_already_shows'))}</p>`}
         <p class="row"><a class="button" href="${esc(prev('/'))}">${esc(say('publish.preview_the_whole_site'))}</a></p>
         ${list.length ? `<form method="post" action="${base}/publish"><button class="primary">Publish ${list.length} change${list.length === 1 ? '' : 's'}</button></form>` : ''}</section>

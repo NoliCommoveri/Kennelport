@@ -106,9 +106,35 @@ test('the owner sets it in her admin view; the breeder reads it in her Site Mana
   await save('/admin/wording/queue', { 'w.queue.no_reviews_waiting_families': 'Nothing to approve, {kennel}.' });
   assert.match(await as(breeder, '/s/akbostons/inbox'), /We keep messages 90 days\. Reply opens your email\./);
   assert.match(await as(breeder, '/s/akbostons/reviews-queue'), /Nothing to approve, AK Boston Terriers\./);
+  // An error on her form, in the owner's line, naming the field by its label.
+  await save('/admin/wording/errors', { 'w.error.too_long': '{field} can be {max} characters at most, {kennel}.' });
+  const tooLong = await call(env, M, '/s/akbostons/dogs/new', { method: 'POST', headers: { cookie: breeder, origin: ORIGIN }, body: form({ call_name: 'x'.repeat(41), sex: 'female' }) });
+  assert.match(text(await tooLong.text()), /Not saved: Pet name can be 40 characters at most, AK Boston Terriers\./);
   // Back to today's: empty lines.
   await save('/admin/akbostons/instructions/home', { 'w.home.tile.dogs': '' });
   await save('/admin/wording/home', { 'w.home.tile.dogs': '' });
   assert.match(await as(breeder, '/s/akbostons'), /Dogs Cards, health results/);
   assert.equal(env.DB.raw.prepare("SELECT COUNT(*) AS n FROM wording WHERE key = 'home.tile.dogs'").get().n, 0);
+});
+
+test('the errors that tell her what to fix: today\'s wording by default, the owner\'s line by kind, the field by its label', async () => {
+  const { sayError, ERROR_KEYS } = await import('../src/manage/wording.js');
+  const { ContentError, cleanValue, DOG_FIELDS } = await import('../src/content/model.js');
+  // Every check's message reads as before with no wording set.
+  const msgs = [
+    ['call_name', 'required'], ['call_name', 'longer than 40 characters'], ['url', 'not a web address'], ['url', 'must start with https://'],
+    ['contact_email', 'not an email address'], ['weeks', 'a whole number from 1 to 52'], ['born_on', 'a date is YYYY-MM-DD'],
+    ['slug', '"willow" is already used'], ['badge_places', 'the Puppies page shows at most 2 badges: take one off it first'], ['x', 'something else'],
+  ];
+  for (const [p, m] of msgs) assert.equal(sayError(new ContentError(p, m).message, defaultSay), `${p}: ${m}`);
+  assert.equal(sayError('An error of another kind.', defaultSay), 'An error of another kind.');
+  assert.ok(ERROR_KEYS.length >= 25);
+  // The owner's line: the field by its label, and what the check carries.
+  const say = sayer({ every: { 'error.too_long': '{field} can be {max} characters at most.', 'error.required': '{field} needs filling in.' } });
+  const label = (n) => ({ call_name: 'Call name' })[n] ?? n;
+  let err;
+  try { cleanValue(DOG_FIELDS.call_name, 'x'.repeat(41), 'dog.call_name'); } catch (e) { err = e; }
+  assert.equal(sayError(err.message, say, label), 'Call name can be 40 characters at most.');
+  assert.equal(sayError('dogs[0].call_name: required', say, label), 'Call name needs filling in.');
+  assert.throws(() => cleanWording('error.required', '{nope} is needed'), /can't use \{nope\}/);
 });

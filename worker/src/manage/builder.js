@@ -810,7 +810,7 @@ async function wordingRoute({ env, request, url, page, site, build = null, scree
       return `<li><a class="rowlink grow" href="${base}/${k}"><b>${esc(name)}</b><br><span class="small muted">${list.length} line${list.length === 1 ? '' : 's'}${n ? ` · <span class="chg">${n} changed</span>` : ''}</span></a><span class="go" aria-hidden="true">›</span></li>`;
     });
     const body = `${head}${search}<section class="card"><div class="between"><h2>${CATALOG.size} lines, by screen</h2></div><ul class="list pages">${rows.join('')}</ul></section>
-      <section class="card band"><p class="small">The list holds every field's label and help, the choices in lists, the notes after a change, and each screen's own headings, instructions, buttons and empty messages. Still to join it: the sign-in screens, the errors that tell her what to fix, and the family portal's screens.</p></section>`;
+      <section class="card band"><p class="small">The list holds every field's label and help, the choices in lists, the notes after a change, each screen's own headings, instructions, buttons and empty messages, signing in, and the errors from her forms' checks. Still to join it: the errors from the waitlist, photos, videos, KennelOS linking and sign-in, and the family portal's screens.</p></section>`;
     return page(site ? 'Her instructions' : 'Site Manager wording', body, nav);
   }
   if (screen !== 'all' && !Object.hasOwn(WORD_SCREENS, screen)) return null;
@@ -838,7 +838,7 @@ async function wordingRoute({ env, request, url, page, site, build = null, scree
     const long = follows.length > 70 || mine.length > 70;
     const input = long ? `<textarea name="w.${esc(it.key)}" rows="3" placeholder="${esc(follows)}">${esc(mine)}</textarea>` : `<input type="text" name="w.${esc(it.key)}" value="${esc(mine)}" placeholder="${esc(follows)}">`;
     return `<li class="wline${mine ? ' on' : ''}"><label><span class="where"><b>${esc(it.where)}</b>${mine ? ' <span class="chg">changed</span>' : ''}</span>${input}
-      <span class="hint">${follows ? `${site && every[it.key] != null ? 'Every site' : 'Today'}: “${esc(follows)}”${/[.!?…:]$/.test(follows) ? '' : '.'}` : 'Empty today.'}${` Can use ${['kennel', ...it.vars.filter((v) => v !== 'kennel')].map((v) => `{${v}}`).join(', ')}.`}</span></label></li>`;
+      <span class="hint">${follows ? `${site && every[it.key] != null ? 'Every site' : 'Today'}: “${esc(follows)}”${/[.!?…:]$/.test(follows) ? '' : '.'}` : 'Empty today.'}${it.vars.length ? ` Can use ${it.vars.map((v) => `{${v}}`).join(', ')}.` : ' No names to fill in here.'}</span></label></li>`;
   }).join('');
   const title = screen === 'all' ? (q ? `Lines with “${q}”` : 'Find a line') : WORD_SCREENS[screen];
   const saved = url.searchParams.get('saved') && !error;

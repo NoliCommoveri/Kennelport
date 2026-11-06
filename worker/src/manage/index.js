@@ -112,44 +112,44 @@ ${header}
 
 // ---------- sign-in ----------
 
-function signInPage({ error, email = '' } = {}) {
-  return page('Sign in', `<section class="card">
-  <h1>KennelPort Site Manager</h1>
-  <p class="muted">Sign in with the email address your website was set up with. We'll send you a 6-digit code; there's no password.</p>
+function signInPage({ error, email = '' } = {}, say = defaultSay) {
+  return page(say('signin.sign_in_2'), `<section class="card">
+  <h1>${esc(say('signin.kennelport_site_manager'))}</h1>
+  <p class="muted">${esc(say('signin.sign_in_with_the'))}</p>
   ${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
   <form method="post" action="/signin" data-save>
-    <label>Email<input type="email" name="email" value="${esc(email)}" autocomplete="email" inputmode="email" required></label>
-    <button class="primary">Send me a code</button>
+    <label>${esc(say('signin.email'))}<input type="email" name="email" value="${esc(email)}" autocomplete="email" inputmode="email" required></label>
+    <button class="primary">${esc(say('signin.send_me_a_code'))}</button>
   </form>
-  <p class="muted small">By signing in you agree to KennelPort's <a href="https://kennelport.com/terms">terms of use</a>.</p></section>`, { status: error ? 400 : 200 });
+  <p class="muted small">${esc(say('signin.by_signing_in_you'))} <a href="https://kennelport.com/terms">${esc(say('signin.terms_of_use'))}</a>.</p></section>`, { status: error ? 400 : 200 });
 }
 
-function codePage({ email, error } = {}) {
-  return page('Your code', `<section class="card">
-  <h1>Check your email</h1>
-  <p class="muted">If <strong>${esc(email)}</strong> manages a KennelPort site, a 6-digit code is on its way. It works for ${CODE_TTL_MS / 60000} minutes.</p>
+function codePage({ email, error } = {}, say = defaultSay) {
+  return page(say('signin.your_code'), `<section class="card">
+  <h1>${esc(say('signin.check_your_email'))}</h1>
+  <p class="muted">${esc(say('signin.if'))} <strong>${esc(email)}</strong> manages a KennelPort site, a 6-digit code is on its way. It works for ${CODE_TTL_MS / 60000} minutes.</p>
   ${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
   <form method="post" action="/signin/verify" data-save>
     <input type="hidden" name="email" value="${esc(email)}">
-    <label>Code<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required autofocus></label>
+    <label>${esc(say('signin.code'))}<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required autofocus></label>
     <input type="hidden" name="label" value="">
-    <button class="primary">Sign in</button>
+    <button class="primary">${esc(say('signin.sign_in'))}</button>
   </form>
-  <form method="post" action="/signin" class="inline"><input type="hidden" name="email" value="${esc(email)}"><button class="link">Send a new code</button></form>
-  <p><a href="/">Use a different email</a></p></section>`, { status: error ? 400 : 200 });
+  <form method="post" action="/signin" class="inline"><input type="hidden" name="email" value="${esc(email)}"><button class="link">${esc(say('signin.send_a_new_code'))}</button></form>
+  <p><a href="/">${esc(say('signin.use_a_different_email'))}</a></p></section>`, { status: error ? 400 : 200 });
 }
 
 // ---------- signed in ----------
 
 const plainPage = page;
 
-function sitesPage(user) {
+function sitesPage(user, say = defaultSay) {
   if (!user.sites.length) {
-    return page('No sites', `<section class="card"><h1>No website here yet</h1><p class="muted">This email isn't on any KennelPort site right now. If you think it should be, ask whoever set up your site.</p>
-      <form method="post" action="/signout"><button class="link">Sign out</button></form></section>`);
+    return page(say('signin.no_sites'), `<section class="card"><h1>${esc(say('signin.no_website_here_yet'))}</h1><p class="muted">${esc(say('signin.this_email_isn_t'))}</p>
+      <form method="post" action="/signout"><button class="link">${esc(say('signin.sign_out_2'))}</button></form></section>`);
   }
-  return page('Your sites', `<ul class="tiles">${user.sites.map((s) => `<li><a class="tile" href="/s/${esc(s.subdomain)}"><b>${esc(s.kennel_name || s.subdomain)}</b><span>${esc(s.subdomain)}</span></a></li>`).join('')}</ul>
-    <form method="post" action="/signout"><button class="link">Sign out</button></form>`);
+  return page(say('signin.your_sites'), `<ul class="tiles">${user.sites.map((s) => `<li><a class="tile" href="/s/${esc(s.subdomain)}"><b>${esc(s.kennel_name || s.subdomain)}</b><span>${esc(s.subdomain)}</span></a></li>`).join('')}</ul>
+    <form method="post" action="/signout"><button class="link">${esc(say('signin.sign_out'))}</button></form>`);
 }
 
 
@@ -188,7 +188,7 @@ async function siteHome(env, user, site, view = 'today', page = plainPage, say =
     leaving ? item('/litters#leaving', say.n('home.needs.leaving', leaving), say('home.needs.leaving.note')) : '',
   ].filter(Boolean);
   const sub = esc(site.subdomain);
-  const notesHtml = `${matches ? matchesWaiting(site.subdomain, matches) : ''}
+  const notesHtml = `${matches ? matchesWaiting(site.subdomain, matches, say) : ''}
   ${notices.map((n) => `<section class="card notice-card" role="status"><p>${esc(n.message)}</p><p class="row">${demo ? `<a class="button" href="/admin/${sub}/site/">Open it in your admin view</a>` : `<a class="button" href="/s/${sub}/publish">${esc(say('home.review_and_publish_3'))}</a>`}<form method="post" action="/s/${sub}/notices/${esc(n.id)}/read"><button class="link">${esc(say('home.done_2'))}</button></form></p></section>`).join('')}`;
   // With the puppy portal, the app is one app for the website and the families
   // (plan 7.3): Today holds what needs her from both; the website's screens are
@@ -274,17 +274,17 @@ function need(sub, x) {
   return `<a class="need${tone ? ` ${tone}` : ''}" href="/s/${esc(sub)}${esc(x.href)}">${ic(icon)}<b>${esc(x.label)}</b><span>${esc(x.note)}</span></a>`;
 }
 
-function notificationsPage(env, user) {
+function notificationsPage(env, user, say = defaultSay) {
   const { ready, publicKey } = vapidConfig(env);
   const back = user.sites.length === 1 ? `/s/${user.sites[0].subdomain}` : '/';
-  return page('Notifications', `<section class="card" id="push" data-key="${esc(publicKey ?? '')}">
-    <h1>Notifications</h1>
-    <p class="muted">Get a notification on this phone or computer when someone sends a message from your site, or a family sends a review to approve. It says who it's from, never what they wrote.</p>
-    ${ready ? `<p id="push-state" class="muted small" role="status">Checking this device…</p>
-    <p class="row"><button class="primary" id="push-on" hidden>Turn on for this device</button><button id="push-test" hidden>Send a test</button><button id="push-off" hidden>Turn off</button></p>
-    <p class="muted small" id="push-ios" hidden>On an iPhone or iPad, notifications work only in the app on your home screen: in Safari, tap Share, then Add to Home Screen, open Site Manager from there and come back to this page.</p>`
+  return page(say('notifications.notifications_2'), `<section class="card" id="push" data-key="${esc(publicKey ?? '')}">
+    <h1>${esc(say('notifications.notifications'))}</h1>
+    <p class="muted">${esc(say('notifications.get_a_notification_on'))}</p>
+    ${ready ? `<p id="push-state" class="muted small" role="status">${esc(say('notifications.checking_this_device'))}</p>
+    <p class="row"><button class="primary" id="push-on" hidden>${esc(say('notifications.turn_on_for_this'))}</button><button id="push-test" hidden>${esc(say('notifications.send_a_test'))}</button><button id="push-off" hidden>${esc(say('notifications.turn_off'))}</button></p>
+    <p class="muted small" id="push-ios" hidden>${esc(say('notifications.on_an_iphone_or'))}</p>`
     : '<p class="muted">Notifications aren\'t set up on KennelPort yet.</p>'}
-    <p class="muted small">Each device is turned on separately. Signing out turns this device off.</p>
+    <p class="muted small">${esc(say('notifications.each_device_is_turned'))}</p>
   </section>`, { back });
 }
 
@@ -326,6 +326,10 @@ export async function handleManage(request, env, url) {
     return new Response(JSON.stringify(text ?? { title: 'KennelPort', body: 'Something new on your website.', path: '/', tag: 'kennelport' }), { headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
   }
 
+  // The every-site wording, for the screens before a site is chosen (wording.js);
+  // today's if it can't be read (before the migrations, say).
+  let everySay = null;
+  const every = async () => (everySay ??= sayer({ every: await everyWording(env).catch(() => ({})) }));
   const post = request.method === 'POST';
   if (post && !sameOrigin(request)) return page('Not allowed', '<section class="card"><p>That form didn\'t come from this app.</p></section>', { status: 403 });
 
@@ -333,7 +337,7 @@ export async function handleManage(request, env, url) {
     if (pathname === '/signin' && post) {
       const form = await request.formData();
       const { email } = await startSignIn(env, request, form.get('email'));
-      return codePage({ email });
+      return codePage({ email }, await every());
     }
     if (pathname === '/signin/verify' && post) {
       const form = await request.formData();
@@ -341,12 +345,12 @@ export async function handleManage(request, env, url) {
         const { cookie } = await verifySignIn(env, form.get('email'), form.get('code'), request.headers.get('user-agent')?.slice(0, 80));
         return redirect('/', { 'set-cookie': cookie });
       } catch (err) {
-        if (err instanceof AuthError) return codePage({ email: String(form.get('email') ?? ''), error: err.message });
+        if (err instanceof AuthError) return codePage({ email: String(form.get('email') ?? ''), error: err.message }, await every());
         throw err;
       }
     }
   } catch (err) {
-    if (err instanceof AuthError) return signInPage({ error: err.message });
+    if (err instanceof AuthError) return signInPage({ error: err.message }, await every());
     throw err;
   }
 
@@ -360,7 +364,7 @@ export async function handleManage(request, env, url) {
     if (user?.admin) headers.append('set-cookie', clearAdminCookie());
     return new Response(null, { status: 303, headers });
   }
-  if (!user) return pathname === '/' ? signInPage() : redirect('/');
+  if (!user) return pathname === '/' ? signInPage({}, await every()) : redirect('/');
 
   if (pathname.startsWith('/push/') && post) {
     let body = {};
@@ -371,15 +375,15 @@ export async function handleManage(request, env, url) {
     if (pathname === '/push/test') return reply({ ok: await testPush(env, user, body.endpoint) });
     if (pathname === '/push/status') return reply({ on: Boolean(await subscriptionFor(env, user, body.endpoint)) });
   }
-  if (pathname === '/notifications') return notificationsPage(env, user);
+  if (pathname === '/notifications') return notificationsPage(env, user, await every());
   if (user.admin && (pathname === '/' || pathname.startsWith('/admin'))) {
     const res = await handleBuilder({ env, request, url: pathname === '/' ? new URL('/admin', url) : url, user, page });
     if (res) return res;
   }
-  if (pathname === '/') return user.sites.length === 1 ? redirect(`/s/${user.sites[0].subdomain}`) : sitesPage(user);
+  if (pathname === '/') return user.sites.length === 1 ? redirect(`/s/${user.sites[0].subdomain}`) : sitesPage(user, await every());
   // KennelOS's "get a link code" link: straight to Link KennelOS with one site,
   // else the list of sites to pick from.
-  if (pathname === '/link-kennelos') return user.sites.length === 1 ? redirect(`/s/${user.sites[0].subdomain}/kennelos`) : sitesPage(user);
+  if (pathname === '/link-kennelos') return user.sites.length === 1 ? redirect(`/s/${user.sites[0].subdomain}/kennelos`) : sitesPage(user, await every());
 
   const m = pathname.match(/^\/s\/([a-z0-9-]+)(\/.*)?$/);
   if (m) {

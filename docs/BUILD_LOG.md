@@ -1601,3 +1601,23 @@ with new sections and a new building order. Docs only; nothing built yet.
   application question kinds (`screens.js` LISTS, QUESTION_WORDS, BLOCK_TITLES, above
   `createScreens`); the match waiting card (`matchesWaiting`); the content model's error
   messages; the family portal's breeder screens (`portal/admin.js`).
+
+## 2026-11-06: the breeder's instructions: signing in, her lists, the errors
+
+- Signing in, the code screen, "No website here yet", her sites and Notifications read
+  every site's wording (no site is chosen yet, so no {kennel}); if the wording table
+  can't be read, today's. The offline screens and "That form didn't come from this
+  app" stay out: they are about KennelPort itself.
+- The line under each item in her lists, the kinds of application question, the Home
+  blocks' names and on or off, and the "waiting for you to match" card (screens.js
+  LISTS, matchesWaiting) are in the list.
+- The errors from her forms' checks (content/model.js, records.js): a line per kind of
+  check (`wording.js` ERRORS, matched by the check's words, so the checks stay as the
+  import uses them), with {path} as today, {field} its label on her form, and what the
+  check carries ({max}, {min}, {slug}, {place}). Today's wording reads exactly as before.
+- Still in the code, each in one place: the errors of the waitlist (`waitlist.js`),
+  photos (`photos.js`), videos (`embedStore.js`), badge codes (`badgeCode.js`), KennelOS
+  linking (`kennelos/link.js`, `feed.js`) and sign-in (`auth.js`); the family portal's
+  breeder screens (`portal/admin.js`).
+- Her screens read as before with no wording set (51 screens compared, sign-in and
+  Notifications among them).

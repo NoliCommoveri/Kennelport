@@ -51,6 +51,9 @@ export const SCREENS = Object.freeze({
   share: 'Share',
   kennelos: 'KennelOS',
   account: 'Your site: storage, copy, delete',
+  errors: 'Errors: what to fix when a form isn\'t saved',
+  signin: 'Signing in, and her sites',
+  notifications: 'Notifications',
 });
 
 // Which screen a form's kind belongs to.
@@ -184,7 +187,55 @@ const LISTS = {
   'list.new': 'New {one}',
   'list.save': 'Save',
   'list.error': 'Not saved: {error}',
+  // The line under each item.
+  'lists.sub.hidden': 'hidden',
+  'lists.sub.hidden_puppy': 'Hidden',
+  'lists.sub.not_shown': 'not shown',
+  'lists.sub.stage.planned': 'Planned',
+  'lists.sub.stage.current': 'Born',
+  'lists.sub.stage.past': 'Past',
+  'lists.sub.package': '{weeks}-week package',
+  'lists.sub.not_sent': 'Not sent by KennelOS · not shown',
+  'lists.sub.code': 'code {code}',
+  'lists.sub.transport': 'transport service',
+  'lists.sub.home_badge': 'home page badge',
+  'lists.sub.also_on': 'also on {places}',
+  'lists.sub.photos.one': '{n} photo',
+  'lists.sub.photos.many': '{n} photos',
+  'lists.sub.must_answer': 'must answer',
+  'lists.sub.optional': 'optional',
+  'lists.qtype.text': 'Short answer',
+  'lists.qtype.paragraph': 'Longer answer',
+  'lists.qtype.choice': 'Choice',
+  'lists.qtype.yes_no': 'Yes or no',
+  'lists.qtype.litter': 'Which litter',
+  'lists.qtype.phone': 'Phone',
+  'lists.qtype.town': 'Town',
+  // Home's blocks, on her Home page screen.
+  'homeblocks.title.hero': 'Top of the page',
+  'homeblocks.title.facts': 'Facts row',
+  'homeblocks.title.story': 'Story',
+  'homeblocks.title.dogs': 'Dogs row',
+  'homeblocks.title.litters': 'Litters',
+  'homeblocks.title.reviews': 'Reviews',
+  'homeblocks.title.waitlist': 'Waitlist band',
+  'homeblocks.on': 'on',
+  'homeblocks.off': 'off',
+  // Records from KennelOS waiting to be matched (her home screen, Publish).
+  'kennelos.waiting.one': '{n} from KennelOS is waiting for you to match.',
+  'kennelos.waiting.many': '{n} from KennelOS are waiting for you to match.',
+  'kennelos.waiting.text.one': 'It has the same name as one already on your website. Until you answer, your website keeps showing your own version, without what KennelOS sent (its sex, health results and so on).',
+  'kennelos.waiting.text.many': 'They have the same name as one already on your website. Until you answer, your website keeps showing your own version, without what KennelOS sent (its sex, health results and so on).',
+  'kennelos.waiting.answer.one': 'Answer it',
+  'kennelos.waiting.answer.many': 'Answer them',
 };
+// Where those lines show.
+const LIST_WHERE = {
+  'lists.sub': 'Under an item in a list', 'lists.qtype': 'An application question\'s kind, under it in the list',
+  'homeblocks.title': 'A Home block\'s name, in the list and as its screen\'s heading', 'homeblocks.on': 'Beside a Home block that is on',
+  'homeblocks.off': 'Beside a Home block that is off', 'kennelos.waiting': 'The "waiting for you to match" card, on her home screen and Publish',
+};
+const SCREEN_OF_LIST = { lists: 'lists', homeblocks: 'homeblocks', kennelos: 'kennelos' };
 
 // Each screen's own lines (screens.js), drawn where the screen draws them:
 // key → [screen, what it is, today's wording]. A line marked "Part of a line" or
@@ -460,13 +511,96 @@ const SCREEN_LINES = {
   "home.all_caught_up": ["home", "Line", "All caught up"],
   "home.nothing_needs_you_right": ["home", "Part of a line", "Nothing needs you right now."],
   "home.pickups_this_week_vet": ["home", "Help line, up to a link or bold words", "Pickups this week, vet records, messages and anything else waiting will show here."],
-  "home.website_2": ["home", "Line", "Website"]
+  "home.website_2": ["home", "Line", "Website"],
+  // Before a site is chosen (index.js): signing in, her sites, Notifications. Every
+  // site's wording only; {kennel} isn't known here.
+  "signin.kennelport_site_manager": ["signin", "Line", "KennelPort Site Manager"],
+  "signin.sign_in_with_the": ["signin", "Help line", "Sign in with the email address your website was set up with. We'll send you a 6-digit code; there's no password."],
+  "signin.email": ["signin", "Field label", "Email"],
+  "signin.send_me_a_code": ["signin", "Button", "Send me a code"],
+  "signin.by_signing_in_you": ["signin", "Help line, up to a link or bold words", "By signing in you agree to KennelPort's"],
+  "signin.terms_of_use": ["signin", "Link", "terms of use"],
+  "signin.check_your_email": ["signin", "Line", "Check your email"],
+  "signin.if": ["signin", "Help line, up to a link or bold words", "If"],
+  "signin.code": ["signin", "Field label", "Code"],
+  "signin.sign_in": ["signin", "Button", "Sign in"],
+  "signin.send_a_new_code": ["signin", "Button", "Send a new code"],
+  "signin.use_a_different_email": ["signin", "Link", "Use a different email"],
+  "signin.no_website_here_yet": ["signin", "Line", "No website here yet"],
+  "signin.this_email_isn_t": ["signin", "Help line", "This email isn't on any KennelPort site right now. If you think it should be, ask whoever set up your site."],
+  "signin.sign_out_2": ["signin", "Button", "Sign out"],
+  "signin.sign_out": ["signin", "Button", "Sign out"],
+  "notifications.notifications": ["notifications", "Line", "Notifications"],
+  "notifications.get_a_notification_on": ["notifications", "Help line", "Get a notification on this phone or computer when someone sends a message from your site, or a family sends a review to approve. It says who it's from, never what they wrote."],
+  "notifications.checking_this_device": ["notifications", "Help line", "Checking this device…"],
+  "notifications.turn_on_for_this": ["notifications", "Button", "Turn on for this device"],
+  "notifications.send_a_test": ["notifications", "Button", "Send a test"],
+  "notifications.turn_off": ["notifications", "Button", "Turn off"],
+  "notifications.on_an_iphone_or": ["notifications", "Help line", "On an iPhone or iPad, notifications work only in the app on your home screen: in Safari, tap Share, then Add to Home Screen, open Site Manager from there and come back to this page."],
+  "notifications.each_device_is_turned": ["notifications", "Help line", "Each device is turned on separately. Signing out turns this device off."],
+  "signin.sign_in_2": ["signin", "Line", "Sign in"],
+  "signin.your_code": ["signin", "Line", "Your code"],
+  "signin.no_sites": ["signin", "Line", "No sites"],
+  "signin.your_sites": ["signin", "Line", "Your sites"],
+  "notifications.notifications_2": ["notifications", "Line", "Notifications"]
 };
+
+// The errors that tell her what to fix (content/model.js and records.js checks,
+// which the import shares, so they stay as they are): each kind, matched by its
+// words, is a line here. {path} is the field as the check names it (today's
+// wording shows it), {field} its label on her form; the rest come from the check.
+const ERRORS = [
+  ['required', /^required$/, '{path}: required', 'A field that must be filled in, left empty'],
+  ['too_long', /^longer than (?<max>\d+) characters$/, '{path}: longer than {max} characters', 'Too many characters'],
+  ['web_address', /^not a web address$/, '{path}: not a web address', 'A web address that isn\'t one'],
+  ['https', /^must start with https:\/\/$/, '{path}: must start with https://', 'A web address not starting https://'],
+  ['email', /^not an email address$/, '{path}: not an email address', 'An email address that isn\'t one'],
+  ['number', /^a whole number from (?<min>-?\d+) to (?<max>-?\d+)$/, '{path}: a whole number from {min} to {max}', 'A number out of range, or not a whole number'],
+  ['date', /^a date is YYYY-MM-DD$/, '{path}: a date is YYYY-MM-DD', 'A date that isn\'t one'],
+  ['month', /^a month is YYYY-MM$/, '{path}: a month is YYYY-MM', 'A month that isn\'t one'],
+  ['at_most', /^at most (?<max>\d+) items$/, '{path}: at most {max} items', 'Too many items in a list'],
+  ['slug', /^a slug is lower-case letters, digits and hyphens$/, '{path}: a slug is lower-case letters, digits and hyphens', 'A web address part with other characters'],
+  ['slug_used', /^"(?<slug>[^"]*)" is already used$/, '{path}: "{slug}" is already used', 'A web address part another one has'],
+  ['slug_free', /^could not find a free web address$/, '{path}: could not find a free web address', 'No free web address to make from the name'],
+  ['choice_options', /^a choice needs at least two options, one per line$/, '{path}: a choice needs at least two options, one per line', 'A choice question with fewer than two options'],
+  ['photo_gone', /^that photo is no longer on this site$/, '{path}: that photo is no longer on this site', 'A chosen photo removed meanwhile'],
+  ['photos_gone', /^a chosen photo is no longer on this site$/, '{path}: a chosen photo is no longer on this site', 'One of the chosen photos removed meanwhile'],
+  ['litter_gone', /^that litter is no longer on this site$/, '{path}: that litter is no longer on this site', 'A chosen litter removed meanwhile'],
+  ['dog_gone', /^that dog is no longer on this site$/, '{path}: that dog is no longer on this site', 'A chosen dog removed meanwhile'],
+  ['kennel_gone', /^that kennel is no longer on your list$/, '{path}: that kennel is no longer on your list', 'A chosen partner kennel removed meanwhile'],
+  ['gone', /^no longer exists$/, '{path}: no longer exists', 'What she was changing was removed meanwhile'],
+  ['price_to', /^lower than the starting price$/, '{path}: lower than the starting price', 'A highest price below the lowest'],
+  ['image_url', /^that picture's address isn't one your site can show from; choose a photo instead$/, '{path}: that picture\'s address isn\'t one your site can show from; choose a photo instead', 'A brand picture from an address the site can\'t show'],
+  ['badge_picture', /^a home page badge needs a picture: choose one, or paste the embed code$/, '{path}: a home page badge needs a picture: choose one, or paste the embed code', 'A Home badge with no picture'],
+  ['badges_max', /^the home page shows at most (?<max>\d+) badges: turn one off first$/, '{path}: the home page shows at most {max} badges: turn one off first', 'Too many Home badges'],
+  ['place_picture', /^a badge needs a picture: choose one, or paste the embed code$/, '{path}: a badge needs a picture: choose one, or paste the embed code', 'A badge on other pages with no picture'],
+  ['place_max', /^the (?<place>.+) shows at most (?<max>\d+) badges: take one off it first$/, '{path}: the {place} shows at most {max} badges: take one off it first', 'Too many badges on a page'],
+  ['kennel_listed', /^that kennel is already on your list$/, '{path}: that kennel is already on your list', 'A partner kennel added twice'],
+  ['partners_max', /^at most (?<max>\d+) partner kennels$/, '{path}: at most {max} partner kennels', 'Too many partner kennels'],
+  ['albums_max', /^this site has reached its limit of (?<max>\d+) albums$/, '{path}: this site has reached its limit of {max} albums', 'Too many albums'],
+  ['pay_methods', /^add at least one way to pay, or a payment page link, before showing it$/, '{path}: add at least one way to pay, or a payment page link, before showing it', 'How to pay shown with no way to pay'],
+];
+export const ERROR_KEYS = ERRORS.map(([k]) => k);
+
+// A check's error as her screens say it: the owner's line for its kind, or the
+// error as it is (an error of another kind, or wording not in the list).
+export function sayError(message, say, labelOf = (name) => name) {
+  const m = String(message ?? '').match(/^([A-Za-z0-9_.[\] -]+): ([\s\S]+)$/);
+  if (!m) return String(message ?? '');
+  const [, path, rest] = m;
+  for (const [k, re] of ERRORS) {
+    const g = rest.match(re);
+    if (g) return say(`error.${k}`, { path, field: labelOf(path.split('.').pop().replace(/\[\d+\]$/, '')), ...(g.groups ?? {}) });
+  }
+  return String(message);
+}
 
 // ---------- the catalog ----------
 
 const items = new Map();
-const add = (key, screen, where, text, vars = []) => items.set(key, { key, screen, where, text: text ?? '', vars: ['kennel', ...vars] });
+// Before a site is chosen there's no kennel to name.
+const NO_KENNEL = new Set(['signin', 'notifications']);
+const add = (key, screen, where, text, vars = []) => items.set(key, { key, screen, where, text: text ?? '', vars: [...(NO_KENNEL.has(screen) ? [] : ['kennel']), ...vars] });
 
 // Where each line of her home screen sits, from its key: a tile, a set-up row, a
 // button, and the lines that go with them.
@@ -487,6 +621,7 @@ function homeWhere(k, t) {
 }
 for (const [k, t] of Object.entries(HOME)) add(k, 'home', homeWhere(k, t), t, [...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]));
 for (const [k, [screen, what, t]] of Object.entries(SCREEN_LINES)) add(k, screen, what, t);
+for (const [k, , t, where] of ERRORS) add(`error.${k}`, 'errors', where, t, ['path', 'field', ...[...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).filter((v) => !['path', 'field'].includes(v))]);
 for (const [k, t] of Object.entries(NOTES)) add(`note.${k}`, 'notes', 'At the top of the screen after the change', t);
 for (const [k, [title, one]] of Object.entries(LIST_TITLES)) {
   add(`list.${k}.title`, 'lists', 'The list\'s heading', title);
@@ -497,6 +632,12 @@ add('list.add', 'lists', 'The button under a list, and on a new one\'s form', LI
 add('list.new', 'lists', 'The heading of a new one\'s form', LISTS['list.new'], ['one']);
 add('list.save', 'lists', 'The button on a form', LISTS['list.save']);
 add('list.error', 'lists', 'When a form isn\'t saved, before what was wrong', LISTS['list.error'], ['error']);
+for (const [k, t] of Object.entries(LISTS)) {
+  if (!/^(lists|homeblocks|kennelos)\./.test(k)) continue;
+  const where = Object.entries(LIST_WHERE).find(([p]) => k === p || k.startsWith(`${p}.`))?.[1] ?? 'A line';
+  const how = k.endsWith('.one') ? ', for one' : k.endsWith('.many') ? ', for more than one' : '';
+  add(k, SCREEN_OF_LIST[k.split('.')[0]], `${where}${how}: "${t}"`, t, [...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]));
+}
 for (const [n, [label, hint]] of Object.entries(SHARED)) {
   add(`f.${n}`, 'fields', `The "${label}" field, on every form that has it`, label);
   add(`f.${n}.hint`, 'fields', `The help under "${label}"`, hint);
@@ -548,7 +689,7 @@ export function cleanWording(key, text) {
   if (!t) return null;
   if (t.length > WORDING_MAX) throw new WordingError(`"${item.where}" is ${WORDING_MAX} characters at most.`);
   const bad = [...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).filter((v) => !item.vars.includes(v));
-  if (bad.length) throw new WordingError(`"${item.where}" can't use {${bad[0]}}. It can use ${item.vars.map((v) => `{${v}}`).join(', ')}.`);
+  if (bad.length) throw new WordingError(`"${item.where}" can't use {${bad[0]}}. ${item.vars.length ? `It can use ${item.vars.map((v) => `{${v}}`).join(', ')}.` : 'It has no names to fill in.'}`);
   return t;
 }
 
