@@ -61,7 +61,9 @@ export const MAX = { dogs: 200, litters: 100, puppies: 30, pairings: 50, heats: 
 // 'partner_kennels': the list, and the co-owned fields on each dog.
 // 'transport': a product's website and transport flag (her KennelOS transport
 // accounts, for the Getting your pup home page).
-export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport'];
+// 'disposition': a puppy-status dog's disposition (keeping, available…), for the
+// owner's rule on which puppies go on the site (rules.landing pup_*).
+export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition'];
 
 // ---------- checking ----------
 

@@ -1776,7 +1776,8 @@ with new sections and a new building order. Docs only; nothing built yet.
   is treated as not sent: off the site, in her draft under Not on your site, back when
   it's sent again (`bundle.js` `pupShown`; `rules.landing.pup_*`). A bundle with no
   dispositions shows every puppy, as before.
-- Needs KennelOS to send `disposition` on puppy-status dogs (`dogEntry`, `DOG_KEYS`);
-  not done here (this session reads KennelOS only).
+- KennelOS sends `disposition` on puppy-status dogs only to a Worker whose answer lists
+  the new `disposition` section (`SECTIONS`), so neither side has to ship first
+  (KennelOS's same-day change, `siteExport.js` `dogEntry`).
 - Tests: the linked sample's Pippa* carries `disposition: keeping`; `rules.test.js`
   ticks Keeping only and checks Pippa* leaves the site once she's Available.
