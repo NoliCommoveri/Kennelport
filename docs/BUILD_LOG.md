@@ -1647,3 +1647,36 @@ with new sections and a new building order. Docs only; nothing built yet.
   version bump. Then step 2.4: the family portal's breeder screens and Today.
 - Today's wording reads exactly as before (each message checked against what the code
   throws). Tests: `wording.test.js` (two new). Nothing in `_kp/` changed: no version bump.
+
+## 2026-11-06: site builder step 3.4: the menu editor
+
+- The menu is the owner's setting (`content/blocks.js`: `menuOf`, `defaultMenu`,
+  `withMenu`, `MENU_PLACES`). Groups in order, each with a name, a **Show it as a
+  button** switch (today's Waitlist: its first link that shows) and a **Show it in
+  the footer** switch; items are a page, a place on a page (Girls, Boys, Available,
+  Upcoming litters, each showing only while it has something to show, as today), or an
+  outside link (opens in a new tab). A page item can be set to show only while no
+  other link to that page in its group shows (today's Puppies).
+- Stored in the build (`build.menu`) only once it differs from today's; the snapshot
+  carries it (`layout.menu`). No migration. `render/parts.js` `menuGroups` draws any
+  menu; with none, today's, which reads exactly as before (413 pages of the demo, the
+  AK sample and the AK sample with five added pages, on four dates, compared before and
+  after: identical but for the application form's random question ids).
+- The footer keeps today's three columns until the menu is changed; then it is a
+  column per group shown in the footer, its pages and outside links (not places on a
+  page), with How to pay and Family login in the last column.
+- **Menu** in the admin view (`manage/builder.js` menuRoute), from the prototype's
+  `aMenu`: each group a card with its name, move and remove; its links as movable rows
+  with Settings (which group, a link's words and address, a place's own words, the
+  only-while switch); the two switches; **Add to …** folded (a page, a place, or an
+  outside link); New group; Back to today's menu; Not in the menu; the phone beside it
+  shows each group as the site shows it today. Checked at 390px and 1280px. No new CSS,
+  so no version bump.
+- Pages she adds: New page and a page's own "In the menu under" list the menu's groups
+  (not a button group); in a changed menu the page goes at the end of that group, and
+  leaves the menu when removed. Pages lists where each sits.
+- Functional checks only (decision 16): every group needs a name; an outside link needs
+  words and an http(s) address. 8 groups, 20 links a group.
+- The owner's screen: its wording stays in the code (her own screens are left out of
+  the breeder's list).
+- Tests: `menu.test.js` (new).

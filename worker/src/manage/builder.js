@@ -30,7 +30,7 @@ import {
 import { buildSnapshot } from '../publish.js';
 import {
   olderPuppies, depositsAhead, puppyStatus, puppyPriceText, regText, statusRule, sortPuppies, fullRegHref, rulesOf,
-  useFormats, word, litterRows, dogGroups, sitePrice, pricesOff, fmtDate, sexWord, dogsFor, label, placedFaqs, addedOn, addedWords, customPage,
+  useFormats, word, litterRows, dogGroups, sitePrice, pricesOff, fmtDate, sexWord, dogsFor, label, placedFaqs, addedOn, addedWords, customPage, menuGroups,
 } from '../render/parts.js';
 import { makePreviewToken, servePhoto, SITE_CSP } from '../site.js';
 import { renderPage } from '../render/index.js';
@@ -39,8 +39,9 @@ import {
   BLOCK_TYPES, DOG_STATUS, ANY3, DOG_FLAGS, DOG_ORDER, DOG_STYLE, STAGES, REVIEW_STYLE, SEXES, DOG_ITEMS, LITTER_ITEMS, LITTER_PAIR,
   LITTER_ROWS, REVIEW_ITEMS, REVIEW_WHO, BlockError, blocksFromForm, moved, newBlock,
   pageBlocks, pageChanged, pagesChanged, withPage, addable, fits, hersOn, blockName, blockHint, isBuilt, BUILT_PAGES, PAGE_PARTS, headFor, isCustom, customPages, addPage, withPageInfo, withoutPage, pathFor, STARTS,
+  menuOf, menuChanged, withMenu, groupOf, MenuError, MENU_PLACES, MENU_LIMITS,
 } from '../content/blocks.js';
-import { PAGES, MENU_GROUPS } from '../content/model.js';
+import { PAGES } from '../content/model.js';
 import { siteLink } from '../ops/sites.js';
 import { SCREENS as WORD_SCREENS, CATALOG, itemsOn, everyWording, saveEveryWording, siteWording, withWording, WordingError } from './wording.js';
 
@@ -58,7 +59,7 @@ const whereIs = (site, path = '') => (isDemo(site) ? `Demo${path ? ` · ${path}`
 
 // A site's screens: [path, title, icon, short name for the phone's tabs].
 const SCREENS = [
-  ['pages', 'Pages', 'pages', 'Pages'], ['rules', 'Pups', 'paw', 'Pups'], ['dogs', 'Dogs', 'star', 'Dogs'], ['wording', 'Wording', 'pages', 'Words'],
+  ['pages', 'Pages', 'pages', 'Pages'], ['menu', 'Menu', 'list', 'Menu'], ['rules', 'Pups', 'paw', 'Pups'], ['dogs', 'Dogs', 'star', 'Dogs'], ['wording', 'Wording', 'pages', 'Words'],
   ['formats', 'Formats', 'cal', 'Formats'], ['kennelos', 'From KennelOS', 'link', 'KennelOS'], ['timing', 'Timing', 'clock', 'Timing'],
   ['instructions', 'Her instructions', 'book', 'Help'],
 ];
@@ -523,8 +524,9 @@ function pagePreview(snap, key, blocks, site) {
 // The Pages list: every page the builder has, in today's menu order, then the pages
 // she added, and Privacy, which stays fixed. ?new=1 opens New page.
 // Waitlist is the menu's button, one link, so a page can't go under it (yet: the menu editor).
-const GROUPS = { '': 'Not in the menu', ...Object.fromEntries(MENU_GROUPS.filter((g) => g.key !== 'waitlist').map((g) => [g.key, g.label])) };
-function newPageCard(input = {}, error = null) {
+// The groups a page of hers can go in: the menu's, but not a button (one button, one link).
+const groupsOf = (build) => ({ '': 'Not in the menu', ...Object.fromEntries(menuOf(build).filter((g) => !g.button).map((g) => [g.id, g.label || 'A group with no name'])) });
+function newPageCard(GROUPS, input = {}, error = null) {
   return `<section class="card" id="new-page"><div class="fgroup"><h2>New page</h2>${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
       <ol class="numsteps"><li><span class="num">1</span><div><div class="fgrid">
         ${field('page.name', input.name ?? '', { label: 'Name', ph: 'Our dams', hint: 'In the menu and as its heading. The breeder can rename both.' })}
@@ -541,26 +543,28 @@ async function pagesScreen(env, site, build, { adding = false, input = {}, error
   const offNote = (k) => (k !== 'home' && snap.pages[k]?.enabled === false ? ' · <span class="chg">off by the breeder</span>' : '');
   const count = (k) => { const n = pageBlocks(build, k).length; return `${n} block${n === 1 ? '' : 's'}`; };
   const rows = BUILT_PAGES.map((k) => row(pagePath(snap, k), pageLabel(snap, k), `/admin/${sub}/pages/${k}`, `${count(k)}${pageChanged(build, k) ? ' · <span class="chg">changed</span>' : ' · as today'}${offNote(k)}`));
-  const mine = customPages(build).map((c) => row(c.path, pageLabel(snap, c.id), `/admin/${sub}/pages/${c.id}`, `${count(c.id)} · <span class="spill brass">Added</span> · ${c.group ? `in ${esc(GROUPS[c.group])}` : 'not in the menu'}${offNote(c.id)}`));
+  const menu = menuOf(build);
+  const inGroup = (k) => { const id = groupOf(menu, k); return id ? menu.find((g) => g.id === id).label : null; };
+  const mine = customPages(build).map((c) => row(c.path, pageLabel(snap, c.id), `/admin/${sub}/pages/${c.id}`, `${count(c.id)} · <span class="spill brass">Added</span> · ${inGroup(c.id) ? `in ${esc(inGroup(c.id))}` : 'not in the menu'}${offNote(c.id)}`));
   const fixed = row(PAGES.privacy.path, PAGES.privacy.label, null, 'written for her by KennelPort, fixed');
   return `<div class="build"><div class="stack">
-    ${adding ? `<form method="post" class="stack">${newPageCard(input, error)}</form>` : ''}
+    ${adding ? `<form method="post" class="stack">${newPageCard(groupsOf(build), input, error)}</form>` : ''}
     <section class="card"><div class="between"><h2>${rows.length + mine.length + 1} pages</h2>${adding ? '' : '<a class="button small primary" href="?new=1#new-page">' + svg('plus') + ' New page</a>'}</div><ul class="list pages">${rows.join('')}</ul>
       ${mine.length ? `<h2 class="mt">Pages you added</h2><ul class="list pages">${mine.join('')}</ul>` : ''}<ul class="list pages">${fixed}</ul></section>
-    <section class="card band"><p class="small">A page you add is the breeder's to switch on or off, name in her menu and word, like any page. The menu editor, page addresses for the breeder, and FAQ and badge spots on your pages come next.</p></section>
+    <section class="card band"><p class="small">A page you add is the breeder's to switch on or off, name in her menu and word, like any page. Where each page sits in the menu is in <a href="/admin/${sub}/menu">Menu</a>. Page addresses for the breeder, and FAQ and badge spots on your pages, come next.</p></section>
   </div><div class="pvwrap" id="preview">${pagePreview(snap, 'home', pageBlocks(build, 'home'), site)}${await previewLink(env, site)}</div></div>`;
 }
 
 // What "The page" says about switching it off and its address. A page of hers
 // has its name, address and menu group here, and can be removed.
 const FIXED_PATHS = ['waitlist', 'waitlist_help'];
-function pageCard(snap, key) {
+function pageCard(snap, key, build) {
   const c = customPage(snap, key);
   if (c) {
     return `<section class="card"><div class="fgroup"><h2>The page <span class="spill brass">Added</span></h2><input type="hidden" name="page.present" value="1"><div class="fgrid">
       ${field('page.name', c.name, { label: 'Starting name', hint: 'The breeder can rename it in her menu.' })}
       ${field('page.path', c.path, { label: 'Address', hint: 'Letters, numbers and hyphens. Renaming it for the breeder comes with the menu.' })}
-      ${select('page.group', c.group ?? '', GROUPS, 'In the menu under')}</div>
+      ${select('page.group', groupOf(menuOf(build), key) ?? '', groupsOf(build), 'In the menu under')}</div>
       <div class="switches boxed"><label class="check"><input type="checkbox" disabled checked aria-describedby="page-on">The breeder can switch this page off</label></div>
       <p class="small muted" id="page-on">${esc(`She switches it off in ${hersAt(snap, key)}. It hides by itself while nothing on it has anything to show.`)}</p>
       <div class="row"><button class="link small danger" name="act" value="delpage">${svg('trash')} Remove this page</button></div></div></section>`;
@@ -591,7 +595,7 @@ async function pageScreen(env, site, build, key, { open = null, error = null } =
     }).join('')}</ul></div>` : '';
   };
   return `<div class="stack">${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
-    ${pageCard(snap, key)}
+    ${pageCard(snap, key, build)}
     <section class="card"><div class="between"><h2>Blocks, top to bottom</h2>${adds.length ? `<button class="button small primary" name="act" value="${open === 'add' ? 'close' : 'adding'}" aria-expanded="${open === 'add'}">${svg('plus')} Add a block</button>` : ''}</div>
       ${open === 'add' ? `<div class="addblock"><p class="small muted">It goes at the bottom; move it up from there.</p>${group(true, 'From KennelOS and her records')}${group(false, key === 'home' ? 'Her words and photos' : 'This page\'s own')}</div>` : ''}
       <p class="small muted">You place and order them. The breeder can switch each one off and reword it, never move it.${changed || isCustom(key) ? '' : ` This is today's ${key === 'home' ? 'Home' : 'page'}.`}</p>
@@ -640,6 +644,156 @@ function pageFromForm(build, key, form) {
   return { build: withPage(build, key, blocks), open };
 }
 
+// ---------- the menu (step 3.4) ----------
+
+// One item's title and the line under it.
+function itemLine(snap, it) {
+  if (it.type === 'link') return [it.text || 'An outside link', `Outside link · ${it.url}`];
+  if (it.type === 'place') {
+    const P = MENU_PLACES[it.place];
+    return [it.text || P.name, `A place on ${pageLabel(snap, P.page)} · #${it.place.split('#')[1]} · shows ${P.when}`];
+  }
+  const off = snap.pages[it.page]?.enabled === false ? ' · off by the breeder' : '';
+  return [pageLabel(snap, it.page), `Page · ${pagePath(snap, it.page)}${it.fallback ? ' · only while no other link to it here shows' : ''}${off}`];
+}
+
+// What can be added to a group: every page (Privacy aside), the places, an outside link.
+function addOptions(snap, build) {
+  const pages = [...Object.keys(PAGES).filter((k) => k !== 'privacy'), ...customPages(build).map((c) => c.id)];
+  return {
+    '': 'Choose…',
+    ...Object.fromEntries(pages.map((k) => [`page:${k}`, `Page: ${pageLabel(snap, k)}`])),
+    ...Object.fromEntries(Object.entries(MENU_PLACES).map(([k, P]) => [`place:${k}`, `Place: ${P.name} (${pageLabel(snap, P.page)})`])),
+    link: 'An outside link (words and address below)',
+  };
+}
+
+// The phone beside it: each group as the site shows it today, with what hides.
+function menuPreview(snap, site, menu) {
+  const today = new Date().toISOString().slice(0, 10);
+  const shown = menuGroups({ ...snap, layout: { ...snap.layout, menu } }, { today, origin: '', path: '/', preview: true, portal: Boolean(site.portal_on) });
+  const out = menu.map((g) => {
+    const s = shown.find((x) => x.key === g.id);
+    if (!s) return `<div class="pvb ghost">${esc(g.label || 'A group with no name')}: nothing in it shows right now, so it hides</div>`;
+    if (g.button) return `<div class="pvb"><div class="pv-row"><span class="pv-pill">${esc(s.links[0].text)}</span><span class="small muted">a button${g.footer ? '' : ' · not in the footer'}</span></div></div>`;
+    return `<div class="pvb"><span class="eyebrow">${esc(g.label)}${g.footer ? '' : ' · not in the footer'}</span>${s.links.map((l) => `<div class="pv-row">${esc(l.text)}</div>`).join('')}</div>`;
+  });
+  return phone(site, snap, '/', 'Their menu, as it shows today', out);
+}
+
+function menuScreen(snap, build, site, menu, { open = null, error = null } = {}) {
+  const groupOpts = Object.fromEntries(menu.map((g, gi) => [String(gi), g.label || 'A group with no name']));
+  const adds = addOptions(snap, build);
+  const listed = new Set(menu.flatMap((g) => g.items.filter((it) => it.type === 'page').map((it) => it.page)));
+  const out = [...Object.keys(PAGES).filter((k) => k !== 'privacy'), ...customPages(build).map((c) => c.id)].filter((k) => !listed.has(k));
+  const item = (g, gi, it, ii) => {
+    const [title, line] = itemLine(snap, it);
+    const id = `${gi}.${ii}`;
+    const isOpen = open === id;
+    const pre = `i.${gi}.${ii}`;
+    const twin = it.type === 'page' && g.items.some((x, xi) => xi !== ii && (x.page === it.page || MENU_PLACES[x.place]?.page === it.page));
+    const set = !isOpen ? '' : `<div class="set"><input type="hidden" name="${pre}.present" value="1"><div class="fgrid">
+        ${select(`${pre}.to`, String(gi), groupOpts, 'In the group')}
+        ${it.type === 'link' ? `${field(`${pre}.text`, it.text, { label: 'Its words' })}${field(`${pre}.url`, it.url, { label: 'Its address', ph: 'https://', hint: 'Opens in a new tab.' })}` : ''}
+        ${it.type === 'place' ? field(`${pre}.text`, it.text ?? '', { label: 'Its words', ph: MENU_PLACES[it.place].name, hint: 'Leave empty for the site\'s own.' }) : ''}</div>
+        ${it.type === 'page' ? `<div class="switches boxed">${toggle(`${pre}.fallback`, it.fallback, 'Show only while no other link to this page in the group shows')}</div>${twin ? '' : '<p class="small muted">Only matters with another link to the same page in this group, like today\'s Puppies after Available and Upcoming litters.</p>'}` : ''}
+        ${it.type === 'page' ? '<p class="small muted">The breeder names it in her menu.</p>' : ''}</div>`;
+    return `<li class="mvr item" id="i-${gi}-${ii}">${mvBtns(`imv:${gi}:${ii}`, ii, g.items.length)}<span class="ttl">${esc(title)}<small>${esc(line)}</small></span>
+      <span class="end"><button class="button small" name="act" value="${isOpen ? 'close' : `iopen:${id}`}" aria-expanded="${isOpen}">${isOpen ? 'Done' : 'Settings'}</button><button class="ib" name="act" value="idel:${gi}:${ii}" aria-label="Take ${esc(title)} out of the menu">${svg('trash')}</button></span>${set}</li>`;
+  };
+  const group = (g, gi) => `<section class="card" id="g-${gi}"><input type="hidden" name="g.${gi}.present" value="1">
+      <div class="mvr item">${mvBtns(`gmv:${gi}`, gi, menu.length)}<label><span class="sr">Group name</span><input type="text" name="g.${gi}.label" value="${esc(g.label)}" maxlength="${MENU_LIMITS.label}" placeholder="Group name"></label>
+        <span class="end"><button class="ib" name="act" value="gdel:${gi}" aria-label="Remove the ${esc(g.label)} group">${svg('trash')}</button></span></div>
+      <ul class="mvl mt">${g.items.map((it, ii) => item(g, gi, it, ii)).join('') || '<li class="small muted">Nothing in it yet, so the site leaves it out.</li>'}</ul>
+      <div class="switches boxed">${toggle(`g.${gi}.button`, g.button, 'Show it as a button, like Waitlist: its first link that shows')}${toggle(`g.${gi}.footer`, g.footer, 'Show it in the footer')}</div>
+      <details class="fgroup fold"><summary>Add to ${esc(g.label || 'this group')}</summary><div class="fgrid">${select(`add.${gi}`, '', adds, 'A page, a place on a page, or an outside link', '')}
+        ${field(`addtext.${gi}`, '', { label: 'An outside link\'s words' })}${field(`addurl.${gi}`, '', { label: 'Its address', ph: 'https://' })}</div>
+      <div class="row"><button class="button small" name="act" value="add:${gi}">${svg('plus')} Add</button></div></details></section>`;
+  return `<div class="stack">${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
+      <p class="small muted">Groups and their links in your order. The breeder names her pages and switches them off; she never moves them. A link hides by itself while what it points to has nothing to show, and a group with nothing showing hides.</p>
+      ${menu.map(group).join('')}
+      <div class="row"><button class="button small primary" name="act" value="newgroup"${menu.length >= MENU_LIMITS.groups ? ' disabled' : ''}>${svg('plus')} New group</button>${menuChanged(build) ? '<button class="link small" name="act" value="default">Back to today\'s menu</button>' : ''}</div>
+      ${out.length ? `<section class="card band"><h2>Not in the menu</h2><p class="small">${out.map((k) => esc(pageLabel(snap, k))).join(' · ')}</p><p class="small muted">These pages keep their addresses; links to them work.</p></section>` : ''}
+      <section class="card band"><p class="small">${menuChanged(build) ? 'The footer follows this menu: a column per group shown in the footer, its pages and outside links.' : 'Today\'s menu. The footer keeps today\'s three columns until you change the menu; then it follows it, a column per group.'}</p></section>
+    </div>`;
+}
+
+// The menu as the form has it, then what was pressed.
+function menuFromForm(menu, form, snap) {
+  const get = (k) => form.get(k);
+  let groups = menu.map((g, gi) => {
+    if (get(`g.${gi}.present`) == null) return structuredClone(g);
+    return { ...structuredClone(g), label: String(get(`g.${gi}.label`) ?? ''), button: get(`g.${gi}.button`) != null, footer: get(`g.${gi}.footer`) != null };
+  });
+  // The open item's settings, and a move to another group.
+  const moves = [];
+  groups.forEach((g, gi) => g.items.forEach((it, ii) => {
+    const pre = `i.${gi}.${ii}`;
+    if (get(`${pre}.present`) == null) return;
+    if (it.type === 'link') { it.text = String(get(`${pre}.text`) ?? ''); it.url = String(get(`${pre}.url`) ?? ''); }
+    if (it.type === 'place') { const t = String(get(`${pre}.text`) ?? '').trim(); if (t) it.text = t; else delete it.text; }
+    if (it.type === 'page') { if (get(`${pre}.fallback`) != null) it.fallback = true; else delete it.fallback; }
+    const to = Number(get(`${pre}.to`));
+    if (Number.isInteger(to) && to !== gi && groups[to]) moves.push([gi, ii, to]);
+  }));
+  for (const [gi, ii, to] of moves) groups[to].items.push(groups[gi].items[ii]);
+  for (const [gi, ii] of moves.sort((a, b) => b[1] - a[1])) groups[gi].items.splice(ii, 1);
+  const act = String(get('act') ?? '');
+  const [verb, a, b, dir] = act.split(':');
+  let open = null;
+  const gi = Number(a);
+  if (verb === 'gmv' && groups[gi]) groups = moved(groups, gi, b);
+  else if (verb === 'gdel' && groups[gi]) groups = groups.filter((_, i) => i !== gi);
+  else if (verb === 'imv' && groups[gi]?.items[Number(b)]) groups[gi].items = moved(groups[gi].items, Number(b), dir);
+  else if (verb === 'idel' && groups[gi]) groups[gi].items = groups[gi].items.filter((_, i) => i !== Number(b));
+  else if (verb === 'iopen') open = a;
+  else if (verb === 'newgroup' && groups.length < MENU_LIMITS.groups) {
+    const ids = new Set(groups.map((g) => g.id));
+    let n = 2;
+    while (ids.has(`group-${n}`)) n++;
+    groups.push({ id: `group-${n}`, label: 'New group', button: false, footer: true, items: [] });
+  } else if (verb === 'add' && groups[gi]) {
+    const what = String(get(`add.${gi}`) ?? '');
+    const [kind, ref] = what.split(/:(.+)/);
+    const items = groups[gi].items;
+    if (kind === 'page' && ref) items.push({ type: 'page', page: ref });
+    else if (kind === 'place' && Object.hasOwn(MENU_PLACES, ref)) items.push({ type: 'place', place: ref });
+    else if (kind === 'link') items.push({ type: 'link', text: String(get(`addtext.${gi}`) ?? ''), url: String(get(`addurl.${gi}`) ?? '') });
+    else throw new MenuError('Choose what to add first.');
+    if (items.length > MENU_LIMITS.items) throw new MenuError(`A group holds ${MENU_LIMITS.items} links at most.`);
+  }
+  return { menu: groups, open, reset: verb === 'default', where: Number.isInteger(gi) && groups[gi] ? `#g-${gi}` : '' };
+}
+
+async function menuRoute({ env, request, url, site, build, page }) {
+  const snap = await buildSnapshot(env, site.id);
+  useFormats(snap);
+  let menu = menuOf(build);
+  let error = null;
+  let open = url.searchParams.get('open');
+  if (request.method === 'POST') {
+    const form = await request.formData();
+    try {
+      const out = menuFromForm(menu, form, snap);
+      menu = out.menu;
+      open = out.open;
+      const next = out.reset ? (({ menu: _, ...rest }) => rest)(build) : withMenu(build, menu);
+      await saveBuild(env, site.id, next);
+      return redirect(`/admin/${site.subdomain}/menu?saved=1${open ? `&open=${encodeURIComponent(open)}#i-${open.replace('.', '-')}` : out.where}`);
+    } catch (err) {
+      if (!(err instanceof MenuError)) throw err;
+      error = err.message;
+    }
+  }
+  const saved = url.searchParams.get('saved') && !error;
+  const body = `<p class="crumb"><a href="/admin">‹ Every site</a></p><span class="eyebrow">${esc(site.kennel_name || site.subdomain)}</span>${isDemo(site) ? ' <span class="spill brass">Demo</span>' : ''}<h1>Menu</h1>
+    ${saved ? '<p class="notice" role="status">Saved. The site shows it once the breeder (or you) publishes.</p>' : ''}
+    <form method="post" id="build" class="build"><button class="sr" tabindex="-1" aria-hidden="true">Save</button>${menuScreen(snap, build, site, menu, { open, error })}
+      <div class="pvwrap" id="preview">${menuPreview(snap, site, menu)}${await previewLink(env, site)}</div>
+      <div class="actionbar"><div class="in"><span class="ico">${ic('eye')}</span><p><b>Their menu</b>Save, then the preview shows it. Publishing puts it live.</p><a class="button small seeit" href="#preview">See it</a><button class="primary small">Save</button></div></div></form>`;
+  return page(`Menu · ${site.kennel_name || site.subdomain}`, body, { admin: { nav: adminNav(site, 'menu'), site } });
+}
+
 // ---------- routes ----------
 
 export async function handleBuilder({ env, request, url, user, page }) {
@@ -649,7 +803,7 @@ export async function handleBuilder({ env, request, url, user, page }) {
   const wm = path.match(/^\/admin\/wording(?:\/([a-z]+))?$/);
   if (wm) return wordingRoute({ env, request, url, page, site: null, screen: wm[1] ?? null });
   const sv = path.match(/^\/admin\/([a-z0-9-]+)\/site(\/.*)?$/);
-  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z0-9_-]+|rules|dogs|wording|formats|kennelos|timing|instructions|instructions\/[a-z]+)$/);
+  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z0-9_-]+|menu|rules|dogs|wording|formats|kennelos|timing|instructions|instructions\/[a-z]+)$/);
   if (!m) return null;
   const site = await env.DB.prepare("SELECT id, subdomain, kennel_name, status, portal_on, demo_step FROM sites WHERE subdomain = ? AND status != 'closed'").bind(m[1]).first();
   if (!site) return null;
@@ -661,6 +815,7 @@ export async function handleBuilder({ env, request, url, user, page }) {
   const build = await loadBuild(env, site.id);
   if (screen === 'instructions' || screen.startsWith('instructions/')) return wordingRoute({ env, request, url, page, site, build, screen: screen.split('/')[1] ?? null });
   if (screen === 'pages' || screen.startsWith('pages/')) return pagesRoute({ env, request, url, site, build, page, screen });
+  if (screen === 'menu') return menuRoute({ env, request, url, site, build, page });
   let { rules, timing } = rulesFor(build);
   let error = null;
   if (request.method === 'POST') {

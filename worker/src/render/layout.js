@@ -44,13 +44,13 @@ const logoDialog = (snap) => (logoOf(snap) ? `<dialog class="logo-zoom" id="logo
 function header(snap, ctx) {
   const groups = menuGroups(snap, ctx);
   const items = groups.map((g) => {
-    if (g.key === 'waitlist') {
-      const main = g.links.find((l) => l.key === 'waitlist') ?? g.links[0];
-      return `<li><a class="btn solid" href="${attr(main.href)}">${esc(label(snap, main.key))}</a></li>`;
+    if (g.button) {
+      const main = g.links[0];
+      return `<li><a class="btn solid" href="${attr(main.href)}"${main.external ? ' rel="noopener noreferrer" target="_blank"' : ''}>${esc(main.text)}</a></li>`;
     }
     const current = g.links.some((l) => l.href.split('#')[0] === ctx.section);
     return `<li><button class="navtop" type="button" aria-expanded="false"${current ? ' aria-current="page"' : ''}>${esc(g.label)} <i class="chev"></i></button>
-      <ul class="drop">${g.links.map((l) => `<li><a href="${attr(l.href)}">${esc(l.text)}</a></li>`).join('')}</ul></li>`;
+      <ul class="drop">${g.links.map((l) => `<li><a href="${attr(l.href)}"${l.external ? ' rel="noopener noreferrer" target="_blank"' : ''}>${esc(l.text)}</a></li>`).join('')}</ul></li>`;
   }).join('');
   // Family login (plan 3.8): beside the Waitlist button (familyLogin says where).
   const fl = familyLogin(snap, ctx);
@@ -63,10 +63,21 @@ function header(snap, ctx) {
   </div></header>`;
 }
 
+// The footer: today's three columns, until the owner changes the menu; then a column
+// per group she shows in the footer, its pages and outside links (not its places on a
+// page), with How to pay and Family login in the last column, as today.
+function menuColumns(snap, ctx) {
+  const groups = menuGroups(snap, ctx).filter((g) => g.footer);
+  const extra = [...(payShown(snap, ctx) ? [{ href: '/waitlist#how-to-pay', text: 'How to pay' }] : []), ...(familyLogin(snap, ctx) ? [{ ...familyLogin(snap, ctx), text: word(snap, 'family_login') }] : [])];
+  const cols = groups.map((g) => [g.label, g.links.filter((l) => l.external || !l.href.includes('#'))]).filter(([, links]) => links.length);
+  if (extra.length) { if (cols.length) cols.at(-1)[1].push(...extra); else cols.push(['', extra]); }
+  return cols;
+}
+
 function footer(snap, ctx) {
   const groups = menuGroups(snap, ctx).filter((g) => g.key !== 'waitlist');
   const year = ctx.today.slice(0, 4);
-  const cols = [
+  const cols = snap.layout?.menu ? menuColumns(snap, ctx) : [
     ['About us', groups.find((g) => g.key === 'about')?.links ?? []],
     // Kennel residents' pages, not its places on a page (Girls, Boys).
     ['Dogs and puppies', [...(groups.find((g) => g.key === 'residents')?.links.filter((l) => !l.href.includes('#')) ?? []), ...(groups.find((g) => g.key === 'puppies')?.links ?? [])]],

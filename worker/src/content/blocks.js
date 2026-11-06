@@ -260,6 +260,7 @@ export function layoutFor(build) {
   const custom = customPages(build);
   if (custom.length) out.custom = custom;
   for (const c of custom) out[c.id] = pageBlocks(build, c.id);
+  if (menuChanged(build)) out.menu = menuOf(build);
   return out;
 }
 
@@ -367,7 +368,7 @@ export function customPages(build) {
     if (!c || !isCustom(c.id) || seen.has(c.id) || !PATH.test(c.path ?? '') || TAKEN.has(c.path.slice(1)) || paths.has(c.path)) return [];
     seen.add(c.id);
     paths.add(c.path);
-    const group = c.group !== 'waitlist' && MENU_GROUPS.some((g) => g.key === c.group) ? c.group : null;
+    const group = typeof c.group === 'string' && GROUP_ID.test(c.group) ? c.group : null;
     return [{ id: c.id, name: String(c.name ?? '').trim().slice(0, 40) || 'New page', path: c.path, group }];
   });
 }
@@ -387,7 +388,7 @@ function checkPage(build, id, { name, path, group }) {
   if (!PATH.test(at)) throw new BlockError('An address is one word or a few joined by hyphens, like /our-dams: letters, numbers and hyphens.');
   if (TAKEN.has(at.slice(1))) throw new BlockError(`${at} is taken by a page of the site's own. Choose another address.`);
   if (customPages(build).some((c) => c.path === at && c.id !== id)) throw new BlockError(`Another page already has ${at}.`);
-  const g = group && group !== 'waitlist' && MENU_GROUPS.some((x) => x.key === group) ? group : null;
+  const g = group && menuOf(build).some((x) => x.id === group && !x.button) ? group : null;
   return { name: clean, path: at, group: g };
 }
 
@@ -412,7 +413,7 @@ export function addPage(build, input) {
   }
   next.custom = [...customPages(next), { id, ...page }];
   next.pages = { ...(next.pages ?? {}), [id]: { blocks: blocks.map(cleanBlock) } };
-  return { build: next, id };
+  return { build: placePage(next, id, page.group), id };
 }
 
 // Her page's name, address or menu group changed.
@@ -420,12 +421,13 @@ export function withPageInfo(build, id, input) {
   const next = structuredClone(build ?? {});
   const page = checkPage(next, id, input);
   next.custom = customPages(next).map((c) => (c.id === id ? { id, ...page } : c));
-  return next;
+  return placePage(next, id, page.group);
 }
 
 // Her page gone, with its blocks.
 export function withoutPage(build, id) {
   const next = structuredClone(build ?? {});
+  if (menuChanged(next)) next.menu = menuOf(next).map((g) => ({ ...g, items: g.items.filter((it) => !(it.type === 'page' && it.page === id)) }));
   next.custom = customPages(next).filter((c) => c.id !== id);
   if (!next.custom.length) delete next.custom;
   if (next.pages) delete next.pages[id];
@@ -436,3 +438,127 @@ export function withoutPage(build, id) {
 // The blocks on a page whose switch and words are the breeder's in block_switches:
 // the data blocks the owner added (Home's own are home_blocks).
 export const addedBlocks = (key, blocks) => blocks.filter((b) => BLOCK_TYPES[b.type].kind === 'data' && !hersOn(key, b));
+
+// ---------- the menu (step 3.4) ----------
+//
+// The owner's menu: groups in order, each with its name, its items in order, and two
+// switches: show it as a button (today's Waitlist) and show it in the footer. An item
+// is a page, a place on a page (today's Girls, Boys, Available and Upcoming litters),
+// or an outside link. The breeder names her pages in the menu, and switches them off,
+// as before; she can't move anything.
+//
+// A site keeps a menu only once the owner changes it (build.menu); until then it is
+// today's menu (defaultMenu), built from where each page sits today, with the pages
+// she added in the groups she picked for them. The footer stays today's three
+// columns until the menu is changed; then it follows the menu, a column per group.
+
+export class MenuError extends Error {}
+
+// The places on a page an item can point to, each showing only while it has
+// something to show, as today.
+export const MENU_PLACES = Object.freeze({
+  'dogs#girls': { page: 'dogs', name: 'Girls', when: 'while there are breeding dogs of both sexes' },
+  'dogs#boys': { page: 'dogs', name: 'Boys', when: 'while there are breeding dogs of both sexes' },
+  'litters#available': { page: 'litters', name: 'Available', when: 'while a litter has puppies to choose from' },
+  'litters#upcoming': { page: 'litters', name: 'Upcoming litters', when: 'while a litter is planned, or its deposits haven\'t opened' },
+});
+// Pages that can't be in the menu: Privacy sits in the footer's fine print.
+const MENU_PAGES = Object.keys(PAGES).filter((k) => k !== 'privacy');
+export const MENU_LIMITS = Object.freeze({ groups: 8, items: 20, label: 30, text: 40 });
+const GROUP_ID = /^[a-z0-9][a-z0-9-]{0,39}$/;
+
+// Today's menu, with her pages (customPages) in the groups she put them in.
+export function defaultMenu(custom = []) {
+  return MENU_GROUPS.map((g) => {
+    const items = [];
+    for (const [key, p] of Object.entries(PAGES)) {
+      if (p.group !== g.key) continue;
+      if (key === 'litters') {
+        items.push({ type: 'place', place: 'litters#available' }, { type: 'place', place: 'litters#upcoming' }, { type: 'page', page: 'litters', fallback: true });
+        continue;
+      }
+      items.push({ type: 'page', page: key });
+      if (key === 'dogs') items.push({ type: 'place', place: 'dogs#girls' }, { type: 'place', place: 'dogs#boys' });
+    }
+    for (const c of custom) if (c.group === g.key) items.push({ type: 'page', page: c.id });
+    return { id: g.key, label: g.label, button: g.key === 'waitlist', footer: true, items };
+  });
+}
+
+const cleanText = (v, max) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+
+// One item as the build keeps it, or null (a page that's gone, a place that isn't one).
+function cleanItem(it, pages) {
+  if (!it || typeof it !== 'object') return null;
+  if (it.type === 'page') {
+    if (!pages.has(it.page)) return null;
+    return { type: 'page', page: it.page, ...(it.fallback ? { fallback: true } : {}) };
+  }
+  if (it.type === 'place') {
+    if (!Object.hasOwn(MENU_PLACES, it.place)) return null;
+    const text = cleanText(it.text, MENU_LIMITS.text);
+    return { type: 'place', place: it.place, ...(text ? { text } : {}) };
+  }
+  if (it.type === 'link') return { type: 'link', text: cleanText(it.text, MENU_LIMITS.text), url: String(it.url ?? '').trim().slice(0, 500) };
+  return null;
+}
+
+// The owner's menu as the build keeps it: what's usable, quietly (a page she removed
+// drops out). Null when the build has none.
+export function cleanMenu(menu, custom = []) {
+  if (!Array.isArray(menu)) return null;
+  const pages = new Set([...MENU_PAGES, ...custom.map((c) => c.id)]);
+  const seen = new Set();
+  return menu.slice(0, MENU_LIMITS.groups).flatMap((g) => {
+    if (!g || !GROUP_ID.test(String(g.id ?? '')) || seen.has(g.id)) return [];
+    seen.add(g.id);
+    const items = (Array.isArray(g.items) ? g.items : []).map((it) => cleanItem(it, pages)).filter(Boolean).slice(0, MENU_LIMITS.items);
+    return [{ id: g.id, label: cleanText(g.label, MENU_LIMITS.label), button: Boolean(g.button), footer: g.footer !== false, items }];
+  });
+}
+
+// The menu a build has: the owner's, or today's.
+export const menuOf = (build) => cleanMenu(build?.menu, customPages(build)) ?? defaultMenu(customPages(build));
+export const menuChanged = (build) => Array.isArray(build?.menu);
+
+// What would stop it working (decision 16): a group with no name, an outside link
+// that goes nowhere. An unusual menu is allowed.
+function checkMenu(menu) {
+  for (const g of menu) {
+    if (!g.label) throw new MenuError('Give every group a name.');
+    for (const it of g.items) {
+      if (it.type !== 'link') continue;
+      if (!it.text) throw new MenuError(`An outside link in ${g.label} needs its words.`);
+      let u = null;
+      try { u = new URL(it.url); } catch { /* below */ }
+      if (!u || (u.protocol !== 'https:' && u.protocol !== 'http:')) throw new MenuError(`The outside link "${it.text}" needs a web address starting https://`);
+      it.url = u.toString();
+    }
+  }
+}
+
+// The build with the owner's menu: kept only while it differs from today's.
+export function withMenu(build, menu) {
+  const next = structuredClone(build ?? {});
+  const custom = customPages(next);
+  const m = cleanMenu(menu, custom) ?? [];
+  checkMenu(m);
+  if (JSON.stringify(m) === JSON.stringify(defaultMenu(custom))) delete next.menu;
+  else next.menu = m;
+  return next;
+}
+
+// Which group a page is in (the first that lists it), or null.
+export const groupOf = (menu, key) => menu.find((g) => g.items.some((it) => it.type === 'page' && it.page === key))?.id ?? null;
+
+// A page of hers put in a group of the owner's menu (or none), at the end; where it
+// already is, it stays where it is.
+function placePage(build, id, group) {
+  if (!menuChanged(build)) return build;
+  const menu = menuOf(build);
+  if (groupOf(menu, id) === (group || null)) return build;
+  const out = menu.map((g) => ({ ...g, items: g.items.filter((it) => !(it.type === 'page' && it.page === id)) }));
+  const g = out.find((x) => x.id === group);
+  if (g) g.items.push({ type: 'page', page: id });
+  return { ...build, menu: out };
+}

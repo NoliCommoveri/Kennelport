@@ -568,7 +568,9 @@ Each step is its own branch and can be released on its own.
       the breeder switches it on or off, names it and words it, and switches off and
       rewords each block the owner added, on any page; `block_switches`; content.json
       carries both);
-   4. the menu editor;
+   4. the menu editor (built: Menu in the admin view; groups, their names, order, button
+      and footer switches; pages, places on a page and outside links; the footer follows
+      a changed menu);
    5. page addresses and their redirects;
    6. FAQ and badge spots as block settings, on new pages too;
    7. what each profile page shows;
