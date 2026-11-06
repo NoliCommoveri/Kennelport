@@ -40,6 +40,7 @@ import {
   LITTER_ROWS, REVIEW_ITEMS, REVIEW_WHO, BlockError, blocksFromForm, moved, newBlock,
   pageBlocks, pageChanged, pagesChanged, withPage, addable, fits, hersOn, blockName, blockHint, isBuilt, BUILT_PAGES, PAGE_PARTS, headFor, isCustom, customPages, addPage, withPageInfo, withoutPage, pathFor, STARTS,
   menuOf, menuChanged, withMenu, groupOf, MenuError, MENU_PLACES, MENU_LIMITS,
+  LINK_TO, BUTTON_SIZE, BUTTON_LOOK, ALIGN, DIVIDER_STYLE, DIVIDER_WIDTH, SPACER_HEIGHT, PHOTO_SHAPE, PHOTO_FOCUS, OVER_V, OVER_SHADE, BG_COLOURS, PAD, TEXT_SIZE,
 } from '../content/blocks.js';
 import { PAGES } from '../content/model.js';
 import { siteLink } from '../ops/sites.js';
@@ -368,6 +369,7 @@ function landingPreview(rules) {
 // ---------- Pages: the list, and each page's blocks (step 2) ----------
 
 const isData = (b) => BLOCK_TYPES[b.type].kind === 'data';
+const isOwn = (b) => BLOCK_TYPES[b.type].kind === 'own';
 const ownWords = (key, b) => isData(b) && !hersOn(key, b);
 const mvBtns = (act, i, n) => `<div class="mv"><button name="act" value="${esc(act)}:up" aria-label="Move up"${i === 0 ? ' disabled' : ''}>${svg('up1')}</button><button name="act" value="${esc(act)}:down" aria-label="Move down"${i === n - 1 ? ' disabled' : ''}>${svg('down1')}</button></div>`;
 const chips = (name, cur, opts) => `<div class="chips">${Object.entries(opts).map(([v, l]) => `<label><input type="checkbox" name="${name}" value="${esc(v)}"${cur.includes(v) ? ' checked' : ''}>${esc(l)}</label>`).join('')}</div>`;
@@ -405,6 +407,7 @@ function blockSummary(snap, key, b) {
   if (b.type === 'litters') return `${b.f.stage.map((x) => STAGES[x]).join(', ')}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b).length} now`;
   if (b.type === 'reviews') return `${REVIEW_STYLE[b.style]}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b).length} now`;
   if (b.type === 'builtin') return blockHint(key, b) ?? '';
+  if (isOwn(b)) return ownSummary(snap, b);
   const faqs = placedFaqs(snap, key).map((e) => e.heading).join(' · ');
   const badges = badgesOn(snap, key).map((x) => x.name).join(' · ');
   if (b.type === 'faq') return faqs || 'No questions placed here yet';
@@ -445,11 +448,15 @@ function hersLine(snap, key, b) {
   return `Its words and photos are hers: she sets them in ${hersAt(snap, key)}.`;
 }
 
-function blockSettings(snap, key, b) {
+function blockSettings(snap, key, b, pics) {
   const k = (f) => `b.${b.id}.${f}`;
+  if (isOwn(b)) {
+    return `<div class="set"><input type="hidden" name="${k('present')}" value="1">${ownSettings(snap, key, b, pics)}${lookSettings(b)}
+      <div class="row"><button class="link small danger" name="act" value="remove:${esc(b.id)}">${svg('trash')} Remove this block</button></div></div>`;
+  }
   if (!isData(b)) {
-    return `<div class="set"><p class="small">${esc(blockHint(key, b) ?? '')}</p>
-      <p class="small muted">${esc(hersLine(snap, key, b))}</p>
+    return `<div class="set"><input type="hidden" name="${k('present')}" value="1"><p class="small">${esc(blockHint(key, b) ?? '')}</p>
+      <p class="small muted">${esc(hersLine(snap, key, b))}</p>${lookSettings(b)}
       <div class="row"><button class="link small danger" name="act" value="remove:${esc(b.id)}">${svg('trash')} Remove this block</button></div></div>`;
   }
   let data = '';
@@ -475,18 +482,82 @@ function blockSettings(snap, key, b) {
     <div class="fgroup"><h2>Which ${WHAT[b.type]}s <span class="kos-tag">${svg('link')}${b.type === 'reviews' ? 'Her records' : 'KennelOS'}</span></h2>${data}
       <div class="fgrid">${select(k('limit'), b.limit ?? 'all', LIMITS, 'How many')}</div>${resultLine(blockRecords(snap, b), WHAT[b.type])}</div>
     <div class="fgroup"><h2>What its cards show</h2>${show}</div>
-    ${words}
+    ${words}${lookSettings(b)}
     <div class="row"><button class="link small danger" name="act" value="remove:${esc(b.id)}">${svg('trash')} Remove this block</button></div></div>`;
 }
 
-function blockRow(snap, key, b, i, n, open) {
+// Every block's look (decision 17): a scheme colour, space around it, and on her own
+// blocks a text size. Text on a colour takes the scheme's matching ink by itself.
+function lookSettings(b) {
+  const k = (f) => `b.${b.id}.s.${f}`;
+  const st = b.s ?? {};
+  return `<div class="fgroup"><h2>Its look</h2><input type="hidden" name="${k('present')}" value="1"><div class="fgrid">
+    ${select(k('bg'), st.bg ?? '', BG_COLOURS, 'Background')}${isOwn(b) ? select(k('text'), st.text ?? 'm', TEXT_SIZE, 'Text size') : ''}
+    ${select(k('py'), st.py ?? '', PAD, 'Space above and below')}${select(k('px'), st.px ?? '', PAD, 'Space at the sides')}</div>
+    <p class="small muted">Colours are this site's scheme, so they follow its light and dark looks. Words on a colour take the scheme's matching ink.</p></div>`;
+}
+
+// The pages a button can go to: Home, every page (Privacy aside), and hers.
+function pageChoices(snap, build) {
+  return { home: 'Home', ...Object.fromEntries(Object.keys(PAGES).filter((x) => x !== 'privacy').map((x) => [x, pageLabel(snap, x)])), ...Object.fromEntries(customPages(build ?? {}).map((c) => [c.id, c.name])) };
+}
+
+function linkSettings(snap, b, pics, optional) {
+  const k = (f) => `b.${b.id}.${f}`;
+  const l = b.link ?? { to: '' };
+  const to = optional ? { '': 'No button', ...LINK_TO } : LINK_TO;
+  return `<div class="fgrid">${select(k('link.to'), l.to ?? '', to, 'The button goes to')}${select(k('link.page'), l.page ?? 'waitlist', pageChoices(snap, pics.build), 'The page (for a page)')}
+    ${field(k('link.value'), l.value ?? '', { label: 'Address, number or email', cls: '', hint: 'An outside site needs its address. For a call, a text or an email, leave it empty to use the phone and email in Kennel details, and follow them when they change.' })}</div>
+    <p class="small muted">The breeder can reword the button, switch it off, and change an outside link, phone number or email address. A link to a page is yours. A button whose page is off hides by itself.</p>`;
+}
+
+// A photo picker from her photos (the manage app's own picker's look).
+function photoChoice(b, pics) {
+  const n = `b.${b.id}.photo`;
+  const opt = (p) => `<label class="ph-opt"><input type="radio" name="${n}" value="${esc(p.id)}"${b.photo === p.id ? ' checked' : ''}><img src="${esc(pics.url(p.id))}" alt="${esc(p.alt || 'Photo')}" loading="lazy"></label>`;
+  return `<fieldset class="photos"><legend>Photo<span class="hint">From the breeder's photos. She adds photos in her Site Manager, under Photos.</span></legend>
+    <div class="ph-grid"><label class="ph-opt none"><input type="radio" name="${n}" value=""${b.photo ? '' : ' checked'}><span>No photo</span></label>${pics.list.map(opt).join('')}</div></fieldset>`;
+}
+
+function ownSettings(snap, key, b, pics) {
+  const k = (f) => `b.${b.id}.${f}`;
+  const w = (f, label, cls = 'half', hint = '') => field(k(`w.${f}`), b.w?.[f] ?? '', { label, cls, hint });
+  const her = `The breeder can switch it off${b.type === 'divider' ? '' : ' and reword it'} in ${hersAt(snap, key)}.`;
+  if (b.type === 'banner') return `<div class="fgroup"><h2>Starting wording</h2><p class="small muted">${esc(her)}</p><div class="fgrid">${w('heading', 'Heading')}${w('label', 'Button words')}${w('line', 'A line', '')}</div></div>
+    <div class="fgroup"><h2>The button</h2>${linkSettings(snap, b, pics, true)}</div>`;
+  if (b.type === 'button') return `<div class="fgroup"><h2>The button</h2><p class="small muted">${esc(her)}</p><div class="fgrid">${w('label', 'Its words')}</div>
+    ${fld('Size', seg(k('size'), b.size, BUTTON_SIZE))}${fld('Look', seg(k('look'), b.look, BUTTON_LOOK))}${fld('Where it sits', seg(k('align'), b.align, ALIGN))}${linkSettings(snap, b, pics, false)}</div>`;
+  if (b.type === 'divider') return `<div class="fgroup"><h2>The divider</h2><p class="small muted">${esc(her)}</p>${fld('Style', seg(k('style'), b.style, DIVIDER_STYLE))}${fld('Width', seg(k('width'), b.width, DIVIDER_WIDTH))}</div>`;
+  if (b.type === 'spacer') return `<div class="fgroup"><h2>The space</h2>${fld('Height', seg(k('height'), b.height, SPACER_HEIGHT))}</div>`;
+  const change = `<div class="switches boxed">${toggle(k('mayChange'), b.mayChange, b.type === 'photo' ? 'The breeder can change the photo and its caption' : 'The breeder can change the photo')}</div>`;
+  if (b.type === 'photo') return `<div class="fgroup"><h2>The photo</h2><p class="small muted">${esc(her.replace(' and reword it', ''))}</p>${photoChoice(b, pics)}
+    ${fld('Shape', seg(k('shape'), b.shape, PHOTO_SHAPE))}${fld('Which part to keep', seg(k('focus'), b.focus, PHOTO_FOCUS))}<div class="fgrid">${w('caption', 'Caption', '', 'Optional.')}</div>${change}</div>`;
+  if (b.type === 'overlay') return `<div class="fgroup"><h2>The photo</h2>${photoChoice(b, pics)}${fld('Which part to keep', seg(k('focus'), b.focus, PHOTO_FOCUS))}${change}</div>
+    <div class="fgroup"><h2>The words over it</h2><p class="small muted">${esc(her)}</p><div class="fgrid">${w('heading', 'Heading')}${w('label', 'Button words')}${w('line', 'A line', '')}</div>
+      ${fld('Up and down', seg(k('v'), b.v, OVER_V))}${fld('Across', seg(k('h'), b.h, ALIGN))}${fld('Shade behind the words', seg(k('shade'), b.shade, OVER_SHADE), 'Even the lightest keeps white words readable.')}</div>
+    <div class="fgroup"><h2>The button</h2>${linkSettings(snap, b, pics, true)}</div>`;
+  return '';
+}
+
+// One line under her own block's name.
+function ownSummary(snap, b) {
+  const to = (l) => (!l ? 'no button' : l.to === 'page' ? `to ${l.page === 'home' ? 'Home' : pageLabel(snap, l.page)}` : l.to === 'url' ? `to ${l.value || '(no address yet)'}` : `${LINK_TO[l.to].toLowerCase()}${l.value ? ` to ${l.value}` : ', from Kennel details'}`);
+  if (b.type === 'banner') return [b.w.heading, b.w.label && `“${b.w.label}” ${to(b.link)}`].filter(Boolean).join(' · ') || 'No words yet';
+  if (b.type === 'button') return `“${b.w.label || '(no words)'}” ${to(b.link)} · ${BUTTON_SIZE[b.size].toLowerCase()}`;
+  if (b.type === 'divider') return `${DIVIDER_STYLE[b.style]} · ${DIVIDER_WIDTH[b.width].toLowerCase()}`;
+  if (b.type === 'spacer') return SPACER_HEIGHT[b.height];
+  if (!b.photo) return 'No photo chosen yet, so it hides';
+  return b.type === 'photo' ? `${PHOTO_SHAPE[b.shape]}${b.w.caption ? ` · ${b.w.caption}` : ''}` : [b.w.heading, `words ${OVER_V[b.v].toLowerCase()} ${ALIGN[b.h].toLowerCase()}`].filter(Boolean).join(' · ');
+}
+
+function blockRow(snap, key, b, i, n, open, pics) {
   const T = BLOCK_TYPES[b.type];
   const off = hersOn(key, b) ? !snap.home[b.id]?.enabled : !addedOn(snap, key, b);
   const isOpen = open === b.id;
   return `<li class="mvr${isData(b) ? ' data' : ''}${b.type === 'builtin' ? ' fixed' : ''}${off ? ' off' : ''}" id="b-${esc(b.id)}">${mvBtns(`mv:${b.id}`, i, n)}<span class="ico">${svg(T.ic)}</span>
     <span class="ttl">${esc(blockName(key, b))}${isData(b) ? ` <span class="kos-tag">${b.type === 'reviews' ? 'Records' : 'KennelOS'}</span>` : ''}${b.type === 'builtin' ? ' <span class="kos-tag">Built-in</span>' : ''}${off ? ' <span class="chg">off by the breeder</span>' : ''}<small>${esc(blockSummary(snap, key, b))}</small></span>
     <span class="end"><button class="button small" name="act" value="${isOpen ? 'close' : `open:${esc(b.id)}`}" aria-expanded="${isOpen}">${isOpen ? 'Done' : 'Settings'}</button></span>
-    ${isOpen ? blockSettings(snap, key, b) : ''}</li>`;
+    ${isOpen ? blockSettings(snap, key, b, pics) : ''}</li>`;
 }
 
 // The phone beside it: the page's blocks as the prototype sketches them, with her words.
@@ -516,6 +587,11 @@ function pagePreview(snap, key, blocks, site) {
     else if (b.type === 'band') out.push(`<div class="pvb deep"><h3>${esc(h.waitlist.heading || 'Hoping for a puppy of your own?')}</h3><span class="pv-pill">${esc(h.waitlist.button_label || 'Join the waitlist')}</span></div>`);
     else if (b.type === 'dogs') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Our dogs', 'Meet our dogs')}<div class="pvg${b.style === 'flip' ? '' : ' slide'}">${names.map((nm) => `<div class="pvc${b.style === 'light' ? ' light' : ' flip'}"><span class="ph"></span><div class="t"><b>${esc(nm)}</b></div></div>`).join('')}</div></div>`);
     else if (b.type === 'litters') out.push(`<div class="pvb sand">${headOf(wordsOf(b), 'Litters', 'Current and upcoming')}${names.map((nm) => `<div class="pv-row"><b>${esc(nm)}</b></div>`).join('')}</div>`);
+    else if (b.type === 'banner') out.push(`<div class="pvb deep">${b.w.heading ? `<h3>${esc(addedWords(snap, key, b).heading)}</h3>` : ''}${b.w.label && b.link ? `<span class="pv-pill">${esc(addedWords(snap, key, b).label)}</span>` : ''}</div>`);
+    else if (b.type === 'button') out.push(`<div class="pvb"><div class="pv-row"><span class="pv-pill">${esc(addedWords(snap, key, b).label || 'Button')}</span></div></div>`);
+    else if (b.type === 'divider') out.push(`<div class="pvb"><div class="pv-row small muted">${esc(DIVIDER_STYLE[b.style])}</div></div>`);
+    else if (b.type === 'spacer') out.push(`<div class="pvb ghost">Space: ${esc(SPACER_HEIGHT[b.height].toLowerCase())}</div>`);
+    else if (b.type === 'photo' || b.type === 'overlay') out.push(b.photo ? `<div class="pv-hero"><span class="ph"></span>${b.type === 'overlay' && b.w.heading ? `<div><h3>${esc(addedWords(snap, key, b).heading)}</h3></div>` : ''}</div>` : ghost(b, 'no photo chosen yet, so it hides'));
     else if (b.type === 'reviews') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Families', 'What our families say')}${snap.reviews.slice(0, 1).map((r) => `<div class="pv-row" style="display:block"><span class="stars">★★★★★</span><br>“${esc(r.quote.slice(0, 90))}${r.quote.length > 90 ? '…' : ''}”</div>`).join('')}</div>`);
   }
   return phone(site, snap, pagePath(snap, key), `Their ${key === 'home' ? 'Home' : pageLabel(snap, key)} page, as you build it`, out);
@@ -585,9 +661,13 @@ async function pageScreen(env, site, build, key, { open = null, error = null } =
   useFormats(snap);
   const blocks = pageBlocks(build, key);
   const adds = addable(key, blocks);
+  // Her photos, for a photo block's picker (served through the admin view of her site).
+  const pics = { build, list: open && blocks.some((b) => b.id === open && (b.type === 'photo' || b.type === 'overlay'))
+    ? (await env.DB.prepare('SELECT id, alt FROM photos WHERE site_id = ? AND removed_at IS NULL ORDER BY created_at DESC').bind(site.id).all()).results : [],
+  url: (id) => `/admin/${site.subdomain}/site/_kp/p/${encodeURIComponent(id)}?s=t` };
   const changed = pageChanged(build, key);
   const group = (data, title) => {
-    const rows = adds.filter((x) => (BLOCK_TYPES[x.type].kind === 'data') === data);
+    const rows = adds.filter((x) => (data === 'own' ? BLOCK_TYPES[x.type].kind === 'own' : BLOCK_TYPES[x.type].kind !== 'own' && (BLOCK_TYPES[x.type].kind === 'data') === data));
     return rows.length ? `<div class="fgroup"><h2>${title}</h2><ul class="list">${rows.map((x) => {
       const b = { type: x.type, id: x.id };
       const T = BLOCK_TYPES[x.type];
@@ -597,9 +677,9 @@ async function pageScreen(env, site, build, key, { open = null, error = null } =
   return `<div class="stack">${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
     ${pageCard(snap, key, build)}
     <section class="card"><div class="between"><h2>Blocks, top to bottom</h2>${adds.length ? `<button class="button small primary" name="act" value="${open === 'add' ? 'close' : 'adding'}" aria-expanded="${open === 'add'}">${svg('plus')} Add a block</button>` : ''}</div>
-      ${open === 'add' ? `<div class="addblock"><p class="small muted">It goes at the bottom; move it up from there.</p>${group(true, 'From KennelOS and her records')}${group(false, key === 'home' ? 'Her words and photos' : 'This page\'s own')}</div>` : ''}
+      ${open === 'add' ? `<div class="addblock"><p class="small muted">It goes at the bottom; move it up from there.</p>${group(true, 'From KennelOS and her records')}${group('own', 'Your own blocks')}${group(false, key === 'home' ? 'Her words and photos' : 'This page\'s own')}</div>` : ''}
       <p class="small muted">You place and order them. The breeder can switch each one off and reword it, never move it.${changed || isCustom(key) ? '' : ` This is today's ${key === 'home' ? 'Home' : 'page'}.`}</p>
-      <ul class="mvl">${blocks.map((b, i) => blockRow(snap, key, b, i, blocks.length, open)).join('')}</ul>
+      <ul class="mvl">${blocks.map((b, i) => blockRow(snap, key, b, i, blocks.length, open, pics)).join('')}</ul>
       ${changed ? `<div class="row"><button class="link small" name="act" value="default">Back to today's ${key === 'home' ? 'Home' : 'page'}</button></div>` : ''}
     </section></div>
     <div class="pvwrap" id="preview">${pagePreview(snap, key, blocks, site)}${await previewLink(env, site)}</div>`;

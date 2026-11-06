@@ -1680,3 +1680,40 @@ with new sections and a new building order. Docs only; nothing built yet.
 - The owner's screen: its wording stays in the code (her own screens are left out of
   the breeder's list).
 - Tests: `menu.test.js` (new).
+
+## 2026-11-06: site builder step 4: the owner's own blocks, and every block's look
+
+- Six new blocks the owner adds to any page, as many as she likes (`content/blocks.js`
+  BLOCK_TYPES kind `own`; drawn by `render/pages.js` ownBlock): **Banner** (heading, a
+  line, a button; Accent background to start), **Button** (small, medium or large;
+  filled or outline; left, centre or right), **Divider** (thin line, brass rule, the
+  scheme's ornament; narrow, wide or full), **Spacer** (four heights), **Photo** (wide,
+  tall, square or full width; which part to keep; a caption) and **Text over a photo**
+  (heading, line and button; top, middle or bottom; left, centre or right; light,
+  medium or dark shade).
+- A button goes to a page (Home, any page, hers), an outside site (new tab), a call, a
+  text or an email. A call, text or email uses Kennel details' phone or email, and
+  follows it, unless a number or address is typed in. A button whose page is off, or
+  with no number or address to use, hides itself (decision 16); a phone or email has to
+  look like one; an outside link needs an https address.
+- The breeder (block_switches, no migration: its content is JSON): switches each off
+  (not a spacer), rewords it, changes an outside link, phone or email, and the photo and
+  caption where the owner ticks "The breeder can change the photo". A link to a page is
+  the owner's: her card says where it goes, and when it's hidden (decision 18). Her
+  lines are in the wording list (`pages.own.*`, 17 lines; an error kind for a phone
+  number). Her button's words post as `button_label`: the app fills any field named
+  `label` with the device's name.
+- **Every block's look** (the owner's, in each block's settings, Its look): a
+  background from the scheme (Surface, Band, Accent, Footer colour, stored by name),
+  space above and below, space at the sides, and on her own blocks a text size. On
+  Accent or the footer colour the block's own colours swap to the scheme's matching
+  ink (`site.css` `.kb`), so text stays readable (decision 16). A block with none set
+  is drawn exactly as before: 413 pages compared, identical.
+- The published snapshot carries the photos her blocks use. Checked at 390px and
+  1280px (the site, the owner's settings, the breeder's cards). No prototype screen for
+  these blocks: built from the template's band, buttons, ornament and photo boxes, and
+  the manage app's cards, pills and photo picker.
+- `site.css` changed: `ASSET_VERSION` bump asked, not done.
+- Still to come in step 4: collages and videos as her blocks, links to a dog, litter or
+  puppy, fonts and the font library, text size on the built-in blocks.
+- Tests: `ownblocks.test.js` (new); `blocks.test.js` (Add a block lists them).

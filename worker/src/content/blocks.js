@@ -33,7 +33,47 @@ export const BLOCK_TYPES = Object.freeze({
   reviews: { name: 'Reviews', ic: 'star', kind: 'data' },
   embeds: { name: 'Videos and posts', ic: 'camera', kind: 'content', once: true, hint: 'The videos and posts she puts on Home.' },
   band: { name: 'Call-to-action band', ic: 'heart', kind: 'content', once: true, hint: 'Her waitlist band. Shows only while the waitlist page is on.' },
+  // The owner's own blocks (decision 17): on any page, as many as she likes.
+  banner: { name: 'Banner', ic: 'layers', kind: 'own', hint: 'A full-width strip: a heading, a line and a button, in a scheme colour.' },
+  button: { name: 'Button', ic: 'link', kind: 'own', hint: 'One button, to a page, an outside site, a phone number or an email address.' },
+  divider: { name: 'Divider', ic: 'list', kind: 'own', hint: 'A line, a brass rule or the scheme\'s ornament between blocks.' },
+  spacer: { name: 'Spacer', ic: 'sliders', kind: 'own', hint: 'Empty space between blocks.' },
+  photo: { name: 'Photo', ic: 'camera', kind: 'own', hint: 'One photo, with an optional caption.' },
+  overlay: { name: 'Text over a photo', ic: 'camera', kind: 'own', hint: 'A photo with a heading, a line and a button over it.' },
 });
+
+// ---------- the owner's own blocks and every block's look (step 4) ----------
+
+// Where a button goes. A page on the site, an outside site, or the kennel's phone
+// (a call or a text) or email: those follow Kennel details unless a number or
+// address is typed in for the button. The breeder can change an outside link, a
+// phone number or an email address; a page link is the owner's (decision 18).
+export const LINK_TO = Object.freeze({ page: 'A page', url: 'An outside site', tel: 'A phone call', sms: 'A text message', email: 'An email' });
+export const BUTTON_SIZE = Object.freeze({ s: 'Small', m: 'Medium', l: 'Large' });
+export const BUTTON_LOOK = Object.freeze({ solid: 'Filled', line: 'Outline' });
+export const ALIGN = Object.freeze({ left: 'Left', center: 'Centre', right: 'Right' });
+export const DIVIDER_STYLE = Object.freeze({ line: 'Thin line', brass: 'Brass rule', ornament: "The scheme's ornament" });
+export const DIVIDER_WIDTH = Object.freeze({ narrow: 'Narrow', wide: 'Wide', full: 'Full width' });
+export const SPACER_HEIGHT = Object.freeze({ xs: 'Very small', s: 'Small', m: 'Medium', l: 'Large' });
+export const PHOTO_SHAPE = Object.freeze({ wide: 'Wide', tall: 'Tall', square: 'Square', full: 'Full width' });
+export const PHOTO_FOCUS = Object.freeze({ top: 'The top', middle: 'The middle', bottom: 'The bottom' });
+export const OVER_V = Object.freeze({ top: 'Top', middle: 'Middle', bottom: 'Bottom' });
+export const OVER_SHADE = Object.freeze({ light: 'Light', medium: 'Medium', dark: 'Dark' });
+// Every block's look. Colours are the scheme's, by name, so they follow light and
+// dark and the scheme; text on them takes the scheme's matching ink.
+export const BG_COLOURS = Object.freeze({ '': 'None', surface: 'Surface', band: 'Band', accent: 'Accent', foot: 'Footer colour' });
+export const PAD = Object.freeze({ '': 'None added', s: 'Small', m: 'Medium', l: 'Large' });
+export const TEXT_SIZE = Object.freeze({ xs: 'Very small', s: 'Small', m: 'Medium', l: 'Large' });
+export const OWN_WORDS = Object.freeze({
+  banner: { heading: 'Hoping for a puppy of your own?', line: '', label: 'Join the waitlist' },
+  button: { label: 'Join the waitlist' },
+  overlay: { heading: '', line: '', label: '' },
+  photo: { caption: '' },
+});
+const PHONE = /^[+()\d][\d\s().-]{5,24}$/;
+const EMAIL = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+export const looksLikePhone = (v) => PHONE.test(String(v ?? '').trim());
+export const looksLikeEmail = (v) => EMAIL.test(String(v ?? '').trim());
 
 // Blocks that draw her Home content (home_blocks): on Home only.
 export const HOME_ONLY = Object.freeze(['hero', 'facts', 'text', 'band']);
@@ -67,6 +107,7 @@ export const SHOW_DEFAULT = Object.freeze({
   reviews: { items: ['stars', 'quote', 'who'], who: ['photo', 'name', 'family'] },
 });
 
+const linkDefault = () => ({ to: 'page', page: 'waitlist' });
 const dogsF = (o = {}) => ({ sex: 'any', status: ['active'], upcoming: 'no', sale: 'no', away: 'no', ...o });
 
 // A new block of a type, as Add a block makes it.
@@ -75,6 +116,12 @@ export function newBlock(type, id) {
   if (type === 'dogs') Object.assign(b, { f: dogsF(), order: 'own', style: 'slider', limit: null, show: structuredClone(SHOW_DEFAULT.dogs), w: { eyebrow: 'Our dogs', heading: 'Meet our dogs' } });
   if (type === 'litters') Object.assign(b, { f: { stage: ['current', 'planned'] }, limit: null, show: structuredClone(SHOW_DEFAULT.litters), w: { eyebrow: 'Litters', heading: 'Current and upcoming' } });
   if (type === 'reviews') Object.assign(b, { style: 'slider', limit: null, show: structuredClone(SHOW_DEFAULT.reviews), w: { eyebrow: 'Families', heading: 'What our families say' } });
+  if (type === 'banner') Object.assign(b, { w: { ...OWN_WORDS.banner }, link: linkDefault(), s: { bg: 'accent' } });
+  if (type === 'button') Object.assign(b, { w: { ...OWN_WORDS.button }, link: linkDefault(), size: 'm', look: 'solid', align: 'center' });
+  if (type === 'divider') Object.assign(b, { style: 'line', width: 'wide' });
+  if (type === 'spacer') Object.assign(b, { height: 'm' });
+  if (type === 'photo') Object.assign(b, { photo: null, shape: 'wide', focus: 'middle', w: { caption: '' }, mayChange: true });
+  if (type === 'overlay') Object.assign(b, { photo: null, focus: 'middle', w: { heading: 'Raised with love', line: '', label: '' }, link: null, v: 'bottom', h: 'left', shade: 'medium', mayChange: true });
   return b;
 }
 
@@ -191,7 +238,28 @@ export const hersOn = (key, b) => key === 'home' && BREEDER_SWITCH.includes(b.id
 const pick = (v, opts, dflt) => (Object.hasOwn(opts, v) ? v : dflt);
 const list = (v, opts) => (Array.isArray(v) ? [...new Set(v.filter((x) => Object.hasOwn(opts, x)))] : null);
 const limitOf = (v) => (v == null || v === '' ? null : Number.isInteger(Number(v)) && Number(v) >= 1 && Number(v) <= LIMIT_MAX ? Number(v) : null);
-const words = (w) => Object.fromEntries(Object.entries(w && typeof w === 'object' ? w : {}).filter(([k, v]) => ['eyebrow', 'heading', 'lede'].includes(k) && typeof v === 'string').map(([k, v]) => [k, v.slice(0, 200)]));
+const words = (w, keys = ['eyebrow', 'heading', 'lede']) => Object.fromEntries(Object.entries(w && typeof w === 'object' ? w : {}).filter(([k, v]) => keys.includes(k) && typeof v === 'string').map(([k, v]) => [k, v.trim().slice(0, k === 'label' ? 40 : 200)]));
+const PHOTO_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
+// A button's link, as the build keeps it, or null (no button).
+export function cleanLink(l) {
+  if (!l || typeof l !== 'object' || !Object.hasOwn(LINK_TO, l.to)) return null;
+  if (l.to === 'page') return /^[a-z][a-z0-9_-]{0,44}$/.test(String(l.page ?? '')) ? { to: 'page', page: l.page } : null;
+  const value = String(l.value ?? '').trim().slice(0, 300);
+  if (l.to === 'url') return { to: 'url', value };
+  return value ? { to: l.to, value } : { to: l.to };
+}
+
+// Every block's look: only what's set, so a block nobody styled reads as before.
+function cleanStyle(st) {
+  if (!st || typeof st !== 'object') return null;
+  const out = {};
+  if (Object.hasOwn(BG_COLOURS, st.bg) && st.bg) out.bg = st.bg;
+  if (Object.hasOwn(PAD, st.py) && st.py) out.py = st.py;
+  if (Object.hasOwn(PAD, st.px) && st.px) out.px = st.px;
+  if (Object.hasOwn(TEXT_SIZE, st.text) && st.text !== 'm') out.text = st.text;
+  return Object.keys(out).length ? out : null;
+}
 
 // One block, every field present and in range: what the renderer and the editor use.
 export function cleanBlock(b) {
@@ -220,13 +288,38 @@ export function cleanBlock(b) {
     out.show = { items: list(b.show?.items, REVIEW_ITEMS) ?? [...D.items], who: list(b.show?.who, REVIEW_WHO) ?? [...D.who] };
   }
   if (BLOCK_TYPES[b.type].kind === 'data') out.w = words(b.w);
+  if (b.type === 'banner') { out.w = words(b.w, ['heading', 'line', 'label']); out.link = cleanLink(b.link); }
+  if (b.type === 'button') {
+    out.w = words(b.w, ['label']);
+    out.link = cleanLink(b.link);
+    out.size = pick(b.size, BUTTON_SIZE, 'm');
+    out.look = pick(b.look, BUTTON_LOOK, 'solid');
+    out.align = pick(b.align, ALIGN, 'center');
+  }
+  if (b.type === 'divider') { out.style = pick(b.style, DIVIDER_STYLE, 'line'); out.width = pick(b.width, DIVIDER_WIDTH, 'wide'); }
+  if (b.type === 'spacer') out.height = pick(b.height, SPACER_HEIGHT, 'm');
+  if (b.type === 'photo' || b.type === 'overlay') {
+    out.photo = PHOTO_ID.test(String(b.photo ?? '')) ? b.photo : null;
+    out.focus = pick(b.focus, PHOTO_FOCUS, 'middle');
+    out.mayChange = b.mayChange !== false;
+  }
+  if (b.type === 'photo') { out.shape = pick(b.shape, PHOTO_SHAPE, 'wide'); out.w = words(b.w, ['caption']); }
+  if (b.type === 'overlay') {
+    out.w = words(b.w, ['heading', 'line', 'label']);
+    out.link = cleanLink(b.link);
+    out.v = pick(b.v, OVER_V, 'bottom');
+    out.h = pick(b.h, ALIGN, 'left');
+    out.shade = pick(b.shade, OVER_SHADE, 'medium');
+  }
+  const st = cleanStyle(b.s);
+  if (st) out.s = st;
   return out;
 }
 
 // Can this block sit on this page? Data blocks anywhere; Home's own content on
 // Home; a page's spots and built-ins on that page.
 export function fits(key, b) {
-  if (BLOCK_TYPES[b.type].kind === 'data') return true;
+  if (BLOCK_TYPES[b.type].kind === 'data' || BLOCK_TYPES[b.type].kind === 'own') return true;
   if (isCustom(key)) return b.type === 'head';
   if (key === 'home') return b.type !== 'builtin' && b.type !== 'head';
   if (HOME_ONLY.includes(b.type)) return false;
@@ -281,7 +374,7 @@ export function addable(key, blocks) {
       continue;
     }
     const b = { id: t === 'text' ? 'story' : t === 'band' ? 'waitlist' : t, type: t };
-    if (T.kind !== 'data' && (!fits(key, b) || have.has(t))) continue;
+    if (T.kind !== 'data' && T.kind !== 'own' && (!fits(key, b) || have.has(t))) continue;
     out.push({ type: t, id: null });
   }
   return out;
@@ -293,6 +386,7 @@ export function addable(key, blocks) {
 // show lists as b.<id>.show.<face>.<item> checkboxes plus b.<id>.show.<face> holding
 // the order ("photo,call,…").
 export function blocksFromForm(blocks, get, getAll, key = 'home') {
+  const str2 = (n) => String(get(n) ?? '');
   return blocks.map((b) => {
     const k = (f) => `b.${b.id}.${f}`;
     if (get(k('present')) == null) return b;
@@ -320,6 +414,21 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
     if (BLOCK_TYPES[b.type].kind === 'data' && !hersOn(key, b)) {
       next.w = { eyebrow: String(get(k('w.eyebrow')) ?? ''), heading: String(get(k('w.heading')) ?? ''), lede: String(get(k('w.lede')) ?? '') };
     }
+    if (BLOCK_TYPES[b.type].kind === 'own') {
+      const str = (f) => String(get(k(f)) ?? '');
+      if (b.w) next.w = Object.fromEntries(Object.keys(b.w).map((x) => [x, str(`w.${x}`)]));
+      if ('link' in b) {
+        const to = str('link.to');
+        next.link = !to ? null : to === 'page' ? { to, page: str('link.page') } : { to, value: str('link.value') };
+        if (next.link && next.link.to === 'url' && next.link.value && !/^https?:\/\//i.test(next.link.value)) throw new BlockError('A button\'s outside link needs an address starting https://');
+        if (next.link && ['tel', 'sms'].includes(to) && next.link.value && !looksLikePhone(next.link.value)) throw new BlockError('That phone number doesn\'t look like one.');
+        if (next.link && to === 'email' && next.link.value && !looksLikeEmail(next.link.value)) throw new BlockError('That email address doesn\'t look like one.');
+        if (next.link && to === 'url' && !next.link.value) throw new BlockError('A button to an outside site needs its address.');
+      }
+      for (const f of ['size', 'look', 'align', 'style', 'width', 'height', 'shape', 'focus', 'v', 'h', 'shade']) if (f in b) next[f] = str(f);
+      if ('photo' in b) { next.photo = str('photo') || null; next.mayChange = get(k('mayChange')) != null; }
+    }
+    if (get(k('s.present')) != null) next.s = { bg: str2(k('s.bg')), py: str2(k('s.py')), px: str2(k('s.px')), text: str2(k('s.text')) };
     if (b.type === 'dogs' && !next.f.status.length) throw new BlockError('A Dog cards block needs at least one status.');
     if (b.type === 'litters' && !next.f.stage.length) throw new BlockError('A Litter cards block needs at least one stage.');
     return cleanBlock(next);
@@ -437,7 +546,7 @@ export function withoutPage(build, id) {
 
 // The blocks on a page whose switch and words are the breeder's in block_switches:
 // the data blocks the owner added (Home's own are home_blocks).
-export const addedBlocks = (key, blocks) => blocks.filter((b) => BLOCK_TYPES[b.type].kind === 'data' && !hersOn(key, b));
+export const addedBlocks = (key, blocks) => blocks.filter((b) => (BLOCK_TYPES[b.type].kind === 'data' && !hersOn(key, b)) || (BLOCK_TYPES[b.type].kind === 'own' && b.type !== 'spacer'));
 
 // ---------- the menu (step 3.4) ----------
 //

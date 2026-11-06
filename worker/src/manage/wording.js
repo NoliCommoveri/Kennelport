@@ -443,6 +443,23 @@ const SCREEN_LINES = {
   "pages.eyebrow": ["pages", "Line", "Eyebrow"],
   "pages.heading": ["pages", "Line", "Heading"],
   "pages.line_under_it": ["pages", "Line", "Line under it"],
+  "pages.own.banner": ["pages", "A banner KennelPort added: what it is", "A banner across the page"],
+  "pages.own.button": ["pages", "A button KennelPort added: what it is", "A button"],
+  "pages.own.divider": ["pages", "A divider KennelPort added: what it is", "A divider between parts of the page"],
+  "pages.own.photo": ["pages", "A photo KennelPort added: what it is", "A photo"],
+  "pages.own.overlay": ["pages", "Words over a photo KennelPort added: what it is", "Words over a photo"],
+  "pages.own.a_line": ["pages", "Field label: a banner's line", "A line"],
+  "pages.own.button_words": ["pages", "Field label: a button's words", "Button words"],
+  "pages.own.address": ["pages", "Field label: a button's outside address", "Web address it opens"],
+  "pages.own.phone": ["pages", "Field label: a button's phone number", "Phone number"],
+  "pages.own.email": ["pages", "Field label: a button's email address", "Email address"],
+  "pages.own.from_details": ["pages", "Hint: phone or email from Kennel details", "Empty: the one in Kennel details."],
+  "pages.own.empty_is": ["pages", "Hint: what an empty field shows", "Empty: \"{text}\"."],
+  "pages.own.goes_to": ["pages", "Line: where a button goes (a page)", "The button goes to {page}. Where it goes is set by KennelPort."],
+  "pages.own.hidden": ["pages", "Line: a button hidden because its page is off", "Its button is hidden right now: {page} is switched off or has nothing to show."],
+  "pages.own.photo_label": ["pages", "Field label: the photo of a block", "Photo"],
+  "pages.own.caption": ["pages", "Field label: a photo's caption", "Caption"],
+  "pages.own.no_photo": ["pages", "Line: a photo block with no photo", "No photo yet, so it doesn't show."],
   "homeblocks.home_page": ["homeblocks", "Line", "Home page"],
   "homeblocks.photos_for_the_home": ["homeblocks", "Line", "Photos for the Home page"],
   "homeblocks.this_block_is_on": ["homeblocks", "Line", "This block is on"],
@@ -554,6 +571,7 @@ const ERRORS = [
   ['too_long', /^longer than (?<max>\d+) characters$/, '{path}: longer than {max} characters', 'Too many characters'],
   ['web_address', /^not a web address$/, '{path}: not a web address', 'A web address that isn\'t one'],
   ['https', /^must start with https:\/\/$/, '{path}: must start with https://', 'A web address not starting https://'],
+  ['phone', /^not a phone number$/, '{path}: not a phone number', 'A phone number that isn\'t one'],
   ['email', /^not an email address$/, '{path}: not an email address', 'An email address that isn\'t one'],
   ['number', /^a whole number from (?<min>-?\d+) to (?<max>-?\d+)$/, '{path}: a whole number from {min} to {max}', 'A number out of range, or not a whole number'],
   ['date', /^a date is YYYY-MM-DD$/, '{path}: a date is YYYY-MM-DD', 'A date that isn\'t one'],
@@ -715,7 +733,7 @@ function homeWhere(k, t) {
   return parent === k ? (parts[1] === 'tile' || parts[1] === 'setup' ? what : `The ${name.includes('{') ? 'line' : 'button or line'} ${what}`) : `${what}: ${SUFFIX[last]}`;
 }
 for (const [k, t] of Object.entries(HOME)) add(k, 'home', homeWhere(k, t), t, [...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]));
-for (const [k, [screen, what, t]] of Object.entries(SCREEN_LINES)) add(k, screen, what, t);
+for (const [k, [screen, what, t]] of Object.entries(SCREEN_LINES)) add(k, screen, what, t, [...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).filter((v) => v !== 'kennel'));
 for (const [k, , t, where] of ERRORS) add(`error.${k}`, 'errors', where, t, ['path', 'field', ...[...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).filter((v) => !['path', 'field'].includes(v))]);
 for (const [group, list] of Object.entries(MESSAGES)) {
   for (const [k, screen, , t, where] of list) {

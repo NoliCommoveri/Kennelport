@@ -211,6 +211,15 @@ export async function buildSnapshot(env, siteId) {
   use(site.logo_photo_id);
   albums.forEach((a) => a.photos.forEach(use));
   Object.values(embeds).flat().forEach((e) => use(e.preview_photo_id));
+  // The owner's photo blocks: hers, or the breeder's where the owner lets her change it.
+  for (const [key, blocks] of Object.entries(layoutFor(build))) {
+    if (!Array.isArray(blocks)) continue;
+    for (const b of blocks) {
+      if (b.type !== 'photo' && b.type !== 'overlay') continue;
+      use(b.photo);
+      if (b.mayChange) use(added[key]?.[b.id]?.photo_id);
+    }
+  }
   // In slices: D1 takes at most 100 parameters a statement, and one album alone
   // can hold 300 photos.
   const photoRows = [];

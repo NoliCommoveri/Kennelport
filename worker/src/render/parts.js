@@ -117,12 +117,12 @@ export const customPage = (snap, key) => (snap.layout?.custom ?? []).find((c) =>
 
 // A block the owner added (not one of Home's own): the breeder's switch, and her
 // words over the owner's starting ones.
-const addedRow = (snap, key, b) => (BLOCK_TYPES[b.type].kind === 'data' && !hersOn(key, b) ? snap.added?.[key]?.[b.id] ?? null : null);
+export const addedRow = (snap, key, b) => ((BLOCK_TYPES[b.type].kind === 'data' && !hersOn(key, b)) || BLOCK_TYPES[b.type].kind === 'own' ? snap.added?.[key]?.[b.id] ?? null : null);
 export const addedOn = (snap, key, b) => addedRow(snap, key, b)?.enabled !== false;
 export function addedWords(snap, key, b) {
   const her = addedRow(snap, key, b) ?? {};
   const w = { ...b.w };
-  for (const k of ['eyebrow', 'heading', 'lede']) if (her[k]) w[k] = her[k];
+  for (const k of ['eyebrow', 'heading', 'lede', 'line', 'label', 'caption']) if (her[k]) w[k] = her[k];
   return w;
 }
 

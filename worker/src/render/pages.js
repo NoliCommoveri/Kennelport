@@ -6,11 +6,11 @@ import {
   litterCard, parentCards, litterFacts, dogCard, coCard, partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
   paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
   dogGroups, dogsFor, depositsAhead, puppyStatus, puppyPriceText, regText, statusRule, rulesOf, pricesOff, sitePrice, word, sexWord, fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
-  faqBlock, familyLogin as familyLoginLink, addedOn, addedWords, customPage,
+  faqBlock, familyLogin as familyLoginLink, addedOn, addedWords, addedRow, customPage,
 } from './parts.js';
 import { embedView } from '../embeds.js';
-import { homeBlocks, pageBlocks, hersOn, BREEDER_SWITCH, PAGE_PARTS, PAGE_HEADS, headFor } from '../content/blocks.js';
-import { COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk, badgeAddress } from '../content/model.js';
+import { homeBlocks, pageBlocks, hersOn, BREEDER_SWITCH, PAGE_PARTS, PAGE_HEADS, headFor, BLOCK_TYPES } from '../content/blocks.js';
+import { COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk, badgeAddress, PAGES } from '../content/model.js';
 
 // A question from her FAQ, where she has placed it (plan 3.9): its own band under
 // the page's heading, so it sits above what the page is about and takes the
@@ -183,8 +183,9 @@ function assemble(snap, ctx, key, parts) {
       const p = parts[b.id];
       html = typeof p === 'function' ? p({ badges: inside ? parts.badgesIn : '' }) : p ?? '';
     } else if (b.type === 'head' || b.type === 'faq' || b.type === 'badges' || b.type === 'embeds') html = parts[b.type] ?? '';
+    else if (BLOCK_TYPES[b.type].kind === 'own') html = ownBlock(snap, ctx, b, key);
     else html = dataBlock(snap, ctx, b, key);
-    if (html) out.push(html);
+    if (html) out.push(styled(b, html));
   }
   return out.join('\n      ');
 }
@@ -208,6 +209,68 @@ export function custom(snap, ctx, key) {
     title: p.heading || label(snap, key), section: c.path, description: p.lede,
     body: assemble(snap, ctx, key, { head: pagehead(p, headFor(key, c)) }),
   };
+}
+
+// ---------- the owner's own blocks, and every block's look (step 4) ----------
+
+// A block with a look of its own (content/blocks.js cleanStyle) sits in a wrap that
+// gives it a scheme colour (text in the scheme's matching ink), space around it and,
+// on her own blocks, a text size. A block with none is drawn as before, unwrapped.
+function styled(b, html) {
+  if (!b.s || !html) return html;
+  const c = ['kb', b.s.bg && `bg-${b.s.bg}`, b.s.py && `py-${b.s.py}`, b.s.px && `px-${b.s.px}`, b.s.text && `t-${b.s.text}`].filter(Boolean).join(' ');
+  return `<div class="kb-o"><div class="${c}">${html}</div></div>`;
+}
+
+// Where a button goes, or null: a page that's off, or a phone or email that isn't
+// there, hides the button rather than going nowhere. Hers (block_switches) over the
+// owner's: an outside link, a phone number, an email address.
+export function linkFor(snap, ctx, link, her = {}) {
+  if (!link) return null;
+  const s = snap.site;
+  if (link.to === 'page') {
+    if (link.page === 'home') return { href: '/' };
+    const path = PAGES[link.page]?.path ?? customPage(snap, link.page)?.path;
+    return path && pageOn(snap, link.page, ctx) ? { href: path } : null;
+  }
+  if (link.to === 'url') { const u = her.url || link.value; return /^https?:\/\//i.test(u ?? '') ? { href: u, external: true } : null; }
+  if (link.to === 'email') { const e = her.email || link.value || s.contact_email; return e ? { href: `mailto:${e}` } : null; }
+  const n = String(her.phone || link.value || s.contact_phone || '').replace(/[^\d+]/g, '');
+  return n ? { href: `${link.to === 'sms' ? 'sms' : 'tel'}:${n}` } : null;
+}
+const aTo = (l, cls, text) => `<a class="${cls}" href="${attr(l.href)}"${l.external ? ' rel="noopener noreferrer" target="_blank"' : ''}>${esc(text)}</a>`;
+
+function ownBlock(snap, ctx, b, key) {
+  if (!addedOn(snap, key, b)) return '';
+  const her = addedRow(snap, key, b) ?? {};
+  const w = addedWords(snap, key, b);
+  const link = b.link ? linkFor(snap, ctx, b.link, her) : null;
+  const photoId = b.mayChange && her.photo_id ? her.photo_id : b.photo;
+  if (b.type === 'banner') {
+    if (!w.heading && !w.line && !link) return '';
+    return `<section class="own-banner"><div class="wrap"><div>${w.heading ? `<h2>${esc(w.heading)}</h2>` : ''}${w.line ? `<p>${esc(w.line)}</p>` : ''}</div>${link && w.label ? aTo(link, 'btn', w.label) : ''}</div></section>`;
+  }
+  if (b.type === 'button') {
+    if (!link || !w.label) return '';
+    return `<div class="own-button wrap a-${b.align}">${aTo(link, `btn ${b.look} sz-${b.size}`, w.label)}</div>`;
+  }
+  if (b.type === 'divider') {
+    const inner = b.style === 'ornament' ? '<svg class="orn" aria-hidden="true"><use href="#sprig"/></svg>' : '<hr>';
+    return `<div class="own-divider ${b.style} w-${b.width}${b.width === 'full' ? '' : ' wrap'}" role="presentation">${inner}</div>`;
+  }
+  if (b.type === 'spacer') return `<div class="own-spacer h-${b.height}" aria-hidden="true"></div>`;
+  if (b.type === 'photo') {
+    const pic = img(snap, photoId);
+    if (!pic) return '';
+    const cap = b.mayChange && her.caption ? her.caption : w.caption;
+    return `<figure class="own-photo ${b.shape}${b.shape === 'full' ? '' : ' wrap'} f-${b.focus}">${pic}${cap ? `<figcaption>${esc(cap)}</figcaption>` : ''}</figure>`;
+  }
+  if (b.type === 'overlay') {
+    const pic = img(snap, photoId);
+    if (!pic) return '';
+    return `<section class="own-over v-${b.v} h-${b.h} shade-${b.shade} f-${b.focus}">${pic}<div class="over"><div class="wrap">${w.heading ? `<h2>${esc(w.heading)}</h2>` : ''}${w.line ? `<p>${esc(w.line)}</p>` : ''}${link && w.label ? aTo(link, 'btn solid', w.label) : ''}</div></div></section>`;
+  }
+  return '';
 }
 
 // ---------- Home ----------
@@ -236,8 +299,9 @@ export function home(snap, ctx) {
       continue;
     }
     // The question spot and videos keep their place too; the rest only when they draw.
-    if (b.type === 'faq') { parts.push(faqSection(snap, 'home')); continue; }
-    if (b.type === 'embeds') { parts.push(embedsBlock(snap, 'home')); continue; }
+    if (b.type === 'faq') { parts.push(styled(b, faqSection(snap, 'home'))); continue; }
+    if (b.type === 'embeds') { parts.push(styled(b, embedsBlock(snap, 'home'))); continue; }
+    if (BLOCK_TYPES[b.type].kind === 'own') { const own = ownBlock(snap, ctx, b, 'home'); if (own) parts.push(styled(b, own)); continue; }
     if (!on(b)) continue;
     let html = '';
     if (b.type === 'facts') {
@@ -248,7 +312,7 @@ export function home(snap, ctx) {
     else if (b.type === 'band') {
       html = waitlistOn ? `<section class="cta"><div class="wrap"><div><h2>${esc(h.waitlist.heading || 'Hoping for a puppy of your own?')}</h2>${h.waitlist.line ? `<p>${esc(h.waitlist.line)}</p>` : ''}</div><a class="btn" href="/waitlist">${esc(h.waitlist.button_label || 'Join the waitlist')}</a></div></section>` : '';
     } else html = dataBlock(snap, ctx, b, 'home');
-    if (html) parts.push(html);
+    if (html) parts.push(styled(b, html));
   }
 
   return { title: null, section: '/', image: h.hero.photos?.[0] ?? h.hero.banner_photo_id, body: parts.join('\n') };
