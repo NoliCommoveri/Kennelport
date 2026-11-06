@@ -208,7 +208,8 @@ test('how KennelOS data lands follows the site\'s settings, for new records', as
   Object.assign(f, {
     'landing.health_display': 'all', 'landing.show_prices': 'off', 'landing.dog_deceased': 'retired', 'landing.dog_puppy': 'breeding',
     'landing.name_heat': 'Coming from {dam}', 'landing.name_none': 'A friend\'s litter', 'landing.label_heat': 'Expected heat', 'landing.new_at': 'start',
-  }); // show_placed left out: off
+    'landing.pup_keeping': 'on',
+  }); // show_placed left out: off; of the puppies, only those she's keeping go on the site
   assert.equal((await call(env, M, '/admin/tuxedolane/kennelos', { method: 'POST', headers: { cookie: admin, origin: `https://${M}` }, body: form(f) })).status, 303);
   // Admin links KennelOS with the KennelOS prices on.
   env.DB.raw.prepare('UPDATE sites SET use_kennelos_prices = 1 WHERE id = ?').run(site.id);
@@ -218,6 +219,12 @@ test('how KennelOS data lands follows the site\'s settings, for new records', as
   const row = (sql) => env.DB.raw.prepare(sql).get(site.id);
   assert.equal(row("SELECT status FROM dogs WHERE site_id = ? AND kennelos_id = 'dog-ginger'").status, 'retired');
   assert.equal(row("SELECT upcoming FROM dogs WHERE site_id = ? AND kennelos_id = 'dog-pippa'").upcoming, 0);
+  // Pippa, no longer kept in KennelOS: left off the site, kept in the draft.
+  const again = load('bundle-1.json');
+  again.bundle_id = `${again.bundle_id}-again`;
+  again.dogs.find((d) => d.id === 'dog-pippa').disposition = 'available';
+  assert.equal((await call(env, API, '/v1/bundle', { method: 'POST', body: JSON.stringify(again), headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` } })).status, 200);
+  assert.equal(row("SELECT hidden_by_kennelos FROM dogs WHERE site_id = ? AND kennelos_id = 'dog-pippa'").hidden_by_kennelos, 1);
   assert.equal(row("SELECT COUNT(*) AS n FROM dogs WHERE site_id = ? AND health_display = 'all'").n, 10);
   assert.equal(row("SELECT COUNT(*) AS n FROM health_results WHERE site_id = ? AND show = 0").n, 0, 'all results shown, not-normal ones too');
   const gem = row("SELECT * FROM litters WHERE site_id = ? AND kennelos_id = 'lit-a'");

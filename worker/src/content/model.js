@@ -177,11 +177,19 @@ export const FAQ_PLACES = {
   pickup: 'Getting your pup home page',
 };
 export const FAQ_PLACE_KEYS = Object.keys(FAQ_PLACES);
+// Since site builder 3.6 (docs/Site_Builder_Plan.md) the owner can put a FAQ spot or
+// a badge row on any page, a page of hers included, and on each kind of profile
+// page; a question or a badge can go to any of them. These are the code's pages and
+// profiles, in the order the breeder's tick boxes list them; a page of the owner's
+// is its own key (CUSTOM_KEY, below). Which of them a site offers is the owner's
+// (content/blocks.js spotPlaces): FAQ_PLACES and BADGE_PLACES are today's.
+export const PLACE_KEYS = ['home', 'about', 'reviews', 'contact', 'dogs', 'litters', 'older', 'albums', 'how_it_works', 'extras', 'products', 'pickup', 'policies', 'faq', 'waitlist', 'waitlist_help', 'dog', 'litter', 'puppy'];
+export const PLACES_MAX = 60;
 // A question she has placed everywhere still fits in one list; the cap is only
 // there so a bad import can't store an endless one.
 export const FAQ_FIELDS = {
   ...EXPANDER_FIELDS,
-  places: { type: 'list', item: 'enum', values: FAQ_PLACE_KEYS, max: FAQ_PLACE_KEYS.length },
+  places: { type: 'list', item: 'place', spot: 'faq', max: PLACES_MAX },
 };
 
 export const EXTRA_FIELDS = {
@@ -242,8 +250,8 @@ export const PRODUCT_FIELDS = {
   code: S(40),
   code_note: S(120),
   website_url: URL_,
-  home_badge: BOOL,
-  badge_places: { type: 'list', item: 'enum', values: BADGE_PLACE_KEYS, max: BADGE_PLACE_KEYS.length, words: BADGE_PLACES },
+  home_badge: { ...BOOL, spot: 'home' },
+  badge_places: { type: 'list', item: 'place', spot: 'badges', max: PLACES_MAX },
   transport: BOOL,
 };
 // A product's address under its badge: its website, else its link, as a bare
@@ -502,6 +510,16 @@ export function cleanValue(f, v, path) {
       if (f.item === 'focus') return v.map((x, i) => cleanValue({ type: 'enum', values: FOCUS, required: true }, x, `${path}[${i}]`));
       // A list of fixed keys (a FAQ's places): each checked, duplicates dropped,
       // kept in the order the list defines so two saves read the same.
+      // Places (a question's, a product badge's): a page or profile of the code's,
+      // in PLACE_KEYS order, then pages of the owner's in the order given.
+      if (f.item === 'place') {
+        const seen = v.map((x, i) => {
+          const k = String(x ?? '');
+          if (!PLACE_KEYS.includes(k) && !CUSTOM_KEY.test(k)) throw new ContentError(`${path}[${i}]`, 'not a page of this site');
+          return k;
+        });
+        return [...PLACE_KEYS.filter((x) => seen.includes(x)), ...[...new Set(seen)].filter((x) => !PLACE_KEYS.includes(x))];
+      }
       if (f.item === 'enum') {
         const seen = v.map((x, i) => cleanValue({ type: 'enum', values: f.values, required: true }, x, `${path}[${i}]`));
         return f.values.filter((x) => seen.includes(x));

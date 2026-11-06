@@ -1719,3 +1719,65 @@ with new sections and a new building order. Docs only; nothing built yet.
 - Tests: `ownblocks.test.js` (new); `blocks.test.js` (Add a block lists them).
 
 - Version bumped (2026-11-06, owner's yes): `ASSET_VERSION` 17, with its fingerprint.
+
+## 2026-11-06: site builder steps 3.6 and 3.7: FAQ and badge spots anywhere, and what each profile page shows
+
+- **Spots on any page (3.6).** A FAQ spot and a badge row fit any page, a page of the
+  owner's included, once each (`content/blocks.js` `fits`, `SPOTS`); Add a block offers
+  them where the page has none. A spot's place is its page's key (`model.js`
+  `PLACE_KEYS`, or the owner's page id), so today's places carry over unchanged. A
+  question's `places` and a product's `badge_places` now take any of those (a place
+  that isn't a page is refused, as an error kind of its own, `error.place`).
+- **The breeder's tick boxes follow the owner** (`spotPlaces`, `forms.js`
+  `placeChoices`): on each FAQ question and each product she sees only the places that
+  exist on her site, in the Pages order, then the profiles. With nothing changed, these
+  are exactly today's `FAQ_PLACES` and `BADGE_PLACES`. A tick whose spot the owner takes
+  away is kept, unseen, so it comes back with the spot. With Home's badge row removed,
+  "Show as a badge on my home page" hides and keeps its value. Her FAQ list's "also on"
+  line names only places that exist. A badge row that's full names the owner's page
+  by its name.
+- **What each profile page shows (3.7).** Every dog's, litter's and puppy's page, one
+  setting per site (`build.profiles`, kept only once changed; the snapshot carries it
+  as `layout.profiles`). A dog's and a puppy's page has three parts (under the
+  breadcrumb, beside the photo, under the photo); each item can be switched off,
+  ordered within its part, or moved to another; the name is always on; facts are
+  switched and ordered. A litter's page: the pair and summary in its heading are
+  switched; what sits under the heading is switched and ordered. A profile's FAQ spot
+  and badge row are items (a dog's badge row is new, off to start), and turning one on
+  or off adds or removes that profile from her tick boxes. A litter's link-card
+  description keeps its summary when the owner hides it on the page.
+- **The owner's screen**: Pages lists "Every dog, litter and puppy"; each opens its
+  editor (`manage/builder.js` profileRoute): the card editor's ordered lists with a
+  switch and a "where it sits" choice per item, the facts, Back to today's page, and
+  the phone beside it sketching one of her records' pages. No prototype screen for it:
+  built from the card editor's lists, switches and the pinned action bar. Checked at
+  390px and 1280px, the breeder's FAQ form too. No new CSS, so no version bump.
+- **Drawn as before**: 416 pages (the demo, the AK sample, and the AK sample with every
+  question and badge placed everywhere, on four dates) compared before and after:
+  identical but for whitespace between tags (the profile pages are now assembled from
+  their items) and the application form's random question ids.
+- Breeder wording: `lists.place.page` and `lists.place.none` in the list, and the
+  place names as choices (`c.place.*`, forms.js ENUM_WORDS). The profile editor is the
+  owner's screen: its wording stays in the code.
+- Tests: `spots.test.js` and `profiles.test.js` (new); `blocks.test.js` (a badge row
+  now fits Reviews), `kennelos.test.js` (two patterns allow a line break between the
+  ask button and the surcharge row).
+
+## 2026-11-06: which KennelOS puppies go on the site, by disposition
+
+- The owner's ask: Up and coming was meant to carry only puppies she's keeping. Read in
+  KennelOS: its bundle sends any puppy-status dog marked Show on website, whatever its
+  disposition (`siteExport.js` `websiteDogs`); its own prompts only mark keepers, but the
+  mark stays when a disposition changes, and the dog form's box can set it by hand.
+- The bundle now takes a dog's `disposition` (text, so a new KennelOS disposition reads
+  as undecided rather than refusing the bundle). **From KennelOS** has "Which puppy dogs
+  go on the site": a switch per disposition (keeping, available, placed, health hold,
+  undecided or none), all on to start (today's behaviour, decision 14). A puppy left out
+  is treated as not sent: off the site, in her draft under Not on your site, back when
+  it's sent again (`bundle.js` `pupShown`; `rules.landing.pup_*`). A bundle with no
+  dispositions shows every puppy, as before.
+- KennelOS sends `disposition` on puppy-status dogs only to a Worker whose answer lists
+  the new `disposition` section (`SECTIONS`), so neither side has to ship first
+  (KennelOS's same-day change, `siteExport.js` `dogEntry`).
+- Tests: the linked sample's Pippa* carries `disposition: keeping`; `rules.test.js`
+  ticks Keeping only and checks Pippa* leaves the site once she's Available.

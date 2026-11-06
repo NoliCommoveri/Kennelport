@@ -78,6 +78,10 @@ export const DOG_PLACES = {
 };
 export const DOG_PLACE_WORDS = { breeding: 'Breeding dog', upcoming: 'Up and coming', for_sale: 'Looking for a home', retired: 'Retired', remembered: 'In memory' };
 export const KOS_DOG_STATUSES = ['puppy', 'active_breeding', 'for_sale', 'retired_breeding', 'deceased'];
+// A KennelOS puppy's disposition: which ones go on the site (rules.landing pup_*), the
+// rest left off. Today's default is every one, as before KennelOS sent it.
+export const PUP_DISPOSITIONS = ['keeping', 'available', 'placed', 'health_hold', 'undecided'];
+export const PUP_DISPOSITION_WORDS = { keeping: 'Keeping', available: 'Available', placed: 'Placed', health_hold: 'Health hold', undecided: 'Undecided (or none set)' };
 
 export const DEFAULT_RULES = {
   status: {
@@ -101,6 +105,7 @@ export const DEFAULT_RULES = {
     name_pair: '{dam} × {sire}', name_dam: "{dam}'s litter", name_heat: "{dam}'s next litter", name_none: 'Our next litter', name_upcoming: 'Upcoming litter',
     label_heat: 'Upcoming heat', label_pairing: 'Planned pairing',
     dog_puppy: 'upcoming', dog_active_breeding: 'breeding', dog_for_sale: 'for_sale', dog_retired_breeding: 'retired', dog_deceased: 'remembered',
+    pup_keeping: true, pup_available: true, pup_placed: true, pup_health_hold: true, pup_undecided: true,
     new_at: 'end',
   },
 };
@@ -145,6 +150,7 @@ const LANDING_FIELDS = {
   name_heat: { t: 'text', max: 60, req: true, needs: '{dam}' }, name_none: TEXT(60, true), name_upcoming: TEXT(60, true),
   label_heat: TEXT(40, true), label_pairing: TEXT(40, true),
   ...Object.fromEntries(KOS_DOG_STATUSES.map((k) => [`dog_${k}`, PLACE])),
+  ...Object.fromEntries(PUP_DISPOSITIONS.map((k) => [`pup_${k}`, { t: 'bool' }])),
   new_at: { t: 'enum', values: ['end', 'start'] },
 };
 const PARTS = { dogs: DOG_FIELDS, words: WORD_FIELDS, format: FORMAT_FIELDS, landing: LANDING_FIELDS };

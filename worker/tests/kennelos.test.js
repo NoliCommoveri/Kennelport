@@ -603,7 +603,7 @@ test('Recommended products from KennelOS: name, link, code and note are KennelOS
   const token = await linked(b);
   const send = async (body) => (await api(b.env, '/v1/bundle', { body, token })).json();
   // Answers say which optional sections this Worker takes.
-  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products', 'registry', 'heat_id', 'partner_kennels', 'transport']);
+  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition']);
   // One she made by hand, with a picture and a Home badge.
   const site = b.site.id;
   const MINE = '00000000-0000-4000-8000-0000000000aa';
@@ -693,7 +693,7 @@ test("an undecided puppy reads Limited and is priced as limited, and can still b
   assert.match(opal, /<dt>Price<\/dt><dd>\$3,000<\/dd>/);
   assert.match(opal, /<dt>Registration<\/dt><dd>Limited<\/dd>/);
   // And it still follows through to full registration: the ask, and the surcharge.
-  assert.match(opal, /puppy=opal#message">Ask about full registration<\/a><\/p><dl class="kv"><dt>Full Registration Surcharge<\/dt><dd>\$500<\/dd><\/dl>/);
+  assert.match(opal, /puppy=opal#message">Ask about full registration<\/a><\/p>\s*<dl class="kv"><dt>Full Registration Surcharge<\/dt><dd>\$500<\/dd><\/dl>/);
   // A puppy she has marked Full still shows the total, and is never asked about.
   assert.match(await b.page('/litters/gem-2026/diamond'), /<dt>Price<\/dt><dd>\$3,500<\/dd>[\s\S]*?<dt>Registration<\/dt><dd>Full<\/dd>/);
   assert.doesNotMatch(await b.page('/litters/gem-2026/diamond'), /Ask about full registration/);
@@ -766,7 +766,7 @@ test('the Full Registration Surcharge: under the ask links, with Show prices on 
   assert.match(html, /puppy=opal#message">Ask about full registration<\/a><ul class="tests"><li><span>Full Registration Surcharge<\/span><span>\$700<\/span>/);
   assert.match(html, /puppy=diamond#message">Ask about full registration<\/a><ul class="tests"><li><span>Full Registration Surcharge<\/span><span>\$500<\/span>/);
   assert.equal((html.match(/Full Registration Surcharge/g) || []).length, 3, 'the litter, Opal and Diamond; not Onyx');
-  assert.match(await b.page('/litters/gem-2026/opal'), /Ask about full registration<\/a><\/p><dl class="kv"><dt>Full Registration Surcharge<\/dt><dd>\$700<\/dd><\/dl>/);
+  assert.match(await b.page('/litters/gem-2026/opal'), /Ask about full registration<\/a><\/p>\s*<dl class="kv"><dt>Full Registration Surcharge<\/dt><dd>\$700<\/dd><\/dl>/);
   // The same for both: one figure.
   b.env.DB.raw.prepare('UPDATE litters SET full_reg_male = NULL WHERE id = ?').run(gem);
   await b.post('/publish');

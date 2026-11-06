@@ -9,6 +9,7 @@
 //   { format: 1, bundle_id, kennel_id, waitlist_public_id?,
 //     dogs: [{ id, call_name, registered_name, registry, sex, date_of_birth, color,
 //              status: puppy | active_breeding | for_sale | retired_breeding | deceased,
+//              disposition? (a puppy's: keeping | available | placed | health_hold | undecided),
 //              died_on, titles: [..], health: [{ id, test, result, normal, date, verify_url }],
 //              co_owned?, lives_away?, lives_with_kennel_id?, co_owner_kennel_ids?: [..] }],
 //     litters: [{ id, pairing_id, heat_id, name, dam_id, sire_id, dam_name, sire_name,
@@ -47,7 +48,7 @@ import { loadSnapshot } from '../publish.js';
 import { siteBase, siteFacts } from './link.js';
 import { litterClockStatements } from './clock.js';
 import { coOwnedRules } from '../content/records.js';
-import { DEFAULT_RULES, DOG_PLACES, rulesFor, loadBuild } from '../content/rules.js';
+import { DEFAULT_RULES, DOG_PLACES, PUP_DISPOSITIONS, rulesFor, loadBuild } from '../content/rules.js';
 
 export const BUNDLE_FORMAT = 1;
 export const MAX_BUNDLE_BYTES = 1024 * 1024;
@@ -60,7 +61,9 @@ export const MAX = { dogs: 200, litters: 100, puppies: 30, pairings: 50, heats: 
 // 'partner_kennels': the list, and the co-owned fields on each dog.
 // 'transport': a product's website and transport flag (her KennelOS transport
 // accounts, for the Getting your pup home page).
-export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport'];
+// 'disposition': a puppy-status dog's disposition (keeping, available…), for the
+// owner's rule on which puppies go on the site (rules.landing pup_*).
+export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition'];
 
 // ---------- checking ----------
 
@@ -76,6 +79,10 @@ const SEX = ENUM(['female', 'male'], true);
 const SHAPES = {
   dog: { id: ID, call_name: S(40, true), registered_name: S(120), registry: S(30), sex: SEX, date_of_birth: DATE, color: S(40),
     status: ENUM(['puppy', 'active_breeding', 'for_sale', 'retired_breeding', 'deceased'], true), died_on: DATE,
+    // A puppy's disposition, for the owner's rule on which go in Up and coming
+    // (rules.landing pup_*). Text, not a fixed list: a disposition KennelOS adds
+    // later reads as undecided rather than refusing the bundle.
+    disposition: S(30),
     titles: { type: 'list', max: MAX.titles, itemMax: 30 }, health: { list: 'health', max: MAX.health },
     co_owned: { type: 'bool' }, lives_away: { type: 'bool' }, lives_with_kennel_id: REF, co_owner_kennel_ids: { type: 'list', max: MAX.co_owner_kennels, itemMax: 80 } },
   // A partner kennel: its public name and website, never a person.
@@ -203,6 +210,9 @@ const dogPlace = (L, status) => {
   const [s, upcoming, forSale] = DOG_PLACES[L[`dog_${status}`]] ?? DOG_PLACES.breeding;
   return { status: s, upcoming, for_sale: forSale };
 };
+// Does this dog go on the site? Any dog but a puppy; a puppy by its disposition, where
+// KennelOS sends one (one it doesn't send shows, as before).
+export const pupShown = (L, d) => d.status !== 'puppy' || !d.disposition || L[`pup_${PUP_DISPOSITIONS.includes(d.disposition) ? d.disposition : 'undecided'}`] !== false;
 // A new website litter's label for a planned litter, by its KennelOS kind.
 const planLabel = (L, kind) => (kind === 'heat' ? L.label_heat : kind === 'pairing' ? L.label_pairing : null);
 const DEFAULT_LABELS = [DEFAULT_RULES.landing.label_heat, DEFAULT_RULES.landing.label_pairing];
@@ -536,9 +546,11 @@ export async function applyBundle(env, device, body) {
   // Partner kennels first: dogs name them.
   if (clean.partner_kennels) w.partners(clean.partner_kennels, st.partners);
 
-  // Dogs.
-  const sentDogs = new Set(clean.dogs.map((d) => d.id));
-  for (const bd of clean.dogs) {
+  // Dogs. A puppy whose disposition the owner leaves out of Up and coming (rules.landing
+  // pup_*) is as if not sent: off the site, kept in her draft under Not on your site.
+  const dogsIn = clean.dogs.filter((d) => pupShown(w.L, d));
+  const sentDogs = new Set(dogsIn.map((d) => d.id));
+  for (const bd of dogsIn) {
     const cur = st.dogs.find((d) => d.kennelos_id === bd.id);
     if (cur) { w.updateDog(cur, bd); continue; }
     // The hand-over (5.3): a kept puppy becomes a dog, taking its photos with it at

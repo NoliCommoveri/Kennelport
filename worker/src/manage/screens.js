@@ -3,13 +3,13 @@
 // a problem comes back with what was typed and the reason.
 import { escapeHtml as esc } from '../lib/html.js';
 import { json } from '../lib/http.js';
-import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, FAQ_PLACES, CUSTOM_PAGE, ADDED_BLOCK_FIELDS } from '../content/model.js';
+import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, CUSTOM_PAGE, ADDED_BLOCK_FIELDS } from '../content/model.js';
 import {
   KINDS, listRecords, getRecord, saveRecord, setField, removeRecord, moveRecord,
   saveSite, getPage, savePage, getBlock, saveBlock, getPayment, savePayment, getAddedBlock, saveAddedBlock,
 } from '../content/records.js';
 import { pageBlocks, customPages, addedBlocks, BLOCK_TYPES, isCustom } from '../content/blocks.js';
-import { fields, field, parseForm, LABELS, labelFor } from './forms.js';
+import { fields, field, parseForm, LABELS, labelFor, placeChoices } from './forms.js';
 import { savePhoto, PhotoError } from '../photos.js';
 import { subjects, isSubject, tagPhotos, untagPhoto, tagsByPhoto } from '../photoTags.js';
 import { buildSnapshot, loadSnapshot, publish, undoPublish, listSnapshots } from '../publish.js';
@@ -66,8 +66,11 @@ const LISTS = {
   products: { name: (r) => r.name, sub: (r, say) => [r.grp, r.code ? say('lists.sub.code', { code: r.code }) : null, r.transport ? say('lists.sub.transport') : null, r.home_badge ? say('lists.sub.home_badge') : null].filter(Boolean).join(' · ') },
   policies: { name: (r) => r.heading, sub: () => '' },
   // A question also placed elsewhere says so here, so she can see at a glance
-  // which ones her pages are carrying (model.js FAQ_PLACES).
-  faq: { name: (r) => r.heading, sub: (r, say) => ((r.places ?? []).length ? say('lists.sub.also_on', { places: (r.places ?? []).map((x) => (FAQ_PLACES[x] ?? x).toLowerCase()).join(', ') }) : '') },
+  // which ones her pages are carrying: the places the owner has made (placeChoices).
+  faq: { name: (r) => r.heading, sub: (r, say, places) => {
+    const at = (r.places ?? []).filter((x) => !places || places.faq.some(([k]) => k === x));
+    return at.length ? say('lists.sub.also_on', { places: at.map((x) => (places?.words(x) ?? x).toLowerCase()).join(', ') }) : '';
+  } },
   waitlist_help: { name: (r) => r.heading, sub: () => '' },
   albums: { name: (r) => r.title, sub: (r, say) => [say.n('lists.sub.photos', (r.photos ?? []).length), r.show_on_site ? null : say('lists.sub.hidden')].filter(Boolean).join(' · ') },
   questions: { name: (r) => r.label, sub: (r, say) => [QUESTION_TYPES.includes(r.type) ? say(`lists.qtype.${r.type}`) : r.type, say(r.required ? 'lists.sub.must_answer' : 'lists.sub.optional')].join(' · ') },
@@ -122,8 +125,12 @@ export function createScreens({ env, request, url, site, user, page, say = defau
   };
   const tickBox = (p) => `<label class="check"><input type="checkbox" name="photos" value="${esc(p.id)}" form="tag-many"> ${esc(say('photos.tick'))}</label>`;
   // pick: { groups: [{ label, subject }], tags: [subject…] to tag uploads with, alt }
+  // Where questions and badges can show: the places the owner has made (step 3.6).
+  let placesMemo = null;
+  const places = async () => (placesMemo ??= placeChoices(await loadBuild(env, site.id), say));
   const ctxFor = async (kind, pick) => {
     const ctx = { kind, say, photos: await photos(), photoUrl, dogs: await dogsList(), litters: await littersList(), partners: kind === 'dogs' ? await partnersList() : [], photosLink: `${base}/photos` };
+    if (kind === 'expander' || kind === 'products') ctx.places = await places();
     if (pick) {
       const t = await tags();
       ctx.photoGroups = pick.groups.map((g) => ({ label: g.label, ids: g.subject ? ctx.photos.filter((p) => (t.get(p.id) ?? []).includes(g.subject)).map((p) => p.id) : [] }));
@@ -408,7 +415,8 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     if (!rest) {
       if (post) return null;
       const rows = await listRecords(env, site.id, kind, scopeId);
-      const items = rows.map((r, i) => `<li class="item"><a href="${esc(`${path}/${r.id}`)}"><b>${esc(L.name(r))}</b><span>${esc(L.sub(r, say) ?? '')}</span></a>
+      const where = kind === 'faq' ? await places() : null;
+      const items = rows.map((r, i) => `<li class="item"><a href="${esc(`${path}/${r.id}`)}"><b>${esc(L.name(r))}</b><span>${esc(L.sub(r, say, where) ?? '')}</span></a>
         <span class="order">${i ? `<form method="post" action="${esc(`${path}/${r.id}/up`)}"><button aria-label="Move ${esc(L.name(r))} up">↑</button></form>` : ''}${i < rows.length - 1 ? `<form method="post" action="${esc(`${path}/${r.id}/down`)}"><button aria-label="Move ${esc(L.name(r))} down">↓</button></form>` : ''}</span></li>`).join('');
       const intro = kind === 'questions' ? `${(await kos()).online ? `<p class="error">${esc(say('lists.not_used_right_now'))}</p>` : ''}<p class="muted">${esc(say('lists.the_application_form_on'))}</p>` : '';
       const extra = kind === 'policies' ? await waitlistPoliciesCard() : kind === 'litters' ? await leavingCard() : kind === 'dogs' ? `${await offSiteDogsCard(rows)}${partnersLink()}` : kind === 'partners' ? await partnersIntro() : kind === 'reviews' ? '<p><a class="button" href="' + base + '/reviews-queue">Reviews families sent</a></p>' : '';

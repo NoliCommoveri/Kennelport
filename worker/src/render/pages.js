@@ -9,7 +9,7 @@ import {
   faqBlock, familyLogin as familyLoginLink, addedOn, addedWords, addedRow, customPage,
 } from './parts.js';
 import { embedView } from '../embeds.js';
-import { homeBlocks, pageBlocks, hersOn, BREEDER_SWITCH, PAGE_PARTS, PAGE_HEADS, headFor, BLOCK_TYPES } from '../content/blocks.js';
+import { homeBlocks, pageBlocks, hersOn, BREEDER_SWITCH, PAGE_PARTS, PAGE_HEADS, headFor, BLOCK_TYPES, cleanProfile } from '../content/blocks.js';
 import { COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk, badgeAddress, PAGES } from '../content/model.js';
 
 // A question from her FAQ, where she has placed it (plan 3.9): its own band under
@@ -171,8 +171,11 @@ function transportBadges(snap, p, list, { own = false } = {}) {
 // page has to draw: its heading, its spots (faq, badges, embeds) and its built-in
 // sections by id. A built-in marked `inside` takes the badge row placed right after
 // it into its own wrap (`inWrap`), as today; elsewhere the row is its own section.
+// A FAQ spot or badge row the page doesn't draw itself (one the owner added, step
+// 3.6) shows what the breeder placed on this page, by its key.
 function assemble(snap, ctx, key, parts) {
   const blocks = snap.layout?.[key] ?? pageBlocks(null, key);
+  parts = { faq: faqSection(snap, key), badges: badgeRow(snap, key), badgesIn: badgeRow(snap, key, { inWrap: true }), ...parts };
   const out = [];
   for (let i = 0; i < blocks.length; i++) {
     const b = blocks[i];
@@ -558,38 +561,62 @@ function coOwnedSection(snap, p, away) {
     </div></section>`;
 }
 
+// A profile page's setting (content/blocks.js PROFILE_*): the owner's, or today's.
+const profileFor = (snap, kind) => cleanProfile(kind, snap.layout?.profiles?.[kind]);
+
+// A dog's or a puppy's page: the breadcrumb, what sits under it, the photo with what
+// sits beside it, then what sits under it, each part's items in the owner's order.
+// Under the breadcrumb, every item after the first gets the space between them;
+// under the photo, an item that doesn't bring its own (`spaced`) gets it.
+function profileBody(pr, pieces, { crumb, photo, spaced }) {
+  const of = (part) => (pr.parts[part] ?? []).map((x) => [x, pieces[x] ?? '']).filter(([, h]) => h);
+  const gap = (x, h) => (spaced.has(x) ? h : `<div class="mt-26">${h}</div>`);
+  const above = of('above').map(([x, h], i) => (i ? gap(x, h) : h)).join('\n      ');
+  return `<section class="section"><div class="wrap">
+      ${crumb}
+      ${above}
+      <div class="dogpage${above ? ' mt-26' : ''}">${photo}<div class="info">
+        ${of('side').map(([, h]) => h).join('\n        ')}
+      </div></div>
+      ${of('below').map(([x, h]) => gap(x, h)).join('\n      ')}
+    </div></section>`;
+}
+
 export function dog(snap, ctx, slug) {
   const d = snap.dogs.find((x) => x.slug === slug);
   if (!d) return null;
+  const pr = profileFor(snap, 'dog');
   const photo = img(snap, d.photo_id, { alt: d.call_name, cls: 'photo', lazy: false }) ?? '<div class="photo" aria-hidden="true"></div>';
-  const facts = [['Sex', sexWord(d.sex)], ['Color', d.color], ['Born', fmtDate(d.date_of_birth)], ['Weight', d.weight], ['Registry', d.registry], ['Titles', d.titles]].filter(([, v]) => v)
-    .map(([k, v]) => [k, esc(v)]);
+  const fact = { sex: ['Sex', sexWord(d.sex)], color: ['Color', d.color], born: ['Born', fmtDate(d.date_of_birth)], weight: ['Weight', d.weight], registry: ['Registry', d.registry], titles: ['Titles', d.titles] };
+  for (const k of Object.keys(fact)) fact[k] = fact[k][1] ? [fact[k][0], esc(fact[k][1])] : null;
   // Co-owned (docs/Co_Owned_Dogs_Plan.md): every named co-owner kennel, with its
   // logo and link; a dog living with one says which.
   const partners = d.co_owned ? coOwnedWith(snap, d) : [];
-  if (partners.length) facts.push(['Co-owned with', partners.map((k) => `<span class="pk">${partnerLogo(snap, k)}${partnerLink(k)}</span>`).join(', ')]);
+  if (partners.length) fact.co_owned = ['Co-owned with', partners.map((k) => `<span class="pk">${partnerLogo(snap, k)}${partnerLink(k)}</span>`).join(', ')];
   if (d.lives_away) {
     const k = partnerOf(snap, d.lives_with_kennel_id);
-    facts.push(['Lives with', k ? `<span class="pk">${partnerLogo(snap, k)}${partnerLink(k)}</span>` : 'A partner kennel']);
+    fact.lives_with = ['Lives with', k ? `<span class="pk">${partnerLogo(snap, k)}${partnerLink(k)}</span>` : 'A partner kennel'];
   }
+  const facts = pr.facts.map((k) => fact[k]).filter(Boolean);
   const tests = d.health.length ? `<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${h.verify_url ? `<a href="${attr(h.verify_url)}" rel="noopener">${esc(h.result)}</a>` : esc(h.result)}</span></li>`).join('')}</ul>` : '';
   const litters = snap.litters.filter((l) => l.dam_id === d.id || l.sire_id === d.id);
   const sale = saleOf(snap, ctx, d);
-  const faqs = faqBlock(snap, 'dog');
   return {
     title: d.call_name, section: '/dogs', description: d.bio || `${d.call_name}, ${[snap.site.breed, d.role].filter(Boolean).join(' ')}`, image: d.photo_id,
-    body: `<section class="section"><div class="wrap">
-      <p class="breadcrumb"><a href="/dogs">${esc(label(snap, 'dogs'))}</a></p>
-      ${faqs}
-      <div class="dogpage${faqs ? ' mt-26' : ''}">${photo}<div class="info">
-        <span class="eyebrow">${esc([snap.site.breed, d.role].filter(Boolean).join(' · '))}</span><h1>${esc(d.call_name)}</h1>
-        ${d.registered_name ? `<p class="reg">${esc(d.registered_name)}</p>` : ''}
-        <dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>
-        ${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''}${sale ? `<p class="status avail">${esc(word(snap, 'for_sale_status'))}${sale.price ? ` · ${esc(sale.price)}` : ''}</p><p><a class="btn solid" href="${attr(sale.ask)}">${esc(word(snap, 'ask_dog', { name: d.call_name }))}</a></p>` : ''}${tests}${shareRow()}
-      </div></div>
-      ${embedsBlock(snap, `dog:${d.id}`, { inWrap: true })}
-      ${litters.length ? `<div class="mt-26">${head('Litters', null)}<div class="litters">${litters.map((l) => litterCard(snap, l, ctx)).join('')}</div></div>` : ''}
-    </div></section>`,
+    body: profileBody(pr, {
+      faq: faqBlock(snap, 'dog'),
+      role: `<span class="eyebrow">${esc([snap.site.breed, d.role].filter(Boolean).join(' · '))}</span>`,
+      name: `<h1>${esc(d.call_name)}</h1>`,
+      reg: d.registered_name ? `<p class="reg">${esc(d.registered_name)}</p>` : '',
+      facts: `<dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>`,
+      bio: d.bio ? `<p class="bio">${esc(d.bio)}</p>` : '',
+      sale: sale ? `<p class="status avail">${esc(word(snap, 'for_sale_status'))}${sale.price ? ` · ${esc(sale.price)}` : ''}</p><p><a class="btn solid" href="${attr(sale.ask)}">${esc(word(snap, 'ask_dog', { name: d.call_name }))}</a></p>` : '',
+      tests,
+      share: shareRow(),
+      badges: badgeRow(snap, 'dog', { inWrap: true }),
+      embeds: embedsBlock(snap, `dog:${d.id}`, { inWrap: true }),
+      litters: litters.length ? `<div class="mt-26">${head('Litters', null)}<div class="litters">${litters.map((l) => litterCard(snap, l, ctx)).join('')}</div></div>` : '',
+    }, { crumb: `<p class="breadcrumb"><a href="/dogs">${esc(label(snap, 'dogs'))}</a></p>`, photo, spaced: new Set(['badges', 'embeds', 'litters']) }),
   };
 }
 
@@ -658,24 +685,37 @@ export function older(snap, ctx) {
 export function litter(snap, ctx, slug) {
   const l = snap.litters.find((x) => x.slug === slug);
   if (!l) return null;
+  const pr = profileFor(snap, 'litter');
+  const on = (x) => pr.parts.head.includes(x);
   const pups = sortPuppies(snap, l.puppies);
   // The parents' names under the litter's own, unless they are its name.
   const pair = pairNames(snap, l);
   const lede = [pair !== l.name ? pair : null, l.summary].filter(Boolean).join('. ');
-  const note = l.show_prices && l.price_note ? `<p class="small muted center mt-20">${esc(l.price_note)}</p>` : '';
-  const faqs = faqBlock(snap, 'litter');
+  const shown = [on('pair') && pair !== l.name ? pair : null, on('summary') ? l.summary : null].filter(Boolean).join('. ');
+  const reg = fullRegLink(snap, l, null, ctx, 'btn line');
+  const pieces = {
+    faq: faqBlock(snap, 'litter'),
+    parents: parentCards(snap, l),
+    facts: litterFacts(snap, l, ctx),
+    note: l.show_prices && l.price_note ? `<p class="small muted center mt-20">${esc(l.price_note)}</p>` : '',
+    fullreg: reg ? `<div class="litters mt-20" id="full-registration"><div><p class="btn-row">${reg}</p>${fullRegSurchargeRow(snap, l, null, ctx) ? `<div class="mt-20">${fullRegSurchargeRow(snap, l, null, ctx)}</div>` : ''}</div></div>` : '',
+    share: shareRow(true),
+    pups: pups.length ? `<div class="mt-26 grid">${pups.map((pup) => puppyCard(snap, l, pup, ctx)).join('')}</div>` : '',
+    badges: badgeRow(snap, 'litter', { inWrap: true }),
+    embeds: embedsBlock(snap, `litter:${l.id}`, { inWrap: true }),
+    albums: litterAlbums(snap, ctx, l),
+  };
+  // Under the heading, in the owner's order: an item that doesn't bring its own
+  // space gets it, unless it comes first.
+  const spaced = new Set(['note', 'fullreg', 'share', 'pups', 'badges', 'embeds', 'albums']);
+  const body = pr.parts.body.map((x) => [x, pieces[x] ?? '']).filter(([, h]) => h)
+    .map(([x, h], i) => (i && !spaced.has(x) ? `<div class="mt-26">${h}</div>` : h)).join('\n        ');
   return {
     title: l.name, section: '/litters', description: lede || l.name, image: pups.find((x) => x.photo_id)?.photo_id,
-    body: `${pagehead({}, { eyebrow: l.stage === 'planned' ? (l.plan_label || word(snap, 'litter_planned')) : l.born_on ? `Born ${fmtDate(l.born_on)}` : 'Litter', heading: l.name, lede })}
+    body: `${pagehead({}, { eyebrow: l.stage === 'planned' ? (l.plan_label || word(snap, 'litter_planned')) : l.born_on ? `Born ${fmtDate(l.born_on)}` : 'Litter', heading: l.name, lede: shown })}
       <section class="section tight"><div class="wrap">
         <p class="breadcrumb center"><a href="/litters">${esc(label(snap, 'litters'))}</a></p>
-        ${faqs}
-        ${[parentCards(snap, l), litterFacts(snap, l, ctx)].filter(Boolean).map((x, i) => (i || faqs ? `<div class="mt-26">${x}</div>` : x)).join('\n        ')}${note}
-        ${fullRegLink(snap, l, null, ctx, 'btn line') ? `<div class="litters mt-20" id="full-registration"><div><p class="btn-row">${fullRegLink(snap, l, null, ctx, 'btn line')}</p>${fullRegSurchargeRow(snap, l, null, ctx) ? `<div class="mt-20">${fullRegSurchargeRow(snap, l, null, ctx)}</div>` : ''}</div></div>` : ''}${shareRow(true)}
-        ${pups.length ? `<div class="mt-26 grid">${pups.map((pup) => puppyCard(snap, l, pup, ctx)).join('')}</div>` : ''}
-        ${badgeRow(snap, 'litter', { inWrap: true })}
-        ${embedsBlock(snap, `litter:${l.id}`, { inWrap: true })}
-        ${litterAlbums(snap, ctx, l)}
+        ${body}
       </div></section>`,
   };
 }
@@ -727,35 +767,38 @@ export function puppy(snap, ctx, litterSlug, slug) {
   const l = snap.litters.find((x) => x.slug === litterSlug);
   const p = l?.puppies.find((x) => x.slug === slug);
   if (!p) return null;
+  const pr = profileFor(snap, 'puppy');
   const photo = img(snap, p.photo_id, { alt: p.name, cls: 'photo', lazy: false }) ?? '<div class="photo" aria-hidden="true"></div>';
   const rule = statusRule(snap, p);
   const status = puppyStatus(snap, l, p, ctx.today);
   const price = puppyPriceText(snap, l, p);
   const reg = regText(snap, p);
-  const facts = [['Sex', sexWord(p.sex)], ['Color', p.color], ['Collar', p.collar], ['Status', status], [rulesOf(snap).price.price_label, price], ['Registration', reg], ['Registry', p.registry], ['Parents', pairNames(snap, l)], ['Born', fmtDate(l.born_on)]].filter(([, v]) => v);
+  const fact = { sex: ['Sex', sexWord(p.sex)], color: ['Color', p.color], collar: ['Collar', p.collar], status: ['Status', status], price: [rulesOf(snap).price.price_label, price], registration: ['Registration', reg], registry: ['Registry', p.registry], parents: ['Parents', pairNames(snap, l)], born: ['Born', fmtDate(l.born_on)] };
+  const facts = pr.facts.map((k) => fact[k]).filter(([, v]) => v);
   // Its own photos, where the litter publishes its puppies' tagged ones, and its own
   // "See more photos" link where she set one (its gallery elsewhere, never the
   // litter's). Either alone is enough for the block. Then the litter's albums: its
   // photos are usually in those too.
   const gallery = galleryHtml(snap, p.photos ?? [], p.name);
   const morePup = morePhotosHtml(p);
-  const faqs = faqBlock(snap, 'puppy');
-  const pupGallery = gallery || morePup
+  const pupGallery = (gallery || morePup) && Object.values(pr.parts).some((x) => x.includes('photos'))
     ? `<div class="mt-26">${head('Photos', `${p.name}'s photos`)}${gallery}${morePup}</div>` : '';
   return {
     title: `${p.name}, ${l.name}`, section: '/litters', description: p.bio || `${p.name}: ${status}`, image: p.photo_id,
-    body: `<section class="section"><div class="wrap">
-      <p class="breadcrumb"><a href="/litters/${attr(l.slug)}">${esc(l.name)}</a></p>
-      ${faqs}
-      <div class="dogpage${faqs ? ' mt-26' : ''}">${photo}<div class="info">
-        ${status ? `<span class="status ${attr(rule.pill)}">${esc(status)}</span>` : ''}<h1>${esc(p.name)}</h1>
-        <dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
-        ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}
-        ${rule.ask || fullRegLink(snap, l, p, ctx, '') ? `<p>${rule.ask ? `<a class="btn solid" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">${esc(word(snap, 'ask_pup', { name: p.name }))}</a> ` : ''}${fullRegLink(snap, l, p, ctx, 'btn line')}</p>` : ''}${fullRegSurchargeRow(snap, l, p, ctx, 'kv')}
-        ${safeNotice(snap, ctx)}${shareRow()}
-      </div></div>
-      ${badgeRow(snap, 'puppy', { inWrap: true })}${pupGallery}${litterAlbums(snap, ctx, l, { eyebrow: 'Albums', heading: `From ${l.name}` })}
-    </div></section>${pupGallery ? viewerHtml() : ''}`,
+    body: `${profileBody(pr, {
+      faq: faqBlock(snap, 'puppy'),
+      status: status ? `<span class="status ${attr(rule.pill)}">${esc(status)}</span>` : '',
+      name: `<h1>${esc(p.name)}</h1>`,
+      facts: `<dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`,
+      bio: p.bio ? `<p class="bio">${esc(p.bio)}</p>` : '',
+      ask: rule.ask || fullRegLink(snap, l, p, ctx, '') ? `<p>${rule.ask ? `<a class="btn solid" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">${esc(word(snap, 'ask_pup', { name: p.name }))}</a> ` : ''}${fullRegLink(snap, l, p, ctx, 'btn line')}</p>` : '',
+      surcharge: fullRegSurchargeRow(snap, l, p, ctx, 'kv'),
+      notice: safeNotice(snap, ctx),
+      share: shareRow(),
+      badges: badgeRow(snap, 'puppy', { inWrap: true }),
+      photos: pupGallery,
+      albums: litterAlbums(snap, ctx, l, { eyebrow: 'Albums', heading: `From ${l.name}` }),
+    }, { crumb: `<p class="breadcrumb"><a href="/litters/${attr(l.slug)}">${esc(l.name)}</a></p>`, photo, spaced: new Set(['badges', 'photos', 'albums']) })}${pupGallery ? viewerHtml() : ''}`,
   };
 }
 

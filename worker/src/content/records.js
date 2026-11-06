@@ -3,7 +3,7 @@
 // can't disagree about what a field may hold. Every write marks the draft as
 // changed; nothing is live until Publish.
 import {
-  DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, FAQ_FIELDS, EXTRA_FIELDS, PRODUCT_FIELDS, PARTNER_FIELDS, PARTNERS_PER_DOG, PARTNERS_MAX, HOME_BADGES_MAX, BADGE_PLACES, brandImageOk,
+  DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, FAQ_FIELDS, EXTRA_FIELDS, PRODUCT_FIELDS, PARTNER_FIELDS, PARTNERS_PER_DOG, PARTNERS_MAX, HOME_BADGES_MAX, BADGE_PLACES, FAQ_PLACES, brandImageOk,
   EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue, slugify,
   CUSTOM_KEY, CUSTOM_PAGE, ADDED_BLOCK_FIELDS,
 } from './model.js';
@@ -164,7 +164,14 @@ export async function saveRecord(env, siteId, kind, id, input, scopeId = null) {
     const others = (await env.DB.prepare('SELECT badge_places FROM products WHERE site_id = ? AND id != ? AND badge_places IS NOT NULL').bind(siteId, id ?? '').all()).results;
     for (const place of clean.badge_places) {
       const n = others.filter((r) => { try { return JSON.parse(r.badge_places).includes(place); } catch { return false; } }).length;
-      if (n >= HOME_BADGES_MAX) throw new ContentError('badge_places', `the ${BADGE_PLACES[place]} shows at most ${HOME_BADGES_MAX} badges: take one off it first`);
+      if (n >= HOME_BADGES_MAX) {
+        // The page by today's words, or its name (a page the owner added).
+        const custom = CUSTOM_KEY.test(place) ? (await env.DB.prepare('SELECT build FROM site_builds WHERE site_id = ?').bind(siteId).first('build')) : null;
+        let name = null;
+        try { name = custom ? JSON.parse(custom).custom?.find((c) => c.id === place)?.name : null; } catch { /* below */ }
+        const words = BADGE_PLACES[place] ?? FAQ_PLACES[place] ?? (PAGES[place] ? `${PAGES[place].label} page` : `${name ?? 'new'} page`);
+        throw new ContentError('badge_places', `the ${words} shows at most ${HOME_BADGES_MAX} badges: take one off it first`);
+      }
     }
   }
   if (kind === 'albums' && clean.photos) clean.photos = [...new Set(clean.photos)];

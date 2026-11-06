@@ -2,7 +2,8 @@
 // the words a breeder sees (LABELS) kept here, next to the inputs. parseForm()
 // turns a submitted form back into the values the model checks.
 import { escapeHtml as esc } from '../lib/html.js';
-import { FEATURE_ICONS, COLLAGE_LAYOUTS, FOCUS, collageLayout, FAQ_PLACES } from '../content/model.js';
+import { FEATURE_ICONS, COLLAGE_LAYOUTS, FOCUS, collageLayout } from '../content/model.js';
+import { spotPlaces, customPages, homeBadgesPlaced } from '../content/blocks.js';
 import { SCHEMES } from '../render/schemes.js';
 
 // [label, hint] per field name; kind-specific entries win over the shared ones.
@@ -169,6 +170,14 @@ export const LABELS = {
 
 export const ENUM_WORDS = {
   sex: { female: 'Female', male: 'Male' },
+  // Where a question or a badge can show (model.js PLACE_KEYS): the tick boxes on a
+  // FAQ question and a product list the ones the owner has placed (placeChoices).
+  place: {
+    home: 'Home page', about: 'Our story page', reviews: 'Reviews page', contact: 'Contact page', dogs: 'All our dogs page', litters: 'Puppies page',
+    older: 'Older puppies page', albums: 'Photo albums page', how_it_works: 'The steps page', extras: 'Extras page', products: 'Recommended products page',
+    pickup: 'Getting your pup home page', policies: 'Policies page', faq: 'FAQ page', waitlist: 'Waitlist page', waitlist_help: 'The "Using your status page" page',
+    dog: "Every dog's profile", litter: "Every litter's page", puppy: "Every puppy's profile",
+  },
   status_dogs: { active: 'At home', retired: 'Retired', remembered: 'In memory' },
   status_puppies: { available: 'Available', reserved: 'Reserved', placed: 'Placed (shows as Reserved)', staying: 'Joining our program', coming_soon: 'Still deciding', hidden: 'Hidden' },
   registration: { limited: 'Limited', full: 'Full' },
@@ -247,6 +256,8 @@ function lockedField(name, f, value, ctx, label) {
 }
 
 export function field(name, f, value, ctx) {
+  // Home's badges, with no badge row on Home (the owner's): kept as they are, not offered.
+  if (f.spot === 'home' && ctx.places && !ctx.places.home) return value ? `<input type="hidden" name="${name}" value="1">` : '';
   const [label, hint] = labelFor(ctx.kind, name, ctx.say);
   if (ctx.locked?.has(name)) return lockedField(name, f, value, ctx, label);
   const id = `f-${name}`;
@@ -291,11 +302,21 @@ export function field(name, f, value, ctx) {
         const partners = ctx.partners ?? [];
         return `<fieldset><legend>${esc(label)}${h}</legend>${partners.length ? partners.map((k) => `<label class="check"><input type="checkbox" name="${name}" value="${esc(k.id)}"${on.has(k.id) ? ' checked' : ''}> <span>${esc(k.name)}</span></label>`).join('') : '<p class="muted small">No partner kennels yet.</p>'}</fieldset>`;
       }
-      // A list of fixed keys (a FAQ's places): one tick box each, in the model's
-      // order, with the words the manage app calls those pages.
+      // Where a question or badge shows: a tick box for each place the owner has
+      // made on her site (ctx.places, placeChoices). One she ticked whose spot the
+      // owner has taken away is kept, unseen, for if it comes back.
+      if (f.item === 'place') {
+        const on = new Set(value ?? []);
+        const offer = ctx.places?.[f.spot] ?? [];
+        const keys = new Set(offer.map(([k]) => k));
+        const kept = [...on].filter((x) => !keys.has(x)).map((x) => `<input type="hidden" name="${name}" value="${esc(x)}">`).join('');
+        const none = ctx.say ? ctx.say('lists.place.none') : 'No page of your site has a place for these yet.';
+        return `<fieldset><legend>${esc(label)}${h}</legend>${offer.length ? offer.map(([x, w]) => `<label class="check"><input type="checkbox" name="${name}" value="${esc(x)}"${on.has(x) ? ' checked' : ''}> <span>${esc(w)}</span></label>`).join('') : `<p class="muted small">${esc(none)}</p>`}${kept}</fieldset>`;
+      }
+      // A list of fixed keys: one tick box each, in the model's order.
       if (f.item === 'enum') {
         const on = new Set(value ?? []);
-        const words = f.words ?? FAQ_PLACES;
+        const words = f.words ?? {};
         return `<fieldset><legend>${esc(label)}${h}</legend>${f.values.map((x) => `<label class="check"><input type="checkbox" name="${name}" value="${esc(x)}"${on.has(x) ? ' checked' : ''}> <span>${esc(words[x] ?? x)}</span></label>`).join('')}</fieldset>`;
       }
       if (f.item === 'photo' && f.boxes) {
@@ -429,7 +450,7 @@ export function parseForm(list, form) {
       case 'int': { const s = String(form.get(n) ?? '').trim(); out[n] = s === '' ? null : Number(s); break; }
       case 'list':
         if (f.item === 'focus') { out[n] ??= []; break; }
-        if (f.item === 'enum' || f.item === 'kennel') { out[n] = form.getAll(n).filter(Boolean); break; }
+        if (f.item === 'enum' || f.item === 'kennel' || f.item === 'place') { out[n] = [...new Set(form.getAll(n).map(String).filter(Boolean))]; break; }
         if (f.item === 'photo' && f.boxes) {
           // The layout's boxes in order; an empty box is skipped, so the photos
           // after it move up (the site then uses a layout for that many).
@@ -472,4 +493,18 @@ export function parseForm(list, form) {
     }
   }
   return out;
+}
+
+// The places a site offers for questions (faq) and badges, as her tick boxes list
+// them: [key, words] in order (content/blocks.js spotPlaces), and whether Home has
+// its badge row. A page of the owner's goes by its name (lists.place.page).
+export function placeChoices(build, say) {
+  const names = new Map(customPages(build).map((c) => [c.id, c.name]));
+  const words = (k) => (names.has(k) ? say('lists.place.page', { page: names.get(k) }) : say(`c.place.${k}`) || ENUM_WORDS.place[k] || k);
+  return {
+    faq: spotPlaces(build, 'faq').map((k) => [k, words(k)]),
+    badges: spotPlaces(build, 'badges').map((k) => [k, words(k)]),
+    home: homeBadgesPlaced(build),
+    words,
+  };
 }

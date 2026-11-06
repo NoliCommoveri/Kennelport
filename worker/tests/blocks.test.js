@@ -163,12 +163,12 @@ test('every page but Privacy has its blocks; with no build each is today\'s, and
   }
   assert.deepEqual(pageBlocks(null, 'dogs').map((b) => b.id), ['head', 'faq', 'all', 'upcoming', 'for_sale', 'co_owned']);
   // Only what fits a page stays: no story or banner off Home, no other page's
-  // built-in, no badge row where the page has no place for one, no heading on Home.
+  // built-in, no heading on Home. A badge row fits any page (step 3.6).
   const saved = { pages: { about: { blocks: [{ id: 'head', type: 'head' }, { id: 'story', type: 'text' }, { id: 'all', type: 'builtin' }, { id: 'story', type: 'builtin' }, newBlock('dogs', 'dogs-2')] },
     reviews: { blocks: [{ id: 'badges', type: 'badges' }, { id: 'list', type: 'builtin' }] }, home: { blocks: [{ id: 'head', type: 'head' }, { id: 'hero', type: 'hero' }] } } };
   assert.deepEqual(pageBlocks(saved, 'about').map((b) => b.id), ['head', 'story', 'dogs-2']);
   assert.equal(pageBlocks(saved, 'about')[1].type, 'builtin');
-  assert.deepEqual(pageBlocks(saved, 'reviews').map((b) => b.id), ['list']);
+  assert.deepEqual(pageBlocks(saved, 'reviews').map((b) => b.id), ['badges', 'list']);
   assert.deepEqual(pageBlocks(saved, 'home').map((b) => b.id), ['hero']);
   // Add a block: data blocks anywhere; a removed built-in or spot, back.
   const less = pageBlocks(null, 'contact').filter((b) => !['main', 'faq'].includes(b.id));

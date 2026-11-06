@@ -24,7 +24,7 @@ a field or value the sample doesn't use. Add it to the step-1 files.
 - Wren*: only the required fields.
 - Atlas*: the main sire, two titles.
 - Bishop*: co-owned, living with Ridgeview*.
-- Pippa*: a kept puppy (`puppy`: up and coming).
+- Pippa*: a kept puppy (`puppy`, disposition `keeping`: up and coming).
 - Rocco*: an adult `for_sale`, a not-normal result.
 - Hazel*: `retired_breeding`.
 - Ginger*: `deceased`, with `died_on`.

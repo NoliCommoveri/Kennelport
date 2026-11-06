@@ -9,8 +9,10 @@ instructions), and the first of her screens' wording moved into it. Step 3 has b
 page but Privacy is a list of blocks (`content/blocks.js`; Pages in the admin view), each
 data block with its records and what its cards show, and each page drawn exactly as
 before until the owner changes it; the owner adds pages, and the breeder switches and
-words what the owner adds. The rest of step 3 is below (Building it, in steps); steps 4
-to 7 aren't built yet.
+words what the owner adds; the menu editor; FAQ and badge spots on any page, with the
+breeder's tick boxes following them; and what each profile page shows. Step 3.5 (page
+addresses) and step 3.8 (the forms' fields) are still to come, as are steps 5 to 7; step 4
+is partly built (below, Building it, in steps).
 
 Today a site's pages, menu, sections, and the rules for how KennelOS data shows are
 written into the code. Changing one means a code change, for every site at once. This
@@ -178,11 +180,12 @@ portal plan's decision (its section 1), not this one.
   (below). A page is a stack of blocks in order. The owner's choices are limited only
   for function (decision 16).
 
-**FAQ and badge spots** (built for today's pages): each page's FAQ spot and badge row
-are blocks keyed by today's places (`model.js` `FAQ_PLACES`, `BADGE_PLACES`), so the
-questions and badges the breeder placed carry over with no data change. On a profile
-page (every dog, litter, puppy) the spot becomes an item in what that profile shows. A
-spot the owner adds to a new page is new, and starts empty.
+**FAQ and badge spots** (built): each page's FAQ spot and badge row are blocks keyed by
+the page (`model.js` `PLACE_KEYS`; a page of the owner's by its id), so the questions and
+badges the breeder placed carry over with no data change. The owner adds either to any
+page. On a profile page (every dog, litter, puppy) the spot is an item in what that
+profile shows. A spot the owner adds to a new page is new, and starts empty. The
+breeder's tick boxes list the places that exist (`blocks.js` `spotPlaces`).
 
 ### Data sections (what KennelOS data goes where)
 
@@ -572,8 +575,14 @@ Each step is its own branch and can be released on its own.
       and footer switches; pages, places on a page and outside links; the footer follows
       a changed menu);
    5. page addresses and their redirects;
-   6. FAQ and badge spots as block settings, on new pages too;
-   7. what each profile page shows;
+   6. FAQ and badge spots as block settings, on new pages too (built: a FAQ spot or a badge
+      row on any page, a page of the owner's included; the breeder's tick boxes on each
+      question and product list only the places the owner has made, and keep, unseen, a
+      tick whose spot is taken away; Home's badge switch hides while Home has no badge row);
+   7. what each profile page shows (built: every dog's, litter's and puppy's page, one
+      setting per site in Pages: each item's switch, its part of the page and its order, a
+      dog's and a puppy's facts; a profile's FAQ spot and badge row are items, and the
+      breeder's tick boxes follow them);
    8. the contact and review forms' fields.
 4. **The owner's own blocks and styling** (decisions 16 to 18): buttons, banners and
    their links; dividers, spacers, collages, photos, videos, text over a photo; every

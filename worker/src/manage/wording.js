@@ -200,6 +200,8 @@ const LISTS = {
   'lists.sub.transport': 'transport service',
   'lists.sub.home_badge': 'home page badge',
   'lists.sub.also_on': 'also on {places}',
+  'lists.place.page': '{page} page',
+  'lists.place.none': 'No page of your site has a place for these yet. Whoever set up your site can add one.',
   'lists.sub.photos.one': '{n} photo',
   'lists.sub.photos.many': '{n} photos',
   'lists.sub.must_answer': 'must answer',
@@ -232,6 +234,8 @@ const LISTS = {
 // Where those lines show.
 const LIST_WHERE = {
   'lists.sub': 'Under an item in a list', 'lists.qtype': 'An application question\'s kind, under it in the list',
+  'lists.place.page': 'A page added for her, in the tick boxes for where a question or badge shows',
+  'lists.place.none': 'Where a question or badge shows, when no page has a place for them',
   'homeblocks.title': 'A Home block\'s name, in the list and as its screen\'s heading', 'homeblocks.on': 'Beside a Home block that is on',
   'homeblocks.off': 'Beside a Home block that is off', 'kennelos.waiting': 'The "waiting for you to match" card, on her home screen and Publish',
 };
@@ -592,6 +596,7 @@ const ERRORS = [
   ['badge_picture', /^a home page badge needs a picture: choose one, or paste the embed code$/, '{path}: a home page badge needs a picture: choose one, or paste the embed code', 'A Home badge with no picture'],
   ['badges_max', /^the home page shows at most (?<max>\d+) badges: turn one off first$/, '{path}: the home page shows at most {max} badges: turn one off first', 'Too many Home badges'],
   ['place_picture', /^a badge needs a picture: choose one, or paste the embed code$/, '{path}: a badge needs a picture: choose one, or paste the embed code', 'A badge on other pages with no picture'],
+  ['place', /^not a page of this site$/, '{path}: not a page of this site', 'A place for a question or badge that isn\'t a page of her site'],
   ['place_max', /^the (?<place>.+) shows at most (?<max>\d+) badges: take one off it first$/, '{path}: the {place} shows at most {max} badges: take one off it first', 'Too many badges on a page'],
   ['kennel_listed', /^that kennel is already on your list$/, '{path}: that kennel is already on your list', 'A partner kennel added twice'],
   ['partners_max', /^at most (?<max>\d+) partner kennels$/, '{path}: at most {max} partner kennels', 'Too many partner kennels'],
