@@ -25,8 +25,8 @@ export const BLOCK_TYPES = Object.freeze({
   builtin: { name: 'Built-in', ic: 'lock', kind: 'fixed', hint: "What this page is for, drawn as today's site draws it." },
   hero: { name: 'Banner and collage', ic: 'camera', kind: 'content', once: true, hint: 'Her banner, collage, headline and buttons.' },
   facts: { name: 'Facts row', ic: 'star', kind: 'content', once: true, hint: 'Right after the banner it sits in it, as today; anywhere else, on its own.' },
-  badges: { name: 'Badge row', ic: 'gift', kind: 'content', once: true, hint: 'The products she shows as a badge on Home, two at most. Right after the banner it sits under it.' },
-  faq: { name: 'FAQ spot', ic: 'book', kind: 'content', once: true, hint: 'The questions she puts on Home.' },
+  badges: { name: 'Badge row', ic: 'gift', kind: 'content', once: true, hint: 'The badges of the products she ticks for this page, two at most (on Home, her Home badges). Right after the banner, or a part that held one today, it sits inside it.' },
+  faq: { name: 'FAQ spot', ic: 'book', kind: 'content', once: true, hint: 'The questions from her FAQ she ticks for this page.' },
   text: { name: 'Photo and words', ic: 'draft', kind: 'content', once: true, hint: 'Her story: photo, heading, words and features.' },
   dogs: { name: 'Dog cards', ic: 'paw', kind: 'data' },
   litters: { name: 'Litter cards', ic: 'heart', kind: 'data' },
@@ -148,10 +148,11 @@ export const BREEDER_SWITCH = Object.freeze(['hero', 'facts', 'story', 'dogs', '
 // as today's site draws it, top to bottom. What a page is for is its built-in
 // blocks (PAGE_PARTS): today's sections, kept whole so they draw exactly as before;
 // the owner moves or removes them, and can put a removed one back. `inside`: a
-// badge row placed right after it sits inside it, as today. The FAQ spot, the badge
-// row and videos and posts are that page's place (model.js FAQ_PLACES,
-// BADGE_PLACES; embeds' 'about'), so the questions and badges she has placed there
-// carry over: a page has them only where today's has a place for them.
+// badge row placed right after it sits inside it, as today. The FAQ spot and the
+// badge row are that page's place (model.js PLACE_KEYS), so the questions and
+// badges she has placed there carry over; since step 3.6 the owner can add either
+// to any page (SPOTS, below). PAGE_SPOTS is where today's pages have them, and
+// where videos and posts can go (embeds' 'about').
 export const PAGE_PARTS = Object.freeze({
   about: { story: { name: 'Her story', hint: 'Her photo, her words and her facts.' } },
   reviews: { list: { name: 'Every review and the review form', hint: 'With the topic filter when her reviews have more than one topic.' } },
@@ -320,8 +321,10 @@ export function cleanBlock(b) {
 // Home; a page's spots and built-ins on that page.
 export function fits(key, b) {
   if (BLOCK_TYPES[b.type].kind === 'data' || BLOCK_TYPES[b.type].kind === 'own') return true;
-  if (isCustom(key)) return b.type === 'head';
   if (key === 'home') return b.type !== 'builtin' && b.type !== 'head';
+  // A FAQ spot and a badge row: on any page (step 3.6), one each.
+  if (SPOTS.includes(b.type)) return b.id === b.type;
+  if (isCustom(key)) return b.type === 'head';
   if (HOME_ONLY.includes(b.type)) return false;
   if (b.type === 'head') return true;
   if (b.type === 'builtin') return Object.hasOwn(PAGE_PARTS[key] ?? {}, b.id);
@@ -354,6 +357,8 @@ export function layoutFor(build) {
   if (custom.length) out.custom = custom;
   for (const c of custom) out[c.id] = pageBlocks(build, c.id);
   if (menuChanged(build)) out.menu = menuOf(build);
+  const profiles = Object.fromEntries(Object.keys(PROFILES).filter((k) => profileChanged(build, k)).map((k) => [k, profileOf(build, k)]));
+  if (Object.keys(profiles).length) out.profiles = profiles;
   return out;
 }
 
@@ -670,4 +675,155 @@ function placePage(build, id, group) {
   const g = out.find((x) => x.id === group);
   if (g) g.items.push({ type: 'page', page: id });
   return { ...build, menu: out };
+}
+
+// ---------- FAQ and badge spots (step 3.6) ----------
+//
+// The owner puts a FAQ spot or a badge row on any page, hers included, and on each
+// kind of profile page (an item in what it shows: PROFILE_ITEMS). The breeder ticks,
+// on each FAQ question and each product, which of those places show it: her tick
+// boxes list only the places the owner has made (decision: the owner decides
+// which pages can show them, the breeder which do). A place is the page's key
+// (model.js PLACE_KEYS), or a page of hers by its id. Home's badge row is her Home
+// badges (a product's home_badge), as always.
+export const SPOTS = Object.freeze(['faq', 'badges']);
+
+// The places a site offers for questions (faq) or badges, in the order her tick
+// boxes list them: Home, the code's pages, the owner's pages, then the profiles.
+export function spotPlaces(build, type) {
+  const out = [];
+  for (const key of BUILT_PAGES) {
+    if (type === 'badges' && key === 'home') continue;
+    if (pageBlocks(build, key).some((b) => b.type === type)) out.push(key);
+  }
+  for (const c of customPages(build)) if (pageBlocks(build, c.id).some((b) => b.type === type)) out.push(c.id);
+  for (const kind of Object.keys(PROFILES)) if (profileOn(build, kind, type)) out.push(kind);
+  return out;
+}
+// Does Home have its badge row (her Home badges)?
+export const homeBadgesPlaced = (build) => homeBlocks(build).some((b) => b.type === 'badges');
+
+// ---------- what each profile page shows (step 3.7) ----------
+//
+// Every dog's, litter's and puppy's own page, one setting per site (decision 15):
+// which items it shows, in which part of the page, in what order, and on a dog's or
+// a puppy's page which facts. The defaults are today's pages exactly. A site keeps
+// only what the owner changed (build.profiles.<kind>); the snapshot carries it
+// (layout.profiles). The breeder still words her records.
+export const PROFILES = Object.freeze({ dog: "Every dog's page", litter: "Every litter's page", puppy: "Every puppy's page" });
+export const PROFILE_PATHS = Object.freeze({ dog: '/dogs/<dog>', litter: '/litters/<litter>', puppy: '/litters/<litter>/<puppy>' });
+
+// Each kind's parts, top to bottom, and its items. `fixed`: always on (the page's
+// name). `only`: it can sit in that part only. `natural`: the part it sits in today.
+export const PROFILE_PARTS = Object.freeze({
+  dog: { above: 'Under the breadcrumb', side: 'Beside the photo', below: 'Under the photo' },
+  puppy: { above: 'Under the breadcrumb', side: 'Beside the photo', below: 'Under the photo' },
+  litter: { head: 'In the heading', body: 'Under the heading' },
+});
+export const PROFILE_ITEMS = Object.freeze({
+  dog: {
+    faq: 'FAQ spot: the questions she ticks for every dog', role: 'Breed and role', name: 'Call name', reg: 'Registered name', facts: 'Facts',
+    bio: 'Bio', sale: 'Looking for a home: price and “Ask about”', tests: 'Health testing (with verify links)', share: 'Share button',
+    badges: 'Badge row: the badges she ticks for every dog', embeds: 'Videos and posts', litters: "The dog's litters",
+  },
+  puppy: {
+    faq: 'FAQ spot: the questions she ticks for every puppy', status: 'Status', name: 'Name', facts: 'Facts', bio: 'Bio',
+    ask: '“Ask about this puppy” and the full-registration link', surcharge: 'The full-registration surcharge', notice: 'The safe-payment notice', share: 'Share button',
+    badges: 'Badge row: the badges she ticks for every puppy', photos: 'Its photos', albums: "The litter's albums",
+  },
+  litter: {
+    pair: "The pair's names", summary: 'Summary',
+    faq: 'FAQ spot: the questions she ticks for every litter', parents: 'Parent cards', facts: 'Facts', note: 'Price note', fullreg: 'The full-registration link and surcharge',
+    share: 'Share button', pups: 'Pup cards', badges: 'Badge row: the badges she ticks for every litter', embeds: 'Videos and posts', albums: 'Albums',
+  },
+});
+export const PROFILE_FIXED = Object.freeze({ dog: ['name'], puppy: ['name'], litter: [] });
+export const PROFILE_ONLY = Object.freeze({ dog: {}, puppy: {}, litter: { pair: 'head', summary: 'head', faq: 'body', parents: 'body', facts: 'body', note: 'body', fullreg: 'body', share: 'body', pups: 'body', badges: 'body', embeds: 'body', albums: 'body' } });
+// The facts on a dog's and a puppy's page, today's order.
+export const PROFILE_FACTS = Object.freeze({
+  dog: { sex: 'Sex', color: 'Color', born: 'Born', weight: 'Weight', registry: 'Registry', titles: 'Titles', co_owned: 'Co-owned with', lives_with: 'Lives with' },
+  puppy: { sex: 'Sex', color: 'Color', collar: 'Collar', status: 'Status', price: 'Price', registration: 'Registration', registry: 'Registry', parents: 'Parents', born: 'Born' },
+});
+// Today's pages: each part's items in order. What isn't listed is off (a dog's
+// badge row: today's dog pages have none).
+export const PROFILE_DEFAULT = Object.freeze({
+  dog: { parts: { above: ['faq'], side: ['role', 'name', 'reg', 'facts', 'bio', 'sale', 'tests', 'share'], below: ['embeds', 'litters'] }, facts: Object.keys(PROFILE_FACTS.dog) },
+  puppy: { parts: { above: ['faq'], side: ['status', 'name', 'facts', 'bio', 'ask', 'surcharge', 'notice', 'share'], below: ['badges', 'photos', 'albums'] }, facts: Object.keys(PROFILE_FACTS.puppy) },
+  litter: { parts: { head: ['pair', 'summary'], body: ['faq', 'parents', 'facts', 'note', 'fullreg', 'share', 'pups', 'badges', 'embeds', 'albums'] } },
+});
+// The part an item sits in when switched on: where today's page has it, else the
+// last part (a dog's badge row goes under the photo).
+export function homePart(kind, item) {
+  const parts = PROFILE_DEFAULT[kind].parts;
+  return Object.keys(parts).find((p) => parts[p].includes(item)) ?? PROFILE_ONLY[kind][item] ?? Object.keys(parts).at(-1);
+}
+
+// A kind's setting, every part present and every item where it may be: the
+// owner's, cleaned, or today's.
+export function cleanProfile(kind, v) {
+  const D = PROFILE_DEFAULT[kind];
+  const items = PROFILE_ITEMS[kind];
+  const src = v && typeof v === 'object' && v.parts && typeof v.parts === 'object' ? v : D;
+  const seen = new Set();
+  const parts = {};
+  for (const part of Object.keys(PROFILE_PARTS[kind])) {
+    parts[part] = (Array.isArray(src.parts[part]) ? src.parts[part] : []).filter((x) => {
+      if (!Object.hasOwn(items, x) || seen.has(x)) return false;
+      const only = PROFILE_ONLY[kind][x];
+      if (only && only !== part) return false;
+      seen.add(x);
+      return true;
+    });
+  }
+  // The page's name is always on, in its own part where it isn't placed.
+  for (const x of PROFILE_FIXED[kind]) if (!seen.has(x)) parts[homePart(kind, x)].unshift(x);
+  const out = { parts };
+  if (PROFILE_FACTS[kind]) out.facts = list(src.facts, PROFILE_FACTS[kind]) ?? [...D.facts];
+  return out;
+}
+export const profileOf = (build, kind) => cleanProfile(kind, build?.profiles?.[kind]);
+export const profileChanged = (build, kind) => build?.profiles?.[kind] != null && JSON.stringify(profileOf(build, kind)) !== JSON.stringify(cleanProfile(kind, null));
+export const profileOn = (build, kind, item) => Object.values(profileOf(build, kind).parts).some((p) => p.includes(item));
+
+// The build with a kind's setting; back to today's when it is today's.
+export function withProfile(build, kind, v) {
+  const next = structuredClone(build ?? {});
+  const clean = cleanProfile(kind, v);
+  if (JSON.stringify(clean) === JSON.stringify(cleanProfile(kind, null))) {
+    if (next.profiles) delete next.profiles[kind];
+    if (next.profiles && !Object.keys(next.profiles).length) delete next.profiles;
+  } else {
+    next.profiles = { ...(next.profiles ?? {}), [kind]: clean };
+  }
+  return next;
+}
+
+// The editor's form (manage/builder.js): each part's items as p.part.<part> (the
+// order shown, on and off), each item's switch p.on.<item> and its part
+// p.at.<item>; the facts as p.facts (the order shown) and p.fact.<key>. An item
+// moved to another part goes at the end of it. `act`: pmv:<item>:<up|down> moves an
+// item within its part, fmv:<key>:<up|down> a fact.
+export function profileFromForm(kind, get) {
+  const cur = cleanProfile(kind, null);
+  const parts = Object.keys(PROFILE_PARTS[kind]);
+  const items = PROFILE_ITEMS[kind];
+  const listed = Object.fromEntries(parts.map((p) => [p, String(get(`p.part.${p}`) ?? '').split(',').filter((x) => Object.hasOwn(items, x))]));
+  const act = String(get('act') ?? '').split(':');
+  if (act[0] === 'pmv') {
+    const p = parts.find((x) => listed[x].includes(act[1]));
+    if (p) listed[p] = moved(listed[p], listed[p].indexOf(act[1]), act[2]);
+  }
+  const at = (x, p) => { const v = String(get(`p.at.${x}`) ?? p); return parts.includes(v) ? v : p; };
+  const out = { parts: {} };
+  for (const p of parts) out.parts[p] = [];
+  for (const p of parts) for (const x of listed[p]) if (at(x, p) === p) out.parts[p].push(x);
+  for (const p of parts) for (const x of listed[p]) if (at(x, p) !== p) out.parts[at(x, p)].push(x);
+  for (const p of parts) out.parts[p] = out.parts[p].filter((x) => PROFILE_FIXED[kind].includes(x) || get(`p.on.${x}`) != null);
+  if (PROFILE_FACTS[kind]) {
+    let order = String(get('p.facts') ?? '').split(',').filter((x) => Object.hasOwn(PROFILE_FACTS[kind], x));
+    for (const x of Object.keys(PROFILE_FACTS[kind])) if (!order.includes(x)) order.push(x);
+    if (act[0] === 'fmv') order = moved(order, order.indexOf(act[1]), act[2]);
+    out.facts = order.filter((x) => get(`p.fact.${x}`) != null);
+  }
+  return act[0] === 'default' ? cur : cleanProfile(kind, out);
 }

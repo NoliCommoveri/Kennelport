@@ -9,6 +9,7 @@
 //   GET  /admin                     Every site
 //   GET  /admin/<sub>/pages         Pages: the list (step 3)
 //   GET  /admin/<sub>/pages/<page>  a page's blocks, top to bottom, and what each data block's cards show
+//   GET  /admin/<sub>/pages/dog      what every dog's page shows (likewise litter, puppy: step 3.7)
 //   GET  /admin/<sub>/rules         Pups: status, registration and price rules
 //   GET  /admin/<sub>/dogs          Dogs: the Dogs page's wording, adults' prices
 //   GET  /admin/<sub>/wording       Wording: the rest of the site's fixed lines
@@ -40,6 +41,7 @@ import {
   LITTER_ROWS, REVIEW_ITEMS, REVIEW_WHO, BlockError, blocksFromForm, moved, newBlock,
   pageBlocks, pageChanged, pagesChanged, withPage, addable, fits, hersOn, blockName, blockHint, isBuilt, BUILT_PAGES, PAGE_PARTS, headFor, isCustom, customPages, addPage, withPageInfo, withoutPage, pathFor, STARTS,
   menuOf, menuChanged, withMenu, groupOf, MenuError, MENU_PLACES, MENU_LIMITS,
+  PROFILES, PROFILE_PATHS, PROFILE_PARTS, PROFILE_ITEMS, PROFILE_FIXED, PROFILE_ONLY, PROFILE_FACTS, profileOf, profileChanged, withProfile, profileFromForm, homePart,
   LINK_TO, BUTTON_SIZE, BUTTON_LOOK, ALIGN, DIVIDER_STYLE, DIVIDER_WIDTH, SPACER_HEIGHT, PHOTO_SHAPE, PHOTO_FOCUS, OVER_V, OVER_SHADE, BG_COLOURS, PAD, TEXT_SIZE,
 } from '../content/blocks.js';
 import { PAGES } from '../content/model.js';
@@ -623,11 +625,13 @@ async function pagesScreen(env, site, build, { adding = false, input = {}, error
   const inGroup = (k) => { const id = groupOf(menu, k); return id ? menu.find((g) => g.id === id).label : null; };
   const mine = customPages(build).map((c) => row(c.path, pageLabel(snap, c.id), `/admin/${sub}/pages/${c.id}`, `${count(c.id)} · <span class="spill brass">Added</span> · ${inGroup(c.id) ? `in ${esc(inGroup(c.id))}` : 'not in the menu'}${offNote(c.id)}`));
   const fixed = row(PAGES.privacy.path, PAGES.privacy.label, null, 'written for her by KennelPort, fixed');
+  const profiles = Object.entries(PROFILES).map(([k, n]) => row(PROFILE_PATHS[k], n, `/admin/${sub}/pages/${k}`, `what it shows${profileChanged(build, k) ? ' · <span class="chg">changed</span>' : ' · as today'}`));
   return `<div class="build"><div class="stack">
     ${adding ? `<form method="post" class="stack">${newPageCard(groupsOf(build), input, error)}</form>` : ''}
     <section class="card"><div class="between"><h2>${rows.length + mine.length + 1} pages</h2>${adding ? '' : '<a class="button small primary" href="?new=1#new-page">' + svg('plus') + ' New page</a>'}</div><ul class="list pages">${rows.join('')}</ul>
-      ${mine.length ? `<h2 class="mt">Pages you added</h2><ul class="list pages">${mine.join('')}</ul>` : ''}<ul class="list pages">${fixed}</ul></section>
-    <section class="card band"><p class="small">A page you add is the breeder's to switch on or off, name in her menu and word, like any page. Where each page sits in the menu is in <a href="/admin/${sub}/menu">Menu</a>. Page addresses for the breeder, and FAQ and badge spots on your pages, come next.</p></section>
+      ${mine.length ? `<h2 class="mt">Pages you added</h2><ul class="list pages">${mine.join('')}</ul>` : ''}<ul class="list pages">${fixed}</ul>
+      <h2 class="mt">Every dog, litter and puppy</h2><p class="small muted">Each record's own page. One setting for the whole site.</p><ul class="list pages">${profiles.join('')}</ul></section>
+    <section class="card band"><p class="small">A page you add is the breeder's to switch on or off, name in her menu and word, like any page. Where each page sits in the menu is in <a href="/admin/${sub}/menu">Menu</a>. A FAQ spot or a badge row can go on any page, yours too, from its Add a block: the breeder then sees that page in the tick boxes on her questions and products. Page addresses for the breeder come next.</p></section>
   </div><div class="pvwrap" id="preview">${pagePreview(snap, 'home', pageBlocks(build, 'home'), site)}${await previewLink(env, site)}</div></div>`;
 }
 
@@ -980,6 +984,7 @@ async function pagesRoute({ env, request, url, site, build, page, screen }) {
     return page(`Pages · ${site.kennel_name || site.subdomain}`, body, { admin: { nav: adminNav(site, 'pages'), site } });
   }
   const key = screen.slice('pages/'.length);
+  if (Object.hasOwn(PROFILES, key)) return profileRoute({ env, request, url, site, build, page, kind: key });
   if (!isBuilt(key, build)) return null;
   let error = null;
   let open = url.searchParams.get('open');
@@ -1014,6 +1019,91 @@ async function pagesRoute({ env, request, url, site, build, page, screen }) {
     ${saved ? `<p class="notice" role="status">${made ? 'Page made. It goes live, and into the menu, once the breeder (or you) publishes.' : 'Saved. The site shows it once the breeder (or you) publishes.'}</p>` : ''}
     <form method="post" id="build" class="build"><button class="sr" tabindex="-1" aria-hidden="true">Save</button>${await pageScreen(env, site, build, key, { open, error })}
       <div class="actionbar"><div class="in"><span class="ico">${ic('eye')}</span><p><b>Their ${esc(title)} page</b>Save, then the preview shows it. Publishing puts it live.</p><a class="button small seeit" href="#preview">See it</a><button class="primary small">Save</button></div></div></form>`;
+  return page(`${title} · ${site.kennel_name || site.subdomain}`, body, { admin: { nav: adminNav(site, 'pages'), site } });
+}
+
+// ---------- what each profile page shows (step 3.7) ----------
+//
+// Every dog's, litter's or puppy's own page: each part's items in order, each with
+// its switch and, where it can move, the part it sits in; then a dog's or a puppy's
+// facts. No prototype screen for it: built from the card editor's ordered lists
+// (showList), its switches and the pinned action bar.
+
+// One part's rows: its items that are on, in order, then those off that sit here when on.
+function profilePart(kind, pr, part) {
+  const on = pr.parts[part];
+  const placed = new Set(Object.values(pr.parts).flat());
+  const off = Object.keys(PROFILE_ITEMS[kind]).filter((x) => !placed.has(x) && homePart(kind, x) === part);
+  const order = [...on, ...off];
+  const parts = PROFILE_PARTS[kind];
+  const row = (x, i) => {
+    const fixed = PROFILE_FIXED[kind].includes(x);
+    const movable = !PROFILE_ONLY[kind][x] && Object.keys(parts).length > 1;
+    const sel = movable ? `<select name="p.at.${x}" aria-label="${esc(PROFILE_ITEMS[kind][x])}: where it sits">${Object.entries(parts).map(([v, l]) => `<option value="${v}"${v === part ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>` : '';
+    const box = fixed ? `<label class="check"><input type="checkbox" checked disabled aria-label="${esc(PROFILE_ITEMS[kind][x])}: always on"></label>`
+      : `<label class="check"><input type="checkbox" name="p.on.${x}"${on.includes(x) ? ' checked' : ''} aria-label="${esc(PROFILE_ITEMS[kind][x])}"></label>`;
+    return `<li class="mvr item${on.includes(x) ? '' : ' off'}">${mvBtns(`pmv:${x}`, i, order.length)}<span class="ttl">${esc(PROFILE_ITEMS[kind][x])}${fixed ? '<small>Always on</small>' : ''}${sel}</span>
+      <span class="end switches">${box}</span></li>`;
+  };
+  return `<div class="fld"><span class="fldt">${esc(parts[part])}</span><input type="hidden" name="p.part.${part}" value="${esc(order.join(','))}">
+    <ul class="mvl">${order.length ? order.map(row).join('') : '<li class="mvr item off"><span class="ttl"><small>Nothing here</small></span></li>'}</ul></div>`;
+}
+
+function profileFacts(kind, pr) {
+  const F = PROFILE_FACTS[kind];
+  const order = [...pr.facts, ...Object.keys(F).filter((x) => !pr.facts.includes(x))];
+  return `<input type="hidden" name="p.facts" value="${esc(order.join(','))}"><ul class="mvl">${order.map((x, i) => `<li class="mvr item${pr.facts.includes(x) ? '' : ' off'}">${mvBtns(`fmv:${x}`, i, order.length)}<span class="ttl">${esc(F[x])}</span>
+    <span class="end switches"><label class="check"><input type="checkbox" name="p.fact.${x}"${pr.facts.includes(x) ? ' checked' : ''} aria-label="${esc(F[x])}"></label></span></li>`).join('')}</ul>`;
+}
+
+// The phone beside it: one of her records' pages, sketched part by part.
+function profilePreview(snap, site, kind, pr) {
+  const l = snap.litters.find((x) => x.puppies.length) ?? snap.litters[0];
+  const rec = kind === 'dog' ? snap.dogs[0] : kind === 'litter' ? l : l?.puppies[0];
+  const name = rec ? (kind === 'dog' ? rec.call_name : rec.name) : PROFILES[kind];
+  const path = !rec ? PROFILE_PATHS[kind] : kind === 'dog' ? `/dogs/${rec.slug}` : kind === 'litter' ? `/litters/${rec.slug}` : `/litters/${l.slug}/${rec.slug}`;
+  const item = (x) => {
+    if (x === 'name') return `<h3>${esc(name)}</h3>`;
+    if (x === 'faq') { const q = placedFaqs(snap, kind); return q.length ? q.map((e) => `<div class="pv-q">${esc(e.heading)}</div>`).join('') : '<div class="pv-row small muted">FAQ spot: no questions ticked for it, so it hides</div>'; }
+    if (x === 'badges') { const b = badgesOn(snap, kind); return `<div class="pv-row">${b.length ? b.map((y) => `<span class="pv-pill">${esc(y.name)}</span>`).join(' ') : '<span class="small muted">Badge row: no badges ticked for it, so it hides</span>'}</div>`; }
+    return `<div class="pv-row small">${esc(PROFILE_ITEMS[kind][x].replace(/:.*$/, ''))}</div>`;
+  };
+  const out = [];
+  if (kind === 'litter') {
+    out.push(`<div class="pvb sand"><h3>${esc(name)}</h3>${pr.parts.head.map((x) => `<p class="small muted">${esc(PROFILE_ITEMS.litter[x])}</p>`).join('')}</div>`);
+    for (const x of pr.parts.body) out.push(`<div class="pvb">${item(x)}</div>`);
+  } else {
+    for (const x of pr.parts.above) out.push(`<div class="pvb">${item(x)}</div>`);
+    out.push(`<div class="pv-hero"><span class="ph"></span></div><div class="pvb">${pr.parts.side.map(item).join('')}</div>`);
+    for (const x of pr.parts.below) out.push(`<div class="pvb">${item(x)}</div>`);
+  }
+  return phone(site, snap, path, `${PROFILES[kind]}, as you set it`, out);
+}
+
+async function profileRoute({ env, request, url, site, build, page, kind }) {
+  const sub = esc(site.subdomain);
+  if (request.method === 'POST') {
+    const form = await request.formData();
+    await saveBuild(env, site.id, withProfile(build, kind, profileFromForm(kind, (k) => form.get(k))));
+    return redirect(`/admin/${site.subdomain}/pages/${kind}?saved=1`);
+  }
+  const snap = await buildSnapshot(env, site.id);
+  useFormats(snap);
+  const pr = profileOf(build, kind);
+  const changed = profileChanged(build, kind);
+  const title = PROFILES[kind];
+  const facts = PROFILE_FACTS[kind] ? `<section class="card"><div class="fgroup"><h2>Facts</h2><p class="small muted">The facts list beside the photo, top to bottom. A fact she hasn't filled in leaves itself out.</p>${profileFacts(kind, pr)}</div></section>` : '';
+  const spots = `A FAQ spot or a badge row that is on here shows in the breeder's tick boxes, on her questions and her products, as ${esc(kind === 'litter' ? '"Every litter\'s page"' : kind === 'dog' ? '"Every dog\'s profile"' : '"Every puppy\'s profile"')}.`;
+  const body = `<p class="crumb"><a href="/admin/${sub}/pages">‹ Pages</a></p><span class="eyebrow">${esc(site.kennel_name || site.subdomain)}</span>${isDemo(site) ? ' <span class="spill brass">Demo</span>' : ''}<h1>${esc(title)}</h1>
+    <p class="muted">What every ${kind}'s own page shows, and where. The breeder words her records; you decide what the page carries.${changed ? '' : ' This is today\'s page.'}</p>
+    ${url.searchParams.get('saved') ? '<p class="notice" role="status">Saved. The site shows it once the breeder (or you) publishes.</p>' : ''}
+    <form method="post" id="build" class="build"><button class="sr" tabindex="-1" aria-hidden="true">Save</button><div class="stack">
+      <section class="card"><div class="fgroup"><h2>What it shows, top to bottom</h2><p class="small muted">${kind === 'litter' ? 'Switch each one on or off, and order what sits under the heading.' : 'Switch each one on or off, order it within its part, or move it to another part.'} ${spots}</p>
+        ${Object.keys(PROFILE_PARTS[kind]).map((p) => profilePart(kind, pr, p)).join('')}</div>
+        ${changed ? '<div class="row"><button class="link small" name="act" value="default">Back to today\'s page</button></div>' : ''}</section>
+      ${facts}</div>
+      <div class="pvwrap" id="preview">${profilePreview(snap, site, kind, pr)}${await previewLink(env, site)}</div>
+      <div class="actionbar"><div class="in"><span class="ico">${ic('eye')}</span><p><b>${esc(title)}</b>Save, then the preview shows it. Publishing puts it live.</p><a class="button small seeit" href="#preview">See it</a><button class="primary small">Save</button></div></div></form>`;
   return page(`${title} · ${site.kennel_name || site.subdomain}`, body, { admin: { nav: adminNav(site, 'pages'), site } });
 }
 
