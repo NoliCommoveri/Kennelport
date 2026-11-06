@@ -74,6 +74,7 @@ KENNELOS_APP_ORIGINS = "https://pro.kennelos.app, http://localhost:8000, http://
 DEV_OUTBOX = "1"
 MAIL_FROM = "KennelPort <signin@kennelport.com>"
 VAPID_SUBJECT = "mailto:support@kennelport.com"
+TURNSTILE_SITE_KEY = "0x4AAAAAAF2OCQGhs6i7yT3M"
 
 # The daily cleanup (src/cleanup.js): messages after 90 days, and the rest; and
 # hourly, the family portal's vet clocks and reminders (src/portal/reminders.js).

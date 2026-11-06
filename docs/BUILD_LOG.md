@@ -466,6 +466,13 @@ features and the inquiry form), and custom domains with guided, self-checking DN
 - `kennelport.com` bought. Production's D1 database (`kennelport`) created and its id
   set in `wrangler.toml`, so the production Worker can be connected (setup step 4).
 
+## 2026-11-06: staging Turnstile key
+
+- Staging's `TURNSTILE_SITE_KEY` in `wrangler.toml` (`[vars]`), for the widget made
+  for `kennelport-staging.kennelport.workers.dev`. The forms use Turnstile once its
+  partner secret `TURNSTILE_SECRET` is set on the staging Worker in the dashboard;
+  until then they keep to the honeypot and rate limits, and `/ops` says so.
+
 ## 2026-11-02: production Turnstile key
 
 - Production's `TURNSTILE_SITE_KEY` in `wrangler.toml` (`[env.production.vars]`): a
