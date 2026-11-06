@@ -18,6 +18,7 @@ import { chunks, placeholders } from './lib/sql.js';
 import { rulesFor, loadBuild, ruleKey } from './content/rules.js';
 import { NOT_FOR_DEMO } from './lib/demo.js';
 import { layoutFor, customPages } from './content/blocks.js';
+import { changes } from './diff.js';
 
 export const SNAPSHOT_VERSION = 1;
 export const KEEP = 10;
@@ -335,10 +336,28 @@ export async function undoPublish(env, siteId) {
   await db.batch([
     db.prepare('UPDATE sites SET published_snapshot_id = ? WHERE id = ?').bind(target.id, siteId),
     db.prepare('DELETE FROM snapshots WHERE id = ?').bind(live.id),
+    // The draft may now differ from what's live again: let the next check compare.
+    db.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(new Date().toISOString(), siteId),
   ]);
   await env.FILES.delete(live.r2_key);
   memory.delete(live.id);
   return { id: target.id };
+}
+
+// What the draft changes on the live site (diff.js), as the Publish screen lists it.
+// When nothing differs, the "changed since" mark is cleared, so the "changes not
+// published yet" notices agree with the Publish screen. Things like a KennelOS
+// update mark the draft changed whether or not anything on the site moved; without
+// this, she'd be told to publish with nothing to publish, and no button to clear it.
+// Cleared only if nothing marked the draft again while this looked.
+export async function draftChanges(env, siteId) {
+  const row = await env.DB.prepare('SELECT draft_changed_at, published_snapshot_id FROM sites WHERE id = ?').bind(siteId).first();
+  const live = await loadSnapshot(env, siteId, row?.published_snapshot_id);
+  const list = changes(live, await buildSnapshot(env, siteId));
+  if (!list.length && live && row.draft_changed_at) {
+    await env.DB.prepare('UPDATE sites SET draft_changed_at = NULL WHERE id = ? AND draft_changed_at = ?').bind(siteId, row.draft_changed_at).run();
+  }
+  return list;
 }
 
 export async function listSnapshots(env, siteId) {

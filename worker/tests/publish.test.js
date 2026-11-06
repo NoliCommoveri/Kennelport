@@ -4,7 +4,7 @@ import { makeEnv, call, addSite } from './helpers/env.js';
 
 const { importContent } = await import('../src/content/io.js');
 const { AK_SAMPLE } = await import('../src/content/akSample.js');
-const { publish, undoPublish, buildSnapshot, listSnapshots, forgetSnapshots, KEEP } = await import('../src/publish.js');
+const { publish, undoPublish, buildSnapshot, listSnapshots, forgetSnapshots, draftChanges, KEEP } = await import('../src/publish.js');
 const { makePreviewToken } = await import('../src/site.js');
 
 const H = 'akbostons.kennelport.com';
@@ -212,4 +212,32 @@ test("a dog's weight shows on its card, beside its health results, and on its pa
   assert.match(dogs, /<li><span>Weight<\/span><span>18 lb<\/span><\/li><\/ul><span class="eyebrow">Health testing/);
   assert.equal(dogs.match(/<span>Weight<\/span>/g).length, 1, 'only on the dog that has one');
   assert.match(await (await call(env, H, '/dogs/willow')).text(), /Weight[\s\S]{0,40}18 lb/);
+});
+
+// Something like a KennelOS update marks the draft changed even when nothing on
+// the site moved: the Today and Website notices then went on saying "changes not
+// published yet" while Publish said there was nothing to publish.
+test('"changes not published yet" shows only when Publish has something to publish', async () => {
+  const { env, site } = await akSite();
+  const M = 'manage.kennelport.com';
+  const login = await call(env, M, '/ops/login', { method: 'POST', body: new URLSearchParams({ token: 'ops-token' }) });
+  const admin = login.headers.getSetCookie().map((c) => c.split(';')[0]).find((c) => c.startsWith('kp_admin='));
+  const home = async () => (await call(env, M, '/s/akbostons', { headers: { cookie: admin } })).text();
+  const touch = () => env.DB.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(new Date(Date.now() + 1000).toISOString(), site.id).run();
+  const changedAt = () => env.DB.prepare('SELECT draft_changed_at AS t FROM sites WHERE id = ?').bind(site.id).first('t');
+
+  await publish(env, site.id, 'test');
+  await touch();
+  assert.doesNotMatch(await home(), /not published yet/);
+  assert.equal(await changedAt(), null, 'the mark is cleared once checked');
+  assert.equal((await draftChanges(env, site.id)).length, 0);
+
+  await importContent(env, site.id, { home: { hero: { headline: 'A brand new headline' } } });
+  assert.match(await home(), /not published yet/);
+  assert.ok((await draftChanges(env, site.id)).length);
+
+  await publish(env, site.id, 'test');
+  await publish(env, site.id, 'test');
+  await undoPublish(env, site.id);
+  assert.ok(await changedAt(), 'undo marks the draft to be checked again');
 });

@@ -12,7 +12,7 @@ import {
   startSignIn, verifySignIn, currentUser, signOut, clearSessionCookie, AuthError, CODE_TTL_MS,
 } from '../auth.js';
 import { makePreviewToken } from '../site.js';
-import { listSnapshots } from '../publish.js';
+import { listSnapshots, draftChanges } from '../publish.js';
 import { siteLink } from '../ops/sites.js';
 import { createScreens, matchesWaiting } from './screens.js';
 import { kennelosState } from '../feed.js';
@@ -157,7 +157,10 @@ async function siteHome(env, user, site, view = 'today', page = plainPage, say =
   const snaps = await listSnapshots(env, site.id);
   const full = await env.DB.prepare('SELECT draft_changed_at, published_snapshot_id FROM sites WHERE id = ?').bind(site.id).first();
   const live = snaps.find((x) => x.id === full.published_snapshot_id);
-  const changed = full.draft_changed_at && (!live || full.draft_changed_at > live.published_at) && site.demo_step == null;
+  // The dates say whether anything was touched since publishing; when they say so,
+  // check that the site would really change (a KennelOS update touches it every time).
+  const changed = full.draft_changed_at && (!live || full.draft_changed_at > live.published_at) && site.demo_step == null
+    && (!live || (await draftChanges(env, site.id)).length > 0);
   const unread = await env.DB.prepare('SELECT COUNT(*) AS n FROM inquiries WHERE site_id = ? AND read_at IS NULL').bind(site.id).first('n');
   const pending = await env.DB.prepare("SELECT COUNT(*) AS n FROM stories WHERE site_id = ? AND status = 'pending'").bind(site.id).first('n');
   const listed = await env.DB.prepare("SELECT COUNT(*) AS n FROM waitlist_entries WHERE site_id = ? AND status = 'waiting'").bind(site.id).first('n');

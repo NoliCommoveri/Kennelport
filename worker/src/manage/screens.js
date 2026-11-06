@@ -12,8 +12,7 @@ import { pageBlocks, customPages, addedBlocks, BLOCK_TYPES, isCustom } from '../
 import { fields, field, parseForm, LABELS, labelFor, placeChoices } from './forms.js';
 import { savePhoto, PhotoError } from '../photos.js';
 import { subjects, isSubject, tagPhotos, untagPhoto, tagsByPhoto } from '../photoTags.js';
-import { buildSnapshot, loadSnapshot, publish, undoPublish, listSnapshots } from '../publish.js';
-import { changes } from '../diff.js';
+import { buildSnapshot, loadSnapshot, publish, undoPublish, listSnapshots, draftChanges } from '../publish.js';
 import { makePreviewToken } from '../site.js';
 import { siteLink } from '../ops/sites.js';
 import { APP_VERSION } from './version.js';
@@ -944,10 +943,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       return null;
     }
     if (rest) return null;
-    const row = await env.DB.prepare('SELECT published_snapshot_id FROM sites WHERE id = ?').bind(site.id).first();
-    const live = await loadSnapshot(env, site.id, row.published_snapshot_id);
-    const draft = await buildSnapshot(env, site.id);
-    const list = changes(live, draft);
+    const list = await draftChanges(env, site.id);
     const token = await makePreviewToken(env, site.id, 1);
     const prev = (path) => siteLink(env, site.subdomain, `/__preview?t=${encodeURIComponent(token)}&next=${encodeURIComponent(path)}`);
     const snaps = await listSnapshots(env, site.id);
