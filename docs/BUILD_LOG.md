@@ -1717,3 +1717,5 @@ with new sections and a new building order. Docs only; nothing built yet.
 - Still to come in step 4: collages and videos as her blocks, links to a dog, litter or
   puppy, fonts and the font library, text size on the built-in blocks.
 - Tests: `ownblocks.test.js` (new); `blocks.test.js` (Add a block lists them).
+
+- Version bumped (2026-11-06, owner's yes): `ASSET_VERSION` 17, with its fingerprint.
