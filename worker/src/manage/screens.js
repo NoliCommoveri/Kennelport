@@ -17,7 +17,7 @@ import { changes } from '../diff.js';
 import { makePreviewToken } from '../site.js';
 import { siteLink } from '../ops/sites.js';
 import { APP_VERSION } from './version.js';
-import { defaultSay, NOTE_KEYS, sayError } from './wording.js';
+import { defaultSay, NOTE_KEYS, sayError, sayMessage } from './wording.js';
 import { STATUS_TEXT, SAFE_NOTICE_TEXT, blockRows } from '../render/parts.js';
 import { exportContent } from '../content/io.js';
 import { closeSite, SiteError } from '../sites.js';
@@ -157,7 +157,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       if (image && brandImageOk(image)) { values.image_url = image; values.photo_id = null; }
       else if (image) { values.photo_id = await storeBadgeImage(env, site.id, image, alt ?? values.name ?? ''); values.image_url = null; }
     } catch (err) {
-      if (err instanceof BadgeCodeError) throw new ContentError('embed code', err.message);
+      if (err instanceof BadgeCodeError) throw new ContentError('embed code', sayMessage('badge', err.message, say));
       throw err;
     }
   }
@@ -213,7 +213,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
           const { code, expiresAt } = await makeLinkCode(env, site.id, user.emailHash.slice(0, 12));
           return render({ code, expiresAt });
         } catch (err) {
-          if (err instanceof LinkError) return render({ error: err.message });
+          if (err instanceof LinkError) return render({ error: sayMessage('kennelos', err.message, say) });
           throw err;
         }
       }
@@ -240,7 +240,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
           if (fd.get('answer') === 'yes') await confirmMatch(env, site.id, kind, kid, fd.getAll('keep').map(String));
           else await declineMatch(env, site.id, kind, kid);
         } catch (err) {
-          if (err instanceof MatchError) return render({ error: err.message });
+          if (err instanceof MatchError) return render({ error: sayMessage('kennelos', err.message, say) });
           throw err;
         }
         return here(fd.get('answer') === 'yes' ? 'matched' : 'apart', '#matches');
@@ -325,7 +325,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     else {
       try { await addEmbed(env, site.id, String(fd.get('place') ?? ''), { link: fd.get('link'), title: fd.get('title') }); } catch (err) {
         if (!(err instanceof EmbedError)) throw err;
-        return redirect(`${here}${here.includes('?') ? '&' : '?'}embed_error=${encodeURIComponent(err.message)}#videos`);
+        return redirect(`${here}${here.includes('?') ? '&' : '?'}embed_error=${encodeURIComponent(sayMessage('videos', err.message, say))}#videos`);
       }
       return redirect(`${here}?note=embedded#videos`);
     }
@@ -600,7 +600,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       if (fd.get('remove')) { await setFeed(env, site.id, null); return redirect(`${base}/pages/waitlist?note=saved#kennelos`); }
       try { await setFeed(env, site.id, parseFeedAddress(env, fd.get('feed'))); } catch (err) {
         if (!(err instanceof FeedError)) throw err;
-        return pagesView('waitlist', await kennelosCard(err.message, String(fd.get('feed') ?? '')), { show: true });
+        return pagesView('waitlist', await kennelosCard(sayMessage('feed', err.message, say), String(fd.get('feed') ?? '')), { show: true });
       }
       return redirect(`${base}/pages/waitlist?note=saved#kennelos`);
     }
@@ -799,7 +799,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
         await tagPhotos(env, site.id, [saved.id], String(form.get('tags') ?? '').split(','));
         return json({ id: saved.id, thumb: photoUrl(saved.id) });
       } catch (err) {
-        if (err instanceof PhotoError) return json({ message: err.message }, 400);
+        if (err instanceof PhotoError) return json({ message: sayMessage('photos', err.message, say) }, 400);
         throw err;
       }
     }
@@ -891,7 +891,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
         if (rest === '/undo') { await undoPublish(env, site.id); return redirect(`${base}/publish?note=undone`); }
         if (!rest) { await publish(env, site.id, user.emailHash.slice(0, 12)); return redirect(`${base}/publish?note=published`); }
       } catch (err) {
-        return { title: say('publish.publish_2'), back: base, body: `<p class="error" role="alert">${esc(err.message)}</p><p><a href="${base}/publish">${esc(say('publish.back'))}</a></p>` };
+        return { title: say('publish.publish_2'), back: base, body: `<p class="error" role="alert">${esc(sayMessage('publish', err.message, say))}</p><p><a href="${base}/publish">${esc(say('publish.back'))}</a></p>` };
       }
       return null;
     }
@@ -988,7 +988,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
         const inquiry = v.inquiry_id ? await env.DB.prepare('SELECT id FROM inquiries WHERE id = ? AND site_id = ?').bind(v.inquiry_id, site.id).first() : null;
         try { await addEntry(env, site.id, v, { inquiryId: inquiry?.id ?? null }); } catch (err) {
           if (!(err instanceof WaitlistError)) throw err;
-          return { title: say('waitlistlist.add_to_waitlist_2'), back: `${base}/waitlist`, body: form(`${base}/waitlist/new`, v, { err: err.message, from: inquiry?.id }) };
+          return { title: say('waitlistlist.add_to_waitlist_2'), back: `${base}/waitlist`, body: form(`${base}/waitlist/new`, v, { err: sayMessage('waitlist', err.message, say), from: inquiry?.id }) };
         }
         return back('listed');
       }
@@ -1020,7 +1020,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
         const v = await values();
         try { await updateEntry(env, site.id, e.id, v); } catch (err) {
           if (!(err instanceof WaitlistError)) throw err;
-          return { title: e.name, back: `${base}/waitlist`, body: form(`${base}/waitlist/${e.id}`, { ...e, ...v }, { err: err.message, edit: true }) };
+          return { title: e.name, back: `${base}/waitlist`, body: form(`${base}/waitlist/${e.id}`, { ...e, ...v }, { err: sayMessage('waitlist', err.message, say), edit: true }) };
         }
         return back('listsaved');
       }
@@ -1153,7 +1153,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       if (!owner) return { title: say('account.your_site'), back: base, body: `<p class="error">${esc(say('account.only_the_owner_can'))}</p>` };
       if (!fresh) return render(say('account.sign_in_again_first'));
       try { await closeSite(env, site.id, (await request.formData()).get('confirm')); } catch (err) {
-        if (err instanceof SiteError) return render(err.message);
+        if (err instanceof SiteError) return render(sayMessage('account', err.message, say));
         throw err;
       }
       return new Response(null, { status: 303, headers: { location: '/deleted', 'cache-control': 'no-store' } });

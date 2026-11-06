@@ -595,6 +595,101 @@ export function sayError(message, say, labelOf = (name) => name) {
   return String(message);
 }
 
+// The errors from her other screens, each a whole message matched by its words (the
+// code that finds the problem keeps today's words, as its tests and the import use
+// them; the screen says it in the owner's). By group, as each screen asks for its own:
+// [key, screen, words, default, where]. A named part of the words is a name the line
+// can use. Left out: messages about KennelPort itself failing (not set up, an email
+// that couldn't be sent), the demo site's, the owner's own screens, and what
+// KennelOS's app shows when it links (kennelos/link.js ApiError: its words, not hers).
+const MESSAGES = {
+  waitlist: [
+    ['required', 'errors', /^Please fill in (?<what>.+)\.$/, 'Please fill in {what}.', 'Your waitlist: a family\'s detail that must be filled in, left empty'],
+    ['too_long', 'errors', /^(?<What>.+) is too long \(at most (?<max>\d+) characters\)\.$/, '{What} is too long (at most {max} characters).', 'Your waitlist: a family\'s detail with too many characters ({What} is {what} with a capital)'],
+    ['email', 'errors', /^That email address doesn't look right\.$/, 'That email address doesn\'t look right.', 'Your waitlist: an email address that isn\'t one'],
+    ['date', 'errors', /^Give the date added as a date\.$/, 'Give the date added as a date.', 'Your waitlist: a date added that isn\'t a date'],
+  ],
+  photos: [
+    ['camera_data', 'errors', /^This photo still carries its camera data \(EXIF\/XMP\), which can include where it was taken\. Re-save it first\.$/, 'This photo still carries its camera data (EXIF/XMP), which can include where it was taken. Re-save it first.', 'Photos: a photo with its camera data still in it'],
+    ['damaged', 'errors', /^This JPEG is damaged\.$/, 'This JPEG is damaged.', 'Photos: a damaged JPEG'],
+    ['empty', 'errors', /^The file is empty\.$/, 'The file is empty.', 'Photos: an empty file'],
+    ['too_large', 'errors', /^The photo is too large \((?<kb>\d+) KB; at most (?<max>\d+) KB\)\.$/, 'The photo is too large ({kb} KB; at most {max} KB).', 'Photos: a photo file too large ({kb} is its size)'],
+    ['kind', 'errors', /^Only WebP or JPEG photos can be uploaded\.$/, 'Only WebP or JPEG photos can be uploaded.', 'Photos: a file that isn\'t a WebP or JPEG photo'],
+    ['unreadable', 'errors', /^The photo's size couldn't be read\.$/, 'The photo\'s size couldn\'t be read.', 'Photos: a photo whose size can\'t be read'],
+    ['too_big', 'errors', /^The photo is (?<width>\d+)×(?<height>\d+); at most (?<max>\d+) pixels a side\.$/, 'The photo is {width}×{height}; at most {max} pixels a side.', 'Photos: a photo with too many pixels'],
+    ['limit', 'errors', /^This site has reached its limit of (?<max>\d+) photos\.$/, 'This site has reached its limit of {max} photos.', 'Photos: the site\'s number of photos used up'],
+    ['storage', 'errors', /^This site has reached its storage limit\.$/, 'This site has reached its storage limit.', 'Photos: the site\'s storage used up'],
+  ],
+  videos: [
+    ['link', 'errors', /^Paste the link to the video or post, starting with https:\/\/$/, 'Paste the link to the video or post, starting with https://', 'Videos and posts: a link that isn\'t a web address'],
+    ['too_long', 'errors', /^That link is too long\.$/, 'That link is too long.', 'Videos and posts: a link too long'],
+    ['unknown', 'errors', /^That link isn't one KennelPort can show\. Links from (?<known>.+) work: open the video or post and copy its address\.$/, 'That link isn\'t one KennelPort can show. Links from {known} work: open the video or post and copy its address.', 'Videos and posts: a link from a site KennelPort can\'t show ({known} lists the ones it can)'],
+    ['page_gone', 'errors', /^That page is no longer on this site\.$/, 'That page is no longer on this site.', 'Videos and posts: the page they were for removed meanwhile'],
+    ['max', 'errors', /^At most (?<max>\d+) videos and posts in one place\.$/, 'At most {max} videos and posts in one place.', 'Videos and posts: too many in one place'],
+    ['twice', 'errors', /^That one's already here\.$/, 'That one\'s already here.', 'Videos and posts: one added twice'],
+  ],
+  badge: [
+    ['too_long', 'errors', /^That embed code is too long\. Paste just the code they gave you\.$/, 'That embed code is too long. Paste just the code they gave you.', 'A badge\'s embed code: too long'],
+    ['nothing', 'errors', /^No link or picture found in that code\. Paste the whole code, from <a to <\/a>\.$/, 'No link or picture found in that code. Paste the whole code, from <a to </a>.', 'A badge\'s embed code: no link or picture in it'],
+    ['fetch', 'errors', /^The picture in that code couldn't be fetched\. Download the logo from their page, choose it as the picture above, and save\.$/, 'The picture in that code couldn\'t be fetched. Download the logo from their page, choose it as the picture above, and save.', 'A badge\'s embed code: its picture couldn\'t be fetched'],
+    ['too_large', 'errors', /^The picture in that code is too large\. Download the logo from their page, choose it as the picture above, and save\.$/, 'The picture in that code is too large. Download the logo from their page, choose it as the picture above, and save.', 'A badge\'s embed code: its picture too large'],
+    ['copy', 'errors', /^Your link is filled in, but the picture in that code can't be copied \((?<reason>.+)\)\. Download the logo from their page, choose it as the picture above, and save\.$/, 'Your link is filled in, but the picture in that code can\'t be copied ({reason}). Download the logo from their page, choose it as the picture above, and save.', 'A badge\'s embed code: its picture can\'t be used as a photo ({reason} is the Photos error, without its stop)'],
+  ],
+  feed: [
+    ['paste', 'errors', /^Paste the website feed address from KennelOS's Online list card\.$/, 'Paste the website feed address from KennelOS\'s Online list card.', 'Waitlist page, KennelOS feed: an address that isn\'t one'],
+    ['not_kennelos', 'errors', /^That isn't a KennelOS address\. It starts (?<start>.+)\.$/, 'That isn\'t a KennelOS address. It starts {start}.', 'Waitlist page, KennelOS feed: an address that isn\'t KennelOS\'s ({start} is how a KennelOS address starts)'],
+    ['no_kennel', 'errors', /^That KennelOS address doesn't name a kennel\. Copy the website feed address from the Online list card\.$/, 'That KennelOS address doesn\'t name a kennel. Copy the website feed address from the Online list card.', 'Waitlist page, KennelOS feed: an address with no kennel in it'],
+  ],
+  kennelos: [
+    ['codes', 'errors', /^Too many codes asked for\. Try again in an hour\.$/, 'Too many codes asked for. Try again in an hour.', 'KennelOS: too many link codes asked for'],
+    ['answered', 'errors', /^That match has already been answered\.$/, 'That match has already been answered.', 'KennelOS: a match answered already (on another device, say)'],
+    ['record_gone', 'errors', /^That website record is no longer there\.$/, 'That website record is no longer there.', 'KennelOS: a match whose website record was removed meanwhile'],
+  ],
+  account: [
+    ['confirm', 'errors', /^Type (?<subdomain>[a-z0-9-]+) to confirm\.$/, 'Type {subdomain} to confirm.', 'Your site, Delete: the site\'s name not typed to confirm'],
+  ],
+  publish: [
+    ['too_large', 'errors', /^the site is too large to publish \((?<bytes>\d+) bytes\)$/, 'the site is too large to publish ({bytes} bytes)', 'Publish: the site too large to publish'],
+    ['no_earlier', 'errors', /^there is no earlier version to go back to$/, 'there is no earlier version to go back to', 'Publish: Undo with no earlier version'],
+  ],
+  signin: [
+    ['codes', 'signin', /^Too many codes asked for\. Try again in an hour\.$/, 'Too many codes asked for. Try again in an hour.', 'Error: too many codes asked for'],
+    ['email', 'signin', /^That isn't an email address\.$/, 'That isn\'t an email address.', 'Error: an email address that isn\'t one'],
+    ['wrong', 'signin', /^That code isn't right\. Check the latest email, or ask for a new code\.$/, 'That code isn\'t right. Check the latest email, or ask for a new code.', 'Error: a code that isn\'t right'],
+    ['expired', 'signin', /^That code has expired\. Ask for a new one\.$/, 'That code has expired. Ask for a new one.', 'Error: a code that has expired'],
+    ['tries', 'signin', /^Too many tries\. Ask for a new code\.$/, 'Too many tries. Ask for a new code.', 'Error: too many wrong codes'],
+    ['used', 'signin', /^That code has already been used\.$/, 'That code has already been used.', 'Error: a code used already'],
+  ],
+};
+
+// How the waitlist's errors name a family's detail ({what} in them).
+const WAITLIST_WHAT = {
+  name: 'their name', email: 'the email', list_name: 'the name on the list', phone: 'the phone number', wants: 'what they want', added_on: 'the date added',
+};
+
+// A message from one of her screens (its group above) as the owner words it, or as
+// it is (a message of another kind).
+export function sayMessage(group, message, say) {
+  const text = String(message ?? '');
+  for (const [k, , re] of MESSAGES[group] ?? []) {
+    const g = text.match(re);
+    if (!g) continue;
+    const vars = { ...(g.groups ?? {}) };
+    if (vars.what ?? vars.What) {
+      const said = (phrase) => {
+        const f = Object.entries(WAITLIST_WHAT).find(([, p]) => p === phrase.toLowerCase());
+        return f ? say(`error.waitlist.what.${f[0]}`) : phrase;
+      };
+      const what = said(vars.what ?? vars.What);
+      vars.what = what;
+      vars.What = what.charAt(0).toUpperCase() + what.slice(1);
+    }
+    if (vars.reason) vars.reason = sayMessage('photos', `${vars.reason}.`, say).replace(/\.$/, '');
+    return say(`error.${group}.${k}`, vars);
+  }
+  return text;
+}
+
 // ---------- the catalog ----------
 
 const items = new Map();
@@ -622,6 +717,14 @@ function homeWhere(k, t) {
 for (const [k, t] of Object.entries(HOME)) add(k, 'home', homeWhere(k, t), t, [...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]));
 for (const [k, [screen, what, t]] of Object.entries(SCREEN_LINES)) add(k, screen, what, t);
 for (const [k, , t, where] of ERRORS) add(`error.${k}`, 'errors', where, t, ['path', 'field', ...[...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).filter((v) => !['path', 'field'].includes(v))]);
+for (const [group, list] of Object.entries(MESSAGES)) {
+  for (const [k, screen, , t, where] of list) {
+    const names = new Set([...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]));
+    if (names.has('what') || names.has('What')) names.add('what').add('What');
+    add(`error.${group}.${k}`, screen, where, t, [...names]);
+  }
+}
+for (const [k, t] of Object.entries(WAITLIST_WHAT)) add(`error.waitlist.what.${k}`, 'errors', `Your waitlist: how its errors name "${t}" ({what})`, t);
 for (const [k, t] of Object.entries(NOTES)) add(`note.${k}`, 'notes', 'At the top of the screen after the change', t);
 for (const [k, [title, one]] of Object.entries(LIST_TITLES)) {
   add(`list.${k}.title`, 'lists', 'The list\'s heading', title);

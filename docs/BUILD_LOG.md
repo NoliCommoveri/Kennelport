@@ -1621,3 +1621,29 @@ with new sections and a new building order. Docs only; nothing built yet.
   breeder screens (`portal/admin.js`).
 - Her screens read as before with no wording set (51 screens compared, sign-in and
   Notifications among them).
+
+## 2026-11-06: the breeder's instructions: the rest of her errors (step 2.3)
+
+- The errors from her other screens are in the list (`wording.js` MESSAGES, read with
+  `sayMessage(group, message, say)`): the waitlist (`waitlist.js`), photos (`photos.js`),
+  videos and posts (`embeds.js`, `embedStore.js`), badge codes (`badgeCode.js`), the
+  KennelOS feed (`feed.js`), link codes and matches (`kennelos/link.js`, `match.js`),
+  Delete (`sites.js` closeSite), Publish (`publish.js`: too large, nothing to undo) and
+  signing in (`auth.js`). As with the content model's errors, the code that finds the
+  problem keeps today's words; each screen says the message in the owner's, matched by
+  its words. 49 new lines; the list now has 931.
+- Under Errors, each line says where it shows ("Photos: an empty file"); signing in's
+  are on Signing in, with no {kennel}. Names from the message can be used ({max}, {kb},
+  {known}...). The waitlist names a family's detail by {what} (and {What}, with a
+  capital), and how it names each detail is its own line ("the name on the list").
+  A badge code's "can't be copied (…)" carries the Photos error in the owner's words.
+- Left out, as the plan says: KennelPort itself failing (sign-in or linking not set up,
+  an email that couldn't be sent, "No such site"), the demo site's message, the owner's
+  own screens (/ops, inviting), what KennelOS's app shows when it links (`link.js`
+  ApiError) and the visitors' review form (`siteforms.js`).
+- Still in the code: a few lines the manage app's own scripts write in the browser
+  (`_kp/m/app.js`: "Copied", "Saving…", "Add Site Manager to your home screen first.";
+  `_kp/m/photos.js`: "upload failed"). Moving them changes `_kp/m`, so it waits for a
+  version bump. Then step 2.4: the family portal's breeder screens and Today.
+- Today's wording reads exactly as before (each message checked against what the code
+  throws). Tests: `wording.test.js` (two new). Nothing in `_kp/` changed: no version bump.

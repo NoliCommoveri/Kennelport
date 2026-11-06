@@ -551,9 +551,10 @@ Each step is its own branch and can be released on its own.
       for the website's screens: headings, instructions, buttons, links, empty
       messages and the lines a screen picks between; signing in, her sites and
       Notifications, with every site's wording; her lists' second lines);
-   3. the errors that tell her what to do (built for the content model's checks: a
-      line per kind of check, with the field by its label; the waitlist's, photos',
-      videos', KennelOS linking's and sign-in's errors come with the next part);
+   3. the errors that tell her what to do (built: the content model's checks, a line
+      per kind of check with the field by its label; and the errors of the waitlist,
+      photos, videos and posts, badge codes, the KennelOS feed, linking and matches,
+      Delete, Publish and signing in, a line per message);
    4. the family portal's screens for the breeder (`portal/admin.js`), and Today.
 3. **Pages, blocks and the menu as settings.** Today's site becomes the **Website** template.
    Add new pages and data blocks (Dams and Sires), the menu editor, and the breeder's
