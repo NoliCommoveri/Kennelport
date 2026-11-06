@@ -239,7 +239,6 @@ nav.main li.open > .navtop .chev { transform: rotate(225deg) translate(-2px, -1p
 @media (max-width: 760px) { .litters { grid-template-columns: minmax(0, 1fr); } }
 .litter { min-width: 0; grid-template-columns: minmax(0, 1fr); }
 .pair .names { min-width: 0; overflow-wrap: anywhere; }
-@media (max-width: 420px) { .litter { padding: 18px 16px; } .pair { gap: 10px; } .pair img, .pair .ph { width: 58px; height: 58px; } .pair .names b { font-size: 1.05rem; } }
 .litter { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 22px; display: grid; gap: 14px; align-content: start; }
 .pair { display: flex; align-items: center; gap: 14px; }
 .pair img, .pair .ph { width: 78px; height: 78px; border-radius: 50%; object-fit: cover; border: 3px solid var(--surface); box-shadow: 0 0 0 1px var(--line); flex: none; }
@@ -247,6 +246,7 @@ nav.main li.open > .navtop .chev { transform: rotate(225deg) translate(-2px, -1p
 .pair .x { font: 400 1.6rem var(--f-display); color: var(--brass); }
 .pair .names { display: grid; min-width: 0; }
 .pair .names b { font: var(--display-w) 1.2rem/1.2 var(--f-display); }
+@media (max-width: 420px) { .litter { padding: 18px 16px; } .pair { gap: 8px; } .pair .x { font-size: 1.3rem; } .pair img, .pair .ph { width: 58px; height: 58px; } .pair .names b { font-size: 1.05rem; } }
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; font-size: .9rem; margin: 0; }
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; font-weight: 600; }
