@@ -315,7 +315,6 @@ select { padding-right: 36px; appearance: none; background-image: linear-gradien
 .embed-in > *, .card { min-width: 0; }
 .embed { width: 100%; }
 form.inline input { min-width: 0; }
-@media (max-width: 400px) { .card { padding: 14px 12px; } form.inline input { flex-basis: 100%; } form.inline .btn { width: 100%; } table.list { font-size: .9rem; } table.list td:nth-child(2) { white-space: normal; } }
 .embed-in header { display: grid; gap: 8px; }
 .embed-in h2 { font-size: 1.7rem; }
 .intro { white-space: pre-line; color: var(--muted); max-width: 66ch; }
@@ -343,6 +342,7 @@ table.list tr:last-child td { border-bottom: 0; }
 table.list td.num { font-variant-numeric: tabular-nums; color: var(--muted); width: 3.5em; font-weight: 700; }
 table.list tr.deciding td { color: var(--muted); }
 table.list td:nth-child(2) { white-space: nowrap; }
+@media (max-width: 400px) { .card { padding: 14px 12px; } form.inline input { flex-basis: 100%; } form.inline .btn { width: 100%; } table.list { font-size: .9rem; } table.list td:nth-child(2) { white-space: normal; } }
 @media (max-width: 560px) { table.list td, table.list th { padding-left: 6px; padding-right: 6px; } }
 td.tip, th.tip { width: 36px; text-align: right; }
 .added-tip { position: relative; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--surface); color: var(--muted); font: italic 700 .78rem/1 Georgia, serif; cursor: pointer; }
