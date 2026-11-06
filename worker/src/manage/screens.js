@@ -3,12 +3,13 @@
 // a problem comes back with what was typed and the reason.
 import { escapeHtml as esc } from '../lib/html.js';
 import { json } from '../lib/http.js';
-import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, FAQ_PLACES } from '../content/model.js';
+import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, FAQ_PLACES, CUSTOM_PAGE, ADDED_BLOCK_FIELDS } from '../content/model.js';
 import {
   KINDS, listRecords, getRecord, saveRecord, setField, removeRecord, moveRecord,
-  saveSite, getPage, savePage, getBlock, saveBlock, getPayment, savePayment,
+  saveSite, getPage, savePage, getBlock, saveBlock, getPayment, savePayment, getAddedBlock, saveAddedBlock,
 } from '../content/records.js';
-import { fields, parseForm } from './forms.js';
+import { pageBlocks, customPages, addedBlocks, BLOCK_TYPES, isCustom } from '../content/blocks.js';
+import { fields, parseForm, LABELS, labelFor } from './forms.js';
 import { savePhoto, PhotoError } from '../photos.js';
 import { subjects, isSubject, tagPhotos, untagPhoto, tagsByPhoto } from '../photoTags.js';
 import { buildSnapshot, loadSnapshot, publish, undoPublish, listSnapshots } from '../publish.js';
@@ -16,7 +17,8 @@ import { changes } from '../diff.js';
 import { makePreviewToken } from '../site.js';
 import { siteLink } from '../ops/sites.js';
 import { APP_VERSION } from './version.js';
-import { STATUS_TEXT, SAFE_NOTICE_TEXT } from '../render/parts.js';
+import { defaultSay, NOTE_KEYS, sayError } from './wording.js';
+import { STATUS_TEXT, SAFE_NOTICE_TEXT, blockRows } from '../render/parts.js';
 import { exportContent } from '../content/io.js';
 import { closeSite, SiteError } from '../sites.js';
 import { listEmbeds, addEmbed, removeEmbed, moveEmbed, EmbedError, EMBEDS_PER_PLACE } from '../embedStore.js';
@@ -31,84 +33,70 @@ import { makeLinkCode, showCode, devices, stopDevice, unlinkSite, setKennelosPri
 import { OWNED, OWNED_PRICES } from '../kennelos/bundle.js';
 import { pendingMatches, matchChanges, confirmMatch, declineMatch, MatchError } from '../kennelos/match.js';
 import { leavingLitters, keepLitter, deleteLitter } from '../kennelos/clock.js';
-import { litterDaysFor } from '../content/rules.js';
+import { NOT_FOR_DEMO } from '../lib/demo.js';
+import { litterDaysFor, loadBuild } from '../content/rules.js';
 
 export const FRESH_SIGN_IN_MS = 15 * 60 * 1000;
 
 const when = (iso) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }) + ' UTC';
 const redirect = (location) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store' } });
 
-const NOTES = {
-  saved: 'Saved to your draft. Publish when you\'re ready.',
-  added: 'Added to your draft.',
-  removed: 'Removed from your draft.',
-  moved: 'Moved.',
-  status: 'Status changed in your draft.',
-  uploaded: 'Photos added.',
-  embedded: 'Added to your draft. It shows on your site after you publish.',
-  tagged: 'Saved.',
-  tagmany: 'Tagged.',
-  tagnone: 'Nothing tagged: tick at least one photo, then choose who\'s in them.',
-  deleted: 'Message deleted.',
-  approved: 'Approved. It shows on your site after you publish.',
-  declined: 'Declined and deleted.',
-  published: 'Published. Visitors now see your changes.',
-  listed: 'Added to your waitlist. It shows on your website now.',
-  fulfilled: 'Marked fulfilled. Everyone below moved up.',
-  back: 'Put back in its place.',
-  listsaved: 'Saved. Your website shows it now.',
-  unlisted: 'Deleted from your waitlist.',
-  undone: 'Undone. Visitors see the version before.',
-  kept: 'Kept. It stays as a past litter until you remove it.',
-  litterremoved: 'Removed, with its puppies, albums and the photos nothing else uses.',
-  matched: 'Matched. It now comes from KennelOS, with your photos and wording kept.',
-  apart: 'Kept apart. KennelOS\'s one is added as new.',
-  stopped: 'That device is no longer linked.',
-  unlinked: 'Unlinked. Everything from KennelOS is now yours to edit here.',
-};
 const day = (ymd) => new Date(`${ymd}T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
-const note = (url) => (NOTES[url.searchParams.get('note')] ? `<p class="notice" role="status">${esc(NOTES[url.searchParams.get('note')])}</p>` : '');
-const errorBox = (err) => (err ? `<p class="error" role="alert">Not saved: ${esc(err)}</p>` : '');
+const ic = (n) => `<span class="ic" aria-hidden="true"><svg class="i"><use href="#i-${n}"/></svg></span>`;
+// The note after a change, and a form's error, in the owner's wording (wording.js).
+const noteFor = (url, say) => (NOTE_KEYS.includes(url.searchParams.get('note')) ? `<p class="notice" role="status">${esc(say(`note.${url.searchParams.get('note')}`))}</p>` : '');
+const errorFor = (err, say) => (err ? `<p class="error" role="alert">${esc(say('list.error', { error: sayError(err, say, fieldLabel(say)) }))}</p>` : '');
+// A field's label on her forms, by its name, for {field} in an error.
+const fieldLabel = (say) => (name) => {
+  const kind = Object.keys(LABELS).find((k) => LABELS[k][name]);
+  return labelFor(kind ?? null, name, say)[0];
+};
 
-// What each list is called, and how one item reads in it.
+// How one item reads in each list: its name, and the line under it in the owner's
+// wording (wording.js, lists.sub.*), as are the lists' names.
 const LISTS = {
-  dogs: { title: 'Dogs', one: 'dog', name: (r) => r.call_name, sub: (r) => [r.role, r.show_on_site ? null : 'hidden'].filter(Boolean).join(' · ') },
-  litters: { title: 'Litters', one: 'litter', name: (r) => r.name, sub: (r) => ({ planned: 'Planned', current: 'Born', past: 'Past' })[r.stage] },
-  puppies: { title: 'Puppies', one: 'puppy', name: (r) => r.name, sub: (r) => STATUS_TEXT[r.status] ?? 'Hidden' },
-  health: { title: 'Health results', one: 'result', name: (r) => r.test, sub: (r) => `${r.result}${r.show ? '' : ' · not shown'}` },
-  reviews: { title: 'Reviews', one: 'review', name: (r) => r.first_name, sub: (r) => (r.status === 'hidden' ? 'hidden' : r.quote.slice(0, 60)) },
-  steps: { title: 'How it works', one: 'step', name: (r) => r.heading, sub: () => '' },
-  extras: { title: 'Extras', one: 'extra', name: (r) => r.name, sub: (r) => (r.kind === 'homegoing' ? `${r.weeks ?? ''}-week package` : r.grp ?? '') },
-  partners: { title: 'Partner kennels', one: 'kennel', name: (r) => r.name, sub: (r) => (r.hidden_by_kennelos ? 'Not sent by KennelOS · not shown' : r.url ? r.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : '') },
-  products: { title: 'Recommended products', one: 'product', name: (r) => r.name, sub: (r) => [r.grp, r.code ? `code ${r.code}` : null, r.transport ? 'transport service' : null, r.home_badge ? 'home page badge' : null].filter(Boolean).join(' · ') },
-  policies: { title: 'Policies', one: 'policy', name: (r) => r.heading, sub: () => '' },
+  dogs: { name: (r) => r.call_name, sub: (r, say) => [r.role, r.show_on_site ? null : say('lists.sub.hidden')].filter(Boolean).join(' · ') },
+  litters: { name: (r) => r.name, sub: (r, say) => (['planned', 'current', 'past'].includes(r.stage) ? say(`lists.sub.stage.${r.stage}`) : '') },
+  puppies: { name: (r) => r.name, sub: (r, say) => STATUS_TEXT[r.status] ?? say('lists.sub.hidden_puppy') },
+  health: { name: (r) => r.test, sub: (r, say) => `${r.result}${r.show ? '' : ` · ${say('lists.sub.not_shown')}`}` },
+  reviews: { name: (r) => r.first_name, sub: (r, say) => (r.status === 'hidden' ? say('lists.sub.hidden') : r.quote.slice(0, 60)) },
+  steps: { name: (r) => r.heading, sub: () => '' },
+  extras: { name: (r) => r.name, sub: (r, say) => (r.kind === 'homegoing' ? say('lists.sub.package', { weeks: r.weeks ?? '' }) : r.grp ?? '') },
+  partners: { name: (r) => r.name, sub: (r, say) => (r.hidden_by_kennelos ? say('lists.sub.not_sent') : r.url ? r.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : '') },
+  products: { name: (r) => r.name, sub: (r, say) => [r.grp, r.code ? say('lists.sub.code', { code: r.code }) : null, r.transport ? say('lists.sub.transport') : null, r.home_badge ? say('lists.sub.home_badge') : null].filter(Boolean).join(' · ') },
+  policies: { name: (r) => r.heading, sub: () => '' },
   // A question also placed elsewhere says so here, so she can see at a glance
   // which ones her pages are carrying (model.js FAQ_PLACES).
-  faq: { title: 'FAQ', one: 'question', name: (r) => r.heading, sub: (r) => ((r.places ?? []).length ? `also on ${(r.places ?? []).map((x) => (FAQ_PLACES[x] ?? x).toLowerCase()).join(', ')}` : '') },
-  waitlist_help: { title: 'Using your status page', one: 'section', name: (r) => r.heading, sub: () => '' },
-  albums: { title: 'Albums', one: 'album', name: (r) => r.title, sub: (r) => [`${(r.photos ?? []).length} photo${(r.photos ?? []).length === 1 ? '' : 's'}`, r.show_on_site ? null : 'hidden'].filter(Boolean).join(' · ') },
-  questions: { title: 'Application questions', one: 'question', name: (r) => r.label, sub: (r) => [QUESTION_WORDS[r.type], r.required ? 'must answer' : 'optional'].join(' · ') },
+  faq: { name: (r) => r.heading, sub: (r, say) => ((r.places ?? []).length ? say('lists.sub.also_on', { places: (r.places ?? []).map((x) => (FAQ_PLACES[x] ?? x).toLowerCase()).join(', ') }) : '') },
+  waitlist_help: { name: (r) => r.heading, sub: () => '' },
+  albums: { name: (r) => r.title, sub: (r, say) => [say.n('lists.sub.photos', (r.photos ?? []).length), r.show_on_site ? null : say('lists.sub.hidden')].filter(Boolean).join(' · ') },
+  questions: { name: (r) => r.label, sub: (r, say) => [QUESTION_TYPES.includes(r.type) ? say(`lists.qtype.${r.type}`) : r.type, say(r.required ? 'lists.sub.must_answer' : 'lists.sub.optional')].join(' · ') },
 };
 // Under a product's fields: the brand's embed code, read for its link and picture
 // (badgeCode.js), never kept.
-const BADGE_CODE_FIELD = `<label for="f-badge_code">Or paste the embed code they gave you<span class="hint">The HTML from the brand's referral page, starting with &lt;a href=. It fills in your referral link and the picture. The code itself isn't kept.</span><textarea id="f-badge_code" name="_badge_code" rows="4" autocapitalize="none" spellcheck="false" placeholder="&lt;a href=&quot;https://…&quot;&gt;&lt;img src=&quot;https://…&quot;&gt;&lt;/a&gt;"></textarea></label>`;
+const BADGE_CODE_FIELD = (say) => `<label for="f-badge_code">${esc(say('products.or_paste_the_embed'))}<span class="hint">${esc(say('products.the_html_from_the'))}</span><textarea id="f-badge_code" name="_badge_code" rows="4" autocapitalize="none" spellcheck="false" placeholder="&lt;a href=&quot;https://…&quot;&gt;&lt;img src=&quot;https://…&quot;&gt;&lt;/a&gt;"></textarea></label>`;
 // Under a partner kennel's fields: the badge code a kennel hands out, read for its
 // link and logo (badgeCode.js), never kept.
-const PARTNER_BADGE_FIELD = `<label for="f-badge_code">Or paste the badge code they gave you<span class="hint">The HTML for their badge or logo, starting with &lt;a href=. It fills in their website and logo. The code itself isn't kept.</span><textarea id="f-badge_code" name="_badge_code" rows="4" autocapitalize="none" spellcheck="false" placeholder="&lt;a href=&quot;https://…&quot;&gt;&lt;img src=&quot;https://…&quot;&gt;&lt;/a&gt;"></textarea></label>`;
-const QUESTION_WORDS = { text: 'Short answer', paragraph: 'Longer answer', choice: 'Choice', yes_no: 'Yes or no', litter: 'Which litter', phone: 'Phone', town: 'Town' };
+const PARTNER_BADGE_FIELD = (say) => `<label for="f-badge_code">${esc(say('partners.or_paste_the_badge'))}<span class="hint">${esc(say('partners.the_html_for_their'))}</span><textarea id="f-badge_code" name="_badge_code" rows="4" autocapitalize="none" spellcheck="false" placeholder="&lt;a href=&quot;https://…&quot;&gt;&lt;img src=&quot;https://…&quot;&gt;&lt;/a&gt;"></textarea></label>`;
+// The kinds of application question (their words: wording.js lists.qtype.*).
+const QUESTION_TYPES = ['text', 'paragraph', 'choice', 'yes_no', 'litter', 'phone', 'town'];
 const FORM_KIND = { policies: 'expander', faq: 'expander', waitlist_help: 'expander' };
 // The kinds whose records a photo can be of (photoTags.js).
 const SUBJECT_OF = { dogs: 'dog', litters: 'litter', puppies: 'puppy', extras: 'extra', products: 'product' };
-const BLOCK_TITLES = { hero: 'Top of the page', facts: 'Facts row', story: 'Story', dogs: 'Dogs row', litters: 'Litters', reviews: 'Reviews', waitlist: 'Waitlist band' };
 
 // Records from KennelOS that share a name with one already on the site wait for
 // her yes; until then the site keeps showing her own version, so this sits at the
 // top of Home and Publish, not only on the KennelOS screen.
-export function matchesWaiting(subdomain, n) {
-  return `<section class="card notice-card" role="status" id="matches-waiting"><p><strong>${n} from KennelOS ${n === 1 ? 'is' : 'are'} waiting for you to match.</strong> ${n === 1 ? 'It has' : 'They have'} the same name as one already on your website. Until you answer, your website keeps showing your own version, without what KennelOS sent (its sex, health results and so on).</p><p class="row"><a class="button primary" href="/s/${esc(subdomain)}/kennelos#matches">Answer ${n === 1 ? 'it' : 'them'}</a></p></section>`;
+export function matchesWaiting(subdomain, n, say = defaultSay) {
+  return `<section class="card notice-card" role="status" id="matches-waiting"><p><strong>${esc(say.n('kennelos.waiting', n))}</strong> ${esc(say.n('kennelos.waiting.text', n))}</p><p class="row"><a class="button primary" href="/s/${esc(subdomain)}/kennelos#matches">${esc(say.n('kennelos.waiting.answer', n))}</a></p></section>`;
 }
 
-export function createScreens({ env, request, url, site, user, page }) {
+export function createScreens({ env, request, url, site, user, page, say = defaultSay }) {
+  const note = (u) => noteFor(u, say);
+  const errorBox = (err) => errorFor(err, say);
+  // A list's name and one of its items, in the owner's wording.
+  const listTitle = (kind) => say(`list.${kind}.title`);
+  const oneOf = (kind) => say(`list.${kind}.one`);
   const base = `/s/${site.subdomain}`;
   const photoUrl = (id) => `${base}/photos/${id}/thumb`;
   let photosCache = null;
@@ -129,13 +117,13 @@ export function createScreens({ env, request, url, site, user, page }) {
     const top = first ? subs.filter((x) => first.names.has(x.subject)) : [];
     const groups = [...new Set(rest.map((x) => x.group))];
     return `<form method="post" action="${base}/photos/tag-many" id="tag-many" class="row"><input type="hidden" name="back" value="${esc(back)}">
-      <select name="subject" aria-label="Who the ticked photos are of"><option value="">Who's in them…</option>${top.length ? `<optgroup label="${esc(first.label)}">${top.map(opt).join('')}</optgroup>` : ''}${groups.map((g) => `<optgroup label="${esc(g)}">${rest.filter((x) => x.group === g).map(opt).join('')}</optgroup>`).join('')}</select>
-      <button class="primary">Tag</button></form>`;
+      <select name="subject" aria-label="Who the ticked photos are of"><option value="">${esc(say('photos.who_s_in_them'))}</option>${top.length ? `<optgroup label="${esc(first.label)}">${top.map(opt).join('')}</optgroup>` : ''}${groups.map((g) => `<optgroup label="${esc(g)}">${rest.filter((x) => x.group === g).map(opt).join('')}</optgroup>`).join('')}</select>
+      <button class="primary">${esc(say('photos.tag'))}</button></form>`;
   };
-  const tickBox = (p) => `<label class="check"><input type="checkbox" name="photos" value="${esc(p.id)}" form="tag-many"> Tick</label>`;
+  const tickBox = (p) => `<label class="check"><input type="checkbox" name="photos" value="${esc(p.id)}" form="tag-many"> ${esc(say('photos.tick'))}</label>`;
   // pick: { groups: [{ label, subject }], tags: [subject…] to tag uploads with, alt }
   const ctxFor = async (kind, pick) => {
-    const ctx = { kind, photos: await photos(), photoUrl, dogs: await dogsList(), litters: await littersList(), partners: kind === 'dogs' ? await partnersList() : [], photosLink: `${base}/photos` };
+    const ctx = { kind, say, photos: await photos(), photoUrl, dogs: await dogsList(), litters: await littersList(), partners: kind === 'dogs' ? await partnersList() : [], photosLink: `${base}/photos` };
     if (pick) {
       const t = await tags();
       ctx.photoGroups = pick.groups.map((g) => ({ label: g.label, ids: g.subject ? ctx.photos.filter((p) => (t.get(p.id) ?? []).includes(g.subject)).map((p) => p.id) : [] }));
@@ -191,25 +179,25 @@ export function createScreens({ env, request, url, site, user, page }) {
   async function leavingCard() {
     const list = await leavingLitters(env, site.id);
     if (!list.length) return '';
-    return `<section class="card" id="leaving"><h2>Leaving your site</h2>
+    return `<section class="card" id="leaving"><h2>${esc(say('litterlist.leaving_your_site'))}</h2>
       <p class="muted small">Litters off your site are deleted ${await litterDaysFor(env, site.id)} days after they left, with their puppies, albums and the photos nothing else uses. Keep one to have it stay as a past litter, or Remove now to delete it today instead of waiting. Removing can't be undone.</p>
       <ul class="items">${list.map((l) => `<li class="item"><a href="${base}/litters/${l.id}"><b>${esc(l.name)}</b><span>Deleted on ${esc(day(l.deletes_on))}</span></a>
-        <form method="post" action="${base}/litters/${l.id}/keep"><button>Keep</button></form>
-        <form method="post" action="${base}/litters/${l.id}/remove-now"><button class="link">Remove now</button></form></li>`).join('')}</ul></section>`;
+        <form method="post" action="${base}/litters/${l.id}/keep"><button>${esc(say('litterlist.keep'))}</button></form>
+        <form method="post" action="${base}/litters/${l.id}/remove-now"><button class="link">${esc(say('litterlist.remove_now'))}</button></form></li>`).join('')}</ul></section>`;
   }
 
   // Dogs that wait in the draft (5.3): never deleted by a clock; removing is hers.
   // Co-owned dogs (docs/Co_Owned_Dogs_Plan.md): her partner kennels, from Dogs.
-  const partnersLink = () => `<p><a class="button" href="${base}/lists/partners">Partner kennels</a> <span class="muted small">The kennels your co-owned dogs are shared with, and their logos.</span></p>`;
+  const partnersLink = () => `<p><a class="button" href="${base}/lists/partners">${esc(say('litterlist.partner_kennels'))}</a> <span class="muted small">${esc(say('litterlist.the_kennels_your_co'))}</span></p>`;
   const partnersIntro = async () => `<p class="muted">The kennels your co-owned dogs are shared with. Your Dogs page shows co-owned dogs living with one of them under Co-owned, with that kennel's logo; each co-owned dog's page names its kennels.${(await kos()).linked ? ' The kennels you tick "Name this kennel on my website" for in KennelOS come from there, by name and website: add their logo here.' : ''}</p>`;
 
   async function offSiteDogsCard(rows) {
     const off = rows.filter((d) => !d.show_on_site || d.hidden_by_kennelos);
     if (!off.length) return '';
-    return `<section class="card" id="not-on-site"><h2>Not on your site</h2>
+    return `<section class="card" id="not-on-site"><h2>${esc(say('doglist.not_on_your_site'))}</h2>
       <p class="muted small">Switched off here${off.some((d) => d.hidden_by_kennelos) ? ', or unticked or archived in KennelOS' : ''}. They wait here, with their photos, until you put them back or remove them.</p>
-      <ul class="items">${off.map((d) => `<li class="item"><a href="${base}/dogs/${d.id}"><b>${esc(d.call_name)}</b><span>${d.hidden_by_kennelos ? 'Not sent by KennelOS' : 'Switched off'}</span></a>
-        <form method="post" action="${base}/dogs/${d.id}/remove"><button class="link">Remove</button></form></li>`).join('')}</ul></section>`;
+      <ul class="items">${off.map((d) => `<li class="item"><a href="${base}/dogs/${d.id}"><b>${esc(d.call_name)}</b><span>${d.hidden_by_kennelos ? esc(say('doglist.not_sent_by_kennelos')) : esc(say('doglist.switched_off'))}</span></a>
+        <form method="post" action="${base}/dogs/${d.id}/remove"><button class="link">${esc(say('doglist.remove'))}</button></form></li>`).join('')}</ul></section>`;
   }
 
   async function kennelosScreen() {
@@ -267,25 +255,25 @@ export function createScreens({ env, request, url, site, user, page }) {
       const linked = list.length > 0;
       const prices = await kosPrices();
       const parts = [note(url), error ? `<p class="error" role="alert">${esc(error)}</p>` : ''];
-      parts.push(`<section class="card"><h2>${linked ? 'Linked to KennelOS' : 'Link KennelOS'}</h2>
+      parts.push(`<section class="card"><h2>${linked ? esc(say('kennelos.linked_to_kennelos')) : esc(say('kennelos.link_kennelos'))}</h2>
         <p class="muted">${linked
-          ? 'When you press Update website in KennelOS, your dogs, litters, puppy statuses and health results arrive here in your draft. Nothing changes on your site until you Publish.'
-          : 'Keep your dogs and litters in KennelOS Pro? Link it, and Update website in KennelOS sends them here, so you type them only once. In KennelOS, tick Show on website on the dogs, litters and pairings you want on your site.'}</p>
-        ${code ? `<p class="notice" role="status">Your code: <strong class="code">${esc(showCode(code))}</strong><br>In KennelOS, open Settings, then Connect website, and type it in. It works once, for ${CODE_TTL_MS / 60000} minutes${expiresAt ? ` (until ${esc(when(expiresAt))})` : ''}.</p>` : ''}
-        <form method="post" action="${base}/kennelos/code"><button class="${linked ? '' : 'primary'}">${linked ? 'Link another device' : 'Show a link code'}</button></form>
-        <p class="muted small">Each phone or computer you use KennelOS on links once, with its own code.</p></section>`);
+          ? esc(say('kennelos.when_you_press_update'))
+          : esc(say('kennelos.keep_your_dogs_and'))}</p>
+        ${code ? `<p class="notice" role="status">${esc(say('kennelos.your_code'))} <strong class="code">${esc(showCode(code))}</strong><br>In KennelOS, open Settings, then Connect website, and type it in. It works once, for ${CODE_TTL_MS / 60000} minutes${expiresAt ? ` (until ${esc(when(expiresAt))})` : ''}.</p>` : ''}
+        ${site.demo_step != null ? `<p class="muted small">${esc(say('kennelos.this_demo_is_linked'))}</p>` : `<form method="post" action="${base}/kennelos/code"><button class="${linked ? '' : 'primary'}">${linked ? esc(say('kennelos.link_another_device')) : esc(say('kennelos.show_a_link_code'))}</button></form>
+        <p class="muted small">${esc(say('kennelos.each_phone_or_computer'))}</p>`}</section>`);
       if (linked) {
-        parts.push(`<section class="card"><h2>Devices</h2><ul class="items">${list.map((d) => `<li class="item"><span><b>${esc(d.device_label || 'A KennelOS device')}</b><span class="muted small"> · ${d.last_bundle_at ? `last update ${esc(when(d.last_bundle_at))}` : `linked ${esc(when(d.linked_at))}, no update yet`}</span>${d.summary?.text ? `<br><span class="muted small">${esc(d.summary.text)}</span>` : ''}</span>
-          ${owner ? `<form method="post" action="${base}/kennelos/devices/${d.id}/stop"><button class="link">Stop this device</button></form>` : ''}</li>`).join('')}</ul></section>`);
+        parts.push(`<section class="card"><h2>${esc(say('kennelos.devices'))}</h2><ul class="items">${list.map((d) => `<li class="item"><span><b>${esc(d.device_label || say('kennelos.a_kennelos_device'))}</b><span class="muted small"> · ${d.last_bundle_at ? `last update ${esc(when(d.last_bundle_at))}` : `linked ${esc(when(d.linked_at))}, no update yet`}</span>${d.summary?.text ? `<br><span class="muted small">${esc(d.summary.text)}</span>` : ''}</span>
+          ${owner ? `<form method="post" action="${base}/kennelos/devices/${d.id}/stop"><button class="link">${esc(say('kennelos.stop_this_device'))}</button></form>` : ''}</li>`).join('')}</ul></section>`);
         const pending = await pendingMatches(env, site.id);
         if (pending.length) parts.push(await matchesCard(pending));
-        parts.push(`<form method="post" action="${base}/kennelos/prices" class="card" id="prices"><h2>Prices</h2>
-          <label class="check"><input type="checkbox" name="on" value="1"${prices ? ' checked' : ''}> <span>Use my KennelOS prices<span class="hint">On: each litter's prices, deposits and full-registration amounts, and your extras' prices, come from KennelOS with the next Update website, and can't be changed here. Switching it on turns on Show prices for those litters, and for each new one KennelOS sends; you can still switch a litter's off. Off: you type them here, and they show only where you switch Show prices on. A puppy's own price and an adult's asking price are always typed here.</span></span></label>
-          <button>Save</button></form>`);
+        parts.push(`<form method="post" action="${base}/kennelos/prices" class="card" id="prices"><h2>${esc(say('kennelos.prices'))}</h2>
+          <label class="check"><input type="checkbox" name="on" value="1"${prices ? ' checked' : ''}> <span>${esc(say('kennelos.use_my_kennelos_prices'))}<span class="hint">${esc(say('kennelos.on_each_litter_s'))}</span></span></label>
+          <button>${esc(say('kennelos.save'))}</button></form>`);
         if (owner) {
-          parts.push(`<form method="post" action="${base}/kennelos/unlink" class="card danger"><h2>Unlink</h2>
-            <p class="muted small">Every device stops, and everything that came from KennelOS stays in your draft as ordinary content you can edit here. KennelOS's next Update website will say your site is no longer linked.</p>
-            <button>Unlink KennelOS</button></form>`);
+          parts.push(`<form method="post" action="${base}/kennelos/unlink" class="card danger"><h2>${esc(say('kennelos.unlink'))}</h2>
+            <p class="muted small">${esc(say('kennelos.every_device_stops_and'))}</p>
+            <button>${esc(say('kennelos.unlink_kennelos'))}</button></form>`);
         }
       }
       return { title: 'KennelOS', back: base, body: parts.join('') };
@@ -300,15 +288,15 @@ export function createScreens({ env, request, url, site, user, page }) {
       if (!target) continue;
       const name = p.kind === 'dogs' ? target.call_name : target.name;
       const what = p.kind === 'dogs' ? 'dog' : 'litter';
-      const rows = diff.map((c) => `<li><label class="check"><input type="checkbox" name="keep" value="${esc(c.field)}"${c.blanking ? ' checked' : ''}> <span>${esc(c.label)}: ${c.from === null ? 'empty' : `'${esc(c.from)}'`} → ${c.to === null ? 'blank' : `'${esc(c.to)}'`}<span class="hint">Tick to keep yours.</span></span></label></li>`).join('');
+      const rows = diff.map((c) => `<li><label class="check"><input type="checkbox" name="keep" value="${esc(c.field)}"${c.blanking ? ' checked' : ''}> <span>${esc(c.label)}: ${c.from === null ? 'empty' : `'${esc(c.from)}'`} → ${c.to === null ? 'blank' : `'${esc(c.to)}'`}<span class="hint">${esc(say('kennelos.tick_to_keep_yours'))}</span></span></label></li>`).join('');
       items.push(`<form method="post" action="${base}/kennelos/match" class="card">
         <input type="hidden" name="kind" value="${esc(p.kind)}"><input type="hidden" name="kennelos_id" value="${esc(p.kennelos_id)}">
         <p><b>Is KennelOS's ${esc(what)} "${esc(p.kind === 'dogs' ? p.data.call_name : p.data.name ?? name)}" your website's ${esc(name)}?</b></p>
         <p class="muted small">Yes: your ${esc(name)} page keeps its address, photos and wording, and from now on comes from KennelOS.${pups ? ` Its ${pups} pupp${pups === 1 ? 'y comes' : 'ies come'} with it, matched by name.` : ''}</p>
-        ${rows ? `<ul class="plain">${rows}</ul>` : '<p class="muted small">Nothing you typed changes.</p>'}
-        <div class="row"><button class="primary" name="answer" value="yes">Yes, the same ${esc(what)}</button><button name="answer" value="no">No, keep them apart</button></div></form>`);
+        ${rows ? `<ul class="plain">${rows}</ul>` : `<p class="muted small">${esc(say('kennelos.nothing_you_typed_changes'))}</p>`}
+        <div class="row"><button class="primary" name="answer" value="yes">Yes, the same ${esc(what)}</button><button name="answer" value="no">${esc(say('kennelos.no_keep_them_apart'))}</button></div></form>`);
     }
-    return items.length ? `<section id="matches"><h2>Already on your site?</h2><p class="muted">These came from KennelOS with the same name as one already on your website. Nothing is matched until you say so.</p>${items.join('')}</section>` : '';
+    return items.length ? `<section id="matches"><h2>${esc(say('kennelos.already_on_your_site'))}</h2><p class="muted">${esc(say('kennelos.these_came_from_kennelos'))}</p>${items.join('')}</section>` : '';
   }
 
   // ---------- videos and posts (plan 3.3) ----------
@@ -317,12 +305,12 @@ export function createScreens({ env, request, url, site, user, page }) {
     const list = await listEmbeds(env, site.id, place);
     const hidden = `<input type="hidden" name="place" value="${esc(place)}"><input type="hidden" name="back" value="${esc(here)}">`;
     const items = list.map((e, i) => `<li class="item"><span><b>${esc(e.title || PROVIDERS[e.provider]?.name || e.provider)}</b><span class="muted small"> · ${esc(PROVIDERS[e.provider]?.name ?? e.provider)}${e.preview_photo_id ? '' : ', no preview'}</span></span>
-      <span class="order">${i ? `<form method="post" action="${base}/embeds/${e.id}/up">${hidden}<button aria-label="Move up">↑</button></form>` : ''}${i < list.length - 1 ? `<form method="post" action="${base}/embeds/${e.id}/down">${hidden}<button aria-label="Move down">↓</button></form>` : ''}<form method="post" action="${base}/embeds/${e.id}/remove">${hidden}<button class="link">Remove</button></form></span></li>`).join('');
-    return `<section class="card" id="videos"><h2>Videos and posts</h2>
+      <span class="order">${i ? `<form method="post" action="${base}/embeds/${e.id}/up">${hidden}<button aria-label="Move up">↑</button></form>` : ''}${i < list.length - 1 ? `<form method="post" action="${base}/embeds/${e.id}/down">${hidden}<button aria-label="Move down">↓</button></form>` : ''}<form method="post" action="${base}/embeds/${e.id}/remove">${hidden}<button class="link">${esc(say('pages.remove'))}</button></form></span></li>`).join('');
+    return `<section class="card" id="videos"><h2>${esc(say('pages.videos_and_posts'))}</h2>
       <p class="muted small">Paste the link to a video or post on ${esc(Object.values(PROVIDERS).map((p) => p.name).join(', '))}. Your site shows a preview, and plays it only when a visitor taps.</p>
       ${err ? `<p class="error" role="alert">Not added: ${esc(err)}</p>` : ''}
       ${items ? `<ul class="items">${items}</ul>` : ''}
-      ${list.length < EMBEDS_PER_PLACE ? `<form method="post" action="${base}/embeds/add">${hidden}<label>Link<input name="link" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=…" required></label><label>Title<span class="hint">Optional, shown under it, like "Opal at 6 weeks".</span><input name="title" maxlength="120"></label><button class="primary">Add</button></form>` : ''}</section>`;
+      ${list.length < EMBEDS_PER_PLACE ? `<form method="post" action="${base}/embeds/add">${hidden}<label>${esc(say('pages.link'))}<input name="link" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=…" required></label><label>${esc(say('pages.title'))}<span class="hint">${esc(say('pages.optional_shown_under_it'))}</span><input name="title" maxlength="120"></label><button class="primary">${esc(say('pages.add'))}</button></form>` : ''}</section>`;
   }
 
   async function embedsAction() {
@@ -349,6 +337,8 @@ export function createScreens({ env, request, url, site, user, page }) {
   // The site and its litters and albums, as visitors see them: published ones only.
   async function shareScreen() {
     const rest = url.pathname.slice(`${base}/share`.length);
+    // The demo has nothing to share: no address, no preview link.
+    if (site.demo_step != null) return { title: say('share.share_2'), back: base, body: `<section class="card band"><p><strong>${esc(say('share.demo_site'))}</strong> ${esc(NOT_FOR_DEMO)}</p><p class="row"><a class="button" href="/admin/${esc(site.subdomain)}/site/">${esc(say('share.open_it_in_your'))}</a></p></section>` };
     if (request.method !== 'GET') return null;
     const row = await env.DB.prepare('SELECT published_snapshot_id FROM sites WHERE id = ?').bind(site.id).first();
     const live = await loadSnapshot(env, site.id, row.published_snapshot_id);
@@ -371,13 +361,13 @@ export function createScreens({ env, request, url, site, user, page }) {
       const link = siteLink(env, site.subdomain, t.path);
       return `<li class="card share-card"><img class="qr" src="${base}/share/qr/${t.key}.svg" alt="QR code for ${esc(t.label)}" width="132" height="132">
         <div><b>${esc(t.label)}</b><p class="muted small share-link">${esc(link)}</p>
-        <p class="row"><button type="button" data-copy="${esc(link)}">Copy link</button><a class="button" href="${base}/share/qr/${t.key}.svg?download">Download QR code</a></p></div></li>`;
+        <p class="row"><button type="button" data-copy="${esc(link)}">${esc(say('share.copy_link'))}</button><a class="button" href="${base}/share/qr/${t.key}.svg?download">${esc(say('share.download_qr_code'))}</a></p></div></li>`;
     };
     return {
-      title: 'Share', back: base,
+      title: say('share.share'), back: base,
       body: `<p class="muted">Links to your site and its pages, and a QR code for each, for puppy packets, business cards and show tables. A link pasted into Facebook, Messenger or a text shows a picture card.${live ? '' : ' Publish your site first: these are the pages visitors can see.'}</p>
         <ul class="share-list">${targets.map(card).join('')}</ul>
-        <p class="muted small">Litters and albums show here once they're published. The QR code is a picture you can print at any size.</p>`,
+        <p class="muted small">${esc(say('share.litters_and_albums_show'))}</p>`,
     };
   }
 
@@ -393,14 +383,14 @@ export function createScreens({ env, request, url, site, user, page }) {
     const subsFor = (id) => [id && one ? `${one}:${id}` : null, kind === 'puppies' ? `litter:${scopeId}` : null, kind === 'partners' ? 'page:partners' : null].filter(Boolean);
     const pickFor = (rec) => {
       // A partner kennel's logo: from the logos she has added for them.
-      if (kind === 'partners') return { groups: [{ label: 'Partner kennel logos', subject: 'page:partners' }], tags: ['page:partners'], alt: rec ? `${rec.name} logo` : '' };
+      if (kind === 'partners') return { groups: [{ label: say('lists.partner_kennel_logos'), subject: 'page:partners' }], tags: ['page:partners'], alt: rec ? `${rec.name} logo` : '' };
       // An album offers its litter's photos first; photos added here are tagged with it.
       if (kind === 'albums') {
         const lit = rec?.litter_id ? `litter:${rec.litter_id}` : null;
-        return { groups: [{ label: rec?.litter_id ? 'Photos of its litter' : 'Your photos', subject: lit }], tags: lit ? [lit] : [], alt: rec?.title ?? '' };
+        return { groups: [{ label: rec?.litter_id ? say('lists.photos_of_its_litter') : say('lists.your_photos'), subject: lit }], tags: lit ? [lit] : [], alt: rec?.title ?? '' };
       }
       if (!one) return null;
-      const groups = [{ label: rec ? `Photos of ${L.name(rec)}` : `Photos of this ${L.one}`, subject: rec ? `${one}:${rec.id}` : null }];
+      const groups = [{ label: rec ? `Photos of ${L.name(rec)}` : `Photos of this ${oneOf(kind)}`, subject: rec ? `${one}:${rec.id}` : null }];
       if (kind === 'puppies' && parentTitle) groups.push({ label: `Photos of ${parentTitle}`, subject: `litter:${scopeId}` });
       return { groups, tags: subsFor(rec?.id), alt: rec ? L.name(rec) : '' };
     };
@@ -408,21 +398,21 @@ export function createScreens({ env, request, url, site, user, page }) {
     const form = async (rec, err, values) => {
       const action = rec ? `${path}/${rec.id}` : `${path}/new`;
       const lock = rec ? await lockedFor(kind, rec) : null;
-      const from = lock ? `<p class="notice">This ${esc(L.one)} comes from KennelOS. What's marked "from KennelOS" changes there, then Update website; everything else here is yours.</p>` : '';
+      const from = lock ? `<p class="notice">This ${esc(oneOf(kind))} comes from KennelOS. What's marked "from KennelOS" changes there, then Update website; everything else here is yours.</p>` : '';
       const body = `${from}${errorBox(err)}<form method="post" action="${esc(action)}" data-save class="card">${fields(formFields, values ?? rec ?? { ...(k.defaults ?? {}) }, { ...await ctxFor(formKind, pickFor(rec)), locked: lock })}
-        ${kind === 'products' ? BADGE_CODE_FIELD : kind === 'partners' ? PARTNER_BADGE_FIELD : ''}<button class="primary">${rec ? 'Save' : `Add ${L.one}`}</button></form>
-        ${rec ? `<form method="post" action="${esc(`${path}/${rec.id}/remove`)}" class="card danger"><p class="muted small">Removing takes it off your draft; it stays on the live site until you publish.</p><button>Remove this ${L.one}</button></form>` : ''}`;
-      return { title: rec ? L.name(rec) : `New ${L.one}`, back: path, body };
+        ${kind === 'products' ? BADGE_CODE_FIELD(say) : kind === 'partners' ? PARTNER_BADGE_FIELD(say) : ''}<button class="primary">${esc(rec ? say('list.save') : say('list.add', { one: oneOf(kind) }))}</button></form>
+        ${rec ? `<form method="post" action="${esc(`${path}/${rec.id}/remove`)}" class="card danger"><p class="muted small">${esc(say('lists.removing_takes_it_off'))}</p><button>Remove this ${esc(oneOf(kind))}</button></form>` : ''}`;
+      return { title: rec ? L.name(rec) : say('list.new', { one: oneOf(kind) }), back: path, body };
     };
 
     if (!rest) {
       if (post) return null;
       const rows = await listRecords(env, site.id, kind, scopeId);
-      const items = rows.map((r, i) => `<li class="item"><a href="${esc(`${path}/${r.id}`)}"><b>${esc(L.name(r))}</b><span>${esc(L.sub(r) ?? '')}</span></a>
+      const items = rows.map((r, i) => `<li class="item"><a href="${esc(`${path}/${r.id}`)}"><b>${esc(L.name(r))}</b><span>${esc(L.sub(r, say) ?? '')}</span></a>
         <span class="order">${i ? `<form method="post" action="${esc(`${path}/${r.id}/up`)}"><button aria-label="Move ${esc(L.name(r))} up">↑</button></form>` : ''}${i < rows.length - 1 ? `<form method="post" action="${esc(`${path}/${r.id}/down`)}"><button aria-label="Move ${esc(L.name(r))} down">↓</button></form>` : ''}</span></li>`).join('');
-      const intro = kind === 'questions' ? `${(await kos()).online ? '<p class="error">Not used right now: KennelOS takes your applications online, so your website shows your KennelOS form. These questions come back if you turn online applications off in KennelOS or remove the link.</p>' : ''}<p class="muted">The application form on your waitlist page always asks for the family's name and email. These questions come after, in this order. With none, it asks for a few lines about their family.</p>` : '';
+      const intro = kind === 'questions' ? `${(await kos()).online ? `<p class="error">${esc(say('lists.not_used_right_now'))}</p>` : ''}<p class="muted">${esc(say('lists.the_application_form_on'))}</p>` : '';
       const extra = kind === 'policies' ? await waitlistPoliciesCard() : kind === 'litters' ? await leavingCard() : kind === 'dogs' ? `${await offSiteDogsCard(rows)}${partnersLink()}` : kind === 'partners' ? await partnersIntro() : kind === 'reviews' ? '<p><a class="button" href="' + base + '/reviews-queue">Reviews families sent</a></p>' : '';
-      return { title: parentTitle ? `${parentTitle}: ${L.title}` : L.title, back: back ?? base, body: `${note(url)}${intro}${extra}<ul class="items">${items || `<li class="muted">None yet.</li>`}</ul><p><a class="button primary" href="${esc(`${path}/new`)}">Add ${L.one}</a></p>` };
+      return { title: parentTitle ? `${parentTitle}: ${listTitle(kind)}` : listTitle(kind), back: back ?? base, body: `${note(url)}${intro}${extra}<ul class="items">${items || `<li class="muted">${esc(say('list.empty'))}</li>`}</ul><p><a class="button primary" href="${esc(`${path}/new`)}">${esc(say('list.add', { one: oneOf(kind) }))}</a></p>` };
     }
     if (rest === 'new') {
       if (!post) return form(null);
@@ -483,15 +473,15 @@ export function createScreens({ env, request, url, site, user, page }) {
     let first = null;
     if (rec.litter_id) {
       const pups = (await env.DB.prepare('SELECT id, name FROM puppies WHERE site_id = ? AND litter_id = ?').bind(site.id, rec.litter_id).all()).results;
-      if (pups.length) first = { label: 'Puppies of its litter', names: new Map(pups.map((x) => [`puppy:${x.id}`, x.name])) };
+      if (pups.length) first = { label: say('photos.puppies_of_its_litter'), names: new Map(pups.map((x) => [`puppy:${x.id}`, x.name])) };
     }
     const card = (p) => {
       const mine = (t.get(p.id) ?? []).filter((x) => names.has(x));
-      return `<li class="card"><img src="${esc(photoUrl(p.id))}" alt="${esc(p.alt || 'Photo')}" loading="lazy">${tickBox(p)}
-        <div class="tags">${mine.map((x) => `<span class="tag">${esc(first?.names.get(x) ?? names.get(x))}</span>`).join('') || '<span class="muted small">No one yet</span>'}</div></li>`;
+      return `<li class="card"><img src="${esc(photoUrl(p.id))}" alt="${esc(p.alt || say('photos.photo_3'))}" loading="lazy">${tickBox(p)}
+        <div class="tags">${mine.map((x) => `<span class="tag">${esc(first?.names.get(x) ?? names.get(x))}</span>`).join('') || `<span class="muted small">${esc(say('photos.no_one_yet'))}</span>`}</div></li>`;
     };
-    return `<section class="card" id="whos-in"><h2>Who's in these photos</h2>
-      <p class="muted small">Tick the photos with the same puppy or dog in them, choose who, then Tag. A puppy's photos show on its own page when its litter's "Show each puppy's tagged photos" is on, and are offered first when you choose its photo.</p>
+    return `<section class="card" id="whos-in"><h2>${esc(say('photos.who_s_in_these'))}</h2>
+      <p class="muted small">${esc(say('photos.tick_the_photos_with'))}</p>
       ${tagManyBar(subs, { back: `${back}#whos-in`, first })}<ul class="ph-list">${list.map(card).join('')}</ul></section>`;
   }
 
@@ -500,8 +490,8 @@ export function createScreens({ env, request, url, site, user, page }) {
     if (!view?.rec) return view;
     const rows = await listRecords(env, site.id, childKind, view.rec.id);
     const L = LISTS[childKind];
-    view.body += `<section class="card"><h2>${esc(label)}</h2><ul class="items">${rows.map((r) => `<li class="item"><a href="${esc(`${childPath}/${r.id}`)}"><b>${esc(L.name(r))}</b><span>${esc(L.sub(r) ?? '')}</span></a></li>`).join('') || '<li class="muted">None yet.</li>'}</ul>
-      <p><a class="button" href="${esc(childPath)}">Edit the list</a> <a class="button" href="${esc(`${childPath}/new`)}">Add ${L.one}</a></p></section>`;
+    view.body += `<section class="card"><h2>${esc(label)}</h2><ul class="items">${rows.map((r) => `<li class="item"><a href="${esc(`${childPath}/${r.id}`)}"><b>${esc(L.name(r))}</b><span>${esc(L.sub(r, say) ?? '')}</span></a></li>`).join('') || `<li class="muted">${esc(say('lists.none_yet'))}</li>`}</ul>
+      <p><a class="button" href="${esc(childPath)}">${esc(say('lists.edit_the_list'))}</a> <a class="button" href="${esc(`${childPath}/new`)}">${esc(say('list.add', { one: oneOf(childKind) }))}</a></p></section>`;
     return view;
   }
 
@@ -513,10 +503,10 @@ export function createScreens({ env, request, url, site, user, page }) {
     const t = await tags();
     const mine = (await photos()).filter((p) => (t.get(p.id) ?? []).includes(subject));
     view.body += `<section class="card photos" data-picker data-type="none" data-upload="${esc(`${base}/photos/upload`)}" data-tags="${esc(subject)}" data-alt="${esc(view.rec.name)}">
-      <h2>Photos of this litter</h2><p class="muted small">Photos added here are offered first when you choose a photo for one of its puppies.</p>
-      <div class="ph-grid" data-first>${mine.map((p) => `<img src="${esc(photoUrl(p.id))}" alt="${esc(p.alt || 'Photo')}" loading="lazy">`).join('')}</div>
-      <div class="ph-add"><label class="button">Add photos<input type="file" accept="image/*" multiple data-add-photos></label><span class="muted small" role="status"></span></div>
-      ${mine.length ? `<p><a href="${esc(`${base}/photos?of=${encodeURIComponent(subject)}`)}">See them on the Photos screen</a></p>` : ''}</section>`;
+      <h2>${esc(say('photos.photos_of_this_litter'))}</h2><p class="muted small">${esc(say('photos.photos_added_here_are'))}</p>
+      <div class="ph-grid" data-first>${mine.map((p) => `<img src="${esc(photoUrl(p.id))}" alt="${esc(p.alt || say('photos.photo_2'))}" loading="lazy">`).join('')}</div>
+      <div class="ph-add"><label class="button">${esc(say('photos.add_photos_2'))}<input type="file" accept="image/*" multiple data-add-photos></label><span class="muted small" role="status"></span></div>
+      ${mine.length ? `<p><a href="${esc(`${base}/photos?of=${encodeURIComponent(subject)}`)}">${esc(say('photos.see_them_on_the'))}</a></p>` : ''}</section>`;
     return view;
   }
 
@@ -541,18 +531,18 @@ export function createScreens({ env, request, url, site, user, page }) {
       const pups = await listRecords(env, site.id, 'puppies', l.id);
       sections.push(`<section class="card"><h2>${esc(l.name)}</h2>${pups.map((p) => `<form method="post" action="${esc(`${base}/puppies/${p.id}/status`)}" class="pup" data-save>
           <a href="${esc(`${base}/litters/${l.id}/puppies/${p.id}`)}"><b>${esc(p.name)}</b><span>${esc([p.collar, p.sex === 'female' ? 'girl' : 'boy'].filter(Boolean).join(' · '))}</span></a>
-          ${p.source === 'kennelos' ? `<span class="muted small">${esc(p.hidden_by_kennelos ? 'Not sent by KennelOS' : STATUS_TEXT[p.status] ?? 'Hidden')} · from KennelOS</span>` : `<select name="status" aria-label="${esc(p.name)}'s status">${Object.entries({ ...STATUS_TEXT, hidden: 'Hidden' }).map(([v, t]) => `<option value="${v}"${v === p.status ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>
-          <button>Set</button>`}</form>`).join('') || '<p class="muted">No puppies yet.</p>'}
-        <p><a class="button" href="${esc(`${base}/litters/${l.id}/puppies/new`)}">Add a puppy</a></p></section>`);
+          ${p.source === 'kennelos' ? `<span class="muted small">${esc(p.hidden_by_kennelos ? say('puppylist.not_sent_by_kennelos') : STATUS_TEXT[p.status] ?? say('puppylist.hidden_2'))} · from KennelOS</span>` : `<select name="status" aria-label="${esc(p.name)}'s status">${Object.entries({ ...STATUS_TEXT, hidden: say('puppylist.hidden') }).map(([v, t]) => `<option value="${v}"${v === p.status ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>
+          <button>${esc(say('puppylist.set'))}</button>`}</form>`).join('') || `<p class="muted">${esc(say('puppylist.no_puppies_yet'))}</p>`}
+        <p><a class="button" href="${esc(`${base}/litters/${l.id}/puppies/new`)}">${esc(say('puppylist.add_a_puppy'))}</a></p></section>`);
     }
-    return { title: 'Puppies', back: base, body: `${note(url)}${sections.join('') || `<section class="card"><p class="muted">No current litters. <a href="${esc(`${base}/litters/new`)}">Add a litter</a>.</p></section>`}` };
+    return { title: say('puppylist.puppies'), back: base, body: `${note(url)}${sections.join('') || `<section class="card"><p class="muted">${esc(say('puppylist.no_current_litters'))} <a href="${esc(`${base}/litters/new`)}">${esc(say('puppylist.add_a_litter'))}</a>.</p></section>`}` };
   }
 
   // ---------- kennel details, pages, Home ----------
   async function details() {
     const row = await env.DB.prepare('SELECT * FROM sites WHERE id = ?').bind(site.id).first();
-    const logoPick = { groups: [{ label: 'Your logo', subject: 'page:logo' }], tags: ['page:logo'], alt: `${row.kennel_name ?? ''} logo` };
-    const render = async (err, values) => ({ title: 'Kennel details', back: base, body: `${note(url)}${errorBox(err)}<form method="post" action="${base}/details" data-save class="card">${fields(SITE_FIELDS, values ?? row, await ctxFor('site', logoPick))}<button class="primary">Save</button></form>` });
+    const logoPick = { groups: [{ label: say('site.your_logo'), subject: 'page:logo' }], tags: ['page:logo'], alt: `${row.kennel_name ?? ''} logo` };
+    const render = async (err, values) => ({ title: say('site.kennel_details'), back: base, body: `${note(url)}${errorBox(err)}<form method="post" action="${base}/details" data-save class="card">${fields(SITE_FIELDS, values ?? row, await ctxFor('site', logoPick))}<button class="primary">${esc(say('site.save'))}</button></form>` });
     if (request.method !== 'POST') return render();
     const fd = await request.formData();
     const values = parseForm(SITE_FIELDS, fd);
@@ -572,12 +562,12 @@ export function createScreens({ env, request, url, site, user, page }) {
     const f = await readFeed(env, site.id, row.kennelos_public_id);
     const list = f.state === 'ok' ? f.feed?.kennel?.policies ?? [] : [];
     if (!list.length) {
-      return f.state === 'ok' ? '<section class="card"><h2>Waitlist policies</h2><p class="muted small">None in KennelOS yet. Add them in KennelOS, in your kennel\'s Waitlist settings under Policies, and they show on your Policies page under their own heading, below the ones here.</p></section>' : '';
+      return f.state === 'ok' ? `<section class="card"><h2>${esc(say('waitlistpage.waitlist_policies_2'))}</h2><p class="muted small">${esc(say('waitlistpage.none_in_kennelos_yet'))}</p></section>` : '';
     }
-    return `<section class="card" id="waitlist-policies"><h2>Waitlist policies <span class="muted small">from KennelOS</span></h2>
-      <p class="muted small">Shown on your Policies page under their own heading, below the ones here. Change them in KennelOS (your kennel's Waitlist settings, Policies); your website shows the change within a few minutes, no publish needed.</p>
+    return `<section class="card" id="waitlist-policies"><h2>${esc(say('waitlistpage.waitlist_policies'))} <span class="muted small">${esc(say('waitlistpage.from_kennelos'))}</span></h2>
+      <p class="muted small">${esc(say('waitlistpage.shown_on_your_policies'))}</p>
       <ul class="items">${list.map((x) => `<li class="item"><details><summary><b>${esc(x.heading)}</b></summary><p class="small">${esc(x.body)}</p></details></li>`).join('')}</ul>
-      <p class="muted small">Add your own policies below: your health guarantee, spay and neuter, take-back, anything beyond the waitlist.</p></section>`;
+      <p class="muted small">${esc(say('waitlistpage.add_your_own_policies'))}</p></section>`;
   }
 
   // The KennelOS website feed (plan 3.8): pasted on the waitlist page's screen.
@@ -590,16 +580,16 @@ export function createScreens({ env, request, url, site, user, page }) {
     if (id) {
       const f = await readFeed(env, site.id, id);
       state = f.state === 'ok'
-        ? `<p class="notice">Connected. ${f.feed.form ? 'You take applications online in KennelOS, so your waitlist page shows your KennelOS application form, and applications go to KennelOS, not to this Inbox.' : 'You aren\'t taking applications online in KennelOS, so your waitlist page shows the application form set up here, and applications come to this Inbox.'}${f.stale ? ' KennelOS couldn\'t be reached just now; this is from its last copy.' : ''}</p>`
-        : f.state === 'not_shared' ? '<p class="error">KennelOS isn\'t sharing your list with your website. In KennelOS, open the Online list card and turn on "Let my KennelPort website show my list in its own style". Until then, your waitlist page links to your KennelOS pages.</p>'
-          : f.state === 'not_found' ? '<p class="error">KennelOS has no waitlist online at this address. Check the address, or put your list online in KennelOS first.</p>'
-            : '<p class="error">KennelOS couldn\'t be reached just now. Your waitlist page links to your KennelOS pages until it can.</p>';
+        ? `<p class="notice">Connected. ${f.feed.form ? esc(say('waitlistpage.you_take_applications_online')) : esc(say('waitlistpage.you_aren_t_taking'))}${f.stale ? ' KennelOS couldn\'t be reached just now; this is from its last copy.' : ''}</p>`
+        : f.state === 'not_shared' ? `<p class="error">${esc(say('waitlistpage.kennelos_isn_t_sharing'))}</p>`
+          : f.state === 'not_found' ? `<p class="error">${esc(say('waitlistpage.kennelos_has_no_waitlist'))}</p>`
+            : `<p class="error">${esc(say('waitlistpage.kennelos_couldn_t_be'))}</p>`;
     }
-    return `<form method="post" action="${base}/pages/waitlist/kennelos" class="card" id="kennelos"><h2>Your KennelOS waitlist</h2>
-      ${id ? '<p class="muted small">Your waitlist page shows your KennelOS list. Remove the link to use the simple waitlist kept here instead.</p>' : `<p class="muted small">Keep your waitlist in KennelOS? Paste the website feed address from its Online list card. Your waitlist page then shows your KennelOS list, and while you take applications online there, your KennelOS application form, in your website's style, with applications going straight to KennelOS. The simple waitlist and the questions set up here are then not used (the questions are, if you don't take applications online in KennelOS). Without KennelOS, leave this empty and use the questions and Your waitlist below.</p>`}
+    return `<form method="post" action="${base}/pages/waitlist/kennelos" class="card" id="kennelos"><h2>${esc(say('waitlistpage.your_kennelos_waitlist'))}</h2>
+      ${id ? `<p class="muted small">${esc(say('waitlistpage.your_waitlist_page_shows'))}</p>` : `<p class="muted small">${esc(say('waitlistpage.keep_your_waitlist_in'))}</p>`}
       ${errorBox(err)}${state}
-      <label>Website feed address<input name="feed" value="${esc(typed ?? (id ? `${origin}/f/site/${id}` : ''))}" placeholder="${esc(origin)}/f/site/…" autocapitalize="none" spellcheck="false"></label>
-      <div class="row"><button class="primary">Save</button>${id ? '<button name="remove" value="1">Remove</button>' : ''}</div></form>`;
+      <label>${esc(say('waitlistpage.website_feed_address'))}<input name="feed" value="${esc(typed ?? (id ? `${origin}/f/site/${id}` : ''))}" placeholder="${esc(origin)}/f/site/…" autocapitalize="none" spellcheck="false"></label>
+      <div class="row"><button class="primary">${esc(say('waitlistpage.save'))}</button>${id ? `<button name="remove" value="1">${esc(say('waitlistpage.remove'))}</button>` : ''}</div></form>`;
   }
 
   async function pages() {
@@ -623,22 +613,29 @@ export function createScreens({ env, request, url, site, user, page }) {
       for (const [k, p] of Object.entries(PAGES)) {
         if (k === 'privacy') continue;
         const v = await getPage(env, site.id, k);
-        rows.push(`<li class="item"><a href="${base}/pages/${k}"><b>${esc(v.menu_label || p.label)}</b><span>${esc(p.path)}${p.canHide && !v.enabled ? ' · off' : ''}</span></a></li>`);
+        rows.push(`<li class="item"><a href="${base}/pages/${k}"><b>${esc(v.menu_label || p.label)}</b><span>${esc(p.path)}${p.canHide && !v.enabled ? esc(say('pages.off_2')) : ''}</span></a></li>`);
       }
-      return { title: 'Pages', back: base, body: `${note(url)}<ul class="items"><li class="item"><a href="${base}/home"><b>Home</b><span>/ · block by block</span></a></li>${rows.join('')}</ul>` };
+      // The pages KennelPort added to her site: hers to switch on or off and word.
+      for (const c of customPages(await loadBuild(env, site.id))) {
+        const v = await getPage(env, site.id, c.id);
+        rows.push(`<li class="item"><a href="${base}/pages/${c.id}"><b>${esc(v.menu_label || c.name)}</b><span>${esc(c.path)}${!v.enabled ? esc(say('pages.off')) : ''}</span></a></li>`);
+      }
+      return { title: say('pages.pages'), back: base, body: `${note(url)}<ul class="items"><li class="item"><a href="${base}/home"><b>${esc(say('pages.home'))}</b><span>${esc(say('pages.block_by_block'))}</span></a></li>${rows.join('')}</ul>` };
     }
-    const p = PAGES[key];
+    const custom = isCustom(key) ? customPages(await loadBuild(env, site.id)).find((c) => c.id === key) : null;
+    const p = custom ? { ...CUSTOM_PAGE, label: custom.name, path: custom.path } : PAGES[key];
     if (!p || key === 'privacy') return null;
     const all = { ...(p.canHide ? { enabled: { type: 'bool' } } : {}), menu_label: { type: 'text', max: 40 }, ...p.fields };
     const current = await getPage(env, site.id, key);
     const subject = key === 'about' ? 'page:about' : null;
+
     const pick = subject ? { groups: [{ label: `Photos for ${p.label}`, subject }], tags: [subject], alt: '' } : undefined;
     const render = async (err, values) => ({
       title: p.label, back: `${base}/pages`,
       body: `${note(url)}${key === 'waitlist' ? kennelos ?? await kennelosCard() : ''}${errorBox(err)}<form method="post" action="${base}/pages/${key}" data-save class="card">
-        ${p.canHide ? fieldsWithLabel(all, values ?? current, await ctxFor(key === 'extras' ? 'extras_page' : key === 'products' ? 'products_page' : key, pick), { enabled: ['This page is on', 'Off: it leaves the menu and its address says "This page isn\'t available". Its words are kept.'], menu_label: ['Name in the menu', `Leave empty for "${p.label}".`] }) : fieldsWithLabel(all, values ?? current, await ctxFor(key, pick), { menu_label: ['Name in the menu', `Leave empty for "${p.label}".`] })}
-        <button class="primary">Save</button></form>
-        ${key === 'waitlist' ? await waitlistLinks() : listLinkFor(key)}${key === 'about' ? await embedsCard('about', `${base}/pages/about`, embedErr()) : ''}`,
+        ${p.canHide ? fieldsWithLabel(all, values ?? current, await ctxFor(key === 'extras' ? 'extras_page' : key === 'products' ? 'products_page' : key, pick), { enabled: [say('pages.this_page_is_on'), say('pages.off_it_leaves_the')], menu_label: [say('pages.name_in_the_menu_2'), `Leave empty for "${p.label}".`] }) : fieldsWithLabel(all, values ?? current, await ctxFor(key, pick), { menu_label: [say('pages.name_in_the_menu'), `Leave empty for "${p.label}".`] })}
+        <button class="primary">${esc(say('pages.save_2'))}</button></form>
+        ${key === 'waitlist' ? await waitlistLinks() : listLinkFor(key)}${key === 'about' ? await embedsCard('about', `${base}/pages/about`, embedErr()) : ''}${await addedCards(key)}`,
     });
     if (request.method !== 'POST' || show) return render();
     const fd = await request.formData();
@@ -656,11 +653,11 @@ export function createScreens({ env, request, url, site, user, page }) {
   async function waitlistLinks() {
     const k = await kos();
     const questions = k.online
-      ? '<p class="muted small">Your application questions aren\'t used while KennelOS takes your applications online: your website shows your KennelOS form. <a href="' + base + '/lists/questions">See them anyway</a></p>'
+      ? `<p class="muted small">${esc(say('waitlistpage.your_application_questions_aren'))} <a href="` + base + '/lists/questions">See them anyway</a></p>'
       : listLinkFor('waitlist');
     const simple = k.linked
-      ? '<p class="muted small">Your simple waitlist isn\'t used while KennelOS is linked: your website shows your KennelOS list.</p>'
-      : `<p><a class="button" href="${base}/waitlist">Your waitlist</a></p>`;
+      ? `<p class="muted small">${esc(say('waitlistpage.your_simple_waitlist_isn'))}</p>`
+      : `<p><a class="button" href="${base}/waitlist">${esc(say('waitlistpage.your_waitlist'))}</a></p>`;
     return questions + simple;
   }
 
@@ -668,7 +665,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     const kind = { reviews: 'reviews', how_it_works: 'steps', extras: 'extras', products: 'products', pickup: 'products', policies: 'policies', faq: 'faq', waitlist_help: 'waitlist_help', dogs: 'dogs', litters: 'litters', waitlist: 'questions', albums: 'albums' }[key];
     if (!kind) return '';
     const href = ['dogs', 'litters'].includes(kind) ? `${base}/${kind}` : `${base}/lists/${kind}`;
-    return `<p><a class="button" href="${esc(href)}">Edit the ${esc(LISTS[kind].title.toLowerCase())} on this page</a></p>`;
+    return `<p><a class="button" href="${esc(href)}">Edit the ${esc(listTitle(kind).toLowerCase())} on this page</a></p>`;
   };
 
   function fieldsWithLabel(list, values, ctx, labels) {
@@ -681,24 +678,65 @@ export function createScreens({ env, request, url, site, user, page }) {
     }).join('\n');
   }
 
+  // Blocks KennelPort placed on a page (content/blocks.js addedBlocks): hers to
+  // switch off and reword, never to move. Each is its own small form.
+  async function addedCards(key) {
+    const blocks = addedBlocks(key, pageBlocks(await loadBuild(env, site.id), key));
+    if (!blocks.length) return '';
+    const snap = await buildSnapshot(env, site.id);
+    const what = { dogs: say('pages.your_dogs_from_kennelos'), litters: say('pages.your_litters_from_kennelos'), reviews: say('pages.your_reviews') };
+    const nameOf = { dogs: (d) => d.call_name, litters: (l) => l.name, reviews: (r) => r.first_name || say('pages.a_family') };
+    const icon = { dogs: 'paw', litters: 'heart', reviews: 'star' };
+    const cards = [];
+    for (const b of blocks) {
+      const cur = await getAddedBlock(env, site.id, key, b.id);
+      const rows = blockRows(snap, b);
+      const names = (b.limit ? rows.slice(0, b.limit) : rows).map(nameOf[b.type]);
+      const input = (n, label, max, half) => `<div class="f${half ? ' half' : ''}"><label>${esc(label)}<input name="${n}" value="${esc(cur[n] ?? '')}" maxlength="${max}" placeholder="${esc(b.w[n] ?? '')}">${b.w[n] ? `<span class="hint">Empty: "${esc(b.w[n])}".</span>` : ''}</label></div>`;
+      cards.push(`<form method="post" action="${base}/blocks/${esc(key)}/${esc(b.id)}" data-save class="card added${cur.enabled ? '' : ' off'}" id="b-${esc(b.id)}">
+        <div class="between"><h2 class="added-h">${ic(icon[b.type])}${esc(cur.heading || b.w.heading || BLOCK_TYPES[b.type].name)}</h2>
+          <div class="switches"><label class="check">${esc(say('pages.show_it'))}<input type="checkbox" name="enabled" value="1"${cur.enabled ? ' checked' : ''}></label></div></div>
+        <p class="muted small">${esc(what[b.type])}: ${names.length ? esc(names.join(', ')) : 'none right now, so it hides'}.</p>
+        <div class="fgrid">${input('eyebrow', say('pages.eyebrow'), ADDED_BLOCK_FIELDS.eyebrow.max, true)}${input('heading', say('pages.heading'), ADDED_BLOCK_FIELDS.heading.max, true)}${input('lede', say('pages.line_under_it'), ADDED_BLOCK_FIELDS.lede.max, false)}</div>
+        <button class="primary">${esc(say('pages.save'))}</button></form>`);
+    }
+    return `<h2>${esc(say('pages.blocks_kennelport_added'))}</h2><p class="muted small">${esc(say('pages.placed_with_you_by'))}</p>${cards.join('')}`;
+  }
+
+  async function addedAction() {
+    const [, , , , page, block] = url.pathname.split('/');
+    if (request.method !== 'POST') return null;
+    const b = addedBlocks(page, pageBlocks(await loadBuild(env, site.id), page)).find((x) => x.id === block);
+    if (!b) return null;
+    const back = page === 'home' ? `${base}/home` : `${base}/pages/${page}`;
+    const fd = await request.formData();
+    try {
+      await saveAddedBlock(env, site.id, page, block, { enabled: fd.get('enabled') != null, eyebrow: fd.get('eyebrow'), heading: fd.get('heading'), lede: fd.get('lede') });
+    } catch (err) {
+      if (!(err instanceof ContentError)) throw err;
+      return redirect(`${back}?note=not_saved#b-${block}`);
+    }
+    return redirect(`${back}?note=saved#b-${block}`);
+  }
+
   async function home() {
     const key = url.pathname.split('/')[4];
     if (!key) {
       const rows = [];
       for (const b of HOME_BLOCK_ORDER) {
         const v = await getBlock(env, site.id, b);
-        rows.push(`<li class="item"><a href="${base}/home/${b}"><b>${esc(BLOCK_TITLES[b])}</b><span>${v.enabled ? 'on' : 'off'}</span></a></li>`);
+        rows.push(`<li class="item"><a href="${base}/home/${b}"><b>${esc(say(`homeblocks.title.${b}`))}</b><span>${esc(say(v.enabled ? 'homeblocks.on' : 'homeblocks.off'))}</span></a></li>`);
       }
-      return { title: 'Home page', back: `${base}/pages`, body: `${note(url)}<p class="muted">Home is a fixed sequence of blocks. Switch each on or off and change its words.</p><ul class="items">${rows.join('')}</ul>${await embedsCard('home', `${base}/home`, embedErr())}` };
+      return { title: say('homeblocks.home_page'), back: `${base}/pages`, body: `${note(url)}<p class="muted">${esc(say('homeblocks.your_home_page_s'))}</p><ul class="items">${rows.join('')}</ul>${await embedsCard('home', `${base}/home`, embedErr())}${await addedCards('home')}` };
     }
     const flds = HOME_BLOCKS[key];
     if (!flds) return null;
     const all = { enabled: { type: 'bool' }, ...flds };
     const current = await getBlock(env, site.id, key);
-    const pick = { groups: [{ label: 'Photos for the Home page', subject: 'page:home' }], tags: ['page:home'], alt: '' };
+    const pick = { groups: [{ label: say('homeblocks.photos_for_the_home'), subject: 'page:home' }], tags: ['page:home'], alt: '' };
     const render = async (err, values) => ({
-      title: BLOCK_TITLES[key], back: `${base}/home`,
-      body: `${note(url)}${errorBox(err)}<form method="post" action="${base}/home/${key}" data-save class="card">${fieldsWithLabel(all, values ?? current, await ctxFor(key, pick), { enabled: ['This block is on', 'Off: it leaves the home page; its words are kept.'] })}<button class="primary">Save</button></form>`,
+      title: say(`homeblocks.title.${key}`), back: `${base}/home`,
+      body: `${note(url)}${errorBox(err)}<form method="post" action="${base}/home/${key}" data-save class="card">${fieldsWithLabel(all, values ?? current, await ctxFor(key, pick), { enabled: [say('homeblocks.this_block_is_on'), say('homeblocks.off_it_leaves_the')] })}<button class="primary">${esc(say('homeblocks.save'))}</button></form>`,
     });
     if (request.method !== 'POST') return render();
     const fd = await request.formData();
@@ -714,7 +752,7 @@ export function createScreens({ env, request, url, site, user, page }) {
   // ---------- how to pay, and the safe-payment notice (plan 3.9) ----------
   async function payment() {
     const kind = url.pathname.split('/')[4] ?? '';
-    const KINDS_HERE = { application_fee: ['Application fee', PAYMENT_FIELDS], deposit: ['Puppy deposit', PAYMENT_FIELDS], safe_notice: ['Safe-payment notice', SAFE_NOTICE_FIELDS] };
+    const KINDS_HERE = { application_fee: [say('payment.application_fee'), PAYMENT_FIELDS], deposit: [say('payment.puppy_deposit'), PAYMENT_FIELDS], safe_notice: [say('payment.safe_payment_notice'), SAFE_NOTICE_FIELDS] };
     if (request.method === 'POST') {
       const k = KINDS_HERE[kind];
       if (!k) return null;
@@ -738,12 +776,12 @@ export function createScreens({ env, request, url, site, user, page }) {
         const current = typed ?? await getPayment(env, site.id, k);
         const intro = k === 'safe_notice'
           ? `<p class="muted small">Leave the wording empty for: "${esc(SAFE_NOTICE_TEXT)}" Where the ways to pay above are shown, it starts "We take payment only by…" and links to them.</p>`
-          : `<p class="muted small">${k === 'application_fee' ? 'How a family pays the fee once you approve them.' : 'How a family pays the deposit once they choose a puppy.'} This is how to pay, not the price.</p>`;
+          : `<p class="muted small">${k === 'application_fee' ? esc(say('payment.how_a_family_pays_2')) : esc(say('payment.how_a_family_pays'))} This is how to pay, not the price.</p>`;
         cards.push(`<form method="post" action="${base}/payment/${k}" id="${k}" data-save class="card"><h2>${esc(title)}</h2>${intro}${errorBox(err)}
-          ${current.source === 'kennelos' ? '<p class="notice">Filled from your waitlist settings in KennelOS. Change the wording there, then Update website; whether it shows is up to you here.</p>' : ''}
-          ${fields(flds, current, { kind: k === 'safe_notice' ? 'safe_notice' : 'payment', locked: current.source === 'kennelos' ? new Set(Object.keys(PAYMENT_FIELDS).filter((f) => f !== 'show_on_site')) : null })}<button class="primary">Save</button></form>`);
+          ${current.source === 'kennelos' ? `<p class="notice">${esc(say('payment.filled_from_your_waitlist'))}</p>` : ''}
+          ${fields(flds, current, { kind: k === 'safe_notice' ? 'safe_notice' : 'payment', say, locked: current.source === 'kennelos' ? new Set(Object.keys(PAYMENT_FIELDS).filter((f) => f !== 'show_on_site')) : null })}<button class="primary">${esc(say('payment.save'))}</button></form>`);
       }
-      return { title: 'How to pay', back: base, body: `${note(url)}<p class="muted">Shown on your waitlist page, so families don't have to email to ask. A How it works step can link here too: open the step and tick its How to pay box.</p>${cards.join('')}` };
+      return { title: say('payment.how_to_pay'), back: base, body: `${note(url)}<p class="muted">${esc(say('payment.shown_on_your_waitlist'))}</p>${cards.join('')}` };
     }
   }
 
@@ -755,7 +793,7 @@ export function createScreens({ env, request, url, site, user, page }) {
       const form = await request.formData();
       const full = form.get('full');
       const thumb = form.get('thumb');
-      if (!full || typeof full === 'string') return json({ message: 'No photo was sent.' }, 400);
+      if (!full || typeof full === 'string') return json({ message: say('photos.no_photo_was_sent') }, 400);
       try {
         const saved = await savePhoto(env, site.id, { full: new Uint8Array(await full.arrayBuffer()), thumb: thumb && typeof thumb !== 'string' ? new Uint8Array(await thumb.arrayBuffer()) : null, alt: form.get('alt') });
         await tagPhotos(env, site.id, [saved.id], String(form.get('tags') ?? '').split(','));
@@ -779,7 +817,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     if (m && !post) {
       const p = await env.DB.prepare('SELECT r2_key, thumb_key, type FROM photos WHERE id = ? AND site_id = ?').bind(m[1], site.id).first();
       const obj = p && await env.FILES.get(m[2] === 'full' ? p.r2_key : (p.thumb_key || p.r2_key));
-      if (!obj) return new Response('Not found', { status: 404 });
+      if (!obj) return new Response(say('photos.not_found'), { status: 404 });
       return new Response(obj.body, { headers: { 'content-type': p.type, 'cache-control': 'private, max-age=86400' } });
     }
     // Where to come back to: the same filter.
@@ -814,7 +852,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     const untagged = all.filter((p) => !known(p).length).length;
     const list = of === 'none' ? all.filter((p) => !known(p).length) : of ? all.filter((p) => known(p).includes(of)) : all;
     const chip = (value, label, n) => `<a class="chip${value === of ? ' on' : ''}" href="${esc(`${base}/photos${value ? `?of=${encodeURIComponent(value)}` : ''}`)}"${value === of ? ' aria-current="true"' : ''}>${esc(label)} <span>${n}</span></a>`;
-    const chips = [chip('', 'All', all.length), untagged ? chip('none', 'Not sorted', untagged) : '', ...subs.map((x) => [x, count(x.subject)]).filter(([, n]) => n).map(([x, n]) => chip(x.subject, x.label, n))].join('');
+    const chips = [chip('', say('photos.all'), all.length), untagged ? chip('none', say('photos.not_sorted_2'), untagged) : '', ...subs.map((x) => [x, count(x.subject)]).filter(([, n]) => n).map(([x, n]) => chip(x.subject, x.label, n))].join('');
     const options = (exclude = [], selected = '') => {
       const groups = [...new Set(subs.map((x) => x.group))];
       return groups.map((g) => `<optgroup label="${esc(g)}">${subs.filter((x) => x.group === g && !exclude.includes(x.subject)).map((x) => `<option value="${esc(x.subject)}"${x.subject === selected ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</optgroup>`).join('');
@@ -822,36 +860,38 @@ export function createScreens({ env, request, url, site, user, page }) {
     const ofInput = of ? `<input type="hidden" name="of" value="${esc(of)}">` : '';
     const card = (p) => {
       const mine = known(p);
-      return `<li class="card"><img src="${esc(photoUrl(p.id))}" alt="${esc(p.alt || 'Photo')}" loading="lazy">${tickBox(p)}
-        <div class="tags">${mine.map((x) => `<form method="post" action="${base}/photos/${p.id}/untag" class="tag">${ofInput}<input type="hidden" name="subject" value="${esc(x)}"><span>${esc(names.get(x))}</span><button class="link" aria-label="${esc(`Not ${names.get(x)}`)}">×</button></form>`).join('') || '<span class="muted small">Not sorted</span>'}</div>
-        <form method="post" action="${base}/photos/${p.id}/tag" class="row">${ofInput}<select name="subject" aria-label="This photo is also of"><option value="">Photo of…</option>${options(mine)}</select><button>Add</button></form>
-        <form method="post" action="${base}/photos/${p.id}/alt" data-save>${ofInput}<label>Description<input name="alt" value="${esc(p.alt ?? '')}" maxlength="200"></label><button>Save</button></form>
-        <form method="post" action="${base}/photos/${p.id}/remove">${ofInput}<button class="link">Remove</button></form></li>`;
+      return `<li class="card"><img src="${esc(photoUrl(p.id))}" alt="${esc(p.alt || say('photos.photo'))}" loading="lazy">${tickBox(p)}
+        <div class="tags">${mine.map((x) => `<form method="post" action="${base}/photos/${p.id}/untag" class="tag">${ofInput}<input type="hidden" name="subject" value="${esc(x)}"><span>${esc(names.get(x))}</span><button class="link" aria-label="${esc(`Not ${names.get(x)}`)}">×</button></form>`).join('') || `<span class="muted small">${esc(say('photos.not_sorted'))}</span>`}</div>
+        <form method="post" action="${base}/photos/${p.id}/tag" class="row">${ofInput}<select name="subject" aria-label="This photo is also of"><option value="">${esc(say('photos.photo_of'))}</option>${options(mine)}</select><button>${esc(say('photos.add'))}</button></form>
+        <form method="post" action="${base}/photos/${p.id}/alt" data-save>${ofInput}<label>${esc(say('photos.description'))}<input name="alt" value="${esc(p.alt ?? '')}" maxlength="200"></label><button>${esc(say('photos.save'))}</button></form>
+        <form method="post" action="${base}/photos/${p.id}/remove">${ofInput}<button class="link">${esc(say('photos.remove'))}</button></form></li>`;
     };
     return {
-      title: 'Photos', back: base,
-      body: `${note(url)}<p class="row"><a class="button" href="${base}/lists/albums">Albums</a><span class="muted small">Galleries with their own link, made from these photos.</span></p>${await usageLine()}<form id="photo-form" class="card" method="post" action="${base}/photos/upload">
-        <label>Add photos<input type="file" accept="image/*" multiple required></label>
-        <label>Photos of<span class="hint">So they're offered first when you choose a photo for that dog, litter or page. You can also add photos from the dog's or litter's own screen.</span>
-          <select name="tags"><option value="">Choose later</option>${options([], of)}</select></label>
-        <label>What's in the photo<span class="hint">Helps visitors who use screen readers, and search engines. For example "Willow on autumn leaves".</span><input name="alt" maxlength="200"></label>
-        <button class="primary">Upload</button><p id="photo-status" class="muted small" role="status"></p>
-        <p class="muted small">Photos are made smaller on your phone before they're sent, and the camera's location is removed.</p></form>
+      title: say('photos.photos'), back: base,
+      body: `${note(url)}<p class="row"><a class="button" href="${base}/lists/albums">${esc(say('photos.albums'))}</a><span class="muted small">${esc(say('photos.galleries_with_their_own'))}</span></p>${await usageLine()}<form id="photo-form" class="card" method="post" action="${base}/photos/upload">
+        <label>${esc(say('photos.add_photos'))}<input type="file" accept="image/*" multiple required></label>
+        <label>${esc(say('photos.photos_of'))}<span class="hint">${esc(say('photos.so_they_re_offered'))}</span>
+          <select name="tags"><option value="">${esc(say('photos.choose_later'))}</option>${options([], of)}</select></label>
+        <label>${esc(say('photos.what_s_in_the'))}<span class="hint">${esc(say('photos.helps_visitors_who_use'))}</span><input name="alt" maxlength="200"></label>
+        <button class="primary">${esc(say('photos.upload'))}</button><p id="photo-status" class="muted small" role="status"></p>
+        <p class="muted small">${esc(say('photos.photos_are_made_smaller'))}</p></form>
         ${all.length ? `<nav class="chips" aria-label="Show photos of">${chips}</nav>` : ''}
-        ${list.length ? `<section class="card"><p class="muted small">To tag several at once: tick them, choose who\'s in them, then Tag.</p>${tagManyBar(subs, { back: `${base}/photos${of ? `?of=${encodeURIComponent(of)}` : ''}` })}</section>` : ''}
-        <ul class="ph-list">${list.map(card).join('') || (all.length ? '<li class="muted">No photos here.</li>' : '')}</ul>`,
+        ${list.length ? `<section class="card"><p class="muted small">${esc(say('photos.to_tag_several_at'))}</p>${tagManyBar(subs, { back: `${base}/photos${of ? `?of=${encodeURIComponent(of)}` : ''}` })}</section>` : ''}
+        <ul class="ph-list">${list.map(card).join('') || (all.length ? `<li class="muted">${esc(say('photos.no_photos_here'))}</li>` : '')}</ul>`,
     };
   }
 
   // ---------- publish ----------
   async function publishScreen() {
     const rest = url.pathname.slice(`${base}/publish`.length);
+    // The demo is never published (kennelos/demo.js).
+    if (site.demo_step != null) return { title: say('publish.publish_3'), back: base, body: `<section class="card band"><p><strong>${esc(say('publish.demo_site'))}</strong> ${esc(NOT_FOR_DEMO)}</p><p class="row"><a class="button" href="/admin/${esc(site.subdomain)}/site/">${esc(say('publish.open_it_in_your'))}</a></p></section>` };
     if (request.method === 'POST') {
       try {
         if (rest === '/undo') { await undoPublish(env, site.id); return redirect(`${base}/publish?note=undone`); }
         if (!rest) { await publish(env, site.id, user.emailHash.slice(0, 12)); return redirect(`${base}/publish?note=published`); }
       } catch (err) {
-        return { title: 'Publish', back: base, body: `<p class="error" role="alert">${esc(err.message)}</p><p><a href="${base}/publish">Back</a></p>` };
+        return { title: say('publish.publish_2'), back: base, body: `<p class="error" role="alert">${esc(err.message)}</p><p><a href="${base}/publish">${esc(say('publish.back'))}</a></p>` };
       }
       return null;
     }
@@ -865,12 +905,12 @@ export function createScreens({ env, request, url, site, user, page }) {
     const snaps = await listSnapshots(env, site.id);
     const matches = await env.DB.prepare('SELECT COUNT(*) AS n FROM link_pending WHERE site_id = ?').bind(site.id).first('n');
     return {
-      title: 'Publish', back: base,
-      body: `${note(url)}${matches ? matchesWaiting(site.subdomain, matches) : ''}<section class="card"><h2>${list.length ? 'Changes since your last publish' : 'Nothing to publish'}</h2>
-        ${list.length ? `<ul class="changes">${list.map((c) => `<li><span>${esc(c.text)}</span>${c.path ? `<a href="${esc(prev(c.path))}">Preview</a>` : ''}</li>`).join('')}</ul>` : '<p class="muted">Your website already shows everything in your draft.</p>'}
-        <p class="row"><a class="button" href="${esc(prev('/'))}">Preview the whole site</a></p>
+      title: say('publish.publish'), back: base,
+      body: `${note(url)}${matches ? matchesWaiting(site.subdomain, matches, say) : ''}<section class="card"><h2>${list.length ? esc(say('publish.changes_since_your_last')) : esc(say('publish.nothing_to_publish'))}</h2>
+        ${list.length ? `<ul class="changes">${list.map((c) => `<li><span>${esc(c.text)}</span>${c.path ? `<a href="${esc(prev(c.path))}">${esc(say('publish.preview'))}</a>` : ''}</li>`).join('')}</ul>` : `<p class="muted">${esc(say('publish.your_website_already_shows'))}</p>`}
+        <p class="row"><a class="button" href="${esc(prev('/'))}">${esc(say('publish.preview_the_whole_site'))}</a></p>
         ${list.length ? `<form method="post" action="${base}/publish"><button class="primary">Publish ${list.length} change${list.length === 1 ? '' : 's'}</button></form>` : ''}</section>
-        ${snaps.length > 1 ? `<form method="post" action="${base}/publish/undo" class="card"><p class="muted small">Undo goes back to the version before the one visitors see now.</p><button>Undo last publish</button></form>` : ''}`,
+        ${snaps.length > 1 ? `<form method="post" action="${base}/publish/undo" class="card"><p class="muted small">${esc(say('publish.undo_goes_back_to'))}</p><button>${esc(say('publish.undo_last_publish'))}</button></form>` : ''}`,
     };
   }
 
@@ -878,9 +918,9 @@ export function createScreens({ env, request, url, site, user, page }) {
   // An application: already on the simple waitlist, or a button to add them.
   async function listedLine(msg) {
     const on = await env.DB.prepare("SELECT id, status FROM waitlist_entries WHERE site_id = ? AND inquiry_id = ?").bind(site.id, msg.id).first();
-    if (on) return `<p class="muted small">${on.status === 'waiting' ? 'On your waitlist.' : 'On your waitlist, marked fulfilled.'} <a href="${base}/waitlist">See the waitlist</a></p>`;
+    if (on) return `<p class="muted small">${on.status === 'waiting' ? esc(say('inbox.on_your_waitlist')) : esc(say('inbox.on_your_waitlist_marked'))} <a href="${base}/waitlist">${esc(say('inbox.see_the_waitlist'))}</a></p>`;
     if ((await kos()).linked) return '';
-    return `<p><a class="button" href="${base}/waitlist/new?from=${esc(msg.id)}">Add to waitlist</a></p>`;
+    return `<p><a class="button" href="${base}/waitlist/new?from=${esc(msg.id)}">${esc(say('inbox.add_to_waitlist'))}</a></p>`;
   }
   async function inbox() {
     const rest = url.pathname.slice(`${base}/inbox`.length);
@@ -899,25 +939,25 @@ export function createScreens({ env, request, url, site, user, page }) {
       const answers = application ? JSON.parse(msg.answers || '[]') : [];
       // An application's answers, each question with what they wrote under it.
       const text = application
-        ? (answers.length ? `<dl class="answers">${answers.map(([q, a]) => `<dt>${esc(q)}</dt><dd>${esc(a).replace(/\n/g, '<br>')}</dd>`).join('')}</dl>` : '<p class="muted">No questions answered.</p>')
+        ? (answers.length ? `<dl class="answers">${answers.map(([q, a]) => `<dt>${esc(q)}</dt><dd>${esc(a).replace(/\n/g, '<br>')}</dd>`).join('')}</dl>` : `<p class="muted">${esc(say('inbox.no_questions_answered'))}</p>`)
         : `<p class="message">${esc(msg.message).replace(/\n/g, '<br>')}</p>`;
       return {
         title: msg.name, back: `${base}/inbox`,
         body: `<section class="card"><p class="muted small">${esc(when(msg.received_at))}${msg.topic ? ` · ${esc(msg.topic)}` : ''}</p>
           ${text}
-          <dl class="kv"><dt>Email</dt><dd>${esc(msg.email)}</dd>${msg.phone ? `<dt>Phone</dt><dd><a href="tel:${esc(msg.phone.replace(/[^\d+]/g, ''))}">${esc(msg.phone)}</a></dd>` : ''}</dl>
-          <p class="row"><a class="button primary" href="${esc(mailto)}">Reply</a><button type="button" data-copy="${esc(msg.email)}">Copy email</button></p>
+          <dl class="kv"><dt>${esc(say('inbox.email'))}</dt><dd>${esc(msg.email)}</dd>${msg.phone ? `<dt>${esc(say('inbox.phone'))}</dt><dd><a href="tel:${esc(msg.phone.replace(/[^\d+]/g, ''))}">${esc(msg.phone)}</a></dd>` : ''}</dl>
+          <p class="row"><a class="button primary" href="${esc(mailto)}">${esc(say('inbox.reply'))}</a><button type="button" data-copy="${esc(msg.email)}">${esc(say('inbox.copy_email'))}</button></p>
           ${application ? await listedLine(msg) : ''}</section>
-          <form method="post" action="${base}/inbox/${msg.id}/unread"><button class="link">Mark as unread</button></form>
-          <form method="post" action="${base}/inbox/${msg.id}/delete" class="card danger"><button>Delete this message</button></form>`,
+          <form method="post" action="${base}/inbox/${msg.id}/unread"><button class="link">${esc(say('inbox.mark_as_unread'))}</button></form>
+          <form method="post" action="${base}/inbox/${msg.id}/delete" class="card danger"><button>${esc(say('inbox.delete_this_message'))}</button></form>`,
       };
     }
     if (rest || post) return null;
     const { results } = await env.DB.prepare('SELECT id, name, topic, message, received_at, read_at FROM inquiries WHERE site_id = ? ORDER BY received_at DESC LIMIT 200').bind(site.id).all();
     return {
-      title: 'Inbox', back: base,
-      body: `${note(url)}${results.length ? `<ul class="items">${results.map((r) => `<li class="item${r.read_at ? '' : ' unread'}"><a href="${base}/inbox/${r.id}"><b>${r.read_at ? '' : '<span class="dot-new" aria-label="Unread"></span>'}${esc(r.name)}</b><span>${esc(when(r.received_at))} · ${esc(r.topic || r.message.slice(0, 80))}</span></a></li>`).join('')}</ul>` : '<section class="card"><p class="muted">No messages yet. Messages from your site\'s contact form, and applications from your waitlist page, land here.</p></section>'}
-        <p class="muted small">Messages are kept for 90 days, then deleted. Reply opens your own email.</p>`,
+      title: say('inbox.inbox'), back: base,
+      body: `${note(url)}${results.length ? `<ul class="items">${results.map((r) => `<li class="item${r.read_at ? '' : ' unread'}"><a href="${base}/inbox/${r.id}"><b>${r.read_at ? '' : '<span class="dot-new" aria-label="Unread"></span>'}${esc(r.name)}</b><span>${esc(when(r.received_at))} · ${esc(r.topic || r.message.slice(0, 80))}</span></a></li>`).join('')}</ul>` : `<section class="card"><p class="muted">${esc(say('inbox.no_messages_yet_messages'))}</p></section>`}
+        <p class="muted small">${esc(say('inbox.messages_are_kept_for'))}</p>`,
     };
   }
 
@@ -927,18 +967,18 @@ export function createScreens({ env, request, url, site, user, page }) {
     const post = request.method === 'POST';
     const back = (n) => redirect(`${base}/waitlist?note=${n}`);
     const FIELDS = [
-      ['name', 'Their name', null, 80],
-      ['list_name', 'Name on the list', 'What your website shows. Leave empty for their first name and last initial, like "Megan R.".', 40],
-      ['email', 'Email', 'For Offer pups. Never shown.', 254],
-      ['phone', 'Phone', 'Never shown.', 30],
-      ['wants', 'What they want', 'Shown on the list, like "Female · Black & white".', 120],
+      ['name', say('waitlistlist.their_name'), null, 80],
+      ['list_name', say('waitlistlist.name_on_the_list'), say('waitlistlist.what_your_website_shows'), 40],
+      ['email', say('waitlistlist.email'), say('waitlistlist.for_offer_pups_never'), 254],
+      ['phone', say('waitlistlist.phone'), say('waitlistlist.never_shown'), 30],
+      ['wants', say('waitlistlist.what_they_want'), say('waitlistlist.shown_on_the_list'), 120],
     ];
     const form = (action, v, { err, edit = false, from = null } = {}) => `${errorBox(err)}<form method="post" action="${esc(action)}" class="card" data-save>
       ${from ? `<input type="hidden" name="inquiry_id" value="${esc(from)}">` : ''}
       ${FIELDS.map(([n, label, hint, max]) => `<label>${esc(label)}${hint ? `<span class="hint">${esc(hint)}</span>` : ''}<input name="${n}"${n === 'email' ? ' type="email"' : n === 'phone' ? ' type="tel"' : ''} value="${esc(v?.[n] ?? '')}" maxlength="${max}"${n === 'name' ? ' required' : ''}></label>`).join('')}
-      <label class="check"><input type="checkbox" name="private" value="1"${v?.private ? ' checked' : ''}> <span>Keep their name private<span class="hint">The list shows it masked, like "A***** K" for Andrea Kim, in place of the name on the list.</span></span></label>
-      ${edit ? `<label>Added<span class="hint">Their place comes from the order of the list, not this date.</span><input name="added_on" type="date" value="${esc(v?.added_on ?? '')}"></label>` : ''}
-      <button class="primary">${edit ? 'Save' : 'Add to waitlist'}</button></form>`;
+      <label class="check"><input type="checkbox" name="private" value="1"${v?.private ? ' checked' : ''}> <span>${esc(say('waitlistlist.keep_their_name_private'))}<span class="hint">${esc(say('waitlistlist.the_list_shows_it'))}</span></span></label>
+      ${edit ? `<label>${esc(say('waitlistlist.added'))}<span class="hint">${esc(say('waitlistlist.their_place_comes_from'))}</span><input name="added_on" type="date" value="${esc(v?.added_on ?? '')}"></label>` : ''}
+      <button class="primary">${edit ? esc(say('waitlistlist.save')) : esc(say('waitlistlist.add_to_waitlist_3'))}</button></form>`;
     const values = async () => Object.fromEntries(await request.formData());
 
     if (rest === '/new') {
@@ -948,7 +988,7 @@ export function createScreens({ env, request, url, site, user, page }) {
         const inquiry = v.inquiry_id ? await env.DB.prepare('SELECT id FROM inquiries WHERE id = ? AND site_id = ?').bind(v.inquiry_id, site.id).first() : null;
         try { await addEntry(env, site.id, v, { inquiryId: inquiry?.id ?? null }); } catch (err) {
           if (!(err instanceof WaitlistError)) throw err;
-          return { title: 'Add to waitlist', back: `${base}/waitlist`, body: form(`${base}/waitlist/new`, v, { err: err.message, from: inquiry?.id }) };
+          return { title: say('waitlistlist.add_to_waitlist_2'), back: `${base}/waitlist`, body: form(`${base}/waitlist/new`, v, { err: err.message, from: inquiry?.id }) };
         }
         return back('listed');
       }
@@ -961,7 +1001,7 @@ export function createScreens({ env, request, url, site, user, page }) {
           v = { name: msg.name, email: msg.email, phone: msg.phone, private: priv, list_name: priv ? maskedNameFor(msg.name) : listNameFor(msg.name), wants: suggestWants(answers) };
         }
       }
-      return { title: 'Add to waitlist', back: fromId ? `${base}/inbox/${fromId}` : `${base}/waitlist`, body: `<p class="muted">They go to the end of the list. Check what the list will show before adding.</p>${form(`${base}/waitlist/new`, v, { from: fromId })}` };
+      return { title: say('waitlistlist.add_to_waitlist'), back: fromId ? `${base}/inbox/${fromId}` : `${base}/waitlist`, body: `<p class="muted">${esc(say('waitlistlist.they_go_to_the'))}</p>${form(`${base}/waitlist/new`, v, { from: fromId })}` };
     }
 
     const m = rest.match(/^\/([0-9a-f-]{36})(?:\/(fulfil|back|up|down|remove))?$/);
@@ -987,7 +1027,7 @@ export function createScreens({ env, request, url, site, user, page }) {
       return {
         title: e.name, back: `${base}/waitlist`,
         body: `${form(`${base}/waitlist/${e.id}`, { ...e, private: e.list_name === maskedNameFor(e.name) }, { edit: true })}
-          <form method="post" action="${base}/waitlist/${e.id}/remove" class="card danger"><p class="muted small">Delete takes them off without marking them fulfilled, and can't be undone.</p><button>Delete from the waitlist</button></form>`,
+          <form method="post" action="${base}/waitlist/${e.id}/remove" class="card danger"><p class="muted small">${esc(say('waitlistlist.delete_takes_them_off'))}</p><button>${esc(say('waitlistlist.delete_from_the_waitlist'))}</button></form>`,
       };
     }
     if (rest || post) return null;
@@ -1000,20 +1040,20 @@ export function createScreens({ env, request, url, site, user, page }) {
     const fmt = (ymd) => (ymd ? new Date(`${ymd}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : '');
     const item = (e, i) => `<li class="card wl-entry"><p><b>#${e.position} ${esc(e.name)}</b><span class="muted small"> · shown as ${esc(e.list_name)}${e.list_name === maskedNameFor(e.name) ? ' (private)' : ''}</span></p>
       <p class="muted small">${esc([e.wants, `added ${fmt(e.added_on)}`].filter(Boolean).join(' · '))}</p>
-      <div class="row">${e.email ? `<a class="button primary" href="${esc(offerMailto(e, { kennelName: site.kennel_name || site.subdomain, siteUrl, message: page.offer_message }))}">Offer pups</a>` : '<span class="muted small">No email: add one to offer pups.</span>'}
-        <form method="post" action="${base}/waitlist/${e.id}/fulfil"><button>Fulfilled</button></form>
-        <a class="button" href="${base}/waitlist/${e.id}">Edit</a>
+      <div class="row">${e.email ? `<a class="button primary" href="${esc(offerMailto(e, { kennelName: site.kennel_name || site.subdomain, siteUrl, message: page.offer_message }))}">${esc(say('waitlistlist.offer_pups'))}</a>` : `<span class="muted small">${esc(say('waitlistlist.no_email_add_one'))}</span>`}
+        <form method="post" action="${base}/waitlist/${e.id}/fulfil"><button>${esc(say('waitlistlist.fulfilled'))}</button></form>
+        <a class="button" href="${base}/waitlist/${e.id}">${esc(say('waitlistlist.edit'))}</a>
         <span class="order">${i ? `<form method="post" action="${base}/waitlist/${e.id}/up"><button aria-label="Move ${esc(e.name)} up">↑</button></form>` : ''}${i < list.length - 1 ? `<form method="post" action="${base}/waitlist/${e.id}/down"><button aria-label="Move ${esc(e.name)} down">↓</button></form>` : ''}</span></div></li>`;
     return {
-      title: 'Your waitlist', back: base,
-      body: `${note(url)}${k.linked ? `<p class="error">Not used: your website shows your KennelOS waitlist, so this list isn't shown on it, and families are added in KennelOS. Remove the KennelOS link under <a href="${base}/pages/waitlist">Waitlist and application</a> to use this one instead.</p>` : ''}
-        <p class="muted">Families in order. Your website shows each one's place, the name on the list and what they want, straight away, with no publish. Offer pups opens your own email to them; Fulfilled takes them off and moves everyone below up.</p>
-        ${k.linked ? '' : `<p><a class="button primary" href="${base}/waitlist/new">Add a family</a></p>`}
-        ${!k.linked && k.offered ? `<p class="muted small">Keep your waitlist in KennelOS Pro instead, with turns, deadlines and status pages for families? Link it under <a href="${base}/pages/waitlist">Waitlist and application</a>.</p>` : ''}
-        <ul class="wl-list">${list.map(item).join('') || '<li class="muted">No one on the list yet. Add families from an application in your Inbox, or here.</li>'}</ul>
-        <p class="muted small">The Offer pups email's wording is under <a href="${base}/pages/waitlist">Waitlist and application</a>.</p>
-        ${done.length ? `<details class="card"><summary>Fulfilled (${done.length})</summary><p class="muted small">Kept 90 days, then deleted.</p><ul class="items">${done.map((e) => `<li class="item"><span><b>${esc(e.name)}</b> <span class="muted small">${esc(fmt(e.done_at.slice(0, 10)))}</span></span>
-          <span class="row"><form method="post" action="${base}/waitlist/${e.id}/back"><button>Put back</button></form><form method="post" action="${base}/waitlist/${e.id}/remove"><button class="link">Delete</button></form></span></li>`).join('')}</ul></details>` : ''}`,
+      title: say('waitlistlist.your_waitlist'), back: base,
+      body: `${note(url)}${k.linked ? `<p class="error">${esc(say('waitlistlist.not_used_your_website'))} <a href="${base}/pages/waitlist">${esc(say('waitlistlist.waitlist_and_application_3'))}</a> ${esc(say('waitlistlist.to_use_this_one'))}</p>` : ''}
+        <p class="muted">${esc(say('waitlistlist.families_in_order_your'))}</p>
+        ${k.linked ? '' : `<p><a class="button primary" href="${base}/waitlist/new">${esc(say('waitlistlist.add_a_family'))}</a></p>`}
+        ${!k.linked && k.offered ? `<p class="muted small">${esc(say('waitlistlist.keep_your_waitlist_in'))} <a href="${base}/pages/waitlist">${esc(say('waitlistlist.waitlist_and_application_2'))}</a>.</p>` : ''}
+        <ul class="wl-list">${list.map(item).join('') || `<li class="muted">${esc(say('waitlistlist.no_one_on_the'))}</li>`}</ul>
+        <p class="muted small">${esc(say('waitlistlist.the_offer_pups_email'))} <a href="${base}/pages/waitlist">${esc(say('waitlistlist.waitlist_and_application'))}</a>.</p>
+        ${done.length ? `<details class="card"><summary>Fulfilled (${done.length})</summary><p class="muted small">${esc(say('waitlistlist.kept_90_days_then'))}</p><ul class="items">${done.map((e) => `<li class="item"><span><b>${esc(e.name)}</b> <span class="muted small">${esc(fmt(e.done_at.slice(0, 10)))}</span></span>
+          <span class="row"><form method="post" action="${base}/waitlist/${e.id}/back"><button>${esc(say('waitlistlist.put_back'))}</button></form><form method="post" action="${base}/waitlist/${e.id}/remove"><button class="link">${esc(say('waitlistlist.delete'))}</button></form></span></li>`).join('')}</ul></details>` : ''}`,
     };
   }
 
@@ -1041,17 +1081,17 @@ export function createScreens({ env, request, url, site, user, page }) {
     if (rest || post) return null;
     const { results } = await env.DB.prepare("SELECT * FROM stories WHERE site_id = ? AND status = 'pending' ORDER BY submitted_at").bind(site.id).all();
     return {
-      title: 'Reviews to approve', back: base,
+      title: say('queue.reviews_to_approve'), back: base,
       body: `${note(url)}${results.map((r) => `<section class="card review-q">
           <p><b>${esc(r.first_name)}</b>${r.town ? `, ${esc(r.town)}` : ''} <span class="muted small">· ${esc(when(r.submitted_at))}</span></p>
           <p class="stars" aria-label="${r.rating} stars">${'★'.repeat(r.rating ?? 0)}</p>
           <p class="message">${esc(r.quote).replace(/\n/g, '<br>')}</p>
           ${r.puppy_name || r.home_month ? `<p class="muted small">${esc([r.puppy_name, r.home_month].filter(Boolean).join(' · '))}</p>` : ''}
           ${r.photo_id ? `<img class="q-photo" src="${esc(photoUrl(r.photo_id))}" alt="Photo sent with the review">` : ''}
-          <p class="muted small">They agreed to it being shown with their first name and town.</p>
-          <div class="row"><form method="post" action="${base}/reviews-queue/${r.id}/approve"><button class="primary">Approve</button></form>
-          <form method="post" action="${base}/reviews-queue/${r.id}/decline"><button>Decline and delete</button></form></div></section>`).join('') || '<section class="card"><p class="muted">No reviews waiting. Families send them from the Reviews page on your site.</p></section>'}
-        <p class="muted small">An approved review shows on your site after you publish. You can hide it later under Reviews.</p>`,
+          <p class="muted small">${esc(say('queue.they_agreed_to_it'))}</p>
+          <div class="row"><form method="post" action="${base}/reviews-queue/${r.id}/approve"><button class="primary">${esc(say('queue.approve'))}</button></form>
+          <form method="post" action="${base}/reviews-queue/${r.id}/decline"><button>${esc(say('queue.decline_and_delete'))}</button></form></div></section>`).join('') || `<section class="card"><p class="muted">${esc(say('queue.no_reviews_waiting_families'))}</p></section>`}
+        <p class="muted small">${esc(say('queue.an_approved_review_shows'))}</p>`,
     };
   }
 
@@ -1094,24 +1134,24 @@ export function createScreens({ env, request, url, site, user, page }) {
     const fresh = Date.now() - Date.parse(user.signedInAt) <= FRESH_SIGN_IN_MS;
     const storage = await usageLine();
     const render = (err) => ({
-      title: 'Your site', back: base,
-      body: `<section class="card"><h2>Storage</h2>${storage}</section>
-        <section class="card"><h2>Download a copy</h2><p class="muted">A zip of your site's words, photos and messages. It's made on this device, so on a phone with many photos a computer may be quicker.</p>
-          <p><button id="export" data-manifest="${base}/export.json">Download a copy</button></p><p id="export-status" class="muted small" role="status"></p></section>
-        ${owner ? `<section class="card danger"><h2>Delete my site</h2>
-          <p>This deletes every dog, litter, puppy, page, photo, review and message <strong>straight away</strong>. There's no undo, and KennelPort keeps no copy, so download one first.</p>
-          <p class="muted small">Your address then shows "This breeder is no longer hosting with KennelPort", and it isn't given to anyone else. Cloudflare keeps its own backup of deleted database rows for up to 30 days, which KennelPort can't turn off. Emails already sent stay where they arrived.</p>
+      title: say('account.your_site_2'), back: base,
+      body: `<section class="card"><h2>${esc(say('account.storage'))}</h2>${storage}</section>
+        <section class="card"><h2>${esc(say('account.download_a_copy_2'))}</h2><p class="muted">${esc(say('account.a_zip_of_your'))}</p>
+          <p><button id="export" data-manifest="${base}/export.json">${esc(say('account.download_a_copy'))}</button></p><p id="export-status" class="muted small" role="status"></p></section>
+        ${owner ? `<section class="card danger"><h2>${esc(say('account.delete_my_site_2'))}</h2>
+          <p>${esc(say('account.this_deletes_every_dog'))} <strong>${esc(say('account.straight_away'))}</strong>${esc(say('account.there_s_no_undo'))}</p>
+          <p class="muted small">${esc(say('account.your_address_then_shows'))}</p>
           ${errorBox(err)}
           ${fresh ? `<form method="post" action="${base}/account/delete">
-            <label>Type <strong>${esc(site.subdomain)}</strong> to confirm<input name="confirm" autocomplete="off" autocapitalize="none" spellcheck="false" required></label>
-            <button>Delete my site</button></form>`
-          : `<p>For safety, deleting needs a fresh sign-in. <form method="post" action="/signout" class="inline"><button class="link">Sign out</button></form>, sign in again, then come back here within 15 minutes.</p>`}
+            <label>${esc(say('account.type'))} <strong>${esc(site.subdomain)}</strong> ${esc(say('account.to_confirm'))}<input name="confirm" autocomplete="off" autocapitalize="none" spellcheck="false" required></label>
+            <button>${esc(say('account.delete_my_site'))}</button></form>`
+          : `<p>${esc(say('account.for_safety_deleting_needs'))} <form method="post" action="/signout" class="inline"><button class="link">${esc(say('account.sign_out'))}</button></form>${esc(say('account.sign_in_again_then'))}</p>`}
         </section>` : ''}
         <script src="/_kp/m/zip.js?v=${APP_VERSION}" defer></script>`,
     });
     if (rest === '/delete' && request.method === 'POST') {
-      if (!owner) return { title: 'Your site', back: base, body: '<p class="error">Only the owner can delete the site.</p>' };
-      if (!fresh) return render('Sign in again first.');
+      if (!owner) return { title: say('account.your_site'), back: base, body: `<p class="error">${esc(say('account.only_the_owner_can'))}</p>` };
+      if (!fresh) return render(say('account.sign_in_again_first'));
       try { await closeSite(env, site.id, (await request.formData()).get('confirm')); } catch (err) {
         if (err instanceof SiteError) return render(err.message);
         throw err;
@@ -1130,6 +1170,7 @@ export function createScreens({ env, request, url, site, user, page }) {
     else if (p === '/details') view = await details();
     else if (p.startsWith('/pages')) view = await pages();
     else if (p.startsWith('/home')) view = await home();
+    else if (p.startsWith('/blocks/')) view = await addedAction();
     else if (p.startsWith('/photos')) view = await photosScreen();
     else if (p === '/payment' || /^\/payment\/(application_fee|deposit|safe_notice)$/.test(p)) view = await payment();
     else if (p.startsWith('/publish')) view = await publishScreen();
@@ -1164,7 +1205,7 @@ export function createScreens({ env, request, url, site, user, page }) {
         if (dog) view = await collection(`${base}/dogs/${dog.id}/health`, 'health', dog.id, { back: `${base}/dogs/${dog.id}`, parentTitle: dog.call_name });
       } else {
         view = await collection(`${base}/dogs`, 'dogs', null);
-        if (view && !(view instanceof Response)) view = await withChildren(view, `${base}/dogs/${view.rec?.id}/health`, 'health', 'Health results');
+        if (view && !(view instanceof Response)) view = await withChildren(view, `${base}/dogs/${view.rec?.id}/health`, 'health', say('lists.health_results'));
       }
     } else if (p.startsWith('/litters')) {
       const pm = p.match(/^\/litters\/([0-9a-f-]{36})\/puppies/);
@@ -1173,7 +1214,7 @@ export function createScreens({ env, request, url, site, user, page }) {
         if (litter) view = await collection(`${base}/litters/${litter.id}/puppies`, 'puppies', litter.id, { back: `${base}/litters/${litter.id}`, parentTitle: litter.name });
       } else {
         view = await collection(`${base}/litters`, 'litters', null);
-        if (view && !(view instanceof Response)) view = await litterPhotos(await withChildren(view, `${base}/litters/${view.rec?.id}/puppies`, 'puppies', 'Puppies'));
+        if (view && !(view instanceof Response)) view = await litterPhotos(await withChildren(view, `${base}/litters/${view.rec?.id}/puppies`, 'puppies', say('lists.puppies')));
       }
     } else {
       const lm = p.match(/^\/lists\/(reviews|steps|extras|products|policies|faq|waitlist_help|questions|albums|partners)(\/|$)/);

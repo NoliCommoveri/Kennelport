@@ -23,6 +23,9 @@ import { localParts } from '../portal/vet.js';
 import { vapidConfig, subscribe, unsubscribe, testPush, pendingPush, subscriptionFor } from '../push.js';
 import { isAdmin, asAdmin, clearAdminCookie } from '../admin.js';
 import { handleBuilder } from './builder.js';
+import { NOT_FOR_DEMO } from '../lib/demo.js';
+import { sayer, everyWording, siteWording, defaultSay } from './wording.js';
+import { loadBuild } from '../content/rules.js';
 
 export const MANAGE_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
 const HEADERS = {
@@ -62,6 +65,12 @@ const SPRITE = `<svg class="sprite" width="0" height="0" aria-hidden="true">${Ob
   clock: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2.5h6"/>',
   eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   layers: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
+  up1: '<path d="m6 15 6-6 6 6"/>',
+  down1: '<path d="m6 9 6 6 6-6"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  book: '<path d="M3 5h6a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H3z"/><path d="M21 5h-6a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h7z"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
 }).map(([k, d]) => `<symbol id="i-${k}" viewBox="0 0 24 24">${d}</symbol>`).join('')}</svg>`;
 const ic = (n) => `<span class="ic" aria-hidden="true"><svg class="i"><use href="#i-${n}"/></svg></span>`;
 
@@ -103,53 +112,52 @@ ${header}
 
 // ---------- sign-in ----------
 
-function signInPage({ error, email = '' } = {}) {
-  return page('Sign in', `<section class="card">
-  <h1>KennelPort Site Manager</h1>
-  <p class="muted">Sign in with the email address your website was set up with. We'll send you a 6-digit code; there's no password.</p>
+function signInPage({ error, email = '' } = {}, say = defaultSay) {
+  return page(say('signin.sign_in_2'), `<section class="card">
+  <h1>${esc(say('signin.kennelport_site_manager'))}</h1>
+  <p class="muted">${esc(say('signin.sign_in_with_the'))}</p>
   ${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
   <form method="post" action="/signin" data-save>
-    <label>Email<input type="email" name="email" value="${esc(email)}" autocomplete="email" inputmode="email" required></label>
-    <button class="primary">Send me a code</button>
+    <label>${esc(say('signin.email'))}<input type="email" name="email" value="${esc(email)}" autocomplete="email" inputmode="email" required></label>
+    <button class="primary">${esc(say('signin.send_me_a_code'))}</button>
   </form>
-  <p class="muted small">By signing in you agree to KennelPort's <a href="https://kennelport.com/terms">terms of use</a>.</p></section>`, { status: error ? 400 : 200 });
+  <p class="muted small">${esc(say('signin.by_signing_in_you'))} <a href="https://kennelport.com/terms">${esc(say('signin.terms_of_use'))}</a>.</p></section>`, { status: error ? 400 : 200 });
 }
 
-function codePage({ email, error } = {}) {
-  return page('Your code', `<section class="card">
-  <h1>Check your email</h1>
-  <p class="muted">If <strong>${esc(email)}</strong> manages a KennelPort site, a 6-digit code is on its way. It works for ${CODE_TTL_MS / 60000} minutes.</p>
+function codePage({ email, error } = {}, say = defaultSay) {
+  return page(say('signin.your_code'), `<section class="card">
+  <h1>${esc(say('signin.check_your_email'))}</h1>
+  <p class="muted">${esc(say('signin.if'))} <strong>${esc(email)}</strong> manages a KennelPort site, a 6-digit code is on its way. It works for ${CODE_TTL_MS / 60000} minutes.</p>
   ${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
   <form method="post" action="/signin/verify" data-save>
     <input type="hidden" name="email" value="${esc(email)}">
-    <label>Code<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required autofocus></label>
+    <label>${esc(say('signin.code'))}<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required autofocus></label>
     <input type="hidden" name="label" value="">
-    <button class="primary">Sign in</button>
+    <button class="primary">${esc(say('signin.sign_in'))}</button>
   </form>
-  <form method="post" action="/signin" class="inline"><input type="hidden" name="email" value="${esc(email)}"><button class="link">Send a new code</button></form>
-  <p><a href="/">Use a different email</a></p></section>`, { status: error ? 400 : 200 });
+  <form method="post" action="/signin" class="inline"><input type="hidden" name="email" value="${esc(email)}"><button class="link">${esc(say('signin.send_a_new_code'))}</button></form>
+  <p><a href="/">${esc(say('signin.use_a_different_email'))}</a></p></section>`, { status: error ? 400 : 200 });
 }
 
 // ---------- signed in ----------
 
 const plainPage = page;
 
-function sitesPage(user) {
+function sitesPage(user, say = defaultSay) {
   if (!user.sites.length) {
-    return page('No sites', `<section class="card"><h1>No website here yet</h1><p class="muted">This email isn't on any KennelPort site right now. If you think it should be, ask whoever set up your site.</p>
-      <form method="post" action="/signout"><button class="link">Sign out</button></form></section>`);
+    return page(say('signin.no_sites'), `<section class="card"><h1>${esc(say('signin.no_website_here_yet'))}</h1><p class="muted">${esc(say('signin.this_email_isn_t'))}</p>
+      <form method="post" action="/signout"><button class="link">${esc(say('signin.sign_out_2'))}</button></form></section>`);
   }
-  return page('Your sites', `<ul class="tiles">${user.sites.map((s) => `<li><a class="tile" href="/s/${esc(s.subdomain)}"><b>${esc(s.kennel_name || s.subdomain)}</b><span>${esc(s.subdomain)}</span></a></li>`).join('')}</ul>
-    <form method="post" action="/signout"><button class="link">Sign out</button></form>`);
+  return page(say('signin.your_sites'), `<ul class="tiles">${user.sites.map((s) => `<li><a class="tile" href="/s/${esc(s.subdomain)}"><b>${esc(s.kennel_name || s.subdomain)}</b><span>${esc(s.subdomain)}</span></a></li>`).join('')}</ul>
+    <form method="post" action="/signout"><button class="link">${esc(say('signin.sign_out'))}</button></form>`);
 }
 
-const STATUS_WORDS = { draft: 'Not published yet', live: 'Live', suspended: 'Switched off by KennelPort' };
 
-async function siteHome(env, user, site, view = 'today', page = plainPage) {
+async function siteHome(env, user, site, view = 'today', page = plainPage, say = defaultSay) {
   const snaps = await listSnapshots(env, site.id);
   const full = await env.DB.prepare('SELECT draft_changed_at, published_snapshot_id FROM sites WHERE id = ?').bind(site.id).first();
   const live = snaps.find((x) => x.id === full.published_snapshot_id);
-  const changed = full.draft_changed_at && (!live || full.draft_changed_at > live.published_at);
+  const changed = full.draft_changed_at && (!live || full.draft_changed_at > live.published_at) && site.demo_step == null;
   const unread = await env.DB.prepare('SELECT COUNT(*) AS n FROM inquiries WHERE site_id = ? AND read_at IS NULL').bind(site.id).first('n');
   const pending = await env.DB.prepare("SELECT COUNT(*) AS n FROM stories WHERE site_id = ? AND status = 'pending'").bind(site.id).first('n');
   const listed = await env.DB.prepare("SELECT COUNT(*) AS n FROM waitlist_entries WHERE site_id = ? AND status = 'waiting'").bind(site.id).first('n');
@@ -158,7 +166,9 @@ async function siteHome(env, user, site, view = 'today', page = plainPage) {
   // Linked to a KennelOS waitlist (plan 3.8): the simple waitlist isn't used, and
   // while KennelOS takes applications online, neither are the site's questions.
   const kos = await kennelosState(env, site.id);
-  const previewLink = siteLink(env, site.subdomain, `/__preview?t=${encodeURIComponent(await makePreviewToken(env, site.id, 1))}`);
+  // The demo (kennelos/demo.js): no preview link, nothing to publish; it opens in the admin view.
+  const demo = site.demo_step != null;
+  const previewLink = demo ? null : siteLink(env, site.subdomain, `/__preview?t=${encodeURIComponent(await makePreviewToken(env, site.id, 1))}`);
   // The KennelOS link (plan 5): what the last Update website brought, until read.
   const linkRow = await env.DB.prepare('SELECT MAX(last_bundle_at) AS at, COUNT(*) AS n FROM links WHERE site_id = ? AND revoked_at IS NULL').bind(site.id).first();
   const matches = await env.DB.prepare('SELECT COUNT(*) AS n FROM link_pending WHERE site_id = ?').bind(site.id).first('n');
@@ -173,13 +183,13 @@ async function siteHome(env, user, site, view = 'today', page = plainPage) {
   // Needs you: what came in and is waiting, shown only while something is.
   const waiting = [
     ...portal.map((x) => item(x.href, x.label, x.note)),
-    unread ? item('/inbox', `${unread} new message${unread === 1 ? '' : 's'}`, 'In your inbox') : '',
-    pending ? item('/reviews-queue', `${pending} review${pending === 1 ? '' : 's'} to approve`, 'From families') : '',
-    leaving ? item('/litters#leaving', `${leaving} litter${leaving === 1 ? '' : 's'} leaving your site`, 'Keep or remove') : '',
+    unread ? item('/inbox', say.n('home.needs.messages', unread), say('home.needs.messages.note')) : '',
+    pending ? item('/reviews-queue', say.n('home.needs.reviews', pending), say('home.needs.reviews.note')) : '',
+    leaving ? item('/litters#leaving', say.n('home.needs.leaving', leaving), say('home.needs.leaving.note')) : '',
   ].filter(Boolean);
   const sub = esc(site.subdomain);
-  const notesHtml = `${matches ? matchesWaiting(site.subdomain, matches) : ''}
-  ${notices.map((n) => `<section class="card notice-card" role="status"><p>${esc(n.message)}</p><p class="row"><a class="button" href="/s/${sub}/publish">Review and publish</a><form method="post" action="/s/${sub}/notices/${esc(n.id)}/read"><button class="link">Done</button></form></p></section>`).join('')}`;
+  const notesHtml = `${matches ? matchesWaiting(site.subdomain, matches, say) : ''}
+  ${notices.map((n) => `<section class="card notice-card" role="status"><p>${esc(n.message)}</p><p class="row">${demo ? `<a class="button" href="/admin/${sub}/site/">Open it in your admin view</a>` : `<a class="button" href="/s/${sub}/publish">${esc(say('home.review_and_publish_3'))}</a>`}<form method="post" action="/s/${sub}/notices/${esc(n.id)}/read"><button class="link">${esc(say('home.done_2'))}</button></form></p></section>`).join('')}`;
   // With the puppy portal, the app is one app for the website and the families
   // (plan 7.3): Today holds what needs her from both; the website's screens are
   // under Website.
@@ -193,52 +203,57 @@ async function siteHome(env, user, site, view = 'today', page = plainPage) {
     // what's gone wrong, amber for what's running late), what it is, and a line more.
     const needs = [
       ...portal.map((x) => need(sub, x)),
-      unread ? need(sub, { href: '/inbox', label: `${unread} new message${unread === 1 ? '' : 's'} from your website`, note: 'In your inbox' }) : '',
-      pending ? need(sub, { href: '/reviews-queue', label: `${pending} review${pending === 1 ? '' : 's'} to approve`, note: 'From families' }) : '',
-      leaving ? need(sub, { href: '/litters#leaving', label: `${leaving} litter${leaving === 1 ? '' : 's'} leaving your site`, note: 'Keep or remove' }) : '',
+      unread ? need(sub, { href: '/inbox', label: say.n('home.needs.site_messages', unread), note: say('home.needs.messages.note') }) : '',
+      pending ? need(sub, { href: '/reviews-queue', label: say.n('home.needs.reviews', pending), note: say('home.needs.reviews.note') }) : '',
+      leaving ? need(sub, { href: '/litters#leaving', label: say.n('home.needs.leaving', leaving), note: say('home.needs.leaving.note') }) : '',
     ].filter(Boolean);
     const kennel = site.kennel_name || site.subdomain;
-    return page('Today', `<section class="sec deep bleed todayband"><span class="eyebrow">${esc(kennel)}</span><h1>Today</h1>
+    return page(say('home.today_2'), `<section class="sec deep bleed todayband"><span class="eyebrow">${esc(kennel)}</span><h1>${esc(say('home.today'))}</h1>
         <p class="small">${esc(now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: tz }))}${home.count ? ` · ${home.today ? `${home.today} going home today${home.count > home.today ? `, ${home.count - home.today} more this week` : ''}` : `${home.count} going home ${inDays === 1 ? 'tomorrow' : `in ${inDays} days`}`}` : ''}</p>
         ${await lastFromKennelos(env, site)}</section>
+      ${demo ? `<section class="card status band"><p><span class="st warn">Demo</span> Step ${esc(site.demo_step)} of the linked sample · never published</p><p class="row"><a class="button" href="/admin/${esc(site.subdomain)}/site/">Open it in your admin view</a><a class="button" href="/ops/sites/${esc(site.id)}">Its steps, in ops</a></p></section>` : ''}
       ${notesHtml}
       ${home.html}
-      ${changed ? `<section class="card status"><div class="between"><p><span class="st warn">Website</span> Changes not published yet</p><a class="button small" href="/s/${sub}/publish">Review and publish</a></div></section>` : ''}
-      ${needs.length ? `<section id="needs-you" class="stack"><h2>Needs you</h2><div class="needs">${needs.join('')}</div></section>`
-        : !changed && !home.count && !notices.length ? '<section class="card band"><p><span class="st ok">All caught up</span> Nothing needs you right now.</p><p class="muted small">Pickups this week, vet records, messages and anything else waiting will show here.</p></section>' : ''}
+      ${changed ? `<section class="card status"><div class="between"><p><span class="st warn">${esc(say('home.website'))}</span> ${esc(say('home.changes_not_published_yet'))}</p><a class="button small" href="/s/${sub}/publish">${esc(say('home.review_and_publish_2'))}</a></div></section>` : ''}
+      ${needs.length ? `<section id="needs-you" class="stack"><h2>${esc(say('home.needs_you'))}</h2><div class="needs">${needs.join('')}</div></section>`
+        : !changed && !home.count && !notices.length ? `<section class="card band"><p><span class="st ok">${esc(say('home.all_caught_up'))}</span> ${esc(say('home.nothing_needs_you_right'))}</p><p class="muted small">${esc(say('home.pickups_this_week_vet'))}</p></section>` : ''}
       ${await todayLists(env, site)}
       <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}${user.admin ? ` <a href="/admin/${esc(site.subdomain)}/rules">This site's build</a>.` : ''}</p>`, { nav: { sub: site.subdomain, tab: 'today' } });
   }
-  return page(portalOn ? 'Website' : site.kennel_name || site.subdomain, `
+  return page(portalOn ? say('home.website_2') : site.kennel_name || site.subdomain, `
   ${portalOn ? '' : notesHtml}
-  ${notices.map((n) => `<section class="card notice-card" role="status"><p>${esc(n.message)}</p><p class="row"><a class="button" href="/s/${esc(site.subdomain)}/publish">Review and publish</a><form method="post" action="/s/${esc(site.subdomain)}/notices/${esc(n.id)}/read"><button class="link">Done</button></form></p></section>`).join('')}
-  <section class="card status">
-    <p><span class="dot ${site.status}"></span>${esc(STATUS_WORDS[site.status] ?? site.status)}${changed ? ' · <strong>changes not published yet</strong>' : ''}</p>
-    <p class="row"><a class="button" href="${esc(siteLink(env, site.subdomain))}">View my site</a><a class="button" href="${esc(previewLink)}">Preview changes</a><a class="button" href="/s/${esc(site.subdomain)}/share">Share</a></p>
-    <p><a class="button primary" href="/s/${esc(site.subdomain)}/publish">${changed ? 'Review and publish' : 'Publish'}</a></p>
-  </section>
-  ${waiting.length && !portalOn ? `<section class="card" id="needs-you"><h2>Needs you</h2><ul class="items">${waiting.join('')}</ul></section>` : ''}
+  ${notices.map((n) => `<section class="card notice-card" role="status"><p>${esc(n.message)}</p><p class="row">${demo ? `<a class="button" href="/admin/${esc(site.subdomain)}/site/">Open it in your admin view</a>` : `<a class="button" href="/s/${esc(site.subdomain)}/publish">${esc(say('home.review_and_publish'))}</a>`}<form method="post" action="/s/${esc(site.subdomain)}/notices/${esc(n.id)}/read"><button class="link">${esc(say('home.done'))}</button></form></p></section>`).join('')}
+  ${demo ? `<section class="card status band">
+    <p><span class="st warn">Demo</span> Step ${esc(site.demo_step)} of the linked sample · never published</p>
+    <p class="muted small">${esc(NOT_FOR_DEMO)}</p>
+    <p class="row"><a class="button" href="/admin/${esc(site.subdomain)}/site/">Open it in your admin view</a><a class="button" href="/ops/sites/${esc(site.id)}">Its steps, in ops</a></p>
+  </section>` : `<section class="card status">
+    <p><span class="dot ${site.status}"></span>${esc(['draft', 'live', 'suspended'].includes(site.status) ? say(`home.status.${site.status}`) : site.status)}${changed ? ` · <strong>${esc(say('home.unpublished'))}</strong>` : ''}</p>
+    <p class="row"><a class="button" href="${esc(siteLink(env, site.subdomain))}">${esc(say('home.view'))}</a><a class="button" href="${esc(previewLink)}">${esc(say('home.preview'))}</a><a class="button" href="/s/${esc(site.subdomain)}/share">${esc(say('home.share'))}</a></p>
+    <p><a class="button primary" href="/s/${esc(site.subdomain)}/publish">${esc(say(changed ? 'home.review_publish' : 'home.publish'))}</a></p>
+  </section>`}
+  ${waiting.length && !portalOn ? `<section class="card" id="needs-you"><h2>${esc(say('home.needs'))}</h2><ul class="items">${waiting.join('')}</ul></section>` : ''}
   <ul class="tiles">
-    ${tile('/puppies', 'Puppies', 'Statuses at a glance')}
-    ${tile('/litters', 'Litters', leaving ? `${leaving} leaving your site` : 'Planned, current, past', leaving)}
-    ${tile('/photos', 'Photos and albums', 'Camera roll, galleries')}
-    ${kos.linked ? '' : tile('/waitlist', 'Your waitlist', listed ? `${listed} famil${listed === 1 ? 'y' : 'ies'} waiting` : 'Families in order, offer pups', listed)}
-    ${tile('/inbox', 'Inbox', 'Messages from your site', unread)}
-    ${tile('/dogs', 'Dogs', 'Cards, health results')}
+    ${tile('/puppies', say('home.tile.puppies'), say('home.tile.puppies.note'))}
+    ${tile('/litters', say('home.tile.litters'), leaving ? say('home.tile.litters.leaving', { n: leaving }) : say('home.tile.litters.note'), leaving)}
+    ${tile('/photos', say('home.tile.photos'), say('home.tile.photos.note'))}
+    ${kos.linked ? '' : tile('/waitlist', say('home.tile.waitlist'), listed ? say.n('home.tile.waitlist', listed) : say('home.tile.waitlist.note'), listed)}
+    ${tile('/inbox', say('home.tile.inbox'), say('home.tile.inbox.note'), unread)}
+    ${tile('/dogs', say('home.tile.dogs'), say('home.tile.dogs.note'))}
   </ul>
-  <section class="card" id="set-up"><h2>Set up your site</h2><p class="muted small">Set once, change now and then.</p><ul class="items">
-    ${item('/pages', 'Pages and wording', 'Home, about, policies, FAQ…')}
-    ${item('/pages/waitlist', 'Waitlist and application', kos.linked ? (kos.online ? 'Linked to KennelOS, which takes your applications' : 'Linked to KennelOS · your questions') : kos.offered ? 'Your questions, or link KennelOS' : 'Open or closed, your questions')}
-    ${item('/payment', 'How to pay', 'Fee, deposit, scam warning')}
-    ${item('/lists/extras', 'Extras', 'Packages and prices')}
-    ${item('/lists/products', 'Recommended products', 'Referral links, codes, home badges')}
-    ${item('/lists/reviews', 'Reviews', 'Add or hide')}
-    ${item('/details', 'Kennel details', 'Name, contact, town')}
-    ${item('/kennelos', 'KennelOS', linkRow?.n ? (linkRow.at ? `Linked · last update ${day(linkRow.at)}` : 'Linked · no update yet') : 'Link your dogs and litters')}
+  <section class="card" id="set-up"><h2>${esc(say('home.setup'))}</h2><p class="muted small">${esc(say('home.setup.note'))}</p><ul class="items">
+    ${item('/pages', say('home.setup.pages'), say('home.setup.pages.note'))}
+    ${item('/pages/waitlist', say('home.setup.waitlist'), say(kos.linked ? (kos.online ? 'home.setup.waitlist.online' : 'home.setup.waitlist.linked') : kos.offered ? 'home.setup.waitlist.offered' : 'home.setup.waitlist.note'))}
+    ${item('/payment', say('home.setup.payment'), say('home.setup.payment.note'))}
+    ${item('/lists/extras', say('home.setup.extras'), say('home.setup.extras.note'))}
+    ${item('/lists/products', say('home.setup.products'), say('home.setup.products.note'))}
+    ${item('/lists/reviews', say('home.setup.reviews'), say('home.setup.reviews.note'))}
+    ${item('/details', say('home.setup.details'), say('home.setup.details.note'))}
+    ${item('/kennelos', say('home.setup.kennelos'), linkRow?.n ? (linkRow.at ? say('home.setup.kennelos.linked', { date: day(linkRow.at) }) : say('home.setup.kennelos.waiting')) : say('home.setup.kennelos.note'))}
   </ul></section>
-  <p class="row"><a class="button" href="/notifications">Notifications on this device</a><a class="button" href="/s/${esc(site.subdomain)}/account">Your site: storage, copy, delete</a></p>
-  <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}${user.admin ? ` <a href="/admin/${esc(site.subdomain)}/rules">This site's build</a>.` : ''}</p>
-  <form method="post" action="/signout"><button class="link">Sign out</button></form>`, portalOn ? { nav: { sub: site.subdomain, tab: 'website' } } : {});
+  <p class="row"><a class="button" href="/notifications">${esc(say('home.notifications'))}</a><a class="button" href="/s/${esc(site.subdomain)}/account">${esc(say('home.account'))}</a></p>
+  <p class="muted small">${esc(say('home.role', { role: site.role }))}${user.sites.length > 1 ? ` <a href="/">${esc(say('home.other_sites'))}</a>.` : ''}${user.admin ? ` <a href="/admin/${esc(site.subdomain)}/rules">This site's build</a>.` : ''}</p>
+  <form method="post" action="/signout"><button class="link">${esc(say('home.signout'))}</button></form>`, portalOn ? { nav: { sub: site.subdomain, tab: 'website' } } : {});
 }
 
 // A Needs you tile: its icon and tone from what it is (portal/admin.js portalNeedsYou).
@@ -259,17 +274,17 @@ function need(sub, x) {
   return `<a class="need${tone ? ` ${tone}` : ''}" href="/s/${esc(sub)}${esc(x.href)}">${ic(icon)}<b>${esc(x.label)}</b><span>${esc(x.note)}</span></a>`;
 }
 
-function notificationsPage(env, user) {
+function notificationsPage(env, user, say = defaultSay) {
   const { ready, publicKey } = vapidConfig(env);
   const back = user.sites.length === 1 ? `/s/${user.sites[0].subdomain}` : '/';
-  return page('Notifications', `<section class="card" id="push" data-key="${esc(publicKey ?? '')}">
-    <h1>Notifications</h1>
-    <p class="muted">Get a notification on this phone or computer when someone sends a message from your site, or a family sends a review to approve. It says who it's from, never what they wrote.</p>
-    ${ready ? `<p id="push-state" class="muted small" role="status">Checking this device…</p>
-    <p class="row"><button class="primary" id="push-on" hidden>Turn on for this device</button><button id="push-test" hidden>Send a test</button><button id="push-off" hidden>Turn off</button></p>
-    <p class="muted small" id="push-ios" hidden>On an iPhone or iPad, notifications work only in the app on your home screen: in Safari, tap Share, then Add to Home Screen, open Site Manager from there and come back to this page.</p>`
+  return page(say('notifications.notifications_2'), `<section class="card" id="push" data-key="${esc(publicKey ?? '')}">
+    <h1>${esc(say('notifications.notifications'))}</h1>
+    <p class="muted">${esc(say('notifications.get_a_notification_on'))}</p>
+    ${ready ? `<p id="push-state" class="muted small" role="status">${esc(say('notifications.checking_this_device'))}</p>
+    <p class="row"><button class="primary" id="push-on" hidden>${esc(say('notifications.turn_on_for_this'))}</button><button id="push-test" hidden>${esc(say('notifications.send_a_test'))}</button><button id="push-off" hidden>${esc(say('notifications.turn_off'))}</button></p>
+    <p class="muted small" id="push-ios" hidden>${esc(say('notifications.on_an_iphone_or'))}</p>`
     : '<p class="muted">Notifications aren\'t set up on KennelPort yet.</p>'}
-    <p class="muted small">Each device is turned on separately. Signing out turns this device off.</p>
+    <p class="muted small">${esc(say('notifications.each_device_is_turned'))}</p>
   </section>`, { back });
 }
 
@@ -311,6 +326,10 @@ export async function handleManage(request, env, url) {
     return new Response(JSON.stringify(text ?? { title: 'KennelPort', body: 'Something new on your website.', path: '/', tag: 'kennelport' }), { headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
   }
 
+  // The every-site wording, for the screens before a site is chosen (wording.js);
+  // today's if it can't be read (before the migrations, say).
+  let everySay = null;
+  const every = async () => (everySay ??= sayer({ every: await everyWording(env).catch(() => ({})) }));
   const post = request.method === 'POST';
   if (post && !sameOrigin(request)) return page('Not allowed', '<section class="card"><p>That form didn\'t come from this app.</p></section>', { status: 403 });
 
@@ -318,7 +337,7 @@ export async function handleManage(request, env, url) {
     if (pathname === '/signin' && post) {
       const form = await request.formData();
       const { email } = await startSignIn(env, request, form.get('email'));
-      return codePage({ email });
+      return codePage({ email }, await every());
     }
     if (pathname === '/signin/verify' && post) {
       const form = await request.formData();
@@ -326,12 +345,12 @@ export async function handleManage(request, env, url) {
         const { cookie } = await verifySignIn(env, form.get('email'), form.get('code'), request.headers.get('user-agent')?.slice(0, 80));
         return redirect('/', { 'set-cookie': cookie });
       } catch (err) {
-        if (err instanceof AuthError) return codePage({ email: String(form.get('email') ?? ''), error: err.message });
+        if (err instanceof AuthError) return codePage({ email: String(form.get('email') ?? ''), error: err.message }, await every());
         throw err;
       }
     }
   } catch (err) {
-    if (err instanceof AuthError) return signInPage({ error: err.message });
+    if (err instanceof AuthError) return signInPage({ error: err.message }, await every());
     throw err;
   }
 
@@ -345,7 +364,7 @@ export async function handleManage(request, env, url) {
     if (user?.admin) headers.append('set-cookie', clearAdminCookie());
     return new Response(null, { status: 303, headers });
   }
-  if (!user) return pathname === '/' ? signInPage() : redirect('/');
+  if (!user) return pathname === '/' ? signInPage({}, await every()) : redirect('/');
 
   if (pathname.startsWith('/push/') && post) {
     let body = {};
@@ -356,15 +375,15 @@ export async function handleManage(request, env, url) {
     if (pathname === '/push/test') return reply({ ok: await testPush(env, user, body.endpoint) });
     if (pathname === '/push/status') return reply({ on: Boolean(await subscriptionFor(env, user, body.endpoint)) });
   }
-  if (pathname === '/notifications') return notificationsPage(env, user);
+  if (pathname === '/notifications') return notificationsPage(env, user, await every());
   if (user.admin && (pathname === '/' || pathname.startsWith('/admin'))) {
     const res = await handleBuilder({ env, request, url: pathname === '/' ? new URL('/admin', url) : url, user, page });
     if (res) return res;
   }
-  if (pathname === '/') return user.sites.length === 1 ? redirect(`/s/${user.sites[0].subdomain}`) : sitesPage(user);
+  if (pathname === '/') return user.sites.length === 1 ? redirect(`/s/${user.sites[0].subdomain}`) : sitesPage(user, await every());
   // KennelOS's "get a link code" link: straight to Link KennelOS with one site,
   // else the list of sites to pick from.
-  if (pathname === '/link-kennelos') return user.sites.length === 1 ? redirect(`/s/${user.sites[0].subdomain}/kennelos`) : sitesPage(user);
+  if (pathname === '/link-kennelos') return user.sites.length === 1 ? redirect(`/s/${user.sites[0].subdomain}/kennelos`) : sitesPage(user, await every());
 
   const m = pathname.match(/^\/s\/([a-z0-9-]+)(\/.*)?$/);
   if (m) {
@@ -375,14 +394,16 @@ export async function handleManage(request, env, url) {
     const portalOn = row?.portal_on;
     const brand = portalOn ? { sub: site.subdomain, name: row.kennel_name || site.subdomain, logo: row.logo_photo_id, monogram: row.monogram } : null;
     const sitePage = brand ? (t, b, o = {}) => page(t, b, { ...o, brand }) : page;
-    if (!m[2] && !post) return siteHome(env, user, site, 'today', sitePage);
-    if (portalOn && !post && m[2] === '/website') return siteHome(env, user, site, 'website', sitePage);
+    // Her wording: the owner's, for this site, else for every site, else today's (wording.js).
+    const say = sayer({ every: await everyWording(env), site: siteWording(await loadBuild(env, site.id)) }, { kennel: row?.kennel_name || site.subdomain });
+    if (!m[2] && !post) return siteHome(env, user, site, 'today', sitePage, say);
+    if (portalOn && !post && m[2] === '/website') return siteHome(env, user, site, 'website', sitePage, say);
     if (portalOn && !post && m[2] === '/kennel') return sitePage('Dogs', await dogsTab(env, site), { nav: { sub: site.subdomain, tab: 'dogs' } });
     if (m[2]?.startsWith('/portal')) {
       const res = await handlePortalAdmin({ env, request, url, site, page: sitePage });
       if (res) return res;
     } else if (m[2]) {
-      const res = await createScreens({ env, request, url, site, user, page: sitePage })();
+      const res = await createScreens({ env, request, url, site, user, page: sitePage, say })();
       if (res) return res;
     }
   }

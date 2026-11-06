@@ -68,7 +68,8 @@ function footer(snap, ctx) {
   const year = ctx.today.slice(0, 4);
   const cols = [
     ['About us', groups.find((g) => g.key === 'about')?.links ?? []],
-    ['Dogs and puppies', [...(groups.find((g) => g.key === 'residents')?.links.slice(0, 1) ?? []), ...(groups.find((g) => g.key === 'puppies')?.links ?? [])]],
+    // Kennel residents' pages, not its places on a page (Girls, Boys).
+    ['Dogs and puppies', [...(groups.find((g) => g.key === 'residents')?.links.filter((l) => !l.href.includes('#')) ?? []), ...(groups.find((g) => g.key === 'puppies')?.links ?? [])]],
     ['Buying a puppy', [...(groups.find((g) => g.key === 'how')?.links ?? []), ...(pageOn(snap, 'waitlist', ctx) ? [{ href: '/waitlist', text: label(snap, 'waitlist') }] : []), ...(payShown(snap, ctx) ? [{ href: '/waitlist#how-to-pay', text: 'How to pay' }] : []), ...(familyLogin(snap, ctx) ? [{ ...familyLogin(snap, ctx), text: word(snap, 'family_login') }] : [])]],
   ].filter(([, links]) => links.length);
   return `<footer class="site"><div class="wrap">
@@ -112,7 +113,8 @@ ${noindex || ctx.preview ? '<meta name="robots" content="noindex">\n' : ''}${og.
 <script src="/_kp/t/ak/site.js?v=${ASSET_VERSION}" defer></script>
 ${ctx.path === '/' ? structuredData(snap, ctx) : ''}
 </head><body>
-${ctx.preview ? '<div class="preview-bar" role="status">Preview: this is the draft, not what visitors see. Publish from /ops to make it live.</div>' : ''}<a class="skip" href="#main">Skip to content</a>
+${ctx.adminBar ? `<div class="preview-bar" role="status">${esc(ctx.adminBar.text)} <a href="${attr(ctx.adminBar.back)}"><u>Back to the build</u></a></div>`
+  : ctx.preview ? '<div class="preview-bar" role="status">Preview: this is the draft, not what visitors see. Publish from /ops to make it live.</div>' : ''}<a class="skip" href="#main">Skip to content</a>
 ${SPRITES(snap)}
 ${header(snap, { ...ctx, section })}
 <main id="main">${body}</main>

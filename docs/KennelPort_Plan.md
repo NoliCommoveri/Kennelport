@@ -846,15 +846,18 @@ a record, her switches publish it (5.3).
 section headings and lead lines all have defaults the breeder can reword.
 
 **Look:** a colour scheme (section 3.13) and the kennel's logo. No free colour, font or
-layout controls.
+layout controls for the breeder. The owner has them, per site, in the site builder
+([`Site_Builder_Plan.md`](Site_Builder_Plan.md), decisions 16 and 17).
 - **The logo** (built): chosen on Kennel details from the site's photos (or added there),
   shown in place of the monogram at the top and foot of every page once published.
   Tapping it in the header opens it full size; the kennel name beside it goes home.
   A square or diamond logo works best; a clear background stays clear (WebP), and on
   iPhones, which save JPEG, white goes behind it.
 
-**Fixed by the template:** page layouts, the order of blocks, card shapes and the flip,
+**Fixed for the breeder:** page layouts, the order of blocks, card shapes and the flip,
 sliding sets, button and link styles, fonts within a scheme, and addresses (section 3.1).
+The owner sets these per site in the site builder
+([`Site_Builder_Plan.md`](Site_Builder_Plan.md)).
 
 ### 3.13 Colour schemes
 

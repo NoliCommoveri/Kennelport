@@ -2,8 +2,9 @@
 // (/ops, "Content"), until the manage app's forms exist (phase 2). The document is
 // the content model (model.js) shaped by section; ids never appear in it.
 //
-//   { site: {...}, pages: { about: { enabled, menu_label, ...wording } },
-//     home: { hero: { enabled, ... } }, dogs: [{ ..., health: [...] }],
+//   { site: {...}, pages: { about: { enabled, menu_label, ...wording }, 'x-<a page the owner added>': {...} },
+//     home: { hero: { enabled, ... } }, blocks: { '<page>/<block the owner added>': { enabled, eyebrow, heading, lede } },
+//     dogs: [{ ..., health: [...] }],
 //     (a co-owned dog names its partner kennels: lives_with: '<name>', co_owned_with: ['<name>'])
 //     litters: [{ ..., dam: '<dog slug>', puppies: [...] }], reviews: [...],
 //     steps: [...], expanders: { policies: [...], faq: [...], waitlist_help: [...] },
@@ -20,11 +21,12 @@ import {
   SITE_FIELDS, DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS,
   STEP_FIELDS, EXPANDER_FIELDS, EXPANDER_PAGES, EXTRA_FIELDS, PRODUCT_FIELDS, PARTNER_FIELDS, PARTNERS_MAX, HOME_BADGES_MAX, brandImageOk, HOME_BLOCKS, PAGES, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS,
   QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue, FAQ_FIELDS,
+  CUSTOM_KEY, CUSTOM_PAGE, ADDED_BLOCK_FIELDS,
 } from './model.js';
 import { PROVIDERS } from '../embeds.js';
 import { coOwnedRules, unlinkPartnerStatements } from './records.js';
 
-const SECTIONS = ['site', 'pages', 'home', 'dogs', 'litters', 'reviews', 'steps', 'expanders', 'extras', 'products', 'partners', 'payment', 'questions', 'albums', 'embeds'];
+const SECTIONS = ['site', 'pages', 'home', 'blocks', 'dogs', 'litters', 'reviews', 'steps', 'expanders', 'extras', 'products', 'partners', 'payment', 'questions', 'albums', 'embeds'];
 const MAX_ITEMS = 200;
 
 const now = () => new Date().toISOString();
@@ -65,8 +67,8 @@ export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = ne
     if (!doc.pages || typeof doc.pages !== 'object') throw new ContentError('pages', 'must be an object');
     out.pages = {};
     for (const [key, v] of Object.entries(doc.pages)) {
-      const page = PAGES[key];
-      if (!page) throw new ContentError(`pages.${key}`, `not a page (pages: ${Object.keys(PAGES).join(', ')})`);
+      const page = PAGES[key] ?? (CUSTOM_KEY.test(key) ? CUSTOM_PAGE : null);
+      if (!page) throw new ContentError(`pages.${key}`, `not a page (pages: ${Object.keys(PAGES).join(', ')}, or x-<a page the owner added>)`);
       const path = `pages.${key}`;
       const enabled = 'enabled' in v ? cleanValue({ type: 'bool' }, v.enabled, `${path}.enabled`) : 1;
       if (!enabled && !page.canHide) throw new ContentError(`${path}.enabled`, 'this page is always on');
@@ -89,6 +91,18 @@ export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = ne
       for (const id of content.photos ?? []) photo(id, `${path}.photos`);
       for (const [n, f] of Object.entries(fields)) if (f.type === 'photo' && content[n]) photo(content[n], `${path}.${n}`);
       out.home[key] = { enabled, content };
+    }
+  }
+
+  // Her switch and words for each block the owner added: '<page>/<block id>'.
+  if ('blocks' in doc) {
+    if (!doc.blocks || typeof doc.blocks !== 'object') throw new ContentError('blocks', 'must be an object');
+    out.blocks = {};
+    for (const [key, v] of Object.entries(doc.blocks)) {
+      const path = `blocks.${key}`;
+      if (!/^[a-z0-9_-]{1,44}\/[a-z][a-z0-9_-]{0,39}$/.test(key)) throw new ContentError(path, 'must be <page>/<block>');
+      const enabled = 'enabled' in v ? cleanValue({ type: 'bool' }, v.enabled, `${path}.enabled`) : 1;
+      out.blocks[key] = { enabled, content: cleanRecord(ADDED_BLOCK_FIELDS, omit(v, ['enabled']), path, { partial: true }) };
     }
   }
 
@@ -257,6 +271,13 @@ export async function importContent(env, siteId, doc) {
   }
   for (const [page, v] of Object.entries(clean.pages ?? {})) {
     s.push(upsert(db, 'site_pages', ['site_id', 'page'], { site_id: siteId, page, enabled: v.enabled, menu_label: v.menu_label, content: JSON.stringify(v.content) }));
+  }
+  if (clean.blocks) {
+    s.push(db.prepare('DELETE FROM block_switches WHERE site_id = ?').bind(siteId));
+    for (const [key, v] of Object.entries(clean.blocks)) {
+      const [page, block] = key.split('/');
+      s.push(db.prepare('INSERT INTO block_switches (site_id, page, block, enabled, content) VALUES (?, ?, ?, ?, ?)').bind(siteId, page, block, v.enabled, JSON.stringify(v.content)));
+    }
   }
   for (const [block, v] of Object.entries(clean.home ?? {})) {
     s.push(upsert(db, 'home_blocks', ['site_id', 'block'], { site_id: siteId, block, enabled: v.enabled, content: JSON.stringify(v.content) }));
@@ -428,6 +449,8 @@ export async function exportContent(env, siteId) {
     .map((p) => [p.page, { enabled: Boolean(p.enabled), ...(p.menu_label ? { menu_label: p.menu_label } : {}), ...JSON.parse(p.content) }]));
   doc.home = Object.fromEntries((await all('SELECT * FROM home_blocks WHERE site_id = ?', siteId))
     .map((b) => [b.block, { enabled: Boolean(b.enabled), ...JSON.parse(b.content) }]));
+  const blocks = await all('SELECT * FROM block_switches WHERE site_id = ? ORDER BY page, block', siteId);
+  if (blocks.length) doc.blocks = Object.fromEntries(blocks.map((b) => [`${b.page}/${b.block}`, { enabled: Boolean(b.enabled), ...JSON.parse(b.content) }]));
 
   const dogs = await all('SELECT * FROM dogs WHERE site_id = ? ORDER BY sort, call_name', siteId);
   const health = await all('SELECT * FROM health_results WHERE site_id = ? ORDER BY sort', siteId);

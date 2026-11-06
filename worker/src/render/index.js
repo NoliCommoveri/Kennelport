@@ -36,6 +36,9 @@ function pick(snap, ctx) {
     return fn(snap, ctx);
   }
   if (path === '/family-login') return P.familyLogin(snap, ctx);
+  // A page the owner added, at its address.
+  const custom = (snap.layout?.custom ?? []).find((c) => c.path === path);
+  if (custom) return pageOn(snap, custom.id, ctx) ? P.custom(snap, ctx, custom.id) : null;
   let m = path.match(/^\/dogs\/([a-z0-9-]+)$/);
   if (m) return pageOn(snap, 'dogs', ctx) || snap.dogs.length ? P.dog(snap, ctx, m[1]) : null;
   m = path.match(/^\/albums\/([a-z0-9-]+)$/);
@@ -59,6 +62,7 @@ export function renderPage(snap, ctx) {
 export function sitePaths(snap, ctx) {
   const paths = [];
   for (const [path, [key]] of Object.entries(FIXED)) if (key === 'home' || pageOn(snap, key, ctx)) paths.push(path);
+  for (const c of snap.layout?.custom ?? []) if (pageOn(snap, c.id, ctx)) paths.push(c.path);
   for (const d of snap.dogs) paths.push(`/dogs/${d.slug}`);
   if (pageOn(snap, 'albums', ctx)) for (const a of snap.albums) paths.push(`/albums/${a.slug}`);
   if (snap.pages.litters.enabled) {

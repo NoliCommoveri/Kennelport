@@ -6,7 +6,7 @@ import { FEATURE_ICONS, COLLAGE_LAYOUTS, FOCUS, collageLayout, FAQ_PLACES } from
 import { SCHEMES } from '../render/schemes.js';
 
 // [label, hint] per field name; kind-specific entries win over the shared ones.
-const SHARED = {
+export const SHARED = {
   slug: ['Web address', 'The last part of this page\'s address. Leave empty to make it from the name. Old addresses keep working if you change it.'],
   photo_id: ['Photo', null],
   bio: ['About', null],
@@ -21,7 +21,7 @@ const SHARED = {
   name: ['Name', null],
   description: ['Description', null],
 };
-const LABELS = {
+export const LABELS = {
   site: {
     kennel_name: ['Kennel name', null], tagline: ['Line under the name', 'Shown small in the header, like "The American Gentleman".'],
     blurb: ['One or two sentences about you', 'For the footer and for search engines.'], breed: ['Breed', null],
@@ -167,7 +167,7 @@ const LABELS = {
   },
 };
 
-const ENUM_WORDS = {
+export const ENUM_WORDS = {
   sex: { female: 'Female', male: 'Male' },
   status_dogs: { active: 'At home', retired: 'Retired', remembered: 'In memory' },
   status_puppies: { available: 'Available', reserved: 'Reserved', placed: 'Placed (shows as Reserved)', staying: 'Joining our program', coming_soon: 'Still deciding', hidden: 'Hidden' },
@@ -192,8 +192,13 @@ function schemePicker(name, label, h, current) {
   return `<fieldset class="layouts"><legend>${esc(label)}${h}</legend>${SCHEMES.map((s) => `<label class="layout-opt"><input type="radio" name="${name}" value="${esc(s.id)}"${s.id === current ? ' checked' : ''}>${swatch(s)}<span><b>${esc(s.name)}</b><br>${esc(fonts(s))}${s.darkFirst ? '<br>Dark first' : ''}</span></label>`).join('')}</fieldset>`;
 }
 
-export function labelFor(kind, name) {
-  return LABELS[kind]?.[name] ?? SHARED[name] ?? [name.replace(/_/g, ' '), null];
+// [label, hint] for a field: the owner's wording (ctx.say, manage/wording.js) over
+// the defaults here.
+export function labelFor(kind, name, say = null) {
+  const key = LABELS[kind]?.[name] ? `f.${kind}.${name}` : SHARED[name] ? `f.${name}` : null;
+  const [label, hint] = LABELS[kind]?.[name] ?? SHARED[name] ?? [name.replace(/_/g, ' '), null];
+  if (!key || !say) return [label, hint];
+  return [say(key) || label, say(`${key}.hint`) || null];
 }
 
 // Each box shape: what it's called, and the photo size that fills it sharply
@@ -219,7 +224,11 @@ const LAYOUT_RECTS = {
 const layoutSvg = (key) => `<svg viewBox="0 0 50 40" width="75" height="60" aria-hidden="true">${LAYOUT_RECTS[key].map(([x, y, w, h], i) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="${x + w / 2}" y="${y + h / 2 + 3}" text-anchor="middle" font-size="9" fill="currentColor">${i + 1}</text>`).join('')}</svg>`;
 const chosenLayout = (values) => values?.layout ?? collageLayout(null, (values?.photos ?? []).length) ?? 'tall_two_wide';
 
-const enumWords = (kind, name, v) => ENUM_WORDS[`${name}_${kind}`]?.[v] ?? ENUM_WORDS[name]?.[v] ?? v;
+const enumWords = (kind, name, v, say = null) => {
+  const group = ENUM_WORDS[`${name}_${kind}`]?.[v] != null ? `${name}_${kind}` : ENUM_WORDS[name]?.[v] != null ? name : null;
+  if (!group) return v;
+  return (say && group !== 'scheme' ? say(`c.${group}.${v}`) : null) || ENUM_WORDS[group][v];
+};
 
 // ctx: { kind, photos: [{id, alt}], photoUrl(id), photoGroups, upload: {action, tags, alt}, dogs: [{id, call_name}] }
 // A field KennelOS owns while linked (plan 5.3): shown, not editable. The save
@@ -231,14 +240,14 @@ function lockedField(name, f, value, ctx, label) {
   else if (f.type === 'dogid') shown = (ctx.dogs ?? []).find((d) => d.id === value)?.call_name ?? '—';
   else if (f.type === 'kennelid') shown = (ctx.partners ?? []).find((k) => k.id === value)?.name ?? '—';
   else if (f.type === 'list' && f.item === 'kennel') shown = value.map((id) => (ctx.partners ?? []).find((k) => k.id === id)?.name).filter(Boolean).join(', ') || '—';
-  else if (f.type === 'enum') shown = enumWords(ctx.kind, name, value);
+  else if (f.type === 'enum') shown = enumWords(ctx.kind, name, value, ctx.say);
   else if (Array.isArray(value)) shown = value.join(', ');
   else shown = String(value);
   return `<p class="locked"><b>${esc(label)}</b><br>${esc(shown)} <span class="muted small">· from KennelOS, change it there</span></p>`;
 }
 
 export function field(name, f, value, ctx) {
-  const [label, hint] = labelFor(ctx.kind, name);
+  const [label, hint] = labelFor(ctx.kind, name, ctx.say);
   if (ctx.locked?.has(name)) return lockedField(name, f, value, ctx, label);
   const id = `f-${name}`;
   const h = hint ? `<span class="hint">${esc(hint)}</span>` : '';
@@ -254,7 +263,7 @@ export function field(name, f, value, ctx) {
       const unset = value === null || value === undefined || value === '';
       const blank = !f.required && !f.default ? '<option value=""></option>'
         : f.required && !f.default && unset ? '<option value="" selected disabled>Choose…</option>' : '';
-      return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"${req}>${blank}${f.values.map((x) => `<option value="${esc(x)}"${x === (value ?? f.default) ? ' selected' : ''}>${esc(enumWords(ctx.kind, name, x))}</option>`).join('')}</select></label>`;
+      return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"${req}>${blank}${f.values.map((x) => `<option value="${esc(x)}"${x === (value ?? f.default) ? ' selected' : ''}>${esc(enumWords(ctx.kind, name, x, ctx.say))}</option>`).join('')}</select></label>`;
     }
     case 'litterid': {
       const litters = ctx.litters ?? [];

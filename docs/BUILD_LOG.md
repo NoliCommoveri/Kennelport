@@ -1527,3 +1527,97 @@ answers to plan 15.
   in you agree…") and every site's footer ("Made with KennelPort · Terms").
 - `/privacy`: KennelPort's privacy policy (15 sections, written from the migrations and
   `cleanup.js`), linked from the terms and the footer. Wording waiting for the owner's approval.
+
+## 2026-11-05: site builder, the owner's additions
+
+From the owner, added to [`Site_Builder_Plan.md`](Site_Builder_Plan.md) as decisions 16 to 19,
+with new sections and a new building order. Docs only; nothing built yet.
+
+- Decision 16: the editor limits the owner only for function (unreadable text, dead
+  links, pages too slow to load, files the site can't serve safely), never for looks;
+  risky-but-working choices get a warning and are allowed.
+- Decision 17: the owner adds her own blocks to any page: buttons, banners, dividers,
+  spacers, collages, photos, videos, text over a photo. Colours only from the template's
+  scheme, stored by name; fonts from an open-licence library served from the site.
+  Every block gets background, padding, text size and fonts.
+- Decision 18: the breeder can reword or switch off the owner's buttons and change an
+  outside link, phone or email; she can't add buttons or change where an on-site link goes.
+- Decision 19 (the owner's top priority): every line of wording the breeder reads in the
+  Site Manager is the owner's, in one list set for every site and overridable per
+  template and per site. `CLAUDE.md` now says new breeder-facing text goes in that list.
+- Building order: 1 display and timing rules; 2 the breeder's instructions; 3 pages,
+  blocks and the menu (was step 2, under way); 4 the owner's own blocks and styling;
+  5 templates; 6 the family portal's build; 7 after the KennelOS review.
+- Older lines brought in line: `KennelPort_Plan.md` 3.12 (no free look controls and
+  "fixed" now mean for the breeder; the owner has them), `KennelPort_Design_Direction.md`
+  section 2 (buttons) and Decided (scheme colours and the font library for the owner).
+
+## 2026-11-05: site builder step 2 begins: the breeder's instructions
+
+- `worker/src/manage/wording.js`: the list of wording the breeder reads in the Site
+  Manager. Each line has a key, its screen, where it appears, its default (today's
+  wording) and the names it can use ({kennel} everywhere; {n}, {date}, {role}, {one},
+  {error} where the screen has them). `say(key)` gives the site's own wording, else every
+  site's, else the default; `say.n()` picks the one or many line.
+- Stored: every site's in a new `wording` table (added to `0028_demo.sql`, the branch's
+  one migration); a site's own in its build (`wording`), so Reset to template will treat
+  it as the owner's build. Per template comes with templates (step 5).
+- The owner's editor: **Site Manager wording** (`/admin/wording`) and each site's **Her
+  instructions** tab: grouped by screen, a search across all of it, each line with where
+  it shows, today's wording and the names it can use; a line with a name it can't use is
+  refused. No prototype screen for it: built from the prototype's lists, cards and pinned
+  bar. Saved lines show straight away, no publish.
+- In the list so far (521 lines): every form field's label and help (`forms.js` LABELS,
+  SHARED, listed from there, so a field's hint she has none of today can be added), the
+  choices in lists (ENUM_WORDS, not the schemes' names), the notes after a change (were
+  `screens.js` NOTES), the lists' names, Add, New, Save and "None yet", and her home
+  screen (`index.js` siteHome: status, buttons, tiles, set-up rows, Needs you).
+- Not in it yet, each kept in one place to move next: each screen's own instructions and
+  empty messages (`screens.js`, inline in each screen's function), the content model's
+  error messages (`content/model.js`, `records.js`), Today with the family portal
+  (`index.js` siteHome, the portal branch) and the portal's breeder screens
+  (`portal/admin.js`).
+- Her Site Manager reads exactly as before with no wording set (45 screens of the AK
+  sample drawn before and after). Tests: `wording.test.js`.
+
+## 2026-11-05: the breeder's instructions: each screen's own wording
+
+- Each screen of the website side of the Site Manager now reads its own wording from
+  the list (`manage/wording.js` SCREEN_LINES): headings, instructions, buttons, links,
+  field labels of its own, empty messages, and the lines a screen picks between (linked
+  to KennelOS or not, a list empty or not). New screens in the editor: Puppies at a
+  glance, Litters, Dogs, Photos and albums, Waitlist and application, Your waitlist,
+  Inbox, Reviews to approve, Publish, Share, KennelOS, Your site. The list now has 790
+  lines.
+- Moved by a script over `screens.js` and her home screen in `index.js`, each line keyed
+  by its screen and first words; where a sentence runs round a link or bold words, each
+  part is its own line ("Part of a line"). The owner's own links (her admin view, ops,
+  This site's build) stay out of the list.
+- Her screens read as before with no wording set (45 screens compared, entities read
+  once; an apostrophe is now written `&#39;`, the same on screen). Four tests that looked
+  for an apostrophe in the raw HTML now look for `&#39;`.
+- Still in the code, each in one place: the sign-in, code, Notifications and offline
+  screens (`index.js`, before a site is chosen); the lists' second lines and the
+  application question kinds (`screens.js` LISTS, QUESTION_WORDS, BLOCK_TITLES, above
+  `createScreens`); the match waiting card (`matchesWaiting`); the content model's error
+  messages; the family portal's breeder screens (`portal/admin.js`).
+
+## 2026-11-06: the breeder's instructions: signing in, her lists, the errors
+
+- Signing in, the code screen, "No website here yet", her sites and Notifications read
+  every site's wording (no site is chosen yet, so no {kennel}); if the wording table
+  can't be read, today's. The offline screens and "That form didn't come from this
+  app" stay out: they are about KennelPort itself.
+- The line under each item in her lists, the kinds of application question, the Home
+  blocks' names and on or off, and the "waiting for you to match" card (screens.js
+  LISTS, matchesWaiting) are in the list.
+- The errors from her forms' checks (content/model.js, records.js): a line per kind of
+  check (`wording.js` ERRORS, matched by the check's words, so the checks stay as the
+  import uses them), with {path} as today, {field} its label on her form, and what the
+  check carries ({max}, {min}, {slug}, {place}). Today's wording reads exactly as before.
+- Still in the code, each in one place: the errors of the waitlist (`waitlist.js`),
+  photos (`photos.js`), videos (`embedStore.js`), badge codes (`badgeCode.js`), KennelOS
+  linking (`kennelos/link.js`, `feed.js`) and sign-in (`auth.js`); the family portal's
+  breeder screens (`portal/admin.js`).
+- Her screens read as before with no wording set (51 screens compared, sign-in and
+  Notifications among them).

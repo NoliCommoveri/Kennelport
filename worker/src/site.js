@@ -87,11 +87,13 @@ const html = (body, status = 200, extra = {}, csp = SITE_CSP) => new Response(bo
 });
 const text = (body, type, extra = {}) => new Response(body, { headers: { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'public, max-age=300', ...extra } });
 
+const noSite = () => htmlPage('Not found', '<h1>Not found</h1><p>No KennelPort site has this address.</p>', { status: 404, headers: { 'x-robots-tag': 'noindex' } });
+
 function closedNotice() {
   return htmlPage('No longer hosted', '<h1>This breeder is no longer hosting with KennelPort.</h1><p>The site that was here has closed.</p>', { status: 410 });
 }
 
-async function servePhoto(env, site, snap, url, { preview }) {
+export async function servePhoto(env, site, snap, url, { preview }) {
   const id = decodeURIComponent(url.pathname.slice('/_kp/p/'.length));
   let entry = snap?.photos?.[id];
   if (!entry && preview) {
@@ -115,17 +117,23 @@ async function servePhoto(env, site, snap, url, { preview }) {
 export async function serveSite(request, env, ctxWorker, subdomain, { onDomain = false } = {}) {
   const url = new URL(request.url);
   // The family portal (portal/family.js), on sites that have it on: its own
-  // sign-in and pages, never cached, never from the snapshot.
-  if (isPortalPath(url.pathname)) return servePortal(request, env, ctxWorker, subdomain, { onDomain });
+  // sign-in and pages, never cached, never from the snapshot. Not on the demo.
+  if (isPortalPath(url.pathname)) {
+    const demo = await env.DB.prepare('SELECT demo_step FROM sites WHERE subdomain = ?').bind(subdomain).first('demo_step');
+    if (demo != null) return noSite();
+    return servePortal(request, env, ctxWorker, subdomain, { onDomain });
+  }
   const formPost = request.method === 'POST' && FORM_PATHS.includes(url.pathname);
   if (request.method !== 'GET' && request.method !== 'HEAD' && !formPost) return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD' } });
   if (!(await schemaReady(env.DB))) {
     return htmlPage('Back soon', '<h1>Back soon</h1><p>This site is being updated. Please try again in a few minutes.</p>', { status: 503, headers: { 'retry-after': '300' } });
   }
 
-  const site = await env.DB.prepare(`SELECT s.id, s.subdomain, s.kennel_name, s.status, s.published_snapshot_id, s.kennelos_public_id, s.portal_on, d.hostname AS domain
+  const site = await env.DB.prepare(`SELECT s.id, s.subdomain, s.kennel_name, s.status, s.published_snapshot_id, s.kennelos_public_id, s.portal_on, s.demo_step, d.hostname AS domain
     FROM sites s LEFT JOIN custom_domains d ON d.site_id = s.id AND d.status = 'active' WHERE s.subdomain = ?`).bind(subdomain).first();
-  if (!site) return htmlPage('Not found', '<h1>Not found</h1><p>No KennelPort site has this address.</p>', { status: 404 });
+  // The demo (kennelos/demo.js) has no address: it answers as if there were no site,
+  // to everyone, preview link or not. It opens only in the admin view.
+  if (!site || site.demo_step != null) return noSite();
   if (site.status === 'closed') return closedNotice();
 
   // With its own domain connected (plan 2.4), the kennelport.com address sends

@@ -154,7 +154,7 @@ test('the feed is read once per five minutes; unreachable, the last copy is used
 test('online applications off in KennelOS: the site\'s own form, with the KennelOS sign-in link', async () => {
   const b = await breeder(kennelos(feed(null)));
   await b.post('/pages/waitlist/kennelos', { feed: FEED_URL });
-  assert.match(await (await b.get('/pages/waitlist')).text(), /You aren't taking applications online in KennelOS/);
+  assert.match(await (await b.get('/pages/waitlist')).text(), /You aren&#39;t taking applications online in KennelOS/);
   const res = await b.waitlist();
   const html = await res.text();
   assert.match(html, /action="\/waitlist#apply"/);
@@ -166,14 +166,14 @@ test('feed off or KennelOS unreachable: links to her KennelOS pages; the manage 
   const k = kennelos('not_shared');
   const b = await breeder(k);
   await b.post('/pages/waitlist/kennelos', { feed: FEED_URL });
-  assert.match(await (await b.get('/pages/waitlist')).text(), /isn't sharing your list with your website/);
+  assert.match(await (await b.get('/pages/waitlist')).text(), /isn&#39;t sharing your list with your website/);
   const html = await (await b.waitlist()).text();
   assert.match(html, /href="https:\/\/apply\.kennelos\.example\/apply\/kos1_[^"]+" rel="noopener" target="_blank">Apply to join the waitlist/);
   assert.doesNotMatch(html, /action="\/waitlist#apply"/);
 
   const down = await breeder(kennelos('down'));
   await down.post('/pages/waitlist/kennelos', { feed: FEED_URL });
-  assert.match(await (await down.get('/pages/waitlist')).text(), /couldn't be reached/);
+  assert.match(await (await down.get('/pages/waitlist')).text(), /couldn&#39;t be reached/);
   assert.match(await (await down.waitlist()).text(), /Our waitlist and application form are on KennelOS/);
 });
 

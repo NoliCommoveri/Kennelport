@@ -9,6 +9,7 @@
 // - sent only to devices whose session is still live; a subscription the push
 //   service says is gone (404/410) is deleted.
 import { sha256Hex, timingSafeEqual } from './lib/crypto.js';
+import { isDemoSite } from './lib/demo.js';
 
 const b64url = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const fromB64url = (s) => Uint8Array.from(atob(String(s).replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((String(s).length + 3) % 4)), (c) => c.charCodeAt(0));
@@ -120,6 +121,8 @@ async function pushAll(env, subs, now = new Date()) {
 // second way to find out, never the only one.
 export async function notify(env, siteId, kind, name = null, ref = null) {
   try {
+    // The demo never notifies anyone (kennelos/demo.js).
+    if (await isDemoSite(env, siteId)) return 0;
     await env.DB.prepare('INSERT INTO notify_items (site_id, kind, name, ref, at) VALUES (?, ?, ?, ?, ?)').bind(siteId, kind, name ? String(name).trim().split(/\s+/)[0].slice(0, 40) : null, ref, new Date().toISOString()).run();
     if (!vapidConfig(env).ready) return 0;
     return pushAll(env, await liveSubscriptions(env, siteId));
