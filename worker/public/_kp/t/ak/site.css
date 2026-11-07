@@ -145,6 +145,10 @@ nav.main li.open > .navtop .chev { transform: rotate(225deg) translate(-2px, -1p
 .facts div { display: grid; }
 .facts b { font: var(--display-w) 1.6rem/1 var(--f-display); }
 .facts span { font-size: .78rem; color: var(--muted); letter-spacing: .05em; }
+/* A long fact wraps inside a third of the row, so three sit side by side; short ones keep their own width. On a phone each may take the full line. */
+.facts div { flex: 0 1 auto; max-width: calc((100% - 56px) / 3); align-content: start; }
+.facts span { line-height: 1.5; }
+@media (max-width: 720px) { .facts div { max-width: 100%; } }
 @media (max-width: 860px) { .hero { grid-template-columns: 1fr; } }
 
 /* Story + features. The photo is a tall 4:5 beside the words, the same shape at
