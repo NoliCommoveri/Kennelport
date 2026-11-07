@@ -125,6 +125,7 @@ export const LABELS = {
   facts: { items: ['Facts', 'Up to 3 pairs, like "8 wks" / "Before going home".'] },
   story: {
     photo_id: ['Photo', 'A tall photo (4:5) beside your words: best at 1280 × 1600 px. "No photo" leaves it out, and your words take the whole width.'],
+    photo_frame: ['Frame round the photo', 'In your site\'s colours, like the frames on your Home page photos.'],
     script: ['Script word', null], text: ['Text', null], features: ['Three features', null], link_label: ['Link to your story', null],
   },
   waitlist: {
@@ -150,7 +151,7 @@ export const LABELS = {
     required: ['Families must answer this', 'Off: it shows as "(optional)".'],
     options: ['Choices (for "A choice from a list")', 'One per line. The first is picked to begin with unless families must answer, so a first choice like "Either" or "Any color" works well.'],
   },
-  about: { text: ['Your story', 'Leave a blank line between paragraphs.'], facts: ['Facts', 'Pairs like "Litters a year" / "One or two".'] },
+  about: { photo_frame: ['Frame round the photo', 'In your site\'s colours, like the frames on your Home page photos.'], text: ['Your story', 'Leave a blank line between paragraphs.'], facts: ['Facts', 'Pairs like "Litters a year" / "One or two".'] },
   contact: { location_note: ['Note about your location', 'For example "Exact address shared once your pickup is booked."'] },
   extras_page: { note: ['Note under the packages', null] },
   payment: {
@@ -186,6 +187,7 @@ export const ENUM_WORDS = {
   stage: { planned: 'Planned', current: 'Born (current)', past: 'Past' },
   banner_focus: { top: 'The top', middle: 'The middle', bottom: 'The bottom' },
   frame: { mat: 'A soft mat around each photo', double: 'A mat with a fine inner line, like a framed print', sprig: 'A leafy vine round each photo', none: 'No frame' },
+  photo_frame: { none: 'No frame', mat: 'A soft mat around the photo', double: 'A mat with a fine inner line, like a framed print', sprig: 'A leafy vine round the photo' },
   kind: { item: 'Extra', homegoing: 'Extended homegoing package' },
   dark_mode: { auto: 'Follow the visitor\'s setting', light_only: 'Light only' },
   scheme: Object.fromEntries(SCHEMES.map((x) => [x.id, x.name])),

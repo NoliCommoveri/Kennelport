@@ -51,7 +51,7 @@ async function setup() {
 }
 
 test('a block nobody styled reads as before; a new block\'s settings are clean', () => {
-  for (const t of ['banner', 'button', 'divider', 'spacer', 'photo', 'overlay']) assert.deepEqual(cleanBlock(newBlock(t, `${t}-2`)), cleanBlock(cleanBlock(newBlock(t, `${t}-2`))), t);
+  for (const t of ['banner', 'button', 'divider', 'spacer', 'photo', 'overlay', 'words', 'factrow']) assert.deepEqual(cleanBlock(newBlock(t, `${t}-2`)), cleanBlock(cleanBlock(newBlock(t, `${t}-2`))), t);
   assert.equal(cleanBlock({ id: 'faq', type: 'faq', s: { bg: '', py: '', px: '', text: 'm' } }).s, undefined);
   assert.deepEqual(cleanBlock({ id: 'faq', type: 'faq', s: { bg: 'accent', py: 'l', text: 'huge' } }).s, { bg: 'accent', py: 'l' });
   assert.equal(cleanBlock({ id: 'x', type: 'button', link: { to: 'page', page: 'Bad Page' } }).link, null);
@@ -139,4 +139,90 @@ test('the breeder rewords, switches off, and changes the outside link, phone and
   const o = (await s.blocks('about')).at(-1);
   await s.post('about', { [`b.${o.id}.photo`]: 'ph1', [`b.${o.id}.v`]: 'middle', [`b.${o.id}.h`]: 'center', [`b.${o.id}.shade`]: 'dark', [`b.${o.id}.w.label`]: 'Apply', [`b.${o.id}.link.to`]: 'page', [`b.${o.id}.link.page`]: 'waitlist' }, { open: o.id });
   assert.match(await s.render('/about'), /<section class="own-over v-middle h-center shade-dark f-middle"><img src="\/_kp\/p\/ph1"[^>]*><div class="over"><div class="wrap"><h2>Raised with love<\/h2><a class="btn solid" href="\/waitlist">Apply<\/a>/);
+});
+
+test('the owner adds a text block: a heading, a line under it and words; the breeder can reword it', async () => {
+  const s = await setup();
+  await s.post('about', {}, { act: 'add:words' });
+  const b = (await s.blocks('about')).at(-1);
+  assert.equal(b.type, 'words');
+  assert.equal(b.align, 'center');
+  // Its settings: heading, line, words and where it sits.
+  const form = await s.get(`/admin/akbostons/pages/about?open=${b.id}`);
+  assert.match(form, new RegExp(`name="b\\.${b.id}\\.w\\.heading"`));
+  assert.match(form, new RegExp(`name="b\\.${b.id}\\.w\\.line"`));
+  assert.match(form, new RegExp(`<textarea name="b\\.${b.id}\\.w\\.body"`));
+  await s.post('about', { [`b.${b.id}.w.heading`]: 'Our promise', [`b.${b.id}.w.line`]: 'Raised at home, with care', [`b.${b.id}.w.body`]: 'Every puppy is family.\r\n\r\nWe stay in touch for life.', [`b.${b.id}.align`]: 'left' }, { open: b.id });
+  let html = await s.render('/about');
+  assert.match(html, /<section class="own-words a-left"><div class="wrap"><div class="head"><h2>Our promise<\/h2><p class="lede">Raised at home, with care<\/p><\/div><div class="prose"><p>Every puppy is family\.<\/p><p>We stay in touch for life\.<\/p><\/div><\/div><\/section>/);
+  // The breeder sees it in her Site Manager and rewords it.
+  const mine = await (await call(s.env, M, '/s/akbostons/pages/about', { headers: { cookie: (await call(s.env, M, '/ops/login', { method: 'POST', body: new URLSearchParams({ token: 'ops-token' }) })).headers.getSetCookie().map((c) => c.split(';')[0]).find((c) => c.startsWith('kp_admin=')) } })).text();
+  assert.match(mine, /<textarea name="body"/);
+  await s.breeder(`/blocks/about/${b.id}`, { enabled: '1', heading: 'Our word', body: 'Just one paragraph.' });
+  html = await s.render('/about');
+  assert.match(html, /<h2>Our word<\/h2><p class="lede">Raised at home, with care<\/p><\/div><div class="prose"><p>Just one paragraph\.<\/p><\/div>/);
+  // Switched off, or with no words at all, it draws nothing.
+  await s.breeder(`/blocks/about/${b.id}`, {});
+  assert.doesNotMatch(await s.render('/about'), /own-words/);
+});
+
+test('the owner adds a facts row to any page; the breeder can change its facts', async () => {
+  const s = await setup();
+  await s.post('about', {}, { act: 'add:factrow' });
+  const b = (await s.blocks('about')).at(-1);
+  assert.equal(b.type, 'factrow');
+  assert.deepEqual(b.items, []);
+  // Empty, it hides.
+  assert.doesNotMatch(await s.render('/about'), /own-facts/);
+  const form = await s.get(`/admin/akbostons/pages/about?open=${b.id}`);
+  assert.match(form, new RegExp(`name="b\\.${b.id}\\.items\\.3\\.1"`));
+  await s.post('about', { [`b.${b.id}.items.0.0`]: '12', [`b.${b.id}.items.0.1`]: 'Years breeding', [`b.${b.id}.items.2.0`]: 'AKC', [`b.${b.id}.items.2.1`]: 'Registered' }, { open: b.id });
+  assert.deepEqual((await s.blocks('about')).at(-1).items, [['12', 'Years breeding'], ['AKC', 'Registered']]);
+  let html = await s.render('/about');
+  assert.match(html, /<section class="section tight own-facts"><div class="wrap"><div class="facts"><div><b>12<\/b><span>Years breeding<\/span><\/div><div><b>AKC<\/b><span>Registered<\/span><\/div><\/div><\/div><\/section>/);
+  // In her Site Manager: four rows, KennelPort's facts as the hints.
+  const mine = await s.get('/s/akbostons/pages/about');
+  assert.match(mine, /<input name="facts\.0\.0" value="" maxlength="20" aria-label="Fact 1, value" placeholder="12">/);
+  assert.match(mine, /name="facts\.3\.1"/);
+  // Hers over the owner's; all empty goes back to the owner's.
+  await s.breeder(`/blocks/about/${b.id}`, { enabled: '1', 'facts.0.0': '40+', 'facts.0.1': 'Puppies home' });
+  html = await s.render('/about');
+  assert.match(html, /<div class="facts"><div><b>40\+<\/b><span>Puppies home<\/span><\/div><\/div>/);
+  await s.breeder(`/blocks/about/${b.id}`, { enabled: '1', 'facts.0.0': '', 'facts.0.1': '' });
+  assert.match(await s.render('/about'), /<b>12<\/b><span>Years breeding/);
+  // Off, it's gone.
+  await s.breeder(`/blocks/about/${b.id}`, {});
+  assert.doesNotMatch(await s.render('/about'), /own-facts/);
+});
+
+test('a photo block can take the Home banner\'s frames; none to start, and never full width', async () => {
+  const s = await setup();
+  await s.post('about', {}, { act: 'add:photo' });
+  const p = (await s.blocks('about')).at(-1);
+  assert.equal(p.frame, 'none');
+  await s.post('about', { [`b.${p.id}.photo`]: 'ph1' }, { open: p.id });
+  assert.match(await s.render('/about'), /<figure class="own-photo wide wrap f-middle"><img /);
+  assert.match(await s.get(`/admin/akbostons/pages/about?open=${p.id}`), new RegExp(`name="b\\.${p.id}\\.frame" value="sprig"`));
+  await s.post('about', { [`b.${p.id}.frame`]: 'double' }, { open: p.id });
+  assert.match(await s.render('/about'), /<figure class="own-photo wide wrap f-middle frame-double"><div class="box"><img src="\/_kp\/p\/ph1"[^>]*><\/div><\/figure>/);
+  await s.post('about', { [`b.${p.id}.frame`]: 'sprig' }, { open: p.id });
+  assert.match(await s.render('/about'), /frame-sprig"><div class="box"><img [^>]*><div class="vine" aria-hidden="true">/);
+  await s.post('about', { [`b.${p.id}.shape`]: 'full' }, { open: p.id });
+  assert.match(await s.render('/about'), /<figure class="own-photo full f-middle"><img /);
+  assert.equal(cleanBlock({ id: 'x', type: 'photo', frame: 'gold' }).frame, 'none');
+});
+
+test('a text block and a facts row take every block\'s look: background, space and text size', async () => {
+  const s = await setup();
+  for (const t of ['words', 'factrow']) {
+    await s.post('about', {}, { act: `add:${t}` });
+    const b = (await s.blocks('about')).at(-1);
+    const form = await s.get(`/admin/akbostons/pages/about?open=${b.id}`);
+    for (const f of ['bg', 'py', 'px', 'text']) assert.match(form, new RegExp(`<select name="b\\.${b.id}\\.s\\.${f}">`), `${t} ${f}`);
+    const fill = t === 'words' ? { [`b.${b.id}.w.heading`]: 'Our promise' } : { [`b.${b.id}.items.0.0`]: '12', [`b.${b.id}.items.0.1`]: 'Years' };
+    await s.post('about', { ...fill, [`b.${b.id}.s.bg`]: 'foot', [`b.${b.id}.s.py`]: 'l', [`b.${b.id}.s.text`]: 'l' }, { open: b.id });
+    assert.deepEqual((await s.blocks('about')).at(-1).s, { bg: 'foot', py: 'l', text: 'l' });
+    const cls = t === 'words' ? 'own-words a-center' : 'section tight own-facts';
+    assert.match(await s.render('/about'), new RegExp(`<div class="kb-o"><div class="kb bg-foot py-l t-l"><section class="${cls}">`));
+  }
 });

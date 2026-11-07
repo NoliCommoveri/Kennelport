@@ -312,7 +312,7 @@ export const HOME_BLOCKS = {
   },
   facts: { items: { type: 'pairs', max: 3, keyMax: 12, valueMax: 30 } },
   story: {
-    photo_id: { type: 'photo' }, eyebrow: S(60), heading: S(80), script: S(40), text: ML(800),
+    photo_id: { type: 'photo' }, photo_frame: { ...ENUM(...FRAMES), default: 'none' }, eyebrow: S(60), heading: S(80), script: S(40), text: ML(800),
     features: { type: 'features', max: 3 }, link_label: S(40),
   },
   dogs: { eyebrow: S(60), heading: S(80), lede: S(200), link_label: S(40) },
@@ -382,7 +382,7 @@ export const FEATURE_ICONS = ['shield', 'home', 'heart', 'star', 'paw', 'leaf'];
 // the wording keys it has (plan 3.1, 3.12). Order within a group is this order.
 const HEAD = { eyebrow: S(60), heading: S(80), lede: ML(300) };
 export const PAGES = {
-  about:          { path: '/about', group: 'about', label: 'Our story', canHide: true, fields: { ...HEAD, photo_id: { type: 'photo' }, text: ML(4000), facts: { type: 'pairs', max: 6, keyMax: 40, valueMax: 60 } } },
+  about:          { path: '/about', group: 'about', label: 'Our story', canHide: true, fields: { ...HEAD, photo_id: { type: 'photo' }, photo_frame: { ...ENUM(...FRAMES), default: 'none' }, text: ML(4000), facts: { type: 'pairs', max: 6, keyMax: 40, valueMax: 60 } } },
   reviews:        { path: '/reviews', group: 'about', label: 'Reviews', canHide: true, fields: { ...HEAD } },
   contact:        { path: '/contact', group: 'about', label: 'Contact', canHide: false, fields: { ...HEAD, location_note: S(160) } },
   dogs:           { path: '/dogs', group: 'residents', label: 'All our dogs', canHide: true, fields: { ...HEAD, co_owned_heading: S(80), co_owned_lede: S(200) } },
@@ -417,7 +417,7 @@ export const CUSTOM_KEY = /^x-[a-z0-9](?:[a-z0-9-]{0,40}[a-z0-9])?$/;
 export const CUSTOM_PAGE = { canHide: true, fields: { ...HEAD } };
 // The owner's own blocks (step 4) add a line, a button's words, the breeder's own
 // outside link, phone or email for it, a photo and its caption (where the owner lets her).
-export const ADDED_BLOCK_FIELDS = { ...HEAD, line: ML(300), label: S(40), url: { type: 'url' }, phone: S(30), email: { type: 'email' }, photo_id: { type: 'photo' }, caption: S(160) };
+export const ADDED_BLOCK_FIELDS = { ...HEAD, line: ML(300), label: S(40), url: { type: 'url' }, phone: S(30), email: { type: 'email' }, photo_id: { type: 'photo' }, caption: S(160), body: ML(4000), facts: { type: 'pairs', max: 4, keyMax: 20, valueMax: 40 } };
 
 // The menu's five groups (plan 3.12), fixed.
 export const MENU_GROUPS = [

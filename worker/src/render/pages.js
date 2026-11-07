@@ -49,6 +49,8 @@ export function embedsBlock(snap, place, { heading = 'Videos and posts', band = 
 // each corner, in the scheme's accent, drawn by masks in site.css.
 const VINE_PARTS = ['t', 'b', 'l', 'r', 'c tl', 'c tr', 'c bl', 'c br'];
 const VINE = `<div class="vine" aria-hidden="true">${VINE_PARTS.map((p) => `<i class="${p}"></i>`).join('')}</div>`;
+// A photo in one of the collage's frames (FRAMES), or bare: the story photos' choice.
+const framed = (pic, frame) => (pic && frame && frame !== 'none' ? `<div class="story-pic frame-${frame}"><div class="box">${pic}${frame === 'sprig' ? VINE : ''}</div></div>` : pic);
 const sprigs = '<svg class="sprig l" aria-hidden="true"><use href="#sprig"/></svg><svg class="sprig r" aria-hidden="true"><use href="#sprig"/></svg>';
 const scriptLine = (text, script) => `${esc(text ?? '')}${script ? ` <span class="script">${esc(script)}</span>` : ''}`;
 
@@ -257,6 +259,17 @@ function ownBlock(snap, ctx, b, key) {
     if (!link || !w.label) return '';
     return `<div class="own-button wrap a-${b.align}">${aTo(link, `btn ${b.look} sz-${b.size}`, w.label)}</div>`;
   }
+  if (b.type === 'factrow') {
+    // Hers over the owner's; drawn as Home's facts row on its own.
+    const items = her.facts?.length ? her.facts : b.items;
+    return items.length ? `<section class="section tight own-facts"><div class="wrap"><div class="facts">${items.map(([v, l]) => `<div><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join('')}</div></div></section>` : '';
+  }
+  if (b.type === 'words') {
+    if (!w.heading && !w.line && !w.body) return '';
+    // The template's own section head and prose (as Getting your pup home draws them).
+    const top = w.heading || w.line ? `<div class="head">${w.heading ? `<h2>${esc(w.heading)}</h2>` : ''}${w.line ? `<p class="lede">${esc(w.line)}</p>` : ''}</div>` : '';
+    return `<section class="own-words a-${b.align}"><div class="wrap">${top}${w.body ? `<div class="prose">${paras(w.body)}</div>` : ''}</div></section>`;
+  }
   if (b.type === 'divider') {
     const inner = b.style === 'ornament' ? '<svg class="orn" aria-hidden="true"><use href="#sprig"/></svg>' : '<hr>';
     return `<div class="own-divider ${b.style} w-${b.width}${b.width === 'full' ? '' : ' wrap'}" role="presentation">${inner}</div>`;
@@ -266,7 +279,9 @@ function ownBlock(snap, ctx, b, key) {
     const pic = img(snap, photoId);
     if (!pic) return '';
     const cap = b.mayChange && her.caption ? her.caption : w.caption;
-    return `<figure class="own-photo ${b.shape}${b.shape === 'full' ? '' : ' wrap'} f-${b.focus}">${pic}${cap ? `<figcaption>${esc(cap)}</figcaption>` : ''}</figure>`;
+    // A frame (the collage's) round the photo; a full-width photo goes edge to edge, unframed.
+    const framed = b.frame !== 'none' && b.shape !== 'full';
+    return `<figure class="own-photo ${b.shape}${b.shape === 'full' ? '' : ' wrap'} f-${b.focus}${framed ? ` frame-${b.frame}` : ''}">${framed ? `<div class="box">${pic}${b.frame === 'sprig' ? VINE : ''}</div>` : pic}${cap ? `<figcaption>${esc(cap)}</figcaption>` : ''}</figure>`;
   }
   if (b.type === 'overlay') {
     const pic = img(snap, photoId);
@@ -358,7 +373,7 @@ function storyBlock(snap, ctx) {
   const s = snap.home.story;
   if (!(s.text || s.heading)) return '';
   // No photo (or "No photo" in the manage app): the words take the whole width.
-  const photo = img(snap, s.photo_id) ?? '';
+  const photo = framed(img(snap, s.photo_id) ?? '', s.photo_frame);
   const features = (s.features ?? []).map((f) => `<div class="feature"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">${ICONS[f.icon] ?? ICONS.heart}</svg><b>${esc(f.title)}</b><p>${esc(f.text)}</p></div>`).join('');
   return `<section class="section band"><div class="wrap story${photo ? '' : ' no-photo'}">${photo}<div class="story-copy">
       ${s.eyebrow ? `<span class="eyebrow">${esc(s.eyebrow)}</span>` : ''}
@@ -411,7 +426,7 @@ function reviewsBlock(snap, ctx, b, key = 'home') {
 
 export function about(snap, ctx) {
   const p = snap.pages.about;
-  const photo = img(snap, p.photo_id) ?? '';
+  const photo = framed(img(snap, p.photo_id) ?? '', p.photo_frame);
   const facts = p.facts?.length ? `<dl class="kv">${p.facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : '';
   const text = p.text ? `<div class="story-copy">${paras(p.text)}${facts}</div>` : facts;
   return {

@@ -1781,3 +1781,34 @@ with new sections and a new building order. Docs only; nothing built yet.
   (KennelOS's same-day change, `siteExport.js` `dogEntry`).
 - Tests: the linked sample's Pippa* carries `disposition: keeping`; `rules.test.js`
   ticks Keeping only and checks Pippa* leaves the site once she's Available.
+
+## 2026-11-07: text block (one of the owner's own blocks)
+
+- Add a block now offers **Text block** on any page, as many as she likes: a heading,
+  a line under it and words (a blank line starts a new paragraph), set left, centred
+  (the default) or right, with every block's look (`content/blocks.js` `words`). The
+  site draws it with the template's own section head and prose (`.head`, `.lede`,
+  `.prose`; `render/pages.js` `ownBlock`, `.own-words` in `site.css`), so no new look.
+- The breeder can switch it off and reword the heading, the line and the words in her
+  Site Manager (`block_switches` content gains `body`; no migration, it's JSON). Her
+  wording for it is in the owner's list: `pages.own.words`, `pages.own.words_body`,
+  `pages.own.words_body_hint`.
+- Tests: `ownblocks.test.js` adds, words, aligns, rewords and switches one off.
+- **Facts row (any page)**, also one of the owner's own blocks: up to four facts, each
+  a value over a label, drawn exactly as Home's facts row on its own (`.facts`, no new
+  CSS). It starts empty and hides until it has a fact. The breeder can switch it off
+  and type her own facts (`block_switches` content `facts`, pairs); all empty follows
+  the owner's. Her wording: `pages.own.factrow`, `pages.own.facts`,
+  `pages.own.facts_hint`, `pages.own.fact_value`, `pages.own.fact_label`. Home's own
+  facts row (her Home block) is unchanged.
+- A **Photo** block (the owner's) can take a frame: the Home banner collage's soft mat,
+  mat with a fine inner line, or leafy vine, in the scheme's colours (`PHOTO_FRAME`,
+  `frame`; none to start, so photos already placed draw as before). A full-width photo
+  stays unframed. The collage's `.box` and `.frame-*` rules carry over (`site.css`).
+- Her two story photos, Home's "Photo and words" and the Our story page's, take the
+  same frames: **Frame round the photo** on each (`photo_frame`, model.js `FRAMES`, no
+  frame to start, so every site draws as before). Drawn as `.story-pic .box` in the
+  story grid, shrunk and centred on a phone as the bare photo is. Her wording is in
+  `forms.js` LABELS (`story.photo_frame`, `about.photo_frame`) and ENUM_WORDS
+  (`photo_frame`), listed in the owner's list from there. Site template 19 (not out
+  yet), fingerprint updated beside it.
