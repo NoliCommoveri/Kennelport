@@ -42,7 +42,7 @@ import {
   pageBlocks, pageChanged, pagesChanged, withPage, addable, fits, hersOn, blockName, blockHint, isBuilt, BUILT_PAGES, PAGE_PARTS, headFor, isCustom, customPages, addPage, withPageInfo, withoutPage, pathFor, STARTS,
   menuOf, menuChanged, withMenu, groupOf, MenuError, MENU_PLACES, MENU_LIMITS,
   PROFILES, PROFILE_PATHS, PROFILE_PARTS, PROFILE_ITEMS, PROFILE_FIXED, PROFILE_ONLY, PROFILE_FACTS, profileOf, profileChanged, withProfile, profileFromForm, homePart,
-  LINK_TO, BUTTON_SIZE, BUTTON_LOOK, ALIGN, DIVIDER_STYLE, DIVIDER_WIDTH, SPACER_HEIGHT, PHOTO_SHAPE, PHOTO_FRAME, PHOTO_FOCUS, OVER_V, OVER_SHADE, BG_COLOURS, PAD, TEXT_SIZE, FACTS_MAX, FACT_SIZES,
+  LINK_TO, BUTTON_SIZE, BUTTON_LOOK, ALIGN, DIVIDER_STYLE, DIVIDER_WIDTH, SPACER_HEIGHT, PHOTO_SHAPE, PHOTO_FRAME, PHOTO_FOCUS, OVER_V, OVER_SHADE, BG_COLOURS, PAD, TEXT_SIZE, FACTS_MAX, FACT_SIZES, COLS_MAX, COL_SIZES, COLS_ACROSS,
 } from '../content/blocks.js';
 import { PAGES } from '../content/model.js';
 import { siteLink } from '../ops/sites.js';
@@ -542,6 +542,13 @@ function ownSettings(snap, key, b, pics) {
   if (b.type === 'words') return `<div class="fgroup"><h2>Starting wording</h2><p class="small muted">${esc(her)}</p><div class="fgrid">${w('heading', 'Heading')}${w('line', 'Line under the heading', 'half', 'Optional.')}
       <label>Words<textarea name="${k('w.body')}" rows="6">${esc(b.w?.body ?? '')}</textarea><span class="hint">Optional. A blank line starts a new paragraph.</span></label></div>
       ${fld('Where it sits', seg(k('align'), b.align, ALIGN))}</div>`;
+  if (b.type === 'columns') {
+    const rows = Array.from({ length: COLS_MAX }, (_, i) => b.cols?.[i] ?? ['', '']);
+    return `<div class="fgroup"><h2>Starting wording</h2><p class="small muted">${esc(her)}</p><div class="fgrid">${w('heading', 'Heading')}${w('line', 'Line under the heading', 'half', 'Optional.')}</div>
+      ${fld('Across on a computer', seg(k('across'), b.across, COLS_ACROSS), 'One under another on a phone.')}${fld('Where the heading sits', seg(k('align'), b.align, ALIGN))}</div>
+      <div class="fgroup"><h2>The sections</h2><p class="small muted">Up to ${COLS_MAX}, filling the columns left to right: a subheading (${COL_SIZES[0]} letters at most) over its words. A blank line in the words starts a new paragraph. Leave a section empty to skip it.</p>
+      <div class="fgrid">${rows.map(([h, t], i) => `${field(k(`cols.${i}.0`), h, { label: `Section ${i + 1}: subheading`, cls: '', ph: i ? '' : 'Early days' })}<label>Section ${i + 1}: words<textarea name="${k(`cols.${i}.1`)}" rows="4" maxlength="${COL_SIZES[1]}">${esc(t)}</textarea></label>`).join('')}</div></div>`;
+  }
   if (b.type === 'spacer') return `<div class="fgroup"><h2>The space</h2>${fld('Height', seg(k('height'), b.height, SPACER_HEIGHT))}</div>`;
   const change = `<div class="switches boxed">${toggle(k('mayChange'), b.mayChange, b.type === 'photo' ? 'The breeder can change the photo and its caption' : 'The breeder can change the photo')}</div>`;
   if (b.type === 'photo') return `<div class="fgroup"><h2>The photo</h2><p class="small muted">${esc(her.replace(' and reword it', ''))}</p>${photoChoice(b, pics)}
@@ -562,6 +569,7 @@ function ownSummary(snap, b) {
   if (b.type === 'spacer') return SPACER_HEIGHT[b.height];
   if (b.type === 'factrow') return b.items.length ? b.items.map(([v, l]) => [v, l].filter(Boolean).join(' ')).join(' · ') : 'No facts yet, so it hides';
   if (b.type === 'words') return [b.w.heading, b.w.line, b.w.body && `${b.w.body.split(/\n{2,}/).filter((x) => x.trim()).length} paragraph(s)`].filter(Boolean).join(' · ') || 'No words yet, so it hides';
+  if (b.type === 'columns') return [b.w.heading, b.cols.length ? `${b.cols.length} section(s), ${COLS_ACROSS[b.across].toLowerCase()} across` : 'No sections yet, so it hides'].filter(Boolean).join(' · ');
   if (!b.photo) return 'No photo chosen yet, so it hides';
   return b.type === 'photo' ? `${PHOTO_SHAPE[b.shape]}${b.frame !== 'none' && b.shape !== 'full' ? ` · ${PHOTO_FRAME[b.frame].toLowerCase()}` : ''}${b.w.caption ? ` · ${b.w.caption}` : ''}` : [b.w.heading, `words ${OVER_V[b.v].toLowerCase()} ${ALIGN[b.h].toLowerCase()}`].filter(Boolean).join(' · ');
 }
@@ -608,6 +616,7 @@ function pagePreview(snap, key, blocks, site) {
     else if (b.type === 'divider') out.push(`<div class="pvb"><div class="pv-row small muted">${esc(DIVIDER_STYLE[b.style])}</div></div>`);
     else if (b.type === 'factrow') { const x = snap.added?.[key]?.[b.id]?.facts?.length ? snap.added[key][b.id].facts : b.items; out.push(x.length ? `<div class="pvb"><div class="pv-facts">${x.map(([v, l]) => `<div><b>${esc(v)}</b>${esc(l)}</div>`).join('')}</div></div>` : ghost(b, 'no facts yet, so it hides')); }
     else if (b.type === 'words') { const x = addedWords(snap, key, b); out.push(x.heading || x.line || x.body ? `<div class="pvb">${x.heading ? `<h3>${esc(x.heading)}</h3>` : ''}${x.line ? `<p class="small muted">${esc(x.line)}</p>` : ''}${x.body ? '<div class="lines"><i></i><i></i><i></i></div>' : ''}</div>` : ghost(b, 'no words yet, so it hides')); }
+    else if (b.type === 'columns') { const x = addedWords(snap, key, b); const c = snap.added?.[key]?.[b.id]?.cols?.length ? snap.added[key][b.id].cols : b.cols; out.push(c.length ? `<div class="pvb">${x.heading ? `<h3>${esc(x.heading)}</h3>` : ''}${c.map(([h]) => `<b class="small">${esc(h)}</b><div class="lines"><i></i><i></i></div>`).join('')}</div>` : ghost(b, 'no sections yet, so it hides')); }
     else if (b.type === 'spacer') out.push(`<div class="pvb ghost">Space: ${esc(SPACER_HEIGHT[b.height].toLowerCase())}</div>`);
     else if (b.type === 'photo' || b.type === 'overlay') out.push(b.photo ? `<div class="pv-hero"><span class="ph"></span>${b.type === 'overlay' && b.w.heading ? `<div><h3>${esc(addedWords(snap, key, b).heading)}</h3></div>` : ''}</div>` : ghost(b, 'no photo chosen yet, so it hides'));
     else if (b.type === 'reviews') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Families', 'What our families say')}${snap.reviews.slice(0, 1).map((r) => `<div class="pv-row" style="display:block"><span class="stars">★★★★★</span><br>“${esc(r.quote.slice(0, 90))}${r.quote.length > 90 ? '…' : ''}”</div>`).join('')}</div>`);
