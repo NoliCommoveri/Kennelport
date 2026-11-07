@@ -203,6 +203,20 @@ test('what Publish would change: a field an older snapshot lacks, blank in the d
   assert.deepEqual(changes(old, next).map((x) => x.text), [`${draft.dogs[0].call_name}: edited`, `${draft.litters[0].name}: edited`]);
 });
 
+test('the Publish list sees blocks, added buttons, colours and the menu, never "Nothing to publish" while they differ', async () => {
+  const { changes } = await import('../src/diff.js');
+  const { env, site } = await akSite();
+  const draft = await buildSnapshot(env, site.id);
+  const texts = (fn) => { const next = structuredClone(draft); fn(next); return changes(draft, next).map((x) => x.text); };
+  assert.deepEqual(texts((s) => { s.layout.home = [...s.layout.home, { id: 'own-1', type: 'button', link: { to: 'url', value: 'https://example.com/' } }]; }), ['Home: blocks or their look changed']);
+  const pups = texts((s) => { s.added = { ...s.added, litters: { 'own-2': { enabled: true, label: 'Apply now' } } }; });
+  assert.equal(pups.length, 1);
+  assert.match(pups[0], /^[^:]+: buttons, banners or added words edited$/);
+  assert.deepEqual(texts((s) => { s.site.scheme = `${s.site.scheme ?? ''}-other`; }), ['Colours and style: changed']);
+  assert.deepEqual(texts((s) => { s.layout.menu = [{ id: 'g', label: 'X', button: true, footer: true, items: [] }]; }), ['Menu: changed']);
+  assert.deepEqual(texts((s) => { s.something_new = { a: 1 }; }), ['Other changes to the site']);
+});
+
 test("a dog's weight shows on its card, beside its health results, and on its page", async () => {
   const { env, site } = await akSite();
   env.DB.raw.prepare("UPDATE dogs SET weight = '18 lb' WHERE site_id = ? AND slug = 'willow'").run(site.id);

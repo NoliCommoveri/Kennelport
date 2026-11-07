@@ -120,5 +120,43 @@ export function changes(live, draft) {
   if (!same(pa.safe_notice, pb.safe_notice)) {
     lines.push({ text: `Safe-payment notice: ${pa.safe_notice?.enabled !== pb.safe_notice?.enabled ? (pb.safe_notice?.enabled ? 'switched on' : 'switched off') : 'wording edited'}`, path: '/waitlist' });
   }
+
+  // Colours and style: the template and its colour scheme.
+  if (!same(live.site.template, draft.site.template) || !same(live.site.scheme, draft.site.scheme)) {
+    lines.push({ text: 'Colours and style: changed', path: '/' });
+  }
+
+  // Each page's blocks and their look (content/blocks.js), and the words, switch and
+  // address of each block the owner added (buttons, banners…): one line a page.
+  const la = live.layout ?? {}; const lb = draft.layout ?? {};
+  const ada = live.added ?? {}; const adb = draft.added ?? {};
+  const customs = [...(lb.custom ?? []), ...(la.custom ?? [])];
+  const pageName = (key) => (key === 'home' ? 'Home' : draft.pages[key]?.menu_label || PAGES[key]?.label || customs.find((c) => c.id === key)?.name || 'A page');
+  const pagePath = (key) => (key === 'home' ? '/' : PAGES[key]?.path ?? (lb.custom ?? []).find((c) => c.id === key)?.path ?? null);
+  const ia = byId(la.custom); const ib = byId(lb.custom);
+  for (const c of lb.custom ?? []) if (!ia[c.id]) lines.push({ text: `${c.name} page: added`, path: c.path });
+  for (const c of la.custom ?? []) if (!ib[c.id]) lines.push({ text: `${c.name} page: removed`, path: null });
+  const pageKeys = new Set([...Object.keys(la), ...Object.keys(lb), ...Object.keys(ada), ...Object.keys(adb)]);
+  for (const key of ['custom', 'menu', 'profiles']) pageKeys.delete(key);
+  for (const key of pageKeys) {
+    if (ia[key] && !ib[key]) continue; // a removed page: said above
+    if (!ia[key] && ib[key]) continue; // a new page: said above
+    const blocks = !same(la[key], lb[key]); const own = !same(ada[key], adb[key]);
+    if (!blocks && !own) continue;
+    lines.push({ text: `${pageName(key)}: ${blocks ? 'blocks or their look changed' : 'buttons, banners or added words edited'}`, path: pagePath(key) });
+  }
+  if (!same(la.menu, lb.menu)) lines.push({ text: 'Menu: changed', path: '/' });
+  if (!same(la.profiles, lb.profiles)) lines.push({ text: 'Dog and puppy pages: layout changed', path: null });
+  if (!same(live.rules, draft.rules)) lines.push({ text: 'Display rules: changed', path: '/litters' });
+  if (!same(live.timing, draft.timing)) lines.push({ text: 'Timing: changed', path: '/litters' });
+
+  // Anything else the site draws from: never "Nothing to publish" while the live
+  // site and the draft differ, even for a part this list doesn't name yet.
+  const SAID = new Set(['v', 'built_at', 'id', 'site', 'pages', 'home', 'dogs', 'litters', 'reviews', 'steps', 'extras', 'products', 'partners', 'questions', 'albums', 'expanders', 'embeds', 'payment', 'layout', 'added', 'rules', 'timing']);
+  const SITE_SAID = new Set([...Object.keys(SITE_NAMES), 'family_login', 'template', 'scheme']);
+  const otherKeys = new Set([...Object.keys(live), ...Object.keys(draft)].filter((k) => !SAID.has(k)));
+  const siteKeys = new Set([...Object.keys(live.site ?? {}), ...Object.keys(draft.site ?? {})].filter((k) => !SITE_SAID.has(k)));
+  const other = [...otherKeys].some((k) => !same(live[k], draft[k])) || [...siteKeys].some((k) => !same(live.site?.[k], draft.site?.[k]));
+  if (other) lines.push({ text: 'Other changes to the site', path: '/' });
   return lines;
 }

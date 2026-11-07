@@ -1834,3 +1834,16 @@ with new sections and a new building order. Docs only; nothing built yet.
 - **A line between cards** (block setting, flip and Photo beside details): a 4px
   accent bar between cards where they stack.
 - Builder wording added to the owner's list: `doglist.outside`. Template v21.
+
+## 2026-11-07: Publish sees every change
+
+- Bug: the Publish screen's change list (`diff.js`) compared only kennel details,
+  page wording, Home's built-in blocks and the records. Blocks and their look, the
+  owner's added buttons and banners (and her words in them), colours and style, the
+  menu, added pages, profile layouts, display rules and timing weren't compared, so
+  it said "Nothing to publish" and hid the Publish button while Preview showed them.
+- Now each of those has a line, and anything else in the snapshot that differs reads
+  "Other changes to the site", so the Publish button can't be hidden again by a part
+  the list doesn't name yet.
+- Wording: the new lines live in `diff.js` with the existing ones (not yet in
+  `manage/wording.js`), to move with them.
