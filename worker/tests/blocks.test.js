@@ -172,7 +172,7 @@ test('every page but Privacy has its blocks; with no build each is today\'s, and
   assert.deepEqual(pageBlocks(saved, 'home').map((b) => b.id), ['hero']);
   // Add a block: data blocks anywhere; a removed built-in or spot, back.
   const less = pageBlocks(null, 'contact').filter((b) => !['main', 'faq'].includes(b.id));
-  assert.deepEqual(addable('contact', less).map((x) => `${x.type}${x.id ? `:${x.id}` : ''}`), ['builtin:main', 'faq', 'dogs', 'litters', 'reviews', 'banner', 'button', 'divider', 'spacer', 'photo', 'overlay', 'factrow', 'words']);
+  assert.deepEqual(addable('contact', less).map((x) => `${x.type}${x.id ? `:${x.id}` : ''}`), ['builtin:main', 'faq', 'dogs', 'litters', 'reviews', 'banner', 'button', 'divider', 'spacer', 'photo', 'overlay', 'factrow', 'words', 'columns']);
 });
 
 test('the Pages list has every page; a page\'s editor moves, removes, puts back and adds', async (t) => {
@@ -319,10 +319,13 @@ test('a block the owner added is the breeder\'s to switch off and reword, on Hom
   await post({}, { act: 'add:dogs' });
   await post({ 'b.dogs-2.f.sex': 'female', 'b.dogs-2.w.heading': 'Our girls' }, { open: 'dogs-2' });
   await post({}, { page: 'about', act: 'add:reviews' });
-  // Her Home screen and the About page's list it under Blocks KennelPort added.
+  // Her Home screen and the About page show it where it sits (last, after the
+  // videos), like the rest of her page: no section of its own.
   const homeScreen = text(await (await call(env, M, `/s/${sub}/home`, { headers: { cookie: admin } })).text());
-  assert.match(homeScreen, /Blocks KennelPort added .* Our girls Show it Your dogs from KennelOS: Clover\*, Maple\*, Juniper\*, Wren\*/);
-  assert.match(text(await (await call(env, M, `/s/${sub}/pages/about`, { headers: { cookie: admin } })).text()), /Blocks KennelPort added .* What our families say Show it Your reviews: none right now, so it hides/);
+  assert.match(homeScreen, /Videos and posts .* Our girls Show it Your dogs from KennelOS: Clover\*, Maple\*, Juniper\*, Wren\*/);
+  const aboutScreen = text(await (await call(env, M, `/s/${sub}/pages/about`, { headers: { cookie: admin } })).text());
+  assert.match(aboutScreen, /Videos and posts .* What our families say Show it Your reviews: none right now, so it hides/);
+  for (const t of [homeScreen, aboutScreen]) assert.doesNotMatch(t, /KennelPort added|Placed with you/);
   const hers = (page, block, body) => call(env, M, `/s/${sub}/blocks/${page}/${block}`, { method: 'POST', headers: { cookie: admin, origin: `https://${M}` }, body: form(body) });
   assert.equal((await hers('home', 'dogs-2', { enabled: '1', heading: 'Meet the girls' })).headers.get('location'), `/s/${sub}/home?note=saved#b-dogs-2`);
   assert.match(text(await render('/')), /Meet the girls/);

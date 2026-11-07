@@ -145,6 +145,10 @@ nav.main li.open > .navtop .chev { transform: rotate(225deg) translate(-2px, -1p
 .facts div { display: grid; }
 .facts b { font: var(--display-w) 1.6rem/1 var(--f-display); }
 .facts span { font-size: .78rem; color: var(--muted); letter-spacing: .05em; }
+/* A long fact wraps inside a third of the row, so three sit side by side; short ones keep their own width. On a phone each may take the full line. */
+.facts div { flex: 0 1 auto; max-width: calc((100% - 56px) / 3); align-content: start; }
+.facts span { line-height: 1.5; }
+@media (max-width: 720px) { .facts div { max-width: 100%; } }
 @media (max-width: 860px) { .hero { grid-template-columns: 1fr; } }
 
 /* Story + features. The photo is a tall 4:5 beside the words, the same shape at
@@ -670,6 +674,20 @@ dialog.viewer img { width: auto; height: auto; max-width: 96vw; max-height: 88dv
 .own-words.a-center .prose { text-align: center; }
 .own-words.a-right .head { justify-items: end; text-align: right; }
 .own-words.a-right .prose { margin-inline: auto 0; text-align: right; }
+
+/* Text in columns: the story's features (a display-face subheading over its words),
+   roomier for longer reading, two or three across; one under another on a phone. */
+.own-cols { padding-block: clamp(32px, 5vw, 56px); }
+.own-cols .head { margin-bottom: 28px; }
+.own-cols.a-left .head { justify-items: start; text-align: left; }
+.own-cols.a-right .head { justify-items: end; text-align: right; }
+.own-cols .features { gap: 30px clamp(28px, 4vw, 56px); margin-top: 0; }
+.own-cols .features.n-2 { grid-template-columns: repeat(2, 1fr); }
+.own-cols .feature { gap: 8px; }
+.own-cols .feature b { font-size: 1.25rem; line-height: 1.2; }
+.own-cols .feature p { font-size: .98rem; line-height: 1.65; }
+@media (max-width: 860px) { .own-cols .features.n-3 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .own-cols .features.n-2, .own-cols .features.n-3 { grid-template-columns: 1fr; } }
 
 .own-spacer.h-xs { height: 12px; } .own-spacer.h-s { height: 28px; } .own-spacer.h-m { height: 56px; } .own-spacer.h-l { height: 96px; }
 

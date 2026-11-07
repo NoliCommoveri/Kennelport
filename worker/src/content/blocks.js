@@ -42,6 +42,7 @@ export const BLOCK_TYPES = Object.freeze({
   overlay: { name: 'Text over a photo', ic: 'camera', kind: 'own', hint: 'A photo with a heading, a line and a button over it.' },
   factrow: { name: 'Facts row (any page)', ic: 'star', kind: 'own', hint: 'Up to four facts side by side, each a big value over a small label (as on Home).' },
   words: { name: 'Text block', ic: 'draft', kind: 'own', hint: 'A heading, a line under it, and words: as many paragraphs as you like.' },
+  columns: { name: 'Text in columns', ic: 'draft', kind: 'own', hint: 'A heading, then up to six short sections side by side, each a subheading over its words: two or three across on a computer, one under another on a phone.' },
 });
 
 // ---------- the owner's own blocks and every block's look (step 4) ----------
@@ -74,6 +75,7 @@ export const OWN_WORDS = Object.freeze({
   overlay: { heading: '', line: '', label: '' },
   photo: { caption: '' },
   words: { heading: '', line: '', body: '' },
+  columns: { heading: '', line: '' },
 });
 const PHONE = /^[+()\d][\d\s().-]{5,24}$/;
 const EMAIL = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
@@ -95,7 +97,11 @@ export const SEXES = Object.freeze({ any: 'Any', female: 'Girls', male: 'Boys' }
 export const LIMIT_MAX = 24;
 // A facts row of the owner's: up to four [value, label] pairs, Home's facts' look.
 export const FACTS_MAX = 4;
-export const FACT_SIZES = Object.freeze([20, 40]);
+export const FACT_SIZES = Object.freeze([40, 240]);
+// Text in columns: up to six [subheading, words] sections, two or three across.
+export const COLS_MAX = 6;
+export const COL_SIZES = Object.freeze([80, 1500]);
+export const COLS_ACROSS = Object.freeze({ 2: 'Two', 3: 'Three' });
 
 // What a card shows (decision 15): its items, by face for a flip card, in order.
 // The defaults draw today's cards exactly.
@@ -131,6 +137,7 @@ export function newBlock(type, id) {
   if (type === 'photo') Object.assign(b, { photo: null, shape: 'wide', frame: 'none', focus: 'middle', w: { caption: '' }, mayChange: true });
   if (type === 'factrow') Object.assign(b, { items: [] });
   if (type === 'words') Object.assign(b, { w: { heading: 'A few words from us', line: '', body: '' }, align: 'center' });
+  if (type === 'columns') Object.assign(b, { w: { heading: 'Our approach', line: '' }, cols: [], across: '2', align: 'center' });
   if (type === 'overlay') Object.assign(b, { photo: null, focus: 'middle', w: { heading: 'Raised with love', line: '', label: '' }, link: null, v: 'bottom', h: 'left', shade: 'medium', mayChange: true });
   return b;
 }
@@ -280,6 +287,13 @@ export const cleanFacts = (v) => (Array.isArray(v) ? v : [])
   .map(([a, l]) => [String(a ?? '').replace(/\s+/g, ' ').trim().slice(0, FACT_SIZES[0]), String(l ?? '').replace(/\s+/g, ' ').trim().slice(0, FACT_SIZES[1])])
   .filter(([a, l]) => a || l).slice(0, FACTS_MAX);
 
+// Text in columns' sections: a one-line subheading over words that keep their
+// paragraphs (a blank line starts one); the empty ones dropped, six at most.
+export const cleanCols = (v) => (Array.isArray(v) ? v : [])
+  .filter((p) => Array.isArray(p) && p.length === 2)
+  .map(([a, t]) => [String(a ?? '').replace(/\s+/g, ' ').trim().slice(0, COL_SIZES[0]), String(t ?? '').replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, COL_SIZES[1])])
+  .filter(([a, t]) => a || t).slice(0, COLS_MAX);
+
 // One block, every field present and in range: what the renderer and the editor use.
 export function cleanBlock(b) {
   if (!b || typeof b !== 'object' || !Object.hasOwn(BLOCK_TYPES, b.type)) return null;
@@ -317,6 +331,7 @@ export function cleanBlock(b) {
   }
   if (b.type === 'factrow') out.items = cleanFacts(b.items);
   if (b.type === 'words') { out.w = words(b.w, ['heading', 'line', 'body']); out.align = pick(b.align, ALIGN, 'center'); }
+  if (b.type === 'columns') { out.w = words(b.w, ['heading', 'line']); out.cols = cleanCols(b.cols); out.across = pick(String(b.across ?? ''), COLS_ACROSS, '2'); out.align = pick(b.align, ALIGN, 'center'); }
   if (b.type === 'divider') { out.style = pick(b.style, DIVIDER_STYLE, 'line'); out.width = pick(b.width, DIVIDER_WIDTH, 'wide'); }
   if (b.type === 'spacer') out.height = pick(b.height, SPACER_HEIGHT, 'm');
   if (b.type === 'photo' || b.type === 'overlay') {
@@ -450,8 +465,9 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
         if (next.link && to === 'email' && next.link.value && !looksLikeEmail(next.link.value)) throw new BlockError('That email address doesn\'t look like one.');
         if (next.link && to === 'url' && !next.link.value) throw new BlockError('A button to an outside site needs its address.');
       }
-      for (const f of ['size', 'look', 'align', 'style', 'width', 'height', 'shape', 'frame', 'focus', 'v', 'h', 'shade']) if (f in b) next[f] = str(f);
+      for (const f of ['size', 'look', 'align', 'style', 'width', 'height', 'shape', 'frame', 'focus', 'v', 'h', 'shade', 'across']) if (f in b) next[f] = str(f);
       if ('items' in b) next.items = Array.from({ length: FACTS_MAX }, (_, i) => [str(`items.${i}.0`), str(`items.${i}.1`)]);
+      if ('cols' in b) next.cols = Array.from({ length: COLS_MAX }, (_, i) => [str(`cols.${i}.0`), str(`cols.${i}.1`)]);
       if ('photo' in b) { next.photo = str('photo') || null; next.mayChange = get(k('mayChange')) != null; }
     }
     if (get(k('s.present')) != null) next.s = { bg: str2(k('s.bg')), py: str2(k('s.py')), px: str2(k('s.px')), text: str2(k('s.text')) };

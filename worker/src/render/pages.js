@@ -270,6 +270,14 @@ function ownBlock(snap, ctx, b, key) {
     const top = w.heading || w.line ? `<div class="head">${w.heading ? `<h2>${esc(w.heading)}</h2>` : ''}${w.line ? `<p class="lede">${esc(w.line)}</p>` : ''}</div>` : '';
     return `<section class="own-words a-${b.align}"><div class="wrap">${top}${w.body ? `<div class="prose">${paras(w.body)}</div>` : ''}</div></section>`;
   }
+  if (b.type === 'columns') {
+    // Hers over the owner's; the prototype's features (a subheading over its words),
+    // two or three across on a computer, one under another on a phone.
+    const cols = her.cols?.length ? her.cols : b.cols;
+    if (!cols.length) return '';
+    const top = w.heading || w.line ? `<div class="head">${w.heading ? `<h2>${esc(w.heading)}</h2>` : ''}${w.line ? `<p class="lede">${esc(w.line)}</p>` : ''}</div>` : '';
+    return `<section class="own-cols a-${b.align}"><div class="wrap">${top}<div class="features n-${b.across}">${cols.map(([h, t]) => `<div class="feature">${h ? `<b>${esc(h)}</b>` : ''}${paras(t)}</div>`).join('')}</div></div></section>`;
+  }
   if (b.type === 'divider') {
     const inner = b.style === 'ornament' ? '<svg class="orn" aria-hidden="true"><use href="#sprig"/></svg>' : '<hr>';
     return `<div class="own-divider ${b.style} w-${b.width}${b.width === 'full' ? '' : ' wrap'}" role="presentation">${inner}</div>`;
