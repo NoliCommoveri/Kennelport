@@ -257,6 +257,11 @@ function ownBlock(snap, ctx, b, key) {
     if (!link || !w.label) return '';
     return `<div class="own-button wrap a-${b.align}">${aTo(link, `btn ${b.look} sz-${b.size}`, w.label)}</div>`;
   }
+  if (b.type === 'factrow') {
+    // Hers over the owner's; drawn as Home's facts row on its own.
+    const items = her.facts?.length ? her.facts : b.items;
+    return items.length ? `<section class="section tight own-facts"><div class="wrap"><div class="facts">${items.map(([v, l]) => `<div><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join('')}</div></div></section>` : '';
+  }
   if (b.type === 'words') {
     if (!w.heading && !w.line && !w.body) return '';
     // The template's own section head and prose (as Getting your pup home draws them).

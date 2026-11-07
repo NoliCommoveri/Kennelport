@@ -725,6 +725,13 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     if (b.type === 'banner' || b.type === 'overlay') parts.push(input('heading', say('pages.heading'), F.heading.max, true, empty(b.w.heading), b.w.heading), input('label', say('pages.own.button_words'), F.label.max, true, empty(b.w.label), b.w.label), input('line', say('pages.own.a_line'), F.line.max, false, empty(b.w.line), b.w.line));
     if (b.type === 'words') parts.push(input('heading', say('pages.heading'), F.heading.max, true, empty(b.w.heading), b.w.heading), input('line', say('pages.line_under_it'), F.line.max, true, empty(b.w.line), b.w.line),
       `<div class="f"><label>${esc(say('pages.own.words_body'))}<textarea name="body" rows="6" maxlength="${F.body.max}"${b.w.body ? ` placeholder="${esc(b.w.body)}"` : ''}>${esc(cur.body ?? '')}</textarea><span class="hint">${esc(say('pages.own.words_body_hint'))}</span></label></div>`);
+    if (b.type === 'factrow') {
+      // Hers, row by row; all empty follows KennelPort's.
+      const mine = cur.facts?.length ? cur.facts : [];
+      const rows = Array.from({ length: F.facts.max }, (_, i) => mine[i] ?? ['', '']);
+      const ph = (i, j) => (!mine.length && b.items[i]?.[j] ? ` placeholder="${esc(b.items[i][j])}"` : '');
+      parts.push(`<div class="f"><fieldset><legend>${esc(say('pages.own.facts'))}<span class="hint">${esc(say('pages.own.facts_hint'))}</span></legend>${rows.map(([v, l], i) => `<div class="pair"><input name="facts.${i}.0" value="${esc(v)}" maxlength="${F.facts.keyMax}" aria-label="${esc(say('pages.own.fact_value', { n: i + 1 }))}"${ph(i, 0)}><input name="facts.${i}.1" value="${esc(l)}" maxlength="${F.facts.valueMax}" aria-label="${esc(say('pages.own.fact_label', { n: i + 1 }))}"${ph(i, 1)}></div>`).join('')}</fieldset></div>`);
+    }
     if (b.type === 'button') parts.push(input('label', say('pages.own.button_words'), F.label.max, true, empty(b.w.label), b.w.label));
     const l = b.link;
     let linkNote = '';
@@ -748,6 +755,9 @@ export function createScreens({ env, request, url, site, user, page, say = defau
         <button class="primary">${esc(say('pages.save'))}</button></form>`;
   }
 
+  // A facts row's rows as she typed them, the empty ones dropped.
+  const factsFrom = (fd) => Array.from({ length: ADDED_BLOCK_FIELDS.facts.max }, (_, i) => [String(fd.get(`facts.${i}.0`) ?? '').trim(), String(fd.get(`facts.${i}.1`) ?? '').trim()]).filter(([v, l]) => v || l);
+
   async function addedAction() {
     const [, , , , page, block] = url.pathname.split('/');
     if (request.method !== 'POST') return null;
@@ -759,7 +769,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       const own = BLOCK_TYPES[b.type].kind === 'own';
       const pick = (...ks) => Object.fromEntries(ks.filter((k) => fd.has(k)).map((k) => [k, fd.get(k)]));
       await saveAddedBlock(env, site.id, page, block, own
-        ? { enabled: fd.get('enabled') != null, ...pick('heading', 'line', 'url', 'phone', 'email', 'caption', 'body'), ...(fd.has('button_label') ? { label: fd.get('button_label') } : {}), ...(b.mayChange ? pick('photo_id') : {}) }
+        ? { enabled: fd.get('enabled') != null, ...pick('heading', 'line', 'url', 'phone', 'email', 'caption', 'body'), ...(b.type === 'factrow' ? { facts: factsFrom(fd) } : {}), ...(fd.has('button_label') ? { label: fd.get('button_label') } : {}), ...(b.mayChange ? pick('photo_id') : {}) }
         : { enabled: fd.get('enabled') != null, eyebrow: fd.get('eyebrow'), heading: fd.get('heading'), lede: fd.get('lede') });
     } catch (err) {
       if (!(err instanceof ContentError)) throw err;

@@ -40,6 +40,7 @@ export const BLOCK_TYPES = Object.freeze({
   spacer: { name: 'Spacer', ic: 'sliders', kind: 'own', hint: 'Empty space between blocks.' },
   photo: { name: 'Photo', ic: 'camera', kind: 'own', hint: 'One photo, with an optional caption.' },
   overlay: { name: 'Text over a photo', ic: 'camera', kind: 'own', hint: 'A photo with a heading, a line and a button over it.' },
+  factrow: { name: 'Facts row (any page)', ic: 'star', kind: 'own', hint: 'Up to four facts side by side, each a big value over a small label (as on Home).' },
   words: { name: 'Text block', ic: 'draft', kind: 'own', hint: 'A heading, a line under it, and words: as many paragraphs as you like.' },
 });
 
@@ -90,6 +91,9 @@ export const STAGES = Object.freeze({ current: 'Current', planned: 'Planned', pa
 export const REVIEW_STYLE = Object.freeze({ slider: 'Slider', grid: 'Cards' });
 export const SEXES = Object.freeze({ any: 'Any', female: 'Girls', male: 'Boys' });
 export const LIMIT_MAX = 24;
+// A facts row of the owner's: up to four [value, label] pairs, Home's facts' look.
+export const FACTS_MAX = 4;
+export const FACT_SIZES = Object.freeze([20, 40]);
 
 // What a card shows (decision 15): its items, by face for a flip card, in order.
 // The defaults draw today's cards exactly.
@@ -123,6 +127,7 @@ export function newBlock(type, id) {
   if (type === 'divider') Object.assign(b, { style: 'line', width: 'wide' });
   if (type === 'spacer') Object.assign(b, { height: 'm' });
   if (type === 'photo') Object.assign(b, { photo: null, shape: 'wide', focus: 'middle', w: { caption: '' }, mayChange: true });
+  if (type === 'factrow') Object.assign(b, { items: [] });
   if (type === 'words') Object.assign(b, { w: { heading: 'A few words from us', line: '', body: '' }, align: 'center' });
   if (type === 'overlay') Object.assign(b, { photo: null, focus: 'middle', w: { heading: 'Raised with love', line: '', label: '' }, link: null, v: 'bottom', h: 'left', shade: 'medium', mayChange: true });
   return b;
@@ -267,6 +272,12 @@ function cleanStyle(st) {
   return Object.keys(out).length ? out : null;
 }
 
+// A facts row's facts: pairs of text, the empty ones dropped, four at most.
+export const cleanFacts = (v) => (Array.isArray(v) ? v : [])
+  .filter((p) => Array.isArray(p) && p.length === 2)
+  .map(([a, l]) => [String(a ?? '').replace(/\s+/g, ' ').trim().slice(0, FACT_SIZES[0]), String(l ?? '').replace(/\s+/g, ' ').trim().slice(0, FACT_SIZES[1])])
+  .filter(([a, l]) => a || l).slice(0, FACTS_MAX);
+
 // One block, every field present and in range: what the renderer and the editor use.
 export function cleanBlock(b) {
   if (!b || typeof b !== 'object' || !Object.hasOwn(BLOCK_TYPES, b.type)) return null;
@@ -302,6 +313,7 @@ export function cleanBlock(b) {
     out.look = pick(b.look, BUTTON_LOOK, 'solid');
     out.align = pick(b.align, ALIGN, 'center');
   }
+  if (b.type === 'factrow') out.items = cleanFacts(b.items);
   if (b.type === 'words') { out.w = words(b.w, ['heading', 'line', 'body']); out.align = pick(b.align, ALIGN, 'center'); }
   if (b.type === 'divider') { out.style = pick(b.style, DIVIDER_STYLE, 'line'); out.width = pick(b.width, DIVIDER_WIDTH, 'wide'); }
   if (b.type === 'spacer') out.height = pick(b.height, SPACER_HEIGHT, 'm');
@@ -437,6 +449,7 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
         if (next.link && to === 'url' && !next.link.value) throw new BlockError('A button to an outside site needs its address.');
       }
       for (const f of ['size', 'look', 'align', 'style', 'width', 'height', 'shape', 'focus', 'v', 'h', 'shade']) if (f in b) next[f] = str(f);
+      if ('items' in b) next.items = Array.from({ length: FACTS_MAX }, (_, i) => [str(`items.${i}.0`), str(`items.${i}.1`)]);
       if ('photo' in b) { next.photo = str('photo') || null; next.mayChange = get(k('mayChange')) != null; }
     }
     if (get(k('s.present')) != null) next.s = { bg: str2(k('s.bg')), py: str2(k('s.py')), px: str2(k('s.px')), text: str2(k('s.text')) };

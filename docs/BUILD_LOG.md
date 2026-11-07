@@ -1794,3 +1794,10 @@ with new sections and a new building order. Docs only; nothing built yet.
   wording for it is in the owner's list: `pages.own.words`, `pages.own.words_body`,
   `pages.own.words_body_hint`.
 - Tests: `ownblocks.test.js` adds, words, aligns, rewords and switches one off.
+- **Facts row (any page)**, also one of the owner's own blocks: up to four facts, each
+  a value over a label, drawn exactly as Home's facts row on its own (`.facts`, no new
+  CSS). It starts empty and hides until it has a fact. The breeder can switch it off
+  and type her own facts (`block_switches` content `facts`, pairs); all empty follows
+  the owner's. Her wording: `pages.own.factrow`, `pages.own.facts`,
+  `pages.own.facts_hint`, `pages.own.fact_value`, `pages.own.fact_label`. Home's own
+  facts row (her Home block) is unchanged.

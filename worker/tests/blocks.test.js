@@ -172,7 +172,7 @@ test('every page but Privacy has its blocks; with no build each is today\'s, and
   assert.deepEqual(pageBlocks(saved, 'home').map((b) => b.id), ['hero']);
   // Add a block: data blocks anywhere; a removed built-in or spot, back.
   const less = pageBlocks(null, 'contact').filter((b) => !['main', 'faq'].includes(b.id));
-  assert.deepEqual(addable('contact', less).map((x) => `${x.type}${x.id ? `:${x.id}` : ''}`), ['builtin:main', 'faq', 'dogs', 'litters', 'reviews', 'banner', 'button', 'divider', 'spacer', 'photo', 'overlay', 'words']);
+  assert.deepEqual(addable('contact', less).map((x) => `${x.type}${x.id ? `:${x.id}` : ''}`), ['builtin:main', 'faq', 'dogs', 'litters', 'reviews', 'banner', 'button', 'divider', 'spacer', 'photo', 'overlay', 'factrow', 'words']);
 });
 
 test('the Pages list has every page; a page\'s editor moves, removes, puts back and adds', async (t) => {
