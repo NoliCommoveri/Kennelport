@@ -676,6 +676,10 @@ dialog.viewer img { width: auto; height: auto; max-width: 96vw; max-height: 88dv
 .own-photo.wide img { aspect-ratio: 3 / 2; } .own-photo.tall { max-width: 520px; } .own-photo.tall img { aspect-ratio: 4 / 5; }
 .own-photo.square { max-width: 620px; } .own-photo.square img { aspect-ratio: 1; }
 .own-photo.full { padding-block: 0; } .own-photo.full img { aspect-ratio: 5 / 2; max-height: 520px; border-radius: 0; }
+/* A framed photo: the collage's box and frames (.frame-*, .vine above). */
+.own-photo .box { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: calc(var(--r) + 3px); padding: 5px; box-shadow: var(--shadow); }
+.own-photo.frame-double .box { padding: 10px; }
+.own-photo.frame-sprig .box { background: none; border: 0; box-shadow: none; padding: 22px; }
 .own-photo figcaption { font-size: .9rem; color: var(--muted); margin-top: 8px; text-align: center; }
 .own-photo.full figcaption { padding-inline: 16px; }
 .own-photo.f-top img, .own-over.f-top img { object-position: 50% 0; }

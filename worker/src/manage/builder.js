@@ -42,7 +42,7 @@ import {
   pageBlocks, pageChanged, pagesChanged, withPage, addable, fits, hersOn, blockName, blockHint, isBuilt, BUILT_PAGES, PAGE_PARTS, headFor, isCustom, customPages, addPage, withPageInfo, withoutPage, pathFor, STARTS,
   menuOf, menuChanged, withMenu, groupOf, MenuError, MENU_PLACES, MENU_LIMITS,
   PROFILES, PROFILE_PATHS, PROFILE_PARTS, PROFILE_ITEMS, PROFILE_FIXED, PROFILE_ONLY, PROFILE_FACTS, profileOf, profileChanged, withProfile, profileFromForm, homePart,
-  LINK_TO, BUTTON_SIZE, BUTTON_LOOK, ALIGN, DIVIDER_STYLE, DIVIDER_WIDTH, SPACER_HEIGHT, PHOTO_SHAPE, PHOTO_FOCUS, OVER_V, OVER_SHADE, BG_COLOURS, PAD, TEXT_SIZE, FACTS_MAX, FACT_SIZES,
+  LINK_TO, BUTTON_SIZE, BUTTON_LOOK, ALIGN, DIVIDER_STYLE, DIVIDER_WIDTH, SPACER_HEIGHT, PHOTO_SHAPE, PHOTO_FRAME, PHOTO_FOCUS, OVER_V, OVER_SHADE, BG_COLOURS, PAD, TEXT_SIZE, FACTS_MAX, FACT_SIZES,
 } from '../content/blocks.js';
 import { PAGES } from '../content/model.js';
 import { siteLink } from '../ops/sites.js';
@@ -545,7 +545,7 @@ function ownSettings(snap, key, b, pics) {
   if (b.type === 'spacer') return `<div class="fgroup"><h2>The space</h2>${fld('Height', seg(k('height'), b.height, SPACER_HEIGHT))}</div>`;
   const change = `<div class="switches boxed">${toggle(k('mayChange'), b.mayChange, b.type === 'photo' ? 'The breeder can change the photo and its caption' : 'The breeder can change the photo')}</div>`;
   if (b.type === 'photo') return `<div class="fgroup"><h2>The photo</h2><p class="small muted">${esc(her.replace(' and reword it', ''))}</p>${photoChoice(b, pics)}
-    ${fld('Shape', seg(k('shape'), b.shape, PHOTO_SHAPE))}${fld('Which part to keep', seg(k('focus'), b.focus, PHOTO_FOCUS))}<div class="fgrid">${w('caption', 'Caption', '', 'Optional.')}</div>${change}</div>`;
+    ${fld('Shape', seg(k('shape'), b.shape, PHOTO_SHAPE))}${fld('Frame', seg(k('frame'), b.frame, PHOTO_FRAME), 'The Home banner\'s frames, in the site\'s colours. A full-width photo stays unframed.')}${fld('Which part to keep', seg(k('focus'), b.focus, PHOTO_FOCUS))}<div class="fgrid">${w('caption', 'Caption', '', 'Optional.')}</div>${change}</div>`;
   if (b.type === 'overlay') return `<div class="fgroup"><h2>The photo</h2>${photoChoice(b, pics)}${fld('Which part to keep', seg(k('focus'), b.focus, PHOTO_FOCUS))}${change}</div>
     <div class="fgroup"><h2>The words over it</h2><p class="small muted">${esc(her)}</p><div class="fgrid">${w('heading', 'Heading')}${w('label', 'Button words')}${w('line', 'A line', '')}</div>
       ${fld('Up and down', seg(k('v'), b.v, OVER_V))}${fld('Across', seg(k('h'), b.h, ALIGN))}${fld('Shade behind the words', seg(k('shade'), b.shade, OVER_SHADE), 'Even the lightest keeps white words readable.')}</div>
@@ -563,7 +563,7 @@ function ownSummary(snap, b) {
   if (b.type === 'factrow') return b.items.length ? b.items.map(([v, l]) => [v, l].filter(Boolean).join(' ')).join(' · ') : 'No facts yet, so it hides';
   if (b.type === 'words') return [b.w.heading, b.w.line, b.w.body && `${b.w.body.split(/\n{2,}/).filter((x) => x.trim()).length} paragraph(s)`].filter(Boolean).join(' · ') || 'No words yet, so it hides';
   if (!b.photo) return 'No photo chosen yet, so it hides';
-  return b.type === 'photo' ? `${PHOTO_SHAPE[b.shape]}${b.w.caption ? ` · ${b.w.caption}` : ''}` : [b.w.heading, `words ${OVER_V[b.v].toLowerCase()} ${ALIGN[b.h].toLowerCase()}`].filter(Boolean).join(' · ');
+  return b.type === 'photo' ? `${PHOTO_SHAPE[b.shape]}${b.frame !== 'none' && b.shape !== 'full' ? ` · ${PHOTO_FRAME[b.frame].toLowerCase()}` : ''}${b.w.caption ? ` · ${b.w.caption}` : ''}` : [b.w.heading, `words ${OVER_V[b.v].toLowerCase()} ${ALIGN[b.h].toLowerCase()}`].filter(Boolean).join(' · ');
 }
 
 function blockRow(snap, key, b, i, n, open, pics) {

@@ -1801,3 +1801,7 @@ with new sections and a new building order. Docs only; nothing built yet.
   the owner's. Her wording: `pages.own.factrow`, `pages.own.facts`,
   `pages.own.facts_hint`, `pages.own.fact_value`, `pages.own.fact_label`. Home's own
   facts row (her Home block) is unchanged.
+- A **Photo** block (the owner's) can take a frame: the Home banner collage's soft mat,
+  mat with a fine inner line, or leafy vine, in the scheme's colours (`PHOTO_FRAME`,
+  `frame`; none to start, so photos already placed draw as before). A full-width photo
+  stays unframed. The collage's `.box` and `.frame-*` rules carry over (`site.css`).

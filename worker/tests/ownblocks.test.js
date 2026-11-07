@@ -194,3 +194,20 @@ test('the owner adds a facts row to any page; the breeder can change its facts',
   await s.breeder(`/blocks/about/${b.id}`, {});
   assert.doesNotMatch(await s.render('/about'), /own-facts/);
 });
+
+test('a photo block can take the Home banner\'s frames; none to start, and never full width', async () => {
+  const s = await setup();
+  await s.post('about', {}, { act: 'add:photo' });
+  const p = (await s.blocks('about')).at(-1);
+  assert.equal(p.frame, 'none');
+  await s.post('about', { [`b.${p.id}.photo`]: 'ph1' }, { open: p.id });
+  assert.match(await s.render('/about'), /<figure class="own-photo wide wrap f-middle"><img /);
+  assert.match(await s.get(`/admin/akbostons/pages/about?open=${p.id}`), new RegExp(`name="b\\.${p.id}\\.frame" value="sprig"`));
+  await s.post('about', { [`b.${p.id}.frame`]: 'double' }, { open: p.id });
+  assert.match(await s.render('/about'), /<figure class="own-photo wide wrap f-middle frame-double"><div class="box"><img src="\/_kp\/p\/ph1"[^>]*><\/div><\/figure>/);
+  await s.post('about', { [`b.${p.id}.frame`]: 'sprig' }, { open: p.id });
+  assert.match(await s.render('/about'), /frame-sprig"><div class="box"><img [^>]*><div class="vine" aria-hidden="true">/);
+  await s.post('about', { [`b.${p.id}.shape`]: 'full' }, { open: p.id });
+  assert.match(await s.render('/about'), /<figure class="own-photo full f-middle"><img /);
+  assert.equal(cleanBlock({ id: 'x', type: 'photo', frame: 'gold' }).frame, 'none');
+});

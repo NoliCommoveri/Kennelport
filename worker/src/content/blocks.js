@@ -58,6 +58,8 @@ export const DIVIDER_STYLE = Object.freeze({ line: 'Thin line', brass: 'Brass ru
 export const DIVIDER_WIDTH = Object.freeze({ narrow: 'Narrow', wide: 'Wide', full: 'Full width' });
 export const SPACER_HEIGHT = Object.freeze({ xs: 'Very small', s: 'Small', m: 'Medium', l: 'Large' });
 export const PHOTO_SHAPE = Object.freeze({ wide: 'Wide', tall: 'Tall', square: 'Square', full: 'Full width' });
+// A photo's frame: the Home banner collage's frames (model.js FRAMES), none to start.
+export const PHOTO_FRAME = Object.freeze({ none: 'No frame', mat: 'A soft mat', double: 'A mat with a fine inner line', sprig: 'A leafy vine' });
 export const PHOTO_FOCUS = Object.freeze({ top: 'The top', middle: 'The middle', bottom: 'The bottom' });
 export const OVER_V = Object.freeze({ top: 'Top', middle: 'Middle', bottom: 'Bottom' });
 export const OVER_SHADE = Object.freeze({ light: 'Light', medium: 'Medium', dark: 'Dark' });
@@ -126,7 +128,7 @@ export function newBlock(type, id) {
   if (type === 'button') Object.assign(b, { w: { ...OWN_WORDS.button }, link: linkDefault(), size: 'm', look: 'solid', align: 'center' });
   if (type === 'divider') Object.assign(b, { style: 'line', width: 'wide' });
   if (type === 'spacer') Object.assign(b, { height: 'm' });
-  if (type === 'photo') Object.assign(b, { photo: null, shape: 'wide', focus: 'middle', w: { caption: '' }, mayChange: true });
+  if (type === 'photo') Object.assign(b, { photo: null, shape: 'wide', frame: 'none', focus: 'middle', w: { caption: '' }, mayChange: true });
   if (type === 'factrow') Object.assign(b, { items: [] });
   if (type === 'words') Object.assign(b, { w: { heading: 'A few words from us', line: '', body: '' }, align: 'center' });
   if (type === 'overlay') Object.assign(b, { photo: null, focus: 'middle', w: { heading: 'Raised with love', line: '', label: '' }, link: null, v: 'bottom', h: 'left', shade: 'medium', mayChange: true });
@@ -322,7 +324,7 @@ export function cleanBlock(b) {
     out.focus = pick(b.focus, PHOTO_FOCUS, 'middle');
     out.mayChange = b.mayChange !== false;
   }
-  if (b.type === 'photo') { out.shape = pick(b.shape, PHOTO_SHAPE, 'wide'); out.w = words(b.w, ['caption']); }
+  if (b.type === 'photo') { out.shape = pick(b.shape, PHOTO_SHAPE, 'wide'); out.frame = pick(b.frame, PHOTO_FRAME, 'none'); out.w = words(b.w, ['caption']); }
   if (b.type === 'overlay') {
     out.w = words(b.w, ['heading', 'line', 'label']);
     out.link = cleanLink(b.link);
@@ -448,7 +450,7 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
         if (next.link && to === 'email' && next.link.value && !looksLikeEmail(next.link.value)) throw new BlockError('That email address doesn\'t look like one.');
         if (next.link && to === 'url' && !next.link.value) throw new BlockError('A button to an outside site needs its address.');
       }
-      for (const f of ['size', 'look', 'align', 'style', 'width', 'height', 'shape', 'focus', 'v', 'h', 'shade']) if (f in b) next[f] = str(f);
+      for (const f of ['size', 'look', 'align', 'style', 'width', 'height', 'shape', 'frame', 'focus', 'v', 'h', 'shade']) if (f in b) next[f] = str(f);
       if ('items' in b) next.items = Array.from({ length: FACTS_MAX }, (_, i) => [str(`items.${i}.0`), str(`items.${i}.1`)]);
       if ('photo' in b) { next.photo = str('photo') || null; next.mayChange = get(k('mayChange')) != null; }
     }

@@ -277,7 +277,9 @@ function ownBlock(snap, ctx, b, key) {
     const pic = img(snap, photoId);
     if (!pic) return '';
     const cap = b.mayChange && her.caption ? her.caption : w.caption;
-    return `<figure class="own-photo ${b.shape}${b.shape === 'full' ? '' : ' wrap'} f-${b.focus}">${pic}${cap ? `<figcaption>${esc(cap)}</figcaption>` : ''}</figure>`;
+    // A frame (the collage's) round the photo; a full-width photo goes edge to edge, unframed.
+    const framed = b.frame !== 'none' && b.shape !== 'full';
+    return `<figure class="own-photo ${b.shape}${b.shape === 'full' ? '' : ' wrap'} f-${b.focus}${framed ? ` frame-${b.frame}` : ''}">${framed ? `<div class="box">${pic}${b.frame === 'sprig' ? VINE : ''}</div>` : pic}${cap ? `<figcaption>${esc(cap)}</figcaption>` : ''}</figure>`;
   }
   if (b.type === 'overlay') {
     const pic = img(snap, photoId);
