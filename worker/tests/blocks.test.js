@@ -319,10 +319,13 @@ test('a block the owner added is the breeder\'s to switch off and reword, on Hom
   await post({}, { act: 'add:dogs' });
   await post({ 'b.dogs-2.f.sex': 'female', 'b.dogs-2.w.heading': 'Our girls' }, { open: 'dogs-2' });
   await post({}, { page: 'about', act: 'add:reviews' });
-  // Her Home screen and the About page's list it under Blocks KennelPort added.
+  // Her Home screen and the About page show it where it sits (last, after the
+  // videos), like the rest of her page: no section of its own.
   const homeScreen = text(await (await call(env, M, `/s/${sub}/home`, { headers: { cookie: admin } })).text());
-  assert.match(homeScreen, /Blocks KennelPort added .* Our girls Show it Your dogs from KennelOS: Clover\*, Maple\*, Juniper\*, Wren\*/);
-  assert.match(text(await (await call(env, M, `/s/${sub}/pages/about`, { headers: { cookie: admin } })).text()), /Blocks KennelPort added .* What our families say Show it Your reviews: none right now, so it hides/);
+  assert.match(homeScreen, /Videos and posts .* Our girls Show it Your dogs from KennelOS: Clover\*, Maple\*, Juniper\*, Wren\*/);
+  const aboutScreen = text(await (await call(env, M, `/s/${sub}/pages/about`, { headers: { cookie: admin } })).text());
+  assert.match(aboutScreen, /Videos and posts .* What our families say Show it Your reviews: none right now, so it hides/);
+  for (const t of [homeScreen, aboutScreen]) assert.doesNotMatch(t, /KennelPort added|Placed with you/);
   const hers = (page, block, body) => call(env, M, `/s/${sub}/blocks/${page}/${block}`, { method: 'POST', headers: { cookie: admin, origin: `https://${M}` }, body: form(body) });
   assert.equal((await hers('home', 'dogs-2', { enabled: '1', heading: 'Meet the girls' })).headers.get('location'), `/s/${sub}/home?note=saved#b-dogs-2`);
   assert.match(text(await render('/')), /Meet the girls/);

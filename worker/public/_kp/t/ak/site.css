@@ -686,7 +686,6 @@ dialog.viewer img { width: auto; height: auto; max-width: 96vw; max-height: 88dv
 .own-cols .feature { gap: 8px; }
 .own-cols .feature b { font-size: 1.25rem; line-height: 1.2; }
 .own-cols .feature p { font-size: .98rem; line-height: 1.65; }
-.own-cols.a-center .feature { text-align: center; }
 @media (max-width: 860px) { .own-cols .features.n-3 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px) { .own-cols .features.n-2, .own-cols .features.n-3 { grid-template-columns: 1fr; } }
 

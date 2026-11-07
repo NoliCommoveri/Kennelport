@@ -137,7 +137,7 @@ export function newBlock(type, id) {
   if (type === 'photo') Object.assign(b, { photo: null, shape: 'wide', frame: 'none', focus: 'middle', w: { caption: '' }, mayChange: true });
   if (type === 'factrow') Object.assign(b, { items: [] });
   if (type === 'words') Object.assign(b, { w: { heading: 'A few words from us', line: '', body: '' }, align: 'center' });
-  if (type === 'columns') Object.assign(b, { w: { heading: 'Our approach', line: '' }, cols: [], across: '2', align: 'left' });
+  if (type === 'columns') Object.assign(b, { w: { heading: 'Our approach', line: '' }, cols: [], across: '2', align: 'center' });
   if (type === 'overlay') Object.assign(b, { photo: null, focus: 'middle', w: { heading: 'Raised with love', line: '', label: '' }, link: null, v: 'bottom', h: 'left', shade: 'medium', mayChange: true });
   return b;
 }
@@ -331,7 +331,7 @@ export function cleanBlock(b) {
   }
   if (b.type === 'factrow') out.items = cleanFacts(b.items);
   if (b.type === 'words') { out.w = words(b.w, ['heading', 'line', 'body']); out.align = pick(b.align, ALIGN, 'center'); }
-  if (b.type === 'columns') { out.w = words(b.w, ['heading', 'line']); out.cols = cleanCols(b.cols); out.across = pick(String(b.across ?? ''), COLS_ACROSS, '2'); out.align = pick(b.align, ALIGN, 'left'); }
+  if (b.type === 'columns') { out.w = words(b.w, ['heading', 'line']); out.cols = cleanCols(b.cols); out.across = pick(String(b.across ?? ''), COLS_ACROSS, '2'); out.align = pick(b.align, ALIGN, 'center'); }
   if (b.type === 'divider') { out.style = pick(b.style, DIVIDER_STYLE, 'line'); out.width = pick(b.width, DIVIDER_WIDTH, 'wide'); }
   if (b.type === 'spacer') out.height = pick(b.height, SPACER_HEIGHT, 'm');
   if (b.type === 'photo' || b.type === 'overlay') {

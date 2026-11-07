@@ -204,16 +204,16 @@ test('the owner adds text in columns: a heading over sections, two or three acro
   await s.post('about', {}, { act: 'add:columns' });
   const b = (await s.blocks('about')).at(-1);
   assert.equal(b.type, 'columns');
-  assert.deepEqual([b.cols, b.across, b.align], [[], '2', 'left']);
+  assert.deepEqual([b.cols, b.across, b.align], [[], '2', 'center']);
   // No sections, it hides.
   assert.doesNotMatch(await s.render('/about'), /own-cols/);
   const long = 'From birth, our littles are closely monitored and handled daily. We begin Early Neurological Stimulation (ENS) during the appropriate developmental window.\n\nTheir earliest days are focused on warmth, cleanliness and nutrition.';
   await s.post('about', { [`b.${b.id}.w.heading`]: 'Our Approach to Raising Puppies', [`b.${b.id}.cols.0.0`]: 'Early Days', [`b.${b.id}.cols.0.1`]: long, [`b.${b.id}.cols.2.0`]: 'Learning Life at Home', [`b.${b.id}.cols.2.1`]: 'Our puppies grow up right in the middle of it.' }, { open: b.id });
   assert.deepEqual((await s.blocks('about')).at(-1).cols, [['Early Days', long], ['Learning Life at Home', 'Our puppies grow up right in the middle of it.']]);
   let html = await s.render('/about');
-  assert.match(html, /<section class="own-cols a-left"><div class="wrap"><div class="head"><h2>Our Approach to Raising Puppies<\/h2><\/div><div class="features n-2"><div class="feature"><b>Early Days<\/b><p>From birth, [^<]+<\/p><p>Their earliest days [^<]+<\/p><\/div><div class="feature"><b>Learning Life at Home<\/b><p>Our puppies grow up right in the middle of it\.<\/p><\/div><\/div><\/div><\/section>/);
-  await s.post('about', { [`b.${b.id}.across`]: '3', [`b.${b.id}.align`]: 'center' }, { open: b.id });
-  assert.match(await s.render('/about'), /<section class="own-cols a-center">.*<div class="features n-3">/s);
+  assert.match(html, /<section class="own-cols a-center"><div class="wrap"><div class="head"><h2>Our Approach to Raising Puppies<\/h2><\/div><div class="features n-2"><div class="feature"><b>Early Days<\/b><p>From birth, [^<]+<\/p><p>Their earliest days [^<]+<\/p><\/div><div class="feature"><b>Learning Life at Home<\/b><p>Our puppies grow up right in the middle of it\.<\/p><\/div><\/div><\/div><\/section>/);
+  await s.post('about', { [`b.${b.id}.across`]: '3', [`b.${b.id}.align`]: 'left' }, { open: b.id });
+  assert.match(await s.render('/about'), /<section class="own-cols a-left">.*<div class="features n-3">/s);
   // In her Site Manager: six sections, KennelPort's as the hints; hers over them.
   const mine = await s.get('/s/akbostons/pages/about');
   assert.match(mine, /<input name="cols\.0\.0" value="" maxlength="80" placeholder="Early Days">/);
@@ -226,6 +226,29 @@ test('the owner adds text in columns: a heading over sections, two or three acro
   await s.breeder(`/blocks/about/${b.id}`, {});
   assert.doesNotMatch(await s.render('/about'), /own-cols/);
   assert.equal(cleanBlock({ id: 'x', type: 'columns', across: '5' }).across, '2');
+});
+
+test('her page screen shows a placed block where it sits, between her own parts; each card saves only its own fields', async () => {
+  const s = await setup();
+  await s.post('about', {}, { act: 'add:factrow' });
+  const b = (await s.blocks('about')).at(-1);
+  await s.post('about', { [`b.${b.id}.items.0.0`]: '12', [`b.${b.id}.items.0.1`]: 'Years breeding' }, { open: b.id });
+  for (let i = 0; i < 3; i++) await s.post('about', {}, { act: `mv:${b.id}:up` });
+  assert.deepEqual((await s.blocks('about')).map((x) => x.id).slice(0, 3), ['head', b.id, 'story']);
+  const mine = await s.get('/s/akbostons/pages/about');
+  // Heading card, then the facts row, then her story: no separate section, no word of who placed it.
+  assert.match(mine, /name="heading"[\s\S]*<\/form>\s*<form method="post" action="\/s\/akbostons\/blocks\/about\/[^"]+"[\s\S]*name="facts\.0\.0"[\s\S]*<\/form>\s*<form method="post" action="\/s\/akbostons\/pages\/about"[^>]*><input type="hidden" name="_part" value="([^"]+)">[\s\S]*name="text"/);
+  assert.doesNotMatch(mine, /KennelPort added|Placed with you/);
+  // The heading card saves its fields only; her story stays.
+  const before = await s.get('/s/akbostons/pages/about');
+  const story = before.match(/<textarea[^>]*name="text"[^>]*>([^<]*)</)[1];
+  const headPart = before.match(/name="_part" value="([^"]*heading[^"]*)"/)[1];
+  assert.ok(!headPart.split(',').includes('text'));
+  await s.breeder('/pages/about', { _part: headPart, enabled: '1', heading: 'Where it began' });
+  const after = await s.get('/s/akbostons/pages/about');
+  assert.match(after, /name="heading" value="Where it began"/);
+  assert.equal(after.match(/<textarea[^>]*name="text"[^>]*>([^<]*)</)[1], story);
+  assert.match(await s.render('/about'), /Where it began/);
 });
 
 test('a photo block can take the Home banner\'s frames; none to start, and never full width', async () => {

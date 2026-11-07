@@ -637,21 +637,60 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     const subject = key === 'about' ? 'page:about' : null;
 
     const pick = subject ? { groups: [{ label: `Photos for ${p.label}`, subject }], tags: [subject], alt: '' } : undefined;
-    const render = async (err, values) => ({
-      title: p.label, back: `${base}/pages`,
-      body: `${note(url)}${key === 'waitlist' ? kennelos ?? await kennelosCard() : ''}${errorBox(err)}<form method="post" action="${base}/pages/${key}" data-save class="card">
-        ${p.canHide ? fieldsWithLabel(all, values ?? current, await ctxFor(key === 'extras' ? 'extras_page' : key === 'products' ? 'products_page' : key, pick), { enabled: [say('pages.this_page_is_on'), say('pages.off_it_leaves_the')], menu_label: [say('pages.name_in_the_menu_2'), `Leave empty for "${p.label}".`] }) : fieldsWithLabel(all, values ?? current, await ctxFor(key, pick), { menu_label: [say('pages.name_in_the_menu'), `Leave empty for "${p.label}".`] })}
-        <button class="primary">${esc(say('pages.save_2'))}</button></form>
-        ${key === 'waitlist' ? await waitlistLinks() : listLinkFor(key)}${key === 'about' ? await embedsCard('about', `${base}/pages/about`, embedErr()) : ''}${await addedCards(key)}`,
-    });
+    // Her page, card by card in the order its parts sit on the page: its on/off and
+    // menu name, then its heading and its own words where those parts sit, with the
+    // blocks placed on it in between, each where it goes. Neighbouring parts of her
+    // page share one card; each card saves only its own fields (_part).
+    const render = async (err, values) => {
+      const ctx = await ctxFor(key === 'extras' ? 'extras_page' : key === 'products' ? 'products_page' : key, pick);
+      const labels = p.canHide ? { enabled: [say('pages.this_page_is_on'), say('pages.off_it_leaves_the')], menu_label: [say('pages.name_in_the_menu_2'), `Leave empty for "${p.label}".`] } : { menu_label: [say('pages.name_in_the_menu'), `Leave empty for "${p.label}".`] };
+      const blocks = pageBlocks(await loadBuild(env, site.id), key);
+      const added = new Set(addedBlocks(key, blocks).map((b) => b.id));
+      const snap = added.size ? await buildSnapshot(env, site.id) : null;
+      const names = Object.keys(all);
+      const top = names.filter((n) => n === 'enabled' || n === 'menu_label');
+      const head = names.filter((n) => ['eyebrow', 'heading', 'lede'].includes(n));
+      const rest = names.filter((n) => !top.includes(n) && !head.includes(n));
+      const segs = [];
+      const pagePart = (ns, links = false) => {
+        const last = segs.at(-1);
+        if (last?.names) { last.names.push(...ns); last.links ||= links; } else segs.push({ names: [...ns], links });
+      };
+      pagePart(top);
+      let headDone = false, restDone = false, embedsDone = key !== 'about';
+      for (const b of blocks) {
+        if (b.type === 'head' && !headDone) { pagePart(head); headDone = true; }
+        else if (b.type === 'builtin' && !restDone) { pagePart(rest, true); restDone = true; }
+        else if (b.type === 'embeds' && !embedsDone) { segs.push({ html: await embedsCard('about', `${base}/pages/about`, embedErr()) }); embedsDone = true; }
+        else if (added.has(b.id)) segs.push({ html: await addedCard(key, b, snap) });
+      }
+      if (!headDone) segs.find((x) => x.names)?.names.push(...head);
+      if (!restDone) pagePart(rest, true);
+      if (!embedsDone) segs.push({ html: await embedsCard('about', `${base}/pages/about`, embedErr()) });
+      const links = `${key === 'waitlist' ? await waitlistLinks() : listLinkFor(key)}`;
+      const pageCards = segs.filter((x) => x.names?.length).length;
+      const cards = [];
+      for (const x of segs) {
+        if (x.html) { cards.push(x.html); continue; }
+        if (!x.names.length) { if (x.links) cards.push(links); continue; }
+        const list = Object.fromEntries(x.names.map((n) => [n, all[n]]));
+        cards.push(`<form method="post" action="${base}/pages/${key}" data-save class="card">${pageCards > 1 ? `<input type="hidden" name="_part" value="${esc(x.names.join(','))}">` : ''}
+        ${fieldsWithLabel(list, values ?? current, ctx, labels)}
+        <button class="primary">${esc(say('pages.save_2'))}</button></form>${x.links ? links : ''}`);
+      }
+      return { title: p.label, back: `${base}/pages`, body: `${note(url)}${key === 'waitlist' ? kennelos ?? await kennelosCard() : ''}${errorBox(err)}${cards.join('\n')}` };
+    };
     if (request.method !== 'POST' || show) return render();
     const fd = await request.formData();
-    const values = parseForm(all, fd);
+    // One card's fields (_part), over what she has saved; or the whole page.
+    const part = fd.has('_part') ? String(fd.get('_part')).split(',').filter((n) => Object.hasOwn(all, n)) : null;
+    const list = part ? Object.fromEntries(part.map((n) => [n, all[n]])) : all;
+    const values = part ? { ...current, ...parseForm(list, fd) } : parseForm(all, fd);
     try { await savePage(env, site.id, key, values); } catch (err) {
       if (err instanceof ContentError) return render(err.message, values);
       throw err;
     }
-    if (subject) await tagFromForm(all, values, fd, [subject]);
+    if (subject) await tagFromForm(list, values, fd, [subject]);
     return redirect(`${base}/pages/${key}?note=saved`);
   }
 
@@ -685,30 +724,22 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     }).join('\n');
   }
 
-  // Blocks KennelPort placed on a page (content/blocks.js addedBlocks): hers to
-  // switch off and reword, never to move. Each is its own small form.
-  async function addedCards(key) {
-    const blocks = addedBlocks(key, pageBlocks(await loadBuild(env, site.id), key));
-    if (!blocks.length) return '';
-    const snap = await buildSnapshot(env, site.id);
+  // A block placed on a page (content/blocks.js addedBlocks): hers to switch off
+  // and reword, drawn like the rest of her page, where it sits. Its own small form.
+  async function addedCard(key, b, snap) {
+    if (BLOCK_TYPES[b.type].kind === 'own') return ownCard(key, b, snap);
     const what = { dogs: say('pages.your_dogs_from_kennelos'), litters: say('pages.your_litters_from_kennelos'), reviews: say('pages.your_reviews') };
     const nameOf = { dogs: (d) => d.call_name, litters: (l) => l.name, reviews: (r) => r.first_name || say('pages.a_family') };
-    const icon = { dogs: 'paw', litters: 'heart', reviews: 'star' };
-    const cards = [];
-    for (const b of blocks) {
-      if (BLOCK_TYPES[b.type].kind === 'own') { cards.push(await ownCard(key, b, snap)); continue; }
-      const cur = await getAddedBlock(env, site.id, key, b.id);
-      const rows = blockRows(snap, b);
-      const names = (b.limit ? rows.slice(0, b.limit) : rows).map(nameOf[b.type]);
-      const input = (n, label, max, half) => `<div class="f${half ? ' half' : ''}"><label>${esc(label)}<input name="${n}" value="${esc(cur[n] ?? '')}" maxlength="${max}" placeholder="${esc(b.w[n] ?? '')}">${b.w[n] ? `<span class="hint">Empty: "${esc(b.w[n])}".</span>` : ''}</label></div>`;
-      cards.push(`<form method="post" action="${base}/blocks/${esc(key)}/${esc(b.id)}" data-save class="card added${cur.enabled ? '' : ' off'}" id="b-${esc(b.id)}">
-        <div class="between"><h2 class="added-h">${ic(icon[b.type])}${esc(cur.heading || b.w.heading || BLOCK_TYPES[b.type].name)}</h2>
+    const cur = await getAddedBlock(env, site.id, key, b.id);
+    const rows = blockRows(snap, b);
+    const names = (b.limit ? rows.slice(0, b.limit) : rows).map(nameOf[b.type]);
+    const input = (n, label, max, half) => `<div class="f${half ? ' half' : ''}"><label>${esc(label)}<input name="${n}" value="${esc(cur[n] ?? '')}" maxlength="${max}" placeholder="${esc(b.w[n] ?? '')}">${b.w[n] ? `<span class="hint">Empty: "${esc(b.w[n])}".</span>` : ''}</label></div>`;
+    return `<form method="post" action="${base}/blocks/${esc(key)}/${esc(b.id)}" data-save class="card added${cur.enabled ? '' : ' off'}" id="b-${esc(b.id)}">
+        <div class="between"><h2 class="added-h">${esc(cur.heading || b.w.heading || BLOCK_TYPES[b.type].name)}</h2>
           <div class="switches"><label class="check">${esc(say('pages.show_it'))}<input type="checkbox" name="enabled" value="1"${cur.enabled ? ' checked' : ''}></label></div></div>
         <p class="muted small">${esc(what[b.type])}: ${names.length ? esc(names.join(', ')) : 'none right now, so it hides'}.</p>
         <div class="fgrid">${input('eyebrow', say('pages.eyebrow'), ADDED_BLOCK_FIELDS.eyebrow.max, true)}${input('heading', say('pages.heading'), ADDED_BLOCK_FIELDS.heading.max, true)}${input('lede', say('pages.line_under_it'), ADDED_BLOCK_FIELDS.lede.max, false)}</div>
-        <button class="primary">${esc(say('pages.save'))}</button></form>`);
-    }
-    return `<h2>${esc(say('pages.blocks_kennelport_added'))}</h2><p class="muted small">${esc(say('pages.placed_with_you_by'))}</p>${cards.join('')}`;
+        <button class="primary">${esc(say('pages.save'))}</button></form>`;
   }
 
   // One of the owner's own blocks (content/blocks.js, step 4): hers to switch off and
@@ -756,7 +787,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       if (b.type === 'photo') parts.push(input('caption', say('pages.own.caption'), F.caption.max, false, empty(b.w.caption), b.w.caption));
     } else if ((b.type === 'photo' || b.type === 'overlay') && !b.photo) linkNote += `<p class="muted small">${esc(say('pages.own.no_photo'))}</p>`;
     return `<form method="post" action="${base}/blocks/${esc(key)}/${esc(b.id)}" data-save class="card added${cur.enabled ? '' : ' off'}" id="b-${esc(b.id)}">
-        <div class="between"><h2 class="added-h">${ic(BLOCK_TYPES[b.type].ic === 'layers' ? 'pages' : BLOCK_TYPES[b.type].ic === 'list' ? 'pages' : BLOCK_TYPES[b.type].ic)}${esc(cur.heading || cur.label || b.w?.heading || b.w?.label || say(`pages.own.${b.type}`))}</h2>
+        <div class="between"><h2 class="added-h">${esc(cur.heading || cur.label || b.w?.heading || b.w?.label || say(`pages.own.${b.type}`))}</h2>
           <div class="switches"><label class="check">${esc(say('pages.show_it'))}<input type="checkbox" name="enabled" value="1"${cur.enabled ? ' checked' : ''}></label></div></div>
         <p class="muted small">${esc(say(`pages.own.${b.type}`))}.</p>${linkNote}${photo}
         ${parts.length ? `<div class="fgrid">${parts.join('')}</div>` : ''}
@@ -792,12 +823,30 @@ export function createScreens({ env, request, url, site, user, page, say = defau
   async function home() {
     const key = url.pathname.split('/')[4];
     if (!key) {
-      const rows = [];
-      for (const b of HOME_BLOCK_ORDER) {
-        const v = await getBlock(env, site.id, b);
-        rows.push(`<li class="item"><a href="${base}/home/${b}"><b>${esc(say(`homeblocks.title.${b}`))}</b><span>${esc(say(v.enabled ? 'homeblocks.on' : 'homeblocks.off'))}</span></a></li>`);
+      // Her Home's parts top to bottom: her blocks, her videos and posts, and the
+      // blocks placed on it, each where it sits.
+      const blocks = pageBlocks(await loadBuild(env, site.id), 'home');
+      const added = new Set(addedBlocks('home', blocks).map((b) => b.id));
+      const snap = added.size ? await buildSnapshot(env, site.id) : null;
+      const out = [];
+      let items = [];
+      const flush = () => { if (items.length) out.push(`<ul class="items">${items.join('')}</ul>`); items = []; };
+      const done = new Set();
+      const item = async (k) => {
+        done.add(k);
+        const v = await getBlock(env, site.id, k);
+        items.push(`<li class="item"><a href="${base}/home/${k}"><b>${esc(say(`homeblocks.title.${k}`))}</b><span>${esc(say(v.enabled ? 'homeblocks.on' : 'homeblocks.off'))}</span></a></li>`);
+      };
+      for (const b of blocks) {
+        if (HOME_BLOCK_ORDER.includes(b.id) && !done.has(b.id)) await item(b.id);
+        else if (b.type === 'embeds' && !done.has('embeds')) { flush(); out.push(await embedsCard('home', `${base}/home`, embedErr())); done.add('embeds'); }
+        else if (added.has(b.id)) { flush(); out.push(await addedCard('home', b, snap)); }
       }
-      return { title: say('homeblocks.home_page'), back: `${base}/pages`, body: `${note(url)}<p class="muted">${esc(say('homeblocks.your_home_page_s'))}</p><ul class="items">${rows.join('')}</ul>${await embedsCard('home', `${base}/home`, embedErr())}${await addedCards('home')}` };
+      // Her blocks not on Home just now, still hers to word.
+      for (const k of HOME_BLOCK_ORDER) if (!done.has(k)) await item(k);
+      flush();
+      if (!done.has('embeds')) out.push(await embedsCard('home', `${base}/home`, embedErr()));
+      return { title: say('homeblocks.home_page'), back: `${base}/pages`, body: `${note(url)}<p class="muted">${esc(say('homeblocks.your_home_page_s'))}</p>${out.join('')}` };
     }
     const flds = HOME_BLOCKS[key];
     if (!flds) return null;
