@@ -51,7 +51,7 @@ async function setup() {
 }
 
 test('a block nobody styled reads as before; a new block\'s settings are clean', () => {
-  for (const t of ['banner', 'button', 'divider', 'spacer', 'photo', 'overlay']) assert.deepEqual(cleanBlock(newBlock(t, `${t}-2`)), cleanBlock(cleanBlock(newBlock(t, `${t}-2`))), t);
+  for (const t of ['banner', 'button', 'divider', 'spacer', 'photo', 'overlay', 'words']) assert.deepEqual(cleanBlock(newBlock(t, `${t}-2`)), cleanBlock(cleanBlock(newBlock(t, `${t}-2`))), t);
   assert.equal(cleanBlock({ id: 'faq', type: 'faq', s: { bg: '', py: '', px: '', text: 'm' } }).s, undefined);
   assert.deepEqual(cleanBlock({ id: 'faq', type: 'faq', s: { bg: 'accent', py: 'l', text: 'huge' } }).s, { bg: 'accent', py: 'l' });
   assert.equal(cleanBlock({ id: 'x', type: 'button', link: { to: 'page', page: 'Bad Page' } }).link, null);
@@ -139,4 +139,29 @@ test('the breeder rewords, switches off, and changes the outside link, phone and
   const o = (await s.blocks('about')).at(-1);
   await s.post('about', { [`b.${o.id}.photo`]: 'ph1', [`b.${o.id}.v`]: 'middle', [`b.${o.id}.h`]: 'center', [`b.${o.id}.shade`]: 'dark', [`b.${o.id}.w.label`]: 'Apply', [`b.${o.id}.link.to`]: 'page', [`b.${o.id}.link.page`]: 'waitlist' }, { open: o.id });
   assert.match(await s.render('/about'), /<section class="own-over v-middle h-center shade-dark f-middle"><img src="\/_kp\/p\/ph1"[^>]*><div class="over"><div class="wrap"><h2>Raised with love<\/h2><a class="btn solid" href="\/waitlist">Apply<\/a>/);
+});
+
+test('the owner adds a text block: a heading, a line under it and words; the breeder can reword it', async () => {
+  const s = await setup();
+  await s.post('about', {}, { act: 'add:words' });
+  const b = (await s.blocks('about')).at(-1);
+  assert.equal(b.type, 'words');
+  assert.equal(b.align, 'center');
+  // Its settings: heading, line, words and where it sits.
+  const form = await s.get(`/admin/akbostons/pages/about?open=${b.id}`);
+  assert.match(form, new RegExp(`name="b\\.${b.id}\\.w\\.heading"`));
+  assert.match(form, new RegExp(`name="b\\.${b.id}\\.w\\.line"`));
+  assert.match(form, new RegExp(`<textarea name="b\\.${b.id}\\.w\\.body"`));
+  await s.post('about', { [`b.${b.id}.w.heading`]: 'Our promise', [`b.${b.id}.w.line`]: 'Raised at home, with care', [`b.${b.id}.w.body`]: 'Every puppy is family.\r\n\r\nWe stay in touch for life.', [`b.${b.id}.align`]: 'left' }, { open: b.id });
+  let html = await s.render('/about');
+  assert.match(html, /<section class="own-words a-left"><div class="wrap"><div class="head"><h2>Our promise<\/h2><p class="lede">Raised at home, with care<\/p><\/div><div class="prose"><p>Every puppy is family\.<\/p><p>We stay in touch for life\.<\/p><\/div><\/div><\/section>/);
+  // The breeder sees it in her Site Manager and rewords it.
+  const mine = await (await call(s.env, M, '/s/akbostons/pages/about', { headers: { cookie: (await call(s.env, M, '/ops/login', { method: 'POST', body: new URLSearchParams({ token: 'ops-token' }) })).headers.getSetCookie().map((c) => c.split(';')[0]).find((c) => c.startsWith('kp_admin=')) } })).text();
+  assert.match(mine, /<textarea name="body"/);
+  await s.breeder(`/blocks/about/${b.id}`, { enabled: '1', heading: 'Our word', body: 'Just one paragraph.' });
+  html = await s.render('/about');
+  assert.match(html, /<h2>Our word<\/h2><p class="lede">Raised at home, with care<\/p><\/div><div class="prose"><p>Just one paragraph\.<\/p><\/div>/);
+  // Switched off, or with no words at all, it draws nothing.
+  await s.breeder(`/blocks/about/${b.id}`, {});
+  assert.doesNotMatch(await s.render('/about'), /own-words/);
 });

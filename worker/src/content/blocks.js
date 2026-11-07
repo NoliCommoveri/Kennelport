@@ -40,6 +40,7 @@ export const BLOCK_TYPES = Object.freeze({
   spacer: { name: 'Spacer', ic: 'sliders', kind: 'own', hint: 'Empty space between blocks.' },
   photo: { name: 'Photo', ic: 'camera', kind: 'own', hint: 'One photo, with an optional caption.' },
   overlay: { name: 'Text over a photo', ic: 'camera', kind: 'own', hint: 'A photo with a heading, a line and a button over it.' },
+  words: { name: 'Text block', ic: 'draft', kind: 'own', hint: 'A heading, a line under it, and words: as many paragraphs as you like.' },
 });
 
 // ---------- the owner's own blocks and every block's look (step 4) ----------
@@ -69,6 +70,7 @@ export const OWN_WORDS = Object.freeze({
   button: { label: 'Join the waitlist' },
   overlay: { heading: '', line: '', label: '' },
   photo: { caption: '' },
+  words: { heading: '', line: '', body: '' },
 });
 const PHONE = /^[+()\d][\d\s().-]{5,24}$/;
 const EMAIL = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
@@ -121,6 +123,7 @@ export function newBlock(type, id) {
   if (type === 'divider') Object.assign(b, { style: 'line', width: 'wide' });
   if (type === 'spacer') Object.assign(b, { height: 'm' });
   if (type === 'photo') Object.assign(b, { photo: null, shape: 'wide', focus: 'middle', w: { caption: '' }, mayChange: true });
+  if (type === 'words') Object.assign(b, { w: { heading: 'A few words from us', line: '', body: '' }, align: 'center' });
   if (type === 'overlay') Object.assign(b, { photo: null, focus: 'middle', w: { heading: 'Raised with love', line: '', label: '' }, link: null, v: 'bottom', h: 'left', shade: 'medium', mayChange: true });
   return b;
 }
@@ -239,7 +242,9 @@ export const hersOn = (key, b) => key === 'home' && BREEDER_SWITCH.includes(b.id
 const pick = (v, opts, dflt) => (Object.hasOwn(opts, v) ? v : dflt);
 const list = (v, opts) => (Array.isArray(v) ? [...new Set(v.filter((x) => Object.hasOwn(opts, x)))] : null);
 const limitOf = (v) => (v == null || v === '' ? null : Number.isInteger(Number(v)) && Number(v) >= 1 && Number(v) <= LIMIT_MAX ? Number(v) : null);
-const words = (w, keys = ['eyebrow', 'heading', 'lede']) => Object.fromEntries(Object.entries(w && typeof w === 'object' ? w : {}).filter(([k, v]) => keys.includes(k) && typeof v === 'string').map(([k, v]) => [k, v.trim().slice(0, k === 'label' ? 40 : 200)]));
+// A text block's words are paragraphs; every other word is one line.
+const WORD_MAX = { label: 40, body: 4000 };
+const words = (w, keys = ['eyebrow', 'heading', 'lede']) => Object.fromEntries(Object.entries(w && typeof w === 'object' ? w : {}).filter(([k, v]) => keys.includes(k) && typeof v === 'string').map(([k, v]) => [k, (k === 'body' ? v.replace(/\r\n?/g, '\n') : v).trim().slice(0, WORD_MAX[k] ?? 200)]));
 const PHOTO_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 // A button's link, as the build keeps it, or null (no button).
@@ -297,6 +302,7 @@ export function cleanBlock(b) {
     out.look = pick(b.look, BUTTON_LOOK, 'solid');
     out.align = pick(b.align, ALIGN, 'center');
   }
+  if (b.type === 'words') { out.w = words(b.w, ['heading', 'line', 'body']); out.align = pick(b.align, ALIGN, 'center'); }
   if (b.type === 'divider') { out.style = pick(b.style, DIVIDER_STYLE, 'line'); out.width = pick(b.width, DIVIDER_WIDTH, 'wide'); }
   if (b.type === 'spacer') out.height = pick(b.height, SPACER_HEIGHT, 'm');
   if (b.type === 'photo' || b.type === 'overlay') {

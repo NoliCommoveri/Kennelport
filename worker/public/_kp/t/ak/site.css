@@ -658,6 +658,17 @@ dialog.viewer img { width: auto; height: auto; max-width: 96vw; max-height: 88dv
 .own-divider.w-narrow hr { max-width: 160px; } .own-divider.w-wide hr { max-width: 720px; }
 .own-divider .orn { width: 120px; height: 60px; color: var(--accent); opacity: .5; }
 
+/* A text block: the template's section head and prose, centred like every other
+   section head, or set to one side. */
+.own-words { padding-block: clamp(32px, 5vw, 56px); }
+.own-words .head { margin-bottom: 20px; }
+.own-words .head:last-child { margin-bottom: 0; }
+.own-words.a-left .head { justify-items: start; text-align: left; }
+.own-words.a-left .prose { margin-inline: 0; }
+.own-words.a-center .prose { text-align: center; }
+.own-words.a-right .head { justify-items: end; text-align: right; }
+.own-words.a-right .prose { margin-inline: auto 0; text-align: right; }
+
 .own-spacer.h-xs { height: 12px; } .own-spacer.h-s { height: 28px; } .own-spacer.h-m { height: 56px; } .own-spacer.h-l { height: 96px; }
 
 .own-photo { margin: 0 auto; padding-block: 20px; }

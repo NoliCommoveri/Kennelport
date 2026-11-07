@@ -723,6 +723,8 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     const F = ADDED_BLOCK_FIELDS;
     const parts = [];
     if (b.type === 'banner' || b.type === 'overlay') parts.push(input('heading', say('pages.heading'), F.heading.max, true, empty(b.w.heading), b.w.heading), input('label', say('pages.own.button_words'), F.label.max, true, empty(b.w.label), b.w.label), input('line', say('pages.own.a_line'), F.line.max, false, empty(b.w.line), b.w.line));
+    if (b.type === 'words') parts.push(input('heading', say('pages.heading'), F.heading.max, true, empty(b.w.heading), b.w.heading), input('line', say('pages.line_under_it'), F.line.max, true, empty(b.w.line), b.w.line),
+      `<div class="f"><label>${esc(say('pages.own.words_body'))}<textarea name="body" rows="6" maxlength="${F.body.max}"${b.w.body ? ` placeholder="${esc(b.w.body)}"` : ''}>${esc(cur.body ?? '')}</textarea><span class="hint">${esc(say('pages.own.words_body_hint'))}</span></label></div>`);
     if (b.type === 'button') parts.push(input('label', say('pages.own.button_words'), F.label.max, true, empty(b.w.label), b.w.label));
     const l = b.link;
     let linkNote = '';
@@ -757,7 +759,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       const own = BLOCK_TYPES[b.type].kind === 'own';
       const pick = (...ks) => Object.fromEntries(ks.filter((k) => fd.has(k)).map((k) => [k, fd.get(k)]));
       await saveAddedBlock(env, site.id, page, block, own
-        ? { enabled: fd.get('enabled') != null, ...pick('heading', 'line', 'url', 'phone', 'email', 'caption'), ...(fd.has('button_label') ? { label: fd.get('button_label') } : {}), ...(b.mayChange ? pick('photo_id') : {}) }
+        ? { enabled: fd.get('enabled') != null, ...pick('heading', 'line', 'url', 'phone', 'email', 'caption', 'body'), ...(fd.has('button_label') ? { label: fd.get('button_label') } : {}), ...(b.mayChange ? pick('photo_id') : {}) }
         : { enabled: fd.get('enabled') != null, eyebrow: fd.get('eyebrow'), heading: fd.get('heading'), lede: fd.get('lede') });
     } catch (err) {
       if (!(err instanceof ContentError)) throw err;

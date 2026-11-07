@@ -1781,3 +1781,16 @@ with new sections and a new building order. Docs only; nothing built yet.
   (KennelOS's same-day change, `siteExport.js` `dogEntry`).
 - Tests: the linked sample's Pippa* carries `disposition: keeping`; `rules.test.js`
   ticks Keeping only and checks Pippa* leaves the site once she's Available.
+
+## 2026-11-07: text block (one of the owner's own blocks)
+
+- Add a block now offers **Text block** on any page, as many as she likes: a heading,
+  a line under it and words (a blank line starts a new paragraph), set left, centred
+  (the default) or right, with every block's look (`content/blocks.js` `words`). The
+  site draws it with the template's own section head and prose (`.head`, `.lede`,
+  `.prose`; `render/pages.js` `ownBlock`, `.own-words` in `site.css`), so no new look.
+- The breeder can switch it off and reword the heading, the line and the words in her
+  Site Manager (`block_switches` content gains `body`; no migration, it's JSON). Her
+  wording for it is in the owner's list: `pages.own.words`, `pages.own.words_body`,
+  `pages.own.words_body_hint`.
+- Tests: `ownblocks.test.js` adds, words, aligns, rewords and switches one off.

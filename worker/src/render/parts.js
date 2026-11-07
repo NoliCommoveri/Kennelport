@@ -122,7 +122,7 @@ export const addedOn = (snap, key, b) => addedRow(snap, key, b)?.enabled !== fal
 export function addedWords(snap, key, b) {
   const her = addedRow(snap, key, b) ?? {};
   const w = { ...b.w };
-  for (const k of ['eyebrow', 'heading', 'lede', 'line', 'label', 'caption']) if (her[k]) w[k] = her[k];
+  for (const k of ['eyebrow', 'heading', 'lede', 'line', 'label', 'caption', 'body']) if (her[k]) w[k] = her[k];
   return w;
 }
 

@@ -257,6 +257,12 @@ function ownBlock(snap, ctx, b, key) {
     if (!link || !w.label) return '';
     return `<div class="own-button wrap a-${b.align}">${aTo(link, `btn ${b.look} sz-${b.size}`, w.label)}</div>`;
   }
+  if (b.type === 'words') {
+    if (!w.heading && !w.line && !w.body) return '';
+    // The template's own section head and prose (as Getting your pup home draws them).
+    const top = w.heading || w.line ? `<div class="head">${w.heading ? `<h2>${esc(w.heading)}</h2>` : ''}${w.line ? `<p class="lede">${esc(w.line)}</p>` : ''}</div>` : '';
+    return `<section class="own-words a-${b.align}"><div class="wrap">${top}${w.body ? `<div class="prose">${paras(w.body)}</div>` : ''}</div></section>`;
+  }
   if (b.type === 'divider') {
     const inner = b.style === 'ornament' ? '<svg class="orn" aria-hidden="true"><use href="#sprig"/></svg>' : '<hr>';
     return `<div class="own-divider ${b.style} w-${b.width}${b.width === 'full' ? '' : ' wrap'}" role="presentation">${inner}</div>`;
