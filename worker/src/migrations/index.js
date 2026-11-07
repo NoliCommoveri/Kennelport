@@ -36,6 +36,7 @@ import coOwned from './0025_co_owned.sql';
 import gettingHome from './0026_getting_home.sql';
 import siteBuilds from './0027_site_builds.sql';
 import demo from './0028_demo.sql';
+import outsideDogs from './0029_outside_dogs.sql';
 
 export const MIGRATIONS = [
   { id: '0001', name: 'schema', sql: schema },
@@ -66,4 +67,5 @@ export const MIGRATIONS = [
   { id: '0026', name: 'getting_home', sql: gettingHome },
   { id: '0027', name: 'site_builds', sql: siteBuilds },
   { id: '0028', name: 'demo', sql: demo },
+  { id: '0029', name: 'outside_dogs', sql: outsideDogs },
 ];

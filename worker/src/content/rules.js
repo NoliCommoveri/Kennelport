@@ -48,6 +48,12 @@ export const WORDS = [
   ['dogs', 'Co-owned', [
     ['co_owned_eyebrow', 'Co-owned', 'Eyebrow'], ['co_owned_heading', 'Shared with friends', 'Heading (the breeder can reword)'],
     ['co_owned_lede', 'Dogs we co-own, living with partner kennels.', 'Line under it (the breeder can reword)'],
+    ['co_with', 'with {kennel}', 'On a card: the kennel a co-owned dog lives with ({kennel})'],
+    ['co_unnamed', 'Lives with a partner kennel', 'On a card: a co-owned dog living with a kennel not named'],
+  ]],
+  ['dogs', 'Outside dogs', [
+    ['outside_owner', 'Owned by {kennel}', 'On a card: an outside dog\'s owner ({kennel})'],
+    ['outside_fact', 'Owned by', 'On an outside dog\'s page, in its facts'],
   ]],
   ['wording', 'Litter cards', [
     ['litter_current', 'Current litter', 'A current litter'], ['litter_coming', 'Coming up', 'Born, deposits not open yet'],

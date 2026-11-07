@@ -24,7 +24,7 @@ import {
   CUSTOM_KEY, CUSTOM_PAGE, ADDED_BLOCK_FIELDS,
 } from './model.js';
 import { PROVIDERS } from '../embeds.js';
-import { coOwnedRules, unlinkPartnerStatements } from './records.js';
+import { coOwnedRules, outsideRules, unlinkPartnerStatements } from './records.js';
 
 const SECTIONS = ['site', 'pages', 'home', 'blocks', 'dogs', 'litters', 'reviews', 'steps', 'expanders', 'extras', 'products', 'partners', 'payment', 'questions', 'albums', 'embeds'];
 const MAX_ITEMS = 200;
@@ -304,7 +304,8 @@ export async function importContent(env, siteId, doc) {
 
   if (clean.dogs) {
     clean.dogs.forEach((d, i) => {
-      const { health, lives_with, co_owned_with, ...dog } = d;
+      const { health, lives_with, co_owned_with, ...rest } = d;
+      const dog = outsideRules({ ...rest, outside: rest.outside ?? 0 });
       const kennels = coOwnedRules({
         co_owned: dog.co_owned ?? 0, lives_away: dog.lives_away ?? 0,
         lives_with_kennel_id: lives_with ? partnerId.get(lives_with.toLowerCase()) : null,
@@ -466,7 +467,7 @@ export async function exportContent(env, siteId) {
     return out;
   };
   doc.dogs = dogs.map((d) => ({
-    ...bools(pick(strip(d, SYSTEM), Object.keys(DOG_FIELDS)), ['show_on_site', 'upcoming', 'for_sale', 'co_owned', 'lives_away']),
+    ...bools(pick(strip(d, SYSTEM), Object.keys(DOG_FIELDS)), ['show_on_site', 'upcoming', 'for_sale', 'co_owned', 'lives_away', 'outside']),
     ...kennelNames(d),
     health: health.filter((h) => h.dog_id === d.id).map((h) => bools(pick(strip(h, SYSTEM), Object.keys(HEALTH_FIELDS)), ['normal', 'show'])),
   }));

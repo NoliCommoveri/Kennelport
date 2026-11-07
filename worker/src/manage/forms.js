@@ -47,6 +47,9 @@ export const LABELS = {
     lives_away: ['Lives with a co-owner', 'On: it shows only under Co-owned on your Dogs page, not with your own dogs or on Home. Off: it lives with you and shows like your own dogs.'],
     lives_with_kennel_id: ['Lives with', 'The co-owner\'s kennel it lives with now.'],
     co_owned_with_ids: ['Co-owned with', 'Its co-owners\' kennels. Add them under Partner kennels.'],
+    outside: ['Outside dog', 'Another kennel\'s dog, like a stud you bred to. It never shows with your own dogs or on Home; a litter can name it as dam or sire, and a Dog cards block can list outside dogs.'],
+    owner_name: ['Owned by', 'The kennel that owns it, for example "Oakridge Bostons".'],
+    owner_url: ['Owner\'s website', 'Their name links here on its page.'],
     co_owned_heading: ['Co-owned section heading', 'Leave empty for "Shared with friends". The section lists co-owned dogs living with a co-owner.'],
     co_owned_lede: ['Line under the Co-owned heading', 'Leave empty for "Dogs we co-own, living with partner kennels."'],
   },
@@ -288,7 +291,7 @@ export function field(name, f, value, ctx) {
     }
     case 'dogid': {
       const dogs = ctx.dogs ?? [];
-      return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"><option value="">—</option>${dogs.map((d) => `<option value="${esc(d.id)}"${d.id === value ? ' selected' : ''}>${esc(d.call_name)}</option>`).join('')}</select></label>`;
+      return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"><option value="">—</option>${dogs.map((d) => `<option value="${esc(d.id)}"${d.id === value ? ' selected' : ''}>${esc(d.call_name)}${d.outside && ctx.say ? ` (${esc(ctx.say('doglist.outside'))})` : ''}</option>`).join('')}</select></label>`;
     }
     case 'photo':
       return photoPicker(name, label, hint, value ? [value] : [], ctx, { multiple: false });
@@ -399,7 +402,7 @@ function photoPicker(name, label, hint, chosen, ctx, { multiple, max }) {
 // name still shows, under More, so a new field is never lost. Kinds without groups keep
 // the one plain list.
 const GROUPS = {
-  dogs: [['About', ['call_name', 'sex', 'registered_name', 'date_of_birth', 'color', 'weight', 'role', 'registry', 'titles']], ['Photo and story', ['photo_id', 'bio']], ['Where they show', ['status', 'health_display', 'price', 'died_on']], ['Co-owned', ['lives_with_kennel_id', 'co_owned_with_ids'], (v) => Boolean(v?.co_owned)]],
+  dogs: [['About', ['call_name', 'sex', 'registered_name', 'date_of_birth', 'color', 'weight', 'role', 'registry', 'titles']], ['Photo and story', ['photo_id', 'bio']], ['Where they show', ['status', 'health_display', 'price', 'died_on']], ['Co-owned', ['lives_with_kennel_id', 'co_owned_with_ids'], (v) => Boolean(v?.co_owned)], ['Outside dog', ['owner_name', 'owner_url'], (v) => Boolean(v?.outside)]],
   partners: [['The kennel', ['name', 'url', 'photo_id']]],
   litters: [['The litter', ['name', 'stage', 'summary']], ['Parents', ['dam_id', 'sire_id', 'dam', 'sire', 'dam_name', 'sire_name']], ['Dates', ['born_on', 'ready_on', 'deposits_on']], ['For a planned litter', ['plan_label', 'expected_label', 'ready_label'], (v) => v?.stage === 'planned'], ['Prices', ['price_female', 'price_male', 'full_reg_female', 'full_reg_male', 'deposit_female', 'deposit_male', 'price_note']]],
   puppies: [['The puppy', ['name', 'collar', 'sex', 'color', 'status', 'registration', 'registry', 'price']], ['Photo and story', ['photo_id', 'bio', 'more_photos_url']]],

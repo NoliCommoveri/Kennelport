@@ -37,7 +37,7 @@ import { makePreviewToken, servePhoto, SITE_CSP } from '../site.js';
 import { renderPage } from '../render/index.js';
 import { DEMO_STEPS } from '../kennelos/demo.js';
 import {
-  BLOCK_TYPES, DOG_STATUS, ANY3, DOG_FLAGS, DOG_ORDER, DOG_STYLE, STAGES, REVIEW_STYLE, SEXES, DOG_ITEMS, LITTER_ITEMS, LITTER_PAIR,
+  BLOCK_TYPES, DOG_STATUS, ANY3, DOG_FLAGS, DOG_ORDER, DOG_STYLE, STAGES, REVIEW_STYLE, SEXES, DOG_ITEMS, LIGHT_ITEMS, DOG_STACKED, LITTER_ITEMS, LITTER_PAIR,
   LITTER_ROWS, REVIEW_ITEMS, REVIEW_WHO, BlockError, blocksFromForm, moved, newBlock,
   pageBlocks, pageChanged, pagesChanged, withPage, addable, fits, hersOn, blockName, blockHint, isBuilt, BUILT_PAGES, PAGE_PARTS, headFor, isCustom, customPages, addPage, withPageInfo, withoutPage, pathFor, STARTS,
   menuOf, menuChanged, withMenu, groupOf, MenuError, MENU_PLACES, MENU_LIMITS,
@@ -471,7 +471,12 @@ function blockSettings(snap, key, b, pics) {
     data = `${fld('Sex', seg(k('f.sex'), b.f.sex, SEXES))}${fld('Status', chips(k('f.status'), b.f.status, DOG_STATUS))}
       <div class="fgrid">${DOG_FLAGS.map(([f, l]) => select(k(`f.${f}`), b.f[f], ANY3, l)).join('')}${select(k('order'), b.order, DOG_ORDER, 'Order')}</div>
       ${fld('Style', seg(k('style'), b.style, DOG_STYLE))}`;
-    show = `<div class="twocol">${showList(b, 'front', DOG_ITEMS, 'Front of the card', 'The photo always fills the front when it is on.')}${showList(b, 'back', DOG_ITEMS, 'Back of the card')}</div>`;
+    // The lists for the style it has now (save after changing the style to see its own).
+    const lines = DOG_STACKED.includes(b.style) ? `<label class="check"><input type="checkbox" name="${k('lines')}"${b.lines ? ' checked' : ''}> <span>A line between cards where they stack<span class="hint">A 4px bar in the scheme's accent colour between one card and the next, where they sit one under another${b.style === 'flip' ? ' (on a phone)' : ' (on a phone or a tablet)'}.</span></span></label>` : '';
+    show = b.style === 'light' ? showList(b, 'light', LIGHT_ITEMS, 'Top to bottom', 'Where it lives shows only for a co-owned dog living with a co-owner, or an outside dog with its owner filled in.')
+      : b.style === 'beside' ? showList(b, 'beside', DOG_ITEMS, 'Beside the photo, then under it', 'The bio and everything after it go under the photo and details, across the card.')
+        : `<div class="twocol">${showList(b, 'front', DOG_ITEMS, 'Front of the card', 'The photo always fills the front when it is on.')}${showList(b, 'back', DOG_ITEMS, 'Back of the card')}</div>`;
+    show += lines;
   } else if (b.type === 'litters') {
     data = fld('Stage', chips(k('f.stage'), b.f.stage, STAGES));
     show = `${showList(b, 'items', LITTER_ITEMS, 'Top to bottom')}<div class="twocol">${showSwitches(b, 'pair', LITTER_PAIR, 'The pair')}${showSwitches(b, 'rows', LITTER_ROWS, 'Facts')}</div>
@@ -609,7 +614,7 @@ function pagePreview(snap, key, blocks, site) {
     else if (b.type === 'text') out.push(h.story.heading || h.story.text ? `<div class="pvb sand">${headOf(h.story, null, h.story.heading)}<div class="pvg"><span class="ph"></span><div class="lines"><i></i><i></i><i></i></div></div></div>` : ghost(b, 'no story yet, so it hides'));
     else if (b.type === 'embeds') out.push(ghost(b, `shows the videos and posts she puts on ${pageLabel(snap, key)}`));
     else if (b.type === 'band') out.push(`<div class="pvb deep"><h3>${esc(h.waitlist.heading || 'Hoping for a puppy of your own?')}</h3><span class="pv-pill">${esc(h.waitlist.button_label || 'Join the waitlist')}</span></div>`);
-    else if (b.type === 'dogs') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Our dogs', 'Meet our dogs')}<div class="pvg${b.style === 'flip' ? '' : ' slide'}">${names.map((nm) => `<div class="pvc${b.style === 'light' ? ' light' : ' flip'}"><span class="ph"></span><div class="t"><b>${esc(nm)}</b></div></div>`).join('')}</div></div>`);
+    else if (b.type === 'dogs') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Our dogs', 'Meet our dogs')}<div class="pvg${b.style === 'flip' || b.style === 'beside' ? '' : ' slide'}">${names.map((nm) => `<div class="pvc${b.style === 'light' ? ' light' : b.style === 'beside' ? ' beside' : ' flip'}"><span class="ph"></span><div class="t"><b>${esc(nm)}</b></div></div>`).join('')}</div></div>`);
     else if (b.type === 'litters') out.push(`<div class="pvb sand">${headOf(wordsOf(b), 'Litters', 'Current and upcoming')}${names.map((nm) => `<div class="pv-row"><b>${esc(nm)}</b></div>`).join('')}</div>`);
     else if (b.type === 'banner') out.push(`<div class="pvb deep">${b.w.heading ? `<h3>${esc(addedWords(snap, key, b).heading)}</h3>` : ''}${b.w.label && b.link ? `<span class="pv-pill">${esc(addedWords(snap, key, b).label)}</span>` : ''}</div>`);
     else if (b.type === 'button') out.push(`<div class="pvb"><div class="pv-row"><span class="pv-pill">${esc(addedWords(snap, key, b).label || 'Button')}</span></div></div>`);

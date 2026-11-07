@@ -88,9 +88,11 @@ export const HOME_ONLY = Object.freeze(['hero', 'facts', 'text', 'band']);
 // Filters and choices, with the editor's words.
 export const DOG_STATUS = Object.freeze({ active: 'Active', retired: 'Retired', remembered: 'In memory' });
 export const ANY3 = Object.freeze({ no: 'Leave out', any: 'Include', only: 'Only these' });
-export const DOG_FLAGS = Object.freeze([['upcoming', 'Up and coming'], ['sale', 'Looking for a home'], ['away', 'Lives with a co-owner']]);
+export const DOG_FLAGS = Object.freeze([['upcoming', 'Up and coming'], ['sale', 'Looking for a home'], ['away', 'Lives with a co-owner'], ['outside', 'Outside dogs (other kennels\' studs)']]);
 export const DOG_ORDER = Object.freeze({ own: "The breeder's order", age: 'Oldest first', young: 'Youngest first', name: 'By name' });
-export const DOG_STYLE = Object.freeze({ slider: 'Slider', flip: 'Flip cards', light: 'Light cards' });
+export const DOG_STYLE = Object.freeze({ slider: 'Slider', flip: 'Flip cards', light: 'Light cards', beside: 'Photo beside details' });
+// The styles whose cards stack one under another on a phone: they can have a line between cards.
+export const DOG_STACKED = Object.freeze(['flip', 'beside']);
 export const STAGES = Object.freeze({ current: 'Current', planned: 'Planned', past: 'Past' });
 export const REVIEW_STYLE = Object.freeze({ slider: 'Slider', grid: 'Cards' });
 export const SEXES = Object.freeze({ any: 'Any', female: 'Girls', male: 'Boys' });
@@ -108,7 +110,10 @@ export const COLS_ACROSS = Object.freeze({ 2: 'Two', 3: 'Three' });
 export const DOG_ITEMS = Object.freeze({
   photo: 'Photo', call: 'Call name', reg: 'Registered name', role: 'Breed and role', titles: 'Titles',
   tests: 'Health tests (or details)', bio: 'Bio', ask: '“Ask about” and price (for sale)', profile: 'View profile',
+  where: 'Where it lives (co-owned) or its owner (outside dogs)',
 });
+// A light card's items: its sex and role on one line, as the Co-owned section has it.
+export const LIGHT_ITEMS = Object.freeze({ photo: 'Photo', call: 'Call name', reg: 'Registered name', line: 'Sex and role', titles: 'Titles', where: 'Where it lives (co-owned) or its owner (outside dogs)' });
 export const LITTER_ITEMS = Object.freeze({ eyebrow: 'Eyebrow (Current litter, Coming up…)', pair: 'The pair', facts: 'Facts', summary: 'Summary (planned litters)', link: 'Meet the puppies or See the waitlist' });
 export const LITTER_PAIR = Object.freeze({ photos: "The parents' photos", name: "The litter's name", parents: "The pair's names" });
 export const LITTER_ROWS = Object.freeze({ born: 'Born', deposits: 'Deposits from', puppies: 'Puppies', going: 'Going home or Ready now', expected: 'Expected (planned)', price: 'Price', deposit: 'Deposit' });
@@ -116,13 +121,16 @@ export const REVIEW_ITEMS = Object.freeze({ stars: 'Stars', quote: 'The quote', 
 export const REVIEW_WHO = Object.freeze({ photo: 'Photo', name: 'First name and town', family: '“{pup}’s family, home {month}”' });
 
 export const SHOW_DEFAULT = Object.freeze({
-  dogs: { front: ['photo', 'call', 'reg', 'role', 'titles'], back: ['call', 'reg', 'tests', 'bio', 'ask', 'profile'] },
+  dogs: { front: ['photo', 'call', 'reg', 'role', 'titles'], back: ['call', 'reg', 'tests', 'bio', 'ask', 'profile'],
+    light: ['photo', 'call', 'line', 'where'],
+    // Photo beside details: the bio and what follows it go under both, across the card.
+    beside: ['photo', 'call', 'reg', 'role', 'titles', 'where', 'tests', 'bio', 'ask', 'profile'] },
   litters: { items: ['eyebrow', 'pair', 'facts', 'summary', 'link'], pair: ['photos', 'name', 'parents'], rows: Object.keys(LITTER_ROWS), names: 2 },
   reviews: { items: ['stars', 'quote', 'who'], who: ['photo', 'name', 'family'] },
 });
 
 const linkDefault = () => ({ to: 'page', page: 'waitlist' });
-const dogsF = (o = {}) => ({ sex: 'any', status: ['active'], upcoming: 'no', sale: 'no', away: 'no', ...o });
+const dogsF = (o = {}) => ({ sex: 'any', status: ['active'], upcoming: 'no', sale: 'no', away: 'no', outside: 'no', ...o });
 
 // A new block of a type, as Add a block makes it.
 export function newBlock(type, id) {
@@ -303,11 +311,14 @@ export function cleanBlock(b) {
   if (b.type === 'dogs') {
     const D = SHOW_DEFAULT.dogs;
     const f = b.f ?? {};
-    out.f = { sex: pick(f.sex, SEXES, 'any'), status: list(f.status, DOG_STATUS) ?? ['active'], upcoming: pick(f.upcoming, ANY3, 'no'), sale: pick(f.sale, ANY3, 'no'), away: pick(f.away, ANY3, 'no') };
+    out.f = { sex: pick(f.sex, SEXES, 'any'), status: list(f.status, DOG_STATUS) ?? ['active'], upcoming: pick(f.upcoming, ANY3, 'no'), sale: pick(f.sale, ANY3, 'no'), away: pick(f.away, ANY3, 'no'), outside: pick(f.outside, ANY3, 'no') };
     out.order = pick(b.order, DOG_ORDER, 'own');
     out.style = pick(b.style, DOG_STYLE, 'slider');
     out.limit = limitOf(b.limit);
-    out.show = { front: list(b.show?.front, DOG_ITEMS) ?? [...D.front], back: list(b.show?.back, DOG_ITEMS) ?? [...D.back] };
+    out.show = { front: list(b.show?.front, DOG_ITEMS) ?? [...D.front], back: list(b.show?.back, DOG_ITEMS) ?? [...D.back],
+      light: list(b.show?.light, LIGHT_ITEMS) ?? [...D.light], beside: list(b.show?.beside, DOG_ITEMS) ?? [...D.beside] };
+    // A 4px accent line between cards where they stack (flip cards on a phone, photo beside details).
+    out.lines = b.lines === true;
   } else if (b.type === 'litters') {
     const D = SHOW_DEFAULT.litters;
     out.f = { stage: list(b.f?.stage, STAGES) ?? ['current', 'planned'] };
@@ -432,16 +443,19 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
     if (get(k('present')) == null) return b;
     const next = structuredClone(b);
     const order = (face, items) => {
+      // A list the form didn't show (another style's) stays as it was.
+      if (get(k(`show.${face}`)) == null && b.show?.[face]) return b.show[face];
       const ord = String(get(k(`show.${face}`)) ?? '').split(',').filter((x) => Object.hasOwn(items, x));
       const all = [...ord, ...Object.keys(items).filter((x) => !ord.includes(x))];
       return all.filter((x) => get(k(`show.${face}.${x}`)) != null);
     };
     if (b.type === 'dogs') {
-      next.f = { sex: get(k('f.sex')), status: getAll(k('f.status')), upcoming: get(k('f.upcoming')), sale: get(k('f.sale')), away: get(k('f.away')) };
+      next.f = { sex: get(k('f.sex')), status: getAll(k('f.status')), upcoming: get(k('f.upcoming')), sale: get(k('f.sale')), away: get(k('f.away')), outside: get(k('f.outside')) };
       next.order = get(k('order'));
       next.style = get(k('style'));
       next.limit = get(k('limit'));
-      next.show = { front: order('front', DOG_ITEMS), back: order('back', DOG_ITEMS) };
+      next.show = { front: order('front', DOG_ITEMS), back: order('back', DOG_ITEMS), light: order('light', LIGHT_ITEMS), beside: order('beside', DOG_ITEMS) };
+      next.lines = DOG_STACKED.includes(b.style) ? get(k('lines')) != null : b.lines;
     } else if (b.type === 'litters') {
       next.f = { stage: getAll(k('f.stage')) };
       next.limit = get(k('limit'));
@@ -778,7 +792,7 @@ export const PROFILE_FIXED = Object.freeze({ dog: ['name'], puppy: ['name'], lit
 export const PROFILE_ONLY = Object.freeze({ dog: {}, puppy: {}, litter: { pair: 'head', summary: 'head', faq: 'body', parents: 'body', facts: 'body', note: 'body', fullreg: 'body', share: 'body', pups: 'body', badges: 'body', embeds: 'body', albums: 'body' } });
 // The facts on a dog's and a puppy's page, today's order.
 export const PROFILE_FACTS = Object.freeze({
-  dog: { sex: 'Sex', color: 'Color', born: 'Born', weight: 'Weight', registry: 'Registry', titles: 'Titles', co_owned: 'Co-owned with', lives_with: 'Lives with' },
+  dog: { sex: 'Sex', color: 'Color', born: 'Born', weight: 'Weight', registry: 'Registry', titles: 'Titles', co_owned: 'Co-owned with', lives_with: 'Lives with', owner: 'Owned by (outside dogs)' },
   puppy: { sex: 'Sex', color: 'Color', collar: 'Collar', status: 'Status', price: 'Price', registration: 'Registration', registry: 'Registry', parents: 'Parents', born: 'Born' },
 });
 // Today's pages: each part's items in order. What isn't listed is off (a dog's

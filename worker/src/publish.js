@@ -86,7 +86,7 @@ export async function buildSnapshot(env, siteId) {
   const dogs = dogsRaw.map((d) => ({
     // An asking price only for a dog looking for a home, with Show other prices on.
     ...keep(d, [...SYSTEM, 'health_display', 'died_on', ...(d.for_sale && site.show_other_prices ? [] : ['price'])]),
-    upcoming: Boolean(d.upcoming), for_sale: Boolean(d.for_sale),
+    upcoming: Boolean(d.upcoming), for_sale: Boolean(d.for_sale), outside: Boolean(d.outside),
     // A co-owned dog living with a co-owner, and the kennels it may name.
     co_owned: Boolean(d.co_owned), lives_away: Boolean(d.co_owned && d.lives_away),
     lives_with_kennel_id: d.co_owned && d.lives_away && partnerIds.has(d.lives_with_kennel_id) ? d.lives_with_kennel_id : null,

@@ -69,6 +69,11 @@ export const DOG_FIELDS = {
   lives_away: BOOL,
   lives_with: S(80),
   co_owned_with: { type: 'list', max: PARTNERS_PER_DOG, itemMax: 80 },
+  // An outside dog (migration 0029): another kennel's, like a stud she bred to.
+  // Never in her own groups or on Home; a litter can name it as dam or sire.
+  outside: BOOL,
+  owner_name: S(80),
+  owner_url: URL_,
 };
 
 // A partner kennel (docs/Co_Owned_Dogs_Plan.md): one her co-owned dogs are shared

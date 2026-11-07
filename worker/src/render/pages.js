@@ -3,7 +3,7 @@
 // "no such page".
 import {
   esc, attr, fmtDate, priceText, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, parentName,
-  litterCard, parentCards, litterFacts, dogCard, coCard, partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
+  litterCard, parentCards, litterFacts, dogCard, coCard, besideCard, partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
   paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
   dogGroups, dogsFor, depositsAhead, puppyStatus, puppyPriceText, regText, statusRule, rulesOf, pricesOff, sitePrice, word, sexWord, fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
   faqBlock, familyLogin as familyLoginLink, addedOn, addedWords, addedRow, customPage,
@@ -398,9 +398,13 @@ function dogsBlock(snap, ctx, b, key = 'home') {
   const w = blockWords(snap, b, key);
   const ctl = pageOn(snap, 'dogs', ctx) ? `<a class="more" href="/dogs">${esc(w.link_label || 'See all our dogs')}</a>` : '';
   const card = (d) => dogCard(snap, d, { sale: saleOf(snap, ctx, d), show: b.show });
-  const body = b.style === 'light' ? slider(list.map((d) => coCard(snap, d)), { cls: 'light', ctl })
-    : b.style === 'flip' ? `<div class="grid${list.length === 1 ? ' narrow-grid' : ''}">${list.map(card).join('')}</div>${ctl ? `<p class="center mt-26">${ctl}</p>` : ''}`
-      : slider(list.map(card), { ctl });
+  // lines: a 4px accent line between cards where they stack (site.css .lines).
+  const lines = b.lines ? ' lines' : '';
+  const more = ctl ? `<p class="center mt-26">${ctl}</p>` : '';
+  const body = b.style === 'light' ? slider(list.map((d) => coCard(snap, d, { show: b.show })), { cls: 'light', ctl })
+    : b.style === 'flip' ? `<div class="grid${list.length === 1 ? ' narrow-grid' : ''}${lines}">${list.map(card).join('')}</div>${more}`
+      : b.style === 'beside' ? `<div class="dogrows${list.length === 1 ? ' one' : ''}${lines}">${list.map((d) => besideCard(snap, d, { sale: saleOf(snap, ctx, d), show: b.show })).join('')}</div>${more}`
+        : slider(list.map(card), { ctl });
   return `<section class="section"><div class="wrap">
       ${head(w.eyebrow ?? 'Our dogs', blockHead(key, b, w, 'Meet our dogs'), w.lede, { ornament: true })}
       ${body}
@@ -620,6 +624,8 @@ export function dog(snap, ctx, slug) {
     const k = partnerOf(snap, d.lives_with_kennel_id);
     fact.lives_with = ['Lives with', k ? `<span class="pk">${partnerLogo(snap, k)}${partnerLink(k)}</span>` : 'A partner kennel'];
   }
+  // An outside dog (another kennel's): who owns it, linked to their website.
+  if (d.outside && d.owner_name) fact.owner = [word(snap, 'outside_fact'), d.owner_url ? `<a href="${attr(d.owner_url)}" rel="noopener">${esc(d.owner_name)}</a>` : esc(d.owner_name)];
   const facts = pr.facts.map((k) => fact[k]).filter(Boolean);
   const tests = d.health.length ? `<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${h.verify_url ? `<a href="${attr(h.verify_url)}" rel="noopener">${esc(h.result)}</a>` : esc(h.result)}</span></li>`).join('')}</ul>` : '';
   const litters = snap.litters.filter((l) => l.dam_id === d.id || l.sire_id === d.id);
