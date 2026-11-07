@@ -211,3 +211,18 @@ test('a photo block can take the Home banner\'s frames; none to start, and never
   assert.match(await s.render('/about'), /<figure class="own-photo full f-middle"><img /);
   assert.equal(cleanBlock({ id: 'x', type: 'photo', frame: 'gold' }).frame, 'none');
 });
+
+test('a text block and a facts row take every block\'s look: background, space and text size', async () => {
+  const s = await setup();
+  for (const t of ['words', 'factrow']) {
+    await s.post('about', {}, { act: `add:${t}` });
+    const b = (await s.blocks('about')).at(-1);
+    const form = await s.get(`/admin/akbostons/pages/about?open=${b.id}`);
+    for (const f of ['bg', 'py', 'px', 'text']) assert.match(form, new RegExp(`<select name="b\\.${b.id}\\.s\\.${f}">`), `${t} ${f}`);
+    const fill = t === 'words' ? { [`b.${b.id}.w.heading`]: 'Our promise' } : { [`b.${b.id}.items.0.0`]: '12', [`b.${b.id}.items.0.1`]: 'Years' };
+    await s.post('about', { ...fill, [`b.${b.id}.s.bg`]: 'foot', [`b.${b.id}.s.py`]: 'l', [`b.${b.id}.s.text`]: 'l' }, { open: b.id });
+    assert.deepEqual((await s.blocks('about')).at(-1).s, { bg: 'foot', py: 'l', text: 'l' });
+    const cls = t === 'words' ? 'own-words a-center' : 'section tight own-facts';
+    assert.match(await s.render('/about'), new RegExp(`<div class="kb-o"><div class="kb bg-foot py-l t-l"><section class="${cls}">`));
+  }
+});
