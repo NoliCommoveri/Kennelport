@@ -312,7 +312,7 @@ export const HOME_BLOCKS = {
   },
   facts: { items: { type: 'pairs', max: 3, keyMax: 12, valueMax: 30 } },
   story: {
-    photo_id: { type: 'photo' }, eyebrow: S(60), heading: S(80), script: S(40), text: ML(800),
+    photo_id: { type: 'photo' }, photo_frame: { ...ENUM(...FRAMES), default: 'none' }, eyebrow: S(60), heading: S(80), script: S(40), text: ML(800),
     features: { type: 'features', max: 3 }, link_label: S(40),
   },
   dogs: { eyebrow: S(60), heading: S(80), lede: S(200), link_label: S(40) },
@@ -382,7 +382,7 @@ export const FEATURE_ICONS = ['shield', 'home', 'heart', 'star', 'paw', 'leaf'];
 // the wording keys it has (plan 3.1, 3.12). Order within a group is this order.
 const HEAD = { eyebrow: S(60), heading: S(80), lede: ML(300) };
 export const PAGES = {
-  about:          { path: '/about', group: 'about', label: 'Our story', canHide: true, fields: { ...HEAD, photo_id: { type: 'photo' }, text: ML(4000), facts: { type: 'pairs', max: 6, keyMax: 40, valueMax: 60 } } },
+  about:          { path: '/about', group: 'about', label: 'Our story', canHide: true, fields: { ...HEAD, photo_id: { type: 'photo' }, photo_frame: { ...ENUM(...FRAMES), default: 'none' }, text: ML(4000), facts: { type: 'pairs', max: 6, keyMax: 40, valueMax: 60 } } },
   reviews:        { path: '/reviews', group: 'about', label: 'Reviews', canHide: true, fields: { ...HEAD } },
   contact:        { path: '/contact', group: 'about', label: 'Contact', canHide: false, fields: { ...HEAD, location_note: S(160) } },
   dogs:           { path: '/dogs', group: 'residents', label: 'All our dogs', canHide: true, fields: { ...HEAD, co_owned_heading: S(80), co_owned_lede: S(200) } },

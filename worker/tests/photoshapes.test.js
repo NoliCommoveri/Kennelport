@@ -16,7 +16,7 @@ const { savePhoto } = await import('../src/photos.js');
 
 const S = 'akbostons.kennelport.com';
 
-async function site({ storyPhoto = true, aboutPhoto = true } = {}) {
+async function site({ storyPhoto = true, aboutPhoto = true, frame = null } = {}) {
   forgetSnapshots();
   const env = await makeEnv();
   const row = await addSite(env, 'akbostons', { kennel_name: 'AK Boston Terriers' });
@@ -24,6 +24,7 @@ async function site({ storyPhoto = true, aboutPhoto = true } = {}) {
   const doc = structuredClone(AK_SAMPLE);
   if (storyPhoto) doc.home.story = { ...doc.home.story, photo_id: photo };
   if (aboutPhoto) doc.pages.about = { ...doc.pages.about, photo_id: photo };
+  if (frame) { doc.home.story.photo_frame = frame; doc.pages.about.photo_frame = frame; }
   for (const d of doc.dogs ?? []) d.photo_id = photo;
   await importContent(env, row.id, doc);
   await publish(env, row.id, 'test');
@@ -87,4 +88,18 @@ test('Our story shares the Home block\'s photo shape, so one rule keeps both rig
   // With no photo the page uses .prose instead, so nothing empty is drawn.
   const bare = await site({ aboutPhoto: false });
   assert.match(await (await call(bare.env, S, '/about')).text(), /<div class="wrap prose">/);
+});
+
+test('her story photos can take the Home collage\'s frames; none to start', async () => {
+  let { env, photo } = await site({ frame: 'double' });
+  assert.match(await (await call(env, S, '/')).text(), new RegExp(`<div class="wrap story"><div class="story-pic frame-double"><div class="box"><img src="/_kp/p/${photo}"[^>]*></div></div><div class="story-copy">`));
+  assert.match(await (await call(env, S, '/about')).text(), /<div class="wrap story"><div class="story-pic frame-double"><div class="box"><img [^>]*><\/div><\/div>/);
+  ({ env } = await site({ frame: 'sprig' }));
+  assert.match(await (await call(env, S, '/about')).text(), /<div class="story-pic frame-sprig"><div class="box"><img [^>]*><div class="vine" aria-hidden="true">/);
+  // Unset, as every site has it today: the bare photo, as before.
+  ({ env } = await site());
+  assert.doesNotMatch(await (await call(env, S, '/')).text(), /story-pic/);
+  // A frame with no photo draws nothing.
+  ({ env } = await site({ storyPhoto: false, aboutPhoto: false, frame: 'mat' }));
+  assert.doesNotMatch(await (await call(env, S, '/about')).text(), /story-pic/);
 });

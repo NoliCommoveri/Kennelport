@@ -1805,3 +1805,10 @@ with new sections and a new building order. Docs only; nothing built yet.
   mat with a fine inner line, or leafy vine, in the scheme's colours (`PHOTO_FRAME`,
   `frame`; none to start, so photos already placed draw as before). A full-width photo
   stays unframed. The collage's `.box` and `.frame-*` rules carry over (`site.css`).
+- Her two story photos, Home's "Photo and words" and the Our story page's, take the
+  same frames: **Frame round the photo** on each (`photo_frame`, model.js `FRAMES`, no
+  frame to start, so every site draws as before). Drawn as `.story-pic .box` in the
+  story grid, shrunk and centred on a phone as the bare photo is. Her wording is in
+  `forms.js` LABELS (`story.photo_frame`, `about.photo_frame`) and ENUM_WORDS
+  (`photo_frame`), listed in the owner's list from there. Site template 19 (not out
+  yet), fingerprint updated beside it.
