@@ -417,7 +417,7 @@ export const CUSTOM_KEY = /^x-[a-z0-9](?:[a-z0-9-]{0,40}[a-z0-9])?$/;
 export const CUSTOM_PAGE = { canHide: true, fields: { ...HEAD } };
 // The owner's own blocks (step 4) add a line, a button's words, the breeder's own
 // outside link, phone or email for it, a photo and its caption (where the owner lets her).
-export const ADDED_BLOCK_FIELDS = { ...HEAD, line: ML(300), label: S(40), url: { type: 'url' }, phone: S(30), email: { type: 'email' }, photo_id: { type: 'photo' }, caption: S(160), body: ML(4000), facts: { type: 'pairs', max: 4, keyMax: 20, valueMax: 40 } };
+export const ADDED_BLOCK_FIELDS = { ...HEAD, line: ML(300), label: S(40), url: { type: 'url' }, phone: S(30), email: { type: 'email' }, photo_id: { type: 'photo' }, caption: S(160), body: ML(4000), facts: { type: 'pairs', max: 4, keyMax: 40, valueMax: 240 } };
 
 // The menu's five groups (plan 3.12), fixed.
 export const MENU_GROUPS = [

@@ -182,12 +182,16 @@ test('the owner adds a facts row to any page; the breeder can change its facts',
   assert.match(html, /<section class="section tight own-facts"><div class="wrap"><div class="facts"><div><b>12<\/b><span>Years breeding<\/span><\/div><div><b>AKC<\/b><span>Registered<\/span><\/div><\/div><\/div><\/section>/);
   // In her Site Manager: four rows, KennelPort's facts as the hints.
   const mine = await s.get('/s/akbostons/pages/about');
-  assert.match(mine, /<input name="facts\.0\.0" value="" maxlength="20" aria-label="Fact 1, value" placeholder="12">/);
+  assert.match(mine, /<input name="facts\.0\.0" value="" maxlength="40" aria-label="Fact 1, value" placeholder="12">/);
   assert.match(mine, /name="facts\.3\.1"/);
   // Hers over the owner's; all empty goes back to the owner's.
   await s.breeder(`/blocks/about/${b.id}`, { enabled: '1', 'facts.0.0': '40+', 'facts.0.1': 'Puppies home' });
   html = await s.render('/about');
   assert.match(html, /<div class="facts"><div><b>40\+<\/b><span>Puppies home<\/span><\/div><\/div>/);
+  // A long fact, a heading and a sentence, keeps every letter.
+  const longLabel = 'From hands-on care and early developmental exercises to new surfaces, sounds, people, and experiences, we introduce age-appropriate challenges designed to encourage confidence and adaptability.';
+  await s.breeder(`/blocks/about/${b.id}`, { enabled: '1', 'facts.0.0': 'Intentional Early Development', 'facts.0.1': longLabel });
+  assert.ok((await s.render('/about')).includes(`<b>Intentional Early Development</b><span>${longLabel}</span>`));
   await s.breeder(`/blocks/about/${b.id}`, { enabled: '1', 'facts.0.0': '', 'facts.0.1': '' });
   assert.match(await s.render('/about'), /<b>12<\/b><span>Years breeding/);
   // Off, it's gone.

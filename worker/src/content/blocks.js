@@ -95,7 +95,7 @@ export const SEXES = Object.freeze({ any: 'Any', female: 'Girls', male: 'Boys' }
 export const LIMIT_MAX = 24;
 // A facts row of the owner's: up to four [value, label] pairs, Home's facts' look.
 export const FACTS_MAX = 4;
-export const FACT_SIZES = Object.freeze([20, 40]);
+export const FACT_SIZES = Object.freeze([40, 240]);
 
 // What a card shows (decision 15): its items, by face for a flip card, in order.
 // The defaults draw today's cards exactly.
