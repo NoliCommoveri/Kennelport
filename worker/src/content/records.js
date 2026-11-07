@@ -26,7 +26,7 @@ const ALBUM_RECORD_FIELDS = { ...omit(ALBUM_FIELDS, ['litter']), litter_id: { ty
 
 // kind → where it lives and what it holds. `scope` is the parent column, if any.
 export const KINDS = {
-  dogs: { table: 'dogs', fields: DOG_RECORD_FIELDS, slug: 'call_name', label: 'call_name', defaults: { status: 'active', health_display: 'normal_only', show_on_site: 1, upcoming: 0, for_sale: 0, co_owned: 0, lives_away: 0 }, json: ['co_owned_with_ids'], stamps: true },
+  dogs: { table: 'dogs', fields: DOG_RECORD_FIELDS, slug: 'call_name', label: 'call_name', defaults: { status: 'active', health_display: 'normal_only', show_on_site: 1, upcoming: 0, for_sale: 0, co_owned: 0, lives_away: 0, outside: 0 }, json: ['co_owned_with_ids'], stamps: true },
   health: { table: 'health_results', fields: HEALTH_FIELDS, scope: 'dog_id', label: 'test', defaults: { normal: 1, show: 0 } },
   litters: { table: 'litters', fields: LITTER_RECORD_FIELDS, slug: 'name', label: 'name', defaults: { show_on_site: 1, show_prices: 0, show_placed: 1, ask_full_reg: 0 }, stamps: true },
   puppies: { table: 'puppies', fields: PUPPY_FIELDS, scope: 'litter_id', slug: 'name', label: 'name', defaults: { status: 'coming_soon' }, stamps: true },
@@ -175,7 +175,7 @@ export async function saveRecord(env, siteId, kind, id, input, scopeId = null) {
     }
   }
   if (kind === 'albums' && clean.photos) clean.photos = [...new Set(clean.photos)];
-  if (kind === 'dogs') coOwnedRules(clean);
+  if (kind === 'dogs') coOwnedRules(outsideRules(clean));
   if (kind === 'partners') {
     const twin = await env.DB.prepare('SELECT id FROM partner_kennels WHERE site_id = ? AND lower(name) = lower(?) AND id != ?').bind(siteId, clean.name, id ?? '').first();
     if (twin) throw new ContentError('name', 'that kennel is already on your list');
@@ -228,6 +228,13 @@ export function coOwnedRules(d) {
   d.co_owned_with_ids = [...new Set(d.co_owned_with_ids ?? [])];
   if (d.lives_with_kennel_id && !d.co_owned_with_ids.includes(d.lives_with_kennel_id)) d.co_owned_with_ids.unshift(d.lives_with_kennel_id);
   d.co_owned_with_ids = d.co_owned_with_ids.slice(0, PARTNERS_PER_DOG);
+  return d;
+}
+
+// An outside dog is another kennel's: not up and coming, for sale or co-owned
+// with her. Only an outside dog names an owner.
+export function outsideRules(d) {
+  if (d.outside) { d.upcoming = 0; d.for_sale = 0; d.co_owned = 0; } else { d.owner_name = null; d.owner_url = null; }
   return d;
 }
 

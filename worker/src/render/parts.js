@@ -227,13 +227,15 @@ export function litterPriceRows(snap, l) {
 // living with one of its co-owners is in none of them, only in `away`, the Co-owned
 // section (docs/Co_Owned_Dogs_Plan.md); one living with her is grouped like her own.
 export function dogGroups(snap) {
-  const active = snap.dogs.filter((d) => d.status === 'active');
+  // An outside dog (another kennel's) is in none of her groups, only `outside`.
+  const active = snap.dogs.filter((d) => d.status === 'active' && !d.outside);
   const home = active.filter((d) => !d.lives_away);
   return {
     breeding: home.filter((d) => !d.upcoming && !d.for_sale),
     upcoming: home.filter((d) => d.upcoming && !d.for_sale),
     for_sale: home.filter((d) => d.for_sale),
     away: active.filter((d) => d.lives_away),
+    outside: snap.dogs.filter((d) => d.status === 'active' && d.outside),
   };
 }
 
@@ -242,7 +244,7 @@ export function dogGroups(snap) {
 export function dogsFor(snap, b) {
   const flag = (v, has) => v === 'any' || (v === 'only' ? has : !has);
   const list = snap.dogs.filter((d) => b.f.status.includes(d.status) && (b.f.sex === 'any' || d.sex === b.f.sex)
-    && flag(b.f.upcoming, Boolean(d.upcoming)) && flag(b.f.sale, Boolean(d.for_sale)) && flag(b.f.away, Boolean(d.lives_away)));
+    && flag(b.f.upcoming, Boolean(d.upcoming)) && flag(b.f.sale, Boolean(d.for_sale)) && flag(b.f.away, Boolean(d.lives_away)) && flag(b.f.outside ?? 'no', Boolean(d.outside)));
   const born = (d) => d.date_of_birth || '9999';
   if (b.order === 'name') return [...list].sort((a, c) => a.call_name.localeCompare(c.call_name));
   if (b.order === 'age') return [...list].sort((a, c) => born(a).localeCompare(born(c)));
@@ -388,11 +390,10 @@ export function litterCard(snap, l, ctx, { link = true, show = SHOW_DEFAULT.litt
 
 // ---------- flip cards ----------
 
-// sale: { price, ask } for a dog looking for a home (plan 3.7). show: what each face
-// shows, in order (content/blocks.js SHOW_DEFAULT.dogs is today's card).
-export function dogCard(snap, d, { sale = null, show = SHOW_DEFAULT.dogs } = {}) {
-  const photo = img(snap, d.photo_id, { alt: d.call_name }) ?? '<div class="ph-photo">Photos coming soon</div>';
-  const bg = img(snap, d.photo_id, { alt: '', cls: 'bg', thumb: true }) ?? '';
+// A card's items for one dog, by key (content/blocks.js DOG_ITEMS). sale: { price,
+// ask } for a dog looking for a home (plan 3.7). link: whether the owner's name may
+// be a link (not inside a card that is itself one).
+function dogItems(snap, d, { sale = null, link = true } = {}) {
   const registry = d.registry ? `<li><span>Registry</span><span>${esc(d.registry)}</span></li>` : '';
   const weight = d.weight ? `<li><span>Weight</span><span>${esc(d.weight)}</span></li>` : '';
   // Health results when it has some (its registry and weight above them, where
@@ -401,30 +402,57 @@ export function dogCard(snap, d, { sale = null, show = SHOW_DEFAULT.dogs } = {})
     ? `${registry || weight ? `<ul class="tests">${registry}${weight}</ul>` : ''}<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${esc(h.result)}</span></li>`).join('')}</ul>`
     : `<span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sexWord(d.sex)}</span></li>${d.color ? `<li><span>Color</span><span>${esc(d.color)}</span></li>` : ''}${weight}${registry}</ul>`;
   const line = [snap.site.breed, d.role].filter(Boolean).join(' · ');
-  const item = {
+  return {
     call: () => `<span class="call">${esc(d.call_name)}</span>`,
     reg: () => (d.registered_name ? `<span class="reg">${esc(d.registered_name)}</span>` : ''),
     role: () => `<span>${esc(line)}</span>`,
+    line: () => `<span class="small muted">${esc([sexWord(d.sex), d.role].filter(Boolean).join(' · '))}</span>`,
     titles: () => (d.titles ? `<span>${esc(d.titles)}</span>` : ''),
     tests: () => tests,
     bio: () => (d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''),
     ask: () => (sale ? `${sale.price ? `<p class="small">${esc(sale.price)}</p>` : ''}<a class="more" href="${attr(sale.ask)}">${esc(word(snap, 'ask_dog', { name: d.call_name }))}</a>` : ''),
     profile: () => `<a class="more" href="/dogs/${attr(d.slug)}">View profile</a>`,
+    where: () => whereLine(snap, d, link),
     photo: () => '',
   };
-  // A face's items in order; breed and role, and titles, next to each other share a line.
-  const face = (items) => {
-    let out = '';
-    for (let i = 0; i < items.length; i++) {
-      if (items[i] === 'role' || items[i] === 'titles') {
-        let run = '';
-        while (items[i] === 'role' || items[i] === 'titles') run += item[items[i++]]();
-        i--;
-        out += `<span class="line1">${run}</span>`;
-      } else out += item[items[i]]();
-    }
-    return out;
-  };
+}
+
+// Where a dog lives or whose it is, only where that says something: a co-owned dog
+// living with a co-owner ("with Oakridge", or unnamed), or an outside dog's owner.
+// A dog living with her says nothing. The words are the site's (content/rules.js).
+export function whereLine(snap, d, link = true) {
+  if (d.lives_away) {
+    const k = partnerOf(snap, d.lives_with_kennel_id);
+    return `<span class="cowith">${k ? `${partnerLogo(snap, k)}<span>${esc(word(snap, 'co_with', { kennel: k.name }))}</span>` : `<span>${esc(word(snap, 'co_unnamed'))}</span>`}</span>`;
+  }
+  if (d.outside && d.owner_name) {
+    const [before, after = ''] = word(snap, 'outside_owner', { kennel: '\u0000' }).split('\u0000');
+    const name = link && d.owner_url ? `<a href="${attr(d.owner_url)}" rel="noopener">${esc(d.owner_name)}</a>` : esc(d.owner_name);
+    return `<span class="cowith"><span>${esc(before)}${name}${esc(after)}</span></span>`;
+  }
+  return '';
+}
+
+// A face's items in order; breed and role, and titles, next to each other share a line.
+function faceOf(item, items) {
+  let out = '';
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] === 'role' || items[i] === 'titles') {
+      let run = '';
+      while (items[i] === 'role' || items[i] === 'titles') run += item[items[i++]]();
+      i--;
+      out += `<span class="line1">${run}</span>`;
+    } else out += item[items[i]]();
+  }
+  return out;
+}
+
+// show: what each face shows, in order (content/blocks.js SHOW_DEFAULT.dogs is today's card).
+export function dogCard(snap, d, { sale = null, show = SHOW_DEFAULT.dogs } = {}) {
+  const photo = img(snap, d.photo_id, { alt: d.call_name }) ?? '<div class="ph-photo">Photos coming soon</div>';
+  const bg = img(snap, d.photo_id, { alt: '', cls: 'bg', thumb: true }) ?? '';
+  const item = dogItems(snap, d, { sale });
+  const face = (items) => faceOf(item, items);
   const front = show.front.filter((k) => k !== 'photo');
   const back = show.back.filter((k) => k !== 'photo');
   // On the back, the name heads it; the rest starts on its own line.
@@ -438,14 +466,30 @@ export function dogCard(snap, d, { sale = null, show = SHOW_DEFAULT.dogs } = {})
     </div></div>`;
 }
 
-// A co-owned dog living with a co-owner (docs/Co_Owned_Dogs_Plan.md): a light
-// card, no flip, for the Co-owned section's slider. It opens the dog's page.
-export function coCard(snap, d) {
-  const photo = img(snap, d.photo_id, { alt: d.call_name, thumb: true }) ?? '<div class="ph-photo">Photo coming soon</div>';
-  const k = partnerOf(snap, d.lives_with_kennel_id);
-  const line = [sexWord(d.sex), d.role].filter(Boolean).join(' · ');
-  return `<a class="cocard" href="/dogs/${attr(d.slug)}">${photo}<span class="cobody"><span class="call">${esc(d.call_name)}</span><span class="small muted">${esc(line)}</span>
-    <span class="cowith">${k ? `${partnerLogo(snap, k)}<span>with ${esc(k.name)}</span>` : '<span>Lives with a partner kennel</span>'}</span></span></a>`;
+// A light card, no flip (docs/Co_Owned_Dogs_Plan.md): a short photo and a few
+// lines; it opens the dog's page. show.light: its items (SHOW_DEFAULT.dogs.light is
+// the Co-owned section's card).
+export function coCard(snap, d, { show = SHOW_DEFAULT.dogs } = {}) {
+  const items = show.light ?? SHOW_DEFAULT.dogs.light;
+  const photo = items.includes('photo') ? img(snap, d.photo_id, { alt: d.call_name, thumb: true }) ?? '<div class="ph-photo">Photo coming soon</div>' : '';
+  const item = dogItems(snap, d, { link: false });
+  const body = items.filter((k) => k !== 'photo').map((k) => item[k]()).join('');
+  return `<a class="cocard" href="/dogs/${attr(d.slug)}">${photo}<span class="cobody">${body}</span></a>`;
+}
+
+// Photo beside details: the photo on the left, the items beside it, and the bio
+// and whatever follows it under both, across the card. The card stacks (photo on
+// top) when it is narrow, as on a phone (site.css .dogrow).
+export function besideCard(snap, d, { sale = null, show = SHOW_DEFAULT.dogs } = {}) {
+  const items = show.beside ?? SHOW_DEFAULT.dogs.beside;
+  const item = dogItems(snap, d, { sale });
+  const rest = items.filter((k) => k !== 'photo');
+  const at = rest.indexOf('bio');
+  const side = at < 0 ? rest : rest.slice(0, at);
+  const under = at < 0 ? [] : rest.slice(at);
+  const photo = items.includes('photo') ? img(snap, d.photo_id, { alt: d.call_name, cls: 'photo' }) ?? '<div class="photo ph-photo">Photos coming soon</div>' : '';
+  const below = faceOf(item, under);
+  return `<article class="dogrow${photo ? '' : ' no-photo'}"><div class="dr-top">${photo}<div class="dr-info">${faceOf(item, side)}</div></div>${below ? `<div class="dr-under">${below}</div>` : ''}</article>`;
 }
 
 // A litter with "Families can ask about full registration" on (its own setting):

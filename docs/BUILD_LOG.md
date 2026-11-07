@@ -1812,3 +1812,25 @@ with new sections and a new building order. Docs only; nothing built yet.
   `forms.js` LABELS (`story.photo_frame`, `about.photo_frame`) and ENUM_WORDS
   (`photo_frame`), listed in the owner's list from there. Site template 19 (not out
   yet), fingerprint updated beside it.
+
+## 2026-11-07: outside dogs, light cards' wording, Photo beside details
+
+- **Outside dogs** (migration 0029): another kennel's dog, like a stud she bred to,
+  kept in `dogs` with `outside`, `owner_name` and `owner_url`, so a litter's dam or
+  sire, health results, photo tags and its page all work as for her own. Never in
+  her groups or on Home; a Dog cards block's new "Outside dogs" filter lists them.
+  An outside dog is never up and coming, for sale or co-owned (`outsideRules`). Its
+  page says "Owned by" (a new dog-page fact). The litter form's dam and sire lists
+  mark them. KennelOS doesn't send them (its `external_reference` dogs stay off).
+- **Light cards** no longer say "Lives with a partner kennel" for every dog: their
+  "where it lives" line shows only for a co-owned dog living away or an outside dog
+  with an owner, and what a light card shows is now a list on the block like the
+  flip card's. The words are the owner's site wording (`co_with`, `co_unnamed`,
+  `outside_owner`, `outside_fact`).
+- **Photo beside details**, a new Dog cards style: photo with the chosen items
+  beside it, the bio and what follows it under both. No prototype screen has it;
+  built from the dog page's and parent card's parts. Two across above 960px, else
+  one wide card; a card stacks its photo on top when narrow (container query).
+- **A line between cards** (block setting, flip and Photo beside details): a 4px
+  accent bar between cards where they stack.
+- Builder wording added to the owner's list: `doglist.outside`. Template v21.

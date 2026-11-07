@@ -54,7 +54,7 @@ const fieldLabel = (say) => (name) => {
 // How one item reads in each list: its name, and the line under it in the owner's
 // wording (wording.js, lists.sub.*), as are the lists' names.
 const LISTS = {
-  dogs: { name: (r) => r.call_name, sub: (r, say) => [r.role, r.show_on_site ? null : say('lists.sub.hidden')].filter(Boolean).join(' · ') },
+  dogs: { name: (r) => r.call_name, sub: (r, say) => [r.outside ? say('doglist.outside') : null, r.role, r.show_on_site ? null : say('lists.sub.hidden')].filter(Boolean).join(' · ') },
   litters: { name: (r) => r.name, sub: (r, say) => (['planned', 'current', 'past'].includes(r.stage) ? say(`lists.sub.stage.${r.stage}`) : '') },
   puppies: { name: (r) => r.name, sub: (r, say) => STATUS_TEXT[r.status] ?? say('lists.sub.hidden_puppy') },
   health: { name: (r) => r.test, sub: (r, say) => `${r.result}${r.show ? '' : ` · ${say('lists.sub.not_shown')}`}` },
@@ -103,7 +103,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
   const photoUrl = (id) => `${base}/photos/${id}/thumb`;
   let photosCache = null;
   const photos = async () => (photosCache ??= (await env.DB.prepare('SELECT id, alt FROM photos WHERE site_id = ? AND removed_at IS NULL ORDER BY created_at DESC').bind(site.id).all()).results);
-  const dogsList = async () => (await env.DB.prepare('SELECT id, call_name FROM dogs WHERE site_id = ? ORDER BY sort').bind(site.id).all()).results;
+  const dogsList = async () => (await env.DB.prepare('SELECT id, call_name, outside FROM dogs WHERE site_id = ? ORDER BY sort').bind(site.id).all()).results;
   const littersList = async () => (await env.DB.prepare('SELECT id, name FROM litters WHERE site_id = ? ORDER BY sort').bind(site.id).all()).results;
   const partnersList = async () => (await env.DB.prepare('SELECT id, name FROM partner_kennels WHERE site_id = ? ORDER BY sort, name').bind(site.id).all()).results;
   let tagsCache = null;

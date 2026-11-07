@@ -211,6 +211,31 @@ nav.main li.open > .navtop .chev { transform: rotate(225deg) translate(-2px, -1p
 .partners a:hover, .partners a:focus-visible { color: var(--ink); }
 .partners a:hover .plogo, .partners a:focus-visible .plogo { filter: none; opacity: 1; }
 
+/* Photo beside details: a dog's photo with its details beside it and its bio under
+   both. Two across on a wide screen, one full-width card otherwise; each card puts
+   its photo on top when it is narrow (a phone). Built from the dog page's parts. */
+.dogrows { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+@media (min-width: 961px) { .dogrows:not(.one) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.dogrows.one { max-width: 780px; margin: 0 auto; }
+.dogrow { container-type: inline-size; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: clamp(14px, 2.4vw, 22px); display: grid; gap: 14px; align-content: start; min-width: 0; overflow-wrap: anywhere; }
+.dr-top { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: clamp(14px, 2.4vw, 24px); align-items: start; }
+.dogrow.no-photo .dr-top { grid-template-columns: minmax(0, 1fr); }
+.dogrow .photo { width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--r); background: var(--band); display: block; }
+.dogrow .photo.ph-photo { display: grid; place-items: center; font-size: .9rem; }
+.dr-info, .dr-under { display: grid; gap: 6px; min-width: 0; align-content: start; }
+.dogrow .call { font: var(--display-w) 1.35rem/1.2 var(--f-display); }
+.dogrow .reg { color: var(--muted); font-style: italic; font-size: .9rem; }
+.dogrow .line1 { display: flex; flex-wrap: wrap; gap: 0 10px; font-size: .86rem; color: var(--muted); }
+.dogrow .eyebrow { margin-top: 6px; }
+.dogrow .bio { color: var(--muted); margin: 0; }
+.dogrow .cowith { margin-top: 2px; }
+@container (max-width: 420px) { .dr-top { grid-template-columns: minmax(0, 1fr); } .dogrow .photo { aspect-ratio: 4 / 3; } }
+
+/* A Dog cards block's "line between cards": where its cards stack one under
+   another, a 4px accent bar in the gap between each card and the next. */
+@media (max-width: 960px) { .dogrows.lines { gap: 44px; } .dogrows.lines > * + * { position: relative; } .dogrows.lines > * + *::before { content: ''; position: absolute; left: 20%; right: 20%; top: -24px; height: 4px; border-radius: 2px; background: var(--accent); } }
+@media (max-width: 560px) { .grid.lines { grid-template-columns: minmax(0, 1fr); gap: 44px; } .grid.lines > * + * { position: relative; } .grid.lines > * + *::before { content: ''; position: absolute; left: 20%; right: 20%; top: -24px; height: 4px; border-radius: 2px; background: var(--accent); } }
+
 /* Flip cards */
 .flip { perspective: 1200px; cursor: pointer; height: 430px; border-radius: var(--r); }
 .flip-in { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .6s cubic-bezier(.3,.7,.3,1); }

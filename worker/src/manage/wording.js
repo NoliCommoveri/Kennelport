@@ -259,6 +259,7 @@ const SCREEN_LINES = {
   "litterlist.the_kennels_your_co": ["litterlist", "Line", "The kennels your co-owned dogs are shared with, and their logos."],
   "doglist.not_on_your_site": ["doglist", "Heading", "Not on your site"],
   "doglist.remove": ["doglist", "Button", "Remove"],
+  "doglist.outside": ["doglist", "Line", "Outside dog"],
   "kennelos.your_code": ["kennelos", "Notice", "Your code:"],
   "kennelos.each_phone_or_computer": ["kennelos", "Help line", "Each phone or computer you use KennelOS on links once, with its own code."],
   "kennelos.devices": ["kennelos", "Heading", "Devices"],
