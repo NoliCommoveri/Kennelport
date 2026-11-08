@@ -156,7 +156,7 @@ export function newBlock(type, id) {
   if (type === 'factrow') Object.assign(b, { items: [] });
   if (type === 'words') Object.assign(b, { w: { heading: 'A few words from us', line: '', body: '' }, align: 'center' });
   if (type === 'columns') Object.assign(b, { w: { heading: 'Our approach', line: '' }, cols: [], across: '2', align: 'center' });
-  if (type === 'beside') Object.assign(b, { photo: null, focus: 'middle', frame: 'none', side: 'left', w: { heading: 'A little about us', body: '', label: '' }, link: null, mayChange: true });
+  if (type === 'beside') Object.assign(b, { photo: null, focus: 'middle', frame: 'none', side: 'left', align: 'left', w: { heading: 'A little about us', body: '', label: '' }, link: null, mayChange: true });
   if (type === 'overlay') Object.assign(b, { photo: null, focus: 'middle', w: { heading: 'Raised with love', line: '', label: '' }, link: null, v: 'bottom', h: 'left', shade: 'medium', mayChange: true });
   return b;
 }
@@ -375,6 +375,7 @@ export function cleanBlock(b) {
   if (b.type === 'beside') {
     out.frame = pick(b.frame, PHOTO_FRAME, 'none');
     out.side = pick(b.side, PHOTO_SIDE, 'left');
+    out.align = pick(b.align, ALIGN, 'left');
     out.w = words(b.w, ['heading', 'body', 'label']);
     out.link = cleanLink(b.link);
   }

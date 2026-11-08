@@ -574,7 +574,8 @@ function ownSettings(snap, key, b, pics) {
     ${fld('Shape', seg(k('shape'), b.shape, PHOTO_SHAPE))}${fld('Frame', seg(k('frame'), b.frame, PHOTO_FRAME), 'The Home banner\'s frames, in the site\'s colours. A full-width photo stays unframed.')}${fld('Which part to keep', seg(k('focus'), b.focus, PHOTO_FOCUS))}<div class="fgrid">${w('caption', 'Caption', '', 'Optional.')}</div>${change}</div>`;
   if (b.type === 'beside') return `<div class="fgroup"><h2>The photo</h2>${photoChoice(b, pics)}${fld('Where it sits', seg(k('side'), b.side, PHOTO_SIDE), 'On a computer. On a phone the photo goes above the words.')}${fld('Frame', seg(k('frame'), b.frame, PHOTO_FRAME), 'The Home banner\'s frames, in the site\'s colours.')}${fld('Which part to keep', seg(k('focus'), b.focus, PHOTO_FOCUS))}${change}</div>
     <div class="fgroup"><h2>The words beside it</h2><p class="small muted">${esc(her)}</p><div class="fgrid">${w('heading', 'Heading')}${w('label', 'Button words')}
-      <label>Words<textarea name="${k('w.body')}" rows="6">${esc(b.w?.body ?? '')}</textarea><span class="hint">Optional. A blank line starts a new paragraph.</span></label></div></div>
+      <label>Words<textarea name="${k('w.body')}" rows="6">${esc(b.w?.body ?? '')}</textarea><span class="hint">Optional. A blank line starts a new paragraph.</span></label></div>
+      ${fld('Words line up', seg(k('align'), b.align, ALIGN), 'The heading, words and button, on a computer and a phone.')}</div>
     <div class="fgroup"><h2>The button</h2>${linkSettings(snap, b, pics, true)}</div>`;
   if (b.type === 'overlay') return `<div class="fgroup"><h2>The photo</h2>${photoChoice(b, pics)}${fld('Which part to keep', seg(k('focus'), b.focus, PHOTO_FOCUS))}${change}</div>
     <div class="fgroup"><h2>The words over it</h2><p class="small muted">${esc(her)}</p><div class="fgrid">${w('heading', 'Heading')}${w('label', 'Button words')}${w('line', 'A line', '')}</div>

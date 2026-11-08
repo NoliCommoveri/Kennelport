@@ -1889,6 +1889,8 @@ with new sections and a new building order. Docs only; nothing built yet.
   `w.label`, `link`). **Where it sits:** the photo on the left or the right on a computer;
   on a phone it always goes above the words, shrunk and centred as the story's is
   (`.story.pic-right` in `site.css`). With no photo the words take the width.
+- **Words line up:** left (to start, as the story's), centred or right: the heading,
+  words and button together, on a computer and a phone (`align`, `.story-copy.a-*`).
 - The breeder can switch it off, reword the heading, words and button, change an outside
   link, phone or email, and change the photo where the owner lets her. Her wording:
   `pages.own.beside`.

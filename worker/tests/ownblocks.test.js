@@ -335,20 +335,25 @@ test('the owner adds a photo beside words: the photo left or right, framed or no
   const b = (await s.blocks('about')).at(-1);
   assert.deepEqual([b.side, b.frame, b.photo, b.link], ['left', 'none', null, null]);
   // Words alone: the story's grid with the words taking the width.
-  assert.match(await s.render('/about'), /<section class="section own-beside"><div class="wrap story no-photo f-middle"><div class="story-copy"><h2>A little about us<\/h2><\/div><\/div><\/section>/);
+  assert.match(await s.render('/about'), /<section class="section own-beside"><div class="wrap story no-photo f-middle"><div class="story-copy a-left"><h2>A little about us<\/h2><\/div><\/div><\/section>/);
   const form = await s.get(`/admin/akbostons/pages/about?open=${b.id}`);
   assert.match(form, new RegExp(`name="b\\.${b.id}\\.side" value="right"`));
   await s.post('about', { [`b.${b.id}.photo`]: 'ph1', [`b.${b.id}.side`]: 'right', [`b.${b.id}.frame`]: 'mat', [`b.${b.id}.w.body`]: 'We raise them at home.\r\n\r\nWith the kids.', [`b.${b.id}.w.label`]: 'Meet the dogs', [`b.${b.id}.link.to`]: 'page', [`b.${b.id}.link.page`]: 'dogs' }, { open: b.id });
   let html = await s.render('/about');
-  assert.match(html, /<section class="section own-beside"><div class="wrap story pic-right f-middle"><div class="story-pic frame-mat"><div class="box"><img src="\/_kp\/p\/ph1"[^>]*><\/div><\/div><div class="story-copy"><h2>A little about us<\/h2><p>We raise them at home\.<\/p><p>With the kids\.<\/p><div><a class="btn solid" href="\/dogs">Meet the dogs<\/a><\/div><\/div><\/div><\/section>/);
+  assert.match(html, /<section class="section own-beside"><div class="wrap story pic-right f-middle"><div class="story-pic frame-mat"><div class="box"><img src="\/_kp\/p\/ph1"[^>]*><\/div><\/div><div class="story-copy a-left"><h2>A little about us<\/h2><p>We raise them at home\.<\/p><p>With the kids\.<\/p><div><a class="btn solid" href="\/dogs">Meet the dogs<\/a><\/div><\/div><\/div><\/section>/);
   assert.match(text(await s.get('/admin/akbostons/pages/about')), /Photo beside words Photo on the right · A little about us · a soft mat/);
   // Left, unframed.
   await s.post('about', { [`b.${b.id}.side`]: 'left', [`b.${b.id}.frame`]: 'none' }, { open: b.id });
-  assert.match(await s.render('/about'), /<div class="wrap story f-middle"><img src="\/_kp\/p\/ph1"[^>]*><div class="story-copy">/);
+  assert.match(await s.render('/about'), /<div class="wrap story f-middle"><img src="\/_kp\/p\/ph1"[^>]*><div class="story-copy a-left">/);
   // Hers: the heading, the words and the button's words.
   assert.match(text(await s.get('/s/akbostons/pages/about')), /A photo beside words\./);
   await s.breeder(`/blocks/about/${b.id}`, { enabled: '1', heading: 'Home life', body: 'Just us.', button_label: 'Our dogs' });
   html = await s.render('/about');
   assert.match(html, /<h2>Home life<\/h2><p>Just us\.<\/p><div><a class="btn solid" href="\/dogs">Our dogs<\/a>/);
   assert.equal(cleanBlock({ id: 'x', type: 'beside', side: 'up' }).side, 'left');
+  // Its words centred, or lined up right.
+  assert.equal(b.align, 'left');
+  await s.post('about', { [`b.${b.id}.align`]: 'center' }, { open: b.id });
+  assert.match(await s.render('/about'), /<div class="story-copy a-center"><h2>Home life<\/h2>/);
+  assert.equal(cleanBlock({ id: 'x', type: 'beside', align: 'middle' }).align, 'left');
 });
