@@ -1847,3 +1847,34 @@ with new sections and a new building order. Docs only; nothing built yet.
   the list doesn't name yet.
 - Wording: the new lines live in `diff.js` with the existing ones (not yet in
   `manage/wording.js`), to move with them.
+
+## 2026-11-08: collage block (one of the owner's own blocks)
+
+- Add a block now offers **Collage** on any page, as many as she likes: Home's
+  collage as a block. The owner picks a layout (the same pictures as the breeder's Home
+  collage, `COLLAGE_LAYOUTS`), a frame (soft mat to start, as Home's; mat with a fine
+  inner line, leafy vine, or none) and a photo for each box with which part to keep
+  (`content/blocks.js` `collage`: `layout`, `frame`, `photos`, `focus`). Boxes the layout
+  doesn't have are hidden, and shown as the layout changes (`app.js`, unchanged). An empty
+  box is skipped, so the site uses a layout for that many photos (`collageLayout`), and it
+  hides with none.
+- The site draws it with Home's own collage (`render/pages.js` `collageOf`, now shared by
+  Home's top block, which draws exactly as before), centred in `.own-collage`: at most
+  760px wide on a computer (440px for one tall photo, 520px for two wide), full width on
+  a phone. No prototype screen for a collage block: it's the prototype's Home collage,
+  boxes and frames as they are.
+- **The breeder can change the photos** (on to start, as the Photo block): her card shows
+  a photo picker for each of the owner's boxes, in the owner's layout and frame, as her Home
+  collage card does (`block_switches` content gains `photos` and `focus`; no migration,
+  it's JSON). Her photos replace the owner's while she has chosen some. The published
+  snapshot carries both.
+- Her wording is in the owner's list: `pages.own.collage`, `pages.own.collage_photos`,
+  `pages.own.no_photos`. The box labels ("Box 1", "which part to keep") are the Home
+  collage's, still in `forms.js`.
+- Checked at 390px and 1280px: the site (each layout and frame), the owner's settings,
+  the breeder's card.
+- `site.css` changed (`.own-collage`): `ASSET_VERSION` bump asked, not done.
+- Still to come in step 4: videos as her blocks, links to a dog, litter or puppy, fonts
+  and the font library, text size on the built-in blocks.
+- Tests: `ownblocks.test.js` (a collage added, filled, a box emptied, the breeder's photos,
+  not hers to change, switched off, cleaned); `blocks.test.js` (Add a block lists it).

@@ -222,7 +222,7 @@ export const BOX_WORDS = {
   tall: { name: 'Tall', ratio: '4:5', size: '1280 × 1600' },
   square: { name: 'Square', ratio: '1:1', size: '1600 × 1600' },
 };
-const boxHint = (shape) => `${BOX_WORDS[shape].name} box (${BOX_WORDS[shape].ratio}): best at ${BOX_WORDS[shape].size} px.`;
+export const boxHint = (shape) => `${BOX_WORDS[shape].name} box (${BOX_WORDS[shape].ratio}): best at ${BOX_WORDS[shape].size} px.`;
 const FOCUS_WORDS = { top: 'The top', middle: 'The middle', bottom: 'The bottom' };
 
 // Each layout's little drawing: its boxes as [x, y, w, h] in a 50 × 40 frame.
@@ -236,6 +236,9 @@ const LAYOUT_RECTS = {
   four_square: [[6, 1, 18, 18], [26, 1, 18, 18], [6, 21, 18, 18], [26, 21, 18, 18]],
 };
 const layoutSvg = (key) => `<svg viewBox="0 0 50 40" width="75" height="60" aria-hidden="true">${LAYOUT_RECTS[key].map(([x, y, w, h], i) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="${x + w / 2}" y="${y + h / 2 + 3}" text-anchor="middle" font-size="9" fill="currentColor">${i + 1}</text>`).join('')}</svg>`;
+// The layouts as pictures to pick from (data-layouts: app.js shows that many
+// boxes, .box[data-box], when the layout changes). Home's collage and a collage block.
+export const layoutChoice = (name, current, label, h = '') => `<fieldset class="layouts" data-layouts><legend>${esc(label)}${h}</legend>${Object.keys(COLLAGE_LAYOUTS).map((k) => `<label class="layout-opt"><input type="radio" name="${name}" value="${esc(k)}" data-boxes="${COLLAGE_LAYOUTS[k].boxes.join(',')}"${k === current ? ' checked' : ''}>${layoutSvg(k)}<span>${esc(COLLAGE_LAYOUTS[k].label)}</span></label>`).join('')}</fieldset>`;
 const chosenLayout = (values) => values?.layout ?? collageLayout(null, (values?.photos ?? []).length) ?? 'tall_two_wide';
 
 const enumWords = (kind, name, v, say = null) => {
@@ -295,10 +298,8 @@ export function field(name, f, value, ctx) {
     }
     case 'photo':
       return photoPicker(name, label, hint, value ? [value] : [], ctx, { multiple: false });
-    case 'layout': {
-      const current = chosenLayout(ctx.values);
-      return `<fieldset class="layouts" data-layouts><legend>${esc(label)}${h}</legend>${f.values.map((k) => `<label class="layout-opt"><input type="radio" name="${name}" value="${esc(k)}" data-boxes="${COLLAGE_LAYOUTS[k].boxes.join(',')}"${k === current ? ' checked' : ''}>${layoutSvg(k)}<span>${esc(COLLAGE_LAYOUTS[k].label)}</span></label>`).join('')}</fieldset>`;
-    }
+    case 'layout':
+      return layoutChoice(name, chosenLayout(ctx.values), label, h);
     case 'list':
       if (f.item === 'focus') return '';
       // Partner kennels: one tick box each, from her list.

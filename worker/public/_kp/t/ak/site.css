@@ -729,6 +729,12 @@ dialog.viewer img { width: auto; height: auto; max-width: 96vw; max-height: 88dv
 .own-photo.full figcaption { padding-inline: 16px; }
 .own-photo.f-top img, .own-over.f-top img { object-position: 50% 0; }
 .own-photo.f-bottom img, .own-over.f-bottom img { object-position: 50% 100%; }
+/* The owner's collage block: Home's collage (.hero-photos, its boxes and frames) on its
+   own, centred, at most about two photos' width so four squares don't fill a computer's screen. */
+.own-collage { padding-block: 20px; }
+.own-collage .hero-photos { max-width: 760px; margin-inline: auto; }
+.own-collage .hero-photos.one_tall { max-width: 440px; }
+.own-collage .hero-photos.two_wide { max-width: 520px; }
 
 /* Text over a photo: white words on a shade dark enough to read at its lightest. */
 .own-over { position: relative; display: grid; min-height: clamp(280px, 48vw, 520px); overflow: hidden; color: #fff; }

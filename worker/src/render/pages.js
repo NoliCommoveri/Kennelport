@@ -52,6 +52,17 @@ const VINE = `<div class="vine" aria-hidden="true">${VINE_PARTS.map((p) => `<i c
 // A photo in one of the collage's frames (FRAMES), or bare: the story photos' choice.
 const framed = (pic, frame) => (pic && frame && frame !== 'none' ? `<div class="story-pic frame-${frame}"><div class="box">${pic}${frame === 'sprig' ? VINE : ''}</div></div>` : pic);
 const sprigs = '<svg class="sprig l" aria-hidden="true"><use href="#sprig"/></svg><svg class="sprig r" aria-hidden="true"><use href="#sprig"/></svg>';
+// A collage: photos ({id, focus}) in a layout's boxes (model.js COLLAGE_LAYOUTS),
+// each its own shape with the part to keep, in one of the frames; never an empty
+// box (collageLayout), and nothing with no photos. Home's and the owner's blocks.
+function collageOf(snap, list, layoutKey, frame, { lazyFirst = false } = {}) {
+  const chosen = list.filter((x) => snap.photos[x.id]);
+  const layout = collageLayout(layoutKey, chosen.length);
+  if (!layout) return { layout: null, html: '' };
+  const boxes = COLLAGE_LAYOUTS[layout].boxes;
+  const photos = chosen.map((x, i) => `<div class="box ${boxes[i]} f-${x.focus ?? 'middle'}">${img(snap, x.id, { lazy: lazyFirst || i > 0 })}${frame === 'sprig' ? VINE : ''}</div>`);
+  return { layout, html: `<div class="hero-photos ${layout} frame-${frame}">${photos.join('')}</div>` };
+}
 const scriptLine = (text, script) => `${esc(text ?? '')}${script ? ` <span class="script">${esc(script)}</span>` : ''}`;
 
 // ---------- Recommended products: links out ----------
@@ -291,6 +302,14 @@ function ownBlock(snap, ctx, b, key) {
     const framed = b.frame !== 'none' && b.shape !== 'full';
     return `<figure class="own-photo ${b.shape}${b.shape === 'full' ? '' : ' wrap'} f-${b.focus}${framed ? ` frame-${b.frame}` : ''}">${framed ? `<div class="box">${pic}${b.frame === 'sprig' ? VINE : ''}</div>` : pic}${cap ? `<figcaption>${esc(cap)}</figcaption>` : ''}</figure>`;
   }
+  if (b.type === 'collage') {
+    // Hers where the owner lets her change them and she has chosen some; the
+    // owner's layout and frame either way.
+    const ids = b.mayChange && her.photos?.length ? her.photos : b.photos;
+    const focus = b.mayChange && her.photos?.length ? her.focus ?? [] : b.focus;
+    const { html } = collageOf(snap, ids.map((id, i) => ({ id, focus: focus[i] })), b.layout, b.frame, { lazyFirst: true });
+    return html ? `<section class="own-collage"><div class="wrap">${html}</div></section>` : '';
+  }
   if (b.type === 'overlay') {
     const pic = img(snap, photoId);
     if (!pic) return '';
@@ -358,11 +377,7 @@ function heroBlock(snap, ctx, { facts, badges, waitlistOn }) {
   if (!h.hero.enabled) return badges ? homeBadges(snap) : '';
   // The collage: the breeder's layout, each box its own shape with her photo in it
   // and the part she chose to keep; never an empty box (collageLayout).
-  const chosen = (h.hero.photos ?? []).map((id, i) => ({ id, focus: h.hero.focus?.[i] ?? 'middle' })).filter((x) => snap.photos[x.id]);
-  const layout = collageLayout(h.hero.layout, chosen.length);
-  const boxes = layout ? COLLAGE_LAYOUTS[layout].boxes : [];
-  const frame = h.hero.frame ?? 'mat';
-  const photos = chosen.map((x, i) => `<div class="box ${boxes[i]} f-${x.focus}">${img(snap, x.id, { lazy: i > 0 })}${frame === 'sprig' ? VINE : ''}</div>`);
+  const { layout, html: collage } = collageOf(snap, (h.hero.photos ?? []).map((id, i) => ({ id, focus: h.hero.focus?.[i] ?? 'middle' })), h.hero.layout, h.hero.frame ?? 'mat');
   const banner = h.hero.banner_photo_id && snap.photos[h.hero.banner_photo_id]
     ? `<div class="banner f-${h.hero.banner_focus ?? 'middle'}">${img(snap, h.hero.banner_photo_id, { lazy: false })}</div>` : '';
   const buttons = [
@@ -374,7 +389,7 @@ function heroBlock(snap, ctx, { facts, badges, waitlistOn }) {
       <h1>${scriptLine(h.hero.headline || snap.site.kennel_name, h.hero.script)}</h1>
       ${h.hero.intro ? `<p>${esc(h.hero.intro)}</p>` : ''}
       ${buttons ? `<div class="hero-actions">${buttons}</div>` : ''}${facts}
-    </div>${layout ? `<div class="hero-photos ${layout} frame-${frame}">${photos.join('')}</div>` : ''}</section>`;
+    </div>${collage}</section>`;
 }
 
 function storyBlock(snap, ctx) {

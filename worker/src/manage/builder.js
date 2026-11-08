@@ -43,8 +43,10 @@ import {
   menuOf, menuChanged, withMenu, groupOf, MenuError, MENU_PLACES, MENU_LIMITS,
   PROFILES, PROFILE_PATHS, PROFILE_PARTS, PROFILE_ITEMS, PROFILE_FIXED, PROFILE_ONLY, PROFILE_FACTS, profileOf, profileChanged, withProfile, profileFromForm, homePart,
   LINK_TO, BUTTON_SIZE, BUTTON_LOOK, ALIGN, DIVIDER_STYLE, DIVIDER_WIDTH, SPACER_HEIGHT, PHOTO_SHAPE, PHOTO_FRAME, PHOTO_FOCUS, OVER_V, OVER_SHADE, BG_COLOURS, PAD, TEXT_SIZE, FACTS_MAX, FACT_SIZES, COLS_MAX, COL_SIZES, COLS_ACROSS,
+  COLLAGE_LAYOUT, COLLAGE_FRAME, COLLAGE_MAX,
 } from '../content/blocks.js';
-import { PAGES } from '../content/model.js';
+import { PAGES, COLLAGE_LAYOUTS, collageLayout } from '../content/model.js';
+import { layoutChoice, boxHint } from './forms.js';
 import { siteLink } from '../ops/sites.js';
 import { SCREENS as WORD_SCREENS, CATALOG, itemsOn, everyWording, saveEveryWording, siteWording, withWording, WordingError } from './wording.js';
 
@@ -523,11 +525,20 @@ function linkSettings(snap, b, pics, optional) {
 }
 
 // A photo picker from her photos (the manage app's own picker's look).
-function photoChoice(b, pics) {
-  const n = `b.${b.id}.photo`;
-  const opt = (p) => `<label class="ph-opt"><input type="radio" name="${n}" value="${esc(p.id)}"${b.photo === p.id ? ' checked' : ''}><img src="${esc(pics.url(p.id))}" alt="${esc(p.alt || 'Photo')}" loading="lazy"></label>`;
-  return `<fieldset class="photos"><legend>Photo<span class="hint">From the breeder's photos. She adds photos in her Site Manager, under Photos.</span></legend>
-    <div class="ph-grid"><label class="ph-opt none"><input type="radio" name="${n}" value=""${b.photo ? '' : ' checked'}><span>No photo</span></label>${pics.list.map(opt).join('')}</div></fieldset>`;
+const FROM_HERS = "From the breeder's photos. She adds photos in her Site Manager, under Photos.";
+function photoChoice(b, pics, { name = `b.${b.id}.photo`, chosen = b.photo, label = 'Photo', hint = FROM_HERS } = {}) {
+  const opt = (p) => `<label class="ph-opt"><input type="radio" name="${name}" value="${esc(p.id)}"${chosen === p.id ? ' checked' : ''}><img src="${esc(pics.url(p.id))}" alt="${esc(p.alt || 'Photo')}" loading="lazy"></label>`;
+  return `<fieldset class="photos"><legend>${esc(label)}<span class="hint">${esc(hint)}</span></legend>
+    <div class="ph-grid"><label class="ph-opt none"><input type="radio" name="${name}" value=""${chosen ? '' : ' checked'}><span>No photo</span></label>${pics.list.map(opt).join('')}</div></fieldset>`;
+}
+
+// A collage block's photos: one box per box of the layout, each with which part
+// to keep; the boxes it doesn't have are hidden (app.js shows them when the layout changes).
+function collageBoxes(b, pics) {
+  const k = (f) => `b.${b.id}.${f}`;
+  const boxes = COLLAGE_LAYOUTS[b.layout].boxes;
+  return Array.from({ length: COLLAGE_MAX }, (_, i) => `<div class="box" data-box="${i}"${i < boxes.length ? '' : ' hidden'}>${photoChoice(b, pics, { name: k(`photos.${i}`), chosen: b.photos[i] ?? null, label: `Box ${i + 1}`, hint: boxHint(boxes[i] ?? 'square') })}
+    ${fld(`Box ${i + 1}: which part to keep`, seg(k(`focus.${i}`), b.focus[i] ?? 'middle', PHOTO_FOCUS), 'If the photo is a different shape from the box: the part that shows.')}</div>`).join('');
 }
 
 function ownSettings(snap, key, b, pics) {
@@ -555,7 +566,10 @@ function ownSettings(snap, key, b, pics) {
       <div class="fgrid">${rows.map(([h, t], i) => `${field(k(`cols.${i}.0`), h, { label: `Section ${i + 1}: subheading`, cls: '', ph: i ? '' : 'Early days' })}<label>Section ${i + 1}: words<textarea name="${k(`cols.${i}.1`)}" rows="4" maxlength="${COL_SIZES[1]}">${esc(t)}</textarea></label>`).join('')}</div></div>`;
   }
   if (b.type === 'spacer') return `<div class="fgroup"><h2>The space</h2>${fld('Height', seg(k('height'), b.height, SPACER_HEIGHT))}</div>`;
-  const change = `<div class="switches boxed">${toggle(k('mayChange'), b.mayChange, b.type === 'photo' ? 'The breeder can change the photo and its caption' : 'The breeder can change the photo')}</div>`;
+  const change = `<div class="switches boxed">${toggle(k('mayChange'), b.mayChange, b.type === 'photo' ? 'The breeder can change the photo and its caption' : b.type === 'collage' ? 'The breeder can change the photos' : 'The breeder can change the photo')}</div>`;
+  if (b.type === 'collage') return `<div class="fgroup"><h2>The collage</h2><p class="small muted">${esc(her.replace(' and reword it', ''))} Home's collage, as a block: pick the boxes, then a photo for each box. With fewer photos than boxes, the site uses a layout for that many.</p>
+    ${layoutChoice(k('layout'), b.layout, 'Photo layout')}${fld('Frame', seg(k('frame'), b.frame, COLLAGE_FRAME), 'The Home banner\'s frames, in the site\'s colours.')}</div>
+    <div class="fgroup"><h2>The photos</h2><p class="small muted">${esc(FROM_HERS)}</p>${collageBoxes(b, pics)}${change}</div>`;
   if (b.type === 'photo') return `<div class="fgroup"><h2>The photo</h2><p class="small muted">${esc(her.replace(' and reword it', ''))}</p>${photoChoice(b, pics)}
     ${fld('Shape', seg(k('shape'), b.shape, PHOTO_SHAPE))}${fld('Frame', seg(k('frame'), b.frame, PHOTO_FRAME), 'The Home banner\'s frames, in the site\'s colours. A full-width photo stays unframed.')}${fld('Which part to keep', seg(k('focus'), b.focus, PHOTO_FOCUS))}<div class="fgrid">${w('caption', 'Caption', '', 'Optional.')}</div>${change}</div>`;
   if (b.type === 'overlay') return `<div class="fgroup"><h2>The photo</h2>${photoChoice(b, pics)}${fld('Which part to keep', seg(k('focus'), b.focus, PHOTO_FOCUS))}${change}</div>
@@ -575,6 +589,11 @@ function ownSummary(snap, b) {
   if (b.type === 'factrow') return b.items.length ? b.items.map(([v, l]) => [v, l].filter(Boolean).join(' ')).join(' · ') : 'No facts yet, so it hides';
   if (b.type === 'words') return [b.w.heading, b.w.line, b.w.body && `${b.w.body.split(/\n{2,}/).filter((x) => x.trim()).length} paragraph(s)`].filter(Boolean).join(' · ') || 'No words yet, so it hides';
   if (b.type === 'columns') return [b.w.heading, b.cols.length ? `${b.cols.length} section(s), ${COLS_ACROSS[b.across].toLowerCase()} across` : 'No sections yet, so it hides'].filter(Boolean).join(' · ');
+  if (b.type === 'collage') {
+    if (!b.photos.length) return b.mayChange ? 'No photos chosen yet, so it hides until the breeder picks some' : 'No photos chosen yet, so it hides';
+    const n = b.photos.length;
+    return [COLLAGE_LAYOUT[collageLayout(b.layout, n)], `${n} photo${n === 1 ? '' : 's'}`, b.frame !== 'none' && COLLAGE_FRAME[b.frame].toLowerCase()].filter(Boolean).join(' · ');
+  }
   if (!b.photo) return 'No photo chosen yet, so it hides';
   return b.type === 'photo' ? `${PHOTO_SHAPE[b.shape]}${b.frame !== 'none' && b.shape !== 'full' ? ` · ${PHOTO_FRAME[b.frame].toLowerCase()}` : ''}${b.w.caption ? ` · ${b.w.caption}` : ''}` : [b.w.heading, `words ${OVER_V[b.v].toLowerCase()} ${ALIGN[b.h].toLowerCase()}`].filter(Boolean).join(' · ');
 }
@@ -623,6 +642,7 @@ function pagePreview(snap, key, blocks, site) {
     else if (b.type === 'words') { const x = addedWords(snap, key, b); out.push(x.heading || x.line || x.body ? `<div class="pvb">${x.heading ? `<h3>${esc(x.heading)}</h3>` : ''}${x.line ? `<p class="small muted">${esc(x.line)}</p>` : ''}${x.body ? '<div class="lines"><i></i><i></i><i></i></div>' : ''}</div>` : ghost(b, 'no words yet, so it hides')); }
     else if (b.type === 'columns') { const x = addedWords(snap, key, b); const c = snap.added?.[key]?.[b.id]?.cols?.length ? snap.added[key][b.id].cols : b.cols; out.push(c.length ? `<div class="pvb">${x.heading ? `<h3>${esc(x.heading)}</h3>` : ''}${c.map(([h]) => `<b class="small">${esc(h)}</b><div class="lines"><i></i><i></i></div>`).join('')}</div>` : ghost(b, 'no sections yet, so it hides')); }
     else if (b.type === 'spacer') out.push(`<div class="pvb ghost">Space: ${esc(SPACER_HEIGHT[b.height].toLowerCase())}</div>`);
+    else if (b.type === 'collage') { const x = b.mayChange && snap.added?.[key]?.[b.id]?.photos?.length ? snap.added[key][b.id].photos : b.photos; out.push(x.length ? `<div class="pvb"><div class="pvg">${x.map(() => '<div class="pvc"><span class="ph"></span></div>').join('')}</div></div>` : ghost(b, 'no photos chosen yet, so it hides')); }
     else if (b.type === 'photo' || b.type === 'overlay') out.push(b.photo ? `<div class="pv-hero"><span class="ph"></span>${b.type === 'overlay' && b.w.heading ? `<div><h3>${esc(addedWords(snap, key, b).heading)}</h3></div>` : ''}</div>` : ghost(b, 'no photo chosen yet, so it hides'));
     else if (b.type === 'reviews') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Families', 'What our families say')}${snap.reviews.slice(0, 1).map((r) => `<div class="pv-row" style="display:block"><span class="stars">★★★★★</span><br>“${esc(r.quote.slice(0, 90))}${r.quote.length > 90 ? '…' : ''}”</div>`).join('')}</div>`);
   }
@@ -696,7 +716,7 @@ async function pageScreen(env, site, build, key, { open = null, error = null } =
   const blocks = pageBlocks(build, key);
   const adds = addable(key, blocks);
   // Her photos, for a photo block's picker (served through the admin view of her site).
-  const pics = { build, list: open && blocks.some((b) => b.id === open && (b.type === 'photo' || b.type === 'overlay'))
+  const pics = { build, list: open && blocks.some((b) => b.id === open && ['photo', 'overlay', 'collage'].includes(b.type))
     ? (await env.DB.prepare('SELECT id, alt FROM photos WHERE site_id = ? AND removed_at IS NULL ORDER BY created_at DESC').bind(site.id).all()).results : [],
   url: (id) => `/admin/${site.subdomain}/site/_kp/p/${encodeURIComponent(id)}?s=t` };
   const changed = pageChanged(build, key);

@@ -51,7 +51,7 @@ async function setup() {
 }
 
 test('a block nobody styled reads as before; a new block\'s settings are clean', () => {
-  for (const t of ['banner', 'button', 'divider', 'spacer', 'photo', 'overlay', 'words', 'factrow', 'columns']) assert.deepEqual(cleanBlock(newBlock(t, `${t}-2`)), cleanBlock(cleanBlock(newBlock(t, `${t}-2`))), t);
+  for (const t of ['banner', 'button', 'divider', 'spacer', 'photo', 'collage', 'overlay', 'words', 'factrow', 'columns']) assert.deepEqual(cleanBlock(newBlock(t, `${t}-2`)), cleanBlock(cleanBlock(newBlock(t, `${t}-2`))), t);
   assert.equal(cleanBlock({ id: 'faq', type: 'faq', s: { bg: '', py: '', px: '', text: 'm' } }).s, undefined);
   assert.deepEqual(cleanBlock({ id: 'faq', type: 'faq', s: { bg: 'accent', py: 'l', text: 'huge' } }).s, { bg: 'accent', py: 'l' });
   assert.equal(cleanBlock({ id: 'x', type: 'button', link: { to: 'page', page: 'Bad Page' } }).link, null);
@@ -281,4 +281,50 @@ test('a text block and a facts row take every block\'s look: background, space a
     const cls = t === 'words' ? 'own-words a-center' : 'section tight own-facts';
     assert.match(await s.render('/about'), new RegExp(`<div class="kb-o"><div class="kb bg-foot py-l t-l"><section class="${cls}">`));
   }
+});
+
+test('the owner adds a collage: Home\'s layouts and frames, a photo for each box; the breeder can change its photos', async () => {
+  const s = await setup();
+  for (const id of ['ph2', 'ph3']) s.env.DB.raw.prepare("INSERT INTO photos (id, site_id, r2_key, type, bytes, width, height, created_at) VALUES (?, ?, ?, 'image/webp', 10, 1600, 1000, '2026-11-02T00:00:00Z')").run(id, s.site.id, `sites/${s.site.id}/photos/${id}.webp`);
+  await s.post('about', {}, { act: 'add:collage' });
+  const c = (await s.blocks('about')).at(-1);
+  assert.deepEqual({ layout: c.layout, frame: c.frame, photos: c.photos, mayChange: c.mayChange }, { layout: 'tall_two_wide', frame: 'mat', photos: [], mayChange: true });
+  // No photos: nothing drawn.
+  assert.doesNotMatch(await s.render('/about'), /own-collage/);
+  // Its settings: the layout pictures, the frames, and a box per box of the layout (the rest hidden).
+  const form = await s.get(`/admin/akbostons/pages/about?open=${c.id}`);
+  assert.match(form, new RegExp(`<fieldset class="layouts" data-layouts><legend>Photo layout</legend><label class="layout-opt"><input type="radio" name="b\\.${c.id}\\.layout" value="one_wide"`));
+  assert.match(form, new RegExp(`name="b\\.${c.id}\\.frame" value="sprig"`));
+  assert.match(form, /<div class="box" data-box="2">/);
+  assert.match(form, /<div class="box" data-box="3" hidden>/);
+  assert.match(form, new RegExp(`name="b\\.${c.id}\\.photos\\.0" value="ph1"`));
+  // Three photos in its three boxes, the second kept at the top.
+  await s.post('about', { [`b.${c.id}.photos.0`]: 'ph1', [`b.${c.id}.photos.1`]: 'ph2', [`b.${c.id}.photos.2`]: 'ph3', [`b.${c.id}.focus.1`]: 'top' }, { open: c.id });
+  let html = await s.render('/about');
+  assert.match(html, /<section class="own-collage"><div class="wrap"><div class="hero-photos tall_two_wide frame-mat"><div class="box tall f-middle"><img src="\/_kp\/p\/ph1"[^>]*><\/div><div class="box wide f-top"><img src="\/_kp\/p\/ph2"[^>]*><\/div><div class="box wide f-middle"><img src="\/_kp\/p\/ph3"[^>]*><\/div><\/div><\/div><\/section>/);
+  // An empty box is skipped: two photos use a layout for two.
+  await s.post('about', { [`b.${c.id}.photos.1`]: '', [`b.${c.id}.frame`]: 'sprig' }, { open: c.id });
+  assert.deepEqual((await s.blocks('about')).at(-1).photos, ['ph1', 'ph3']);
+  html = await s.render('/about');
+  assert.match(html, /<div class="hero-photos two_tall frame-sprig"><div class="box tall f-middle"><img src="\/_kp\/p\/ph1"[^>]*><div class="vine" aria-hidden="true">/);
+  // Its line in the list.
+  assert.match(text(await s.get('/admin/akbostons/pages/about')), /Collage Two tall, side by side · 2 photos · a leafy vine/);
+  // The breeder picks her own, in the owner's layout; the boxes past it hidden.
+  await s.post('about', { [`b.${c.id}.layout`]: 'four_square', [`b.${c.id}.photos.0`]: 'ph1', [`b.${c.id}.photos.1`]: 'ph2' }, { open: c.id });
+  const mine = await s.get('/s/akbostons/pages/about');
+  assert.match(text(mine), /A collage of photos\. A photo for each box, in order\./);
+  assert.match(mine, /<div class="box" data-box="3">/);
+  await s.breeder(`/blocks/about/${c.id}`, { enabled: '1', 'photos.0': 'ph3', 'focus.0': 'bottom', 'photos.2': 'ph2' });
+  html = await s.render('/about');
+  assert.match(html, /<div class="hero-photos two_tall frame-sprig"><div class="box tall f-bottom"><img src="\/_kp\/p\/ph3"[^>]*>.*?<\/div><div class="box tall f-middle"><img src="\/_kp\/p\/ph2"/);
+  // Not hers to change: the owner's photos, and no boxes on her card.
+  await s.post('about', { [`b.${c.id}.mayChange`]: null }, { open: c.id });
+  assert.match(await s.render('/about'), /<div class="hero-photos two_tall frame-sprig"><div class="box tall f-middle"><img src="\/_kp\/p\/ph1"/);
+  assert.doesNotMatch(await s.get('/s/akbostons/pages/about'), /name="photos\.0"/);
+  // Switched off by her.
+  await s.breeder(`/blocks/about/${c.id}`, {});
+  assert.doesNotMatch(await s.render('/about'), /own-collage/);
+  // Cleaned: an unknown layout or frame falls back; at most four photos.
+  const x = cleanBlock({ id: 'x', type: 'collage', layout: 'nine', frame: 'gold', photos: ['a', 'b', 'c', 'd', 'e'], focus: ['top', 'sideways'] });
+  assert.deepEqual([x.layout, x.frame, x.photos, x.focus], ['tall_two_wide', 'mat', ['a', 'b', 'c', 'd'], ['top', 'middle', 'middle', 'middle']]);
 });

@@ -8,7 +8,7 @@ import {
   KINDS, listRecords, getRecord, saveRecord, setField, removeRecord, moveRecord,
   saveSite, getPage, savePage, getBlock, saveBlock, getPayment, savePayment, getAddedBlock, saveAddedBlock,
 } from '../content/records.js';
-import { pageBlocks, customPages, addedBlocks, BLOCK_TYPES, isCustom } from '../content/blocks.js';
+import { pageBlocks, customPages, addedBlocks, BLOCK_TYPES, isCustom, collageFromForm } from '../content/blocks.js';
 import { fields, field, parseForm, LABELS, labelFor, placeChoices } from './forms.js';
 import { savePhoto, PhotoError } from '../photos.js';
 import { subjects, isSubject, tagPhotos, untagPhoto, tagsByPhoto } from '../photoTags.js';
@@ -786,6 +786,11 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       photo = field('photo_id', { type: 'photo' }, cur.photo_id || b.photo || '', { kind: 'pages', say, photos: await photos(), photoUrl });
       if (b.type === 'photo') parts.push(input('caption', say('pages.own.caption'), F.caption.max, false, empty(b.w.caption), b.w.caption));
     } else if ((b.type === 'photo' || b.type === 'overlay') && !b.photo) linkNote += `<p class="muted small">${esc(say('pages.own.no_photo'))}</p>`;
+    if (b.type === 'collage' && b.mayChange) {
+      // A photo for each of the owner's boxes (her layout and frame), as on Home's collage.
+      const mine = cur.photos?.length;
+      photo = `<p class="muted small">${esc(say('pages.own.collage_photos'))}</p>${field('photos', { ...ADDED_BLOCK_FIELDS.photos, boxes: true }, mine ? cur.photos : b.photos, { kind: 'pages', say, photos: await photos(), photoUrl, values: { layout: b.layout, focus: mine ? cur.focus ?? [] : b.focus } })}`;
+    } else if (b.type === 'collage' && !b.photos.length) linkNote += `<p class="muted small">${esc(say('pages.own.no_photos'))}</p>`;
     return `<form method="post" action="${base}/blocks/${esc(key)}/${esc(b.id)}" data-save class="card added${cur.enabled ? '' : ' off'}" id="b-${esc(b.id)}">
         <div class="between"><h2 class="added-h">${esc(cur.heading || cur.label || b.w?.heading || b.w?.label || say(`pages.own.${b.type}`))}</h2>
           <div class="switches"><label class="check">${esc(say('pages.show_it'))}<input type="checkbox" name="enabled" value="1"${cur.enabled ? ' checked' : ''}></label></div></div>
@@ -800,6 +805,9 @@ export function createScreens({ env, request, url, site, user, page, say = defau
   // Text in columns' sections as she typed them, the empty ones dropped.
   const colsFrom = (fd) => Array.from({ length: ADDED_BLOCK_FIELDS.cols.max }, (_, i) => [String(fd.get(`cols.${i}.0`) ?? '').trim(), String(fd.get(`cols.${i}.1`) ?? '').trim()]).filter(([h, t]) => h || t);
 
+  // A collage's photos as she picked them, box by box in the owner's layout.
+  const collageMine = (fd, b) => { const { photos: ids, focus } = collageFromForm((n) => fd.get(n), b.layout); return { photos: ids, focus }; };
+
   async function addedAction() {
     const [, , , , page, block] = url.pathname.split('/');
     if (request.method !== 'POST') return null;
@@ -811,7 +819,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       const own = BLOCK_TYPES[b.type].kind === 'own';
       const pick = (...ks) => Object.fromEntries(ks.filter((k) => fd.has(k)).map((k) => [k, fd.get(k)]));
       await saveAddedBlock(env, site.id, page, block, own
-        ? { enabled: fd.get('enabled') != null, ...pick('heading', 'line', 'url', 'phone', 'email', 'caption', 'body'), ...(b.type === 'factrow' ? { facts: factsFrom(fd) } : {}), ...(b.type === 'columns' ? { cols: colsFrom(fd) } : {}), ...(fd.has('button_label') ? { label: fd.get('button_label') } : {}), ...(b.mayChange ? pick('photo_id') : {}) }
+        ? { enabled: fd.get('enabled') != null, ...pick('heading', 'line', 'url', 'phone', 'email', 'caption', 'body'), ...(b.type === 'factrow' ? { facts: factsFrom(fd) } : {}), ...(b.type === 'columns' ? { cols: colsFrom(fd) } : {}), ...(b.type === 'collage' && b.mayChange ? collageMine(fd, b) : {}), ...(fd.has('button_label') ? { label: fd.get('button_label') } : {}), ...(b.mayChange ? pick('photo_id') : {}) }
         : { enabled: fd.get('enabled') != null, eyebrow: fd.get('eyebrow'), heading: fd.get('heading'), lede: fd.get('lede') });
     } catch (err) {
       if (!(err instanceof ContentError)) throw err;

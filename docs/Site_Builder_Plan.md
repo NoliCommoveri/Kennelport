@@ -587,12 +587,12 @@ Each step is its own branch and can be released on its own.
 4. **The owner's own blocks and styling** (decisions 16 to 18): buttons, banners and
    their links; dividers, spacers, collages, photos, videos, text over a photo; every
    block's background, padding, text size and fonts; template colours; the font library.
-   Built: banners, buttons, dividers, spacers, photos and text over a photo, on any page,
+   Built: banners, buttons, dividers, spacers, photos, collages and text over a photo, on any page,
    with links to a page, an outside site, a call, a text or an email; the breeder's
    switch, words, outside link, phone, email and (where allowed) photo; every block's
    background (scheme colours by name, with the scheme's matching ink), space above and
-   below and at the sides; text size on the owner's own blocks. Still to come: collages
-   and videos as the owner's blocks, links to a dog, litter or puppy, fonts and the font
+   below and at the sides; text size on the owner's own blocks. Still to come: videos
+   as the owner's blocks, links to a dog, litter or puppy, fonts and the font
    library, and text size on the built-in blocks.
 5. **Templates.** Save as template, Apply, Reset to template.
 6. **The family portal's build:** the **Website and family portal** template; the

@@ -13,7 +13,7 @@
 // she placed there, videos and posts) and draws a few differently (the facts sit in
 // the top block, two litters at most). Those stay as today on every existing site;
 // the prototype's Home goes into the Website template for new sites (step 5).
-import { PAGES, MENU_GROUPS, CUSTOM_KEY, slugify } from './model.js';
+import { PAGES, MENU_GROUPS, CUSTOM_KEY, slugify, COLLAGE_LAYOUTS, FRAMES, FOCUS } from './model.js';
 
 export class BlockError extends Error {}
 
@@ -39,6 +39,7 @@ export const BLOCK_TYPES = Object.freeze({
   divider: { name: 'Divider', ic: 'list', kind: 'own', hint: 'A line, a brass rule or the scheme\'s ornament between blocks.' },
   spacer: { name: 'Spacer', ic: 'sliders', kind: 'own', hint: 'Empty space between blocks.' },
   photo: { name: 'Photo', ic: 'camera', kind: 'own', hint: 'One photo, with an optional caption.' },
+  collage: { name: 'Collage', ic: 'camera', kind: 'own', hint: 'Up to four photos in one of the Home collage\'s layouts and frames.' },
   overlay: { name: 'Text over a photo', ic: 'camera', kind: 'own', hint: 'A photo with a heading, a line and a button over it.' },
   factrow: { name: 'Facts row (any page)', ic: 'star', kind: 'own', hint: 'Up to four facts side by side, each a big value over a small label (as on Home).' },
   words: { name: 'Text block', ic: 'draft', kind: 'own', hint: 'A heading, a line under it, and words: as many paragraphs as you like.' },
@@ -62,6 +63,11 @@ export const PHOTO_SHAPE = Object.freeze({ wide: 'Wide', tall: 'Tall', square: '
 // A photo's frame: the Home banner collage's frames (model.js FRAMES), none to start.
 export const PHOTO_FRAME = Object.freeze({ none: 'No frame', mat: 'A soft mat', double: 'A mat with a fine inner line', sprig: 'A leafy vine' });
 export const PHOTO_FOCUS = Object.freeze({ top: 'The top', middle: 'The middle', bottom: 'The bottom' });
+// A collage block's layouts and frames: the Home collage's (model.js COLLAGE_LAYOUTS,
+// FRAMES), a soft mat to start, as Home's.
+export const COLLAGE_LAYOUT = Object.freeze(Object.fromEntries(Object.entries(COLLAGE_LAYOUTS).map(([k, v]) => [k, v.label])));
+export const COLLAGE_FRAME = Object.freeze(Object.fromEntries(FRAMES.map((f) => [f, PHOTO_FRAME[f]])));
+export const COLLAGE_MAX = 4;
 export const OVER_V = Object.freeze({ top: 'Top', middle: 'Middle', bottom: 'Bottom' });
 export const OVER_SHADE = Object.freeze({ light: 'Light', medium: 'Medium', dark: 'Dark' });
 // Every block's look. Colours are the scheme's, by name, so they follow light and
@@ -143,6 +149,7 @@ export function newBlock(type, id) {
   if (type === 'divider') Object.assign(b, { style: 'line', width: 'wide' });
   if (type === 'spacer') Object.assign(b, { height: 'm' });
   if (type === 'photo') Object.assign(b, { photo: null, shape: 'wide', frame: 'none', focus: 'middle', w: { caption: '' }, mayChange: true });
+  if (type === 'collage') Object.assign(b, { layout: 'tall_two_wide', frame: 'mat', photos: [], focus: [], mayChange: true });
   if (type === 'factrow') Object.assign(b, { items: [] });
   if (type === 'words') Object.assign(b, { w: { heading: 'A few words from us', line: '', body: '' }, align: 'center' });
   if (type === 'columns') Object.assign(b, { w: { heading: 'Our approach', line: '' }, cols: [], across: '2', align: 'center' });
@@ -350,6 +357,16 @@ export function cleanBlock(b) {
     out.focus = pick(b.focus, PHOTO_FOCUS, 'middle');
     out.mayChange = b.mayChange !== false;
   }
+  if (b.type === 'collage') {
+    // Its photos in box order, each with the part to keep; at most four.
+    const ids = (Array.isArray(b.photos) ? b.photos : []).slice(0, COLLAGE_MAX);
+    const keep = ids.map((id, i) => [id, b.focus?.[i]]).filter(([id]) => PHOTO_ID.test(String(id ?? '')));
+    out.layout = pick(b.layout, COLLAGE_LAYOUT, 'tall_two_wide');
+    out.frame = pick(b.frame, COLLAGE_FRAME, 'mat');
+    out.photos = keep.map(([id]) => id);
+    out.focus = keep.map(([, f]) => (FOCUS.includes(f) ? f : 'middle'));
+    out.mayChange = b.mayChange !== false;
+  }
   if (b.type === 'photo') { out.shape = pick(b.shape, PHOTO_SHAPE, 'wide'); out.frame = pick(b.frame, PHOTO_FRAME, 'none'); out.w = words(b.w, ['caption']); }
   if (b.type === 'overlay') {
     out.w = words(b.w, ['heading', 'line', 'label']);
@@ -483,12 +500,29 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
       if ('items' in b) next.items = Array.from({ length: FACTS_MAX }, (_, i) => [str(`items.${i}.0`), str(`items.${i}.1`)]);
       if ('cols' in b) next.cols = Array.from({ length: COLS_MAX }, (_, i) => [str(`cols.${i}.0`), str(`cols.${i}.1`)]);
       if ('photo' in b) { next.photo = str('photo') || null; next.mayChange = get(k('mayChange')) != null; }
+      if (b.type === 'collage') Object.assign(next, collageFromForm((n) => get(k(n)), str('layout')), { mayChange: get(k('mayChange')) != null });
     }
     if (get(k('s.present')) != null) next.s = { bg: str2(k('s.bg')), py: str2(k('s.py')), px: str2(k('s.px')), text: str2(k('s.text')) };
     if (b.type === 'dogs' && !next.f.status.length) throw new BlockError('A Dog cards block needs at least one status.');
     if (b.type === 'litters' && !next.f.stage.length) throw new BlockError('A Litter cards block needs at least one stage.');
     return cleanBlock(next);
   });
+}
+
+// A collage's photos from a form: the layout's boxes in order (photos.<i>, focus.<i>);
+// an empty box is skipped, so the photos after it move up and the site uses a
+// layout for that many (model.js collageLayout), as Home's collage does.
+export function collageFromForm(get, layout) {
+  const count = COLLAGE_LAYOUTS[layout]?.boxes.length ?? COLLAGE_MAX;
+  const photos = []; const focus = [];
+  for (let i = 0; i < count; i++) {
+    const id = String(get(`photos.${i}`) ?? '');
+    if (!id) continue;
+    photos.push(id);
+    const f = String(get(`focus.${i}`) ?? '');
+    focus.push(FOCUS.includes(f) ? f : 'middle');
+  }
+  return { layout, photos, focus };
 }
 
 // Move an item of a block's list (or a block itself) up or down.
