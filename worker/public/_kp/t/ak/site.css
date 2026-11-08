@@ -729,6 +729,34 @@ dialog.viewer img { width: auto; height: auto; max-width: 96vw; max-height: 88dv
 .own-photo.full figcaption { padding-inline: 16px; }
 .own-photo.f-top img, .own-over.f-top img { object-position: 50% 0; }
 .own-photo.f-bottom img, .own-over.f-bottom img { object-position: 50% 100%; }
+/* The owner's photo beside words: the story's grid, the photo on the right on a
+   computer when she picks it; on a phone it stays above the words. */
+/* Its words lined up left (as the story's), centred or right. */
+.story-copy.a-center { text-align: center; justify-items: center; } .story-copy.a-center > p { margin-inline: auto; }
+.story-copy.a-right { text-align: right; justify-items: end; } .story-copy.a-right > p { margin-inline: auto 0; }
+@media (min-width: 861px) { .story.pic-right { grid-template-columns: 1.1fr .9fr; } .story.pic-right > :first-child { order: 2; } }
+/* The owner's gallery strip: the album page's gallery (.gal-item, the viewer) in one
+   row, as many across as she shows on a computer (twelve scroll, six at a time), and
+   sideways on a phone, the next photo peeking so it reads as more. */
+.gallery.strip { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: calc((100% - 5 * 8px) / 6); overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: thin; overscroll-behavior-x: contain; padding-bottom: 4px; }
+.gallery.strip > * { scroll-snap-align: start; }
+.gallery.strip.n-4 { grid-auto-columns: calc((100% - 3 * 8px) / 4); }
+.gallery.strip.n-8 { grid-auto-columns: calc((100% - 7 * 8px) / 8); }
+/* A border round the whole strip: a thin line, the photo frames' soft mat, or the mat
+   with a fine brass line inside it. */
+.strip-frame { border-radius: calc(var(--r) + 4px); }
+.strip-frame.frame-line { border: 1px solid var(--line); padding: 10px; }
+.strip-frame.frame-mat, .strip-frame.frame-double { position: relative; background: var(--surface); border: 1px solid var(--line); padding: 12px; box-shadow: var(--shadow); }
+.strip-frame.frame-double { padding: 16px; }
+.strip-frame.frame-double::after { content: ""; position: absolute; inset: 6px; border: 1.5px solid var(--brass); border-radius: calc(var(--r) + 1px); pointer-events: none; }
+@media (max-width: 760px) { .strip-frame.frame-line, .strip-frame.frame-mat { padding: 8px; } .strip-frame.frame-double { padding: 12px; } .strip-frame.frame-double::after { inset: 4px; } }
+@media (max-width: 760px) { .gallery.strip, .gallery.strip.n-4, .gallery.strip.n-8 { grid-auto-columns: calc((100% - 2 * 6px) / 2.6); gap: 6px; } }
+/* The owner's collage block: Home's collage (.hero-photos, its boxes and frames) on its
+   own, centred, at most about two photos' width so four squares don't fill a computer's screen. */
+.own-collage { padding-block: 20px; }
+.own-collage .hero-photos { max-width: 760px; margin-inline: auto; }
+.own-collage .hero-photos.one_tall { max-width: 440px; }
+.own-collage .hero-photos.two_wide { max-width: 520px; }
 
 /* Text over a photo: white words on a shade dark enough to read at its lightest. */
 .own-over { position: relative; display: grid; min-height: clamp(280px, 48vw, 520px); overflow: hidden; color: #fff; }

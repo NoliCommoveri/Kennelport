@@ -89,6 +89,9 @@
         box.hidden = i >= shapes.length;
         const hint = box.querySelector('legend .hint');
         if (hint && shapes[i]) hint.textContent = SHAPES[shapes[i]];
+        // Its photo spot takes the box's shape (forms.js photoSlot).
+        const spot = box.querySelector('.ph-slot');
+        if (spot && shapes[i]) { spot.classList.remove('wide', 'tall', 'square'); spot.classList.add(shapes[i]); }
       }
     };
     set.addEventListener('change', show);

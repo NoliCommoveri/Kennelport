@@ -3,15 +3,16 @@
 // a problem comes back with what was typed and the reason.
 import { escapeHtml as esc } from '../lib/html.js';
 import { json } from '../lib/http.js';
-import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, CUSTOM_PAGE, ADDED_BLOCK_FIELDS } from '../content/model.js';
+import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, HOME_WORDS, ALBUM_PHOTOS_MAX, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, CUSTOM_PAGE, ADDED_BLOCK_FIELDS } from '../content/model.js';
 import {
   KINDS, listRecords, getRecord, saveRecord, setField, removeRecord, moveRecord,
   saveSite, getPage, savePage, getBlock, saveBlock, getPayment, savePayment, getAddedBlock, saveAddedBlock,
 } from '../content/records.js';
-import { pageBlocks, customPages, addedBlocks, BLOCK_TYPES, isCustom } from '../content/blocks.js';
+import { pageBlocks, customPages, addedBlocks, BLOCK_TYPES, isCustom, collageFromForm, PAGE_HEADS } from '../content/blocks.js';
 import { fields, field, parseForm, LABELS, labelFor, placeChoices } from './forms.js';
 import { savePhoto, PhotoError } from '../photos.js';
 import { subjects, isSubject, tagPhotos, untagPhoto, tagsByPhoto } from '../photoTags.js';
+import { photoPlaces } from '../photoPlaces.js';
 import { buildSnapshot, loadSnapshot, publish, undoPublish, listSnapshots, draftChanges } from '../publish.js';
 import { makePreviewToken } from '../site.js';
 import { siteLink } from '../ops/sites.js';
@@ -59,7 +60,7 @@ const LISTS = {
   puppies: { name: (r) => r.name, sub: (r, say) => STATUS_TEXT[r.status] ?? say('lists.sub.hidden_puppy') },
   health: { name: (r) => r.test, sub: (r, say) => `${r.result}${r.show ? '' : ` · ${say('lists.sub.not_shown')}`}` },
   reviews: { name: (r) => r.first_name, sub: (r, say) => (r.status === 'hidden' ? say('lists.sub.hidden') : r.quote.slice(0, 60)) },
-  steps: { name: (r) => r.heading, sub: () => '' },
+  steps: { name: (r) => r.heading || r.body || '—', sub: () => '' },
   extras: { name: (r) => r.name, sub: (r, say) => (r.kind === 'homegoing' ? say('lists.sub.package', { weeks: r.weeks ?? '' }) : r.grp ?? '') },
   partners: { name: (r) => r.name, sub: (r, say) => (r.hidden_by_kennelos ? say('lists.sub.not_sent') : r.url ? r.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : '') },
   products: { name: (r) => r.name, sub: (r, say) => [r.grp, r.code ? say('lists.sub.code', { code: r.code }) : null, r.transport ? say('lists.sub.transport') : null, r.home_badge ? say('lists.sub.home_badge') : null].filter(Boolean).join(' · ') },
@@ -127,14 +128,12 @@ export function createScreens({ env, request, url, site, user, page, say = defau
   // Where questions and badges can show: the places the owner has made (step 3.6).
   let placesMemo = null;
   const places = async () => (placesMemo ??= placeChoices(await loadBuild(env, site.id), say));
+  // The photo library window's addresses (forms.js photoSlot, photos.js): one window
+  // for every photo spot; a new photo is tagged as what's being edited.
+  const library = (pick) => ({ list: `${base}/photos/library`, upload: `${base}/photos/upload`, tags: (pick?.tags ?? []).filter(Boolean).join(','), alt: pick?.alt ?? '' });
   const ctxFor = async (kind, pick) => {
-    const ctx = { kind, say, photos: await photos(), photoUrl, dogs: await dogsList(), litters: await littersList(), partners: kind === 'dogs' ? await partnersList() : [], photosLink: `${base}/photos` };
+    const ctx = { kind, say, library: library(pick), photos: await photos(), photoUrl, dogs: await dogsList(), litters: await littersList(), partners: kind === 'dogs' ? await partnersList() : [], photosLink: `${base}/photos` };
     if (kind === 'expander' || kind === 'products') ctx.places = await places();
-    if (pick) {
-      const t = await tags();
-      ctx.photoGroups = pick.groups.map((g) => ({ label: g.label, ids: g.subject ? ctx.photos.filter((p) => (t.get(p.id) ?? []).includes(g.subject)).map((p) => p.id) : [] }));
-      ctx.upload = { action: `${base}/photos/upload`, tags: pick.tags.filter(Boolean).join(','), alt: pick.alt ?? '' };
-    }
     return ctx;
   };
   // After a save: the photos chosen in the form, and any added with its Add
@@ -502,18 +501,17 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     return view;
   }
 
-  // A litter has no photo field of its own, but its photos (for albums and the
-  // puppies' pickers) are added here, tagged with the litter.
+  // A litter has no photo field of its own: the photos shown on its profile (tagged
+  // with it) are listed here, and chosen on the Photos screen (Show on a profile), the one
+  // place to upload (decision 20). They're its row in the photo library's Profile photos.
   async function litterPhotos(view) {
     if (!view?.rec) return view;
     const subject = `litter:${view.rec.id}`;
     const t = await tags();
     const mine = (await photos()).filter((p) => (t.get(p.id) ?? []).includes(subject));
-    view.body += `<section class="card photos" data-picker data-type="none" data-upload="${esc(`${base}/photos/upload`)}" data-tags="${esc(subject)}" data-alt="${esc(view.rec.name)}">
-      <h2>${esc(say('photos.photos_of_this_litter'))}</h2><p class="muted small">${esc(say('photos.photos_added_here_are'))}</p>
-      <div class="ph-grid" data-first>${mine.map((p) => `<img src="${esc(photoUrl(p.id))}" alt="${esc(p.alt || say('photos.photo_2'))}" loading="lazy">`).join('')}</div>
-      <div class="ph-add"><label class="button">${esc(say('photos.add_photos_2'))}<input type="file" accept="image/*" multiple data-add-photos></label><span class="muted small" role="status"></span></div>
-      ${mine.length ? `<p><a href="${esc(`${base}/photos?of=${encodeURIComponent(subject)}`)}">${esc(say('photos.see_them_on_the'))}</a></p>` : ''}</section>`;
+    view.body += `<section class="card photos"><h2>${esc(say('photos.photos_of_this_litter'))}</h2><p class="muted small">${esc(say('photos.photos_added_here_are'))}</p>
+      ${mine.length ? `<div class="pm-peek pm-litter">${mine.slice(0, 12).map((p) => `<img src="${esc(photoUrl(p.id))}" alt="${esc(p.alt || say('photos.photo_2'))}" loading="lazy">`).join('')}</div>` : ''}
+      <p><a class="button small" href="${esc(`${base}/photos?tab=profile`)}">${esc(say('photos.see_them_on_the'))}</a></p></section>`;
     return view;
   }
 
@@ -635,6 +633,8 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     const all = { ...(p.canHide ? { enabled: { type: 'bool' } } : {}), menu_label: { type: 'text', max: 40 }, ...p.fields };
     const current = await getPage(env, site.id, key);
     const subject = key === 'about' ? 'page:about' : null;
+    // Its heading's own words, shown where she has set none (render/parts.js pagehead).
+    const defs = custom ? { heading: custom.name } : { ...(PAGE_HEADS[key] ?? {}) };
 
     const pick = subject ? { groups: [{ label: `Photos for ${p.label}`, subject }], tags: [subject], alt: '' } : undefined;
     // Her page, card by card in the order its parts sit on the page: its on/off and
@@ -675,7 +675,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
         if (!x.names.length) { if (x.links) cards.push(links); continue; }
         const list = Object.fromEntries(x.names.map((n) => [n, all[n]]));
         cards.push(`<form method="post" action="${base}/pages/${key}" data-save class="card">${pageCards > 1 ? `<input type="hidden" name="_part" value="${esc(x.names.join(','))}">` : ''}
-        ${fieldsWithLabel(list, values ?? current, ctx, labels)}
+        ${fieldsWithLabel(list, shownWith(values ?? current, defs), ctx, labels)}
         <button class="primary">${esc(say('pages.save_2'))}</button></form>${x.links ? links : ''}`);
       }
       return { title: p.label, back: `${base}/pages`, body: `${note(url)}${key === 'waitlist' ? kennelos ?? await kennelosCard() : ''}${errorBox(err)}${cards.join('\n')}` };
@@ -685,7 +685,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     // One card's fields (_part), over what she has saved; or the whole page.
     const part = fd.has('_part') ? String(fd.get('_part')).split(',').filter((n) => Object.hasOwn(all, n)) : null;
     const list = part ? Object.fromEntries(part.map((n) => [n, all[n]])) : all;
-    const values = part ? { ...current, ...parseForm(list, fd) } : parseForm(all, fd);
+    const values = part ? { ...current, ...keepUnset(parseForm(list, fd), defs) } : keepUnset(parseForm(all, fd), defs);
     try { await savePage(env, site.id, key, values); } catch (err) {
       if (err instanceof ContentError) return render(err.message, values);
       throw err;
@@ -733,7 +733,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     const cur = await getAddedBlock(env, site.id, key, b.id);
     const rows = blockRows(snap, b);
     const names = (b.limit ? rows.slice(0, b.limit) : rows).map(nameOf[b.type]);
-    const input = (n, label, max, half) => `<div class="f${half ? ' half' : ''}"><label>${esc(label)}<input name="${n}" value="${esc(cur[n] ?? '')}" maxlength="${max}" placeholder="${esc(b.w[n] ?? '')}">${b.w[n] ? `<span class="hint">Empty: "${esc(b.w[n])}".</span>` : ''}</label></div>`;
+    const input = (n, label, max, half) => `<div class="f${half ? ' half' : ''}"><label>${esc(label)}<input name="${n}" value="${esc(cur[n] ?? b.w[n] ?? '')}" maxlength="${max}"><span class="hint">${esc(say('pages.own.empty_none'))}</span></label></div>`;
     return `<form method="post" action="${base}/blocks/${esc(key)}/${esc(b.id)}" data-save class="card added${cur.enabled ? '' : ' off'}" id="b-${esc(b.id)}">
         <div class="between"><h2 class="added-h">${esc(cur.heading || b.w.heading || BLOCK_TYPES[b.type].name)}</h2>
           <div class="switches"><label class="check">${esc(say('pages.show_it'))}<input type="checkbox" name="enabled" value="1"${cur.enabled ? ' checked' : ''}></label></div></div>
@@ -745,17 +745,21 @@ export function createScreens({ env, request, url, site, user, page, say = defau
   // One of the owner's own blocks (content/blocks.js, step 4): hers to switch off and
   // reword; an outside link, phone or email she can change; a page link is the owner's
   // (decision 18); the photo, where the owner lets her.
+  const WORD_KEYS = ['heading', 'line', 'label', 'caption', 'body'];
   async function ownCard(key, b, snap) {
     const cur = await getAddedBlock(env, site.id, key, b.id);
     const empty = (t) => (t ? say('pages.own.empty_is', { text: t }) : '');
+    const none = say('pages.own.empty_none');
+    // Her words where she has typed some (emptied too), else the owner's: what shows.
+    const shown = (n) => cur[n] ?? b.w?.[n];
     // A button's words post as button_label: the app fills any field named label
     // with the device's name (the sign-in form's).
-    const input = (n, label, max, half, hint = '', ph = '') => `<div class="f${half ? ' half' : ''}"><label>${esc(label)}<input name="${n === 'label' ? 'button_label' : n}" value="${esc(cur[n] ?? '')}" maxlength="${max}"${ph ? ` placeholder="${esc(ph)}"` : ''}>${hint ? `<span class="hint">${esc(hint)}</span>` : ''}</label></div>`;
+    const input = (n, label, max, half, hint = '', ph = '') => `<div class="f${half ? ' half' : ''}"><label>${esc(label)}<input name="${n === 'label' ? 'button_label' : n}" value="${esc((WORD_KEYS.includes(n) ? shown(n) : cur[n]) ?? '')}" maxlength="${max}"${ph && !WORD_KEYS.includes(n) ? ` placeholder="${esc(ph)}"` : ''}>${hint ? `<span class="hint">${esc(hint)}</span>` : ''}</label></div>`;
     const F = ADDED_BLOCK_FIELDS;
     const parts = [];
-    if (b.type === 'banner' || b.type === 'overlay') parts.push(input('heading', say('pages.heading'), F.heading.max, true, empty(b.w.heading), b.w.heading), input('label', say('pages.own.button_words'), F.label.max, true, empty(b.w.label), b.w.label), input('line', say('pages.own.a_line'), F.line.max, false, empty(b.w.line), b.w.line));
-    if (b.type === 'words') parts.push(input('heading', say('pages.heading'), F.heading.max, true, empty(b.w.heading), b.w.heading), input('line', say('pages.line_under_it'), F.line.max, true, empty(b.w.line), b.w.line),
-      `<div class="f"><label>${esc(say('pages.own.words_body'))}<textarea name="body" rows="6" maxlength="${F.body.max}"${b.w.body ? ` placeholder="${esc(b.w.body)}"` : ''}>${esc(cur.body ?? '')}</textarea><span class="hint">${esc(say('pages.own.words_body_hint'))}</span></label></div>`);
+    if (b.type === 'banner' || b.type === 'overlay') parts.push(input('heading', say('pages.heading'), F.heading.max, true, none, b.w.heading), input('label', say('pages.own.button_words'), F.label.max, true, none, b.w.label), input('line', say('pages.own.a_line'), F.line.max, false, none, b.w.line));
+    if (b.type === 'words') parts.push(input('heading', say('pages.heading'), F.heading.max, true, none, b.w.heading), input('line', say('pages.line_under_it'), F.line.max, true, none, b.w.line),
+      `<div class="f"><label>${esc(say('pages.own.words_body'))}<textarea name="body" rows="6" maxlength="${F.body.max}">${esc(shown('body') ?? '')}</textarea><span class="hint">${esc(say('pages.own.words_body_hint'))}</span></label></div>`);
     if (b.type === 'factrow') {
       // Hers, row by row; all empty follows KennelPort's.
       const mine = cur.facts?.length ? cur.facts : [];
@@ -765,13 +769,17 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     }
     if (b.type === 'columns') {
       // Her heading and sections; all sections empty follows KennelPort's.
-      parts.push(input('heading', say('pages.heading'), F.heading.max, true, empty(b.w.heading), b.w.heading), input('line', say('pages.line_under_it'), F.line.max, true, empty(b.w.line), b.w.line));
+      parts.push(input('heading', say('pages.heading'), F.heading.max, true, none, b.w.heading), input('line', say('pages.line_under_it'), F.line.max, true, none, b.w.line));
       const mine = cur.cols?.length ? cur.cols : [];
       const rows = Array.from({ length: F.cols.max }, (_, i) => mine[i] ?? ['', '']);
       const ph = (i, j) => (!mine.length && b.cols[i]?.[j] ? ` placeholder="${esc(b.cols[i][j])}"` : '');
       parts.push(`<div class="f"><fieldset><legend>${esc(say('pages.own.cols'))}<span class="hint">${esc(say('pages.own.cols_hint'))}</span></legend>${rows.map(([h, t], i) => `<label>${esc(say('pages.own.col_heading', { n: i + 1 }))}<input name="cols.${i}.0" value="${esc(h)}" maxlength="${F.cols.keyMax}"${ph(i, 0)}></label><label>${esc(say('pages.own.col_words', { n: i + 1 }))}<textarea name="cols.${i}.1" rows="4" maxlength="${F.cols.valueMax}"${ph(i, 1)}>${esc(t)}</textarea></label>`).join('')}</fieldset></div>`);
     }
-    if (b.type === 'button') parts.push(input('label', say('pages.own.button_words'), F.label.max, true, empty(b.w.label), b.w.label));
+    if (b.type === 'gallery') parts.push(input('heading', say('pages.heading'), F.heading.max, true, none, b.w.heading), input('line', say('pages.line_under_it'), F.line.max, true, none, b.w.line),
+      ...(b.source === 'album' && b.more ? [input('label', say('pages.own.album_link'), F.label.max, true, none, b.w.label)] : []));
+    if (b.type === 'beside') parts.push(input('heading', say('pages.heading'), F.heading.max, true, none, b.w.heading), input('label', say('pages.own.button_words'), F.label.max, true, none, b.w.label),
+      `<div class="f"><label>${esc(say('pages.own.words_body'))}<textarea name="body" rows="6" maxlength="${F.body.max}">${esc(shown('body') ?? '')}</textarea><span class="hint">${esc(say('pages.own.words_body_hint'))}</span></label></div>`);
+    if (b.type === 'button') parts.push(input('label', say('pages.own.button_words'), F.label.max, true, none, b.w.label));
     const l = b.link;
     let linkNote = '';
     if (l?.to === 'url') parts.push(input('url', say('pages.own.address'), 300, false, empty(l.value), l.value));
@@ -782,10 +790,18 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       linkNote = `<p class="muted small">${esc(say('pages.own.goes_to', { page: name }))}${l.page !== 'home' && !pageShows(snap, l.page, { today: new Date().toISOString().slice(0, 10) }) ? ` ${esc(say('pages.own.hidden', { page: name }))}` : ''}</p>`;
     }
     let photo = '';
-    if ((b.type === 'photo' || b.type === 'overlay') && b.mayChange) {
-      photo = field('photo_id', { type: 'photo' }, cur.photo_id || b.photo || '', { kind: 'pages', say, photos: await photos(), photoUrl });
-      if (b.type === 'photo') parts.push(input('caption', say('pages.own.caption'), F.caption.max, false, empty(b.w.caption), b.w.caption));
+    if (['photo', 'overlay', 'beside'].includes(b.type) && b.mayChange) {
+      photo = field('photo_id', { type: 'photo' }, cur.photo_id || b.photo || '', { kind: 'pages', say, library: library(), photos: await photos(), photoUrl });
+      if (b.type === 'photo') parts.push(input('caption', say('pages.own.caption'), F.caption.max, false, none, b.w.caption));
     } else if ((b.type === 'photo' || b.type === 'overlay') && !b.photo) linkNote += `<p class="muted small">${esc(say('pages.own.no_photo'))}</p>`;
+    if (b.type === 'collage' && b.mayChange) {
+      // A photo for each of the owner's boxes (her layout and frame), as on Home's collage.
+      const mine = cur.photos?.length;
+      photo = `<p class="muted small">${esc(say('pages.own.collage_photos'))}</p>${field('photos', { ...ADDED_BLOCK_FIELDS.photos, boxes: true }, mine ? cur.photos : b.photos, { kind: 'pages', say, library: library(), photos: await photos(), photoUrl, values: { layout: b.layout, focus: mine ? cur.focus ?? [] : b.focus } })}`;
+    } else if (b.type === 'gallery' && b.mayChange) {
+      // Her own photos for the strip, picked in the photo library window; none: the owner's.
+      photo = `<p class="muted small">${esc(say('pages.own.gallery_photos'))}</p>${field('photos', ADDED_BLOCK_FIELDS.photos, cur.photos ?? [], { kind: 'pages', say, library: library(), photos: await photos(), photoUrl })}`;
+    } else if (b.type === 'collage' && !b.photos.length) linkNote += `<p class="muted small">${esc(say('pages.own.no_photos'))}</p>`;
     return `<form method="post" action="${base}/blocks/${esc(key)}/${esc(b.id)}" data-save class="card added${cur.enabled ? '' : ' off'}" id="b-${esc(b.id)}">
         <div class="between"><h2 class="added-h">${esc(cur.heading || cur.label || b.w?.heading || b.w?.label || say(`pages.own.${b.type}`))}</h2>
           <div class="switches"><label class="check">${esc(say('pages.show_it'))}<input type="checkbox" name="enabled" value="1"${cur.enabled ? ' checked' : ''}></label></div></div>
@@ -794,11 +810,22 @@ export function createScreens({ env, request, url, site, user, page, say = defau
         <button class="primary">${esc(say('pages.save'))}</button></form>`;
   }
 
+  // Headings and the lines round them show as typed (model.js CLR): where she has set
+  // none, her form shows the site's own words, so what's in the box is what shows and
+  // emptying it shows nothing. Saved unchanged, they stay unset and keep following
+  // the site's own (a renamed kennel, the owner's starting words).
+  const sameWords = (v, d) => d != null && String(v ?? '').replace(/\s+/g, ' ').trim() === String(d).replace(/\s+/g, ' ').trim();
+  const shownWith = (values, defs) => ({ ...values, ...Object.fromEntries(Object.entries(defs).filter(([k, d]) => d != null && values?.[k] == null)) });
+  const keepUnset = (values, defs) => { for (const [k, d] of Object.entries(defs)) if (k in values && sameWords(values[k], d)) values[k] = null; return values; };
+
   // A facts row's rows as she typed them, the empty ones dropped.
   const factsFrom = (fd) => Array.from({ length: ADDED_BLOCK_FIELDS.facts.max }, (_, i) => [String(fd.get(`facts.${i}.0`) ?? '').trim(), String(fd.get(`facts.${i}.1`) ?? '').trim()]).filter(([v, l]) => v || l);
 
   // Text in columns' sections as she typed them, the empty ones dropped.
   const colsFrom = (fd) => Array.from({ length: ADDED_BLOCK_FIELDS.cols.max }, (_, i) => [String(fd.get(`cols.${i}.0`) ?? '').trim(), String(fd.get(`cols.${i}.1`) ?? '').trim()]).filter(([h, t]) => h || t);
+
+  // A collage's photos as she picked them, box by box in the owner's layout.
+  const collageMine = (fd, b) => { const { photos: ids, focus } = collageFromForm((n) => fd.get(n), b.layout); return { photos: ids, focus }; };
 
   async function addedAction() {
     const [, , , , page, block] = url.pathname.split('/');
@@ -810,9 +837,10 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     try {
       const own = BLOCK_TYPES[b.type].kind === 'own';
       const pick = (...ks) => Object.fromEntries(ks.filter((k) => fd.has(k)).map((k) => [k, fd.get(k)]));
-      await saveAddedBlock(env, site.id, page, block, own
-        ? { enabled: fd.get('enabled') != null, ...pick('heading', 'line', 'url', 'phone', 'email', 'caption', 'body'), ...(b.type === 'factrow' ? { facts: factsFrom(fd) } : {}), ...(b.type === 'columns' ? { cols: colsFrom(fd) } : {}), ...(fd.has('button_label') ? { label: fd.get('button_label') } : {}), ...(b.mayChange ? pick('photo_id') : {}) }
-        : { enabled: fd.get('enabled') != null, eyebrow: fd.get('eyebrow'), heading: fd.get('heading'), lede: fd.get('lede') });
+      const owners = b.w ?? {};
+      await saveAddedBlock(env, site.id, page, block, keepUnset(own
+        ? { enabled: fd.get('enabled') != null, ...pick('heading', 'line', 'url', 'phone', 'email', 'caption', 'body'), ...(b.type === 'factrow' ? { facts: factsFrom(fd) } : {}), ...(b.type === 'columns' ? { cols: colsFrom(fd) } : {}), ...(b.type === 'collage' && b.mayChange ? collageMine(fd, b) : {}), ...(b.type === 'gallery' && b.mayChange ? { photos: fd.getAll('photos').map(String).filter(Boolean).slice(0, ADDED_BLOCK_FIELDS.photos.max) } : {}), ...(fd.has('button_label') ? { label: fd.get('button_label') } : {}), ...(b.mayChange ? pick('photo_id') : {}) }
+        : { enabled: fd.get('enabled') != null, eyebrow: fd.get('eyebrow'), heading: fd.get('heading'), lede: fd.get('lede') }, owners));
     } catch (err) {
       if (!(err instanceof ContentError)) throw err;
       return redirect(`${back}?note=not_saved#b-${block}`);
@@ -852,14 +880,15 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     if (!flds) return null;
     const all = { enabled: { type: 'bool' }, ...flds };
     const current = await getBlock(env, site.id, key);
+    const defs = key === 'hero' ? { headline: site.kennel_name ?? null } : HOME_WORDS[key] ?? {};
     const pick = { groups: [{ label: say('homeblocks.photos_for_the_home'), subject: 'page:home' }], tags: ['page:home'], alt: '' };
     const render = async (err, values) => ({
       title: say(`homeblocks.title.${key}`), back: `${base}/home`,
-      body: `${note(url)}${errorBox(err)}<form method="post" action="${base}/home/${key}" data-save class="card">${fieldsWithLabel(all, values ?? current, await ctxFor(key, pick), { enabled: [say('homeblocks.this_block_is_on'), say('homeblocks.off_it_leaves_the')] })}<button class="primary">${esc(say('homeblocks.save'))}</button></form>`,
+      body: `${note(url)}${errorBox(err)}<form method="post" action="${base}/home/${key}" data-save class="card">${fieldsWithLabel(all, shownWith(values ?? current, defs), await ctxFor(key, pick), { enabled: [say('homeblocks.this_block_is_on'), say('homeblocks.off_it_leaves_the')] })}<button class="primary">${esc(say('homeblocks.save'))}</button></form>`,
     });
     if (request.method !== 'POST') return render();
     const fd = await request.formData();
-    const values = parseForm(all, fd);
+    const values = keepUnset(parseForm(all, fd), defs);
     try { await saveBlock(env, site.id, key, values); } catch (err) {
       if (err instanceof ContentError) return render(err.message, values);
       throw err;
@@ -905,6 +934,27 @@ export function createScreens({ env, request, url, site, user, page, say = defau
   }
 
   // ---------- photos ----------
+  // The photo library window (docs/Site_Builder_Plan.md, decision 20): the same on every
+  // screen, the owner's too. Upload at the top; Page photos | Profile photos, each a row
+  // per place a photo shows (photoPlaces.js), folded until opened, its thumbnails loading
+  // then; the pinned bar's Replace (or Use these photos, picking several). photos.js
+  // opens it in a dialog and does the choosing; these are only its parts, in her words.
+  async function libraryHtml() {
+    const places = await photoPlaces(env, site.id, say);
+    const alts = new Map((await photos()).map((p) => [p.id, p.alt]));
+    const ph = (id) => `<button type="button" class="lib-ph" data-id="${esc(id)}" data-thumb="${esc(photoUrl(id))}" aria-pressed="false"><img data-src="${esc(photoUrl(id))}" alt="${esc(alts.get(id) || say('photos.photo'))}"></button>`;
+    const row = (r) => `<details class="lib-row"${r.unused ? ' data-unused' : ''}><summary><b>${esc(r.label)}</b><span class="n">${r.ids.length}</span></summary><div class="lib-grid">${r.ids.map(ph).join('')}</div></details>`;
+    const tab = (k, list) => `<div class="lib-tab" data-tab="${k}"${k === 'page' ? '' : ' hidden'}>${list.map(row).join('') || `<p class="muted small">${esc(say('library.empty'))}</p>`}</div>`;
+    return `<div class="lib" data-lib data-chosen="${esc(say('library.chosen', { n: '{n}' }))}" data-too-many="${esc(say('library.too_many', { n: '{n}' }))}" data-just-added="${esc(say('library.just_added'))}">
+      <div class="lib-top"><h2>${esc(say('library.title'))}</h2>
+        <label class="button small primary">${esc(say('library.upload'))}<input type="file" accept="image/*" multiple data-lib-upload></label>
+        <p class="small muted" role="status" data-lib-status></p></div>
+      <div class="seg sm lib-tabs" role="radiogroup"><label><input type="radio" name="lib-tab" value="page" checked><span>${esc(say('library.page_photos'))}</span></label><label><input type="radio" name="lib-tab" value="profile"><span>${esc(say('library.profile_photos'))}</span></label></div>
+      <p class="small muted" data-for="one">${esc(say('library.pick_one'))}</p><p class="small muted" data-for="many">${esc(say('library.pick_many'))}</p>
+      <div class="lib-rows">${tab('page', places.page)}${tab('profile', places.profile)}</div>
+      <div class="lib-bar"><span class="small muted" data-lib-count></span><button type="button" class="link" data-lib-cancel>${esc(say('library.cancel'))}</button><button type="button" class="primary" data-lib-pick data-one="${esc(say('library.replace'))}" data-many="${esc(say('library.use_many'))}" disabled>${esc(say('library.replace'))}</button></div></div>`;
+  }
+
   async function photosScreen() {
     const rest = url.pathname.slice(`${base}/photos`.length);
     const post = request.method === 'POST';
@@ -922,6 +972,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
         throw err;
       }
     }
+    if (rest === '/library' && !post) return new Response(await libraryHtml(), { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
     if (rest === '/tag-many' && post) {
       const form = await request.formData();
       const asked = String(form.get('back') ?? '');
@@ -959,44 +1010,86 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       await env.DB.batch([env.DB.prepare('UPDATE photos SET removed_at = ? WHERE id = ? AND site_id = ?').bind(t, photo.id, site.id), env.DB.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(t, site.id)]);
       return back('removed', of);
     }
+    // The pinned bar's actions on the photos she chose (decision 20, step 2).
+    if (rest === '/selected' && post) {
+      const form = await request.formData();
+      const tab = form.get('tab') === 'profile' ? 'profile' : 'page';
+      const back = (key) => redirect(`${base}/photos?${tab === 'profile' ? 'tab=profile&' : ''}note=${key}`);
+      const live = new Set((await photos()).map((p) => p.id));
+      const ids = [...new Set(form.getAll('photos').map(String))].filter((id) => live.has(id));
+      if (!ids.length) return back('pick_none');
+      const act = String(form.get('act') ?? '');
+      const t = new Date().toISOString();
+      const touch = env.DB.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(t, site.id);
+      if (act === 'tag' || act === 'untag') {
+        const subject = String(form.get('subject') ?? '');
+        if (!subject || !(await isSubject(env, site.id, subject))) return back('tagnone');
+        if (act === 'tag') await tagPhotos(env, site.id, ids, [subject]);
+        else for (const id of ids) await untagPhoto(env, site.id, id, subject);
+        return back(act === 'tag' ? 'onprofile' : 'offprofile');
+      }
+      if (act === 'album') {
+        const album = await env.DB.prepare('SELECT id, photos FROM albums WHERE id = ? AND site_id = ?').bind(String(form.get('album') ?? ''), site.id).first();
+        if (!album) return back('noalbum');
+        const had = JSON.parse(album.photos || '[]');
+        const next = [...had, ...ids.filter((id) => !had.includes(id))].slice(0, ALBUM_PHOTOS_MAX);
+        await env.DB.batch([env.DB.prepare('UPDATE albums SET photos = ? WHERE id = ? AND site_id = ?').bind(JSON.stringify(next), album.id, site.id), touch]);
+        return back('inalbum');
+      }
+      if (act === 'alt') {
+        const alt = String(form.get('alt') ?? '').replace(/\s+/g, ' ').trim().slice(0, 200) || null;
+        await env.DB.batch([...ids.map((id) => env.DB.prepare('UPDATE photos SET alt = ? WHERE id = ? AND site_id = ?').bind(alt, id, site.id)), touch]);
+        return back('saved');
+      }
+      if (act === 'remove') {
+        // In use: say where first, and remove only when she says so. Removed, a photo
+        // comes off those places (the site leaves out removed photos; a form drops it).
+        const places = await photoPlaces(env, site.id, say);
+        const where = (id) => [...places.page, ...places.profile].filter((r) => !r.unused && r.ids.includes(id)).map((r) => r.label);
+        const used = ids.map((id) => [id, where(id)]).filter(([, w]) => w.length);
+        if (used.length && !form.has('confirm')) {
+          return { title: say('photos.photos'), back: `${base}/photos`, body: `<form method="post" action="${base}/photos/selected" class="card"><h2>${esc(say('pm.in_use'))}</h2>
+            <ul class="pm-where">${used.map(([id, w]) => `<li><img src="${esc(photoUrl(id))}" alt=""><span>${esc(w.join(', '))}</span></li>`).join('')}</ul>
+            <p class="muted small">${esc(say('pm.in_use_then'))}</p>${ids.map((id) => `<input type="hidden" name="photos" value="${esc(id)}">`).join('')}
+            <input type="hidden" name="tab" value="${tab}"><input type="hidden" name="confirm" value="1">
+            <div class="row"><button class="primary danger" name="act" value="remove">${esc(say('pm.remove_anyway'))}</button><a class="link" href="${base}/photos${tab === 'profile' ? '?tab=profile' : ''}">${esc(say('pm.keep'))}</a></div></form>` };
+        }
+        await env.DB.batch([...ids.map((id) => env.DB.prepare('UPDATE photos SET removed_at = ? WHERE id = ? AND site_id = ?').bind(t, id, site.id)), touch]);
+        return back('removed');
+      }
+      return back('pick_none');
+    }
     if (rest || post) return null;
 
-    const all = await photos();
-    const t = await tags();
-    const subs = await subjects(env, site.id);
-    const names = new Map(subs.map((x) => [x.subject, x.label]));
-    const of = ofParam(url.searchParams.get('of') ?? '');
-    const known = (p) => (t.get(p.id) ?? []).filter((x) => names.has(x));
-    const count = (subject) => all.filter((p) => known(p).includes(subject)).length;
-    const untagged = all.filter((p) => !known(p).length).length;
-    const list = of === 'none' ? all.filter((p) => !known(p).length) : of ? all.filter((p) => known(p).includes(of)) : all;
-    const chip = (value, label, n) => `<a class="chip${value === of ? ' on' : ''}" href="${esc(`${base}/photos${value ? `?of=${encodeURIComponent(value)}` : ''}`)}"${value === of ? ' aria-current="true"' : ''}>${esc(label)} <span>${n}</span></a>`;
-    const chips = [chip('', say('photos.all'), all.length), untagged ? chip('none', say('photos.not_sorted_2'), untagged) : '', ...subs.map((x) => [x, count(x.subject)]).filter(([, n]) => n).map(([x, n]) => chip(x.subject, x.label, n))].join('');
-    const options = (exclude = [], selected = '') => {
-      const groups = [...new Set(subs.map((x) => x.group))];
-      return groups.map((g) => `<optgroup label="${esc(g)}">${subs.filter((x) => x.group === g && !exclude.includes(x.subject)).map((x) => `<option value="${esc(x.subject)}"${x.subject === selected ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</optgroup>`).join('');
-    };
-    const ofInput = of ? `<input type="hidden" name="of" value="${esc(of)}">` : '';
-    const card = (p) => {
-      const mine = known(p);
-      return `<li class="card"><img src="${esc(photoUrl(p.id))}" alt="${esc(p.alt || say('photos.photo'))}" loading="lazy">${tickBox(p)}
-        <div class="tags">${mine.map((x) => `<form method="post" action="${base}/photos/${p.id}/untag" class="tag">${ofInput}<input type="hidden" name="subject" value="${esc(x)}"><span>${esc(names.get(x))}</span><button class="link" aria-label="${esc(`Not ${names.get(x)}`)}">×</button></form>`).join('') || `<span class="muted small">${esc(say('photos.not_sorted'))}</span>`}</div>
-        <form method="post" action="${base}/photos/${p.id}/tag" class="row">${ofInput}<select name="subject" aria-label="This photo is also of"><option value="">${esc(say('photos.photo_of'))}</option>${options(mine)}</select><button>${esc(say('photos.add'))}</button></form>
-        <form method="post" action="${base}/photos/${p.id}/alt" data-save>${ofInput}<label>${esc(say('photos.description'))}<input name="alt" value="${esc(p.alt ?? '')}" maxlength="200"></label><button>${esc(say('photos.save'))}</button></form>
-        <form method="post" action="${base}/photos/${p.id}/remove">${ofInput}<button class="link">${esc(say('photos.remove'))}</button></form></li>`;
-    };
+    // The Photos screen (decision 20, step 2): upload at the top; Page photos | Profile
+    // photos, a row per place a photo shows (photoPlaces.js), folded with its count and
+    // a few small previews; nothing under a photo until she chooses it, then one pinned
+    // bar: Show on a profile, Add to album, Description, Remove (photos.js shows it).
+    const tab = url.searchParams.get('tab') === 'profile' ? 'profile' : 'page';
+    const places = await photoPlaces(env, site.id, say);
+    const alts = new Map((await photos()).map((p) => [p.id, p.alt]));
+    const rows = places[tab];
+    const pic = (id, cls = '') => `<img${cls ? ` class="${cls}"` : ''} src="${esc(photoUrl(id))}" alt="${esc(alts.get(id) || say('photos.photo'))}" loading="lazy">`;
+    const row = (r) => `<details class="lib-row pm-row"${r.unused ? ' data-unused' : ''}><summary><b>${esc(r.label)}</b><span class="pm-peek" aria-hidden="true">${r.ids.slice(0, 4).map((id) => pic(id)).join('')}</span><span class="n">${r.ids.length}</span></summary>
+      <div class="lib-grid">${r.ids.map((id) => `<label class="lib-ph pm-ph"><input type="checkbox" name="photos" value="${esc(id)}" form="pm-bar">${pic(id)}</label>`).join('')}</div></details>`;
+    const profiles = (await env.DB.prepare('SELECT d.id, d.call_name FROM dogs d WHERE d.site_id = ? ORDER BY d.sort, d.rowid').bind(site.id).all()).results.map((d) => [`dog:${d.id}`, say('library.dog', { name: d.call_name })])
+      .concat((await env.DB.prepare('SELECT id, name FROM litters WHERE site_id = ? ORDER BY sort, rowid').bind(site.id).all()).results.map((l) => [`litter:${l.id}`, say('library.litter', { name: l.name })]))
+      .concat((await env.DB.prepare('SELECT p.id, p.name, l.name AS litter FROM puppies p JOIN litters l ON l.id = p.litter_id WHERE p.site_id = ? ORDER BY l.sort, l.rowid, p.sort, p.rowid').bind(site.id).all()).results.map((p) => [`puppy:${p.id}`, say('library.puppy', { name: p.name, litter: p.litter })]));
+    const albums = (await env.DB.prepare('SELECT id, title FROM albums WHERE site_id = ? ORDER BY sort, title').bind(site.id).all()).results;
+    const tabLink = (k, label) => `<a href="${base}/photos${k === 'profile' ? '?tab=profile' : ''}"${k === tab ? ' class="on" aria-current="page"' : ''}>${esc(label)}</a>`;
+    const panel = (k, inner) => `<div class="pm-panel" data-panel="${k}" hidden>${inner}</div>`;
+    const bar = `<form method="post" action="${base}/photos/selected" id="pm-bar" class="pm-bar" data-chosen="${esc(say('library.chosen', { n: '{n}' }))}"><input type="hidden" name="tab" value="${tab}">
+      ${panel('profile', `<label>${esc(say('pm.profile'))}<select name="subject"><option value="">${esc(say('pm.choose_profile'))}</option>${profiles.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('')}</select></label><div class="row"><button class="primary small" name="act" value="tag">${esc(say('pm.show_on_it'))}</button><button class="small" name="act" value="untag">${esc(say('pm.take_off_it'))}</button></div>`)}
+      ${panel('album', albums.length ? `<label>${esc(say('pm.album'))}<select name="album">${albums.map((a) => `<option value="${esc(a.id)}">${esc(a.title)}</option>`).join('')}</select></label><div class="row"><button class="primary small" name="act" value="album">${esc(say('pm.add_to_it'))}</button></div>` : `<p class="small muted">${esc(say('pm.no_albums'))} <a href="${base}/lists/albums/new">${esc(say('pm.new_album'))}</a></p>`)}
+      ${panel('alt', `<label>${esc(say('photos.what_s_in_the'))}<span class="hint">${esc(say('photos.helps_visitors_who_use'))}</span><input name="alt" maxlength="200"></label><div class="row"><button class="primary small" name="act" value="alt">${esc(say('photos.save'))}</button></div>`)}
+      <div class="pm-acts"><span class="small" data-pm-count></span><button type="button" class="small" data-pm-panel="profile">${esc(say('pm.on_a_profile'))}</button><button type="button" class="small" data-pm-panel="album">${esc(say('pm.to_album'))}</button><button type="button" class="small" data-pm-panel="alt" data-pm-one>${esc(say('photos.description'))}</button><button class="small danger" name="act" value="remove">${esc(say('photos.remove'))}</button><button type="button" class="link small" data-pm-clear>${esc(say('library.cancel'))}</button></div></form>`;
     return {
       title: say('photos.photos'), back: base,
-      body: `${note(url)}<p class="row"><a class="button" href="${base}/lists/albums">${esc(say('photos.albums'))}</a><span class="muted small">${esc(say('photos.galleries_with_their_own'))}</span></p>${await usageLine()}<form id="photo-form" class="card" method="post" action="${base}/photos/upload">
-        <label>${esc(say('photos.add_photos'))}<input type="file" accept="image/*" multiple required></label>
-        <label>${esc(say('photos.photos_of'))}<span class="hint">${esc(say('photos.so_they_re_offered'))}</span>
-          <select name="tags"><option value="">${esc(say('photos.choose_later'))}</option>${options([], of)}</select></label>
-        <label>${esc(say('photos.what_s_in_the'))}<span class="hint">${esc(say('photos.helps_visitors_who_use'))}</span><input name="alt" maxlength="200"></label>
-        <button class="primary">${esc(say('photos.upload'))}</button><p id="photo-status" class="muted small" role="status"></p>
-        <p class="muted small">${esc(say('photos.photos_are_made_smaller'))}</p></form>
-        ${all.length ? `<nav class="chips" aria-label="Show photos of">${chips}</nav>` : ''}
-        ${list.length ? `<section class="card"><p class="muted small">${esc(say('photos.to_tag_several_at'))}</p>${tagManyBar(subs, { back: `${base}/photos${of ? `?of=${encodeURIComponent(of)}` : ''}` })}</section>` : ''}
-        <ul class="ph-list">${list.map(card).join('') || (all.length ? `<li class="muted">${esc(say('photos.no_photos_here'))}</li>` : '')}</ul>`,
+      body: `${note(url)}<p class="row"><a class="button" href="${base}/lists/albums">${esc(say('photos.albums'))}</a><span class="muted small">${esc(say('photos.galleries_with_their_own'))}</span></p>${await usageLine()}
+        <section class="card pm-up" data-upload-here="${base}/photos/upload"><label class="button primary">${esc(say('library.upload'))}<input type="file" accept="image/*" multiple></label><p class="muted small" role="status"></p><p class="muted small">${esc(say('photos.photos_are_made_smaller'))}</p></section>
+        <nav class="pm-tabs seg sm" aria-label="${esc(say('photos.photos'))}">${tabLink('page', say('library.page_photos'))}${tabLink('profile', say('library.profile_photos'))}</nav>
+        <p class="muted small">${esc(say('pm.how'))}</p>
+        <section class="card pm-rows">${rows.map(row).join('') || `<p class="muted small">${esc(say('library.empty'))}</p>`}</section>${bar}`,
     };
   }
 

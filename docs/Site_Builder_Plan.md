@@ -80,6 +80,11 @@ Added by the owner on 2026-11-05:
     label, empty-screen message and explanation the breeder reads in the Site Manager
     is wording the owner sets, not text fixed in the code. Today's wording is the
     default (decision 14). This is the owner's top priority among these additions.
+20. **One photo library, the same everywhere** (added 2026-11-08). Where a photo goes,
+    she sees only the photo that's there; to change it she opens one window that reaches
+    every photo on her site, sorted by where each one shows, and picks one. Labels name
+    where a photo shows on her site, never what kind of record it belongs to (see
+    **Photos: one library** below).
 
 ## Who controls what
 
@@ -384,6 +389,8 @@ many times as she likes.
 | **Spacer** | height: very small, small, medium, large | — |
 | **Collage** | the same layouts, frames and "which part to keep" as Home's collage (`COLLAGE_LAYOUTS` in `content/model.js`); its photos | switch off; change photos if the owner allows it |
 | **Photo** | photo, shape (wide, tall, square, full width), which part to keep, optional caption | switch off; change photo and caption if the owner allows it |
+| **Photo beside words** | photo, which part to keep, frame; the photo on the left or the right (above the words on a phone); heading, words, optional button; the words lined up left, centre or right | reword; switch off; change the photo if the owner allows it |
+| **Gallery strip** | a row of photos that scrolls sideways, from one of her albums or picked from her photo library; how many show; a border round the whole strip; a link to the album | switch off; reword; pick her own photos if the owner allows it |
 | **Video** | a video from the approved embed list, click to load (plan 3.3) | switch off; change the video if the owner allows it |
 | **Text over a photo** | photo; heading, line and optional button over it; where the text sits (top, middle or bottom; left, centre or right); a shade behind the text | reword; switch off; change the photo if the owner allows it |
 
@@ -431,6 +438,77 @@ These checks are functional (decision 16):
   The preview shows each font in the site's own wording.
 - The only limit is speed: every extra font is another file for visitors to load. The
   editor warns when a page uses more than a few, and still allows it (decision 16).
+
+### Photos: one library
+
+Decided 2026-11-08 (decision 20). Today each screen has its own picker: Home and Our
+story offer photos tagged to that page, with the rest under "Other photos"; the owner's
+blocks show every photo full size with no upload; a litter has a third kind. A photo's
+"page" is a tag set when it was uploaded or saved, not where it is used, so a photo used
+on another page isn't found there and gets uploaded again. Upload and view buttons repeat
+within one block. This replaces all of that with one system.
+
+**The words she sees name where a photo shows on her site, never what kind of record it
+belongs to.** Nearly every photo has a dog in it, so "Dogs" or "Puppies" tells her
+nothing; "Ziva's profile" or "Home: banner" does.
+
+**1. The photo slot.** Everywhere a photo goes (every block, Home's banner, collage and
+story, a profile's photo, an album's cover, the logo, a product's picture), she sees only
+the photo that's there now, at the shape it shows, with **Replace**, **Remove** (where a
+photo is optional) and **Which part to keep** where the spot has a shape. A collage shows
+one small slot per box. No grid of photos and no upload button sit in the form itself.
+
+**2. The photo library window.** **Replace** opens it, the same window on every screen:
+her Site Manager and the owner's admin screens (the owner picks from her library, and can
+upload to it). It's the prototype's window (`portal-prototype.html` `dialog`), full screen
+on a phone with the pinned action bar at the bottom.
+- **Upload new photos** at the top: the one place to upload. A new photo goes into the
+  library and is selected, ready to use.
+- **A toggle: Page photos | Profile photos.**
+  - **Page photos:** a row for each place on her pages a photo is used: "Home: banner",
+    "Home: collage", "Home: Photo and words", "Our story", "Contact", the name of a block
+    the owner added ("About: Photo beside words"), "Logo", "Recommended products", "Partner
+    kennels", each album ("Album: Spring 2026"). The last row is **Not used anywhere**,
+    so no photo is ever out of reach.
+  - **Profile photos:** a row for each profile page, named the way she'd say it:
+    "Ziva's profile", "The Clover × Duke litter", "Pip's profile". These are the photos
+    on each dog's, litter's and puppy's own page, and the ones she has set to show on one.
+- **The rows come from where each photo is used,** worked out from the site as it stands
+  (the same walk Publish does to find the photos it carries), so they are always right
+  and need no tagging. A photo used in two places shows in both rows.
+- Each row: its name and how many photos, small square thumbnails that load when it opens.
+- **Tap a photo** to select it (one), then **Replace** on the pinned bar. The window closes
+  and the slot shows only the new photo. **Cancel** changes nothing.
+- **Pick several** (an album, a collage's boxes in turn, a gallery strip): the same window,
+  with ticks and "Add 12 photos" on the bar.
+
+**3. The Photos screen** (her Site Manager): the same rows and toggle, **collapsed by
+default**, each header showing its name, its count and a few small previews; tap to open.
+Nothing shows under a photo until she selects it. Selecting one or several brings up one
+bar: **Show on a profile…** (today's tag, which puts a photo on a dog's, litter's or
+puppy's page), **Add to album…**, **Description** (for screen readers) and **Remove**.
+**Remove** warns when the photo is in use and says where ("Used on Home: banner and Our
+story"); going ahead takes it off those places too, which then show nothing or their
+next photo, as when a photo is removed today.
+
+**4. Albums from photos she already has.** An album's screen gets **Add from your photos**,
+the library window in pick-several mode, beside upload; the album keeps its order and
+reordering.
+
+**5. The same photo uploaded twice.** On upload, a photo the site already has (the same
+file) is caught: she's told it's already in her photos and that one is used, rather than
+a copy being stored.
+
+**6. Gallery strip** (one of the owner's blocks, table above), built on the window: a
+row of photos from an album, or picked from the library in pick-several mode.
+
+Building it, in this order: (1) the photo slot and the library window, on every screen
+that takes a photo, both sides (built 2026-11-08; an album's photos are a spot that takes
+several, so (3) is mostly in: what's left is its own **Add from your photos** wording); (2) the Photos screen's rows and its select-first bar (built 2026-11-08);
+(3) albums from photos she has; (4) the Gallery strip (built 2026-11-08); (5) the duplicate check. The window
+and the slot are the manage app's (`public/_kp/m/`), so they need an `APP_VERSION` bump,
+asked for first (CLAUDE.md). Every line she reads goes in the owner's list
+(`manage/wording.js`). Checked at 390px and on a computer at each step.
 
 ### The breeder's instructions
 
@@ -587,13 +665,16 @@ Each step is its own branch and can be released on its own.
 4. **The owner's own blocks and styling** (decisions 16 to 18): buttons, banners and
    their links; dividers, spacers, collages, photos, videos, text over a photo; every
    block's background, padding, text size and fonts; template colours; the font library.
-   Built: banners, buttons, dividers, spacers, photos and text over a photo, on any page,
+   Built: banners, buttons, dividers, spacers, photos, collages, a photo beside words (left or right) and text over a photo, on any page,
    with links to a page, an outside site, a call, a text or an email; the breeder's
    switch, words, outside link, phone, email and (where allowed) photo; every block's
    background (scheme colours by name, with the scheme's matching ink), space above and
-   below and at the sides; text size on the owner's own blocks. Still to come: collages
-   and videos as the owner's blocks, links to a dog, litter or puppy, fonts and the font
+   below and at the sides; text size on the owner's own blocks. Still to come: videos
+   as the owner's blocks, links to a dog, litter or puppy, fonts and the font
    library, and text size on the built-in blocks.
+   **Next: the photo system** (decision 20, **Photos: one library**): the photo slot and
+   library window (built), the Photos screen's rows (built), albums from photos she has, the
+   **Gallery strip** block (built), then the duplicate check.
 5. **Templates.** Save as template, Apply, Reset to template.
 6. **The family portal's build:** the **Website and family portal** template; the
    portal's timing and display rules; then moving its family and breeder components,

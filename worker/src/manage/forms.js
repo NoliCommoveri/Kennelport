@@ -16,9 +16,9 @@ export const SHARED = {
   registry: ['Registry', 'For example AKC or CKC. Shown on your site where set.'],
   status: ['Status', null],
   show_on_site: ['Show on my website', null],
-  eyebrow: ['Small label above the heading', 'The letter-spaced line, like "OUR PARENT DOGS".'],
-  heading: ['Heading', null],
-  lede: ['Line under the heading', null],
+  eyebrow: ['Small label above the heading', 'The letter-spaced line, like "OUR PARENT DOGS". Leave it empty and nothing shows.'],
+  heading: ['Heading', 'Leave it empty and nothing shows.'],
+  lede: ['Line under the heading', 'Leave it empty and nothing shows.'],
   name: ['Name', null],
   description: ['Description', null],
 };
@@ -89,7 +89,7 @@ export const LABELS = {
     topic: ['Topic', 'Optional: groups reviews in the filter, like "health" or "temperament".'],
     status: ['Shown', null],
   },
-  steps: { heading: ['Step', null], body: ['Short text', null], detail: ['More detail (opens on tap)', null], pay_link: ['Link to "How to pay" under this step', null] },
+  steps: { heading: ['Step', 'Its heading. Leave it empty and nothing shows.'], body: ['Short text', null], detail: ['More detail (opens on tap)', null], pay_link: ['Link to "How to pay" under this step', null] },
   expander: {
     heading: ['Heading', null], body: ['Text', null], start_open: ['Open when the page loads', null],
     places: ['Also show this question at the top of', 'It stays on your FAQ page as well. Use it for a question families need where they meet it \u2014 "limited or full registration?" at the top of every litter\'s page, say.'],
@@ -118,16 +118,16 @@ export const LABELS = {
   },
   products_page: { note: ['Note under the products', 'For example "We may earn a small commission when you order through these links."'] },
   hero: {
-    banner_photo_id: ['Banner photo', 'A wide strip right under the menu, across the whole page. Make it 1600 × 640 px (5:2) for a sharp fit. "No photo" for none.'],
+    banner_photo_id: ['Banner photo', 'A wide strip right under the menu, across the whole page. Make it 1600 × 640 px (5:2) for a sharp fit. Remove it for none.'],
     banner_focus: ['Banner: which part to keep', 'If the photo is taller than the strip: the part that shows.'],
-    headline: ['Headline', null], script: ['Script line', 'The handwritten-style line, like "and tuxedos to match".'], intro: ['Intro', null],
+    headline: ['Headline', 'Leave it empty and nothing shows.'], script: ['Script line', 'The handwritten-style line, like "and tuxedos to match". Leave it empty and nothing shows.'], intro: ['Intro', null],
     layout: ['Photo layout', 'Pick the boxes, then a photo for each box below. With fewer photos than boxes, your site uses a layout for that many.'],
     frame: ['Frame', 'In your site\'s colours.'],
     photos: ['Photos', null], primary_label: ['Waitlist button', null], secondary_label: ['Puppies button', null],
   },
   facts: { items: ['Facts', 'Up to 3 pairs, like "8 wks" / "Before going home".'] },
   story: {
-    photo_id: ['Photo', 'A tall photo (4:5) beside your words: best at 1280 × 1600 px. "No photo" leaves it out, and your words take the whole width.'],
+    photo_id: ['Photo', 'A tall photo (4:5) beside your words: best at 1280 × 1600 px. With no photo, your words take the whole width.'],
     photo_frame: ['Frame round the photo', 'In your site\'s colours, like the frames on your Home page photos.'],
     script: ['Script word', null], text: ['Text', null], features: ['Three features', null], link_label: ['Link to your story', null],
   },
@@ -142,8 +142,8 @@ export const LABELS = {
   albums: {
     title: ['Title', 'For example "The Gem litter, week 6".'], description: ['A line about it', null],
     litter_id: ['Litter', 'Its litter\'s page links to it, and that litter\'s photos are offered first below.'],
-    cover_photo_id: ['Cover photo', 'Leave as "No photo" to use the first photo.'],
-    photos: ['Photos', 'Tick the photos for this album. They show newest first.'],
+    cover_photo_id: ['Cover photo', 'With none, the album uses its first photo.'],
+    photos: ['Photos', 'Add or change photos opens all your photos, and can upload more. They show newest first.'],
     more_photos_url: ['More photos link', 'Where the rest of these photos live \u2014 your Google Photos or Shutterfly share, say. Shown under the album as "See more photos".'],
     show_on_site: ['Show on my website', null],
   },
@@ -222,7 +222,7 @@ export const BOX_WORDS = {
   tall: { name: 'Tall', ratio: '4:5', size: '1280 × 1600' },
   square: { name: 'Square', ratio: '1:1', size: '1600 × 1600' },
 };
-const boxHint = (shape) => `${BOX_WORDS[shape].name} box (${BOX_WORDS[shape].ratio}): best at ${BOX_WORDS[shape].size} px.`;
+export const boxHint = (shape) => `${BOX_WORDS[shape].name} box (${BOX_WORDS[shape].ratio}): best at ${BOX_WORDS[shape].size} px.`;
 const FOCUS_WORDS = { top: 'The top', middle: 'The middle', bottom: 'The bottom' };
 
 // Each layout's little drawing: its boxes as [x, y, w, h] in a 50 × 40 frame.
@@ -236,6 +236,9 @@ const LAYOUT_RECTS = {
   four_square: [[6, 1, 18, 18], [26, 1, 18, 18], [6, 21, 18, 18], [26, 21, 18, 18]],
 };
 const layoutSvg = (key) => `<svg viewBox="0 0 50 40" width="75" height="60" aria-hidden="true">${LAYOUT_RECTS[key].map(([x, y, w, h], i) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="${x + w / 2}" y="${y + h / 2 + 3}" text-anchor="middle" font-size="9" fill="currentColor">${i + 1}</text>`).join('')}</svg>`;
+// The layouts as pictures to pick from (data-layouts: app.js shows that many
+// boxes, .box[data-box], when the layout changes). Home's collage and a collage block.
+export const layoutChoice = (name, current, label, h = '') => `<fieldset class="layouts" data-layouts><legend>${esc(label)}${h}</legend>${Object.keys(COLLAGE_LAYOUTS).map((k) => `<label class="layout-opt"><input type="radio" name="${name}" value="${esc(k)}" data-boxes="${COLLAGE_LAYOUTS[k].boxes.join(',')}"${k === current ? ' checked' : ''}>${layoutSvg(k)}<span>${esc(COLLAGE_LAYOUTS[k].label)}</span></label>`).join('')}</fieldset>`;
 const chosenLayout = (values) => values?.layout ?? collageLayout(null, (values?.photos ?? []).length) ?? 'tall_two_wide';
 
 const enumWords = (kind, name, v, say = null) => {
@@ -244,7 +247,8 @@ const enumWords = (kind, name, v, say = null) => {
   return (say && group !== 'scheme' ? say(`c.${group}.${v}`) : null) || ENUM_WORDS[group][v];
 };
 
-// ctx: { kind, photos: [{id, alt}], photoUrl(id), photoGroups, upload: {action, tags, alt}, dogs: [{id, call_name}] }
+// ctx: { kind, say, photoUrl(id), library: {list, upload, tags, alt} (photoSlot), dogs: [{id, call_name}] }
+// Photos chosen in a form are tagged with the record when it's saved (screens.js tagFromForm).
 // A field KennelOS owns while linked (plan 5.3): shown, not editable. The save
 // keeps what's stored (screens.js), whatever the form sends.
 function lockedField(name, f, value, ctx, label) {
@@ -294,11 +298,9 @@ export function field(name, f, value, ctx) {
       return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"><option value="">—</option>${dogs.map((d) => `<option value="${esc(d.id)}"${d.id === value ? ' selected' : ''}>${esc(d.call_name)}${d.outside && ctx.say ? ` (${esc(ctx.say('doglist.outside'))})` : ''}</option>`).join('')}</select></label>`;
     }
     case 'photo':
-      return photoPicker(name, label, hint, value ? [value] : [], ctx, { multiple: false });
-    case 'layout': {
-      const current = chosenLayout(ctx.values);
-      return `<fieldset class="layouts" data-layouts><legend>${esc(label)}${h}</legend>${f.values.map((k) => `<label class="layout-opt"><input type="radio" name="${name}" value="${esc(k)}" data-boxes="${COLLAGE_LAYOUTS[k].boxes.join(',')}"${k === current ? ' checked' : ''}>${layoutSvg(k)}<span>${esc(COLLAGE_LAYOUTS[k].label)}</span></label>`).join('')}</fieldset>`;
-    }
+      return photoSlot(name, label, hint, value ? [value] : [], ctx);
+    case 'layout':
+      return layoutChoice(name, chosenLayout(ctx.values), label, h);
     case 'list':
       if (f.item === 'focus') return '';
       // Partner kennels: one tick box each, from her list.
@@ -331,11 +333,11 @@ export function field(name, f, value, ctx) {
         const focus = ctx.values?.focus ?? [];
         return Array.from({ length: f.max }, (_, i) => {
           const shape = boxes[i] ?? 'square';
-          return `<div class="box" data-box="${i}"${i < boxes.length ? '' : ' hidden'}>${photoPicker(`${name}.${i}`, `Box ${i + 1}`, boxHint(shape), value?.[i] ? [value[i]] : [], ctx, { multiple: false })}
+          return `<div class="box" data-box="${i}"${i < boxes.length ? '' : ' hidden'}>${photoSlot(`${name}.${i}`, `Box ${i + 1}`, boxHint(shape), value?.[i] ? [value[i]] : [], ctx, { shape })}
             <label>Box ${i + 1}: which part to keep<span class="hint">If the photo is a different shape from the box: the part that shows.</span><select name="focus.${i}">${FOCUS.map((x) => `<option value="${x}"${x === (focus[i] ?? 'middle') ? ' selected' : ''}>${FOCUS_WORDS[x]}</option>`).join('')}</select></label></div>`;
         }).join('\n');
       }
-      if (f.item === 'photo') return photoPicker(name, label, hint, value ?? [], ctx, { multiple: true, max: f.max });
+      if (f.item === 'photo') return photoSlot(name, label, hint, value ?? [], ctx, { multiple: true, max: f.max });
       return `<label for="${id}">${esc(label)}${h}<textarea id="${id}" name="${name}" rows="6">${esc((value ?? []).join('\n'))}</textarea></label>`;
     case 'pairs': {
       const rows = [...(value ?? [])];
@@ -369,31 +371,31 @@ export function field(name, f, value, ctx) {
   }
 }
 
-// A photo picker shows the photos of what's being edited first (ctx.photoGroups:
-// [{ label, ids }], the first group being this record's own), then every other
-// photo folded away, and an Add photos button that uploads straight into the
-// first group, tagged with ctx.upload.tags (public/_kp/m/photos.js). Photos
-// chosen here are tagged with the record when the form is saved.
-function photoPicker(name, label, hint, chosen, ctx, { multiple, max }) {
-  const photos = ctx.photos ?? [];
-  const type = multiple ? 'checkbox' : 'radio';
-  const byId = new Map(photos.map((p) => [p.id, p]));
-  const groups = (ctx.photoGroups ?? [{ label: 'Photos', ids: photos.map((p) => p.id) }]).map((g) => ({ ...g, ids: g.ids.filter((id) => byId.has(id)) }));
-  const shown = new Set(groups.flatMap((g) => g.ids));
-  const strays = chosen.filter((id) => byId.has(id) && !shown.has(id));
-  groups[0] = { ...groups[0], ids: [...strays, ...groups[0].ids] };
-  for (const id of strays) shown.add(id);
-  const rest = photos.filter((p) => !shown.has(p.id));
-  const opt = (p) => `<label class="ph-opt"><input type="${type}" name="${name}" value="${esc(p.id)}"${chosen.includes(p.id) ? ' checked' : ''}><img src="${esc(ctx.photoUrl(p.id))}" alt="${esc(p.alt || 'Photo')}" loading="lazy"></label>`;
-  const none = multiple ? '' : `<label class="ph-opt none"><input type="radio" name="${name}" value=""${chosen.length ? '' : ' checked'}><span>No photo</span></label>`;
-  const grid = (ids, first) => `<div class="ph-grid"${first ? ' data-first' : ''}>${first ? none : ''}${ids.map((id) => opt(byId.get(id))).join('')}</div>`;
-  const parts = groups.map((g, i) => (i === 0 || g.ids.length ? `<p class="ph-head">${esc(g.label)}${i === 0 && !g.ids.length ? ' <span class="muted small">· none yet</span>' : ''}</p>${grid(g.ids, i === 0)}` : ''));
-  const others = rest.length ? `<details class="ph-more"><summary>${groups[0].ids.length || groups.length > 1 ? 'Other photos' : 'Choose from your photos'} (${rest.length})</summary>${grid(rest.map((p) => p.id), false)}</details>` : '';
-  const up = ctx.upload;
-  const add = up ? `<div class="ph-add"><label class="button">Add photos<input type="file" accept="image/*" multiple data-add-photos></label><span class="muted small" role="status"></span></div>` : '';
-  return `<fieldset class="photos" data-picker data-name="${esc(name)}" data-type="${type}"${max ? ` data-max="${max}"` : ''}${up ? ` data-upload="${esc(up.action)}" data-tags="${esc(up.tags)}" data-alt="${esc(up.alt ?? '')}"` : ''}>
-    <legend>${esc(label)}${hint ? `<span class="hint">${esc(hint)}</span>` : ''}${max ? `<span class="hint">Choose up to ${max}.</span>` : ''}</legend>
-    ${parts.join('')}${others}${add}</fieldset>`;
+// A photo spot (docs/Site_Builder_Plan.md, decision 20): only the photo that's there
+// now, with Replace (or Choose a photo) and Remove; choosing and uploading happen in
+// the one photo library window (photos.js), the same on every screen. A spot that
+// takes several shows them small, with Add or change photos. The form posts the
+// hidden inputs, so it saves as before. ctx.say: the Site Manager's wording (the owner's
+// screens pass its defaults). ctx.library: { list, upload, tags, alt }, the
+// window's and the upload's addresses and what a new photo is tagged as.
+const SLOT_SHOWN = 24;
+export function photoSlot(name, label, hint, chosen, ctx, { multiple = false, max = null, shape = null } = {}) {
+  const { say } = ctx;
+  const lib = ctx.library ?? {};
+  // A removed photo has come off every spot (decision 20): it isn't shown or posted.
+  const live = ctx.photos ? new Set(ctx.photos.map((p) => p.id)) : null;
+  const cur = chosen.filter((id) => id && (!live || live.has(id)));
+  const pic = (id) => `<img src="${esc(ctx.photoUrl(id))}" alt="" loading="lazy">`;
+  const shown = cur.slice(0, multiple ? SLOT_SHOWN : 1).map(pic).join('') + (cur.length > SLOT_SHOWN && multiple ? `<span class="ph-more-n">+${cur.length - SLOT_SHOWN}</span>` : '');
+  const inputs = multiple ? cur.map((id) => `<input type="hidden" name="${esc(name)}" value="${esc(id)}">`).join('') : `<input type="hidden" name="${esc(name)}" value="${esc(cur[0] ?? '')}">`;
+  const button = multiple ? say('slot.choose_many') : cur.length ? say('slot.replace') : say('slot.choose');
+  const data = Object.entries({ name, mode: multiple ? 'many' : 'one', max: max ?? '', library: lib.list ?? '', upload: lib.upload ?? '', tags: lib.tags ?? '', alt: lib.alt ?? '', choose: say('slot.choose'), replace: say('slot.replace'), none: say('slot.none'), count: say('slot.count', { n: '{n}' }), failed: say('library.failed'), cancel: say('library.cancel') })
+    .map(([k, v]) => ` data-${k}="${esc(String(v))}"`).join('');
+  return `<fieldset class="ph-slot${multiple ? ' many' : ''}${shape ? ` ${shape}` : ''}" data-slot${data}>
+    <legend>${esc(label)}${hint ? `<span class="hint">${esc(hint)}</span>` : ''}</legend>
+    <div class="ph-cur">${shown || `<span class="ph-none">${esc(say('slot.none'))}</span>`}</div>${inputs}
+    ${multiple && cur.length ? `<p class="small muted" data-count>${esc(say('slot.count', { n: cur.length }))}</p>` : ''}
+    <div class="row"><button type="button" class="button small" data-replace>${esc(button)}</button>${multiple ? '' : `<button type="button" class="link small" data-remove${cur.length ? '' : ' hidden'}>${esc(say('slot.remove'))}</button>`}</div></fieldset>`;
 }
 
 // The long forms in sections (docs/Puppy_Parent_Portal_Plan.md section 7.3): what belongs

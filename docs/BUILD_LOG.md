@@ -1847,3 +1847,187 @@ with new sections and a new building order. Docs only; nothing built yet.
   the list doesn't name yet.
 - Wording: the new lines live in `diff.js` with the existing ones (not yet in
   `manage/wording.js`), to move with them.
+
+## 2026-11-08: collage block (one of the owner's own blocks)
+
+- Add a block now offers **Collage** on any page, as many as she likes: Home's
+  collage as a block. The owner picks a layout (the same pictures as the breeder's Home
+  collage, `COLLAGE_LAYOUTS`), a frame (soft mat to start, as Home's; mat with a fine
+  inner line, leafy vine, or none) and a photo for each box with which part to keep
+  (`content/blocks.js` `collage`: `layout`, `frame`, `photos`, `focus`). Boxes the layout
+  doesn't have are hidden, and shown as the layout changes (`app.js`, unchanged). An empty
+  box is skipped, so the site uses a layout for that many photos (`collageLayout`), and it
+  hides with none.
+- The site draws it with Home's own collage (`render/pages.js` `collageOf`, now shared by
+  Home's top block, which draws exactly as before), centred in `.own-collage`: at most
+  760px wide on a computer (440px for one tall photo, 520px for two wide), full width on
+  a phone. No prototype screen for a collage block: it's the prototype's Home collage,
+  boxes and frames as they are.
+- **The breeder can change the photos** (on to start, as the Photo block): her card shows
+  a photo picker for each of the owner's boxes, in the owner's layout and frame, as her Home
+  collage card does (`block_switches` content gains `photos` and `focus`; no migration,
+  it's JSON). Her photos replace the owner's while she has chosen some. The published
+  snapshot carries both.
+- Her wording is in the owner's list: `pages.own.collage`, `pages.own.collage_photos`,
+  `pages.own.no_photos`. The box labels ("Box 1", "which part to keep") are the Home
+  collage's, still in `forms.js`.
+- Checked at 390px and 1280px: the site (each layout and frame), the owner's settings,
+  the breeder's card.
+- `site.css` changed (`.own-collage`): `ASSET_VERSION` bump asked, not done.
+- Still to come in step 4: videos as her blocks, links to a dog, litter or puppy, fonts
+  and the font library, text size on the built-in blocks.
+- Tests: `ownblocks.test.js` (a collage added, filled, a box emptied, the breeder's photos,
+  not hers to change, switched off, cleaned); `blocks.test.js` (Add a block lists it).
+
+## 2026-11-08: photo beside words (one of the owner's own blocks)
+
+- Add a block now offers **Photo beside words** on any page: the prototype's story
+  layout (`.story`, `.story-copy`, the framed `.story-pic`) as a block. A photo (which
+  part to keep, a frame or none) beside a heading, words (a blank line starts a new
+  paragraph) and an optional button to a page, an outside site, a call, a text or an
+  email (`content/blocks.js` `beside`: `side`, `frame`, `focus`, `w.heading`, `w.body`,
+  `w.label`, `link`). **Where it sits:** the photo on the left or the right on a computer;
+  on a phone it always goes above the words, shrunk and centred as the story's is
+  (`.story.pic-right` in `site.css`). With no photo the words take the width.
+- **Words line up:** left (to start, as the story's), centred or right: the heading,
+  words and button together, on a computer and a phone (`align`, `.story-copy.a-*`).
+- The breeder can switch it off, reword the heading, words and button, change an outside
+  link, phone or email, and change the photo where the owner lets her. Her wording:
+  `pages.own.beside`.
+- Checked at 390px and 1280px, left and right.
+- Tests: `ownblocks.test.js` (words alone, the photo on the right framed, then left
+  unframed, her words); `blocks.test.js` (Add a block lists it).
+
+## 2026-11-08: headings show only as typed
+
+- The owner's ask: no heading is required anywhere; if nothing is typed, nothing shows.
+  Before, an empty heading box fell back to the site's own words ("Meet our dogs", "Our
+  story", the owner's starting words on an added block), so emptying it changed nothing.
+- Now a heading, the small label above it, the line under it and, on the owner's own
+  blocks, the line, words, caption and button words show **as typed**. **Emptied, nothing
+  shows.** Covered: every page's heading (eyebrow, heading, line under it), Home's blocks
+  (the headline and script line, the story's label, heading and script word, the dogs',
+  litters' and reviews' label, heading and line, the waitlist band's heading and line),
+  the breeder's words on blocks the owner added, and a How it works step's heading (no
+  longer required).
+- **What's in the box is what shows.** Where she has never set one, her form now fills the
+  box with the site's own words (the page's own heading, `blocks.js` `PAGE_HEADS`; Home's,
+  `model.js` `HOME_WORDS`; her kennel's name for the headline; the owner's starting words).
+  Saved unchanged, they stay unset and keep following the site's own (a renamed kennel,
+  the owner's new wording). So no live site changes the day this ships: a heading she
+  never touched still shows as before.
+- How: those fields are marked `clear` (`model.js` `CLR`); an emptied one is stored as ""
+  (no migration: it's JSON, and a step's `heading` column takes ""). The site uses `??`
+  where it used `||` (`pagehead`, `head`, Home's blocks, `addedWords`), and draws no empty
+  heading, page head or decorative sprigs (`head` and `pagehead` draw nothing when all
+  three are empty). The owner's own settings already worked this way.
+- Hints: "Leave it empty and nothing shows." on these fields (`forms.js` SHARED `eyebrow`,
+  `heading`, `lede`; Home's `headline`, `script`; `steps.heading`) and on her added-block
+  boxes (`pages.own.empty_none` in the owner's list).
+- Not changed: a FAQ, policy or help expander still needs its heading (it's the line she
+  taps to open it). The sub-headings that read "Leave empty for …" still fall back to
+  their words when left empty: Getting your pup home's pickup, transport, travel and
+  transport-services headings, Our dogs' co-owned heading, and the application form's
+  heading.
+- `site.css`: no change for this. Tests: `headings.test.js` (new).
+
+## 2026-11-08: photo spots and the photo library window (decision 20, step 1)
+
+- **Every place a photo goes now shows only the photo that's there** (`forms.js`
+  `photoSlot`), at its box's shape where it has one, with **Replace** (or **Choose a
+  photo** when empty) and **Remove**. No grid of photos and no upload button in the form.
+  A spot that takes several (an album's photos) shows them small, with **Add or change
+  photos** and how many. Every breeder form with a photo goes through it (a dog, puppy,
+  partner kennel, review, extra, product, album, Kennel details' logo, Home's banner,
+  collage boxes and story, Our story, the owner's blocks on her pages), and the owner's
+  builder uses the same one for its photo, Photo beside words, Text over a photo and
+  collage boxes (`builder.js` `photoChoice`). The form posts hidden inputs, so saving and
+  tagging (`tagFromForm`, `_new_photos`) are as before.
+- **The photo library window** (`photos.js`, `screens.js` `libraryHtml`, `GET
+  /s/<site>/photos/library`): the same on every screen, the owner's too. **Upload new
+  photos** at the top, the only upload there now; a new photo joins **Just added**, chosen,
+  tagged as what's being edited. **Page photos | Profile photos**: a row per place a photo
+  shows, named the way she'd say it ("Home: banner", "Our story", "Contact: Photo",
+  "Album: Spring 2026", "Willow's profile", "Opal's profile (Gem litter)"), then **Not used
+  anywhere**. The rows come from what's saved, shown or not (`photoPlaces.js`), so they need
+  no tagging; a photo in two places is in both. Rows are folded, with counts; the ones
+  holding the spot's photo start open; thumbnails load when a row opens. Tap a photo, then
+  **Replace**; picking several, tick them ("3 chosen"), then **Use these photos**; more
+  than the spot takes says so. **Cancel** changes nothing. The prototype's `dialog`, full
+  screen on a phone with the pinned bar at the bottom.
+- A collage box's spot takes its box's shape as the layout changes (`app.js`).
+- Wording: `slot.*` and `library.*` in the owner's list; hints that said "No photo" or
+  "Tick the photos" reworded (`forms.js` LABELS: Home's banner and story photo, an
+  album's cover and photos).
+- Checked in a browser at 390px and 1280px against a local copy (her Our story photo,
+  an album of three, Home's collage boxes, the owner's Photo block on Contact): choose,
+  replace, remove, upload in the window, save. No script errors.
+- Still to come (plan, decision 20): the Photos screen's rows and select-first bar
+  (step 2), whose own upload form and a litter's "Photos of this litter" card (each with
+  its own upload) go then; albums' **Add from your photos** wording; the Gallery strip;
+  the duplicate check.
+- Manage app files changed (`app.js`, `photos.js`, `app.css`): `APP_VERSION` to bump
+  before merging, as agreed. Tests: `phototags.test.js` (spots, the library's rows),
+  `ownblocks.test.js` (a collage box is a spot).
+
+## 2026-11-08: the Photos screen (decision 20, step 2)
+
+- **Upload new photos** at the top, one button (the old form with its "Photos of" and
+  description fields is gone: who's in a photo and its description are set from the bar).
+- **Page photos | Profile photos** (two links, `?tab=profile`), then the same rows as the
+  library window (`photoPlaces.js`), **folded by default**, each header with its name, a
+  few small previews and its count. The old filter chips are gone.
+- **Nothing under a photo until she chooses it.** Tapping photos ticks them (a photo in two
+  rows is ticked in both); a **pinned bar** comes up at the bottom (above the tabs on a
+  phone) with how many, **Show on a profile…** (a profile, then **Show on it** or **Take
+  off it**: today's tags, worded by where they show), **Add to album…** (added after what
+  the album has), **Description** (one photo only) and **Remove**. All post to `POST
+  /s/<site>/photos/selected` (`act`: tag, untag, album, alt, remove).
+- **Remove warns when a photo is in use** and lists where ("Our story"), with **Remove
+  anyway** or **Keep them**; one not in use goes straight away. Removed, it comes off those
+  places: the site already leaves removed photos out, and a photo spot now drops a removed
+  photo, so the form doesn't post it (`photoSlot`, the owner's builder too).
+- **A litter's "Photos of this litter" card** lost its own upload: it lists the photos on
+  the litter's profile and links to the Photos screen's Profile photos.
+- Kept as they were: an album's "Who's in these photos" card (`/photos/tag-many`), and the
+  single-photo `/photos/<id>/tag|untag|alt|remove` actions.
+- Wording: `pm.*` and five notes (`pick_none`, `onprofile`, `offprofile`, `inalbum`,
+  `noalbum`) in the owner's list; thirteen lines the old screen used are gone from it.
+- Checked in a browser at 390px and 1280px against a local copy: open a row, choose one
+  and two, the profile panel, Show on it, remove one in use. No script errors.
+- Manage app files changed: `APP_VERSION` to bump before merging, as agreed. Tests:
+  `phototags.test.js` (the screen, the bar's actions, remove warns), `albums.test.js`.
+
+## 2026-11-08: Gallery strip (one of the owner's own blocks)
+
+- Add a block now offers **Gallery strip** on any page: one row of photos that **scrolls
+  sideways**, drawn as an album page's gallery (`.gal-item`), so a tap opens the photo full
+  size in the site's viewer (one viewer per page, added by `render/index.js` wherever a
+  page has such photos).
+- **The owner sets:** where the photos come from (**one of her albums**, its photos newest
+  first, only while the album is on her site; or **photos you pick**, up to 24 in order,
+  in the photo library window); **how many show** (4, 6, 8 or 12: in one row on a
+  computer, twelve scrolling six at a time; on a phone two and a bit across, scrolling);
+  a **border round the whole strip** (none to start, a thin line, the photo frames' soft
+  mat, or the mat with a fine brass line); a link under it to the whole album (from an
+  album, while the Photo albums page is on); a heading, a line and the link's words.
+- **The breeder** can switch it off, reword its heading, line and link, and, where the
+  owner lets her, pick her own photos, which replace the owner's (`block_switches`
+  content `photos`, now up to 24; no migration).
+- Her photos and the picked ones are a row of the photo library ("Our story: Gallery
+  strip"); an album's are its album's row. Her wording: `pages.own.gallery`,
+  `pages.own.gallery_photos`, `pages.own.album_link`, `library.block.gallery`.
+- Checked at 390px and 1280px: six and twelve from an album, with the mat and the fine
+  line; the viewer opens; no sideways scroll on the page.
+- `site.css` changed (`.gallery.strip`, `.strip-frame`): `ASSET_VERSION` to bump before
+  merging, as agreed. Tests: `ownblocks.test.js` (from an album, how many, the border,
+  the link, picked photos, hers), `blocks.test.js`.
+
+## 2026-11-08: versions bumped for this branch
+
+- Manage app 17 (`APP_VERSION`, fingerprint `29bc1a90c35f691b`): the photo spots, the
+  photo library window, the Photos screen.
+- Site template 23 (`ASSET_VERSION`, fingerprint `2ba787891d1c26bb`): the collage block,
+  Photo beside words (the photo on the right, its words lined up), the gallery strip and
+  its border. Both were last released at 16 and 22 on `main`; bumped once, at the end,
+  as the owner asked.

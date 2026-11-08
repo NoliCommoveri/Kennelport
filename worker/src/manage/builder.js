@@ -42,11 +42,13 @@ import {
   pageBlocks, pageChanged, pagesChanged, withPage, addable, fits, hersOn, blockName, blockHint, isBuilt, BUILT_PAGES, PAGE_PARTS, headFor, isCustom, customPages, addPage, withPageInfo, withoutPage, pathFor, STARTS,
   menuOf, menuChanged, withMenu, groupOf, MenuError, MENU_PLACES, MENU_LIMITS,
   PROFILES, PROFILE_PATHS, PROFILE_PARTS, PROFILE_ITEMS, PROFILE_FIXED, PROFILE_ONLY, PROFILE_FACTS, profileOf, profileChanged, withProfile, profileFromForm, homePart,
-  LINK_TO, BUTTON_SIZE, BUTTON_LOOK, ALIGN, DIVIDER_STYLE, DIVIDER_WIDTH, SPACER_HEIGHT, PHOTO_SHAPE, PHOTO_FRAME, PHOTO_FOCUS, OVER_V, OVER_SHADE, BG_COLOURS, PAD, TEXT_SIZE, FACTS_MAX, FACT_SIZES, COLS_MAX, COL_SIZES, COLS_ACROSS,
+  LINK_TO, BUTTON_SIZE, BUTTON_LOOK, ALIGN, DIVIDER_STYLE, DIVIDER_WIDTH, SPACER_HEIGHT, PHOTO_SHAPE, PHOTO_FRAME, PHOTO_FOCUS, PHOTO_SIDE, GALLERY_SOURCE, GALLERY_COUNT, GALLERY_MAX, STRIP_FRAME, OVER_V, OVER_SHADE, BG_COLOURS, PAD, TEXT_SIZE, FACTS_MAX, FACT_SIZES, COLS_MAX, COL_SIZES, COLS_ACROSS,
+  COLLAGE_LAYOUT, COLLAGE_FRAME, COLLAGE_MAX,
 } from '../content/blocks.js';
-import { PAGES } from '../content/model.js';
+import { PAGES, COLLAGE_LAYOUTS, collageLayout, HOME_WORDS } from '../content/model.js';
+import { layoutChoice, boxHint, photoSlot } from './forms.js';
 import { siteLink } from '../ops/sites.js';
-import { SCREENS as WORD_SCREENS, CATALOG, itemsOn, everyWording, saveEveryWording, siteWording, withWording, WordingError } from './wording.js';
+import { SCREENS as WORD_SCREENS, CATALOG, itemsOn, everyWording, saveEveryWording, siteWording, withWording, WordingError, defaultSay } from './wording.js';
 
 const redirect = (location) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store' } });
 const ic = (n) => `<span class="ic" aria-hidden="true"><svg class="i"><use href="#i-${n}"/></svg></span>`;
@@ -421,11 +423,11 @@ function blockSummary(snap, key, b) {
   if (b.type === 'embeds') return `Her videos and posts on ${pageLabel(snap, key)}`;
   if (b.type === 'head') {
     const p = snap.pages[key] ?? {};
-    return [p.eyebrow ?? headOf(snap, key).eyebrow, p.heading || headOf(snap, key).heading].filter(Boolean).join(' · ');
+    return [p.eyebrow ?? headOf(snap, key).eyebrow, p.heading ?? headOf(snap, key).heading].filter(Boolean).join(' · ');
   }
   const h = snap.home;
-  const said = { hero: h.hero.headline || snap.site.kennel_name, facts: (h.facts.items ?? []).map(([v, l]) => `${v} ${l}`).join(' · '), text: h.story.heading,
-    band: h.waitlist.heading || 'Hoping for a puppy of your own?' }[b.type];
+  const said = { hero: h.hero.headline ?? snap.site.kennel_name, facts: (h.facts.items ?? []).map(([v, l]) => `${v} ${l}`).join(' · '), text: h.story.heading,
+    band: h.waitlist.heading ?? HOME_WORDS.waitlist.heading }[b.type];
   return said || { facts: 'No facts yet', text: 'No story yet' }[b.type] || '';
 }
 
@@ -522,12 +524,20 @@ function linkSettings(snap, b, pics, optional) {
     <p class="small muted">The breeder can reword the button, switch it off, and change an outside link, phone number or email address. A link to a page is yours. A button whose page is off hides by itself.</p>`;
 }
 
-// A photo picker from her photos (the manage app's own picker's look).
-function photoChoice(b, pics) {
-  const n = `b.${b.id}.photo`;
-  const opt = (p) => `<label class="ph-opt"><input type="radio" name="${n}" value="${esc(p.id)}"${b.photo === p.id ? ' checked' : ''}><img src="${esc(pics.url(p.id))}" alt="${esc(p.alt || 'Photo')}" loading="lazy"></label>`;
-  return `<fieldset class="photos"><legend>Photo<span class="hint">From the breeder's photos. She adds photos in her Site Manager, under Photos.</span></legend>
-    <div class="ph-grid"><label class="ph-opt none"><input type="radio" name="${n}" value=""${b.photo ? '' : ' checked'}><span>No photo</span></label>${pics.list.map(opt).join('')}</div></fieldset>`;
+// A photo spot: the photo that's there, with Replace, which opens her photo library
+// window (forms.js photoSlot, photos.js), the same one she uses, upload and all.
+const FROM_HERS = "From the breeder's photos: Replace opens them all, and can upload more.";
+function photoChoice(b, pics, { name = `b.${b.id}.photo`, chosen = b.photo, label = 'Photo', hint = FROM_HERS, shape = null } = {}) {
+  return photoSlot(name, label, hint, chosen ? [chosen] : [], { say: defaultSay, photoUrl: pics.url, library: pics.library, photos: pics.photos }, { shape });
+}
+
+// A collage block's photos: one box per box of the layout, each with which part
+// to keep; the boxes it doesn't have are hidden (app.js shows them when the layout changes).
+function collageBoxes(b, pics) {
+  const k = (f) => `b.${b.id}.${f}`;
+  const boxes = COLLAGE_LAYOUTS[b.layout].boxes;
+  return Array.from({ length: COLLAGE_MAX }, (_, i) => `<div class="box" data-box="${i}"${i < boxes.length ? '' : ' hidden'}>${photoChoice(b, pics, { name: k(`photos.${i}`), chosen: b.photos[i] ?? null, label: `Box ${i + 1}`, hint: boxHint(boxes[i] ?? 'square'), shape: boxes[i] ?? 'square' })}
+    ${fld(`Box ${i + 1}: which part to keep`, seg(k(`focus.${i}`), b.focus[i] ?? 'middle', PHOTO_FOCUS), 'If the photo is a different shape from the box: the part that shows.')}</div>`).join('');
 }
 
 function ownSettings(snap, key, b, pics) {
@@ -555,9 +565,28 @@ function ownSettings(snap, key, b, pics) {
       <div class="fgrid">${rows.map(([h, t], i) => `${field(k(`cols.${i}.0`), h, { label: `Section ${i + 1}: subheading`, cls: '', ph: i ? '' : 'Early days' })}<label>Section ${i + 1}: words<textarea name="${k(`cols.${i}.1`)}" rows="4" maxlength="${COL_SIZES[1]}">${esc(t)}</textarea></label>`).join('')}</div></div>`;
   }
   if (b.type === 'spacer') return `<div class="fgroup"><h2>The space</h2>${fld('Height', seg(k('height'), b.height, SPACER_HEIGHT))}</div>`;
-  const change = `<div class="switches boxed">${toggle(k('mayChange'), b.mayChange, b.type === 'photo' ? 'The breeder can change the photo and its caption' : 'The breeder can change the photo')}</div>`;
+  const change = `<div class="switches boxed">${toggle(k('mayChange'), b.mayChange, b.type === 'photo' ? 'The breeder can change the photo and its caption' : b.type === 'collage' || b.type === 'gallery' ? 'The breeder can change the photos' : 'The breeder can change the photo')}</div>`;
+  if (b.type === 'gallery') {
+    const albums = Object.fromEntries((pics.albums ?? []).map((a) => [a.id, `${a.title}${a.show_on_site ? '' : ' (not on her site)'}`]));
+    return `<div class="fgroup"><h2>The photos</h2><p class="small muted">${esc(her)} A tap on a photo opens it full size, as on an album's page.</p>
+      ${fld('Where they come from', seg(k('source'), b.source, GALLERY_SOURCE))}
+      <div class="fgrid">${select(k('album'), b.album ?? '', { '': Object.keys(albums).length ? 'Choose an album' : 'She has no albums yet', ...albums }, 'The album (from an album)', '')}</div>
+      ${photoSlot(k('photos'), 'The photos (photos you pick)', `Up to ${GALLERY_MAX}, in this order. From the breeder's photos: the button opens them all, and can upload more.`, b.photos, { say: defaultSay, photoUrl: pics.url, library: pics.library, photos: pics.photos }, { multiple: true, max: GALLERY_MAX })}
+      ${fld('How many show', seg(k('count'), b.count, GALLERY_COUNT), 'In one row on a computer (twelve scroll sideways, six at a time); sideways on a phone.')}
+      ${fld('Border round the strip', seg(k('frame'), b.frame, STRIP_FRAME), 'Round the whole row, in the site\'s colours.')}
+      <div class="switches boxed">${toggle(k('more'), b.more, 'A link under it to the whole album (from an album, while the Photo albums page is on)')}</div>${change}</div>
+      <div class="fgroup"><h2>Starting wording</h2><div class="fgrid">${w('heading', 'Heading', 'half', 'Optional.')}${w('label', 'Link words')}${w('line', 'Line under the heading', '', 'Optional.')}</div></div>`;
+  }
+  if (b.type === 'collage') return `<div class="fgroup"><h2>The collage</h2><p class="small muted">${esc(her.replace(' and reword it', ''))} Home's collage, as a block: pick the boxes, then a photo for each box. With fewer photos than boxes, the site uses a layout for that many.</p>
+    ${layoutChoice(k('layout'), b.layout, 'Photo layout')}${fld('Frame', seg(k('frame'), b.frame, COLLAGE_FRAME), 'The Home banner\'s frames, in the site\'s colours.')}</div>
+    <div class="fgroup"><h2>The photos</h2><p class="small muted">${esc(FROM_HERS)}</p>${collageBoxes(b, pics)}${change}</div>`;
   if (b.type === 'photo') return `<div class="fgroup"><h2>The photo</h2><p class="small muted">${esc(her.replace(' and reword it', ''))}</p>${photoChoice(b, pics)}
     ${fld('Shape', seg(k('shape'), b.shape, PHOTO_SHAPE))}${fld('Frame', seg(k('frame'), b.frame, PHOTO_FRAME), 'The Home banner\'s frames, in the site\'s colours. A full-width photo stays unframed.')}${fld('Which part to keep', seg(k('focus'), b.focus, PHOTO_FOCUS))}<div class="fgrid">${w('caption', 'Caption', '', 'Optional.')}</div>${change}</div>`;
+  if (b.type === 'beside') return `<div class="fgroup"><h2>The photo</h2>${photoChoice(b, pics)}${fld('Where it sits', seg(k('side'), b.side, PHOTO_SIDE), 'On a computer. On a phone the photo goes above the words.')}${fld('Frame', seg(k('frame'), b.frame, PHOTO_FRAME), 'The Home banner\'s frames, in the site\'s colours.')}${fld('Which part to keep', seg(k('focus'), b.focus, PHOTO_FOCUS))}${change}</div>
+    <div class="fgroup"><h2>The words beside it</h2><p class="small muted">${esc(her)}</p><div class="fgrid">${w('heading', 'Heading')}${w('label', 'Button words')}
+      <label>Words<textarea name="${k('w.body')}" rows="6">${esc(b.w?.body ?? '')}</textarea><span class="hint">Optional. A blank line starts a new paragraph.</span></label></div>
+      ${fld('Words line up', seg(k('align'), b.align, ALIGN), 'The heading, words and button, on a computer and a phone.')}</div>
+    <div class="fgroup"><h2>The button</h2>${linkSettings(snap, b, pics, true)}</div>`;
   if (b.type === 'overlay') return `<div class="fgroup"><h2>The photo</h2>${photoChoice(b, pics)}${fld('Which part to keep', seg(k('focus'), b.focus, PHOTO_FOCUS))}${change}</div>
     <div class="fgroup"><h2>The words over it</h2><p class="small muted">${esc(her)}</p><div class="fgrid">${w('heading', 'Heading')}${w('label', 'Button words')}${w('line', 'A line', '')}</div>
       ${fld('Up and down', seg(k('v'), b.v, OVER_V))}${fld('Across', seg(k('h'), b.h, ALIGN))}${fld('Shade behind the words', seg(k('shade'), b.shade, OVER_SHADE), 'Even the lightest keeps white words readable.')}</div>
@@ -575,6 +604,18 @@ function ownSummary(snap, b) {
   if (b.type === 'factrow') return b.items.length ? b.items.map(([v, l]) => [v, l].filter(Boolean).join(' ')).join(' · ') : 'No facts yet, so it hides';
   if (b.type === 'words') return [b.w.heading, b.w.line, b.w.body && `${b.w.body.split(/\n{2,}/).filter((x) => x.trim()).length} paragraph(s)`].filter(Boolean).join(' · ') || 'No words yet, so it hides';
   if (b.type === 'columns') return [b.w.heading, b.cols.length ? `${b.cols.length} section(s), ${COLS_ACROSS[b.across].toLowerCase()} across` : 'No sections yet, so it hides'].filter(Boolean).join(' · ');
+  if (b.type === 'collage') {
+    if (!b.photos.length) return b.mayChange ? 'No photos chosen yet, so it hides until the breeder picks some' : 'No photos chosen yet, so it hides';
+    const n = b.photos.length;
+    return [COLLAGE_LAYOUT[collageLayout(b.layout, n)], `${n} photo${n === 1 ? '' : 's'}`, b.frame !== 'none' && COLLAGE_FRAME[b.frame].toLowerCase()].filter(Boolean).join(' · ');
+  }
+  if (b.type === 'gallery') {
+    const album = b.source === 'album' ? snap.albums?.find((a) => a.id === b.album) : null;
+    const border = b.frame === 'none' ? null : STRIP_FRAME[b.frame].toLowerCase();
+    if (b.source === 'album') return b.album ? [album ? `Album: ${album.title}` : 'An album not on her site, so it hides', `${b.count} photos`, border].filter(Boolean).join(' · ') : 'No album chosen yet, so it hides';
+    return b.photos.length ? `${b.photos.length} photo${b.photos.length === 1 ? '' : 's'} picked · ${b.count} show` : b.mayChange ? 'No photos picked yet, so it hides until the breeder picks some' : 'No photos picked yet, so it hides';
+  }
+  if (b.type === 'beside') return [b.photo ? `Photo ${PHOTO_SIDE[b.side].toLowerCase()}` : 'No photo yet, words only', b.w.heading, b.frame !== 'none' && b.photo && PHOTO_FRAME[b.frame].toLowerCase()].filter(Boolean).join(' · ');
   if (!b.photo) return 'No photo chosen yet, so it hides';
   return b.type === 'photo' ? `${PHOTO_SHAPE[b.shape]}${b.frame !== 'none' && b.shape !== 'full' ? ` · ${PHOTO_FRAME[b.frame].toLowerCase()}` : ''}${b.w.caption ? ` · ${b.w.caption}` : ''}` : [b.w.heading, `words ${OVER_V[b.v].toLowerCase()} ${ALIGN[b.h].toLowerCase()}`].filter(Boolean).join(' · ');
 }
@@ -593,19 +634,19 @@ function blockRow(snap, key, b, i, n, open, pics) {
 function pagePreview(snap, key, blocks, site) {
   const h = snap.home;
   const ghost = (b, why) => `<div class="pvb ghost">${esc(blockName(key, b))}: ${why}</div>`;
-  const headOf = (w, eb, hd) => `${(w.eyebrow ?? eb) ? `<span class="eyebrow">${esc(w.eyebrow ?? eb)}</span>` : ''}${(w.heading ?? hd) ? `<h3>${esc(w.heading || hd)}</h3>` : ''}`;
-  const wordsOf = (b) => (hersOn(key, b) ? { ...h[b.id], heading: h[b.id]?.heading || undefined } : addedWords(snap, key, b));
+  const headOf = (w, eb, hd) => `${(w.eyebrow ?? eb) ? `<span class="eyebrow">${esc(w.eyebrow ?? eb)}</span>` : ''}${(w.heading ?? hd) ? `<h3>${esc(w.heading ?? hd)}</h3>` : ''}`;
+  const wordsOf = (b) => (hersOn(key, b) ? h[b.id] ?? {} : addedWords(snap, key, b));
   const out = [];
   for (const b of blocks) {
     if (hersOn(key, b) ? !h[b.id]?.enabled : !addedOn(snap, key, b)) { out.push(ghost(b, 'switched off by the breeder')); continue; }
     const names = blockRecords(snap, b);
     if (isData(b) && !names.length) { out.push(ghost(b, 'nothing matches, so it hides')); continue; }
-    if (b.type === 'hero') out.push(`<div class="pv-hero"><span class="ph"></span><div>${h.hero.eyebrow ? `<span class="eyebrow">${esc(h.hero.eyebrow)}</span>` : ''}<h3>${esc(h.hero.headline || snap.site.kennel_name)}</h3>${h.hero.script ? `<span class="script">${esc(h.hero.script)}</span>` : ''}</div></div>`);
+    if (b.type === 'hero') out.push(`<div class="pv-hero"><span class="ph"></span><div>${h.hero.eyebrow ? `<span class="eyebrow">${esc(h.hero.eyebrow)}</span>` : ''}${(h.hero.headline ?? snap.site.kennel_name) ? `<h3>${esc(h.hero.headline ?? snap.site.kennel_name)}</h3>` : ''}${h.hero.script ? `<span class="script">${esc(h.hero.script)}</span>` : ''}</div></div>`);
     else if (b.type === 'head') {
       const p = snap.pages[key] ?? {};
       const eb = p.eyebrow ?? headOf(snap, key).eyebrow;
       const lede = p.lede ?? headOf(snap, key).lede;
-      out.push(`<div class="pvb sand">${eb ? `<span class="eyebrow">${esc(eb)}</span>` : ''}<h3>${esc(p.heading || headOf(snap, key).heading)}</h3>${lede ? `<p class="small muted">${esc(lede)}</p>` : ''}</div>`);
+      out.push(`<div class="pvb sand">${eb ? `<span class="eyebrow">${esc(eb)}</span>` : ''}${(p.heading ?? headOf(snap, key).heading) ? `<h3>${esc(p.heading ?? headOf(snap, key).heading)}</h3>` : ''}${lede ? `<p class="small muted">${esc(lede)}</p>` : ''}</div>`);
     }
     else if (b.type === 'builtin') out.push(`<div class="pvb"><div class="pv-row pv-built">${svg('lock')}<b>${esc(blockName(key, b))}</b></div></div>`);
     else if (b.type === 'facts') out.push(h.facts.items?.length ? `<div class="pvb"><div class="pv-facts">${h.facts.items.slice(0, 3).map(([v, l]) => `<div><b>${esc(v)}</b>${esc(l)}</div>`).join('')}</div></div>` : ghost(b, 'no facts yet, so it hides'));
@@ -613,7 +654,7 @@ function pagePreview(snap, key, blocks, site) {
     else if (b.type === 'faq') { const q = placedFaqs(snap, key); out.push(q.length ? `<div class="pvb">${q.map((e) => `<div class="pv-q">${esc(e.heading)}</div>`).join('')}</div>` : ghost(b, 'no questions placed here, so it hides')); }
     else if (b.type === 'text') out.push(h.story.heading || h.story.text ? `<div class="pvb sand">${headOf(h.story, null, h.story.heading)}<div class="pvg"><span class="ph"></span><div class="lines"><i></i><i></i><i></i></div></div></div>` : ghost(b, 'no story yet, so it hides'));
     else if (b.type === 'embeds') out.push(ghost(b, `shows the videos and posts she puts on ${pageLabel(snap, key)}`));
-    else if (b.type === 'band') out.push(`<div class="pvb deep"><h3>${esc(h.waitlist.heading || 'Hoping for a puppy of your own?')}</h3><span class="pv-pill">${esc(h.waitlist.button_label || 'Join the waitlist')}</span></div>`);
+    else if (b.type === 'band') out.push(`<div class="pvb deep">${(h.waitlist.heading ?? HOME_WORDS.waitlist.heading) ? `<h3>${esc(h.waitlist.heading ?? HOME_WORDS.waitlist.heading)}</h3>` : ''}<span class="pv-pill">${esc(h.waitlist.button_label || 'Join the waitlist')}</span></div>`);
     else if (b.type === 'dogs') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Our dogs', 'Meet our dogs')}<div class="pvg${b.style === 'flip' || b.style === 'beside' ? '' : ' slide'}">${names.map((nm) => `<div class="pvc${b.style === 'light' ? ' light' : b.style === 'beside' ? ' beside' : ' flip'}"><span class="ph"></span><div class="t"><b>${esc(nm)}</b></div></div>`).join('')}</div></div>`);
     else if (b.type === 'litters') out.push(`<div class="pvb sand">${headOf(wordsOf(b), 'Litters', 'Current and upcoming')}${names.map((nm) => `<div class="pv-row"><b>${esc(nm)}</b></div>`).join('')}</div>`);
     else if (b.type === 'banner') out.push(`<div class="pvb deep">${b.w.heading ? `<h3>${esc(addedWords(snap, key, b).heading)}</h3>` : ''}${b.w.label && b.link ? `<span class="pv-pill">${esc(addedWords(snap, key, b).label)}</span>` : ''}</div>`);
@@ -623,6 +664,9 @@ function pagePreview(snap, key, blocks, site) {
     else if (b.type === 'words') { const x = addedWords(snap, key, b); out.push(x.heading || x.line || x.body ? `<div class="pvb">${x.heading ? `<h3>${esc(x.heading)}</h3>` : ''}${x.line ? `<p class="small muted">${esc(x.line)}</p>` : ''}${x.body ? '<div class="lines"><i></i><i></i><i></i></div>' : ''}</div>` : ghost(b, 'no words yet, so it hides')); }
     else if (b.type === 'columns') { const x = addedWords(snap, key, b); const c = snap.added?.[key]?.[b.id]?.cols?.length ? snap.added[key][b.id].cols : b.cols; out.push(c.length ? `<div class="pvb">${x.heading ? `<h3>${esc(x.heading)}</h3>` : ''}${c.map(([h]) => `<b class="small">${esc(h)}</b><div class="lines"><i></i><i></i></div>`).join('')}</div>` : ghost(b, 'no sections yet, so it hides')); }
     else if (b.type === 'spacer') out.push(`<div class="pvb ghost">Space: ${esc(SPACER_HEIGHT[b.height].toLowerCase())}</div>`);
+    else if (b.type === 'collage') { const x = b.mayChange && snap.added?.[key]?.[b.id]?.photos?.length ? snap.added[key][b.id].photos : b.photos; out.push(x.length ? `<div class="pvb"><div class="pvg">${x.map(() => '<div class="pvc"><span class="ph"></span></div>').join('')}</div></div>` : ghost(b, 'no photos chosen yet, so it hides')); }
+    else if (b.type === 'gallery') { const x = addedWords(snap, key, b); const album = b.source === 'album' ? snap.albums?.find((a) => a.id === b.album) : null; const n = Math.min(Number(b.count), album ? album.photos.length : b.photos.length, 4); out.push(n ? `<div class="pvb">${x.heading ? `<h3>${esc(x.heading)}</h3>` : ''}<div class="pvg">${'<div class="pvc"><span class="ph"></span></div>'.repeat(n)}</div></div>` : ghost(b, 'no photos yet, so it hides')); }
+    else if (b.type === 'beside') { const x = addedWords(snap, key, b); const pic = b.photo ? '<span class="ph"></span>' : ''; out.push(pic || x.heading || x.body ? `<div class="pvb"><div class="pvg">${b.side === 'right' ? '' : `<div class="pvc">${pic}</div>`}<div>${x.heading ? `<h3>${esc(x.heading)}</h3>` : ''}${x.body ? '<div class="lines"><i></i><i></i><i></i></div>' : ''}</div>${b.side === 'right' ? `<div class="pvc">${pic}</div>` : ''}</div></div>` : ghost(b, 'no photo or words yet, so it hides')); }
     else if (b.type === 'photo' || b.type === 'overlay') out.push(b.photo ? `<div class="pv-hero"><span class="ph"></span>${b.type === 'overlay' && b.w.heading ? `<div><h3>${esc(addedWords(snap, key, b).heading)}</h3></div>` : ''}</div>` : ghost(b, 'no photo chosen yet, so it hides'));
     else if (b.type === 'reviews') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Families', 'What our families say')}${snap.reviews.slice(0, 1).map((r) => `<div class="pv-row" style="display:block"><span class="stars">★★★★★</span><br>“${esc(r.quote.slice(0, 90))}${r.quote.length > 90 ? '…' : ''}”</div>`).join('')}</div>`);
   }
@@ -695,10 +739,14 @@ async function pageScreen(env, site, build, key, { open = null, error = null } =
   useFormats(snap);
   const blocks = pageBlocks(build, key);
   const adds = addable(key, blocks);
-  // Her photos, for a photo block's picker (served through the admin view of her site).
-  const pics = { build, list: open && blocks.some((b) => b.id === open && (b.type === 'photo' || b.type === 'overlay'))
-    ? (await env.DB.prepare('SELECT id, alt FROM photos WHERE site_id = ? AND removed_at IS NULL ORDER BY created_at DESC').bind(site.id).all()).results : [],
-  url: (id) => `/admin/${site.subdomain}/site/_kp/p/${encodeURIComponent(id)}?s=t` };
+  // A photo block's spot: its photo (served through the admin view of her site), and
+  // her photo library window, from her Site Manager.
+  const pics = { build, photos: open && blocks.some((b) => b.id === open && ['photo', 'overlay', 'collage', 'beside', 'gallery'].includes(b.type))
+    ? (await env.DB.prepare('SELECT id FROM photos WHERE site_id = ? AND removed_at IS NULL').bind(site.id).all()).results : null,
+  albums: open && blocks.some((b) => b.id === open && b.type === 'gallery')
+    ? (await env.DB.prepare('SELECT id, title, show_on_site FROM albums WHERE site_id = ? ORDER BY sort, title').bind(site.id).all()).results : [],
+  url: (id) => `/admin/${site.subdomain}/site/_kp/p/${encodeURIComponent(id)}?s=t`,
+    library: { list: `/s/${site.subdomain}/photos/library`, upload: `/s/${site.subdomain}/photos/upload`, tags: '', alt: '' } };
   const changed = pageChanged(build, key);
   const group = (data, title) => {
     const rows = adds.filter((x) => (data === 'own' ? BLOCK_TYPES[x.type].kind === 'own' : BLOCK_TYPES[x.type].kind !== 'own' && (BLOCK_TYPES[x.type].kind === 'data') === data));

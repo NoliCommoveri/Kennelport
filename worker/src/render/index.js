@@ -2,7 +2,7 @@
 // for a page that's switched off or empty. Pure: no D1, R2 or network, so the
 // same function renders the live site, a preview and the tests.
 import { layout } from './layout.js';
-import { pageOn, useFormats } from './parts.js';
+import { pageOn, useFormats, viewerHtml } from './parts.js';
 import * as P from './pages.js';
 import { PAGES } from '../content/model.js';
 
@@ -55,6 +55,9 @@ export function renderPage(snap, ctx) {
   useFormats(snap);
   const page = pick(snap, ctx);
   if (!page) return { status: 404, html: layout(snap, ctx, P.unavailable(snap, ctx)) };
+  // A page with photos that open full size (an album, a puppy's, a gallery strip) has
+  // the one viewer they open into.
+  if (page.body?.includes('data-gallery') && !page.body.includes('id="viewer"')) page.body += viewerHtml();
   return { status: 200, html: layout(snap, ctx, page) };
 }
 
