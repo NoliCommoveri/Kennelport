@@ -63,6 +63,32 @@ test('an album made in the manage app gets its own page, a card on /albums, and 
   assert.equal((await call(b.env, SITE, `/_kp/p/${p2}`)).status, 200, 'its photos are served');
 });
 
+test("every album with a photo tagged as a dog is listed at the foot of that dog's page", async () => {
+  const b = await breeder();
+  const dogs = b.env.DB.raw.prepare("SELECT id, slug, call_name FROM dogs WHERE show_on_site = 1 ORDER BY sort, call_name").all();
+  const [willow, other] = dogs;
+  const [p1, p2, p3] = [await b.photo('one'), await b.photo('two'), await b.photo('three')];
+  await b.post('/lists/albums/new', form({ title: 'Beach day' }, [p1, p2]));
+  await b.post('/lists/albums/new', form({ title: 'Snow day' }, [p3]));
+  const tag = (photo, dog) => b.env.DB.raw.prepare('INSERT INTO photo_tags (site_id, photo_id, subject) VALUES (?, ?, ?)').run(b.site.id, photo, `dog:${dog.id}`);
+  tag(p2, willow); tag(p3, willow); tag(p3, other);
+  await b.post('/publish', new URLSearchParams());
+
+  const page = await b.page(`/dogs/${willow.slug}`);
+  assert.match(page, new RegExp(`<span class="eyebrow">Albums</span><h2>With ${willow.call_name}</h2>`));
+  assert.match(page, /<a class="album-card" href="\/albums\/beach-day">/, 'one tagged photo is enough');
+  assert.match(page, /<a class="album-card" href="\/albums\/snow-day">/);
+  assert.ok(page.lastIndexOf('album-card') > page.indexOf('class="dogpage'), 'under the photo');
+  const theirs = await b.page(`/dogs/${other.slug}`);
+  assert.match(theirs, /href="\/albums\/snow-day"/);
+  assert.doesNotMatch(theirs, /href="\/albums\/beach-day"/);
+
+  // Untagged: gone from the page once published.
+  b.env.DB.raw.prepare('DELETE FROM photo_tags WHERE photo_id = ?').run(p2);
+  await b.post('/publish', new URLSearchParams());
+  assert.doesNotMatch(await b.page(`/dogs/${willow.slug}`), /href="\/albums\/beach-day"/);
+});
+
 test('a removed photo drops out; an empty or hidden album isn\'t shown; a new title keeps the old address working', async () => {
   const b = await breeder();
   const [p1, p2] = [await b.photo('one'), await b.photo('two')];

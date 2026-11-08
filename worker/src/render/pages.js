@@ -645,7 +645,8 @@ export function dog(snap, ctx, slug) {
       badges: badgeRow(snap, 'dog', { inWrap: true }),
       embeds: embedsBlock(snap, `dog:${d.id}`, { inWrap: true }),
       litters: litters.length ? `<div class="mt-26">${head('Litters', null)}<div class="litters">${litters.map((l) => litterCard(snap, l, ctx)).join('')}</div></div>` : '',
-    }, { crumb: `<p class="breadcrumb"><a href="/dogs">${esc(label(snap, 'dogs'))}</a></p>`, photo, spaced: new Set(['badges', 'embeds', 'litters']) }),
+      albums: dogAlbums(snap, ctx, d),
+    }, { crumb: `<p class="breadcrumb"><a href="/dogs">${esc(label(snap, 'dogs'))}</a></p>`, photo, spaced: new Set(['badges', 'embeds', 'litters', 'albums']) }),
   };
 }
 
@@ -763,6 +764,12 @@ function albumCard(snap, a) {
 function litterAlbums(snap, ctx, l, { eyebrow = 'Photos', heading = null } = {}) {
   const list = pageOn(snap, 'albums', ctx) ? (snap.albums ?? []).filter((a) => a.litter_id === l.id) : [];
   return list.length ? `<div class="mt-26">${head(eyebrow, heading)}<div class="albums">${list.map((a) => albumCard(snap, a)).join('')}</div></div>` : '';
+}
+
+// Every album with a photo she tagged as this dog, at the foot of the dog's page.
+function dogAlbums(snap, ctx, d) {
+  const list = pageOn(snap, 'albums', ctx) ? (snap.albums ?? []).filter((a) => (a.dog_ids ?? []).includes(d.id)) : [];
+  return list.length ? `<div class="mt-26">${head('Albums', `With ${d.call_name}`)}<div class="albums">${list.map((a) => albumCard(snap, a)).join('')}</div></div>` : '';
 }
 
 export function albums(snap, ctx) {
