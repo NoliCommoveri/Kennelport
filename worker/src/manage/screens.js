@@ -771,6 +771,8 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       const ph = (i, j) => (!mine.length && b.cols[i]?.[j] ? ` placeholder="${esc(b.cols[i][j])}"` : '');
       parts.push(`<div class="f"><fieldset><legend>${esc(say('pages.own.cols'))}<span class="hint">${esc(say('pages.own.cols_hint'))}</span></legend>${rows.map(([h, t], i) => `<label>${esc(say('pages.own.col_heading', { n: i + 1 }))}<input name="cols.${i}.0" value="${esc(h)}" maxlength="${F.cols.keyMax}"${ph(i, 0)}></label><label>${esc(say('pages.own.col_words', { n: i + 1 }))}<textarea name="cols.${i}.1" rows="4" maxlength="${F.cols.valueMax}"${ph(i, 1)}>${esc(t)}</textarea></label>`).join('')}</fieldset></div>`);
     }
+    if (b.type === 'beside') parts.push(input('heading', say('pages.heading'), F.heading.max, true, empty(b.w.heading), b.w.heading), input('label', say('pages.own.button_words'), F.label.max, true, empty(b.w.label), b.w.label),
+      `<div class="f"><label>${esc(say('pages.own.words_body'))}<textarea name="body" rows="6" maxlength="${F.body.max}"${b.w.body ? ` placeholder="${esc(b.w.body)}"` : ''}>${esc(cur.body ?? '')}</textarea><span class="hint">${esc(say('pages.own.words_body_hint'))}</span></label></div>`);
     if (b.type === 'button') parts.push(input('label', say('pages.own.button_words'), F.label.max, true, empty(b.w.label), b.w.label));
     const l = b.link;
     let linkNote = '';
@@ -782,7 +784,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       linkNote = `<p class="muted small">${esc(say('pages.own.goes_to', { page: name }))}${l.page !== 'home' && !pageShows(snap, l.page, { today: new Date().toISOString().slice(0, 10) }) ? ` ${esc(say('pages.own.hidden', { page: name }))}` : ''}</p>`;
     }
     let photo = '';
-    if ((b.type === 'photo' || b.type === 'overlay') && b.mayChange) {
+    if (['photo', 'overlay', 'beside'].includes(b.type) && b.mayChange) {
       photo = field('photo_id', { type: 'photo' }, cur.photo_id || b.photo || '', { kind: 'pages', say, photos: await photos(), photoUrl });
       if (b.type === 'photo') parts.push(input('caption', say('pages.own.caption'), F.caption.max, false, empty(b.w.caption), b.w.caption));
     } else if ((b.type === 'photo' || b.type === 'overlay') && !b.photo) linkNote += `<p class="muted small">${esc(say('pages.own.no_photo'))}</p>`;

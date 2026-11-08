@@ -51,7 +51,7 @@ async function setup() {
 }
 
 test('a block nobody styled reads as before; a new block\'s settings are clean', () => {
-  for (const t of ['banner', 'button', 'divider', 'spacer', 'photo', 'collage', 'overlay', 'words', 'factrow', 'columns']) assert.deepEqual(cleanBlock(newBlock(t, `${t}-2`)), cleanBlock(cleanBlock(newBlock(t, `${t}-2`))), t);
+  for (const t of ['banner', 'button', 'divider', 'spacer', 'photo', 'collage', 'beside', 'overlay', 'words', 'factrow', 'columns']) assert.deepEqual(cleanBlock(newBlock(t, `${t}-2`)), cleanBlock(cleanBlock(newBlock(t, `${t}-2`))), t);
   assert.equal(cleanBlock({ id: 'faq', type: 'faq', s: { bg: '', py: '', px: '', text: 'm' } }).s, undefined);
   assert.deepEqual(cleanBlock({ id: 'faq', type: 'faq', s: { bg: 'accent', py: 'l', text: 'huge' } }).s, { bg: 'accent', py: 'l' });
   assert.equal(cleanBlock({ id: 'x', type: 'button', link: { to: 'page', page: 'Bad Page' } }).link, null);
@@ -327,4 +327,28 @@ test('the owner adds a collage: Home\'s layouts and frames, a photo for each box
   // Cleaned: an unknown layout or frame falls back; at most four photos.
   const x = cleanBlock({ id: 'x', type: 'collage', layout: 'nine', frame: 'gold', photos: ['a', 'b', 'c', 'd', 'e'], focus: ['top', 'sideways'] });
   assert.deepEqual([x.layout, x.frame, x.photos, x.focus], ['tall_two_wide', 'mat', ['a', 'b', 'c', 'd'], ['top', 'middle', 'middle', 'middle']]);
+});
+
+test('the owner adds a photo beside words: the photo left or right, framed or not; the breeder rewords it and changes the photo', async () => {
+  const s = await setup();
+  await s.post('about', {}, { act: 'add:beside' });
+  const b = (await s.blocks('about')).at(-1);
+  assert.deepEqual([b.side, b.frame, b.photo, b.link], ['left', 'none', null, null]);
+  // Words alone: the story's grid with the words taking the width.
+  assert.match(await s.render('/about'), /<section class="section own-beside"><div class="wrap story no-photo f-middle"><div class="story-copy"><h2>A little about us<\/h2><\/div><\/div><\/section>/);
+  const form = await s.get(`/admin/akbostons/pages/about?open=${b.id}`);
+  assert.match(form, new RegExp(`name="b\\.${b.id}\\.side" value="right"`));
+  await s.post('about', { [`b.${b.id}.photo`]: 'ph1', [`b.${b.id}.side`]: 'right', [`b.${b.id}.frame`]: 'mat', [`b.${b.id}.w.body`]: 'We raise them at home.\r\n\r\nWith the kids.', [`b.${b.id}.w.label`]: 'Meet the dogs', [`b.${b.id}.link.to`]: 'page', [`b.${b.id}.link.page`]: 'dogs' }, { open: b.id });
+  let html = await s.render('/about');
+  assert.match(html, /<section class="section own-beside"><div class="wrap story pic-right f-middle"><div class="story-pic frame-mat"><div class="box"><img src="\/_kp\/p\/ph1"[^>]*><\/div><\/div><div class="story-copy"><h2>A little about us<\/h2><p>We raise them at home\.<\/p><p>With the kids\.<\/p><div><a class="btn solid" href="\/dogs">Meet the dogs<\/a><\/div><\/div><\/div><\/section>/);
+  assert.match(text(await s.get('/admin/akbostons/pages/about')), /Photo beside words Photo on the right · A little about us · a soft mat/);
+  // Left, unframed.
+  await s.post('about', { [`b.${b.id}.side`]: 'left', [`b.${b.id}.frame`]: 'none' }, { open: b.id });
+  assert.match(await s.render('/about'), /<div class="wrap story f-middle"><img src="\/_kp\/p\/ph1"[^>]*><div class="story-copy">/);
+  // Hers: the heading, the words and the button's words.
+  assert.match(text(await s.get('/s/akbostons/pages/about')), /A photo beside words\./);
+  await s.breeder(`/blocks/about/${b.id}`, { enabled: '1', heading: 'Home life', body: 'Just us.', button_label: 'Our dogs' });
+  html = await s.render('/about');
+  assert.match(html, /<h2>Home life<\/h2><p>Just us\.<\/p><div><a class="btn solid" href="\/dogs">Our dogs<\/a>/);
+  assert.equal(cleanBlock({ id: 'x', type: 'beside', side: 'up' }).side, 'left');
 });

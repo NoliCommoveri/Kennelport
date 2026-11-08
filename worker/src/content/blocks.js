@@ -40,6 +40,7 @@ export const BLOCK_TYPES = Object.freeze({
   spacer: { name: 'Spacer', ic: 'sliders', kind: 'own', hint: 'Empty space between blocks.' },
   photo: { name: 'Photo', ic: 'camera', kind: 'own', hint: 'One photo, with an optional caption.' },
   collage: { name: 'Collage', ic: 'camera', kind: 'own', hint: 'Up to four photos in one of the Home collage\'s layouts and frames.' },
+  beside: { name: 'Photo beside words', ic: 'camera', kind: 'own', hint: 'A photo with a heading, words and a button beside it, the photo on the left or the right (above the words on a phone).' },
   overlay: { name: 'Text over a photo', ic: 'camera', kind: 'own', hint: 'A photo with a heading, a line and a button over it.' },
   factrow: { name: 'Facts row (any page)', ic: 'star', kind: 'own', hint: 'Up to four facts side by side, each a big value over a small label (as on Home).' },
   words: { name: 'Text block', ic: 'draft', kind: 'own', hint: 'A heading, a line under it, and words: as many paragraphs as you like.' },
@@ -68,6 +69,7 @@ export const PHOTO_FOCUS = Object.freeze({ top: 'The top', middle: 'The middle',
 export const COLLAGE_LAYOUT = Object.freeze(Object.fromEntries(Object.entries(COLLAGE_LAYOUTS).map(([k, v]) => [k, v.label])));
 export const COLLAGE_FRAME = Object.freeze(Object.fromEntries(FRAMES.map((f) => [f, PHOTO_FRAME[f]])));
 export const COLLAGE_MAX = 4;
+export const PHOTO_SIDE = Object.freeze({ left: 'On the left', right: 'On the right' });
 export const OVER_V = Object.freeze({ top: 'Top', middle: 'Middle', bottom: 'Bottom' });
 export const OVER_SHADE = Object.freeze({ light: 'Light', medium: 'Medium', dark: 'Dark' });
 // Every block's look. Colours are the scheme's, by name, so they follow light and
@@ -79,6 +81,7 @@ export const OWN_WORDS = Object.freeze({
   banner: { heading: 'Hoping for a puppy of your own?', line: '', label: 'Join the waitlist' },
   button: { label: 'Join the waitlist' },
   overlay: { heading: '', line: '', label: '' },
+  beside: { heading: '', body: '', label: '' },
   photo: { caption: '' },
   words: { heading: '', line: '', body: '' },
   columns: { heading: '', line: '' },
@@ -153,6 +156,7 @@ export function newBlock(type, id) {
   if (type === 'factrow') Object.assign(b, { items: [] });
   if (type === 'words') Object.assign(b, { w: { heading: 'A few words from us', line: '', body: '' }, align: 'center' });
   if (type === 'columns') Object.assign(b, { w: { heading: 'Our approach', line: '' }, cols: [], across: '2', align: 'center' });
+  if (type === 'beside') Object.assign(b, { photo: null, focus: 'middle', frame: 'none', side: 'left', w: { heading: 'A little about us', body: '', label: '' }, link: null, mayChange: true });
   if (type === 'overlay') Object.assign(b, { photo: null, focus: 'middle', w: { heading: 'Raised with love', line: '', label: '' }, link: null, v: 'bottom', h: 'left', shade: 'medium', mayChange: true });
   return b;
 }
@@ -352,7 +356,7 @@ export function cleanBlock(b) {
   if (b.type === 'columns') { out.w = words(b.w, ['heading', 'line']); out.cols = cleanCols(b.cols); out.across = pick(String(b.across ?? ''), COLS_ACROSS, '2'); out.align = pick(b.align, ALIGN, 'center'); }
   if (b.type === 'divider') { out.style = pick(b.style, DIVIDER_STYLE, 'line'); out.width = pick(b.width, DIVIDER_WIDTH, 'wide'); }
   if (b.type === 'spacer') out.height = pick(b.height, SPACER_HEIGHT, 'm');
-  if (b.type === 'photo' || b.type === 'overlay') {
+  if (b.type === 'photo' || b.type === 'overlay' || b.type === 'beside') {
     out.photo = PHOTO_ID.test(String(b.photo ?? '')) ? b.photo : null;
     out.focus = pick(b.focus, PHOTO_FOCUS, 'middle');
     out.mayChange = b.mayChange !== false;
@@ -368,6 +372,12 @@ export function cleanBlock(b) {
     out.mayChange = b.mayChange !== false;
   }
   if (b.type === 'photo') { out.shape = pick(b.shape, PHOTO_SHAPE, 'wide'); out.frame = pick(b.frame, PHOTO_FRAME, 'none'); out.w = words(b.w, ['caption']); }
+  if (b.type === 'beside') {
+    out.frame = pick(b.frame, PHOTO_FRAME, 'none');
+    out.side = pick(b.side, PHOTO_SIDE, 'left');
+    out.w = words(b.w, ['heading', 'body', 'label']);
+    out.link = cleanLink(b.link);
+  }
   if (b.type === 'overlay') {
     out.w = words(b.w, ['heading', 'line', 'label']);
     out.link = cleanLink(b.link);
@@ -496,7 +506,7 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
         if (next.link && to === 'email' && next.link.value && !looksLikeEmail(next.link.value)) throw new BlockError('That email address doesn\'t look like one.');
         if (next.link && to === 'url' && !next.link.value) throw new BlockError('A button to an outside site needs its address.');
       }
-      for (const f of ['size', 'look', 'align', 'style', 'width', 'height', 'shape', 'frame', 'focus', 'v', 'h', 'shade', 'across']) if (f in b) next[f] = str(f);
+      for (const f of ['size', 'look', 'align', 'style', 'width', 'height', 'shape', 'frame', 'focus', 'side', 'v', 'h', 'shade', 'across']) if (f in b) next[f] = str(f);
       if ('items' in b) next.items = Array.from({ length: FACTS_MAX }, (_, i) => [str(`items.${i}.0`), str(`items.${i}.1`)]);
       if ('cols' in b) next.cols = Array.from({ length: COLS_MAX }, (_, i) => [str(`cols.${i}.0`), str(`cols.${i}.1`)]);
       if ('photo' in b) { next.photo = str('photo') || null; next.mayChange = get(k('mayChange')) != null; }

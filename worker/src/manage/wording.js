@@ -451,6 +451,7 @@ const SCREEN_LINES = {
   "pages.own.divider": ["pages", "A divider KennelPort added: what it is", "A divider between parts of the page"],
   "pages.own.photo": ["pages", "A photo KennelPort added: what it is", "A photo"],
   "pages.own.overlay": ["pages", "Words over a photo KennelPort added: what it is", "Words over a photo"],
+  "pages.own.beside": ["pages", "A photo beside words KennelPort added: what it is", "A photo beside words"],
   "pages.own.factrow": ["pages", "A facts row KennelPort added: what it is", "A row of facts, each a big value over a small label"],
   "pages.own.facts": ["pages", "Field label: a facts row's facts", "Facts"],
   "pages.own.facts_hint": ["pages", "Hint: a facts row's facts", "A value and its label on each line. All empty: the facts it started with."],

@@ -302,6 +302,15 @@ function ownBlock(snap, ctx, b, key) {
     const framed = b.frame !== 'none' && b.shape !== 'full';
     return `<figure class="own-photo ${b.shape}${b.shape === 'full' ? '' : ' wrap'} f-${b.focus}${framed ? ` frame-${b.frame}` : ''}">${framed ? `<div class="box">${pic}${b.frame === 'sprig' ? VINE : ''}</div>` : pic}${cap ? `<figcaption>${esc(cap)}</figcaption>` : ''}</figure>`;
   }
+  if (b.type === 'beside') {
+    // The prototype's story: a photo beside a heading, words and a button. On a
+    // computer the photo sits left or right; on a phone it goes above the words.
+    const pic = img(snap, photoId) ?? '';
+    const button = link && w.label ? `<div>${aTo(link, 'btn solid', w.label)}</div>` : '';
+    if (!pic && !w.heading && !w.body && !button) return '';
+    const side = pic && b.side === 'right' ? ' pic-right' : '';
+    return `<section class="section own-beside"><div class="wrap story${pic ? '' : ' no-photo'}${side} f-${b.focus}">${framed(pic, b.frame)}<div class="story-copy">${w.heading ? `<h2>${esc(w.heading)}</h2>` : ''}${w.body ? paras(w.body) : ''}${button}</div></div></section>`;
+  }
   if (b.type === 'collage') {
     // Hers where the owner lets her change them and she has chosen some; the
     // owner's layout and frame either way.

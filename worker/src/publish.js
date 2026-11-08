@@ -229,7 +229,7 @@ export async function buildSnapshot(env, siteId) {
         if (b.mayChange) (added[key]?.[b.id]?.photos ?? []).forEach(use);
         continue;
       }
-      if (b.type !== 'photo' && b.type !== 'overlay') continue;
+      if (!['photo', 'overlay', 'beside'].includes(b.type)) continue;
       use(b.photo);
       if (b.mayChange) use(added[key]?.[b.id]?.photo_id);
     }
