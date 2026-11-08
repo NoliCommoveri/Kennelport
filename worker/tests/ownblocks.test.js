@@ -297,7 +297,9 @@ test('the owner adds a collage: Home\'s layouts and frames, a photo for each box
   assert.match(form, new RegExp(`name="b\\.${c.id}\\.frame" value="sprig"`));
   assert.match(form, /<div class="box" data-box="2">/);
   assert.match(form, /<div class="box" data-box="3" hidden>/);
-  assert.match(form, new RegExp(`name="b\\.${c.id}\\.photos\\.0" value="ph1"`));
+  // Each box a photo spot that opens her photo library (forms.js photoSlot).
+  assert.match(form, new RegExp(`<fieldset class="ph-slot tall" data-slot data-name="b\\.${c.id}\\.photos\\.0" data-mode="one"[^>]*data-library="/s/akbostons/photos/library"`));
+  assert.match(form, new RegExp(`<input type="hidden" name="b\\.${c.id}\\.photos\\.0" value="">`));
   // Three photos in its three boxes, the second kept at the top.
   await s.post('about', { [`b.${c.id}.photos.0`]: 'ph1', [`b.${c.id}.photos.1`]: 'ph2', [`b.${c.id}.photos.2`]: 'ph3', [`b.${c.id}.focus.1`]: 'top' }, { open: c.id });
   let html = await s.render('/about');

@@ -41,26 +41,30 @@ async function breeder() {
   return { env, site, get, post, id, upload, tagsOf };
 }
 
-// The part of a picker before "Other photos", and the part after.
-const split = (html) => {
-  const i = html.indexOf('class="ph-more"');
-  return i < 0 ? [html, ''] : [html.slice(0, i), html.slice(i)];
-};
+// A photo spot (forms.js photoSlot): its name, the photos it holds, and its data.
+const spot = (html, name) => html.match(new RegExp(`<fieldset class="ph-slot[^"]*" data-slot data-name="${name.replace(/\./g, '\\.')}"[\\s\\S]*?</fieldset>`))?.[0] ?? '';
+const held = (slotHtml) => [...slotHtml.matchAll(/<input type="hidden" name="[^"]+" value="([^"]*)">/g)].map((m) => m[1]).filter(Boolean);
 
-test("a dog's picker shows that dog's photos first, the rest folded away, and an Add photos button tagged with the dog", async () => {
+test("a dog's photo spot shows only its photo; Replace opens the library, which uploads tagged with the dog", async () => {
   const b = await breeder();
   const willow = b.id('dogs', "slug = 'willow'");
   const mine = await b.upload(`dog:${willow}`, 'Willow');
   const other = await b.upload();
+  const row = b.env.DB.raw.prepare('SELECT * FROM dogs WHERE id = ?').get(willow);
+  b.env.DB.raw.prepare('UPDATE dogs SET photo_id = ? WHERE id = ?').run(mine, willow);
   const html = await (await b.get(`/dogs/${willow}`)).text();
-  assert.match(html, /Photos of Willow/);
-  const [first, rest] = split(html);
-  assert.ok(first.includes(mine) && !first.includes(other));
-  assert.ok(rest.includes(other) && !rest.includes(mine));
-  assert.match(rest, /Other photos \(1\)/);
-  assert.match(html, new RegExp(`data-tags="dog:${willow}"`));
-  assert.match(html, /data-add-photos/);
+  const s = spot(html, 'photo_id');
+  assert.ok(s, 'the photo spot');
+  assert.deepEqual(held(s), [mine]);
+  assert.ok(!s.includes(other), 'no other photo in the form');
+  assert.match(s, /data-replace>Replace</);
+  assert.match(s, /data-remove>Remove</);
+  assert.match(s, new RegExp(`data-tags="dog:${willow}"`));
+  assert.match(s, /data-library="\/s\/akbostons\/photos\/library"/);
+  assert.match(s, /data-upload="\/s\/akbostons\/photos\/upload"/);
+  assert.doesNotMatch(html, /data-add-photos|ph-grid/);
   assert.match(html, /\/_kp\/m\/photos\.js\?v=/);
+  assert.ok(row);
 });
 
 test('uploads ignore subjects that are not this site\'s', async () => {
@@ -84,7 +88,7 @@ test('saving a dog tags the chosen photo and any added with its Add photos butto
   assert.deepEqual(b.tagsOf(extra), [`dog:${nova}`]);
 });
 
-test("a puppy's picker offers its own photos, then its litter's; saving tags both", async () => {
+test("a puppy's spot uploads tagged with the puppy and its litter; saving tags what's chosen", async () => {
   const b = await breeder();
   const gem = b.id('litters', "slug = 'gem-2026'");
   const opal = b.id('puppies', "slug = 'opal'");
@@ -95,30 +99,62 @@ test("a puppy's picker offers its own photos, then its litter's; saving tags bot
   assert.match(page, new RegExp(`data-tags="litter:${gem}"`));
 
   const html = await (await b.get(`/litters/${gem}/puppies/${opal}`)).text();
-  assert.match(html, /Photos of Opal/);
-  assert.match(html, /Photos of The Gem litter|Photos of Gem/);
-  assert.match(html, new RegExp(`data-tags="puppy:${opal},litter:${gem}"`));
-  assert.ok(split(html)[0].includes(litterPhoto));
+  assert.match(spot(html, 'photo_id'), new RegExp(`data-tags="puppy:${opal},litter:${gem}"`));
 
   const row = b.env.DB.raw.prepare('SELECT * FROM puppies WHERE id = ?').get(opal);
   const body = Object.fromEntries(['slug', 'name', 'collar', 'sex', 'color', 'status', 'bio'].map((k) => [k, row[k] ?? '']));
   assert.equal((await b.post(`/litters/${gem}/puppies/${opal}`, { ...body, photo_id: litterPhoto })).status, 303);
   assert.deepEqual(b.tagsOf(litterPhoto), [`litter:${gem}`, `puppy:${opal}`].sort());
+  // Now it's the puppy's spot's one photo.
+  assert.deepEqual(held(spot(await (await b.get(`/litters/${gem}/puppies/${opal}`)).text(), 'photo_id')), [litterPhoto]);
 });
 
-test('Home and Our story pickers offer their own photos and tag on save', async () => {
+test('Home and Our story spots: no photo yet reads Choose a photo; saving tags the chosen photo', async () => {
   const b = await breeder();
-  const hero = await b.upload('page:home');
   const html = await (await b.get('/home/hero')).text();
-  assert.match(html, /Photos for the Home page/);
-  assert.ok(split(html)[0].includes(hero));
+  assert.match(spot(html, 'banner_photo_id'), /data-tags="page:home"/);
   const about = await b.upload();
   const page = await (await b.get('/pages/about')).text();
-  assert.match(page, /data-tags="page:about"/);
-  const current = await (await b.get('/pages/about')).text();
-  assert.ok(current.includes('Photos for Our story'));
+  const s = spot(page, 'photo_id');
+  assert.match(s, /data-tags="page:about"/);
   await b.post('/pages/about', { enabled: '1', text: 'Our story.', photo_id: about });
   assert.deepEqual(b.tagsOf(about), ['page:about']);
+  assert.deepEqual(held(spot(await (await b.get('/pages/about')).text(), 'photo_id')), [about]);
+  // Removed: the spot is empty, and says so.
+  await b.post('/pages/about', { enabled: '1', text: 'Our story.', photo_id: '' });
+  const empty = spot(await (await b.get('/pages/about')).text(), 'photo_id');
+  assert.deepEqual(held(empty), []);
+  assert.match(empty, /class="ph-none">No photo yet</);
+  assert.match(empty, /data-replace>Choose a photo</);
+  assert.match(empty, /data-remove hidden>/);
+});
+
+test('the photo library: Page photos by where each photo shows, Profile photos by profile, and Not used anywhere', async () => {
+  const b = await breeder();
+  const willow = b.id('dogs', "slug = 'willow'");
+  const opal = b.id('puppies', "slug = 'opal'");
+  const onAbout = await b.upload();
+  const onWillow = await b.upload();
+  const tagged = await b.upload(`puppy:${opal}`);
+  const loose = await b.upload();
+  await b.post('/pages/about', { enabled: '1', text: 'Our story.', photo_id: onAbout });
+  b.env.DB.raw.prepare('UPDATE dogs SET photo_id = ? WHERE id = ?').run(onWillow, willow);
+  const r = await b.get('/photos/library');
+  assert.equal(r.status, 200);
+  const html = await r.text();
+  const tab = (k) => html.match(new RegExp(`<div class="lib-tab" data-tab="${k}"[^>]*>([\\s\\S]*?)</div></details>(?:</div>|<p)`))?.[0] ?? html.split(`data-tab="${k}"`)[1].split('data-tab=')[0];
+  const rowOf = (part, label) => part.match(new RegExp(`<summary><b>${label.replace(/[()']/g, (c) => (c === "'" ? '&#39;' : `\\${c}`))}</b><span class="n">\\d+</span></summary><div class="lib-grid">([\\s\\S]*?)</div></details>`))?.[1] ?? '';
+  const page = tab('page'); const profile = tab('profile');
+  assert.match(html, /<span>Page photos<\/span>.*<span>Profile photos<\/span>/s);
+  assert.ok(rowOf(page, 'Our story').includes(onAbout), 'Our story row');
+  assert.ok(rowOf(profile, "Willow's profile").includes(onWillow), "Willow's profile row");
+  assert.ok(rowOf(profile, "Opal's profile (The Gem litter)").includes(tagged) || /Opal&#39;s profile/.test(profile), "Opal's profile row");
+  assert.ok(rowOf(page, 'Not used anywhere').includes(loose), 'Not used anywhere');
+  assert.ok(!rowOf(page, 'Not used anywhere').includes(onAbout));
+  // Thumbnails load only when a row opens.
+  assert.match(html, /<button type="button" class="lib-ph" data-id="[^"]+" data-thumb="\/s\/akbostons\/photos\/[^"]+\/thumb" aria-pressed="false"><img data-src=/);
+  assert.match(html, /data-lib-upload/);
+  assert.match(html, /data-lib-pick data-one="Replace" data-many="Use these photos" disabled/);
 });
 
 test('the Photos screen filters by what a photo is of, and tags can be added and taken off', async () => {

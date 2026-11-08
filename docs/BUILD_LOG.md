@@ -1930,3 +1930,42 @@ with new sections and a new building order. Docs only; nothing built yet.
   transport-services headings, Our dogs' co-owned heading, and the application form's
   heading.
 - `site.css`: no change for this. Tests: `headings.test.js` (new).
+
+## 2026-11-08: photo spots and the photo library window (decision 20, step 1)
+
+- **Every place a photo goes now shows only the photo that's there** (`forms.js`
+  `photoSlot`), at its box's shape where it has one, with **Replace** (or **Choose a
+  photo** when empty) and **Remove**. No grid of photos and no upload button in the form.
+  A spot that takes several (an album's photos) shows them small, with **Add or change
+  photos** and how many. Every breeder form with a photo goes through it (a dog, puppy,
+  partner kennel, review, extra, product, album, Kennel details' logo, Home's banner,
+  collage boxes and story, Our story, the owner's blocks on her pages), and the owner's
+  builder uses the same one for its photo, Photo beside words, Text over a photo and
+  collage boxes (`builder.js` `photoChoice`). The form posts hidden inputs, so saving and
+  tagging (`tagFromForm`, `_new_photos`) are as before.
+- **The photo library window** (`photos.js`, `screens.js` `libraryHtml`, `GET
+  /s/<site>/photos/library`): the same on every screen, the owner's too. **Upload new
+  photos** at the top, the only upload there now; a new photo joins **Just added**, chosen,
+  tagged as what's being edited. **Page photos | Profile photos**: a row per place a photo
+  shows, named the way she'd say it ("Home: banner", "Our story", "Contact: Photo",
+  "Album: Spring 2026", "Willow's profile", "Opal's profile (Gem litter)"), then **Not used
+  anywhere**. The rows come from what's saved, shown or not (`photoPlaces.js`), so they need
+  no tagging; a photo in two places is in both. Rows are folded, with counts; the ones
+  holding the spot's photo start open; thumbnails load when a row opens. Tap a photo, then
+  **Replace**; picking several, tick them ("3 chosen"), then **Use these photos**; more
+  than the spot takes says so. **Cancel** changes nothing. The prototype's `dialog`, full
+  screen on a phone with the pinned bar at the bottom.
+- A collage box's spot takes its box's shape as the layout changes (`app.js`).
+- Wording: `slot.*` and `library.*` in the owner's list; hints that said "No photo" or
+  "Tick the photos" reworded (`forms.js` LABELS: Home's banner and story photo, an
+  album's cover and photos).
+- Checked in a browser at 390px and 1280px against a local copy (her Our story photo,
+  an album of three, Home's collage boxes, the owner's Photo block on Contact): choose,
+  replace, remove, upload in the window, save. No script errors.
+- Still to come (plan, decision 20): the Photos screen's rows and select-first bar
+  (step 2), whose own upload form and a litter's "Photos of this litter" card (each with
+  its own upload) go then; albums' **Add from your photos** wording; the Gallery strip;
+  the duplicate check.
+- Manage app files changed (`app.js`, `photos.js`, `app.css`): `APP_VERSION` to bump
+  before merging, as agreed. Tests: `phototags.test.js` (spots, the library's rows),
+  `ownblocks.test.js` (a collage box is a spot).

@@ -12,6 +12,7 @@ import { pageBlocks, customPages, addedBlocks, BLOCK_TYPES, isCustom, collageFro
 import { fields, field, parseForm, LABELS, labelFor, placeChoices } from './forms.js';
 import { savePhoto, PhotoError } from '../photos.js';
 import { subjects, isSubject, tagPhotos, untagPhoto, tagsByPhoto } from '../photoTags.js';
+import { photoPlaces } from '../photoPlaces.js';
 import { buildSnapshot, loadSnapshot, publish, undoPublish, listSnapshots, draftChanges } from '../publish.js';
 import { makePreviewToken } from '../site.js';
 import { siteLink } from '../ops/sites.js';
@@ -127,14 +128,12 @@ export function createScreens({ env, request, url, site, user, page, say = defau
   // Where questions and badges can show: the places the owner has made (step 3.6).
   let placesMemo = null;
   const places = async () => (placesMemo ??= placeChoices(await loadBuild(env, site.id), say));
+  // The photo library window's addresses (forms.js photoSlot, photos.js): one window
+  // for every photo spot; a new photo is tagged as what's being edited.
+  const library = (pick) => ({ list: `${base}/photos/library`, upload: `${base}/photos/upload`, tags: (pick?.tags ?? []).filter(Boolean).join(','), alt: pick?.alt ?? '' });
   const ctxFor = async (kind, pick) => {
-    const ctx = { kind, say, photos: await photos(), photoUrl, dogs: await dogsList(), litters: await littersList(), partners: kind === 'dogs' ? await partnersList() : [], photosLink: `${base}/photos` };
+    const ctx = { kind, say, library: library(pick), photos: await photos(), photoUrl, dogs: await dogsList(), litters: await littersList(), partners: kind === 'dogs' ? await partnersList() : [], photosLink: `${base}/photos` };
     if (kind === 'expander' || kind === 'products') ctx.places = await places();
-    if (pick) {
-      const t = await tags();
-      ctx.photoGroups = pick.groups.map((g) => ({ label: g.label, ids: g.subject ? ctx.photos.filter((p) => (t.get(p.id) ?? []).includes(g.subject)).map((p) => p.id) : [] }));
-      ctx.upload = { action: `${base}/photos/upload`, tags: pick.tags.filter(Boolean).join(','), alt: pick.alt ?? '' };
-    }
     return ctx;
   };
   // After a save: the photos chosen in the form, and any added with its Add
@@ -791,13 +790,13 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     }
     let photo = '';
     if (['photo', 'overlay', 'beside'].includes(b.type) && b.mayChange) {
-      photo = field('photo_id', { type: 'photo' }, cur.photo_id || b.photo || '', { kind: 'pages', say, photos: await photos(), photoUrl });
+      photo = field('photo_id', { type: 'photo' }, cur.photo_id || b.photo || '', { kind: 'pages', say, library: library(), photoUrl });
       if (b.type === 'photo') parts.push(input('caption', say('pages.own.caption'), F.caption.max, false, none, b.w.caption));
     } else if ((b.type === 'photo' || b.type === 'overlay') && !b.photo) linkNote += `<p class="muted small">${esc(say('pages.own.no_photo'))}</p>`;
     if (b.type === 'collage' && b.mayChange) {
       // A photo for each of the owner's boxes (her layout and frame), as on Home's collage.
       const mine = cur.photos?.length;
-      photo = `<p class="muted small">${esc(say('pages.own.collage_photos'))}</p>${field('photos', { ...ADDED_BLOCK_FIELDS.photos, boxes: true }, mine ? cur.photos : b.photos, { kind: 'pages', say, photos: await photos(), photoUrl, values: { layout: b.layout, focus: mine ? cur.focus ?? [] : b.focus } })}`;
+      photo = `<p class="muted small">${esc(say('pages.own.collage_photos'))}</p>${field('photos', { ...ADDED_BLOCK_FIELDS.photos, boxes: true }, mine ? cur.photos : b.photos, { kind: 'pages', say, library: library(), photoUrl, values: { layout: b.layout, focus: mine ? cur.focus ?? [] : b.focus } })}`;
     } else if (b.type === 'collage' && !b.photos.length) linkNote += `<p class="muted small">${esc(say('pages.own.no_photos'))}</p>`;
     return `<form method="post" action="${base}/blocks/${esc(key)}/${esc(b.id)}" data-save class="card added${cur.enabled ? '' : ' off'}" id="b-${esc(b.id)}">
         <div class="between"><h2 class="added-h">${esc(cur.heading || cur.label || b.w?.heading || b.w?.label || say(`pages.own.${b.type}`))}</h2>
@@ -931,6 +930,27 @@ export function createScreens({ env, request, url, site, user, page, say = defau
   }
 
   // ---------- photos ----------
+  // The photo library window (docs/Site_Builder_Plan.md, decision 20): the same on every
+  // screen, the owner's too. Upload at the top; Page photos | Profile photos, each a row
+  // per place a photo shows (photoPlaces.js), folded until opened, its thumbnails loading
+  // then; the pinned bar's Replace (or Use these photos, picking several). photos.js
+  // opens it in a dialog and does the choosing; these are only its parts, in her words.
+  async function libraryHtml() {
+    const places = await photoPlaces(env, site.id, say);
+    const alts = new Map((await photos()).map((p) => [p.id, p.alt]));
+    const ph = (id) => `<button type="button" class="lib-ph" data-id="${esc(id)}" data-thumb="${esc(photoUrl(id))}" aria-pressed="false"><img data-src="${esc(photoUrl(id))}" alt="${esc(alts.get(id) || say('photos.photo'))}"></button>`;
+    const row = (r) => `<details class="lib-row"${r.unused ? ' data-unused' : ''}><summary><b>${esc(r.label)}</b><span class="n">${r.ids.length}</span></summary><div class="lib-grid">${r.ids.map(ph).join('')}</div></details>`;
+    const tab = (k, list) => `<div class="lib-tab" data-tab="${k}"${k === 'page' ? '' : ' hidden'}>${list.map(row).join('') || `<p class="muted small">${esc(say('library.empty'))}</p>`}</div>`;
+    return `<div class="lib" data-lib data-chosen="${esc(say('library.chosen', { n: '{n}' }))}" data-too-many="${esc(say('library.too_many', { n: '{n}' }))}" data-just-added="${esc(say('library.just_added'))}">
+      <div class="lib-top"><h2>${esc(say('library.title'))}</h2>
+        <label class="button small primary">${esc(say('library.upload'))}<input type="file" accept="image/*" multiple data-lib-upload></label>
+        <p class="small muted" role="status" data-lib-status></p></div>
+      <div class="seg sm lib-tabs" role="radiogroup"><label><input type="radio" name="lib-tab" value="page" checked><span>${esc(say('library.page_photos'))}</span></label><label><input type="radio" name="lib-tab" value="profile"><span>${esc(say('library.profile_photos'))}</span></label></div>
+      <p class="small muted" data-for="one">${esc(say('library.pick_one'))}</p><p class="small muted" data-for="many">${esc(say('library.pick_many'))}</p>
+      <div class="lib-rows">${tab('page', places.page)}${tab('profile', places.profile)}</div>
+      <div class="lib-bar"><span class="small muted" data-lib-count></span><button type="button" class="link" data-lib-cancel>${esc(say('library.cancel'))}</button><button type="button" class="primary" data-lib-pick data-one="${esc(say('library.replace'))}" data-many="${esc(say('library.use_many'))}" disabled>${esc(say('library.replace'))}</button></div></div>`;
+  }
+
   async function photosScreen() {
     const rest = url.pathname.slice(`${base}/photos`.length);
     const post = request.method === 'POST';
@@ -948,6 +968,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
         throw err;
       }
     }
+    if (rest === '/library' && !post) return new Response(await libraryHtml(), { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
     if (rest === '/tag-many' && post) {
       const form = await request.formData();
       const asked = String(form.get('back') ?? '');

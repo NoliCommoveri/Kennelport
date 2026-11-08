@@ -46,9 +46,9 @@ import {
   COLLAGE_LAYOUT, COLLAGE_FRAME, COLLAGE_MAX,
 } from '../content/blocks.js';
 import { PAGES, COLLAGE_LAYOUTS, collageLayout, HOME_WORDS } from '../content/model.js';
-import { layoutChoice, boxHint } from './forms.js';
+import { layoutChoice, boxHint, photoSlot } from './forms.js';
 import { siteLink } from '../ops/sites.js';
-import { SCREENS as WORD_SCREENS, CATALOG, itemsOn, everyWording, saveEveryWording, siteWording, withWording, WordingError } from './wording.js';
+import { SCREENS as WORD_SCREENS, CATALOG, itemsOn, everyWording, saveEveryWording, siteWording, withWording, WordingError, defaultSay } from './wording.js';
 
 const redirect = (location) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store' } });
 const ic = (n) => `<span class="ic" aria-hidden="true"><svg class="i"><use href="#i-${n}"/></svg></span>`;
@@ -524,12 +524,11 @@ function linkSettings(snap, b, pics, optional) {
     <p class="small muted">The breeder can reword the button, switch it off, and change an outside link, phone number or email address. A link to a page is yours. A button whose page is off hides by itself.</p>`;
 }
 
-// A photo picker from her photos (the manage app's own picker's look).
-const FROM_HERS = "From the breeder's photos. She adds photos in her Site Manager, under Photos.";
-function photoChoice(b, pics, { name = `b.${b.id}.photo`, chosen = b.photo, label = 'Photo', hint = FROM_HERS } = {}) {
-  const opt = (p) => `<label class="ph-opt"><input type="radio" name="${name}" value="${esc(p.id)}"${chosen === p.id ? ' checked' : ''}><img src="${esc(pics.url(p.id))}" alt="${esc(p.alt || 'Photo')}" loading="lazy"></label>`;
-  return `<fieldset class="photos"><legend>${esc(label)}<span class="hint">${esc(hint)}</span></legend>
-    <div class="ph-grid"><label class="ph-opt none"><input type="radio" name="${name}" value=""${chosen ? '' : ' checked'}><span>No photo</span></label>${pics.list.map(opt).join('')}</div></fieldset>`;
+// A photo spot: the photo that's there, with Replace, which opens her photo library
+// window (forms.js photoSlot, photos.js), the same one she uses, upload and all.
+const FROM_HERS = "From the breeder's photos: Replace opens them all, and can upload more.";
+function photoChoice(b, pics, { name = `b.${b.id}.photo`, chosen = b.photo, label = 'Photo', hint = FROM_HERS, shape = null } = {}) {
+  return photoSlot(name, label, hint, chosen ? [chosen] : [], { say: defaultSay, photoUrl: pics.url, library: pics.library }, { shape });
 }
 
 // A collage block's photos: one box per box of the layout, each with which part
@@ -537,7 +536,7 @@ function photoChoice(b, pics, { name = `b.${b.id}.photo`, chosen = b.photo, labe
 function collageBoxes(b, pics) {
   const k = (f) => `b.${b.id}.${f}`;
   const boxes = COLLAGE_LAYOUTS[b.layout].boxes;
-  return Array.from({ length: COLLAGE_MAX }, (_, i) => `<div class="box" data-box="${i}"${i < boxes.length ? '' : ' hidden'}>${photoChoice(b, pics, { name: k(`photos.${i}`), chosen: b.photos[i] ?? null, label: `Box ${i + 1}`, hint: boxHint(boxes[i] ?? 'square') })}
+  return Array.from({ length: COLLAGE_MAX }, (_, i) => `<div class="box" data-box="${i}"${i < boxes.length ? '' : ' hidden'}>${photoChoice(b, pics, { name: k(`photos.${i}`), chosen: b.photos[i] ?? null, label: `Box ${i + 1}`, hint: boxHint(boxes[i] ?? 'square'), shape: boxes[i] ?? 'square' })}
     ${fld(`Box ${i + 1}: which part to keep`, seg(k(`focus.${i}`), b.focus[i] ?? 'middle', PHOTO_FOCUS), 'If the photo is a different shape from the box: the part that shows.')}</div>`).join('');
 }
 
@@ -722,10 +721,10 @@ async function pageScreen(env, site, build, key, { open = null, error = null } =
   useFormats(snap);
   const blocks = pageBlocks(build, key);
   const adds = addable(key, blocks);
-  // Her photos, for a photo block's picker (served through the admin view of her site).
-  const pics = { build, list: open && blocks.some((b) => b.id === open && ['photo', 'overlay', 'collage', 'beside'].includes(b.type))
-    ? (await env.DB.prepare('SELECT id, alt FROM photos WHERE site_id = ? AND removed_at IS NULL ORDER BY created_at DESC').bind(site.id).all()).results : [],
-  url: (id) => `/admin/${site.subdomain}/site/_kp/p/${encodeURIComponent(id)}?s=t` };
+  // A photo block's spot: its photo (served through the admin view of her site), and
+  // her photo library window, from her Site Manager.
+  const pics = { build, url: (id) => `/admin/${site.subdomain}/site/_kp/p/${encodeURIComponent(id)}?s=t`,
+    library: { list: `/s/${site.subdomain}/photos/library`, upload: `/s/${site.subdomain}/photos/upload`, tags: '', alt: '' } };
   const changed = pageChanged(build, key);
   const group = (data, title) => {
     const rows = adds.filter((x) => (data === 'own' ? BLOCK_TYPES[x.type].kind === 'own' : BLOCK_TYPES[x.type].kind !== 'own' && (BLOCK_TYPES[x.type].kind === 'data') === data));

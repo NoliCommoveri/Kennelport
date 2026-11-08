@@ -505,3 +505,54 @@ body.admin .wlines > li { display: block; padding: .8rem 0; }
 body.admin .wlines label { display: grid; gap: 6px; }
 body.admin .wlines .where { font-size: .9rem; }
 body.admin .wlines li.on input, body.admin .wlines li.on textarea { border-color: var(--accent); }
+/* A photo spot (forms.js photoSlot): only the photo that's there, at its box's shape,
+   with Replace and Remove; several show small. And the photo library window
+   (photos.js, screens.js libraryHtml): the prototype's dialog, full screen on a phone,
+   rows folded until opened, the pinned bar at the bottom (decision 20). */
+.ph-slot .ph-cur { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ph-slot:not(.many) .ph-cur img, .ph-slot .ph-none { width: 168px; max-width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--r); display: block; border: 1px solid var(--line); }
+.ph-slot.tall:not(.many) .ph-cur img, .ph-slot.tall .ph-none { width: 128px; aspect-ratio: 4 / 5; }
+.ph-slot.square:not(.many) .ph-cur img, .ph-slot.square .ph-none { width: 140px; aspect-ratio: 1; }
+.ph-slot .ph-none { display: grid; place-items: center; border: 2px dashed var(--line); color: var(--muted); font-size: .8rem; text-align: center; padding: 8px; }
+.ph-slot.many .ph-cur img { width: 58px; height: 58px; object-fit: cover; border-radius: var(--r); display: block; }
+.ph-slot.many .ph-none { width: auto; aspect-ratio: auto; padding: 14px; }
+.ph-slot .ph-more-n { font-size: .8rem; color: var(--muted); padding: 0 6px; }
+.ph-slot .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.ph-slot .row > button { width: auto; flex: 0 0 auto; min-width: 128px; }
+.ph-slot .row > button.link { min-width: 0; }
+.ph-slot [hidden], .lib [hidden] { display: none !important; }
+dialog.lib-dlg { width: min(760px, calc(100vw - 24px)); max-height: calc(100dvh - 40px); padding: 0; border: 1px solid var(--line); border-radius: var(--rc); background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+dialog.lib-dlg::backdrop { background: rgba(0, 0, 0, .4); }
+.lib { display: flex; flex-direction: column; gap: 10px; padding: 14px 14px 0; max-height: calc(100dvh - 42px); }
+.lib-top { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
+.lib-top [role=status] { flex-basis: 100%; }
+.lib-top label.button { position: relative; overflow: hidden; }
+.lib-top label.button input { position: absolute; inset: 0; opacity: 0; cursor: pointer; min-height: 0; }
+.lib .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1.5px solid var(--accent); border-radius: 40px; overflow: hidden; }
+.lib .seg label { display: block; position: relative; margin: 0; }
+.lib .seg input { position: absolute; opacity: 0; width: 1px; height: 1px; min-height: 0; }
+.lib .seg span { display: block; text-align: center; font-weight: 800; font-size: .8rem; color: var(--accent); padding: 9px 6px; cursor: pointer; }
+.lib .seg input:checked + span { background: var(--accent); color: var(--accent-ink); }
+.lib .seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -4px; }
+.lib[data-mode=one] [data-for=many], .lib[data-mode=many] [data-for=one] { display: none; }
+.lib-rows { overflow-y: auto; min-height: 120px; flex: 1 1 auto; margin-inline: -14px; padding-inline: 14px; }
+.lib-row { border-bottom: 1px solid var(--line); }
+.lib-row summary { display: flex; align-items: center; gap: 10px; padding: 12px 2px; cursor: pointer; list-style: none; }
+.lib-row summary::-webkit-details-marker { display: none; }
+.lib-row summary::before { content: "›"; font-size: 1.3rem; line-height: 1; color: var(--muted); transition: transform .15s; }
+.lib-row[open] summary::before { transform: rotate(90deg); }
+.lib-row summary b { flex: 1; font-weight: 700; }
+.lib-row summary .n { font-size: .8rem; color: var(--muted); background: var(--band); border-radius: 20px; padding: 1px 9px; }
+.lib-row[data-unused] summary b { color: var(--muted); }
+.lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; padding: 2px 0 14px; }
+.lib-ph { position: relative; padding: 0; border: 2px solid transparent; border-radius: var(--r); aspect-ratio: 1; overflow: hidden; background: var(--band); cursor: pointer; min-height: 0; }
+.lib-ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lib-ph[aria-pressed=true] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.lib-ph[aria-pressed=true]::after { content: "✓"; position: absolute; top: 4px; left: 4px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-weight: 800; font-size: .8rem; }
+.lib-bar { position: sticky; bottom: 0; display: flex; gap: 14px; align-items: center; justify-content: flex-end; margin-inline: -14px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -6px 18px rgba(0,0,0,.06); }
+.lib-bar [data-lib-count] { margin-right: auto; }
+@media (max-width: 600px) {
+  dialog.lib-dlg { width: 100vw; max-width: none; height: 100dvh; max-height: none; margin: 0; border: 0; border-radius: 0; }
+  .lib { height: 100dvh; max-height: none; padding-top: calc(14px + env(safe-area-inset-top, 0px)); }
+}
+
