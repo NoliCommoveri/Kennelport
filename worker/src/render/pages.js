@@ -302,6 +302,20 @@ function ownBlock(snap, ctx, b, key) {
     const framed = b.frame !== 'none' && b.shape !== 'full';
     return `<figure class="own-photo ${b.shape}${b.shape === 'full' ? '' : ' wrap'} f-${b.focus}${framed ? ` frame-${b.frame}` : ''}">${framed ? `<div class="box">${pic}${b.frame === 'sprig' ? VINE : ''}</div>` : pic}${cap ? `<figcaption>${esc(cap)}</figcaption>` : ''}</figure>`;
   }
+  if (b.type === 'gallery') {
+    // A row of photos (the album page's gallery and viewer): hers where the owner lets
+    // her pick, else the album's (shown albums only) or the owner's picks; how many
+    // show; a link to the whole album where it has a page.
+    const album = b.source === 'album' ? snap.albums?.find((a) => a.id === b.album) : null;
+    const ids = (b.mayChange && her.photos?.length ? her.photos : album ? album.photos : b.source === 'pick' ? b.photos : []).filter((id) => snap.photos[id]).slice(0, Number(b.count));
+    if (!ids.length) return '';
+    const row = galleryHtml(snap, ids, album?.title ?? w.heading ?? '').replace('<div class="gallery">', `<div class="gallery strip n-${b.count}">`);
+    // A border round the whole strip, where she picked one.
+    const strip = b.frame === 'none' ? row : `<div class="strip-frame frame-${b.frame}">${row}</div>`;
+    const more = album && b.more && w.label && pageOn(snap, 'albums', ctx) ? `<p class="center mt-20"><a class="more" href="/albums/${attr(album.slug)}">${esc(w.label)}</a></p>` : '';
+    const top = w.heading || w.line ? `<div class="head">${w.heading ? `<h2>${esc(w.heading)}</h2>` : ''}${w.line ? `<p class="lede">${esc(w.line)}</p>` : ''}</div>` : '';
+    return `<section class="section own-gallery"><div class="wrap">${top}${strip}${more}</div></section>`;
+  }
   if (b.type === 'beside') {
     // The prototype's story: a photo beside a heading, words and a button. On a
     // computer the photo sits left or right; on a phone it goes above the words.

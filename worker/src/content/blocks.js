@@ -40,6 +40,7 @@ export const BLOCK_TYPES = Object.freeze({
   spacer: { name: 'Spacer', ic: 'sliders', kind: 'own', hint: 'Empty space between blocks.' },
   photo: { name: 'Photo', ic: 'camera', kind: 'own', hint: 'One photo, with an optional caption.' },
   collage: { name: 'Collage', ic: 'camera', kind: 'own', hint: 'Up to four photos in one of the Home collage\'s layouts and frames.' },
+  gallery: { name: 'Gallery strip', ic: 'camera', kind: 'own', hint: 'A row of photos from one of her albums, or ones you pick; a tap opens them full size, and it can link to the whole album.' },
   beside: { name: 'Photo beside words', ic: 'camera', kind: 'own', hint: 'A photo with a heading, words and a button beside it, the photo on the left or the right (above the words on a phone).' },
   overlay: { name: 'Text over a photo', ic: 'camera', kind: 'own', hint: 'A photo with a heading, a line and a button over it.' },
   factrow: { name: 'Facts row (any page)', ic: 'star', kind: 'own', hint: 'Up to four facts side by side, each a big value over a small label (as on Home).' },
@@ -69,6 +70,12 @@ export const PHOTO_FOCUS = Object.freeze({ top: 'The top', middle: 'The middle',
 export const COLLAGE_LAYOUT = Object.freeze(Object.fromEntries(Object.entries(COLLAGE_LAYOUTS).map(([k, v]) => [k, v.label])));
 export const COLLAGE_FRAME = Object.freeze(Object.fromEntries(FRAMES.map((f) => [f, PHOTO_FRAME[f]])));
 export const COLLAGE_MAX = 4;
+// A gallery strip: from one of her albums, or photos picked one by one; how many show.
+export const GALLERY_SOURCE = Object.freeze({ album: 'From one of her albums', pick: 'Photos you pick' });
+export const GALLERY_COUNT = Object.freeze({ 4: '4', 6: '6', 8: '8', 12: '12' });
+export const GALLERY_MAX = 24;
+// A border round the whole strip, in the scheme's colours (the photo frames' mat and fine line).
+export const STRIP_FRAME = Object.freeze({ none: 'No border', line: 'A thin line', mat: 'A soft mat', double: 'A mat with a fine inner line' });
 export const PHOTO_SIDE = Object.freeze({ left: 'On the left', right: 'On the right' });
 export const OVER_V = Object.freeze({ top: 'Top', middle: 'Middle', bottom: 'Bottom' });
 export const OVER_SHADE = Object.freeze({ light: 'Light', medium: 'Medium', dark: 'Dark' });
@@ -82,6 +89,7 @@ export const OWN_WORDS = Object.freeze({
   button: { label: 'Join the waitlist' },
   overlay: { heading: '', line: '', label: '' },
   beside: { heading: '', body: '', label: '' },
+  gallery: { heading: '', line: '', label: '' },
   photo: { caption: '' },
   words: { heading: '', line: '', body: '' },
   columns: { heading: '', line: '' },
@@ -156,6 +164,7 @@ export function newBlock(type, id) {
   if (type === 'factrow') Object.assign(b, { items: [] });
   if (type === 'words') Object.assign(b, { w: { heading: 'A few words from us', line: '', body: '' }, align: 'center' });
   if (type === 'columns') Object.assign(b, { w: { heading: 'Our approach', line: '' }, cols: [], across: '2', align: 'center' });
+  if (type === 'gallery') Object.assign(b, { source: 'album', album: null, photos: [], count: '6', frame: 'none', more: true, w: { heading: 'From our photo albums', line: '', label: 'See the whole album' }, mayChange: true });
   if (type === 'beside') Object.assign(b, { photo: null, focus: 'middle', frame: 'none', side: 'left', align: 'left', w: { heading: 'A little about us', body: '', label: '' }, link: null, mayChange: true });
   if (type === 'overlay') Object.assign(b, { photo: null, focus: 'middle', w: { heading: 'Raised with love', line: '', label: '' }, link: null, v: 'bottom', h: 'left', shade: 'medium', mayChange: true });
   return b;
@@ -372,6 +381,16 @@ export function cleanBlock(b) {
     out.mayChange = b.mayChange !== false;
   }
   if (b.type === 'photo') { out.shape = pick(b.shape, PHOTO_SHAPE, 'wide'); out.frame = pick(b.frame, PHOTO_FRAME, 'none'); out.w = words(b.w, ['caption']); }
+  if (b.type === 'gallery') {
+    out.source = pick(b.source, GALLERY_SOURCE, 'album');
+    out.album = PHOTO_ID.test(String(b.album ?? '')) ? b.album : null;
+    out.photos = (Array.isArray(b.photos) ? b.photos : []).filter((id) => PHOTO_ID.test(String(id ?? ''))).slice(0, GALLERY_MAX);
+    out.count = pick(String(b.count ?? ''), GALLERY_COUNT, '6');
+    out.frame = pick(b.frame, STRIP_FRAME, 'none');
+    out.more = b.more !== false;
+    out.w = words(b.w, ['heading', 'line', 'label']);
+    out.mayChange = b.mayChange !== false;
+  }
   if (b.type === 'beside') {
     out.frame = pick(b.frame, PHOTO_FRAME, 'none');
     out.side = pick(b.side, PHOTO_SIDE, 'left');
@@ -507,10 +526,11 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
         if (next.link && to === 'email' && next.link.value && !looksLikeEmail(next.link.value)) throw new BlockError('That email address doesn\'t look like one.');
         if (next.link && to === 'url' && !next.link.value) throw new BlockError('A button to an outside site needs its address.');
       }
-      for (const f of ['size', 'look', 'align', 'style', 'width', 'height', 'shape', 'frame', 'focus', 'side', 'v', 'h', 'shade', 'across']) if (f in b) next[f] = str(f);
+      for (const f of ['size', 'look', 'align', 'style', 'width', 'height', 'shape', 'frame', 'focus', 'side', 'v', 'h', 'shade', 'across', 'source', 'count', 'album']) if (f in b) next[f] = str(f);
       if ('items' in b) next.items = Array.from({ length: FACTS_MAX }, (_, i) => [str(`items.${i}.0`), str(`items.${i}.1`)]);
       if ('cols' in b) next.cols = Array.from({ length: COLS_MAX }, (_, i) => [str(`cols.${i}.0`), str(`cols.${i}.1`)]);
       if ('photo' in b) { next.photo = str('photo') || null; next.mayChange = get(k('mayChange')) != null; }
+      if (b.type === 'gallery') Object.assign(next, { photos: getAll(k('photos')).map(String).filter(Boolean), more: get(k('more')) != null, mayChange: get(k('mayChange')) != null });
       if (b.type === 'collage') Object.assign(next, collageFromForm((n) => get(k(n)), str('layout')), { mayChange: get(k('mayChange')) != null });
     }
     if (get(k('s.present')) != null) next.s = { bg: str2(k('s.bg')), py: str2(k('s.py')), px: str2(k('s.px')), text: str2(k('s.text')) };

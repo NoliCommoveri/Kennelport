@@ -435,7 +435,7 @@ export const CUSTOM_KEY = /^x-[a-z0-9](?:[a-z0-9-]{0,40}[a-z0-9])?$/;
 export const CUSTOM_PAGE = { canHide: true, fields: { ...HEAD } };
 // The owner's own blocks (step 4) add a line, a button's words, the breeder's own
 // outside link, phone or email for it, a photo and its caption (where the owner lets her).
-export const ADDED_BLOCK_FIELDS = { ...HEAD, line: { ...ML(300), ...CLR }, label: S(40, CLR), url: { type: 'url' }, phone: S(30), email: { type: 'email' }, photo_id: { type: 'photo' }, photos: { type: 'list', max: 4, item: 'photo' }, focus: { type: 'list', max: 4, item: 'focus' }, caption: S(160, CLR), body: { ...ML(4000), ...CLR }, facts: { type: 'pairs', max: 4, keyMax: 40, valueMax: 240 }, cols: { type: 'pairs', max: 6, keyMax: 80, valueMax: 1500, valueMultiline: true } };
+export const ADDED_BLOCK_FIELDS = { ...HEAD, line: { ...ML(300), ...CLR }, label: S(40, CLR), url: { type: 'url' }, phone: S(30), email: { type: 'email' }, photo_id: { type: 'photo' }, photos: { type: 'list', max: 24, item: 'photo' }, focus: { type: 'list', max: 4, item: 'focus' }, caption: S(160, CLR), body: { ...ML(4000), ...CLR }, facts: { type: 'pairs', max: 4, keyMax: 40, valueMax: 240 }, cols: { type: 'pairs', max: 6, keyMax: 80, valueMax: 1500, valueMultiline: true } };
 
 // The menu's five groups (plan 3.12), fixed.
 export const MENU_GROUPS = [

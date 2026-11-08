@@ -51,7 +51,7 @@ async function setup() {
 }
 
 test('a block nobody styled reads as before; a new block\'s settings are clean', () => {
-  for (const t of ['banner', 'button', 'divider', 'spacer', 'photo', 'collage', 'beside', 'overlay', 'words', 'factrow', 'columns']) assert.deepEqual(cleanBlock(newBlock(t, `${t}-2`)), cleanBlock(cleanBlock(newBlock(t, `${t}-2`))), t);
+  for (const t of ['banner', 'button', 'divider', 'spacer', 'photo', 'collage', 'gallery', 'beside', 'overlay', 'words', 'factrow', 'columns']) assert.deepEqual(cleanBlock(newBlock(t, `${t}-2`)), cleanBlock(cleanBlock(newBlock(t, `${t}-2`))), t);
   assert.equal(cleanBlock({ id: 'faq', type: 'faq', s: { bg: '', py: '', px: '', text: 'm' } }).s, undefined);
   assert.deepEqual(cleanBlock({ id: 'faq', type: 'faq', s: { bg: 'accent', py: 'l', text: 'huge' } }).s, { bg: 'accent', py: 'l' });
   assert.equal(cleanBlock({ id: 'x', type: 'button', link: { to: 'page', page: 'Bad Page' } }).link, null);
@@ -358,4 +358,52 @@ test('the owner adds a photo beside words: the photo left or right, framed or no
   await s.post('about', { [`b.${b.id}.align`]: 'center' }, { open: b.id });
   assert.match(await s.render('/about'), /<div class="story-copy a-center"><h2>Home life<\/h2>/);
   assert.equal(cleanBlock({ id: 'x', type: 'beside', align: 'middle' }).align, 'left');
+});
+
+test('the owner adds a gallery strip: an album\'s photos or picked ones, how many show, a link to the album; the breeder can pick her own', async () => {
+  const s = await setup();
+  for (const id of ['ph2', 'ph3', 'ph4', 'ph5']) s.env.DB.raw.prepare("INSERT INTO photos (id, site_id, r2_key, type, bytes, width, height, created_at) VALUES (?, ?, ?, 'image/webp', 10, 1600, 1000, '2026-11-02T00:00:00Z')").run(id, s.site.id, `sites/${s.site.id}/photos/${id}.webp`);
+  const f = new URLSearchParams({ title: 'Spring week 3', show_on_site: '1' });
+  for (const id of ['ph1', 'ph2', 'ph3', 'ph4', 'ph5']) f.append('photos', id);
+  await s.breeder('/lists/albums/new', f);
+  const album = s.env.DB.raw.prepare("SELECT id, slug FROM albums WHERE title = 'Spring week 3'").get();
+  await s.post('about', {}, { act: 'add:gallery' });
+  const g = (await s.blocks('about')).at(-1);
+  assert.deepEqual([g.source, g.album, g.count, g.more, g.mayChange], ['album', null, '6', true, true]);
+  assert.doesNotMatch(await s.render('/about'), /own-gallery/);
+  const form = await s.get(`/admin/akbostons/pages/about?open=${g.id}`);
+  assert.match(form, new RegExp(`<option value="${album.id}">Spring week 3</option>`));
+  assert.match(form, new RegExp(`data-name="b\\.${g.id}\\.photos" data-mode="many" data-max="24"`));
+  // From the album, four showing: its photos in the album page's gallery, the viewer once, the link.
+  await s.post('about', { [`b.${g.id}.album`]: album.id, [`b.${g.id}.count`]: '4' }, { open: g.id });
+  let html = await s.render('/about');
+  const strip = html.match(/<section class="section own-gallery">[\s\S]*?<\/section>/)[0];
+  assert.match(strip, /<div class="head"><h2>From our photo albums<\/h2><\/div><div class="gallery strip n-4">/);
+  assert.equal((strip.match(/class="gal-item"/g) ?? []).length, 4);
+  assert.match(strip, new RegExp(`<a class="more" href="/albums/${album.slug}">See the whole album</a>`));
+  assert.equal((html.match(/id="viewer"/g) ?? []).length, 1);
+  assert.match(text(await s.get('/admin/akbostons/pages/about')), /Gallery strip Album: Spring week 3 · 4 photos/);
+  // A border round the whole strip.
+  assert.equal(g.frame, 'none');
+  assert.match(form, new RegExp(`name="b\\.${g.id}\\.frame" value="double"`));
+  await s.post('about', { [`b.${g.id}.frame`]: 'mat' }, { open: g.id });
+  assert.match(await s.render('/about'), /<div class="strip-frame frame-mat"><div class="gallery strip n-4">/);
+  assert.match(text(await s.get('/admin/akbostons/pages/about')), /Gallery strip Album: Spring week 3 · 4 photos · a soft mat/);
+  // No link when switched off.
+  await s.post('about', { [`b.${g.id}.more`]: null }, { open: g.id });
+  assert.doesNotMatch(await s.render('/about'), /See the whole album/);
+  // Picked one by one, in her order.
+  await s.post('about', { [`b.${g.id}.source`]: 'pick', [`b.${g.id}.photos`]: 'ph3' }, { open: g.id });
+  assert.deepEqual((await s.blocks('about')).at(-1).photos, ['ph3']);
+  html = await s.render('/about');
+  assert.match(html, /<div class="strip-frame frame-mat"><div class="gallery strip n-4"><a class="gal-item" href="\/_kp\/p\/ph3"/);
+  // Hers: her own photos replace the owner's.
+  assert.match(text(await s.get('/s/akbostons/pages/about')), /A row of photos that open full size\. Choose your own photos for it/);
+  const mine = new URLSearchParams({ enabled: '1', heading: 'Our puppies', line: '' });
+  mine.append('photos', 'ph5'); mine.append('photos', 'ph4');
+  await s.breeder(`/blocks/about/${g.id}`, mine);
+  html = await s.render('/about');
+  assert.match(html, /<h2>Our puppies<\/h2><\/div><div class="strip-frame frame-mat"><div class="gallery strip n-4"><a class="gal-item" href="\/_kp\/p\/ph5"[\s\S]*?href="\/_kp\/p\/ph4"/);
+  assert.equal(cleanBlock({ id: 'x', type: 'gallery', count: '99', source: 'web' }).count, '6');
+  assert.equal(cleanBlock({ id: 'x', type: 'gallery', frame: 'gold' }).frame, 'none');
 });

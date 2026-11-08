@@ -775,6 +775,8 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       const ph = (i, j) => (!mine.length && b.cols[i]?.[j] ? ` placeholder="${esc(b.cols[i][j])}"` : '');
       parts.push(`<div class="f"><fieldset><legend>${esc(say('pages.own.cols'))}<span class="hint">${esc(say('pages.own.cols_hint'))}</span></legend>${rows.map(([h, t], i) => `<label>${esc(say('pages.own.col_heading', { n: i + 1 }))}<input name="cols.${i}.0" value="${esc(h)}" maxlength="${F.cols.keyMax}"${ph(i, 0)}></label><label>${esc(say('pages.own.col_words', { n: i + 1 }))}<textarea name="cols.${i}.1" rows="4" maxlength="${F.cols.valueMax}"${ph(i, 1)}>${esc(t)}</textarea></label>`).join('')}</fieldset></div>`);
     }
+    if (b.type === 'gallery') parts.push(input('heading', say('pages.heading'), F.heading.max, true, none, b.w.heading), input('line', say('pages.line_under_it'), F.line.max, true, none, b.w.line),
+      ...(b.source === 'album' && b.more ? [input('label', say('pages.own.album_link'), F.label.max, true, none, b.w.label)] : []));
     if (b.type === 'beside') parts.push(input('heading', say('pages.heading'), F.heading.max, true, none, b.w.heading), input('label', say('pages.own.button_words'), F.label.max, true, none, b.w.label),
       `<div class="f"><label>${esc(say('pages.own.words_body'))}<textarea name="body" rows="6" maxlength="${F.body.max}">${esc(shown('body') ?? '')}</textarea><span class="hint">${esc(say('pages.own.words_body_hint'))}</span></label></div>`);
     if (b.type === 'button') parts.push(input('label', say('pages.own.button_words'), F.label.max, true, none, b.w.label));
@@ -796,6 +798,9 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       // A photo for each of the owner's boxes (her layout and frame), as on Home's collage.
       const mine = cur.photos?.length;
       photo = `<p class="muted small">${esc(say('pages.own.collage_photos'))}</p>${field('photos', { ...ADDED_BLOCK_FIELDS.photos, boxes: true }, mine ? cur.photos : b.photos, { kind: 'pages', say, library: library(), photos: await photos(), photoUrl, values: { layout: b.layout, focus: mine ? cur.focus ?? [] : b.focus } })}`;
+    } else if (b.type === 'gallery' && b.mayChange) {
+      // Her own photos for the strip, picked in the photo library window; none: the owner's.
+      photo = `<p class="muted small">${esc(say('pages.own.gallery_photos'))}</p>${field('photos', ADDED_BLOCK_FIELDS.photos, cur.photos ?? [], { kind: 'pages', say, library: library(), photos: await photos(), photoUrl })}`;
     } else if (b.type === 'collage' && !b.photos.length) linkNote += `<p class="muted small">${esc(say('pages.own.no_photos'))}</p>`;
     return `<form method="post" action="${base}/blocks/${esc(key)}/${esc(b.id)}" data-save class="card added${cur.enabled ? '' : ' off'}" id="b-${esc(b.id)}">
         <div class="between"><h2 class="added-h">${esc(cur.heading || cur.label || b.w?.heading || b.w?.label || say(`pages.own.${b.type}`))}</h2>
@@ -834,7 +839,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       const pick = (...ks) => Object.fromEntries(ks.filter((k) => fd.has(k)).map((k) => [k, fd.get(k)]));
       const owners = b.w ?? {};
       await saveAddedBlock(env, site.id, page, block, keepUnset(own
-        ? { enabled: fd.get('enabled') != null, ...pick('heading', 'line', 'url', 'phone', 'email', 'caption', 'body'), ...(b.type === 'factrow' ? { facts: factsFrom(fd) } : {}), ...(b.type === 'columns' ? { cols: colsFrom(fd) } : {}), ...(b.type === 'collage' && b.mayChange ? collageMine(fd, b) : {}), ...(fd.has('button_label') ? { label: fd.get('button_label') } : {}), ...(b.mayChange ? pick('photo_id') : {}) }
+        ? { enabled: fd.get('enabled') != null, ...pick('heading', 'line', 'url', 'phone', 'email', 'caption', 'body'), ...(b.type === 'factrow' ? { facts: factsFrom(fd) } : {}), ...(b.type === 'columns' ? { cols: colsFrom(fd) } : {}), ...(b.type === 'collage' && b.mayChange ? collageMine(fd, b) : {}), ...(b.type === 'gallery' && b.mayChange ? { photos: fd.getAll('photos').map(String).filter(Boolean).slice(0, ADDED_BLOCK_FIELDS.photos.max) } : {}), ...(fd.has('button_label') ? { label: fd.get('button_label') } : {}), ...(b.mayChange ? pick('photo_id') : {}) }
         : { enabled: fd.get('enabled') != null, eyebrow: fd.get('eyebrow'), heading: fd.get('heading'), lede: fd.get('lede') }, owners));
     } catch (err) {
       if (!(err instanceof ContentError)) throw err;

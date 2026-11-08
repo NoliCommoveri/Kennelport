@@ -224,6 +224,12 @@ export async function buildSnapshot(env, siteId) {
   for (const [key, blocks] of Object.entries(layoutFor(build))) {
     if (!Array.isArray(blocks)) continue;
     for (const b of blocks) {
+      if (b.type === 'gallery') {
+        // An album's photos are carried with the album; picked ones here.
+        (b.source === 'pick' ? b.photos : []).forEach(use);
+        if (b.mayChange) (added[key]?.[b.id]?.photos ?? []).slice(0, Number(b.count)).forEach(use);
+        continue;
+      }
       if (b.type === 'collage') {
         b.photos.forEach(use);
         if (b.mayChange) (added[key]?.[b.id]?.photos ?? []).forEach(use);

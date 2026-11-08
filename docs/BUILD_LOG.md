@@ -1997,3 +1997,28 @@ with new sections and a new building order. Docs only; nothing built yet.
   and two, the profile panel, Show on it, remove one in use. No script errors.
 - Manage app files changed: `APP_VERSION` to bump before merging, as agreed. Tests:
   `phototags.test.js` (the screen, the bar's actions, remove warns), `albums.test.js`.
+
+## 2026-11-08: Gallery strip (one of the owner's own blocks)
+
+- Add a block now offers **Gallery strip** on any page: one row of photos that **scrolls
+  sideways**, drawn as an album page's gallery (`.gal-item`), so a tap opens the photo full
+  size in the site's viewer (one viewer per page, added by `render/index.js` wherever a
+  page has such photos).
+- **The owner sets:** where the photos come from (**one of her albums**, its photos newest
+  first, only while the album is on her site; or **photos you pick**, up to 24 in order,
+  in the photo library window); **how many show** (4, 6, 8 or 12: in one row on a
+  computer, twelve scrolling six at a time; on a phone two and a bit across, scrolling);
+  a **border round the whole strip** (none to start, a thin line, the photo frames' soft
+  mat, or the mat with a fine brass line); a link under it to the whole album (from an
+  album, while the Photo albums page is on); a heading, a line and the link's words.
+- **The breeder** can switch it off, reword its heading, line and link, and, where the
+  owner lets her, pick her own photos, which replace the owner's (`block_switches`
+  content `photos`, now up to 24; no migration).
+- Her photos and the picked ones are a row of the photo library ("Our story: Gallery
+  strip"); an album's are its album's row. Her wording: `pages.own.gallery`,
+  `pages.own.gallery_photos`, `pages.own.album_link`, `library.block.gallery`.
+- Checked at 390px and 1280px: six and twelve from an album, with the mat and the fine
+  line; the viewer opens; no sideways scroll on the page.
+- `site.css` changed (`.gallery.strip`, `.strip-frame`): `ASSET_VERSION` to bump before
+  merging, as agreed. Tests: `ownblocks.test.js` (from an album, how many, the border,
+  the link, picked photos, hers), `blocks.test.js`.
