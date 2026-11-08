@@ -166,10 +166,18 @@ export async function buildSnapshot(env, siteId) {
   // each album's photos newest first too, like a puppy's own.
   const livePhotos = new Map((await all('SELECT id, created_at FROM photos WHERE site_id = ? AND removed_at IS NULL')).map((p) => [p.id, p.created_at]));
   const newestFirst = (ids) => [...ids].sort((a, b) => String(livePhotos.get(b)).localeCompare(String(livePhotos.get(a))));
+  // The shown dogs tagged in each album's photos, so a dog's page can list every
+  // album it's in. Only the dog ids go out, never the tags themselves.
+  const dogTags = new Map();
+  for (const t of await all("SELECT photo_id, subject FROM photo_tags WHERE site_id = ? AND subject LIKE 'dog:%'")) {
+    const id = t.subject.slice('dog:'.length);
+    if (dogById[id]) dogTags.set(t.photo_id, [...(dogTags.get(t.photo_id) ?? []), id]);
+  }
   const albums = (await all('SELECT * FROM albums WHERE site_id = ? AND show_on_site = 1 ORDER BY sort, title')).map((a) => {
     const ids = newestFirst(json(a.photos, []).filter((id) => livePhotos.has(id)));
     const cover = a.cover_photo_id && livePhotos.has(a.cover_photo_id) ? a.cover_photo_id : ids[0] ?? null;
-    return { id: a.id, slug: a.slug, title: a.title, description: a.description, litter_id: litters.some((l) => l.id === a.litter_id) ? a.litter_id : null, cover_photo_id: cover, photos: ids, more_photos_url: a.more_photos_url ?? null };
+    const dog_ids = [...new Set(ids.flatMap((id) => dogTags.get(id) ?? []))];
+    return { id: a.id, slug: a.slug, title: a.title, description: a.description, litter_id: litters.some((l) => l.id === a.litter_id) ? a.litter_id : null, cover_photo_id: cover, photos: ids, more_photos_url: a.more_photos_url ?? null, dog_ids };
   }).filter((a) => a.photos.length);
 
   // Videos and posts (plan 3.3), by where they sit; only places still on the site.

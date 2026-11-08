@@ -776,6 +776,7 @@ export const PROFILE_ITEMS = Object.freeze({
     faq: 'FAQ spot: the questions she ticks for every dog', role: 'Breed and role', name: 'Call name', reg: 'Registered name', facts: 'Facts',
     bio: 'Bio', sale: 'Looking for a home: price and “Ask about”', tests: 'Health testing (with verify links)', share: 'Share button',
     badges: 'Badge row: the badges she ticks for every dog', embeds: 'Videos and posts', litters: "The dog's litters",
+    albums: 'Albums with a photo tagged as the dog',
   },
   puppy: {
     faq: 'FAQ spot: the questions she ticks for every puppy', status: 'Status', name: 'Name', facts: 'Facts', bio: 'Bio',
@@ -798,7 +799,7 @@ export const PROFILE_FACTS = Object.freeze({
 // Today's pages: each part's items in order. What isn't listed is off (a dog's
 // badge row: today's dog pages have none).
 export const PROFILE_DEFAULT = Object.freeze({
-  dog: { parts: { above: ['faq'], side: ['role', 'name', 'reg', 'facts', 'bio', 'sale', 'tests', 'share'], below: ['embeds', 'litters'] }, facts: Object.keys(PROFILE_FACTS.dog) },
+  dog: { parts: { above: ['faq'], side: ['role', 'name', 'reg', 'facts', 'bio', 'sale', 'tests', 'share'], below: ['embeds', 'litters', 'albums'] }, facts: Object.keys(PROFILE_FACTS.dog) },
   puppy: { parts: { above: ['faq'], side: ['status', 'name', 'facts', 'bio', 'ask', 'surcharge', 'notice', 'share'], below: ['badges', 'photos', 'albums'] }, facts: Object.keys(PROFILE_FACTS.puppy) },
   litter: { parts: { head: ['pair', 'summary'], body: ['faq', 'parents', 'facts', 'note', 'fullreg', 'share', 'pups', 'badges', 'embeds', 'albums'] } },
 });
