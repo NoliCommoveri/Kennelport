@@ -3,7 +3,7 @@
 // a problem comes back with what was typed and the reason.
 import { escapeHtml as esc } from '../lib/html.js';
 import { json } from '../lib/http.js';
-import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, HOME_WORDS, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, CUSTOM_PAGE, ADDED_BLOCK_FIELDS } from '../content/model.js';
+import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, HOME_WORDS, ALBUM_PHOTOS_MAX, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, CUSTOM_PAGE, ADDED_BLOCK_FIELDS } from '../content/model.js';
 import {
   KINDS, listRecords, getRecord, saveRecord, setField, removeRecord, moveRecord,
   saveSite, getPage, savePage, getBlock, saveBlock, getPayment, savePayment, getAddedBlock, saveAddedBlock,
@@ -501,18 +501,17 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     return view;
   }
 
-  // A litter has no photo field of its own, but its photos (for albums and the
-  // puppies' pickers) are added here, tagged with the litter.
+  // A litter has no photo field of its own: the photos shown on its profile (tagged
+  // with it) are listed here, and chosen on the Photos screen (Show on a profile), the one
+  // place to upload (decision 20). They're its row in the photo library's Profile photos.
   async function litterPhotos(view) {
     if (!view?.rec) return view;
     const subject = `litter:${view.rec.id}`;
     const t = await tags();
     const mine = (await photos()).filter((p) => (t.get(p.id) ?? []).includes(subject));
-    view.body += `<section class="card photos" data-picker data-type="none" data-upload="${esc(`${base}/photos/upload`)}" data-tags="${esc(subject)}" data-alt="${esc(view.rec.name)}">
-      <h2>${esc(say('photos.photos_of_this_litter'))}</h2><p class="muted small">${esc(say('photos.photos_added_here_are'))}</p>
-      <div class="ph-grid" data-first>${mine.map((p) => `<img src="${esc(photoUrl(p.id))}" alt="${esc(p.alt || say('photos.photo_2'))}" loading="lazy">`).join('')}</div>
-      <div class="ph-add"><label class="button">${esc(say('photos.add_photos_2'))}<input type="file" accept="image/*" multiple data-add-photos></label><span class="muted small" role="status"></span></div>
-      ${mine.length ? `<p><a href="${esc(`${base}/photos?of=${encodeURIComponent(subject)}`)}">${esc(say('photos.see_them_on_the'))}</a></p>` : ''}</section>`;
+    view.body += `<section class="card photos"><h2>${esc(say('photos.photos_of_this_litter'))}</h2><p class="muted small">${esc(say('photos.photos_added_here_are'))}</p>
+      ${mine.length ? `<div class="pm-peek pm-litter">${mine.slice(0, 12).map((p) => `<img src="${esc(photoUrl(p.id))}" alt="${esc(p.alt || say('photos.photo_2'))}" loading="lazy">`).join('')}</div>` : ''}
+      <p><a class="button small" href="${esc(`${base}/photos?tab=profile`)}">${esc(say('photos.see_them_on_the'))}</a></p></section>`;
     return view;
   }
 
@@ -790,13 +789,13 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     }
     let photo = '';
     if (['photo', 'overlay', 'beside'].includes(b.type) && b.mayChange) {
-      photo = field('photo_id', { type: 'photo' }, cur.photo_id || b.photo || '', { kind: 'pages', say, library: library(), photoUrl });
+      photo = field('photo_id', { type: 'photo' }, cur.photo_id || b.photo || '', { kind: 'pages', say, library: library(), photos: await photos(), photoUrl });
       if (b.type === 'photo') parts.push(input('caption', say('pages.own.caption'), F.caption.max, false, none, b.w.caption));
     } else if ((b.type === 'photo' || b.type === 'overlay') && !b.photo) linkNote += `<p class="muted small">${esc(say('pages.own.no_photo'))}</p>`;
     if (b.type === 'collage' && b.mayChange) {
       // A photo for each of the owner's boxes (her layout and frame), as on Home's collage.
       const mine = cur.photos?.length;
-      photo = `<p class="muted small">${esc(say('pages.own.collage_photos'))}</p>${field('photos', { ...ADDED_BLOCK_FIELDS.photos, boxes: true }, mine ? cur.photos : b.photos, { kind: 'pages', say, library: library(), photoUrl, values: { layout: b.layout, focus: mine ? cur.focus ?? [] : b.focus } })}`;
+      photo = `<p class="muted small">${esc(say('pages.own.collage_photos'))}</p>${field('photos', { ...ADDED_BLOCK_FIELDS.photos, boxes: true }, mine ? cur.photos : b.photos, { kind: 'pages', say, library: library(), photos: await photos(), photoUrl, values: { layout: b.layout, focus: mine ? cur.focus ?? [] : b.focus } })}`;
     } else if (b.type === 'collage' && !b.photos.length) linkNote += `<p class="muted small">${esc(say('pages.own.no_photos'))}</p>`;
     return `<form method="post" action="${base}/blocks/${esc(key)}/${esc(b.id)}" data-save class="card added${cur.enabled ? '' : ' off'}" id="b-${esc(b.id)}">
         <div class="between"><h2 class="added-h">${esc(cur.heading || cur.label || b.w?.heading || b.w?.label || say(`pages.own.${b.type}`))}</h2>
@@ -1006,44 +1005,86 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       await env.DB.batch([env.DB.prepare('UPDATE photos SET removed_at = ? WHERE id = ? AND site_id = ?').bind(t, photo.id, site.id), env.DB.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(t, site.id)]);
       return back('removed', of);
     }
+    // The pinned bar's actions on the photos she chose (decision 20, step 2).
+    if (rest === '/selected' && post) {
+      const form = await request.formData();
+      const tab = form.get('tab') === 'profile' ? 'profile' : 'page';
+      const back = (key) => redirect(`${base}/photos?${tab === 'profile' ? 'tab=profile&' : ''}note=${key}`);
+      const live = new Set((await photos()).map((p) => p.id));
+      const ids = [...new Set(form.getAll('photos').map(String))].filter((id) => live.has(id));
+      if (!ids.length) return back('pick_none');
+      const act = String(form.get('act') ?? '');
+      const t = new Date().toISOString();
+      const touch = env.DB.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(t, site.id);
+      if (act === 'tag' || act === 'untag') {
+        const subject = String(form.get('subject') ?? '');
+        if (!subject || !(await isSubject(env, site.id, subject))) return back('tagnone');
+        if (act === 'tag') await tagPhotos(env, site.id, ids, [subject]);
+        else for (const id of ids) await untagPhoto(env, site.id, id, subject);
+        return back(act === 'tag' ? 'onprofile' : 'offprofile');
+      }
+      if (act === 'album') {
+        const album = await env.DB.prepare('SELECT id, photos FROM albums WHERE id = ? AND site_id = ?').bind(String(form.get('album') ?? ''), site.id).first();
+        if (!album) return back('noalbum');
+        const had = JSON.parse(album.photos || '[]');
+        const next = [...had, ...ids.filter((id) => !had.includes(id))].slice(0, ALBUM_PHOTOS_MAX);
+        await env.DB.batch([env.DB.prepare('UPDATE albums SET photos = ? WHERE id = ? AND site_id = ?').bind(JSON.stringify(next), album.id, site.id), touch]);
+        return back('inalbum');
+      }
+      if (act === 'alt') {
+        const alt = String(form.get('alt') ?? '').replace(/\s+/g, ' ').trim().slice(0, 200) || null;
+        await env.DB.batch([...ids.map((id) => env.DB.prepare('UPDATE photos SET alt = ? WHERE id = ? AND site_id = ?').bind(alt, id, site.id)), touch]);
+        return back('saved');
+      }
+      if (act === 'remove') {
+        // In use: say where first, and remove only when she says so. Removed, a photo
+        // comes off those places (the site leaves out removed photos; a form drops it).
+        const places = await photoPlaces(env, site.id, say);
+        const where = (id) => [...places.page, ...places.profile].filter((r) => !r.unused && r.ids.includes(id)).map((r) => r.label);
+        const used = ids.map((id) => [id, where(id)]).filter(([, w]) => w.length);
+        if (used.length && !form.has('confirm')) {
+          return { title: say('photos.photos'), back: `${base}/photos`, body: `<form method="post" action="${base}/photos/selected" class="card"><h2>${esc(say('pm.in_use'))}</h2>
+            <ul class="pm-where">${used.map(([id, w]) => `<li><img src="${esc(photoUrl(id))}" alt=""><span>${esc(w.join(', '))}</span></li>`).join('')}</ul>
+            <p class="muted small">${esc(say('pm.in_use_then'))}</p>${ids.map((id) => `<input type="hidden" name="photos" value="${esc(id)}">`).join('')}
+            <input type="hidden" name="tab" value="${tab}"><input type="hidden" name="confirm" value="1">
+            <div class="row"><button class="primary danger" name="act" value="remove">${esc(say('pm.remove_anyway'))}</button><a class="link" href="${base}/photos${tab === 'profile' ? '?tab=profile' : ''}">${esc(say('pm.keep'))}</a></div></form>` };
+        }
+        await env.DB.batch([...ids.map((id) => env.DB.prepare('UPDATE photos SET removed_at = ? WHERE id = ? AND site_id = ?').bind(t, id, site.id)), touch]);
+        return back('removed');
+      }
+      return back('pick_none');
+    }
     if (rest || post) return null;
 
-    const all = await photos();
-    const t = await tags();
-    const subs = await subjects(env, site.id);
-    const names = new Map(subs.map((x) => [x.subject, x.label]));
-    const of = ofParam(url.searchParams.get('of') ?? '');
-    const known = (p) => (t.get(p.id) ?? []).filter((x) => names.has(x));
-    const count = (subject) => all.filter((p) => known(p).includes(subject)).length;
-    const untagged = all.filter((p) => !known(p).length).length;
-    const list = of === 'none' ? all.filter((p) => !known(p).length) : of ? all.filter((p) => known(p).includes(of)) : all;
-    const chip = (value, label, n) => `<a class="chip${value === of ? ' on' : ''}" href="${esc(`${base}/photos${value ? `?of=${encodeURIComponent(value)}` : ''}`)}"${value === of ? ' aria-current="true"' : ''}>${esc(label)} <span>${n}</span></a>`;
-    const chips = [chip('', say('photos.all'), all.length), untagged ? chip('none', say('photos.not_sorted_2'), untagged) : '', ...subs.map((x) => [x, count(x.subject)]).filter(([, n]) => n).map(([x, n]) => chip(x.subject, x.label, n))].join('');
-    const options = (exclude = [], selected = '') => {
-      const groups = [...new Set(subs.map((x) => x.group))];
-      return groups.map((g) => `<optgroup label="${esc(g)}">${subs.filter((x) => x.group === g && !exclude.includes(x.subject)).map((x) => `<option value="${esc(x.subject)}"${x.subject === selected ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</optgroup>`).join('');
-    };
-    const ofInput = of ? `<input type="hidden" name="of" value="${esc(of)}">` : '';
-    const card = (p) => {
-      const mine = known(p);
-      return `<li class="card"><img src="${esc(photoUrl(p.id))}" alt="${esc(p.alt || say('photos.photo'))}" loading="lazy">${tickBox(p)}
-        <div class="tags">${mine.map((x) => `<form method="post" action="${base}/photos/${p.id}/untag" class="tag">${ofInput}<input type="hidden" name="subject" value="${esc(x)}"><span>${esc(names.get(x))}</span><button class="link" aria-label="${esc(`Not ${names.get(x)}`)}">×</button></form>`).join('') || `<span class="muted small">${esc(say('photos.not_sorted'))}</span>`}</div>
-        <form method="post" action="${base}/photos/${p.id}/tag" class="row">${ofInput}<select name="subject" aria-label="This photo is also of"><option value="">${esc(say('photos.photo_of'))}</option>${options(mine)}</select><button>${esc(say('photos.add'))}</button></form>
-        <form method="post" action="${base}/photos/${p.id}/alt" data-save>${ofInput}<label>${esc(say('photos.description'))}<input name="alt" value="${esc(p.alt ?? '')}" maxlength="200"></label><button>${esc(say('photos.save'))}</button></form>
-        <form method="post" action="${base}/photos/${p.id}/remove">${ofInput}<button class="link">${esc(say('photos.remove'))}</button></form></li>`;
-    };
+    // The Photos screen (decision 20, step 2): upload at the top; Page photos | Profile
+    // photos, a row per place a photo shows (photoPlaces.js), folded with its count and
+    // a few small previews; nothing under a photo until she chooses it, then one pinned
+    // bar: Show on a profile, Add to album, Description, Remove (photos.js shows it).
+    const tab = url.searchParams.get('tab') === 'profile' ? 'profile' : 'page';
+    const places = await photoPlaces(env, site.id, say);
+    const alts = new Map((await photos()).map((p) => [p.id, p.alt]));
+    const rows = places[tab];
+    const pic = (id, cls = '') => `<img${cls ? ` class="${cls}"` : ''} src="${esc(photoUrl(id))}" alt="${esc(alts.get(id) || say('photos.photo'))}" loading="lazy">`;
+    const row = (r) => `<details class="lib-row pm-row"${r.unused ? ' data-unused' : ''}><summary><b>${esc(r.label)}</b><span class="pm-peek" aria-hidden="true">${r.ids.slice(0, 4).map((id) => pic(id)).join('')}</span><span class="n">${r.ids.length}</span></summary>
+      <div class="lib-grid">${r.ids.map((id) => `<label class="lib-ph pm-ph"><input type="checkbox" name="photos" value="${esc(id)}" form="pm-bar">${pic(id)}</label>`).join('')}</div></details>`;
+    const profiles = (await env.DB.prepare('SELECT d.id, d.call_name FROM dogs d WHERE d.site_id = ? ORDER BY d.sort, d.rowid').bind(site.id).all()).results.map((d) => [`dog:${d.id}`, say('library.dog', { name: d.call_name })])
+      .concat((await env.DB.prepare('SELECT id, name FROM litters WHERE site_id = ? ORDER BY sort, rowid').bind(site.id).all()).results.map((l) => [`litter:${l.id}`, say('library.litter', { name: l.name })]))
+      .concat((await env.DB.prepare('SELECT p.id, p.name, l.name AS litter FROM puppies p JOIN litters l ON l.id = p.litter_id WHERE p.site_id = ? ORDER BY l.sort, l.rowid, p.sort, p.rowid').bind(site.id).all()).results.map((p) => [`puppy:${p.id}`, say('library.puppy', { name: p.name, litter: p.litter })]));
+    const albums = (await env.DB.prepare('SELECT id, title FROM albums WHERE site_id = ? ORDER BY sort, title').bind(site.id).all()).results;
+    const tabLink = (k, label) => `<a href="${base}/photos${k === 'profile' ? '?tab=profile' : ''}"${k === tab ? ' class="on" aria-current="page"' : ''}>${esc(label)}</a>`;
+    const panel = (k, inner) => `<div class="pm-panel" data-panel="${k}" hidden>${inner}</div>`;
+    const bar = `<form method="post" action="${base}/photos/selected" id="pm-bar" class="pm-bar" data-chosen="${esc(say('library.chosen', { n: '{n}' }))}"><input type="hidden" name="tab" value="${tab}">
+      ${panel('profile', `<label>${esc(say('pm.profile'))}<select name="subject"><option value="">${esc(say('pm.choose_profile'))}</option>${profiles.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('')}</select></label><div class="row"><button class="primary small" name="act" value="tag">${esc(say('pm.show_on_it'))}</button><button class="small" name="act" value="untag">${esc(say('pm.take_off_it'))}</button></div>`)}
+      ${panel('album', albums.length ? `<label>${esc(say('pm.album'))}<select name="album">${albums.map((a) => `<option value="${esc(a.id)}">${esc(a.title)}</option>`).join('')}</select></label><div class="row"><button class="primary small" name="act" value="album">${esc(say('pm.add_to_it'))}</button></div>` : `<p class="small muted">${esc(say('pm.no_albums'))} <a href="${base}/lists/albums/new">${esc(say('pm.new_album'))}</a></p>`)}
+      ${panel('alt', `<label>${esc(say('photos.what_s_in_the'))}<span class="hint">${esc(say('photos.helps_visitors_who_use'))}</span><input name="alt" maxlength="200"></label><div class="row"><button class="primary small" name="act" value="alt">${esc(say('photos.save'))}</button></div>`)}
+      <div class="pm-acts"><span class="small" data-pm-count></span><button type="button" class="small" data-pm-panel="profile">${esc(say('pm.on_a_profile'))}</button><button type="button" class="small" data-pm-panel="album">${esc(say('pm.to_album'))}</button><button type="button" class="small" data-pm-panel="alt" data-pm-one>${esc(say('photos.description'))}</button><button class="small danger" name="act" value="remove">${esc(say('photos.remove'))}</button><button type="button" class="link small" data-pm-clear>${esc(say('library.cancel'))}</button></div></form>`;
     return {
       title: say('photos.photos'), back: base,
-      body: `${note(url)}<p class="row"><a class="button" href="${base}/lists/albums">${esc(say('photos.albums'))}</a><span class="muted small">${esc(say('photos.galleries_with_their_own'))}</span></p>${await usageLine()}<form id="photo-form" class="card" method="post" action="${base}/photos/upload">
-        <label>${esc(say('photos.add_photos'))}<input type="file" accept="image/*" multiple required></label>
-        <label>${esc(say('photos.photos_of'))}<span class="hint">${esc(say('photos.so_they_re_offered'))}</span>
-          <select name="tags"><option value="">${esc(say('photos.choose_later'))}</option>${options([], of)}</select></label>
-        <label>${esc(say('photos.what_s_in_the'))}<span class="hint">${esc(say('photos.helps_visitors_who_use'))}</span><input name="alt" maxlength="200"></label>
-        <button class="primary">${esc(say('photos.upload'))}</button><p id="photo-status" class="muted small" role="status"></p>
-        <p class="muted small">${esc(say('photos.photos_are_made_smaller'))}</p></form>
-        ${all.length ? `<nav class="chips" aria-label="Show photos of">${chips}</nav>` : ''}
-        ${list.length ? `<section class="card"><p class="muted small">${esc(say('photos.to_tag_several_at'))}</p>${tagManyBar(subs, { back: `${base}/photos${of ? `?of=${encodeURIComponent(of)}` : ''}` })}</section>` : ''}
-        <ul class="ph-list">${list.map(card).join('') || (all.length ? `<li class="muted">${esc(say('photos.no_photos_here'))}</li>` : '')}</ul>`,
+      body: `${note(url)}<p class="row"><a class="button" href="${base}/lists/albums">${esc(say('photos.albums'))}</a><span class="muted small">${esc(say('photos.galleries_with_their_own'))}</span></p>${await usageLine()}
+        <section class="card pm-up" data-upload-here="${base}/photos/upload"><label class="button primary">${esc(say('library.upload'))}<input type="file" accept="image/*" multiple></label><p class="muted small" role="status"></p><p class="muted small">${esc(say('photos.photos_are_made_smaller'))}</p></section>
+        <nav class="pm-tabs seg sm" aria-label="${esc(say('photos.photos'))}">${tabLink('page', say('library.page_photos'))}${tabLink('profile', say('library.profile_photos'))}</nav>
+        <p class="muted small">${esc(say('pm.how'))}</p>
+        <section class="card pm-rows">${rows.map(row).join('') || `<p class="muted small">${esc(say('library.empty'))}</p>`}</section>${bar}`,
     };
   }
 

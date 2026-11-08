@@ -226,6 +226,58 @@
     else if (e.target.closest('[data-remove]')) setSpot(slot, []);
   });
 
+  // ---------- the Photos screen (decision 20, step 2) ----------
+  // Upload at the top, then reload. A photo is chosen by tapping it (the same photo
+  // in two rows is chosen in both); the pinned bar says how many, and its buttons open
+  // what goes with them (Description only for one).
+  const here = document.querySelector('[data-upload-here]');
+  if (here) {
+    const input = here.querySelector('input[type=file]');
+    const out = here.querySelector('[role=status]');
+    input.addEventListener('change', async () => {
+      const files = [...input.files];
+      if (!files.length) return;
+      input.disabled = true;
+      const done = await uploadAll(files, { action: here.dataset.uploadHere, alt: '', tags: '', say: (m) => { out.textContent = m; } });
+      if (done.length === files.length) location.reload();
+      input.value = ''; input.disabled = false;
+    });
+  }
+  const bar = document.getElementById('pm-bar');
+  if (bar) {
+    const boxes = () => [...document.querySelectorAll('.pm-ph input[type=checkbox]')];
+    const count = bar.querySelector('[data-pm-count]');
+    const chosen = () => new Set(boxes().filter((b) => b.checked).map((b) => b.value));
+    const sync = () => {
+      const n = chosen().size;
+      count.textContent = bar.dataset.chosen.replace('{n}', n);
+      const one = bar.querySelector('[data-pm-one]');
+      one.hidden = n !== 1;
+      if (n !== 1 && !bar.querySelector('[data-panel=alt]').hidden) show(null);
+    };
+    const show = (k) => {
+      for (const p of bar.querySelectorAll('[data-panel]')) p.hidden = p.dataset.panel !== k;
+      for (const b of bar.querySelectorAll('[data-pm-panel]')) b.setAttribute('aria-expanded', String(b.dataset.pmPanel === k));
+    };
+    document.addEventListener('change', (e) => {
+      const box = e.target.closest?.('.pm-ph input[type=checkbox]');
+      if (!box) return;
+      for (const b of boxes()) if (b.value === box.value) b.checked = box.checked;
+      sync();
+    });
+    bar.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-pm-panel]');
+      if (btn) show(btn.getAttribute('aria-expanded') === 'true' ? null : btn.dataset.pmPanel);
+      if (e.target.closest('[data-pm-clear]')) { for (const b of boxes()) b.checked = false; show(null); sync(); }
+    });
+    // The same photo twice in the form posts once.
+    bar.addEventListener('submit', () => {
+      const seen = new Set();
+      for (const b of boxes()) { if (!b.checked) continue; if (seen.has(b.value)) b.disabled = true; seen.add(b.value); }
+    });
+    sync();
+  }
+
   for (const picker of document.querySelectorAll('[data-picker][data-upload]')) {
     const input = picker.querySelector('input[data-add-photos]');
     if (!input) continue;

@@ -96,7 +96,9 @@ test("a puppy's spot uploads tagged with the puppy and its litter; saving tags w
   const page = await (await b.get(`/litters/${gem}`)).text();
   assert.match(page, /Photos of this litter/);
   assert.ok(page.includes(litterPhoto));
-  assert.match(page, new RegExp(`data-tags="litter:${gem}"`));
+  // Chosen on the Photos screen, the one place to upload.
+  assert.match(page, /href="\/s\/akbostons\/photos\?tab=profile">Open Photos</);
+  assert.doesNotMatch(page, /data-add-photos/);
 
   const html = await (await b.get(`/litters/${gem}/puppies/${opal}`)).text();
   assert.match(spot(html, 'photo_id'), new RegExp(`data-tags="puppy:${opal},litter:${gem}"`));
@@ -157,30 +159,73 @@ test('the photo library: Page photos by where each photo shows, Profile photos b
   assert.match(html, /data-lib-pick data-one="Replace" data-many="Use these photos" disabled/);
 });
 
-test('the Photos screen filters by what a photo is of, and tags can be added and taken off', async () => {
+test('the Photos screen: Page photos | Profile photos, folded rows, and a pinned bar for the chosen photos', async () => {
   const b = await breeder();
   const willow = b.id('dogs', "slug = 'willow'");
   const a = await b.upload(`dog:${willow}`);
   const c = await b.upload();
-  const all = await (await b.get('/photos')).text();
-  assert.match(all, /All <span>2<\/span>/);
-  assert.match(all, /Not sorted <span>1<\/span>/);
-  assert.match(all, /Willow <span>1<\/span>/);
-  const only = await (await b.get(`/photos?of=dog:${willow}`)).text();
-  assert.ok(only.includes(a) && !only.includes(`/photos/${c}/thumb`));
-  const none = await (await b.get('/photos?of=none')).text();
-  assert.ok(none.includes(`/photos/${c}/thumb`) && !none.includes(`/photos/${a}/thumb`));
+  const onAbout = await b.upload();
+  await b.post('/pages/about', { enabled: '1', text: 'Our story.', photo_id: onAbout });
+  const page = await (await b.get('/photos')).text();
+  assert.match(page, /<nav class="pm-tabs seg sm"[^>]*><a href="\/s\/akbostons\/photos" class="on" aria-current="page">Page photos<\/a><a href="\/s\/akbostons\/photos\?tab=profile">Profile photos<\/a><\/nav>/);
+  // Rows folded, each with its count and a few small previews; nothing under a photo.
+  assert.match(page, /<details class="lib-row pm-row"><summary><b>Our story<\/b><span class="pm-peek" aria-hidden="true"><img [^>]+><\/span><span class="n">1<\/span><\/summary>/);
+  assert.match(page, /<details class="lib-row pm-row" data-unused><summary><b>Not used anywhere<\/b>/);
+  assert.doesNotMatch(page, /<details[^>]* open/);
+  assert.doesNotMatch(page, /name="alt" value=|class="tags"|aria-label="This photo is also of"/);
+  assert.match(page, /data-upload-here="\/s\/akbostons\/photos\/upload"/);
+  assert.match(page, /<form method="post" action="\/s\/akbostons\/photos\/selected" id="pm-bar" class="pm-bar"/);
+  const profile = await (await b.get('/photos?tab=profile')).text();
+  assert.match(profile, /<summary><b>Willow&#39;s profile<\/b>/);
+  assert.ok(profile.includes(a) && !profile.includes(`value="${c}"`));
 
+  const sel = (fields, ids) => { const f = new URLSearchParams(fields); for (const x of ids) f.append('photos', x); return b.post('/photos/selected', f); };
   const changedAt = () => b.env.DB.raw.prepare('SELECT draft_changed_at AS t FROM sites WHERE id = ?').get(b.site.id).t;
   const before = changedAt();
-  const r = await b.post(`/photos/${c}/tag`, { subject: `dog:${willow}`, of: 'none' });
-  assert.equal(r.status, 303);
-  assert.match(r.headers.get('location'), /\?of=none&note=tagged$/);
+  // Show on a profile, and take off it again: for her only, the draft unchanged.
+  let r = await sel({ act: 'tag', subject: `dog:${willow}`, tab: 'profile' }, [c]);
+  assert.equal(r.headers.get('location'), '/s/akbostons/photos?tab=profile&note=onprofile');
   assert.deepEqual(b.tagsOf(c), [`dog:${willow}`]);
-  await b.post(`/photos/${c}/untag`, { subject: `dog:${willow}` });
+  await sel({ act: 'untag', subject: `dog:${willow}` }, [c]);
   assert.deepEqual(b.tagsOf(c), []);
-  // Tagging is for the breeder only: it doesn't change the draft.
   assert.equal(changedAt(), before);
+  // Nothing chosen, or not her profile: nothing changes.
+  assert.match((await sel({ act: 'tag', subject: `dog:${willow}` }, [])).headers.get('location'), /note=pick_none$/);
+  assert.match((await sel({ act: 'tag', subject: 'dog:00000000-0000-0000-0000-000000000000' }, [c])).headers.get('location'), /note=tagnone$/);
+  // A description, for one.
+  await sel({ act: 'alt', alt: 'Willow at the beach' }, [c]);
+  assert.equal(b.env.DB.raw.prepare('SELECT alt FROM photos WHERE id = ?').get(c).alt, 'Willow at the beach');
+  // Remove: one not in use goes straight away; one in use says where first.
+  r = await sel({ act: 'remove' }, [c]);
+  assert.match(r.headers.get('location'), /note=removed$/);
+  assert.ok(b.env.DB.raw.prepare('SELECT removed_at FROM photos WHERE id = ?').get(c).removed_at);
+  r = await sel({ act: 'remove' }, [onAbout]);
+  assert.equal(r.status, 200);
+  const warn = await r.text();
+  assert.match(warn, /<h2>Used on your site<\/h2>/);
+  assert.match(warn, /<span>Our story<\/span>/);
+  assert.match(warn, /name="confirm" value="1"/);
+  assert.equal(b.env.DB.raw.prepare('SELECT removed_at FROM photos WHERE id = ?').get(onAbout).removed_at, null);
+  await sel({ act: 'remove', confirm: '1' }, [onAbout]);
+  assert.ok(b.env.DB.raw.prepare('SELECT removed_at FROM photos WHERE id = ?').get(onAbout).removed_at);
+  // Gone from Our story's spot too.
+  const spotHtml = spot(await (await b.get('/pages/about')).text(), 'photo_id');
+  assert.deepEqual(held(spotHtml), []);
+});
+
+test('the Photos screen adds the chosen photos to an album, after what it has', async () => {
+  const b = await breeder();
+  const [p1, p2] = [await b.upload(), await b.upload()];
+  const f = new URLSearchParams({ title: 'Spring', show_on_site: '1' });
+  f.append('photos', p1);
+  await b.post('/lists/albums/new', f);
+  const album = b.env.DB.raw.prepare("SELECT id FROM albums WHERE title = 'Spring'").get().id;
+  const page = await (await b.get('/photos')).text();
+  assert.match(page, new RegExp(`<option value="${album}">Spring</option>`));
+  const g = new URLSearchParams({ act: 'album', album });
+  g.append('photos', p1); g.append('photos', p2);
+  assert.match((await b.post('/photos/selected', g)).headers.get('location'), /note=inalbum$/);
+  assert.deepEqual(JSON.parse(b.env.DB.raw.prepare('SELECT photos FROM albums WHERE id = ?').get(album).photos), [p1, p2]);
 });
 
 test("removing a dog or a litter removes their tags (a litter's puppies' too); closing the site removes all", async () => {

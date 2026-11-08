@@ -504,7 +504,7 @@ row of photos from an album, or picked from the library in pick-several mode.
 
 Building it, in this order: (1) the photo slot and the library window, on every screen
 that takes a photo, both sides (built 2026-11-08; an album's photos are a spot that takes
-several, so (3) is mostly in: what's left is its own **Add from your photos** wording); (2) the Photos screen's rows and its select-first bar;
+several, so (3) is mostly in: what's left is its own **Add from your photos** wording); (2) the Photos screen's rows and its select-first bar (built 2026-11-08);
 (3) albums from photos she has; (4) the Gallery strip; (5) the duplicate check. The window
 and the slot are the manage app's (`public/_kp/m/`), so they need an `APP_VERSION` bump,
 asked for first (CLAUDE.md). Every line she reads goes in the owner's list
@@ -673,7 +673,7 @@ Each step is its own branch and can be released on its own.
    as the owner's blocks, links to a dog, litter or puppy, fonts and the font
    library, and text size on the built-in blocks.
    **Next: the photo system** (decision 20, **Photos: one library**): the photo slot and
-   library window (built), the Photos screen's rows, albums from photos she has, then the
+   library window (built), the Photos screen's rows (built), albums from photos she has, then the
    **Gallery strip** block and the duplicate check.
 5. **Templates.** Save as template, Apply, Reset to template.
 6. **The family portal's build:** the **Website and family portal** template; the

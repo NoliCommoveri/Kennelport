@@ -1969,3 +1969,31 @@ with new sections and a new building order. Docs only; nothing built yet.
 - Manage app files changed (`app.js`, `photos.js`, `app.css`): `APP_VERSION` to bump
   before merging, as agreed. Tests: `phototags.test.js` (spots, the library's rows),
   `ownblocks.test.js` (a collage box is a spot).
+
+## 2026-11-08: the Photos screen (decision 20, step 2)
+
+- **Upload new photos** at the top, one button (the old form with its "Photos of" and
+  description fields is gone: who's in a photo and its description are set from the bar).
+- **Page photos | Profile photos** (two links, `?tab=profile`), then the same rows as the
+  library window (`photoPlaces.js`), **folded by default**, each header with its name, a
+  few small previews and its count. The old filter chips are gone.
+- **Nothing under a photo until she chooses it.** Tapping photos ticks them (a photo in two
+  rows is ticked in both); a **pinned bar** comes up at the bottom (above the tabs on a
+  phone) with how many, **Show on a profile…** (a profile, then **Show on it** or **Take
+  off it**: today's tags, worded by where they show), **Add to album…** (added after what
+  the album has), **Description** (one photo only) and **Remove**. All post to `POST
+  /s/<site>/photos/selected` (`act`: tag, untag, album, alt, remove).
+- **Remove warns when a photo is in use** and lists where ("Our story"), with **Remove
+  anyway** or **Keep them**; one not in use goes straight away. Removed, it comes off those
+  places: the site already leaves removed photos out, and a photo spot now drops a removed
+  photo, so the form doesn't post it (`photoSlot`, the owner's builder too).
+- **A litter's "Photos of this litter" card** lost its own upload: it lists the photos on
+  the litter's profile and links to the Photos screen's Profile photos.
+- Kept as they were: an album's "Who's in these photos" card (`/photos/tag-many`), and the
+  single-photo `/photos/<id>/tag|untag|alt|remove` actions.
+- Wording: `pm.*` and five notes (`pick_none`, `onprofile`, `offprofile`, `inalbum`,
+  `noalbum`) in the owner's list; thirteen lines the old screen used are gone from it.
+- Checked in a browser at 390px and 1280px against a local copy: open a row, choose one
+  and two, the profile panel, Show on it, remove one in use. No script errors.
+- Manage app files changed: `APP_VERSION` to bump before merging, as agreed. Tests:
+  `phototags.test.js` (the screen, the bar's actions, remove warns), `albums.test.js`.

@@ -528,7 +528,7 @@ function linkSettings(snap, b, pics, optional) {
 // window (forms.js photoSlot, photos.js), the same one she uses, upload and all.
 const FROM_HERS = "From the breeder's photos: Replace opens them all, and can upload more.";
 function photoChoice(b, pics, { name = `b.${b.id}.photo`, chosen = b.photo, label = 'Photo', hint = FROM_HERS, shape = null } = {}) {
-  return photoSlot(name, label, hint, chosen ? [chosen] : [], { say: defaultSay, photoUrl: pics.url, library: pics.library }, { shape });
+  return photoSlot(name, label, hint, chosen ? [chosen] : [], { say: defaultSay, photoUrl: pics.url, library: pics.library, photos: pics.photos }, { shape });
 }
 
 // A collage block's photos: one box per box of the layout, each with which part
@@ -723,7 +723,9 @@ async function pageScreen(env, site, build, key, { open = null, error = null } =
   const adds = addable(key, blocks);
   // A photo block's spot: its photo (served through the admin view of her site), and
   // her photo library window, from her Site Manager.
-  const pics = { build, url: (id) => `/admin/${site.subdomain}/site/_kp/p/${encodeURIComponent(id)}?s=t`,
+  const pics = { build, photos: open && blocks.some((b) => b.id === open && ['photo', 'overlay', 'collage', 'beside'].includes(b.type))
+    ? (await env.DB.prepare('SELECT id FROM photos WHERE site_id = ? AND removed_at IS NULL').bind(site.id).all()).results : null,
+  url: (id) => `/admin/${site.subdomain}/site/_kp/p/${encodeURIComponent(id)}?s=t`,
     library: { list: `/s/${site.subdomain}/photos/library`, upload: `/s/${site.subdomain}/photos/upload`, tags: '', alt: '' } };
   const changed = pageChanged(build, key);
   const group = (data, title) => {

@@ -302,7 +302,11 @@ test("an album's screen tags several photos at once with who's in them, its litt
   assert.match((await tag({ subject: 'puppy:00000000-0000-0000-0000-000000000000' }, [p3])).headers.get('location'), /^\/s\/akbostons\/photos\?note=tagnone$/);
   assert.equal((await tag({ subject: `puppy:${opal}`, back: '//evil.example/x' }, [p3])).headers.get('location'), '/s/akbostons/photos?note=tagmany');
 
+  // The Photos screen: choose several, then Show on a profile (its pinned bar).
   const photosScreen = await (await b.get('/photos')).text();
-  assert.match(photosScreen, /To tag several at once/);
-  assert.match(photosScreen, new RegExp(`name="photos" value="${p3}" form="tag-many"`));
+  assert.match(photosScreen, new RegExp(`<input type="checkbox" name="photos" value="${p3}" form="pm-bar">`));
+  const f = new URLSearchParams({ act: 'tag', subject: `puppy:${opal}` });
+  f.append('photos', p3);
+  assert.match((await b.post('/photos/selected', f)).headers.get('location'), /\/photos\?note=onprofile$/);
+  assert.equal(b.env.DB.raw.prepare('SELECT COUNT(*) AS n FROM photo_tags WHERE subject = ? AND photo_id = ?').get(`puppy:${opal}`, p3).n, 1);
 });

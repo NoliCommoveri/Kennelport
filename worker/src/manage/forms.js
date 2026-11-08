@@ -382,7 +382,9 @@ const SLOT_SHOWN = 24;
 export function photoSlot(name, label, hint, chosen, ctx, { multiple = false, max = null, shape = null } = {}) {
   const { say } = ctx;
   const lib = ctx.library ?? {};
-  const cur = chosen.filter(Boolean);
+  // A removed photo has come off every spot (decision 20): it isn't shown or posted.
+  const live = ctx.photos ? new Set(ctx.photos.map((p) => p.id)) : null;
+  const cur = chosen.filter((id) => id && (!live || live.has(id)));
   const pic = (id) => `<img src="${esc(ctx.photoUrl(id))}" alt="" loading="lazy">`;
   const shown = cur.slice(0, multiple ? SLOT_SHOWN : 1).map(pic).join('') + (cur.length > SLOT_SHOWN && multiple ? `<span class="ph-more-n">+${cur.length - SLOT_SHOWN}</span>` : '');
   const inputs = multiple ? cur.map((id) => `<input type="hidden" name="${esc(name)}" value="${esc(id)}">`).join('') : `<input type="hidden" name="${esc(name)}" value="${esc(cur[0] ?? '')}">`;
