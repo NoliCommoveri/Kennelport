@@ -1878,3 +1878,53 @@ with new sections and a new building order. Docs only; nothing built yet.
   and the font library, text size on the built-in blocks.
 - Tests: `ownblocks.test.js` (a collage added, filled, a box emptied, the breeder's photos,
   not hers to change, switched off, cleaned); `blocks.test.js` (Add a block lists it).
+
+## 2026-11-08: photo beside words (one of the owner's own blocks)
+
+- Add a block now offers **Photo beside words** on any page: the prototype's story
+  layout (`.story`, `.story-copy`, the framed `.story-pic`) as a block. A photo (which
+  part to keep, a frame or none) beside a heading, words (a blank line starts a new
+  paragraph) and an optional button to a page, an outside site, a call, a text or an
+  email (`content/blocks.js` `beside`: `side`, `frame`, `focus`, `w.heading`, `w.body`,
+  `w.label`, `link`). **Where it sits:** the photo on the left or the right on a computer;
+  on a phone it always goes above the words, shrunk and centred as the story's is
+  (`.story.pic-right` in `site.css`). With no photo the words take the width.
+- The breeder can switch it off, reword the heading, words and button, change an outside
+  link, phone or email, and change the photo where the owner lets her. Her wording:
+  `pages.own.beside`.
+- Checked at 390px and 1280px, left and right.
+- Tests: `ownblocks.test.js` (words alone, the photo on the right framed, then left
+  unframed, her words); `blocks.test.js` (Add a block lists it).
+
+## 2026-11-08: headings show only as typed
+
+- The owner's ask: no heading is required anywhere; if nothing is typed, nothing shows.
+  Before, an empty heading box fell back to the site's own words ("Meet our dogs", "Our
+  story", the owner's starting words on an added block), so emptying it changed nothing.
+- Now a heading, the small label above it, the line under it and, on the owner's own
+  blocks, the line, words, caption and button words show **as typed**. **Emptied, nothing
+  shows.** Covered: every page's heading (eyebrow, heading, line under it), Home's blocks
+  (the headline and script line, the story's label, heading and script word, the dogs',
+  litters' and reviews' label, heading and line, the waitlist band's heading and line),
+  the breeder's words on blocks the owner added, and a How it works step's heading (no
+  longer required).
+- **What's in the box is what shows.** Where she has never set one, her form now fills the
+  box with the site's own words (the page's own heading, `blocks.js` `PAGE_HEADS`; Home's,
+  `model.js` `HOME_WORDS`; her kennel's name for the headline; the owner's starting words).
+  Saved unchanged, they stay unset and keep following the site's own (a renamed kennel,
+  the owner's new wording). So no live site changes the day this ships: a heading she
+  never touched still shows as before.
+- How: those fields are marked `clear` (`model.js` `CLR`); an emptied one is stored as ""
+  (no migration: it's JSON, and a step's `heading` column takes ""). The site uses `??`
+  where it used `||` (`pagehead`, `head`, Home's blocks, `addedWords`), and draws no empty
+  heading, page head or decorative sprigs (`head` and `pagehead` draw nothing when all
+  three are empty). The owner's own settings already worked this way.
+- Hints: "Leave it empty and nothing shows." on these fields (`forms.js` SHARED `eyebrow`,
+  `heading`, `lede`; Home's `headline`, `script`; `steps.heading`) and on her added-block
+  boxes (`pages.own.empty_none` in the owner's list).
+- Not changed: a FAQ, policy or help expander still needs its heading (it's the line she
+  taps to open it). The sub-headings that read "Leave empty for …" still fall back to
+  their words when left empty: Getting your pup home's pickup, transport, travel and
+  transport-services headings, Our dogs' co-owned heading, and the application form's
+  heading.
+- `site.css`: no change for this. Tests: `headings.test.js` (new).

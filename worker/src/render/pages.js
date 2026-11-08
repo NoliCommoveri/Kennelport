@@ -10,7 +10,7 @@ import {
 } from './parts.js';
 import { embedView } from '../embeds.js';
 import { homeBlocks, pageBlocks, hersOn, BREEDER_SWITCH, PAGE_PARTS, PAGE_HEADS, headFor, BLOCK_TYPES, cleanProfile } from '../content/blocks.js';
-import { COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk, badgeAddress, PAGES } from '../content/model.js';
+import { HOME_WORDS, COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk, badgeAddress, PAGES } from '../content/model.js';
 
 // A question from her FAQ, where she has placed it (plan 3.9): its own band under
 // the page's heading, so it sits above what the page is about and takes the
@@ -364,7 +364,7 @@ export function home(snap, ctx) {
     } else if (b.type === 'badges') html = homeBadges(snap);
     else if (b.type === 'text') html = storyBlock(snap, ctx);
     else if (b.type === 'band') {
-      html = waitlistOn ? `<section class="cta"><div class="wrap"><div><h2>${esc(h.waitlist.heading || 'Hoping for a puppy of your own?')}</h2>${h.waitlist.line ? `<p>${esc(h.waitlist.line)}</p>` : ''}</div><a class="btn" href="/waitlist">${esc(h.waitlist.button_label || 'Join the waitlist')}</a></div></section>` : '';
+      html = waitlistOn ? `<section class="cta"><div class="wrap"><div>${(h.waitlist.heading ?? HOME_WORDS.waitlist.heading) ? `<h2>${esc(h.waitlist.heading ?? HOME_WORDS.waitlist.heading)}</h2>` : ''}${h.waitlist.line ? `<p>${esc(h.waitlist.line)}</p>` : ''}</div><a class="btn" href="/waitlist">${esc(h.waitlist.button_label || 'Join the waitlist')}</a></div></section>` : '';
     } else html = dataBlock(snap, ctx, b, 'home');
     if (html) parts.push(styled(b, html));
   }
@@ -376,9 +376,9 @@ export function home(snap, ctx) {
 // owner added, hers (block_switches) over the owner's starting wording.
 const blockWords = (snap, b, key) => (hersOn(key, b) ? snap.home[b.id] ?? {} : { ...addedWords(snap, key, b), link_label: null });
 const limited = (rows, b) => (b.limit ? rows.slice(0, b.limit) : rows);
-// Its heading: Home's own fall back to today's words; a block the owner added
-// shows none when its heading is left empty (a page's heading may lead it).
-const blockHead = (key, b, w, dflt) => (hersOn(key, b) ? w.heading || dflt : w.heading ?? dflt);
+// Its heading as typed (hers, or the owner's for a block the owner added): emptied, none;
+// never set, today's words (model.js HOME_WORDS).
+const blockHead = (key, b, w, dflt) => w.heading ?? dflt;
 
 function heroBlock(snap, ctx, { facts, badges, waitlistOn }) {
   const h = snap.home;
@@ -395,7 +395,7 @@ function heroBlock(snap, ctx, { facts, badges, waitlistOn }) {
   ].join('');
   return `${banner}${badges ? homeBadges(snap) : ''}<section class="wrap hero${layout ? '' : ' no-photos'}"><div class="hero-copy">
       ${h.hero.eyebrow ? `<span class="eyebrow">${esc(h.hero.eyebrow)}</span>` : ''}
-      <h1>${scriptLine(h.hero.headline || snap.site.kennel_name, h.hero.script)}</h1>
+      ${(h.hero.headline ?? snap.site.kennel_name) || h.hero.script ? `<h1>${scriptLine(h.hero.headline ?? snap.site.kennel_name, h.hero.script)}</h1>` : ''}
       ${h.hero.intro ? `<p>${esc(h.hero.intro)}</p>` : ''}
       ${buttons ? `<div class="hero-actions">${buttons}</div>` : ''}${facts}
     </div>${collage}</section>`;
@@ -409,7 +409,7 @@ function storyBlock(snap, ctx) {
   const features = (s.features ?? []).map((f) => `<div class="feature"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">${ICONS[f.icon] ?? ICONS.heart}</svg><b>${esc(f.title)}</b><p>${esc(f.text)}</p></div>`).join('');
   return `<section class="section band"><div class="wrap story${photo ? '' : ' no-photo'}">${photo}<div class="story-copy">
       ${s.eyebrow ? `<span class="eyebrow">${esc(s.eyebrow)}</span>` : ''}
-      <h2>${scriptLine(s.heading, s.script)}</h2>
+      ${s.heading || s.script ? `<h2>${scriptLine(s.heading, s.script)}</h2>` : ''}
       ${s.text ? `<p>${esc(s.text)}</p>` : ''}
       ${features ? `<div class="features">${features}</div>` : ''}
       ${pageOn(snap, 'about', ctx) ? `<div><a class="more" href="/about">${esc(s.link_label || 'Read our full story')}</a></div>` : ''}
@@ -430,7 +430,7 @@ function dogsBlock(snap, ctx, b, key = 'home') {
       : b.style === 'beside' ? `<div class="dogrows${list.length === 1 ? ' one' : ''}${lines}">${list.map((d) => besideCard(snap, d, { sale: saleOf(snap, ctx, d), show: b.show })).join('')}</div>${more}`
         : slider(list.map(card), { ctl });
   return `<section class="section"><div class="wrap">
-      ${head(w.eyebrow ?? 'Our dogs', blockHead(key, b, w, 'Meet our dogs'), w.lede, { ornament: true })}
+      ${head(w.eyebrow ?? HOME_WORDS.dogs.eyebrow, blockHead(key, b, w, HOME_WORDS.dogs.heading), w.lede, { ornament: true })}
       ${body}
     </div></section>`;
 }
@@ -440,7 +440,7 @@ function littersBlock(snap, ctx, b, key = 'home') {
   if (!list.length) return '';
   const w = blockWords(snap, b, key);
   return `<section class="section band"><div class="wrap">
-      ${head(w.eyebrow ?? 'Litters', blockHead(key, b, w, 'Current and upcoming'))}
+      ${head(w.eyebrow ?? HOME_WORDS.litters.eyebrow, blockHead(key, b, w, HOME_WORDS.litters.heading))}
       <div class="litters">${list.map((l) => litterCard(snap, l, ctx, { show: b.show })).join('')}</div>
       <p class="center mt-26"><a class="btn line" href="/litters">${esc(w.link_label || 'View all puppies')}</a></p>
     </div></section>`;
@@ -453,7 +453,7 @@ function reviewsBlock(snap, ctx, b, key = 'home') {
   const ctl = pageOn(snap, 'reviews', ctx) ? `<a class="more" href="/reviews">${esc(w.link_label || 'All reviews')}</a>` : '';
   const cards = list.map((r) => reviewCard(snap, r, { show: b.show }));
   return `<section class="section"><div class="wrap">
-      ${head(w.eyebrow ?? 'Families', blockHead(key, b, w, 'What our families say'))}
+      ${head(w.eyebrow ?? HOME_WORDS.reviews.eyebrow, blockHead(key, b, w, HOME_WORDS.reviews.heading))}
       ${b.style === 'grid' ? `<div class="grid">${cards.join('')}</div>${ctl ? `<p class="center mt-26">${ctl}</p>` : ''}` : slider(cards, { cls: 'three', ctl })}
     </div></section>`;
 }
@@ -867,7 +867,7 @@ export function puppy(snap, ctx, litterSlug, slug) {
 export function howItWorks(snap, ctx) {
   const p = snap.pages.how_it_works;
   const pay = payShown(snap, ctx);
-  const items = snap.steps.map((s, i) => `<article class="step"><span class="n">${i + 1}</span><h3>${esc(s.heading)}</h3>${s.body ? `<p>${esc(s.body)}</p>` : ''}${s.detail ? `<details class="x"><summary>${esc(word(snap, 'more_detail'))}</summary><div class="body">${paras(s.detail)}</div></details>` : ''}${s.pay_link && pay ? '<a class="more" href="/waitlist#how-to-pay">How to pay</a>' : ''}</article>`);
+  const items = snap.steps.map((s, i) => `<article class="step"><span class="n">${i + 1}</span>${s.heading ? `<h3>${esc(s.heading)}</h3>` : ''}${s.body ? `<p>${esc(s.body)}</p>` : ''}${s.detail ? `<details class="x"><summary>${esc(word(snap, 'more_detail'))}</summary><div class="body">${paras(s.detail)}</div></details>` : ''}${s.pay_link && pay ? '<a class="more" href="/waitlist#how-to-pay">How to pay</a>' : ''}</article>`);
   return {
     title: snap.pages.how_it_works.heading || label(snap, 'how_it_works'), section: '/how-it-works', description: p.lede,
     body: assemble(snap, ctx, 'how_it_works', {

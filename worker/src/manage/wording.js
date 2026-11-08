@@ -471,6 +471,7 @@ const SCREEN_LINES = {
   "pages.own.phone": ["pages", "Field label: a button's phone number", "Phone number"],
   "pages.own.email": ["pages", "Field label: a button's email address", "Email address"],
   "pages.own.from_details": ["pages", "Hint: phone or email from Kennel details", "Empty: the one in Kennel details."],
+  "pages.own.empty_none": ["pages", "Hint: a heading or line left empty", "Leave it empty and nothing shows."],
   "pages.own.empty_is": ["pages", "Hint: what an empty field shows", "Empty: \"{text}\"."],
   "pages.own.goes_to": ["pages", "Line: where a button goes (a page)", "The button goes to {page}."],
   "pages.own.hidden": ["pages", "Line: a button hidden because its page is off", "Its button is hidden right now: {page} is switched off or has nothing to show."],

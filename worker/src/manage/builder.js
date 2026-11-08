@@ -45,7 +45,7 @@ import {
   LINK_TO, BUTTON_SIZE, BUTTON_LOOK, ALIGN, DIVIDER_STYLE, DIVIDER_WIDTH, SPACER_HEIGHT, PHOTO_SHAPE, PHOTO_FRAME, PHOTO_FOCUS, PHOTO_SIDE, OVER_V, OVER_SHADE, BG_COLOURS, PAD, TEXT_SIZE, FACTS_MAX, FACT_SIZES, COLS_MAX, COL_SIZES, COLS_ACROSS,
   COLLAGE_LAYOUT, COLLAGE_FRAME, COLLAGE_MAX,
 } from '../content/blocks.js';
-import { PAGES, COLLAGE_LAYOUTS, collageLayout } from '../content/model.js';
+import { PAGES, COLLAGE_LAYOUTS, collageLayout, HOME_WORDS } from '../content/model.js';
 import { layoutChoice, boxHint } from './forms.js';
 import { siteLink } from '../ops/sites.js';
 import { SCREENS as WORD_SCREENS, CATALOG, itemsOn, everyWording, saveEveryWording, siteWording, withWording, WordingError } from './wording.js';
@@ -423,11 +423,11 @@ function blockSummary(snap, key, b) {
   if (b.type === 'embeds') return `Her videos and posts on ${pageLabel(snap, key)}`;
   if (b.type === 'head') {
     const p = snap.pages[key] ?? {};
-    return [p.eyebrow ?? headOf(snap, key).eyebrow, p.heading || headOf(snap, key).heading].filter(Boolean).join(' · ');
+    return [p.eyebrow ?? headOf(snap, key).eyebrow, p.heading ?? headOf(snap, key).heading].filter(Boolean).join(' · ');
   }
   const h = snap.home;
-  const said = { hero: h.hero.headline || snap.site.kennel_name, facts: (h.facts.items ?? []).map(([v, l]) => `${v} ${l}`).join(' · '), text: h.story.heading,
-    band: h.waitlist.heading || 'Hoping for a puppy of your own?' }[b.type];
+  const said = { hero: h.hero.headline ?? snap.site.kennel_name, facts: (h.facts.items ?? []).map(([v, l]) => `${v} ${l}`).join(' · '), text: h.story.heading,
+    band: h.waitlist.heading ?? HOME_WORDS.waitlist.heading }[b.type];
   return said || { facts: 'No facts yet', text: 'No story yet' }[b.type] || '';
 }
 
@@ -617,19 +617,19 @@ function blockRow(snap, key, b, i, n, open, pics) {
 function pagePreview(snap, key, blocks, site) {
   const h = snap.home;
   const ghost = (b, why) => `<div class="pvb ghost">${esc(blockName(key, b))}: ${why}</div>`;
-  const headOf = (w, eb, hd) => `${(w.eyebrow ?? eb) ? `<span class="eyebrow">${esc(w.eyebrow ?? eb)}</span>` : ''}${(w.heading ?? hd) ? `<h3>${esc(w.heading || hd)}</h3>` : ''}`;
-  const wordsOf = (b) => (hersOn(key, b) ? { ...h[b.id], heading: h[b.id]?.heading || undefined } : addedWords(snap, key, b));
+  const headOf = (w, eb, hd) => `${(w.eyebrow ?? eb) ? `<span class="eyebrow">${esc(w.eyebrow ?? eb)}</span>` : ''}${(w.heading ?? hd) ? `<h3>${esc(w.heading ?? hd)}</h3>` : ''}`;
+  const wordsOf = (b) => (hersOn(key, b) ? h[b.id] ?? {} : addedWords(snap, key, b));
   const out = [];
   for (const b of blocks) {
     if (hersOn(key, b) ? !h[b.id]?.enabled : !addedOn(snap, key, b)) { out.push(ghost(b, 'switched off by the breeder')); continue; }
     const names = blockRecords(snap, b);
     if (isData(b) && !names.length) { out.push(ghost(b, 'nothing matches, so it hides')); continue; }
-    if (b.type === 'hero') out.push(`<div class="pv-hero"><span class="ph"></span><div>${h.hero.eyebrow ? `<span class="eyebrow">${esc(h.hero.eyebrow)}</span>` : ''}<h3>${esc(h.hero.headline || snap.site.kennel_name)}</h3>${h.hero.script ? `<span class="script">${esc(h.hero.script)}</span>` : ''}</div></div>`);
+    if (b.type === 'hero') out.push(`<div class="pv-hero"><span class="ph"></span><div>${h.hero.eyebrow ? `<span class="eyebrow">${esc(h.hero.eyebrow)}</span>` : ''}${(h.hero.headline ?? snap.site.kennel_name) ? `<h3>${esc(h.hero.headline ?? snap.site.kennel_name)}</h3>` : ''}${h.hero.script ? `<span class="script">${esc(h.hero.script)}</span>` : ''}</div></div>`);
     else if (b.type === 'head') {
       const p = snap.pages[key] ?? {};
       const eb = p.eyebrow ?? headOf(snap, key).eyebrow;
       const lede = p.lede ?? headOf(snap, key).lede;
-      out.push(`<div class="pvb sand">${eb ? `<span class="eyebrow">${esc(eb)}</span>` : ''}<h3>${esc(p.heading || headOf(snap, key).heading)}</h3>${lede ? `<p class="small muted">${esc(lede)}</p>` : ''}</div>`);
+      out.push(`<div class="pvb sand">${eb ? `<span class="eyebrow">${esc(eb)}</span>` : ''}${(p.heading ?? headOf(snap, key).heading) ? `<h3>${esc(p.heading ?? headOf(snap, key).heading)}</h3>` : ''}${lede ? `<p class="small muted">${esc(lede)}</p>` : ''}</div>`);
     }
     else if (b.type === 'builtin') out.push(`<div class="pvb"><div class="pv-row pv-built">${svg('lock')}<b>${esc(blockName(key, b))}</b></div></div>`);
     else if (b.type === 'facts') out.push(h.facts.items?.length ? `<div class="pvb"><div class="pv-facts">${h.facts.items.slice(0, 3).map(([v, l]) => `<div><b>${esc(v)}</b>${esc(l)}</div>`).join('')}</div></div>` : ghost(b, 'no facts yet, so it hides'));
@@ -637,7 +637,7 @@ function pagePreview(snap, key, blocks, site) {
     else if (b.type === 'faq') { const q = placedFaqs(snap, key); out.push(q.length ? `<div class="pvb">${q.map((e) => `<div class="pv-q">${esc(e.heading)}</div>`).join('')}</div>` : ghost(b, 'no questions placed here, so it hides')); }
     else if (b.type === 'text') out.push(h.story.heading || h.story.text ? `<div class="pvb sand">${headOf(h.story, null, h.story.heading)}<div class="pvg"><span class="ph"></span><div class="lines"><i></i><i></i><i></i></div></div></div>` : ghost(b, 'no story yet, so it hides'));
     else if (b.type === 'embeds') out.push(ghost(b, `shows the videos and posts she puts on ${pageLabel(snap, key)}`));
-    else if (b.type === 'band') out.push(`<div class="pvb deep"><h3>${esc(h.waitlist.heading || 'Hoping for a puppy of your own?')}</h3><span class="pv-pill">${esc(h.waitlist.button_label || 'Join the waitlist')}</span></div>`);
+    else if (b.type === 'band') out.push(`<div class="pvb deep">${(h.waitlist.heading ?? HOME_WORDS.waitlist.heading) ? `<h3>${esc(h.waitlist.heading ?? HOME_WORDS.waitlist.heading)}</h3>` : ''}<span class="pv-pill">${esc(h.waitlist.button_label || 'Join the waitlist')}</span></div>`);
     else if (b.type === 'dogs') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Our dogs', 'Meet our dogs')}<div class="pvg${b.style === 'flip' || b.style === 'beside' ? '' : ' slide'}">${names.map((nm) => `<div class="pvc${b.style === 'light' ? ' light' : b.style === 'beside' ? ' beside' : ' flip'}"><span class="ph"></span><div class="t"><b>${esc(nm)}</b></div></div>`).join('')}</div></div>`);
     else if (b.type === 'litters') out.push(`<div class="pvb sand">${headOf(wordsOf(b), 'Litters', 'Current and upcoming')}${names.map((nm) => `<div class="pv-row"><b>${esc(nm)}</b></div>`).join('')}</div>`);
     else if (b.type === 'banner') out.push(`<div class="pvb deep">${b.w.heading ? `<h3>${esc(addedWords(snap, key, b).heading)}</h3>` : ''}${b.w.label && b.link ? `<span class="pv-pill">${esc(addedWords(snap, key, b).label)}</span>` : ''}</div>`);

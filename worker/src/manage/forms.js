@@ -16,9 +16,9 @@ export const SHARED = {
   registry: ['Registry', 'For example AKC or CKC. Shown on your site where set.'],
   status: ['Status', null],
   show_on_site: ['Show on my website', null],
-  eyebrow: ['Small label above the heading', 'The letter-spaced line, like "OUR PARENT DOGS".'],
-  heading: ['Heading', null],
-  lede: ['Line under the heading', null],
+  eyebrow: ['Small label above the heading', 'The letter-spaced line, like "OUR PARENT DOGS". Leave it empty and nothing shows.'],
+  heading: ['Heading', 'Leave it empty and nothing shows.'],
+  lede: ['Line under the heading', 'Leave it empty and nothing shows.'],
   name: ['Name', null],
   description: ['Description', null],
 };
@@ -89,7 +89,7 @@ export const LABELS = {
     topic: ['Topic', 'Optional: groups reviews in the filter, like "health" or "temperament".'],
     status: ['Shown', null],
   },
-  steps: { heading: ['Step', null], body: ['Short text', null], detail: ['More detail (opens on tap)', null], pay_link: ['Link to "How to pay" under this step', null] },
+  steps: { heading: ['Step', 'Its heading. Leave it empty and nothing shows.'], body: ['Short text', null], detail: ['More detail (opens on tap)', null], pay_link: ['Link to "How to pay" under this step', null] },
   expander: {
     heading: ['Heading', null], body: ['Text', null], start_open: ['Open when the page loads', null],
     places: ['Also show this question at the top of', 'It stays on your FAQ page as well. Use it for a question families need where they meet it \u2014 "limited or full registration?" at the top of every litter\'s page, say.'],
@@ -120,7 +120,7 @@ export const LABELS = {
   hero: {
     banner_photo_id: ['Banner photo', 'A wide strip right under the menu, across the whole page. Make it 1600 × 640 px (5:2) for a sharp fit. "No photo" for none.'],
     banner_focus: ['Banner: which part to keep', 'If the photo is taller than the strip: the part that shows.'],
-    headline: ['Headline', null], script: ['Script line', 'The handwritten-style line, like "and tuxedos to match".'], intro: ['Intro', null],
+    headline: ['Headline', 'Leave it empty and nothing shows.'], script: ['Script line', 'The handwritten-style line, like "and tuxedos to match". Leave it empty and nothing shows.'], intro: ['Intro', null],
     layout: ['Photo layout', 'Pick the boxes, then a photo for each box below. With fewer photos than boxes, your site uses a layout for that many.'],
     frame: ['Frame', 'In your site\'s colours.'],
     photos: ['Photos', null], primary_label: ['Waitlist button', null], secondary_label: ['Puppies button', null],

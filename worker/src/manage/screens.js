@@ -3,12 +3,12 @@
 // a problem comes back with what was typed and the reason.
 import { escapeHtml as esc } from '../lib/html.js';
 import { json } from '../lib/http.js';
-import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, CUSTOM_PAGE, ADDED_BLOCK_FIELDS } from '../content/model.js';
+import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, HOME_WORDS, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, CUSTOM_PAGE, ADDED_BLOCK_FIELDS } from '../content/model.js';
 import {
   KINDS, listRecords, getRecord, saveRecord, setField, removeRecord, moveRecord,
   saveSite, getPage, savePage, getBlock, saveBlock, getPayment, savePayment, getAddedBlock, saveAddedBlock,
 } from '../content/records.js';
-import { pageBlocks, customPages, addedBlocks, BLOCK_TYPES, isCustom, collageFromForm } from '../content/blocks.js';
+import { pageBlocks, customPages, addedBlocks, BLOCK_TYPES, isCustom, collageFromForm, PAGE_HEADS } from '../content/blocks.js';
 import { fields, field, parseForm, LABELS, labelFor, placeChoices } from './forms.js';
 import { savePhoto, PhotoError } from '../photos.js';
 import { subjects, isSubject, tagPhotos, untagPhoto, tagsByPhoto } from '../photoTags.js';
@@ -59,7 +59,7 @@ const LISTS = {
   puppies: { name: (r) => r.name, sub: (r, say) => STATUS_TEXT[r.status] ?? say('lists.sub.hidden_puppy') },
   health: { name: (r) => r.test, sub: (r, say) => `${r.result}${r.show ? '' : ` · ${say('lists.sub.not_shown')}`}` },
   reviews: { name: (r) => r.first_name, sub: (r, say) => (r.status === 'hidden' ? say('lists.sub.hidden') : r.quote.slice(0, 60)) },
-  steps: { name: (r) => r.heading, sub: () => '' },
+  steps: { name: (r) => r.heading || r.body || '—', sub: () => '' },
   extras: { name: (r) => r.name, sub: (r, say) => (r.kind === 'homegoing' ? say('lists.sub.package', { weeks: r.weeks ?? '' }) : r.grp ?? '') },
   partners: { name: (r) => r.name, sub: (r, say) => (r.hidden_by_kennelos ? say('lists.sub.not_sent') : r.url ? r.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : '') },
   products: { name: (r) => r.name, sub: (r, say) => [r.grp, r.code ? say('lists.sub.code', { code: r.code }) : null, r.transport ? say('lists.sub.transport') : null, r.home_badge ? say('lists.sub.home_badge') : null].filter(Boolean).join(' · ') },
@@ -635,6 +635,8 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     const all = { ...(p.canHide ? { enabled: { type: 'bool' } } : {}), menu_label: { type: 'text', max: 40 }, ...p.fields };
     const current = await getPage(env, site.id, key);
     const subject = key === 'about' ? 'page:about' : null;
+    // Its heading's own words, shown where she has set none (render/parts.js pagehead).
+    const defs = custom ? { heading: custom.name } : { ...(PAGE_HEADS[key] ?? {}) };
 
     const pick = subject ? { groups: [{ label: `Photos for ${p.label}`, subject }], tags: [subject], alt: '' } : undefined;
     // Her page, card by card in the order its parts sit on the page: its on/off and
@@ -675,7 +677,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
         if (!x.names.length) { if (x.links) cards.push(links); continue; }
         const list = Object.fromEntries(x.names.map((n) => [n, all[n]]));
         cards.push(`<form method="post" action="${base}/pages/${key}" data-save class="card">${pageCards > 1 ? `<input type="hidden" name="_part" value="${esc(x.names.join(','))}">` : ''}
-        ${fieldsWithLabel(list, values ?? current, ctx, labels)}
+        ${fieldsWithLabel(list, shownWith(values ?? current, defs), ctx, labels)}
         <button class="primary">${esc(say('pages.save_2'))}</button></form>${x.links ? links : ''}`);
       }
       return { title: p.label, back: `${base}/pages`, body: `${note(url)}${key === 'waitlist' ? kennelos ?? await kennelosCard() : ''}${errorBox(err)}${cards.join('\n')}` };
@@ -685,7 +687,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     // One card's fields (_part), over what she has saved; or the whole page.
     const part = fd.has('_part') ? String(fd.get('_part')).split(',').filter((n) => Object.hasOwn(all, n)) : null;
     const list = part ? Object.fromEntries(part.map((n) => [n, all[n]])) : all;
-    const values = part ? { ...current, ...parseForm(list, fd) } : parseForm(all, fd);
+    const values = part ? { ...current, ...keepUnset(parseForm(list, fd), defs) } : keepUnset(parseForm(all, fd), defs);
     try { await savePage(env, site.id, key, values); } catch (err) {
       if (err instanceof ContentError) return render(err.message, values);
       throw err;
@@ -733,7 +735,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     const cur = await getAddedBlock(env, site.id, key, b.id);
     const rows = blockRows(snap, b);
     const names = (b.limit ? rows.slice(0, b.limit) : rows).map(nameOf[b.type]);
-    const input = (n, label, max, half) => `<div class="f${half ? ' half' : ''}"><label>${esc(label)}<input name="${n}" value="${esc(cur[n] ?? '')}" maxlength="${max}" placeholder="${esc(b.w[n] ?? '')}">${b.w[n] ? `<span class="hint">Empty: "${esc(b.w[n])}".</span>` : ''}</label></div>`;
+    const input = (n, label, max, half) => `<div class="f${half ? ' half' : ''}"><label>${esc(label)}<input name="${n}" value="${esc(cur[n] ?? b.w[n] ?? '')}" maxlength="${max}"><span class="hint">${esc(say('pages.own.empty_none'))}</span></label></div>`;
     return `<form method="post" action="${base}/blocks/${esc(key)}/${esc(b.id)}" data-save class="card added${cur.enabled ? '' : ' off'}" id="b-${esc(b.id)}">
         <div class="between"><h2 class="added-h">${esc(cur.heading || b.w.heading || BLOCK_TYPES[b.type].name)}</h2>
           <div class="switches"><label class="check">${esc(say('pages.show_it'))}<input type="checkbox" name="enabled" value="1"${cur.enabled ? ' checked' : ''}></label></div></div>
@@ -745,17 +747,21 @@ export function createScreens({ env, request, url, site, user, page, say = defau
   // One of the owner's own blocks (content/blocks.js, step 4): hers to switch off and
   // reword; an outside link, phone or email she can change; a page link is the owner's
   // (decision 18); the photo, where the owner lets her.
+  const WORD_KEYS = ['heading', 'line', 'label', 'caption', 'body'];
   async function ownCard(key, b, snap) {
     const cur = await getAddedBlock(env, site.id, key, b.id);
     const empty = (t) => (t ? say('pages.own.empty_is', { text: t }) : '');
+    const none = say('pages.own.empty_none');
+    // Her words where she has typed some (emptied too), else the owner's: what shows.
+    const shown = (n) => cur[n] ?? b.w?.[n];
     // A button's words post as button_label: the app fills any field named label
     // with the device's name (the sign-in form's).
-    const input = (n, label, max, half, hint = '', ph = '') => `<div class="f${half ? ' half' : ''}"><label>${esc(label)}<input name="${n === 'label' ? 'button_label' : n}" value="${esc(cur[n] ?? '')}" maxlength="${max}"${ph ? ` placeholder="${esc(ph)}"` : ''}>${hint ? `<span class="hint">${esc(hint)}</span>` : ''}</label></div>`;
+    const input = (n, label, max, half, hint = '', ph = '') => `<div class="f${half ? ' half' : ''}"><label>${esc(label)}<input name="${n === 'label' ? 'button_label' : n}" value="${esc((WORD_KEYS.includes(n) ? shown(n) : cur[n]) ?? '')}" maxlength="${max}"${ph && !WORD_KEYS.includes(n) ? ` placeholder="${esc(ph)}"` : ''}>${hint ? `<span class="hint">${esc(hint)}</span>` : ''}</label></div>`;
     const F = ADDED_BLOCK_FIELDS;
     const parts = [];
-    if (b.type === 'banner' || b.type === 'overlay') parts.push(input('heading', say('pages.heading'), F.heading.max, true, empty(b.w.heading), b.w.heading), input('label', say('pages.own.button_words'), F.label.max, true, empty(b.w.label), b.w.label), input('line', say('pages.own.a_line'), F.line.max, false, empty(b.w.line), b.w.line));
-    if (b.type === 'words') parts.push(input('heading', say('pages.heading'), F.heading.max, true, empty(b.w.heading), b.w.heading), input('line', say('pages.line_under_it'), F.line.max, true, empty(b.w.line), b.w.line),
-      `<div class="f"><label>${esc(say('pages.own.words_body'))}<textarea name="body" rows="6" maxlength="${F.body.max}"${b.w.body ? ` placeholder="${esc(b.w.body)}"` : ''}>${esc(cur.body ?? '')}</textarea><span class="hint">${esc(say('pages.own.words_body_hint'))}</span></label></div>`);
+    if (b.type === 'banner' || b.type === 'overlay') parts.push(input('heading', say('pages.heading'), F.heading.max, true, none, b.w.heading), input('label', say('pages.own.button_words'), F.label.max, true, none, b.w.label), input('line', say('pages.own.a_line'), F.line.max, false, none, b.w.line));
+    if (b.type === 'words') parts.push(input('heading', say('pages.heading'), F.heading.max, true, none, b.w.heading), input('line', say('pages.line_under_it'), F.line.max, true, none, b.w.line),
+      `<div class="f"><label>${esc(say('pages.own.words_body'))}<textarea name="body" rows="6" maxlength="${F.body.max}">${esc(shown('body') ?? '')}</textarea><span class="hint">${esc(say('pages.own.words_body_hint'))}</span></label></div>`);
     if (b.type === 'factrow') {
       // Hers, row by row; all empty follows KennelPort's.
       const mine = cur.facts?.length ? cur.facts : [];
@@ -765,15 +771,15 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     }
     if (b.type === 'columns') {
       // Her heading and sections; all sections empty follows KennelPort's.
-      parts.push(input('heading', say('pages.heading'), F.heading.max, true, empty(b.w.heading), b.w.heading), input('line', say('pages.line_under_it'), F.line.max, true, empty(b.w.line), b.w.line));
+      parts.push(input('heading', say('pages.heading'), F.heading.max, true, none, b.w.heading), input('line', say('pages.line_under_it'), F.line.max, true, none, b.w.line));
       const mine = cur.cols?.length ? cur.cols : [];
       const rows = Array.from({ length: F.cols.max }, (_, i) => mine[i] ?? ['', '']);
       const ph = (i, j) => (!mine.length && b.cols[i]?.[j] ? ` placeholder="${esc(b.cols[i][j])}"` : '');
       parts.push(`<div class="f"><fieldset><legend>${esc(say('pages.own.cols'))}<span class="hint">${esc(say('pages.own.cols_hint'))}</span></legend>${rows.map(([h, t], i) => `<label>${esc(say('pages.own.col_heading', { n: i + 1 }))}<input name="cols.${i}.0" value="${esc(h)}" maxlength="${F.cols.keyMax}"${ph(i, 0)}></label><label>${esc(say('pages.own.col_words', { n: i + 1 }))}<textarea name="cols.${i}.1" rows="4" maxlength="${F.cols.valueMax}"${ph(i, 1)}>${esc(t)}</textarea></label>`).join('')}</fieldset></div>`);
     }
-    if (b.type === 'beside') parts.push(input('heading', say('pages.heading'), F.heading.max, true, empty(b.w.heading), b.w.heading), input('label', say('pages.own.button_words'), F.label.max, true, empty(b.w.label), b.w.label),
-      `<div class="f"><label>${esc(say('pages.own.words_body'))}<textarea name="body" rows="6" maxlength="${F.body.max}"${b.w.body ? ` placeholder="${esc(b.w.body)}"` : ''}>${esc(cur.body ?? '')}</textarea><span class="hint">${esc(say('pages.own.words_body_hint'))}</span></label></div>`);
-    if (b.type === 'button') parts.push(input('label', say('pages.own.button_words'), F.label.max, true, empty(b.w.label), b.w.label));
+    if (b.type === 'beside') parts.push(input('heading', say('pages.heading'), F.heading.max, true, none, b.w.heading), input('label', say('pages.own.button_words'), F.label.max, true, none, b.w.label),
+      `<div class="f"><label>${esc(say('pages.own.words_body'))}<textarea name="body" rows="6" maxlength="${F.body.max}">${esc(shown('body') ?? '')}</textarea><span class="hint">${esc(say('pages.own.words_body_hint'))}</span></label></div>`);
+    if (b.type === 'button') parts.push(input('label', say('pages.own.button_words'), F.label.max, true, none, b.w.label));
     const l = b.link;
     let linkNote = '';
     if (l?.to === 'url') parts.push(input('url', say('pages.own.address'), 300, false, empty(l.value), l.value));
@@ -786,7 +792,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     let photo = '';
     if (['photo', 'overlay', 'beside'].includes(b.type) && b.mayChange) {
       photo = field('photo_id', { type: 'photo' }, cur.photo_id || b.photo || '', { kind: 'pages', say, photos: await photos(), photoUrl });
-      if (b.type === 'photo') parts.push(input('caption', say('pages.own.caption'), F.caption.max, false, empty(b.w.caption), b.w.caption));
+      if (b.type === 'photo') parts.push(input('caption', say('pages.own.caption'), F.caption.max, false, none, b.w.caption));
     } else if ((b.type === 'photo' || b.type === 'overlay') && !b.photo) linkNote += `<p class="muted small">${esc(say('pages.own.no_photo'))}</p>`;
     if (b.type === 'collage' && b.mayChange) {
       // A photo for each of the owner's boxes (her layout and frame), as on Home's collage.
@@ -800,6 +806,14 @@ export function createScreens({ env, request, url, site, user, page, say = defau
         ${parts.length ? `<div class="fgrid">${parts.join('')}</div>` : ''}
         <button class="primary">${esc(say('pages.save'))}</button></form>`;
   }
+
+  // Headings and the lines round them show as typed (model.js CLR): where she has set
+  // none, her form shows the site's own words, so what's in the box is what shows and
+  // emptying it shows nothing. Saved unchanged, they stay unset and keep following
+  // the site's own (a renamed kennel, the owner's starting words).
+  const sameWords = (v, d) => d != null && String(v ?? '').replace(/\s+/g, ' ').trim() === String(d).replace(/\s+/g, ' ').trim();
+  const shownWith = (values, defs) => ({ ...values, ...Object.fromEntries(Object.entries(defs).filter(([k, d]) => d != null && values?.[k] == null)) });
+  const keepUnset = (values, defs) => { for (const [k, d] of Object.entries(defs)) if (k in values && sameWords(values[k], d)) values[k] = null; return values; };
 
   // A facts row's rows as she typed them, the empty ones dropped.
   const factsFrom = (fd) => Array.from({ length: ADDED_BLOCK_FIELDS.facts.max }, (_, i) => [String(fd.get(`facts.${i}.0`) ?? '').trim(), String(fd.get(`facts.${i}.1`) ?? '').trim()]).filter(([v, l]) => v || l);
@@ -820,9 +834,10 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     try {
       const own = BLOCK_TYPES[b.type].kind === 'own';
       const pick = (...ks) => Object.fromEntries(ks.filter((k) => fd.has(k)).map((k) => [k, fd.get(k)]));
-      await saveAddedBlock(env, site.id, page, block, own
+      const owners = b.w ?? {};
+      await saveAddedBlock(env, site.id, page, block, keepUnset(own
         ? { enabled: fd.get('enabled') != null, ...pick('heading', 'line', 'url', 'phone', 'email', 'caption', 'body'), ...(b.type === 'factrow' ? { facts: factsFrom(fd) } : {}), ...(b.type === 'columns' ? { cols: colsFrom(fd) } : {}), ...(b.type === 'collage' && b.mayChange ? collageMine(fd, b) : {}), ...(fd.has('button_label') ? { label: fd.get('button_label') } : {}), ...(b.mayChange ? pick('photo_id') : {}) }
-        : { enabled: fd.get('enabled') != null, eyebrow: fd.get('eyebrow'), heading: fd.get('heading'), lede: fd.get('lede') });
+        : { enabled: fd.get('enabled') != null, eyebrow: fd.get('eyebrow'), heading: fd.get('heading'), lede: fd.get('lede') }, owners));
     } catch (err) {
       if (!(err instanceof ContentError)) throw err;
       return redirect(`${back}?note=not_saved#b-${block}`);
@@ -862,14 +877,15 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     if (!flds) return null;
     const all = { enabled: { type: 'bool' }, ...flds };
     const current = await getBlock(env, site.id, key);
+    const defs = key === 'hero' ? { headline: site.kennel_name ?? null } : HOME_WORDS[key] ?? {};
     const pick = { groups: [{ label: say('homeblocks.photos_for_the_home'), subject: 'page:home' }], tags: ['page:home'], alt: '' };
     const render = async (err, values) => ({
       title: say(`homeblocks.title.${key}`), back: `${base}/home`,
-      body: `${note(url)}${errorBox(err)}<form method="post" action="${base}/home/${key}" data-save class="card">${fieldsWithLabel(all, values ?? current, await ctxFor(key, pick), { enabled: [say('homeblocks.this_block_is_on'), say('homeblocks.off_it_leaves_the')] })}<button class="primary">${esc(say('homeblocks.save'))}</button></form>`,
+      body: `${note(url)}${errorBox(err)}<form method="post" action="${base}/home/${key}" data-save class="card">${fieldsWithLabel(all, shownWith(values ?? current, defs), await ctxFor(key, pick), { enabled: [say('homeblocks.this_block_is_on'), say('homeblocks.off_it_leaves_the')] })}<button class="primary">${esc(say('homeblocks.save'))}</button></form>`,
     });
     if (request.method !== 'POST') return render();
     const fd = await request.formData();
-    const values = parseForm(all, fd);
+    const values = keepUnset(parseForm(all, fd), defs);
     try { await saveBlock(env, site.id, key, values); } catch (err) {
       if (err instanceof ContentError) return render(err.message, values);
       throw err;

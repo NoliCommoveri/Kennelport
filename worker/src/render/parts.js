@@ -122,7 +122,8 @@ export const addedOn = (snap, key, b) => addedRow(snap, key, b)?.enabled !== fal
 export function addedWords(snap, key, b) {
   const her = addedRow(snap, key, b) ?? {};
   const w = { ...b.w };
-  for (const k of ['eyebrow', 'heading', 'lede', 'line', 'label', 'caption', 'body']) if (her[k]) w[k] = her[k];
+  // Hers as typed, an emptied one too (nothing shows); never set, the owner's.
+  for (const k of ['eyebrow', 'heading', 'lede', 'line', 'label', 'caption', 'body']) if (her[k] != null) w[k] = her[k];
   return w;
 }
 
@@ -653,13 +654,16 @@ export function familyLogin(snap, ctx) {
 }
 
 export function pagehead(page, fallback, { ornament = true } = {}) {
-  const heading = page?.heading || fallback.heading;
+  // Hers as typed (emptied: none); never set, the page's own.
+  const heading = page?.heading ?? fallback.heading;
   const eyebrow = page?.eyebrow ?? fallback.eyebrow;
   const lede = page?.lede ?? fallback.lede;
-  return `<div class="wrap pagehead">${ornament ? '<svg class="sprig l" aria-hidden="true"><use href="#sprig"/></svg><svg class="sprig r" aria-hidden="true"><use href="#sprig"/></svg>' : ''}${eyebrow ? `<span class="eyebrow">${esc(eyebrow)}</span>` : ''}<h1>${esc(heading)}</h1>${lede ? `<p class="lede">${esc(lede)}</p>` : ''}</div>`;
+  if (!heading && !eyebrow && !lede) return '';
+  return `<div class="wrap pagehead">${ornament ? '<svg class="sprig l" aria-hidden="true"><use href="#sprig"/></svg><svg class="sprig r" aria-hidden="true"><use href="#sprig"/></svg>' : ''}${eyebrow ? `<span class="eyebrow">${esc(eyebrow)}</span>` : ''}${heading ? `<h1>${esc(heading)}</h1>` : ''}${lede ? `<p class="lede">${esc(lede)}</p>` : ''}</div>`;
 }
 
 export function head(eyebrow, heading, lede, { ornament = false } = {}) {
+  if (!eyebrow && !heading && !lede) return '';
   return `<div class="head">${ornament ? '<svg class="sprig l" aria-hidden="true"><use href="#sprig"/></svg><svg class="sprig r" aria-hidden="true"><use href="#sprig"/></svg>' : ''}${eyebrow ? `<span class="eyebrow">${esc(eyebrow)}</span>` : ''}${heading ? `<h2>${esc(heading)}</h2>` : ''}${lede ? `<p class="lede">${esc(lede)}</p>` : ''}</div>`;
 }
 

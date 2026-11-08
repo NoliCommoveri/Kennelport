@@ -6,6 +6,11 @@
 // A field not named here is never stored or published.
 
 const S = (max, extra = {}) => ({ type: 'text', max, ...extra });
+// Words the site shows only as typed (headings and the lines round them): left
+// empty, nothing shows. Never set at all, the site's own words show (HOME_WORDS,
+// blocks.js PAGE_HEADS, the owner's starting words), so no site changes the day
+// this ships; an emptied one is kept as "" (cleanValue).
+const CLR = { clear: true };
 const ML = (max) => ({ type: 'text', max, multiline: true });
 const DATE = { type: 'date' };
 const URL_ = { type: 'url' };
@@ -150,7 +155,7 @@ export const REVIEW_FIELDS = {
 };
 
 export const STEP_FIELDS = {
-  heading: S(80, { required: true }),
+  heading: S(80, CLR),
   body: ML(400),
   detail: ML(800),
   pay_link: BOOL,
@@ -308,7 +313,7 @@ export function collageLayout(layout, count) {
 export const HOME_BLOCKS = {
   hero: {
     banner_photo_id: { type: 'photo' }, banner_focus: { ...ENUM(...FOCUS), default: 'middle' },
-    eyebrow: S(60), headline: S(80), script: S(60), intro: ML(400),
+    eyebrow: S(60, CLR), headline: S(80, CLR), script: S(60, CLR), intro: ML(400),
     layout: { type: 'layout', values: Object.keys(COLLAGE_LAYOUTS) },
     frame: { ...ENUM(...FRAMES), default: 'mat' },
     photos: { type: 'list', max: 4, item: 'photo', boxes: true },
@@ -317,13 +322,21 @@ export const HOME_BLOCKS = {
   },
   facts: { items: { type: 'pairs', max: 3, keyMax: 12, valueMax: 30 } },
   story: {
-    photo_id: { type: 'photo' }, photo_frame: { ...ENUM(...FRAMES), default: 'none' }, eyebrow: S(60), heading: S(80), script: S(40), text: ML(800),
+    photo_id: { type: 'photo' }, photo_frame: { ...ENUM(...FRAMES), default: 'none' }, eyebrow: S(60, CLR), heading: S(80, CLR), script: S(40, CLR), text: ML(800),
     features: { type: 'features', max: 3 }, link_label: S(40),
   },
-  dogs: { eyebrow: S(60), heading: S(80), lede: S(200), link_label: S(40) },
-  litters: { eyebrow: S(60), heading: S(80), link_label: S(40) },
-  reviews: { eyebrow: S(60), heading: S(80), link_label: S(40) },
-  waitlist: { heading: S(80), line: ML(240), button_label: S(30) },
+  dogs: { eyebrow: S(60, CLR), heading: S(80, CLR), lede: S(200, CLR), link_label: S(40) },
+  litters: { eyebrow: S(60, CLR), heading: S(80, CLR), link_label: S(40) },
+  reviews: { eyebrow: S(60, CLR), heading: S(80, CLR), link_label: S(40) },
+  waitlist: { heading: S(80, CLR), line: { ...ML(240), ...CLR }, button_label: S(30) },
+};
+// Home's blocks' own words, where she has set none (the hero's headline is her
+// kennel's name). Her forms show them, so what's in the box is what shows.
+export const HOME_WORDS = {
+  dogs: { eyebrow: 'Our dogs', heading: 'Meet our dogs' },
+  litters: { eyebrow: 'Litters', heading: 'Current and upcoming' },
+  reviews: { eyebrow: 'Families', heading: 'What our families say' },
+  waitlist: { heading: 'Hoping for a puppy of your own?' },
 };
 export const HOME_BLOCK_ORDER = Object.keys(HOME_BLOCKS);
 
@@ -385,7 +398,7 @@ export const FEATURE_ICONS = ['shield', 'home', 'heart', 'star', 'paw', 'leaf'];
 
 // Every page: its address, its menu group, whether it can be switched off, and
 // the wording keys it has (plan 3.1, 3.12). Order within a group is this order.
-const HEAD = { eyebrow: S(60), heading: S(80), lede: ML(300) };
+const HEAD = { eyebrow: S(60, CLR), heading: S(80, CLR), lede: { ...ML(300), ...CLR } };
 export const PAGES = {
   about:          { path: '/about', group: 'about', label: 'Our story', canHide: true, fields: { ...HEAD, photo_id: { type: 'photo' }, photo_frame: { ...ENUM(...FRAMES), default: 'none' }, text: ML(4000), facts: { type: 'pairs', max: 6, keyMax: 40, valueMax: 60 } } },
   reviews:        { path: '/reviews', group: 'about', label: 'Reviews', canHide: true, fields: { ...HEAD } },
@@ -422,7 +435,7 @@ export const CUSTOM_KEY = /^x-[a-z0-9](?:[a-z0-9-]{0,40}[a-z0-9])?$/;
 export const CUSTOM_PAGE = { canHide: true, fields: { ...HEAD } };
 // The owner's own blocks (step 4) add a line, a button's words, the breeder's own
 // outside link, phone or email for it, a photo and its caption (where the owner lets her).
-export const ADDED_BLOCK_FIELDS = { ...HEAD, line: ML(300), label: S(40), url: { type: 'url' }, phone: S(30), email: { type: 'email' }, photo_id: { type: 'photo' }, photos: { type: 'list', max: 4, item: 'photo' }, focus: { type: 'list', max: 4, item: 'focus' }, caption: S(160), body: ML(4000), facts: { type: 'pairs', max: 4, keyMax: 40, valueMax: 240 }, cols: { type: 'pairs', max: 6, keyMax: 80, valueMax: 1500, valueMultiline: true } };
+export const ADDED_BLOCK_FIELDS = { ...HEAD, line: { ...ML(300), ...CLR }, label: S(40, CLR), url: { type: 'url' }, phone: S(30), email: { type: 'email' }, photo_id: { type: 'photo' }, photos: { type: 'list', max: 4, item: 'photo' }, focus: { type: 'list', max: 4, item: 'focus' }, caption: S(160, CLR), body: { ...ML(4000), ...CLR }, facts: { type: 'pairs', max: 4, keyMax: 40, valueMax: 240 }, cols: { type: 'pairs', max: 6, keyMax: 80, valueMax: 1500, valueMultiline: true } };
 
 // The menu's five groups (plan 3.12), fixed.
 export const MENU_GROUPS = [
@@ -467,6 +480,7 @@ function cleanText(v, f, path) {
 
 // Returns the cleaned value, or null for "not set". Throws ContentError.
 export function cleanValue(f, v, path) {
+  if (f.clear && typeof v === 'string' && !v.trim()) return '';
   if (v === undefined || v === null || v === '') {
     if (f.required) throw new ContentError(path, 'required');
     return null;
@@ -475,7 +489,7 @@ export function cleanValue(f, v, path) {
     case 'text': {
       const s = cleanText(v, f, path);
       if (!s && f.required) throw new ContentError(path, 'required');
-      return s || null;
+      return s || (f.clear ? '' : null);
     }
     case 'slug':
       if (typeof v !== 'string' || !SLUG.test(v)) throw new ContentError(path, 'a slug is lower-case letters, digits and hyphens');
