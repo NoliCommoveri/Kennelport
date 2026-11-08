@@ -2022,3 +2022,12 @@ with new sections and a new building order. Docs only; nothing built yet.
 - `site.css` changed (`.gallery.strip`, `.strip-frame`): `ASSET_VERSION` to bump before
   merging, as agreed. Tests: `ownblocks.test.js` (from an album, how many, the border,
   the link, picked photos, hers), `blocks.test.js`.
+
+## 2026-11-08: versions bumped for this branch
+
+- Manage app 17 (`APP_VERSION`, fingerprint `29bc1a90c35f691b`): the photo spots, the
+  photo library window, the Photos screen.
+- Site template 23 (`ASSET_VERSION`, fingerprint `2ba787891d1c26bb`): the collage block,
+  Photo beside words (the photo on the right, its words lined up), the gallery strip and
+  its border. Both were last released at 16 and 22 on `main`; bumped once, at the end,
+  as the owner asked.
