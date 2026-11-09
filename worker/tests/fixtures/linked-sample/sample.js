@@ -1,4 +1,4 @@
-// The linked sample (docs/Linked_Sample_Plan.md): Tuxedo Lane Bostons*, a made-up
+// The linked sample (docs/plans/done/linked-sample.md): Tuxedo Lane Bostons*, a made-up
 // kennel, as KennelOS would send it. The files are written as of SAMPLE_DAY; load()
 // moves every date by whole days so the sample reads the same on any day it is
 // used (deposits still ahead, a litter past its ready date, a family in the vet

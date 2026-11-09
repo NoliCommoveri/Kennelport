@@ -1,5 +1,5 @@
 // The go-home checklist, the first-weeks timeline and each family's program status
-// (docs/Puppy_Parent_Portal_Plan.md sections 4, 7.2 and 9; build chunk 2).
+// (docs/plans/family-portal.md sections 4, 7.2 and 9; build chunk 2).
 //
 // Her templates hold the steps every family gets; she can add a step for one
 // family, hide one from a family, or move a task's day for them. Ticks are the

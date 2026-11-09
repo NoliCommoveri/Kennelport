@@ -1,4 +1,4 @@
-// The Puppy Parent Portal, build chunk 3 (docs/Puppy_Parent_Portal_Plan.md 3.1 and
+// The Puppy Parent Portal, build chunk 3 (docs/plans/family-portal.md 3.1 and
 // 3.4): the KennelOS family feed, her edits winning, tombstones, a voided sale, the
 // facts that go back, and the status page's one-tap link.
 import { test } from 'node:test';

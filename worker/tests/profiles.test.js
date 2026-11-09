@@ -1,4 +1,4 @@
-// What each profile page shows (docs/Site_Builder_Plan.md, step 3.7): every dog's,
+// What each profile page shows (docs/plans/site-builder.md, step 3.7): every dog's,
 // litter's and puppy's own page, one setting per site in the owner's admin view:
 // which items, in which part, in what order, and a dog's or puppy's facts. With
 // nothing set, each is today's page.

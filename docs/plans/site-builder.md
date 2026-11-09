@@ -529,7 +529,7 @@ Decision 19, the owner's first ask among the additions.
 
 ## The family portal (in the portal template)
 
-The family portal (`docs/Puppy_Parent_Portal_Plan.md`) is on for one breeder's site,
+The family portal (`docs/plans/family-portal.md`) is on for one breeder's site,
 and much of its build is written into the code for her. Its build moves into the
 **Website and family portal** template (decision 13), with the same split as the
 website:

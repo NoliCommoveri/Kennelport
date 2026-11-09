@@ -1,4 +1,4 @@
-// The owner's own blocks and every block's look (docs/Site_Builder_Plan.md, step 4,
+// The owner's own blocks and every block's look (docs/plans/site-builder.md, step 4,
 // decisions 16 to 18; content/blocks.js, render/pages.js ownBlock, styled).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

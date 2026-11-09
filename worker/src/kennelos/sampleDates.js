@@ -1,4 +1,4 @@
-// The linked sample's dates (docs/Linked_Sample_Plan.md), shared by the tests
+// The linked sample's dates (docs/plans/done/linked-sample.md), shared by the tests
 // (tests/fixtures/linked-sample/sample.js) and the demo site (kennelos/demo.js).
 // The files are written as of their step's day (SENT); shiftDates moves every date
 // in a package by whole days, so a package can be sent "as of" any day and read

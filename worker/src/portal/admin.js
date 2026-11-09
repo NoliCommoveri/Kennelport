@@ -1,4 +1,4 @@
-// Her side of the portal (docs/Puppy_Parent_Portal_Plan.md section 7.3), in the
+// Her side of the portal (docs/plans/family-portal.md section 7.3), in the
 // Site Manager under /s/<subdomain>/portal: puppy families, each family's screen
 // (invite, pickup, vet visit, records, contract, reminder log, history), and the
 // portal's settings and programs. Build chunk 1 adds these as their own section;

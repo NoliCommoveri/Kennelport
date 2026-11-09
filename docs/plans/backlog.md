@@ -1,7 +1,7 @@
 # KennelPort: backlog
 
 > Built when someone asks for it, not part of version 1. Version 1 is section 8.1 of
-> [`KennelPort_Plan.md`](KennelPort_Plan.md); this file holds the designs for everything
+> [`plans/kennelport.md`](kennelport.md); this file holds the designs for everything
 > after it. Section numbers in brackets point at the plan, where each item's place in the
 > site (its address, its fields from KennelOS) is set. The parity rule from the plan holds
 > here too: each item works with no KennelOS first.

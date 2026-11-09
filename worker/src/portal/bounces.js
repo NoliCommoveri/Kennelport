@@ -1,4 +1,4 @@
-// Resend's delivery results for the portal's emails (docs/Puppy_Parent_Portal_Plan.md
+// Resend's delivery results for the portal's emails (docs/plans/family-portal.md
 // section 5: the reminder log is her evidence, and a bounce alerts her so she can
 // text the family). Resend posts its events, signed the Svix way, to
 //

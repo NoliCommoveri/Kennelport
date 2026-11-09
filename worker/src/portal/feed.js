@@ -1,4 +1,4 @@
-// The KennelOS family feed (docs/Puppy_Parent_Portal_Plan.md sections 3.1, 3.2 and
+// The KennelOS family feed (docs/plans/family-portal.md sections 3.1, 3.2 and
 // 3.4; build chunk 3). For her kennel, KennelOS sends each family from their signed
 // contract on, on its own whenever one of their records changes, to
 //

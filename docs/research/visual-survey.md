@@ -3,7 +3,7 @@
 > Status: observations, not a design. Home pages in sections 1–9, inner pages in
 > section 10. What real breeder websites look like on screen:
 > layout, photos, colour, type, borders, spacing, and which elements are there or
-> missing. The companion to [`KennelPort_Site_Directory.md`](KennelPort_Site_Directory.md),
+> missing. The companion to [`research/site-directory.md`](site-directory.md),
 > which covers what the pages say.
 
 ## 1. How this was done

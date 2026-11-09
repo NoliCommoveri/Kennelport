@@ -91,7 +91,7 @@ on whether her public site is a KennelPort site (open question 1).
 
 **Changes to the KennelPort plan,** when this is approved: decision 20 says "no
 KennelPort portal" and needs rewording to "no portal for every breeder; a family portal
-module for one site (`Puppy_Parent_Portal_Plan.md`)"; and plan 5.3's read-only rule for
+module for one site (`plans/family-portal.md`)"; and plan 5.3's read-only rule for
 linked sites doesn't apply to her site (section 3).
 
 ## 3. KennelOS: a feed, not the source
@@ -415,12 +415,12 @@ typed in by her rather than fed from KennelOS.
 
 The look follows her site: the Lawn scheme of the AK sample (ivory ground, tuxedo ink,
 lawn-green accent, brass labels; Fraunces, Mulish and Pinyon Script) and the design
-direction's rules (`KennelPort_Design_Direction.md`), with one thing decided by the breeder
+direction's rules (`research/design-direction.md`), with one thing decided by the breeder
 herself: **the family pages are photo-led and use icons**, as in the first mockups. She
 liked the photo across the top, the round puppy photo beside what's due, and the quick
 links as icon tiles, and said a flatter, text-led version lost that (Nov 4, 2026). The
 clickable prototype, which follows this, is
-[`reference/portal-prototype.html`](reference/portal-prototype.html).
+[`reference/portal-prototype.html`](../reference/portal-prototype.html).
 
 ### 7.1 Style rules
 

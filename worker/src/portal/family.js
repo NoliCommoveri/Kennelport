@@ -1,4 +1,4 @@
-// The family's pages (docs/Puppy_Parent_Portal_Plan.md section 7): everything under
+// The family's pages (docs/plans/family-portal.md section 7): everything under
 // /family on her site, signed in only, for a site with the portal on (/ops).
 // Home changes with the puppy's stage (before go-home, the vet window, after);
 // Timeline holds the first-weeks tasks, each with its day and program link; Vet

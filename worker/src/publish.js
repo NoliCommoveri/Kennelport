@@ -293,7 +293,7 @@ export async function publish(env, siteId, publishedBy) {
   const site = await db.prepare('SELECT id, status, published_snapshot_id, demo_step FROM sites WHERE id = ?').bind(siteId).first();
   if (!site) throw new Error('no such site');
   if (site.status === 'closed') throw new Error('this site is closed');
-  // The demo is never published (docs/Linked_Sample_Plan.md): it has no real address.
+  // The demo is never published (docs/plans/done/linked-sample.md): it has no real address.
   if (site.demo_step != null) throw new Error(NOT_FOR_DEMO);
 
   const snap = await buildSnapshot(env, siteId);

@@ -1,4 +1,4 @@
-// Pages as blocks (docs/Site_Builder_Plan.md, step 3): Home and the other pages
+// Pages as blocks (docs/plans/site-builder.md, step 3): Home and the other pages
 // (PAGE_DEFAULTS): which blocks each has, in what order, each data block's records (filters, order, how
 // many, style) and what its cards show. The owner sets these per site in her admin
 // view (manage/builder.js); the breeder still switches Home's blocks on or off and

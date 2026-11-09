@@ -1,7 +1,7 @@
 # The linked sample
 
 Tuxedo Lane Bostons*, a **made-up** kennel, as KennelOS would send it
-(`docs/Linked_Sample_Plan.md`). Nothing here is real: every dog, family, address and
+(`docs/plans/done/linked-sample.md`). Nothing here is real: every dog, family, address and
 price is invented, and names carry a * as in the AK sample. No photos.
 
 - `bundle-N.json`: the website bundle (`src/kennelos/bundle.js`, format 1), as Update

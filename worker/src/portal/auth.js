@@ -1,4 +1,4 @@
-// Family sign-in (docs/Puppy_Parent_Portal_Plan.md section 2): an email code, or
+// Family sign-in (docs/plans/family-portal.md section 2): an email code, or
 // the invite's tap-to-sign-in link, then a session for that family only. Kept
 // apart from breeder sign-in: its own codes, sessions and cookie (Path=/family on
 // her site's host), so a family session can never reach the manage app and the

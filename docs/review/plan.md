@@ -1,5 +1,9 @@
 # KennelPort × KennelOS: version-1 code review plan
 
+> **Parked (2026-11-09).** Written against the code of 2026-11-03; no session has run. The
+> code has moved on a lot since, and the docs it names were renamed (`docs/plans/`,
+> `docs/log/`): check each session's file list against `docs/CODE_MAP.md` before running it.
+
 A read-only review of the built code against the plans, run over several sessions.
 **KennelPort is the higher priority**; KennelOS is reviewed where it touches KennelPort
 and where it feeds the website.
@@ -56,7 +60,7 @@ real user hitting it belongs in a short "notes, not findings" section at the end
 - **S4 — latent.** Fine today; the next ordinary change or scale-up breaks it.
 
 **Not findings** (deferred on purpose — check before reporting):
-`docs/KennelPort_Backlog.md` (requests, guided custom domains, pickup/delivery page, the
+`docs/plans/backlog.md` (requests, guided custom domains, pickup/delivery page, the
 rest of 3.9, survey pages, past litters) and the **Open** entries in plan section 9
 (content rules and suspension, decision 9). KennelPort README's Status names what is built
 and what is only built-but-untried; "built, not yet tried against staging" is not a defect,
@@ -65,7 +69,7 @@ but *code that cannot work when it is tried* is.
 **Output.** One file per session:
 `docs/review/findings/NN-<slug>.md` in the **KennelPort** repo (findings about KennelOS go
 there too, so everything is in one place). Then add your row to
-`docs/review/INDEX.md`. Commit docs only, push to the branch your session was assigned.
+`docs/review/index.md`. Commit docs only, push to the branch your session was assigned.
 Use this shape:
 
 ```markdown
@@ -97,7 +101,7 @@ Worker has no local dev server set up in these sessions — drive it through
 
 | Contract | Read |
 |---|---|
-| The KennelOS link, end to end | `Kennelport/docs/KennelPort_Plan.md` §5 (lines 1001–1332): 5.1 principle, 5.2 linking, 5.3 what a bundle does, 5.4 photos/addresses, 5.5 the KennelOS side |
+| The KennelOS link, end to end | `Kennelport/docs/plans/kennelport.md` §5 (lines 1001–1332): 5.1 principle, 5.2 linking, 5.3 what a bundle does, 5.4 photos/addresses, 5.5 the KennelOS side |
 | The waitlist on the site + the sealed application form | same file §3.8 (lines 471–620) |
 | What's public, puppy statuses, prices, embeds | §3.2 (243), §3.3 (281), §3.6 (370), §3.7 (421) |
 | Sign-in, draft/preview/publish, photos, limits | §4 (lines 834–1000) |
@@ -106,7 +110,7 @@ Worker has no local dev server set up in these sessions — drive it through
 | KennelOS waitlist, editions, invariants, SW | same guide §29 (1638), §0 (16), §16 (976), §12 (827) |
 | KennelOS cloud sync/backup | `docs/KennelOS_Cloud_Phase1_Plan.md`, `_Phase2_Sync_Plan.md`, `cloud/README.md` |
 
-Do not read `BUILD_LOG.md` by default in either repo. Do skim
+Do not read `log/BUILD_LOG.md` by default in either repo. Do skim
 `git log --oneline -40` in both: the newest work is the least reviewed, and several recent
 commits reversed each other (KennelOS `84c40e3` then `2c00f28` on the full-registration
 surcharge) — flip-flops are where the two sides most easily end up disagreeing.
@@ -465,7 +469,7 @@ repo, and the deciding rule for where an application lands.
 Tests: `schemes.test.js`, `collage.test.js`, `photoshapes.test.js`, `sites.test.js`,
 `worker.test.js`, `embeds.test.js`, `products.test.js`, `payment.test.js`,
 `application.test.js`. Contract: plan §3 (3.1–3.13), §3.6, §3.7, §3.2, decisions 18, 23, 25,
-31, 32; `docs/KennelPort_Design_Direction.md`.
+31, 32; `docs/research/design-direction.md`.
 
 **What you are evaluating**
 - **Escaping, everywhere.** Every user value on every page, including attributes, `srcset`,
@@ -605,6 +609,6 @@ Sessions within a wave are independent. If only a few sessions ever run, run 1, 
 
 ## 3. Index of findings
 
-`docs/review/INDEX.md` — one row per session: number, title, branch, date, counts by
+`docs/review/index.md` — one row per session: number, title, branch, date, counts by
 severity, and a link to the findings file. Each session adds its own row; nobody edits
 another session's row.

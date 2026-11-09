@@ -1,7 +1,7 @@
 # KennelPort: setup (phase 0)
 
 What has to be done once, by hand, in the Cloudflare dashboard, for the Worker in
-[`../worker/`](../worker/) to run (plan 2.1, 8.1 phase 0). Nothing here is repeated per
+[`../worker/`](../../worker/) to run (plan 2.1, 8.1 phase 0). Nothing here is repeated per
 site. The code side is done; these steps are yours.
 
 ## Before the domain is bought
@@ -38,7 +38,7 @@ cloud). They point nowhere real; the Worker answers every request:
 ## 3. D1 and R2
 
 - **Storage & Databases → D1 → Create:** `kennelport-staging`, then `kennelport`. Copy each
-  database id into [`../worker/wrangler.toml`](../worker/wrangler.toml), replacing
+  database id into [`../worker/wrangler.toml`](../../worker/wrangler.toml), replacing
   `REPLACE-WITH-STAGING-D1-ID` and `REPLACE-WITH-PRODUCTION-D1-ID` (or send them to Claude
   to commit).
 - **R2:** turn R2 on (Cloudflare asks for a payment method even on the free tier; nothing

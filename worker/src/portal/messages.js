@@ -1,4 +1,4 @@
-// The portal's emails to families, plain text (docs/Puppy_Parent_Portal_Plan.md
+// The portal's emails to families, plain text (docs/plans/family-portal.md
 // sections 5 and 11). Vet reminders are transactional: no unsubscribe, no
 // program links. Her own wording for them comes with a later chunk (plan section 4);
 // until then these are the words, with her proof note added where she wrote one.

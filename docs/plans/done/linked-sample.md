@@ -11,7 +11,7 @@ so the owner can see and test a site linked to KennelOS without a real breeder's
 
 ## What it is for
 
-1. **Building and checking templates and rules** (`docs/Site_Builder_Plan.md`). Every
+1. **Building and checking templates and rules** (`docs/plans/site-builder.md`). Every
    filter, display rule and timing rule needs records to act on: a pup of every status,
    dogs of every kind, litters at every stage. The site builder's previews and "Shows N
    dogs" lines use it.
@@ -20,7 +20,7 @@ so the owner can see and test a site linked to KennelOS without a real breeder's
 3. **Tests.** The same files feed `node --test`. One test checks that the sample uses
    every field and every value the bundle and feed accept, so the sample stays complete
    as the package grows.
-4. **The KennelOS package review** (Site_Builder_Plan, decision 8). It is a record of
+4. **The KennelOS package review** (site-builder plan, decision 8). It is a record of
    what the package carries today, value by value, and a list of which values are raw
    and which are KennelOS's summaries. The review works from that list.
 

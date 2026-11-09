@@ -10,21 +10,21 @@ and ends the session with a findings file committed and pushed to that session's
 
 **Session 1 — the bundle contract**
 
-> Read `Kennelport/docs/KennelPort_Review_Plan.md` (sections 0 and "Session 1") and follow
+> Read `Kennelport/docs/review/plan.md` (sections 0 and "Session 1") and follow
 > it. You are reviewing the KennelOS → KennelPort bundle, field by field, for defects,
 > pitfalls and poor user experience — not for departures from the plan. The files are
 > `Kennelport/worker/src/kennelos/bundle.js`, `api.js`, `worker/src/content/model.js`, and
 > `KennelOS/shared/data/siteExport.js`. Prove what you can with scratch scripts against
 > `worker/tests/helpers/d1.js` and `siteExport.buildSiteBundle`. Write
 > `docs/review/findings/01-bundle-contract.md` in the KennelPort repo, add your row to
-> `docs/review/INDEX.md`, commit docs only, push. Change no product code and bump no
+> `docs/review/index.md`, commit docs only, push. Change no product code and bump no
 > version numbers.
 
 ---
 
 **Session 2 — link lifecycle, tokens, editions, licence**
 
-> Read `Kennelport/docs/KennelPort_Review_Plan.md` (section 0 and "Session 2") and follow
+> Read `Kennelport/docs/review/plan.md` (section 0 and "Session 2") and follow
 > it. You are reviewing the link boundary between the two products: codes, rate limits,
 > the device token, CORS and origins, unlink/stop-device, multi-kennel, multi-device, the
 > lapsed-Pro path, and manage-app sign-in. Prove the token never reaches a backup, the
@@ -36,7 +36,7 @@ and ends the session with a findings file committed and pushed to that session's
 
 **Session 3 — matching, the hand-over, the 30-day clock, photos**
 
-> Read `Kennelport/docs/KennelPort_Review_Plan.md` (section 0 and "Session 3") and follow
+> Read `Kennelport/docs/review/plan.md` (section 0 and "Session 3") and follow
 > it. You are reviewing everything that can destroy a breeder's photos or a record:
 > `worker/src/kennelos/match.js`, `clock.js`, `cleanup.js`, `photos.js`, `photoTags.js`,
 > `ops/usage.js`, and the hand-over block in `kennelos/bundle.js`. Start with the question
@@ -49,7 +49,7 @@ and ends the session with a findings file committed and pushed to that session's
 
 **Session 4 — addresses back to KennelOS, publish and snapshots**
 
-> Read `Kennelport/docs/KennelPort_Review_Plan.md` (section 0 and "Session 4") and follow
+> Read `Kennelport/docs/review/plan.md` (section 0 and "Session 4") and follow
 > it. You are reviewing the only write that crosses back into KennelOS's records
 > (`publishedAddresses` → `addressChanges` / `kennelChanges`) and the publish/snapshot
 > machinery under it. Start with the ordering question: `publishedAddresses` reads the
@@ -62,7 +62,7 @@ and ends the session with a findings file committed and pushed to that session's
 
 **Session 5 — the waitlist page, the feed, the sealed application form**
 
-> Read `Kennelport/docs/KennelPort_Review_Plan.md` (section 0 and "Session 5") and follow
+> Read `Kennelport/docs/review/plan.md` (section 0 and "Session 5") and follow
 > it. You are reviewing the one path a *family's* data takes between the products:
 > `worker/src/feed.js`, `site.js`, `siteforms.js`, `waitlist.js`,
 > `worker/public/_kp/t/ak/site.js`'s `sealToKennelos`, against `KennelOS/cloud/src/familyPages.js`,
@@ -76,7 +76,7 @@ and ends the session with a findings file committed and pushed to that session's
 
 **Session 6 — the manage app**
 
-> Read `Kennelport/docs/KennelPort_Review_Plan.md` (section 0 and "Session 6") and follow
+> Read `Kennelport/docs/review/plan.md` (section 0 and "Session 6") and follow
 > it. You are reviewing the breeder's own app on a phone: `worker/src/manage/*` and
 > `worker/public/_kp/m/*`, plus push. Judge every empty, error and offline state, the photo
 > upload past the first photo, publish/preview/undo, the matching screen, owner-vs-editor on
@@ -88,7 +88,7 @@ and ends the session with a findings file committed and pushed to that session's
 
 **Session 7 — the public site**
 
-> Read `Kennelport/docs/KennelPort_Review_Plan.md` (section 0 and "Session 7") and follow
+> Read `Kennelport/docs/review/plan.md` (section 0 and "Session 7") and follow
 > it. You are reviewing what a family sees: `worker/src/render/*`, `site.js`, and the AK
 > template under `worker/public/_kp/t/ak/`. Escaping on every public value first, then the
 > price and status rules (decisions 31 and 32), then empty and extreme content, then 320px
@@ -100,7 +100,7 @@ and ends the session with a findings file committed and pushed to that session's
 
 **Session 8 — content layer, migrations, platform**
 
-> Read `Kennelport/docs/KennelPort_Review_Plan.md` (section 0 and "Session 8") and follow
+> Read `Kennelport/docs/review/plan.md` (section 0 and "Session 8") and follow
 > it. You are reviewing the floor everything stands on: `worker/src/content/*`, the
 > migrations and `migrate.js`, `index.js`, `hosts.js`, `domains.js`, `ops*`, `cleanup.js`,
 > `lib/*`, `wrangler.toml` and the scripts. Pay attention to a Worker running ahead of its
@@ -113,7 +113,7 @@ and ends the session with a findings file committed and pushed to that session's
 
 **Session 9 — the KennelOS side a breeder touches**
 
-> Read `Kennelport/docs/KennelPort_Review_Plan.md` (section 0 and "Session 9") and follow
+> Read `Kennelport/docs/review/plan.md` (section 0 and "Session 9") and follow
 > it. You are reviewing KennelOS's website UI and flows: `shared/assets/websiteCard.js`,
 > `websiteUpdateUI.js`, the website paths through Kels, the marks on the dog, litter and
 > pairing pages, and `shared/data/kennelportLink.js` — which has **no tests at all**, so
@@ -127,7 +127,7 @@ and ends the session with a findings file committed and pushed to that session's
 
 **Session 10 — consolidation** (only after the others)
 
-> Read `Kennelport/docs/KennelPort_Review_Plan.md` (section 0 and "Session 10") and every
+> Read `Kennelport/docs/review/plan.md` (section 0 and "Session 10") and every
 > file in `docs/review/findings/`. Produce `docs/review/SUMMARY.md`: de-duplicated findings
 > ranked S1 → S4, the repeated themes, a fix order that puts a breeder's photos and a
 > family's application first, the collected test gaps, and what no session reached. Do not

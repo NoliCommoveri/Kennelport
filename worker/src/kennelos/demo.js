@@ -1,4 +1,4 @@
-// The demo site (docs/Linked_Sample_Plan.md, step 3): made in /ops from the linked
+// The demo site (docs/plans/done/linked-sample.md, step 3): made in /ops from the linked
 // sample (tests/fixtures/linked-sample/), for the owner only.
 //
 // - It is linked to the sample, not to a KennelOS device: its one links row has a

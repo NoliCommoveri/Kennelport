@@ -1,4 +1,4 @@
-// The Puppy Parent Portal, build chunk 4 (docs/Puppy_Parent_Portal_Plan.md 2, 7.4
+// The Puppy Parent Portal, build chunk 4 (docs/plans/family-portal.md 2, 7.4
 // and 10): messages from pickup on, the loss page and her note, Resend's bounces,
 // her delete with its 30-day undo, a back-out, and the family's own erase.
 import { test } from 'node:test';

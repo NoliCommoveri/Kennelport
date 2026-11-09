@@ -1,4 +1,4 @@
-// The owner as admin in the Site Manager (docs/Site_Builder_Plan.md, "Where they
+// The owner as admin in the Site Manager (docs/plans/site-builder.md, "Where they
 // live"). Signing in to /ops with OPS_TOKEN also makes this device admin in the
 // Site Manager, so there is no code email and no invite per site: every open site
 // is in her list. The proof is its own signed, HttpOnly cookie for the whole manage

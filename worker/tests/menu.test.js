@@ -1,4 +1,4 @@
-// The menu as the owner's setting (docs/Site_Builder_Plan.md, step 3.4;
+// The menu as the owner's setting (docs/plans/site-builder.md, step 3.4;
 // content/blocks.js menuOf, render/parts.js menuGroups, manage/builder.js Menu).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

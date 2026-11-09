@@ -1,0 +1,99 @@
+# Code map
+
+Where things live in `worker/`, one line each, so you can open the right file first. Each
+source file starts with a comment saying what it does and which plan section it follows;
+read that before the rest. Update this map when you add, move or split a file.
+
+## The request, from the top
+
+- `src/index.js`: the router. `src/hosts.js` picks the part of KennelPort from the
+  hostname: `kennelport.com` (front), `manage.` (Site Manager, `/ops`), `api.` (KennelOS),
+  or a site.
+- `src/gate.js`: answers 503 between a deploy and its migrations. `src/migrate.js` runs
+  them; `src/migrations/` holds them (a `.sql` file plus its line in `index.js`; one per
+  branch, never edit one on `main`: see CLAUDE.md).
+- `src/lib/`: `http.js`, `html.js` (escaping), `sql.js`, `crypto.js`, `demo.js`,
+  `vendor/qrcode.js`. `sql.js`, `crypto.js`, `migrate.js` and `gate.js` are copied from
+  KennelOS cloud: a fix in one copy belongs in both.
+
+## A breeder's website
+
+- `src/site.js`: serves a site: its published snapshot, or the draft behind a preview link.
+- `src/publish.js`: draft → snapshot in R2 → live; undo; redirects. `src/diff.js`: Publish's
+  list of changes.
+- `src/render/`: the "ak" template. `index.js` path → page; `pages.js` every page;
+  `parts.js` shared cards, photos, menu; `layout.js` head, header, footer; `schemes.js` the
+  colour schemes (source for `scripts/schemes.mjs`); `version.js` `ASSET_VERSION`.
+- `public/_kp/t/ak/`: the template's CSS, JS, scheme CSS and ornaments; `public/_kp/fonts/`.
+  A change here needs an `ASSET_VERSION` bump (ask first: CLAUDE.md).
+- `src/siteforms.js`: forms visitors send (contact, waitlist application, review).
+- `src/feed.js`: KennelOS's public waitlist and application form, read for the waitlist page.
+- `src/waitlist.js`: the simple waitlist kept by hand.
+- `src/embeds.js` (reading a pasted link) and `src/embedStore.js` (where each video or post
+  sits). `src/qr.js`: QR codes.
+- `src/front.js`: kennelport.com's own front page, terms and privacy.
+
+## Content: what a site holds
+
+- `src/content/model.js`: every field and its limits; the one list everything else uses.
+- `src/content/records.js`: saving one record at a time (the Site Manager's forms).
+- `src/content/io.js`: content as one JSON document (`/ops` import and export).
+- `src/content/blocks.js`: pages as lists of blocks (`PAGE_DEFAULTS`), each block's records
+  and what its cards show.
+- `src/content/rules.js`: display and timing rules, set per site by the owner.
+- `src/content/prices.js`: every price shown, worked out from a litter's figures.
+- `src/content/akSample.js`: the AK sample as a content document.
+- Photos: `src/photos.js` (upload checks), `src/photoTags.js` (what a photo is of),
+  `src/photoPlaces.js` (where each photo shows: the photo library). `src/badgeCode.js`:
+  a product's embed code.
+
+## The Site Manager (the breeder's app, and the owner's admin view)
+
+- `src/manage/index.js`: sign-in, her sites, home. `src/auth.js`, `src/mail.js`: email-code
+  sign-in, invites, sessions.
+- `src/manage/screens.js`: the editing screens under `/s/<subdomain>/`.
+- `src/manage/forms.js`: an input per content field, with `LABELS` (field wording).
+- `src/manage/wording.js`: every other line she reads, as one list (`say('key')`).
+- `src/manage/hub.js`: Today, Families, Dogs, Website, Portal: the app for sites with the
+  portal on.
+- `src/manage/builder.js` and `src/admin.js`: the owner's admin view (pages, blocks, menu,
+  rules, timing, wording).
+- `src/push.js`: push notifications. `src/manage/version.js`: `APP_VERSION`.
+- `public/_kp/m/`: the app's CSS, JS, service worker, photo resizing, zip, icons. A change
+  here needs an `APP_VERSION` bump (ask first).
+
+## The family portal (`src/portal/`, sites with it switched on)
+
+- `family.js` the family's pages under `/family`; `auth.js` family sign-in.
+- `admin.js` her side (Puppy families, each family's screen).
+- `store.js` the records; `steps.js` checklist, timeline, programs; `stays.js` extended
+  stays; `vet.js` the 3-day vet visit; `reminders.js` the hourly job; `messages.js` emails;
+  `bounces.js` Resend's delivery results; `account.js` the account over time (loss, delete).
+- `feed.js` KennelOS's family feed. `version.js`: `PORTAL_VERSION`; files in `public/_kp/f/`
+  (ask before bumping).
+
+## KennelOS link (`src/kennelos/`)
+
+- `api.js` the API on `api.kennelport.com`; `link.js` link codes and device tokens;
+  `bundle.js` what a bundle does to the site (every key it accepts is listed at its top);
+  `match.js` matching existing records; `clock.js` the 30 days a litter is kept;
+  `demo.js` and `sampleDates.js` the demo site from the linked sample.
+
+## The operator (`/ops`)
+
+- `src/ops.js` sign-in, setup checks, migrations; `src/ops/sites.js` site screens;
+  `src/ops/usage.js` usage against the free tiers.
+- `src/sites.js` create, suspend, close; `src/domains.js` custom domains;
+  `src/cleanup.js` the daily cleanup (what KennelPort promises not to keep).
+
+## Scripts and tests
+
+- `scripts/fingerprint.mjs`: the fingerprints for the three versions. `scripts/schemes.mjs`:
+  writes the scheme CSS. `scripts/cpu-check.mjs`: CPU time of publish and render.
+- `tests/`: one `*.test.js` per area, named after it (`portal-feed.test.js`,
+  `blocks.test.js`…). `tests/helpers/`: a D1 over `node:sqlite` (`d1.js`), a staging-like
+  environment and calls as any host (`env.js`), the Worker loaded with its `.sql` hook
+  (`worker.js`, `sql-hooks.js`), static files (`assets.js`), tiny test images (`images.js`). `tests/versions.test.js` fails when a
+  versioned file changes without its bump. `tests/fixtures/linked-sample/`: a made-up
+  kennel as KennelOS would send it.
+- Run: `node --test` from the repo root, or `npm test` in `worker/` (Node 22 or later).

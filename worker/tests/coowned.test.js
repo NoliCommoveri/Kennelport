@@ -1,4 +1,4 @@
-// Co-owned dogs (docs/Co_Owned_Dogs_Plan.md): partner kennels, the Dogs page's
+// Co-owned dogs (docs/plans/done/co-owned-dogs.md): partner kennels, the Dogs page's
 // Co-owned section, "Co-owned with" on a dog's page, KennelOS's partner_kennels
 // section, the Site Manager's screens, and the import document.
 import { test } from 'node:test';

@@ -1,4 +1,4 @@
-// Where each photo shows on her site (docs/Site_Builder_Plan.md, decision 20, "Photos:
+// Where each photo shows on her site (docs/plans/site-builder.md, decision 20, "Photos:
 // one library"): the rows of the photo library window and, later, the Photos screen.
 // Worked out from what is saved, shown or not (a hidden dog's photo is still that
 // dog's), so the rows are always right and need no tagging. Named the way she'd say

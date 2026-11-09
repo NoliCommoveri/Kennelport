@@ -163,14 +163,14 @@ ${domain ? `<p><a href="https://${esc(domain.hostname)}/"><code>${esc(domain.hos
 <br><span class="muted"><code>${esc(bareOf(domain.hostname))}</code> redirects to it when it reaches KennelPort too.</span></p>
 <form method="post" action="/ops/sites/${esc(site.id)}/domain/${domain.status === 'active' ? 'pause' : 'activate'}"><p><button>${domain.status === 'active' ? 'Stop redirecting to it' : 'Make it the main address'}</button></p></form>
 <form method="post" action="/ops/sites/${esc(site.id)}/domain/remove"><p><button>Remove the domain</button> <span class="muted">Only forgets it here; remove its route or custom hostname in Cloudflare too.</span></p></form>`
-    : `<p class="muted">None: the site's address is <code>${esc(site.subdomain)}.${esc(env.ROOT_DOMAIN)}</code>. Route the domain to the Worker in Cloudflare first (docs/KennelPort_Setup.md, "Custom domains"), then add it here.</p>`}
+    : `<p class="muted">None: the site's address is <code>${esc(site.subdomain)}.${esc(env.ROOT_DOMAIN)}</code>. Route the domain to the Worker in Cloudflare first (docs/plans/setup.md, "Custom domains"), then add it here.</p>`}
 <form method="post" action="/ops/sites/${esc(site.id)}/domain">
   <p><label>${domain ? 'Replace with' : 'Domain'}<br><input name="hostname" required autocomplete="off" placeholder="www.thornfieldkennels.com"></label></p>
   <p><button>Save as pending</button></p>
 </form>`;
 
   const portalSection = `<h2>Puppy parent portal</h2>
-<p class="muted">The family portal at <code>/family</code> on this site, and the Puppy families screens in the breeder's Site Manager (docs/Puppy_Parent_Portal_Plan.md). ${env.PORTAL_EMAIL_KEY ? '' : '<strong>The PORTAL_EMAIL_KEY secret isn\'t set: families can\'t be added until it is.</strong>'}</p>
+<p class="muted">The family portal at <code>/family</code> on this site, and the Puppy families screens in the breeder's Site Manager (docs/plans/family-portal.md). ${env.PORTAL_EMAIL_KEY ? '' : '<strong>The PORTAL_EMAIL_KEY secret isn\'t set: families can\'t be added until it is.</strong>'}</p>
 <form method="post" action="/ops/sites/${esc(site.id)}/portal/${site.portal_on ? 'off' : 'on'}"><p><button>${site.portal_on ? 'Switch the portal off' : 'Switch the portal on'}</button> <span class="muted">${site.portal_on ? 'On. Switching off hides it from families and the breeder; nothing is deleted.' : 'Off.'}</span></p></form>`;
 
   const lifecycle = `<h2>Suspend or close</h2>

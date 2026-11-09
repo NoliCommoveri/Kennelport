@@ -1,4 +1,4 @@
-// Display and timing rules (docs/Site_Builder_Plan.md, step 1): how a site shows
+// Display and timing rules (docs/plans/site-builder.md, step 1): how a site shows
 // what it holds, set by the owner per site in her admin view of the Site Manager.
 // The site stores what KennelOS sends unchanged; these decide how it reads. Every
 // default is today's behaviour, so a site is unchanged until the owner changes a
@@ -13,7 +13,7 @@
 export const PUP_STATUSES = ['available', 'reserved', 'placed', 'staying', 'undecided', 'hidden'];
 export const ruleKey = (status) => (status === 'coming_soon' ? 'undecided' : status);
 
-// What each one stands for in KennelOS (docs/Linked_Sample_Plan.md, raw or summary).
+// What each one stands for in KennelOS (docs/plans/done/linked-sample.md, raw or summary).
 export const STATUS_NOTES = {
   available: 'Available, with no open pick',
   reserved: 'Worked out by KennelOS: a pick waiting on its deposit, or sold before delivery',

@@ -1,4 +1,4 @@
-// The demo site (docs/Linked_Sample_Plan.md, step 3; src/kennelos/demo.js): made in
+// The demo site (docs/plans/done/linked-sample.md, step 3; src/kennelos/demo.js): made in
 // /ops from the linked sample, linked to the sample instead of a KennelOS device,
 // stepped through the series and back to step 1, each step as of today. It is
 // marked Demo everywhere, never served at its address, published or indexed, has

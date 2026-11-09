@@ -1,4 +1,4 @@
-// The Puppy Parent Portal, build chunk 6 (docs/Puppy_Parent_Portal_Plan.md 7.3): her
+// The Puppy Parent Portal, build chunk 6 (docs/plans/family-portal.md 7.3): her
 // Site Manager as one app for the website and the portal, with Today, Families,
 // Dogs, Website and Portal tabs, on sites with the portal on, and only there.
 import { test } from 'node:test';

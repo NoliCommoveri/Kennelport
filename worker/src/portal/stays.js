@@ -1,4 +1,4 @@
-// Extended stays (docs/Puppy_Parent_Portal_Plan.md sections 8.1, 8.2 and 8.5; build
+// Extended stays (docs/plans/family-portal.md sections 8.1, 8.2 and 8.5; build
 // chunk 5): the 10-, 12- and 16-week homegoing packages, where the puppy stays with
 // her past 8 weeks and the family watches the progress in the portal.
 //
