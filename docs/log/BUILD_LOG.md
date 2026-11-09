@@ -607,3 +607,15 @@ with new sections and a new building order. Docs only; nothing built yet.
   Photo beside words (the photo on the right, its words lined up), the gallery strip and
   its border. Both were last released at 16 and 22 on `main`; bumped once, at the end,
   as the owner asked.
+
+## 2026-11-09: docs reorganised; production is the only target
+
+- Docs moved into `docs/plans/` (with `done/`), `docs/log/`, `docs/research/` and
+  `docs/review/`, with lowercase names; entries up to 2026-11-04 archived in
+  `docs/log/2026-10-09_to_11-04.md`. New `docs/STATUS.md` and `docs/CODE_MAP.md`; the
+  reference README says where each screen is in the prototypes. Doc paths in migrations
+  and in `worker/public/` CSS comments still use the old names (changing them would edit
+  an applied migration or need a version bump).
+- Production is live: every built migration applied, every key and service connected.
+  Work deploys straight to production from `main`; staging still deploys but isn't used
+  regularly. CLAUDE.md says so, with the 503 until **Apply pending** after a migration.

@@ -4,6 +4,10 @@ What has to be done once, by hand, in the Cloudflare dashboard, for the Worker i
 [`../worker/`](../../worker/) to run (plan 2.1, 8.1 phase 0). Nothing here is repeated per
 site. The code side is done; these steps are yours.
 
+> **Done.** Production is live at `kennelport.com` with every key and service set up;
+> work now goes straight to production, and staging isn't used regularly. This file is
+> kept for rebuilding, or for setting up something new (Custom domains, below).
+
 ## Before the domain is bought
 
 Staging needs no domain: it runs on its `workers.dev` address, and `kennelport.com` in

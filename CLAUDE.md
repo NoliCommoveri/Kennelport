@@ -17,6 +17,14 @@ change its line in `docs/STATUS.md`, and update `docs/CODE_MAP.md` if you added,
 split a file. Doc names are lowercase with hyphens; a new feature plan goes in
 `docs/plans/` and moves to `docs/plans/done/` once it's fully built.
 
+## Deploys: `main` is production
+
+Production is live with the real breeder's site and families, and there's no staging step
+in practice: a merge to `main` deploys to `kennelport.com` at once (Workers Builds). A
+merge carrying a migration makes the Worker answer 503 (`src/gate.js`) until the owner
+presses **Apply pending** in `/ops`, so say so whenever a branch adds one. Keep migrations
+safe to apply to live data (add, don't drop or rewrite), and never push to `main`.
+
 ## Version bumps: ask first, every time
 
 Browsers cache two sets of files, so a change to them only reaches phones and

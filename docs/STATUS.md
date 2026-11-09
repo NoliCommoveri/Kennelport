@@ -9,21 +9,23 @@ template (`ASSET_VERSION`) 23.
 
 ## Platform
 
-- **Staging** is live at `kennelport-staging.kennelport.workers.dev`.
-- **Production:** `kennelport.com` bought, its D1 database and Turnstile key set
-  (2026-11-02). Whether the production Worker is connected and serving isn't recorded
-  anywhere: confirm, then update this line. Setup steps: [`plans/setup.md`](plans/setup.md).
+- **Production is live** at `kennelport.com`: every built migration applied, every key
+  and service connected (Resend, push, Turnstile). Work is deployed straight to
+  production: a merge to `main` deploys it (Workers Builds), then **Apply pending** in
+  `/ops` if it carries a migration. Setup steps, for a rebuild: [`plans/setup.md`](plans/setup.md).
+- **Staging** (`kennelport-staging.kennelport.workers.dev`) still deploys from `main` but
+  isn't used regularly.
 - Custom domains are connected by hand ([`plans/setup.md`](plans/setup.md), Custom domains).
 
 ## Version 1, the first family site ([`plans/kennelport.md`](plans/kennelport.md) 8.1)
 
 | Phase | State |
 |---|---|
-| 0. Set up | Done (staging) |
+| 0. Set up | Done; production live |
 | 1. Renderer + ops | Built |
 | 2. Breeder login, the Site Manager | Built; photo upload tried on a real Android and iPhone |
 | 3. The first site's pages | Built |
-| 4. The KennelOS link | Built on both sides. **Next:** try it end to end on staging |
+| 4. The KennelOS link | Built on both sides. **Next:** try it end to end with KennelOS, on production |
 | 5. Albums, embeds, sharing | Built, apart from KennelOS shares carrying album links |
 | 6. Customisation and schemes | Built, and now carried further by the site builder (below) |
 
