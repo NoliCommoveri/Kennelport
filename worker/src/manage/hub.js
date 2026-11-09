@@ -1,5 +1,5 @@
 // Her Site Manager as one app for the website and the puppy portal
-// (docs/Puppy_Parent_Portal_Plan.md section 7.3; build chunk 6), on sites with the
+// (docs/plans/family-portal.md section 7.3; build chunk 6), on sites with the
 // portal on. Five tabs (Reports comes with phase 2), along the bottom on a phone and
 // down the side on a computer:
 //

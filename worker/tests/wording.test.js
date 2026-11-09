@@ -1,4 +1,4 @@
-// The breeder's instructions (docs/Site_Builder_Plan.md, step 2, decision 19;
+// The breeder's instructions (docs/plans/site-builder.md, step 2, decision 19;
 // manage/wording.js): every line she reads in the Site Manager is the owner's
 // wording, for every site and per site, with today's wording as the default.
 import { test } from 'node:test';

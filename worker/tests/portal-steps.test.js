@@ -1,4 +1,4 @@
-// The Puppy Parent Portal, build chunk 2 (docs/Puppy_Parent_Portal_Plan.md sections
+// The Puppy Parent Portal, build chunk 2 (docs/plans/family-portal.md sections
 // 4, 7.2 and 9): her checklist and timeline templates, each family's ticks, hidden
 // steps and moved days, program status and own codes, and the food band.
 import { test } from 'node:test';

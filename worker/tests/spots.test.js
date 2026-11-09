@@ -1,4 +1,4 @@
-// FAQ and badge spots as block settings (docs/Site_Builder_Plan.md, step 3.6): the
+// FAQ and badge spots as block settings (docs/plans/site-builder.md, step 3.6): the
 // owner puts a FAQ spot or a badge row on any page, a page of hers included; the
 // breeder's tick boxes, on each question and each product, list only the places
 // the owner has made. Today's places are unchanged until the owner changes them.

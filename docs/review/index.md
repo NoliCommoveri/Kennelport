@@ -1,6 +1,6 @@
 # Review findings index
 
-The plan: [`docs/KennelPort_Review_Plan.md`](../KennelPort_Review_Plan.md).
+The plan: [`docs/review/plan.md`](plan.md).
 Each session adds its own row when it finishes; nobody edits another session's row.
 Findings live in `docs/review/findings/NN-<slug>.md`.
 

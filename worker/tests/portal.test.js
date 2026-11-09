@@ -1,4 +1,4 @@
-// The Puppy Parent Portal, build chunk 1 (docs/Puppy_Parent_Portal_Plan.md): switched
+// The Puppy Parent Portal, build chunk 1 (docs/plans/family-portal.md): switched
 // on per site, families added by her, invites and sign-in, the family's pages, the
 // vet clock and its reminders, proof, clicks, and families kept apart.
 import { test } from 'node:test';

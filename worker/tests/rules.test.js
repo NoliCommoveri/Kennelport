@@ -1,4 +1,4 @@
-// Display and timing rules (docs/Site_Builder_Plan.md, step 1), checked on the
+// Display and timing rules (docs/plans/site-builder.md, step 1), checked on the
 // linked sample (tests/fixtures/linked-sample): the defaults are today's behaviour;
 // a rule the owner changes in her admin view changes what the site shows; only
 // admin (signed in to /ops on the device) reaches the screens.

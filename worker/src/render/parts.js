@@ -226,7 +226,7 @@ export function litterPriceRows(snap, l) {
 // (girls and boys), young stock she has kept, and adults looking for a home.
 // Retired and in-memory dogs wait for their pages (backlog). A co-owned dog
 // living with one of its co-owners is in none of them, only in `away`, the Co-owned
-// section (docs/Co_Owned_Dogs_Plan.md); one living with her is grouped like her own.
+// section (docs/plans/done/co-owned-dogs.md); one living with her is grouped like her own.
 export function dogGroups(snap) {
   // An outside dog (another kennel's) is in none of her groups, only `outside`.
   const active = snap.dogs.filter((d) => d.status === 'active' && !d.outside);
@@ -467,7 +467,7 @@ export function dogCard(snap, d, { sale = null, show = SHOW_DEFAULT.dogs } = {})
     </div></div>`;
 }
 
-// A light card, no flip (docs/Co_Owned_Dogs_Plan.md): a short photo and a few
+// A light card, no flip (docs/plans/done/co-owned-dogs.md): a short photo and a few
 // lines; it opens the dog's page. show.light: its items (SHOW_DEFAULT.dogs.light is
 // the Co-owned section's card).
 export function coCard(snap, d, { show = SHOW_DEFAULT.dogs } = {}) {

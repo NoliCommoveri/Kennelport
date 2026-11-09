@@ -8,6 +8,55 @@ Published copies (claude.ai artifacts, with the photos):
 To change either, update the file here and republish it to the same link (pass the link
 as the artifact's `url`) so the shared address keeps working.
 
+## Finding a screen without reading the whole file
+
+The prototypes are 100–200 KB each. Read only the part you need: find it below, then
+`grep -n` its comment or function name (line numbers move when a file is edited; the
+names don't) and read that range. Each file is one `<style>`, an SVG `<symbol>` sprite,
+then one `<script>`; CSS sections start with a `/* Name */` comment line.
+
+**`portal-prototype.html`** (family portal and her Site Manager)
+- CSS (lines 1–486). Colours, type and text size: 1–140. Components, by comment: `The tile
+  grid` (141), `Pup card`, `Calendar page`, `Ring`, `Quick links`, `Steps`, `Photo-top
+  cards`, `Stay`, `Gallery`, `Her Site Manager` (269), `Gauges`, `Numbered steps`,
+  `Photo rows`, `Side-scrolling cards`, `Highlights`, `Segmented toggle`, `Pinned action
+  bar`, `Messages`.
+- Sample data and state: `const KENNEL` to `function reset()` (536–720).
+- Family view (`// ---------- Family view`, 763): Home's tiles `heroTile` … `vetStepsTile`;
+  section types `gauge`, `numSteps`, `foodBand`, `programsList`, `bookCarousel`,
+  `actionBar`; pages `famHome`, `famTimeline`, `famStay`, `famPhotos`, `famRecords`,
+  `famBook`, `famHandbook`, `famPicks`, `famLost`, `famMessages`.
+- KennelOS's status page: `kosPage` (1084).
+- Her Site Manager (`// ---------- Her Site Manager`, 1101): `admToday`, `admVet`,
+  `admFamilies`, `admFamily`, `admDogs`, `admEdit`, `admDrafts`, `admWebsite`,
+  `admPortal`, `admReports` (charts: `miniBars`, `hbars`).
+- Routing and rendering: `route`, `render` (1474 on).
+
+**`site-builder-prototype.html`** (the owner's admin view)
+- CSS (lines 1–652): lines 1–485 are the portal prototype's stylesheet, copied unchanged;
+  the builder's own follows: `Build screens` (editor beside a phone preview), `Movable
+  rows`, `Status pills`.
+- Sample builds: `BLOCKS`, `websiteBuild`, `portalBuild`, `TEMPLATES`, `SITES` (727–900).
+- Phone preview: `pvBlock`, `pvSite`, `pvPortal`, `pvManager`.
+- Shared controls: `sw` (switch), `seg`, `sel`, `txt`, `fld`, `chipsMulti`, `mvBtns`.
+- Admin screens (`// ---------- Admin screens`): `aSites`, `aTemplates`, `aPages`,
+  `blockRow`, `aPage`, `aMenu`, `aRules`, `aTiming`, `aPortal`, `aTemplate`, `shell`.
+- The breeder's side: `bWebsite`, `bPage`. Dialogs: `dlgAddBlock`, `dlgNewPage`, `dlgAddItem`.
+
+**`ak-sample.html`** (her website)
+- CSS (lines 1–390), by comment: `Header + nested menu`, `Ornament`, `Hero`, `Story +
+  features`, `Slider`, `Flip cards`, `Litter cards`, `Reviews`, `CTA band`, `Expanders`,
+  `Steps`, `Extended homegoing packages`, `Filter row`, `Waitlist`, `How to pay`,
+  `Review form`, `Apply form`, `Contact`, `Footer`.
+- Pages: `<section data-view="home">`, `about`, `residents`, `puppies`, `how`,
+  `waitlist` (with How to pay and the apply form), `applicant-help` (421–668).
+- Script (669 on): sample data, `flipCard`, `litterCard`, the waitlist's `listHtml`, the
+  sliders, the menu, `route`.
+
+**`scheme-lab.html`** is `ak-sample.html` plus the scheme switcher (`Scheme switcher` in its
+CSS, and its `SCHEMES` list); `worker/src/render/schemes.js` is now the source of truth for
+the schemes, so you rarely need it.
+
 **`ak-sample.html`** is the working sample of the first site, AK Boston Terriers: the
 target for version 1 (plan, top and section 8.1). It's one page with hash routing
 (`#home`, `#residents`, `#puppies`, `#how`, `#extras`, `#waitlist`, …), built to be
@@ -41,7 +90,7 @@ sizes in `worker/public/_kp/m/icon-*.png` are made from it; the maskable one kee
 art in Android's middle 80%.
 
 **`portal-prototype.html`** is a clickable prototype of the Puppy Parent Portal
-([`../Puppy_Parent_Portal_Plan.md`](../Puppy_Parent_Portal_Plan.md) section 7): the family
+([`../plans/family-portal.md`](../plans/family-portal.md) section 7): the family
 pages, the KennelOS status page they hand off from, and her Site Manager as one app for her website and the portal (Today, Families with the
 waitlist, Dogs, Website, Portal, Reports), in the AK sample's Lawn scheme, light and dark. A bar at
 the top switches between the Family and Breeder views and four dates (before go-home, the
@@ -67,7 +116,7 @@ the date changes. Like the AK sample it has no `<html>`/`<head>` wrapper (artifa
   she keeps, never an extended stay (plan section 7.3).
 
 **`site-builder-prototype.html`** is a clickable prototype of the owner's site builder
-([`../Site_Builder_Plan.md`](../Site_Builder_Plan.md)), the admin view of the Site Manager.
+([`../plans/site-builder.md`](../plans/site-builder.md)), the admin view of the Site Manager.
 It has no prototype of its own, so it is built from the portal prototype's components: that
 file's whole stylesheet is copied in unchanged, and the builder's additions follow it. Like
 the others it has no `<html>`/`<head>` wrapper, and everything is in memory, reset on reload.

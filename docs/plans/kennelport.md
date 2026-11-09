@@ -3,8 +3,8 @@
 > Status: phases 0 to 3 are built (`worker/`), and phase 5 (albums, videos and posts, sharing) apart from its KennelOS part, which needs phase 4; section 8.1 says how phase 3 came together.
 > Phase 4 was settled on 2026-11-03 against KennelOS's code (section 5, decisions 29 to 32). Both sides are built (section 8.1).
 > Section 8 says what version 1 is; section 9 lists the one decision still open. What comes after version 1 is
-> in [`KennelPort_Backlog.md`](KennelPort_Backlog.md). History of this plan lives in
-> [`BUILD_LOG.md`](BUILD_LOG.md).
+> in [`plans/backlog.md`](backlog.md). History of this plan lives in
+> [`log/BUILD_LOG.md`](../log/BUILD_LOG.md).
 
 KennelPort hosts breeder websites. Each kennel gets a site at `theirkennel.kennelport.com`.
 The operator (you) sets up and drafts every site by hand. Breeders then manage their own
@@ -14,7 +14,7 @@ and photo albums fill in by themselves.
 **Version 1 is one site.** The first site is for a family member, and KennelPort is not
 for sale. The design below allows for more breeders, but version 1 (section 8) builds only
 what that first site needs. Everything else is a backlog, built when someone asks for it
-([`KennelPort_Backlog.md`](KennelPort_Backlog.md)).
+([`plans/backlog.md`](backlog.md)).
 
 **The target is the AK sample.** A working sample of the first site, AK Boston Terriers,
 was built as one page and approved by the owner: every page in the five-item menu, flip
@@ -24,7 +24,7 @@ with its content in forms (section 3.12), a choice of colour schemes (section 3.
 pages a breeder can switch off, plus the two things the first breeder wants most: the
 **KennelOS link**, so dogs, litters and health results come from KennelOS instead of being
 typed twice (section 5), and **albums and embeds** (section 3.3). The sample's source is
-[`reference/ak-sample.html`](reference/ak-sample.html); the reference folder's README
+[`reference/ak-sample.html`](../reference/ak-sample.html); the reference folder's README
 says what's real and what's made up in it.
 
 **KennelOS is optional.** A KennelPort site works fully on its own; a breeder who has never
@@ -109,7 +109,7 @@ each with its own D1 and R2. Production answers on `kennelport.com` and
 `*.kennelport.com`. Staging lives on its `workers.dev` address, which can't receive those
 hostnames, so on staging only a cookie set by `/__host?h=<hostname>` stands in for the
 hostname and the same routing is tested there; without it, staging acts as the manage
-host. One-time dashboard steps: [`KennelPort_Setup.md`](KennelPort_Setup.md).
+host. One-time dashboard steps: [`plans/setup.md`](setup.md).
 
 ### 2.4 Custom domains (their own domain)
 
@@ -160,7 +160,7 @@ Breeders fill in fields; the template handles layout. Version 1 needs one good t
 3.12: pages and Home blocks turned on and off, steps, extras and expanders added and
 reworded. How it looks and
 behaves (flip cards, sliding sets, nested menus and expanders, ornaments, font pairings)
-is in [`KennelPort_Design_Direction.md`](KennelPort_Design_Direction.md). The sections:
+is in [`research/design-direction.md`](../research/design-direction.md). The sections:
 
 - **Home:** kennel name, logo, hero photo, short intro, an optional announcement banner (section 3.9)
 - **About:** the kennel's story, breed(s), location (town and region only, never a street address), visiting policy, memberships and breeder programs (section 3.9)
@@ -178,7 +178,7 @@ is in [`KennelPort_Design_Direction.md`](KennelPort_Design_Direction.md). The se
 - **Embeds:** videos and social feeds placed on any page (section 3.3)
 
 Version 1 builds the sections in decision 14; the others are designed in
-[`KennelPort_Backlog.md`](KennelPort_Backlog.md), and their addresses (3.1) and KennelOS
+[`plans/backlog.md`](backlog.md), and their addresses (3.1) and KennelOS
 fields (5.3) are kept here so the template and the link are designed once.
 
 Content is stored as structured records (a dog, a litter, a photo), not free HTML. That's
@@ -703,7 +703,7 @@ visitor stats) are in the backlog doc, section 5.
   - Plus a link to their Google reviews (or a free Google reviews widget).
 
 **Dogs and litters, beyond the basics**
-- **Pedigree:** backlog ([`KennelPort_Backlog.md`](KennelPort_Backlog.md) section 6). A
+- **Pedigree:** backlog ([`plans/backlog.md`](backlog.md) section 6). A
   three-generation pedigree on each dog page is in neither the data model nor the AK
   sample, so it waits with the other survey pages; KennelOS already holds the ancestors
   (`pedigree_only` dogs) and a `parent_pedigree` switch for when it lands.
@@ -756,7 +756,7 @@ KennelOS (section 3.8, decision 26). It works with no KennelOS at all.
 ### 3.11 Pages from the site survey
 
 What the survey of real breeder websites
-([`KennelPort_Site_Directory.md`](KennelPort_Site_Directory.md)) found that the list
+([`research/site-directory.md`](../research/site-directory.md)) found that the list
 above lacked. Each is a section the breeder turns on, and works with no KennelOS. Version 1
 has these; programs, raising, How to pay safely as a page, retired and in-memory dogs,
 show results, the litter diary and planned-litter pages are in the backlog doc, section 6.
@@ -847,7 +847,7 @@ section headings and lead lines all have defaults the breeder can reword.
 
 **Look:** a colour scheme (section 3.13) and the kennel's logo. No free colour, font or
 layout controls for the breeder. The owner has them, per site, in the site builder
-([`Site_Builder_Plan.md`](Site_Builder_Plan.md), decisions 16 and 17).
+([`plans/site-builder.md`](site-builder.md), decisions 16 and 17).
 - **The logo** (built): chosen on Kennel details from the site's photos (or added there),
   shown in place of the monogram at the top and foot of every page once published.
   Tapping it in the header opens it full size; the kennel name beside it goes home.
@@ -857,7 +857,7 @@ layout controls for the breeder. The owner has them, per site, in the site build
 **Fixed for the breeder:** page layouts, the order of blocks, card shapes and the flip,
 sliding sets, button and link styles, fonts within a scheme, and addresses (section 3.1).
 The owner sets these per site in the site builder
-([`Site_Builder_Plan.md`](Site_Builder_Plan.md)).
+([`plans/site-builder.md`](site-builder.md)).
 
 ### 3.13 Colour schemes
 
@@ -867,7 +867,7 @@ in the manage app with a live preview of their own site; switching is instant an
 undone like any edit. Every scheme is checked for contrast (normal text at least 4.5:1)
 in both versions before it ships. Version 1 has six (decision 25): Lawn, Harbor, Heather,
 Clay, Slate and Midnight, set out in
-[`KennelPort_Design_Direction.md`](KennelPort_Design_Direction.md) section 7. Midnight is
+[`research/design-direction.md`](../research/design-direction.md) section 7. Midnight is
 dark first: it shows dark unless the visitor's device asks for light explicitly.
 - **Dark mode (decision 23):** each site follows the visitor's device setting, as the AK
   sample does; the breeder can lock it to light with **Light only**.
@@ -1422,7 +1422,7 @@ These follow KennelOS's own rules, and each one needs its own decision there:
 | `form_fields` | site_id, form (`application`), type (short answer, longer answer, choice, yes/no, which litter, phone, town), label, hint, required, options (JSON, for a choice), order: the application form's questions after name and email (section 3.8) |
 
 Tables for backlog items (requests, news, programs, the litter diary, events) are in
-[`KennelPort_Backlog.md`](KennelPort_Backlog.md) section 7.
+[`plans/backlog.md`](backlog.md) section 7.
 
 R2 keys look like `sites/<site_id>/photos/<photo_id>.webp` (or `.jpg`, section 4.2) and
 `sites/<site_id>/snapshots/<snapshot_id>.json`, so a whole site can be deleted
@@ -1501,14 +1501,14 @@ and the feed, and the prompts at Active breeding, past Expected, and Sold or Clo
 domain joins KennelOS's `isWebsiteOrigin` by hand, in its cloud's `WEBSITE_ORIGINS`
 (Setup, Custom domains, step C), like the domain itself. Not built from 5.5: the
 deposit's How to pay (KennelOS keeps no deposit
-instructions). Next: try the link end to end on staging.
+instructions). The link works end to end with KennelOS on production.
 
 If the first site wants its own domain, connect it by hand (section 2.4).
 
 ### 8.2 Backlog
 
 Everything after version 1, with its order and designs, is in
-[`KennelPort_Backlog.md`](KennelPort_Backlog.md).
+[`plans/backlog.md`](backlog.md).
 
 ---
 
@@ -1549,7 +1549,7 @@ Everything after version 1, with its order and designs, is in
     shows (section 3.9).
 14. **What ships first:** the AK sample's pages (section 8.1, phase 3), the KennelOS link
     (phase 4) and albums, embeds and sharing (phase 5). Past litters, news and the other
-    standard pages wait in the backlog ([`KennelPort_Backlog.md`](KennelPort_Backlog.md)).
+    standard pages wait in the backlog ([`plans/backlog.md`](backlog.md)).
 15. **Main address for a custom domain:** `www.`, with the bare domain forwarding to it.
 16. **How a KennelOS bundle changes the site:** as in section 5.3 — four **Show on
     website** marks decide what is offered, her own dates decide where a litter sits, and
@@ -1570,7 +1570,7 @@ Everything after version 1, with its order and designs, is in
     off, and choose a scheme; layouts stay fixed (section 3.12).
 25. **Colour schemes:** all six ship in version 1: Lawn, Harbor, Heather, Clay, Slate and
     Midnight (design direction section 7), each with light and dark versions. Compared
-    side by side in [`reference/scheme-lab.html`](reference/scheme-lab.html).
+    side by side in [`reference/scheme-lab.html`](../reference/scheme-lab.html).
     Proposed 2026-11-02: a seventh, **Tuxedo**, made to match the AK logo (design
     direction section 7), waiting for the owner's yes.
 26. **Where an application goes:** to KennelOS's live list flow whenever the breeder takes

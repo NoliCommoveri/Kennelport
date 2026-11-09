@@ -2,8 +2,8 @@
 
 > Status: the owner's stated preferences for how a KennelPort site looks and behaves,
 > worked out in more detail. The only rule is that it costs nothing. The AK sample
-> ([`reference/ak-sample.html`](reference/ak-sample.html)) shows all six working. Evidence
-> for what real breeder sites do is in [`KennelPort_Visual_Survey.md`](KennelPort_Visual_Survey.md).
+> ([`reference/ak-sample.html`](../reference/ak-sample.html)) shows all six working. Evidence
+> for what real breeder sites do is in [`research/visual-survey.md`](visual-survey.md).
 
 ## The six preferences
 
@@ -71,7 +71,7 @@ front too, so nobody falls for a puppy that's taken.
   screen (Apply, Join the waitlist), outlined or plain text with an arrow for the rest.
   No pill shapes, no stacks of coloured buttons. That is the template's default: in
   the site builder the owner can add buttons of any type and any template colour
-  ([`Site_Builder_Plan.md`](Site_Builder_Plan.md), decisions 16 and 17).
+  ([`plans/site-builder.md`](../plans/site-builder.md), decisions 16 and 17).
 - **Links:** no raw blue underlined links and no visible web addresses. Links look like
   the surrounding text or the accent colour; navigation and buttons carry no underline.
 - **Badges and labels:** small caps text, or a thin outlined tag, not coloured lozenges.
@@ -157,7 +157,7 @@ and the inquiry form's choices (which litter, preferred sex, timing).
 Each scheme is a palette in light and dark versions, a font pairing and an ornament set
 (plan section 3.13). Breeders pick a scheme, never single colours. All six ship in
 version 1 (decided after comparing them on the AK sample in
-[`reference/scheme-lab.html`](reference/scheme-lab.html), which holds each scheme's exact
+[`reference/scheme-lab.html`](../reference/scheme-lab.html), which holds each scheme's exact
 colours). Every scheme is contrast-checked in both versions before it ships; the lab's
 colours haven't had that check yet.
 
@@ -193,9 +193,9 @@ where they add something.
 - The top menu is About us · Kennel residents · Puppies · How it works · Waitlist
   (section 4).
 - JavaScript and any free library or service may be used (the one rule: no cost).
-- The AK sample ([`reference/ak-sample.html`](reference/ak-sample.html)) is the reference
+- The AK sample ([`reference/ak-sample.html`](../reference/ak-sample.html)) is the reference
   for the first template: its layout, cards, sliding sets, expanders and Lawn scheme.
 - Breeders choose a colour scheme, not individual colours; all six schemes in section 7
   ship (section 7). The owner can colour blocks and buttons from the scheme's colours,
   and choose fonts from the font library, in the site builder
-  ([`Site_Builder_Plan.md`](Site_Builder_Plan.md), Template colours, Font library).
+  ([`plans/site-builder.md`](../plans/site-builder.md), Template colours, Font library).

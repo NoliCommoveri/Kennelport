@@ -1,4 +1,4 @@
-// The breeder's instructions (docs/Site_Builder_Plan.md, step 2, decision 19): every
+// The breeder's instructions (docs/plans/site-builder.md, step 2, decision 19): every
 // line of wording she reads in the Site Manager, as one list the owner edits. Each
 // item has a key, the screen it's grouped under, where it appears, its default
 // (today's wording: decision 14) and the names it may use ({kennel} everywhere;

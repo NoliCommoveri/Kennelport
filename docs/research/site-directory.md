@@ -3,7 +3,7 @@
 > Status: proposal. A survey of real breeder websites, turned into the page directory a
 > KennelPort site offers, with what KennelOS can fill on each page and what only the
 > breeder can write. Nothing here is decided; section 5 lists what to settle before it
-> changes [`KennelPort_Plan.md`](KennelPort_Plan.md).
+> changes [`plans/kennelport.md`](../plans/kennelport.md).
 
 ## 1. How this was gathered
 
@@ -166,7 +166,7 @@ title; upcoming show entries; the vaccines usually given by go-home age.
 
 **Never from KennelOS:** buyers, families, guardians, co-owners' personal details and any
 contact (a co-owner's kennel only by its public name and website, and only once she ticks
-Name this kennel on my website: `docs/Co_Owned_Dogs_Plan.md`); sales,
+Name this kennel on my website: `docs/plans/done/co-owned-dogs.md`); sales,
 contracts and invoices; private notes; stud fees and stud partners; addresses; individual
 puppies' medical records; vault documents and certificates; anything not ticked **Show on
 website**.

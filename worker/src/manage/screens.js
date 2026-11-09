@@ -192,7 +192,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
   }
 
   // Dogs that wait in the draft (5.3): never deleted by a clock; removing is hers.
-  // Co-owned dogs (docs/Co_Owned_Dogs_Plan.md): her partner kennels, from Dogs.
+  // Co-owned dogs (docs/plans/done/co-owned-dogs.md): her partner kennels, from Dogs.
   const partnersLink = () => `<p><a class="button" href="${base}/lists/partners">${esc(say('litterlist.partner_kennels'))}</a> <span class="muted small">${esc(say('litterlist.the_kennels_your_co'))}</span></p>`;
   const partnersIntro = async () => `<p class="muted">The kennels your co-owned dogs are shared with. Your Dogs page shows co-owned dogs living with one of them under Co-owned, with that kennel's logo; each co-owned dog's page names its kennels.${(await kos()).linked ? ' The kennels you tick "Name this kennel on my website" for in KennelOS come from there, by name and website: add their logo here.' : ''}</p>`;
 
@@ -934,7 +934,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
   }
 
   // ---------- photos ----------
-  // The photo library window (docs/Site_Builder_Plan.md, decision 20): the same on every
+  // The photo library window (docs/plans/site-builder.md, decision 20): the same on every
   // screen, the owner's too. Upload at the top; Page photos | Profile photos, each a row
   // per place a photo shows (photoPlaces.js), folded until opened, its thumbnails loading
   // then; the pinned bar's Replace (or Use these photos, picking several). photos.js

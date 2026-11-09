@@ -1,6 +1,6 @@
 # Co-owned dogs: plan
 
-KennelPort's half is built (`docs/BUILD_LOG.md`, 2026-11-04); KennelOS's is in its repo.
+KennelPort's half is built (`docs/log/BUILD_LOG.md`, 2026-11-04); KennelOS's is in its repo.
 Two halves: KennelOS says which dogs are co-owned and where each
 lives; KennelPort shows the ones living with a co-owner in their own section of
 the Dogs page, with the partner kennel's logo.

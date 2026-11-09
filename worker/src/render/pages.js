@@ -610,7 +610,7 @@ export function dogs(snap, ctx) {
   };
 }
 
-// Co-owned dogs living with a co-owner (docs/Co_Owned_Dogs_Plan.md): light cards in
+// Co-owned dogs living with a co-owner (docs/plans/done/co-owned-dogs.md): light cards in
 // a slider, then the logos of the kennels they live with, each linked to its site.
 function coOwnedSection(snap, p, away) {
   if (!away.length) return '';
@@ -654,7 +654,7 @@ export function dog(snap, ctx, slug) {
   const photo = img(snap, d.photo_id, { alt: d.call_name, cls: 'photo', lazy: false }) ?? '<div class="photo" aria-hidden="true"></div>';
   const fact = { sex: ['Sex', sexWord(d.sex)], color: ['Color', d.color], born: ['Born', fmtDate(d.date_of_birth)], weight: ['Weight', d.weight], registry: ['Registry', d.registry], titles: ['Titles', d.titles] };
   for (const k of Object.keys(fact)) fact[k] = fact[k][1] ? [fact[k][0], esc(fact[k][1])] : null;
-  // Co-owned (docs/Co_Owned_Dogs_Plan.md): every named co-owner kennel, with its
+  // Co-owned (docs/plans/done/co-owned-dogs.md): every named co-owner kennel, with its
   // logo and link; a dog living with one says which.
   const partners = d.co_owned ? coOwnedWith(snap, d) : [];
   if (partners.length) fact.co_owned = ['Co-owned with', partners.map((k) => `<span class="pk">${partnerLogo(snap, k)}${partnerLink(k)}</span>`).join(', ')];

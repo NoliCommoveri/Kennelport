@@ -1,6 +1,6 @@
 # The KennelPort Worker (plan section 2): every site, the manage app, /ops and the
 # KennelOS link API, from one deploy. Deployed by Cloudflare Workers Builds with its
-# root directory set to `worker/` (docs/KennelPort_Setup.md).
+# root directory set to `worker/` (docs/plans/setup.md).
 #
 # The top level is the STAGING Worker, on workers.dev only. [env.production] at
 # the bottom is the production one: its own name, D1, R2 and routes, deployed by a
@@ -27,7 +27,7 @@ binding = "ASSETS"
 run_worker_first = true
 html_handling = "none"
 
-# Setup step 3 (docs/KennelPort_Setup.md): the staging database, created 2026-11-02.
+# Setup step 3 (docs/plans/setup.md): the staging database, created 2026-11-02.
 [[d1_databases]]
 binding = "DB"
 database_name = "kennelport-staging"

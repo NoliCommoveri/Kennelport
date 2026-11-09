@@ -1,4 +1,4 @@
-// The portal's records (docs/Puppy_Parent_Portal_Plan.md section 9): families and
+// The portal's records (docs/plans/family-portal.md section 9): families and
 // their addresses, placements with the pickup and vet clock, health records, files
 // and history. Every change to a placement is written to portal_history with who
 // made it (plan 3.1); fields she edits are listed in edited_fields, so a later

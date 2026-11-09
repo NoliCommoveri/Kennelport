@@ -1,4 +1,4 @@
-// The family's account over time (docs/Puppy_Parent_Portal_Plan.md sections 2, 7.4
+// The family's account over time (docs/plans/family-portal.md sections 2, 7.4
 // and 10; build chunk 4): messages from pickup on, her note when a puppy is lost
 // before pickup, her delete (undoable for 30 days), a back-out's account going the
 // same way, and the erase a family asks for.

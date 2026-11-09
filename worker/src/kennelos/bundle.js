@@ -29,7 +29,7 @@
 // a puppy's disposition with isPupAvailable, and does the heat-to-pairing rules,
 // so the site works nothing out (decision 30).
 //
-// Co-owned dogs (docs/Co_Owned_Dogs_Plan.md) come with partner_kennels: the
+// Co-owned dogs (docs/plans/done/co-owned-dogs.md) come with partner_kennels: the
 // kennels of a dog's co-owners that she ticked Name this kennel on my website in
 // KennelOS, by public name and website only. A dog's four co-owned fields count
 // only in a bundle that has the section; one without leaves them as they are.

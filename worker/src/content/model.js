@@ -66,7 +66,7 @@ export const DOG_FIELDS = {
   died_on: DATE,
   health_display: ENUM('normal_only', 'all', 'none'),
   show_on_site: BOOL,
-  // Co-owned (docs/Co_Owned_Dogs_Plan.md): lives_away, living with one of its
+  // Co-owned (docs/plans/done/co-owned-dogs.md): lives_away, living with one of its
   // co-owners, puts it in the Dogs page's Co-owned section only. Its partner
   // kennels by name here (the import's way, like a litter's dam by slug); the
   // forms name them by id (records.js).
@@ -81,7 +81,7 @@ export const DOG_FIELDS = {
   owner_url: URL_,
 };
 
-// A partner kennel (docs/Co_Owned_Dogs_Plan.md): one her co-owned dogs are shared
+// A partner kennel (docs/plans/done/co-owned-dogs.md): one her co-owned dogs are shared
 // with. Its logo is a photo on the site, uploaded or copied from its badge code.
 export const PARTNERS_MAX = 50;
 
@@ -187,7 +187,7 @@ export const FAQ_PLACES = {
   pickup: 'Getting your pup home page',
 };
 export const FAQ_PLACE_KEYS = Object.keys(FAQ_PLACES);
-// Since site builder 3.6 (docs/Site_Builder_Plan.md) the owner can put a FAQ spot or
+// Since site builder 3.6 (docs/plans/site-builder.md) the owner can put a FAQ spot or
 // a badge row on any page, a page of hers included, and on each kind of profile
 // page; a question or a badge can go to any of them. These are the code's pages and
 // profiles, in the order the breeder's tick boxes list them; a page of the owner's
@@ -426,7 +426,7 @@ export const PAGES = {
   privacy:        { path: '/privacy', group: null, label: 'Privacy', canHide: false, fields: {} },
 };
 
-// A page the owner adds (docs/Site_Builder_Plan.md, step 3; content/blocks.js): its
+// A page the owner adds (docs/plans/site-builder.md, step 3; content/blocks.js): its
 // key is x-<name>, so it never meets a page of the code's. The breeder switches it
 // on or off, names it in the menu and words its heading, as for any page; its
 // blocks are the owner's. A block the owner adds to any page has the same words,

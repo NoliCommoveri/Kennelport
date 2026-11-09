@@ -1,4 +1,4 @@
-// The linked sample (docs/Linked_Sample_Plan.md): Tuxedo Lane Bostons*, a made-up
+// The linked sample (docs/plans/done/linked-sample.md): Tuxedo Lane Bostons*, a made-up
 // kennel, as KennelOS would send it. Step 1's bundle and feed must use every field
 // and every value the packages take, so the sample stays complete as they grow.
 // The series (bundles and feeds 1–5) must land in order on a linked site with the

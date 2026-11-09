@@ -1,4 +1,4 @@
-// The Puppy Parent Portal, build chunk 5 (docs/Puppy_Parent_Portal_Plan.md 8.1, 8.2
+// The Puppy Parent Portal, build chunk 5 (docs/plans/family-portal.md 8.1, 8.2
 // and 8.5): an extended stay on a placement, its go-home date and skills, her
 // weekly updates with photos, the family's Stay page, and KennelOS's extras.
 import { test } from 'node:test';

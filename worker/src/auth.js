@@ -131,7 +131,7 @@ export async function inviteToSite(env, siteId, rawEmail, role, { manageUrl, sit
   if (!['owner', 'editor'].includes(role)) throw new AuthError('bad_role', 'The role is owner or editor.');
   const site = await env.DB.prepare('SELECT kennel_name, subdomain, status FROM sites WHERE id = ?').bind(siteId).first();
   if (!site || site.status === 'closed') throw new AuthError('no_site', 'No such open site.');
-  // Nobody is invited to the demo (docs/Linked_Sample_Plan.md): it is the owner's only.
+  // Nobody is invited to the demo (docs/plans/done/linked-sample.md): it is the owner's only.
   if (await isDemoSite(env, siteId)) throw new AuthError('demo', NOT_FOR_DEMO);
   const eh = await emailHash(env, email);
   await env.DB.prepare(`INSERT INTO site_users (site_id, email_hash, role, invited_at) VALUES (?, ?, ?, ?)

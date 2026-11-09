@@ -371,7 +371,7 @@ export function field(name, f, value, ctx) {
   }
 }
 
-// A photo spot (docs/Site_Builder_Plan.md, decision 20): only the photo that's there
+// A photo spot (docs/plans/site-builder.md, decision 20): only the photo that's there
 // now, with Replace (or Choose a photo) and Remove; choosing and uploading happen in
 // the one photo library window (photos.js), the same on every screen. A spot that
 // takes several shows them small, with Add or change photos. The form posts the
@@ -398,7 +398,7 @@ export function photoSlot(name, label, hint, chosen, ctx, { multiple = false, ma
     <div class="row"><button type="button" class="button small" data-replace>${esc(button)}</button>${multiple ? '' : `<button type="button" class="link small" data-remove${cur.length ? '' : ' hidden'}>${esc(say('slot.remove'))}</button>`}</div></fieldset>`;
 }
 
-// The long forms in sections (docs/Puppy_Parent_Portal_Plan.md section 7.3): what belongs
+// The long forms in sections (docs/plans/family-portal.md section 7.3): what belongs
 // together under a heading, short fields two to a row, and every on/off setting gathered
 // at the end as switches instead of scattered between the inputs. A field a group doesn't
 // name still shows, under More, so a new field is never lost. Kinds without groups keep

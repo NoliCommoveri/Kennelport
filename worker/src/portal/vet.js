@@ -1,4 +1,4 @@
-// The 3-day vet visit (docs/Puppy_Parent_Portal_Plan.md section 5): the deadline,
+// The 3-day vet visit (docs/plans/family-portal.md section 5): the deadline,
 // counted exactly as her contract words it, and the reminders, counted back from
 // it so none lands after it. Pure functions of times and settings, so every rule
 // here has a test (tests/portal-vet.test.js).

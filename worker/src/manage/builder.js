@@ -1,5 +1,5 @@
 // The owner's build tools, in her admin view of the Site Manager
-// (docs/Site_Builder_Plan.md, step 1: display and timing rules). Drawn from the
+// (docs/plans/site-builder.md, step 1: display and timing rules). Drawn from the
 // site builder prototype (docs/reference/site-builder-prototype.html): Every site
 // as tiles; per site, Display rules (a card per pup status, then registration and
 // prices) and Timing (a row per rule with its default), each beside a phone
