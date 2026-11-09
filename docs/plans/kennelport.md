@@ -1501,7 +1501,7 @@ and the feed, and the prompts at Active breeding, past Expected, and Sold or Clo
 domain joins KennelOS's `isWebsiteOrigin` by hand, in its cloud's `WEBSITE_ORIGINS`
 (Setup, Custom domains, step C), like the domain itself. Not built from 5.5: the
 deposit's How to pay (KennelOS keeps no deposit
-instructions). Next: try the link end to end, on production (staging is no longer used regularly).
+instructions). The link works end to end with KennelOS on production.
 
 If the first site wants its own domain, connect it by hand (section 2.4).
 

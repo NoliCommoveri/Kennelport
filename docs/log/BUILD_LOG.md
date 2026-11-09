@@ -619,3 +619,7 @@ with new sections and a new building order. Docs only; nothing built yet.
 - Production is live: every built migration applied, every key and service connected.
   Work deploys straight to production from `main`; staging still deploys but isn't used
   regularly. CLAUDE.md says so, with the 503 until **Apply pending** after a migration.
+
+## 2026-11-09: the KennelOS link works on production
+
+- The owner confirms the link works end to end with KennelOS on production: phase 4 is done.
