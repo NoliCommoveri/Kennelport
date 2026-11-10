@@ -4,7 +4,7 @@ The one place for progress. Keep it short: one line per item, a link to where th
 is. When a step is built, change its line here and add the detail to the build log
 ([`log/BUILD_LOG.md`](log/BUILD_LOG.md)); the plans describe intent, not progress.
 
-Last updated 2026-11-09. Released on `main`: Site Manager (`APP_VERSION`) 17, site
+Last updated 2026-11-10. Released on `main`: Site Manager (`APP_VERSION`) 17, site
 template (`ASSET_VERSION`) 23.
 
 ## Platform
@@ -16,6 +16,11 @@ template (`ASSET_VERSION`) 23.
 - **Staging** (`kennelport-staging.kennelport.workers.dev`) still deploys from `main` but
   isn't used regularly.
 - Custom domains are connected by hand ([`plans/setup.md`](plans/setup.md), Custom domains).
+- **Full backup and restore** in `/ops` (2026-11-10): every row and file of a site in one
+  zip, and back in ([`plans/backup-format.md`](plans/backup-format.md)). Back up each
+  site before any change that could lose data.
+- The tests run on every pull request and push (`.github/workflows/test.yml`). **To do
+  (owner):** require them to pass before a merge to `main`, in GitHub's branch settings.
 
 ## Version 1, the first family site ([`plans/kennelport.md`](plans/kennelport.md) 8.1)
 
@@ -59,6 +64,14 @@ anyone outside the family.
 
 - Co-owned dogs: KennelPort's half built 2026-11-04 ([`plans/done/co-owned-dogs.md`](plans/done/co-owned-dogs.md)).
 - Linked sample and the demo site: built ([`plans/done/linked-sample.md`](plans/done/linked-sample.md)).
+
+## Review ([`review/senior-review-2026-11.md`](review/senior-review-2026-11.md), 2026-11-10)
+
+Verdict: keep the code, fix how it reaches production. Done: backup, tests on every
+change, a plain page for unexpected errors. **Open, the owner's to decide:** migrations
+applying themselves instead of every site showing "Back soon" until Apply pending
+(item 1); limiting wrong guesses at the `/ops` token (item 4). Recommended: no new
+features until the portal's gate has been run.
 
 ## Parked
 

@@ -2,9 +2,6 @@
 // app, the ops console and the KennelOS link API. It picks what a request is for
 // from its hostname (hosts.js).
 //
-// Phase 0: the routing, the bindings and /ops are real; every page is a plain
-// placeholder until the template (phase 1) and the manage app (phase 2) exist.
-//
 // Never logged: an email address, a code, a token or a request body.
 import { handleFront } from './front.js';
 import { handleOps } from './ops.js';
@@ -65,7 +62,24 @@ export default {
     ctx.waitUntil(event.cron === HOURLY_CRON ? runPortalHourly(env) : runCleanup(env));
   },
 
+  // The last resort: something nobody expected went wrong. The visitor, family or
+  // breeder gets a plain page (the API, JSON) instead of Cloudflare's error
+  // screen, and the Worker's log gets what failed and where. The error's own
+  // message and stack only: never the request (see the note at the top).
   async fetch(request, env, ctx) {
+    try {
+      return await route(request, env, ctx);
+    } catch (err) {
+      const url = new URL(request.url);
+      console.error(`unhandled: ${request.method} ${url.pathname}: ${err?.stack ?? err}`);
+      if (url.hostname.startsWith('api.') || url.pathname.startsWith('/v1/')) return json({ error: 'server_error', message: 'Something went wrong at KennelPort. Try again in a minute.' }, 500);
+      return htmlPage('Something went wrong', '<h1>Something went wrong</h1><p>That didn\'t work, and it isn\'t anything you did. Please try again in a minute.</p>', { status: 500 });
+    }
+  },
+};
+
+async function route(request, env, ctx) {
+  {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith('/_kp/') && !url.pathname.startsWith('/_kp/p/')) return serveAsset(request, env);
@@ -121,5 +135,5 @@ export default {
       default:
         return notFound();
     }
-  },
-};
+  }
+}

@@ -85,3 +85,15 @@ test('kennelport.com: the front page and the terms, linked from the sign-ins and
   await publish(env, site.id, 'test');
   assert.match(await (await call(env, 'akbostons.kennelport.com', '/')).text(), /Made with <a href="https:\/\/kennelport\.com\/">KennelPort<\/a> · <a href="https:\/\/kennelport\.com\/terms">Terms<\/a>/);
 });
+
+test('something unexpected going wrong answers a plain page, not a crash', async (t) => {
+  const env = await makeEnv();
+  await addSite(env, 'akbostons');
+  t.mock.method(console, 'error', () => {});
+  assert.equal((await call(env, 'akbostons.kennelport.com', '/')).status, 200);
+  env.DB.prepare = () => { throw new Error('the database is away'); };
+  const page = await call(env, 'akbostons.kennelport.com', '/');
+  assert.equal(page.status, 500);
+  assert.match(await page.text(), /Something went wrong/);
+  assert.match(console.error.mock.calls[0].arguments[0], /unhandled: GET \/: Error: the database is away/);
+});

@@ -623,3 +623,31 @@ with new sections and a new building order. Docs only; nothing built yet.
 ## 2026-11-09: the KennelOS link works on production
 
 - The owner confirms the link works end to end with KennelOS on production: phase 4 is done.
+
+## 2026-11-10: a review of the whole build; full backup and restore
+
+- Review written: `docs/review/senior-review-2026-11.md`. Verdict: no rewrite and no
+  reshaped data; the code is sound, the way it reaches production is what needs work.
+  Two items left for the owner to decide (migrations applying themselves; a limit on
+  wrong `/ops` tokens).
+- **Full backup and restore** (`src/backup.js`, `src/ops/backup.js`,
+  `public/_kp/o/backup.js`; format in `docs/plans/backup-format.md`). `/ops` → a site →
+  Full backup makes one zip with every row of every table that holds the site's data
+  and every file under `sites/<id>/` in R2; `/ops` → Restore a site from a full backup
+  puts it back where that site isn't (never over a site that is there), and takes out
+  what went in if it fails part way. The site is asked for and sent a piece at a time
+  (a manifest, rows by the page, files one by one), so no request holds a whole site;
+  the zip is made and read in the browser with the manage app's `zip.js`. Left out:
+  sign-in state and caches (`SKIPPED` in `backup.js`). Families' addresses go out
+  readable as well as encrypted (`_email`). A restore is marked by an R2 object under
+  `_ops/restoring/`, so it needed no migration.
+- A test now fails when a table with `site_id` is missing from `SITE_TABLES` or is
+  neither in a backup nor named as left out. `tests/helpers/d1.js`: the stand-in
+  bucket's list gives each object's size, as R2 does.
+- `src/index.js`: an error nobody caught answers a plain "Something went wrong" page
+  (JSON on the API) and logs the method, path and the error's stack, in place of
+  Cloudflare's error screen. The stale "phase 0" note at its top is gone.
+- `.github/workflows/test.yml`: `node --test` on every pull request and push.
+- No migration; no file in the three versioned sets changed (`public/_kp/o/` is new and
+  outside them), so no version bump. Wording: the two `/ops` pages are the owner's own
+  screens, so their words are in `src/ops/backup.js`, not `manage/wording.js`.

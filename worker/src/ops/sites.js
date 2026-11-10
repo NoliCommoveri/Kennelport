@@ -69,6 +69,7 @@ ${rows ? `<table><tr><th>Subdomain</th><th>Kennel</th><th>Status</th></tr>${rows
   <p><label>Kennel name<br><input name="kennel_name" required maxlength="80" placeholder="AK Boston Terriers"></label></p>
   <p><button>Create site</button></p>
 </form>
+<p><a href="/ops/restore">Restore a site from a full backup</a></p>
 <form method="post" action="/ops/sites/demo"><p><button>Make a demo site from the sample</button> <span class="muted">Tuxedo Lane Bostons*, the made-up kennel in the linked sample, linked to the sample instead of a KennelOS device, with step 1 in. Marked Demo; never published or indexed, no preview link, nobody can be invited. It opens only in your admin view.</span></p></form>`;
 }
 
@@ -117,6 +118,7 @@ ${snaps.length ? `<table><tr><th>Published</th><th>Size</th><th></th></tr>${snap
   const contentSection = `<h2>Content</h2>
 <p>The draft's content as one JSON document (the content model, <code>worker/src/content/model.js</code>). Download it, edit it, paste it back. A section you include replaces that section of the draft; one you leave out is untouched. Nothing is live until you publish.</p>
 <p><a href="/ops/sites/${esc(site.id)}/content.json">Download the content (JSON)</a></p>
+<p><a href="/ops/backup/${esc(site.id)}">Full backup</a> <span class="muted">Everything the site holds, photos and the puppy portal included, as one zip that can be restored.</span></p>
 <form method="post" action="/ops/sites/${esc(site.id)}/content">
   <p><textarea name="content" rows="14" spellcheck="false" placeholder='{"site": {"tagline": "..."}}'>${esc(content ?? '')}</textarea></p>
   <p><button>Save to draft</button></p>

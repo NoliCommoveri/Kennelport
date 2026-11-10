@@ -1,0 +1,25 @@
+# Runs the tests on every pull request and every push, so a change that breaks
+# something shows red before it is merged: a merge to main deploys to production
+# at once (CLAUDE.md). The tests need nothing installed: Node 22 and the repo.
+#
+# This marks a pull request; it can't stop a merge by itself. For that, turn on
+# "Require status checks to pass" for main in the repository's branch settings.
+name: Tests
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test
