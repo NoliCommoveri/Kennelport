@@ -2,7 +2,7 @@
 // the draft, as short lines a breeder can read ("Willow: new photo", "Opal:
 // Reserved", "Extras: 12-week package edited"), each with the page to preview.
 import { PAGES, HOME_BLOCK_ORDER } from './content/model.js';
-import { STATUS_TEXT } from './render/parts.js';
+import { statusText } from './render/parts.js';
 
 // Two values the same to a visitor. A blank (null, '', false, an empty list or
 // object) is the same as a field that isn't there, and key order doesn't count: a
@@ -77,7 +77,7 @@ export function changes(live, draft) {
   const pups = (snap) => snap.litters.flatMap((l) => l.puppies.map((p) => ({ ...p, _litter: l.slug })));
   records(lines, pups(live), pups(draft), {
     name: (p) => p.name, path: (p) => `/litters/${p._litter}/${p.slug}`,
-    describe: (a, b) => why(a, b, { status: (x, y) => (Object.keys({ ...a, ...b }).filter((k) => !same(a[k], b[k])).length === 1 ? STATUS_TEXT[y] ?? y : null) }),
+    describe: (a, b) => why(a, b, { status: (x, y) => (Object.keys({ ...a, ...b }).filter((k) => !same(a[k], b[k])).length === 1 ? statusText(y) ?? y : null) }),
   });
 
   for (const [label, key, path, nameOf] of [

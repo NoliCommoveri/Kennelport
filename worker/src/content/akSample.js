@@ -82,7 +82,7 @@ export const AK_SAMPLE = {
       puppies: [
         { slug: 'opal', name: 'Opal', collar: 'pink collar', sex: 'female', color: 'Black & white', status: 'available', bio: 'Our pink-collar girl. Loudest at feeding time and first to find the warm spot.' },
         { slug: 'diamond', name: 'Diamond', collar: 'blue collar', sex: 'male', color: 'Black & white', status: 'available', bio: 'Blue-collar boy with a wide white blaze. Photos coming this week.' },
-        { slug: 'onyx', name: 'Onyx', collar: 'black collar', sex: 'male', color: 'Black & white', status: 'reserved', bio: 'The darkest of the three, with a little white snip. Picked by our #1 family.' },
+        { slug: 'onyx', name: 'Onyx', collar: 'black collar', sex: 'male', color: 'Black & white', status: 'placed', bio: 'The darkest of the three, with a little white snip. Picked by our #1 family.' },
       ],
     },
     {

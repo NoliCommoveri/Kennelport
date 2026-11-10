@@ -15,7 +15,7 @@
 //     litters: [{ id, pairing_id, heat_id, name, dam_id, sire_id, dam_name, sire_name,
 //                 expected_on, born_on, ready_on, deposits_on, prices: { price_female, … },
 //                 puppies: [{ id, name, collar, sex, color, registration, registry,
-//                             status: available | reserved | placed | staying | undecided | hidden }] }],
+//                             status: available | placed | staying | undecided | hidden }] }],
 //     pairings: [{ id, heat_id, dam_id, sire_id, dam_name, sire_name, planned_on, expected_on }],
 //     heats: [{ id, dam_id, dam_name, month }],
 //     extras?: [{ id, name, group, description, price_from, price_to }],
@@ -92,7 +92,7 @@ const SHAPES = {
     expected_on: DATE, born_on: DATE, ready_on: DATE, deposits_on: DATE, prices: { object: 'prices' }, puppies: { list: 'puppy', max: MAX.puppies } },
   prices: Object.fromEntries(LITTER_PRICE_FIELDS.map((k) => [k, INT])),
   puppy: { id: ID, name: S(40, true), collar: S(30), sex: SEX, color: S(40), registration: ENUM(['limited', 'full']), registry: S(30),
-    status: ENUM(['available', 'reserved', 'placed', 'staying', 'undecided', 'hidden'], true) },
+    status: ENUM(['available', 'placed', 'staying', 'undecided', 'hidden'], true) },
   pairing: { id: ID, heat_id: REF, dam_id: REF, sire_id: REF, dam_name: S(60), sire_name: S(60), planned_on: DATE, expected_on: DATE },
   heat: { id: ID, dam_id: REF, dam_name: S(60), month: { type: 'month', required: true } },
   extra: { id: ID, name: S(80, true), group: S(40), description: ML(600), price_from: INT, price_to: INT },
@@ -216,7 +216,7 @@ export const pupShown = (L, d) => d.status !== 'puppy' || !d.disposition || L[`p
 // A new website litter's label for a planned litter, by its KennelOS kind.
 const planLabel = (L, kind) => (kind === 'heat' ? L.label_heat : kind === 'pairing' ? L.label_pairing : null);
 const DEFAULT_LABELS = [DEFAULT_RULES.landing.label_heat, DEFAULT_RULES.landing.label_pairing];
-const PUPPY_STATUS = { available: 'available', reserved: 'reserved', placed: 'placed', staying: 'staying', undecided: 'coming_soon', hidden: 'hidden' };
+const PUPPY_STATUS = { available: 'available', placed: 'placed', staying: 'staying', undecided: 'coming_soon', hidden: 'hidden' };
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const monthOf = (ymd) => (ymd ? `${MONTHS[Number(ymd.slice(5, 7)) - 1]} ${ymd.slice(0, 4)}` : null);
 
@@ -356,13 +356,19 @@ export class Writer {
   // set once from the dog's Health results choice, and is hers from then on, save
   // one kept off as not normal, which follows the choice again once it is. A
   // result KennelOS leaves unmarked (normal: null) counts as normal.
+  // Their order (rules.landing health_order): 'hers' keeps where each result is in
+  // her order and puts a new one after her last; 'kennelos' takes KennelOS's order
+  // at every update.
   health(dogId, display, list, existing = []) {
     if (!list.length) return;
     const mine = existing.filter((h) => h.dog_id === dogId && h.source === 'kennelos');
     const byKos = new Map(mine.map((h) => [h.kennelos_id, h]));
+    const hers = this.L.health_order === 'hers';
+    let next = Math.max(99, ...existing.filter((h) => h.dog_id === dogId).map((h) => Number(h.sort) || 0)) + 1;
     list.forEach((h, i) => {
-      const values = { test: h.test, result: h.result, normal: h.normal ?? 1, date: h.date, verify_url: h.verify_url, sort: 100 + i };
       const cur = byKos.get(h.id);
+      const values = { test: h.test, result: h.result, normal: h.normal ?? 1, date: h.date, verify_url: h.verify_url, sort: 100 + i };
+      if (hers) { if (cur) delete values.sort; else values.sort = next++; }
       // A result Normal results only kept off for not being normal shows once it
       // is (KennelOS sends an unmarked result as normal now): the dog's rule, again.
       if (cur && display === 'normal_only' && !cur.normal && !cur.show && values.normal) values.show = 1;

@@ -10,7 +10,7 @@ import { load } from './fixtures/linked-sample/sample.js';
 const { buildSnapshot } = await import('../src/publish.js');
 const { renderPage } = await import('../src/render/index.js');
 const { leavingLitters, expireLitters } = await import('../src/kennelos/clock.js');
-const { rulesFor, withPart, DEFAULT_RULES, DEFAULT_TIMING } = await import('../src/content/rules.js');
+const { rulesFor, withPart, saveBuild, DEFAULT_RULES, DEFAULT_TIMING } = await import('../src/content/rules.js');
 
 const M = 'manage.kennelport.com';
 const API = 'api.kennelport.com';
@@ -33,7 +33,8 @@ async function sampleSite(t) {
   assert.equal(r.status, 200);
   const page = async (path) => renderPage(await buildSnapshot(env, site.id), { path, origin: 'https://x', today: TODAY, preview: false, portal: false });
   const post = (path, fields) => call(env, M, path, { method: 'POST', headers: { cookie: admin, origin: `https://${M}` }, body: form(fields) });
-  return { env, site, admin, page, post };
+  const send = (body) => call(env, API, '/v1/bundle', { method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` } });
+  return { env, site, admin, page, post, send };
 }
 
 // The rules screen's form as it stands, with some fields changed.
@@ -76,16 +77,16 @@ test('display rules change how the sample\'s pups read', async (t) => {
   assert.match(gem, /Onyx\* .*Reserved/);
   const r = await post('/admin/tuxedolane/rules', await rulesForm(env, admin, {
     'status.hidden.show': 'on', 'status.hidden.words': 'Health hold',
-    'status.reserved.words': 'Spoken for', 'status.placed.words': 'Home with family',
+    'status.placed.words': 'Spoken for',
     'status.undecided.show': null,
     'reg.unset': 'To be decided',
-    'price.off': 'Ask us', 'price.before': 'Deposits open {date}',
+    'price.off': 'Ask us', 'status.not_open.words': 'Deposits open {date}',
   }));
   assert.equal(r.status, 303);
   gem = text((await page('/litters/the-gem-litter')).html);
   assert.match(gem, /Garnet\* .*Health hold/);
   assert.match(gem, /Onyx\* .*Spoken for/);
-  assert.match(text((await page('/litters/the-gem-litter/jade')).html), /Home with family/);
+  assert.match(text((await page('/litters/the-gem-litter/jade')).html), /Spoken for/);
   assert.doesNotMatch(gem, /Topaz\*/, 'undecided switched off');
   assert.match(text((await page('/litters/the-gem-litter/ruby')).html), /Registration To be decided/);
   assert.match(gem, /Ask us/);
@@ -94,8 +95,8 @@ test('display rules change how the sample\'s pups read', async (t) => {
   await post('/admin/tuxedolane/rules', { ...(await rulesForm(env, admin)), default: 'status.hidden' });
   assert.doesNotMatch(text((await page('/litters/the-gem-litter')).html), /Garnet\*/);
   // A bad value is refused, with the reason, and nothing saved.
-  const bad = await post('/admin/tuxedolane/rules', await rulesForm(env, admin, { 'price.before': 'Available soon' }));
-  assert.match(await bad.text(), /needs \{date\}/);
+  const bad = await post('/admin/tuxedolane/rules', await rulesForm(env, admin, { 'status.not_open.words': 'x'.repeat(61) }));
+  assert.match(await bad.text(), /at most 60 characters/);
   assert.match(text((await page('/litters/the-spice-litter/sage')).html), /Deposits open/);
 });
 
@@ -236,4 +237,55 @@ test('how KennelOS data lands follows the site\'s settings, for new records', as
   // First in her order: the last one sent has the lowest place.
   const sorts = env.DB.raw.prepare('SELECT sort FROM dogs WHERE site_id = ?').all(site.id).map((r) => r.sort);
   assert.ok(Math.max(...sorts) < 0);
+});
+
+test('her health order stays through an update, a new result goes last; KennelOS\'s order is a rule', async (t) => {
+  const { env, site, send } = await sampleSite(t);
+  const dog = env.DB.raw.prepare("SELECT id FROM dogs WHERE site_id = ? AND kennelos_id = 'dog-clover'").get(site.id).id;
+  const order = () => env.DB.raw.prepare('SELECT kennelos_id FROM health_results WHERE dog_id = ? ORDER BY sort, id').all(dog).map((h) => h.kennelos_id);
+  assert.deepEqual(order(), ['h-clover-1', 'h-clover-2', 'h-clover-3'], "KennelOS's order, the first time");
+  // She moves the last one to the top in the Site Manager.
+  env.DB.raw.prepare("UPDATE health_results SET sort = 1 WHERE dog_id = ? AND kennelos_id = 'h-clover-3'").run(dog);
+  const bundle = load('bundle-1.json');
+  bundle.bundle_id = 'b-health-1';
+  const clover = bundle.dogs.find((d) => d.id === 'dog-clover');
+  clover.health.unshift({ ...clover.health[0], id: 'h-clover-new', test: 'Cardiac (OFA)' });
+  assert.equal((await send(bundle)).status, 200);
+  assert.deepEqual(order(), ['h-clover-3', 'h-clover-1', 'h-clover-2', 'h-clover-new'], 'hers kept, the new one last');
+
+  // With KennelOS's order, every update puts them back in its order.
+  await saveBuild(env, site.id, withPart({}, 'rules', { ...DEFAULT_RULES, landing: { ...DEFAULT_RULES.landing, health_order: 'kennelos' } }));
+  bundle.bundle_id = 'b-health-2';
+  assert.equal((await send(bundle)).status, 200);
+  assert.deepEqual(order(), ['h-clover-new', 'h-clover-1', 'h-clover-2', 'h-clover-3']);
+});
+
+test('born, not yet open is its own status row; her old "before deposits open" words carry over', async (t) => {
+  const { env, site, page } = await sampleSite(t);
+  // Today's result by default: Sage* reads "Available on November 22", the available pill.
+  let sage = text((await page('/litters/the-spice-litter/sage')).html);
+  assert.match(sage, /Available on November 22/);
+  // A site that changed the price rules' "before" keeps its words, now on the row.
+  assert.equal(rulesFor({ rules: { price: { before: 'Deposits open {date}' } } }).rules.status.not_open.words, 'Deposits open {date}');
+  assert.equal('before' in rulesFor({}).rules.price, false);
+  // The row's own words, pill and price.
+  await saveBuild(env, site.id, withPart({}, 'rules', { ...DEFAULT_RULES, status: { ...DEFAULT_RULES.status, not_open: { ...DEFAULT_RULES.status.not_open, words: 'Born {date}? No: opens {date}', pill: 'res', price: false } } }));
+  sage = (await page('/litters/the-spice-litter/sage')).html;
+  assert.match(text(sage), /No: opens November 22/);
+  assert.match(sage, /status res">Born November 22\? No: opens November 22/);
+  // Pearl*, in a litter already open, still reads by the available row.
+  assert.match(text((await page('/litters/the-gem-litter/pearl')).html), /Status Available/);
+});
+
+test('a snapshot from before the not_open row reads as it did', async () => {
+  const { statusRule, puppyStatus } = await import('../src/render/parts.js');
+  const old = structuredClone(DEFAULT_RULES);
+  delete old.status.not_open;
+  old.price.before = 'Opens {date}';
+  const snap = { rules: old, timing: DEFAULT_TIMING };
+  const l = { stage: 'current', deposits_on: '2026-12-01', puppies: [] };
+  const p = { status: 'available' };
+  assert.equal(puppyStatus(snap, l, p, '2026-11-01'), 'Opens December 1');
+  assert.equal(statusRule(snap, p, l, '2026-11-01').pill, 'avail');
+  assert.equal(puppyStatus(snap, l, p, '2026-12-01'), 'Available');
 });

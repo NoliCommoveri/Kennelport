@@ -76,6 +76,11 @@ extra's one price is sent as a range of the same number twice; `collar` and
    `price.before`, which it replaces), the available pill, shown, no price change. The
    owner can then give it its own words, pill, price, ask and order. No data changes: it
    is worked out at render from `deposits_on`, as now.
+   **Modified (as built):** it is the sixth row, since `reserved` went. It always shows
+   and can't be an older puppy, so it has no Show or Older switch: whether a pup shows is
+   decided at publish, and this row moves on to available on the day by itself. Its words
+   needn't hold `{date}` (60 characters, as `price.before` had). A site's changed
+   `price.before` is carried to the row's words; an older snapshot reads as before.
 
 ## Part B. Fields, conditions and picks: blocks over any data
 

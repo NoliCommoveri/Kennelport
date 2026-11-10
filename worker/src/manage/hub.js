@@ -14,7 +14,7 @@ import { escapeHtml as esc } from '../lib/html.js';
 import { getSettings } from '../portal/store.js';
 import { formatAt, formatDay, localParts, vetStatus } from '../portal/vet.js';
 import { updatesDue } from '../portal/stays.js';
-import { STATUS_TEXT } from '../render/parts.js';
+import { statusText } from '../render/parts.js';
 
 const DAY = 86400000;
 
@@ -101,7 +101,7 @@ export async function dogsTab(env, site, now = new Date()) {
   const due = new Set((await updatesDue(env, site.id, s.time_zone, now)).map((x) => x.placement_id));
   const stays = new Set((await env.DB.prepare("SELECT placement_id FROM portal_placement_extras WHERE site_id = ? AND delivery = 'stay' AND confirmed_at IS NOT NULL").bind(site.id).all()).results.map((r) => r.placement_id));
   const card = (p) => {
-    const bits = [STATUS_TEXT[p.status] ?? 'Hidden on the website'];
+    const bits = [statusText(p.status) ?? 'Hidden on the website'];
     if (p.family) {
       bits.push(p.family);
       if (p.picked_up_at) bits.push(`went home ${formatAt(p.picked_up_at, s.time_zone, { weekday: false })}`, `vet: ${vetStatus(p, now).word.toLowerCase()}`);

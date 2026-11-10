@@ -33,7 +33,7 @@ a field or value the sample doesn't use. Add it to the step-1 files.
 
 **Litters**
 - A, The Gem litter*: deposits open, every price, a pairing it came from; seven pups, one
-  of each status (Pearl* available, Ruby* reserved), registration limited, full and unset.
+  of each status (Pearl* available, Ruby* placed, sold and not yet home), registration limited, full and unset.
 - B, The Spice litter*: deposits still three weeks ahead; prices for girls only.
 - C, The Summer litter*: past its ready date, so Sunny* is an older puppy.
 - E, Wren* × Moose*: expected, no prices, an outside sire by name, a heat it used.
@@ -58,8 +58,8 @@ a field or value the sample doesn't use. Add it to the step-1 files.
 | # | Sent on | Bundle | Feed |
 |---|---|---|---|
 | 1 | Nov 1, 2026 | everything above | everything above |
-| 2 | Nov 20 | Onyx* placed; Pearl* reserved; a health result for Maple* | the Reeds*' pickup booked; the Kims* sign for Pearl* |
-| 3 | Dec 10 | P1 → litter D, the Forest litter* (4 pups); H1 → P2; Ruby* placed; the Spice litter*'s deposits date has passed | Ruby*'s vet visit |
+| 2 | Nov 20 | Pearl* placed; a health result for Maple* | the Reeds*' pickup booked; the Kims* sign for Pearl* |
+| 3 | Dec 10 | P1 → litter D, the Forest litter* (4 pups); H1 → P2; the Spice litter*'s deposits date has passed | Ruby*'s vet visit |
 | 4 | Jan 15, 2027 | litter A and Ginger* not sent; Harbor Light* renamed | the Chos* removed |
 | 5 | Jan 20 | litter A sent again, Pearl* available | the Kims* back out (voided) |
 

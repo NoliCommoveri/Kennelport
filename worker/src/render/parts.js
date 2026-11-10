@@ -2,7 +2,7 @@
 // the menu. Every value from a snapshot passes through esc() (or attr()) here.
 import { SHOW_DEFAULT, isCustom, hersOn, BLOCK_TYPES, defaultMenu, MENU_PLACES } from '../content/blocks.js';
 import { escapeHtml as esc } from '../lib/html.js';
-import { PAGES } from '../content/model.js';
+import { PAGES, pupStatus } from '../content/model.js';
 import { puppyPrice, litterPriceRange, depositRange } from '../content/prices.js';
 import { DEFAULT_RULES, DEFAULT_TIMING, ruleKey, addDays } from '../content/rules.js';
 
@@ -62,8 +62,21 @@ export function word(snap, key, vars = {}) {
   return w.replace(/\{(\w+)\}/g, (m, v) => (v in vars ? String(vars[v]) : m));
 }
 export const timingOf = (snap) => snap.timing ?? DEFAULT_TIMING;
-// The rule for a puppy's status.
-export const statusRule = (snap, p) => rulesOf(snap).status[ruleKey(p.status)] ?? DEFAULT_RULES.status.hidden;
+// Which status row a puppy reads by: its status's, or `not_open` for an available
+// pup in a born litter whose deposits don't open yet (content/rules.js STATUS_ROWS).
+// Without its litter and the day, its status's.
+export const pupRuleKey = (snap, p, l = null, today = null) => {
+  const k = ruleKey(p.status);
+  return k === 'available' && l && today && depositsAhead(snap, l, today) ? 'not_open' : k;
+};
+// The rule for a puppy's status. A snapshot from before the not_open row reads it
+// as today did: available's, with the price rules' "Available on {date}".
+export function statusRule(snap, p, l = null, today = null) {
+  const R = rulesOf(snap);
+  const k = pupRuleKey(snap, p, l, today);
+  if (k === 'not_open' && !R.status.not_open) return { ...R.status.available, words: R.price?.before ?? DEFAULT_RULES.status.not_open.words };
+  return R.status[k] ?? DEFAULT_RULES.status.hidden;
+}
 // What replaces a price where prices are off.
 export const pricesOff = (snap) => rulesOf(snap).price.off;
 export const sitePrice = (snap, from, to) => priceText(from, to, rulesOf(snap).price.style);
@@ -182,14 +195,16 @@ export function menuGroups(snap, ctx) {
 // 'coming_soon' is stored, and reads "Still deciding" (plan 3.6, decision 32): she
 // may keep the puppy, place it privately or never offer it, so the site promises
 // nothing. The Site Manager's own words for a status; the site reads its rules.
-export const STATUS_TEXT = { available: 'Available', reserved: 'Reserved', placed: 'Reserved', staying: 'Joining our program', coming_soon: 'Still deciding' };
+// A pup stored as reserved reads as placed: look it up with statusText.
+export const STATUS_TEXT = { available: 'Available', placed: 'Reserved', staying: 'Joining our program', coming_soon: 'Still deciding' };
+export const statusText = (status) => STATUS_TEXT[pupStatus(status)];
 
 // The day deposits open: the litter's deposits date, moved by the site's timing rule.
 const depositsOpen = (snap, l) => (l.deposits_on ? addDays(l.deposits_on, timingOf(snap).deposits_after) : null);
 
 // A born litter whose deposits don't open yet (plan 5.3): it sits under Coming up,
-// and its Available puppies read "Available on <date>". The site moves it on the
-// day, from the published snapshot.
+// and its Available puppies read by the not_open row ("Available on <date>"). The
+// site moves it on the day, from the published snapshot.
 export const depositsAhead = (snap, l, today) => l.stage === 'current' && Boolean(l.deposits_on) && depositsOpen(snap, l) > today;
 
 // A current litter past its going-home date, by the site's timing rule (today: from
@@ -199,14 +214,14 @@ const pastReady = (snap, l, today) => l.stage === 'current' && Boolean(l.ready_o
 
 // What a puppy's status says, on its card and page.
 export function puppyStatus(snap, l, p, today) {
-  if (p.status === 'available' && depositsAhead(snap, l, today)) return rulesOf(snap).price.before.replace('{date}', fmtDay(depositsOpen(snap, l)));
-  return statusRule(snap, p).words;
+  const words = statusRule(snap, p, l, today).words;
+  return pupRuleKey(snap, p, l, today) === 'not_open' ? words.replaceAll('{date}', fmtDay(depositsOpen(snap, l))) : words;
 }
 
 // A puppy's price line: only for a status whose rule shows a price (today
-// Available only), and only with the litter's Show prices on (plan 3.2).
-export function puppyPriceText(snap, l, p) {
-  if (!statusRule(snap, p).price) return '';
+// Available, before deposits open too), and only with the litter's Show prices on (plan 3.2).
+export function puppyPriceText(snap, l, p, today = null) {
+  if (!statusRule(snap, p, l, today).price) return '';
   if (!l.show_prices) return pricesOff(snap);
   const r = puppyPrice(l, p);
   return r ? sitePrice(snap, r.from, r.to) : '';
@@ -276,9 +291,10 @@ export function olderPuppies(snap, today) {
   return out;
 }
 
-// A litter's puppies in the order its rules give their statuses (today reserved
-// and placed last); equal keeps the breeder's order.
-export const sortPuppies = (snap, pups) => [...pups].sort((a, b) => statusRule(snap, a).order - statusRule(snap, b).order);
+// A litter's puppies in the order its rules give their statuses (today placed
+// last); equal keeps the breeder's order. With the litter and the day, an available
+// pup whose deposits don't open yet is ordered by the not_open row.
+export const sortPuppies = (snap, pups, l = null, today = null) => [...pups].sort((a, b) => statusRule(snap, a, l, today).order - statusRule(snap, b, l, today).order);
 
 export function parentName(snap, l, role) {
   const id = l[`${role}_id`];
@@ -498,7 +514,7 @@ export function besideCard(snap, d, { sale = null, show = SHOW_DEFAULT.dogs } = 
 // links to the contact form with it filled in, and so does the litter while it has
 // one. Only for statuses whose rule allows it (today all but staying: a puppy
 // staying here is for no one), and only while the contact page is on.
-const undecided = (snap, p) => !p.registration && statusRule(snap, p).fullreg;
+const undecided = (snap, p, l = null, today = null) => !p.registration && statusRule(snap, p, l, today).fullreg;
 
 // What a puppy's Registration line says, in the site's words. A puppy she hasn't
 // settled reads **Limited** by default, like the limited puppy it will almost
@@ -507,14 +523,14 @@ const undecided = (snap, p) => !p.registration && statusRule(snap, p).fullreg;
 // pay. She can still be asked about full registration, where the litter's tick
 // allows it, and the surcharge shows under that link. A puppy of a status that
 // can't be asked about it (staying, by default) says nothing.
-export function regText(snap, p) {
+export function regText(snap, p, l = null, today = null) {
   const R = rulesOf(snap).reg;
   if (p.registration) return R[p.registration] ?? null;
-  return undecided(snap, p) ? R.unset || null : null;
+  return undecided(snap, p, l, today) ? R.unset || null : null;
 }
 export function fullRegHref(snap, l, p, ctx) {
   if (!l.ask_full_reg || !pageOn(snap, 'contact', ctx)) return null;
-  if (p ? !undecided(snap, p) : !l.puppies.some((x) => undecided(snap, x))) return null;
+  if (p ? !undecided(snap, p, l, ctx?.today) : !l.puppies.some((x) => undecided(snap, x, l, ctx?.today))) return null;
   return `/contact?full-reg=${encodeURIComponent(l.slug)}${p ? `&puppy=${encodeURIComponent(p.slug)}` : ''}#message`;
 }
 // The litter's full-registration surcharge, shown under those links while its Show
@@ -557,12 +573,12 @@ export function puppyCard(snap, l, p, ctx) {
   const photo = img(snap, p.photo_id, { alt: p.name }) ?? '<div class="ph-photo">Photos coming soon</div>';
   const bg = img(snap, p.photo_id, { alt: '', cls: 'bg', thumb: true }) ?? '';
   const sex = sexWord(p.sex);
-  const rule = statusRule(snap, p);
+  const rule = statusRule(snap, p, l, ctx.today);
   const status = puppyStatus(snap, l, p, ctx.today);
-  const price = puppyPriceText(snap, l, p);
+  const price = puppyPriceText(snap, l, p, ctx.today);
   const priceLabel = rulesOf(snap).price.price_label;
   const reg = [l.name, p.collar].filter(Boolean).join(' · ');
-  const regWord = regText(snap, p);
+  const regWord = regText(snap, p, l, ctx.today);
   const action = (rule.ask
     ? `<a class="more" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">${esc(word(snap, 'ask_puppy'))}</a>`
     : '') + fullRegLink(snap, l, p, ctx, 'more') + fullRegSurchargeRow(snap, l, p, ctx);

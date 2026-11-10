@@ -223,7 +223,7 @@
      "id": "dog-ruby",
      "name": "Ruby*",
      "sex": "female",
-     "status": "reserved",
+     "status": "placed",
      "collar": "Red",
      "color": "Black & white",
      "registry": "AKC"
@@ -232,7 +232,7 @@
      "id": "dog-onyx",
      "name": "Onyx*",
      "sex": "male",
-     "status": "reserved",
+     "status": "placed",
      "collar": "Black",
      "color": "Black & white",
      "registration": "limited",

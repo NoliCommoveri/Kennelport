@@ -183,7 +183,7 @@ export const ENUM_WORDS = {
     dog: "Every dog's profile", litter: "Every litter's page", puppy: "Every puppy's profile",
   },
   status_dogs: { active: 'At home', retired: 'Retired', remembered: 'In memory' },
-  status_puppies: { available: 'Available', reserved: 'Reserved', placed: 'Placed (shows as Reserved)', staying: 'Joining our program', coming_soon: 'Still deciding', hidden: 'Hidden' },
+  status_puppies: { available: 'Available', placed: 'Placed (shows as Reserved)', staying: 'Joining our program', coming_soon: 'Still deciding', hidden: 'Hidden' },
   registration: { limited: 'Limited', full: 'Full' },
   status_reviews: { approved: 'Shown', hidden: 'Hidden' },
   health_display: { normal_only: 'Normal results only', all: 'All ticked results', none: 'None' },
@@ -283,7 +283,7 @@ export function field(name, f, value, ctx) {
       const unset = value === null || value === undefined || value === '';
       const blank = !f.required && !f.default ? '<option value=""></option>'
         : f.required && !f.default && unset ? '<option value="" selected disabled>Choose…</option>' : '';
-      return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"${req}>${blank}${f.values.map((x) => `<option value="${esc(x)}"${x === (value ?? f.default) ? ' selected' : ''}>${esc(enumWords(ctx.kind, name, x, ctx.say))}</option>`).join('')}</select></label>`;
+      return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"${req}>${blank}${f.values.map((x) => `<option value="${esc(x)}"${x === ((f.was && Object.hasOwn(f.was, value) ? f.was[value] : value) ?? f.default) ? ' selected' : ''}>${esc(enumWords(ctx.kind, name, x, ctx.say))}</option>`).join('')}</select></label>`;
     }
     case 'litterid': {
       const litters = ctx.litters ?? [];

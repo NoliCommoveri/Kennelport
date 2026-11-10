@@ -3,7 +3,7 @@
 // a problem comes back with what was typed and the reason.
 import { escapeHtml as esc } from '../lib/html.js';
 import { json } from '../lib/http.js';
-import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, HOME_WORDS, ALBUM_PHOTOS_MAX, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, CUSTOM_PAGE, ADDED_BLOCK_FIELDS } from '../content/model.js';
+import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, HOME_WORDS, ALBUM_PHOTOS_MAX, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, CUSTOM_PAGE, ADDED_BLOCK_FIELDS, pupStatus } from '../content/model.js';
 import {
   KINDS, listRecords, getRecord, saveRecord, setField, removeRecord, moveRecord,
   saveSite, getPage, savePage, getBlock, saveBlock, getPayment, savePayment, getAddedBlock, saveAddedBlock,
@@ -18,7 +18,7 @@ import { makePreviewToken } from '../site.js';
 import { siteLink } from '../ops/sites.js';
 import { APP_VERSION } from './version.js';
 import { defaultSay, NOTE_KEYS, sayError, sayMessage } from './wording.js';
-import { STATUS_TEXT, SAFE_NOTICE_TEXT, blockRows, pageOn as pageShows, label as pageMenuName } from '../render/parts.js';
+import { STATUS_TEXT, statusText, SAFE_NOTICE_TEXT, blockRows, pageOn as pageShows, label as pageMenuName } from '../render/parts.js';
 import { exportContent } from '../content/io.js';
 import { closeSite, SiteError } from '../sites.js';
 import { listEmbeds, addEmbed, removeEmbed, moveEmbed, EmbedError, EMBEDS_PER_PLACE } from '../embedStore.js';
@@ -57,7 +57,7 @@ const fieldLabel = (say) => (name) => {
 const LISTS = {
   dogs: { name: (r) => r.call_name, sub: (r, say) => [r.outside ? say('doglist.outside') : null, r.role, r.show_on_site ? null : say('lists.sub.hidden')].filter(Boolean).join(' · ') },
   litters: { name: (r) => r.name, sub: (r, say) => (['planned', 'current', 'past'].includes(r.stage) ? say(`lists.sub.stage.${r.stage}`) : '') },
-  puppies: { name: (r) => r.name, sub: (r, say) => STATUS_TEXT[r.status] ?? say('lists.sub.hidden_puppy') },
+  puppies: { name: (r) => r.name, sub: (r, say) => statusText(r.status) ?? say('lists.sub.hidden_puppy') },
   health: { name: (r) => r.test, sub: (r, say) => `${r.result}${r.show ? '' : ` · ${say('lists.sub.not_shown')}`}` },
   reviews: { name: (r) => r.first_name, sub: (r, say) => (r.status === 'hidden' ? say('lists.sub.hidden') : r.quote.slice(0, 60)) },
   steps: { name: (r) => r.heading || r.body || '—', sub: () => '' },
@@ -536,7 +536,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       const pups = await listRecords(env, site.id, 'puppies', l.id);
       sections.push(`<section class="card"><h2>${esc(l.name)}</h2>${pups.map((p) => `<form method="post" action="${esc(`${base}/puppies/${p.id}/status`)}" class="pup" data-save>
           <a href="${esc(`${base}/litters/${l.id}/puppies/${p.id}`)}"><b>${esc(p.name)}</b><span>${esc([p.collar, p.sex === 'female' ? 'girl' : 'boy'].filter(Boolean).join(' · '))}</span></a>
-          ${p.source === 'kennelos' ? `<span class="muted small">${esc(p.hidden_by_kennelos ? say('puppylist.not_sent_by_kennelos') : STATUS_TEXT[p.status] ?? say('puppylist.hidden_2'))} · from KennelOS</span>` : `<select name="status" aria-label="${esc(p.name)}'s status">${Object.entries({ ...STATUS_TEXT, hidden: say('puppylist.hidden') }).map(([v, t]) => `<option value="${v}"${v === p.status ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>
+          ${p.source === 'kennelos' ? `<span class="muted small">${esc(p.hidden_by_kennelos ? say('puppylist.not_sent_by_kennelos') : statusText(p.status) ?? say('puppylist.hidden_2'))} · from KennelOS</span>` : `<select name="status" aria-label="${esc(p.name)}'s status">${Object.entries({ ...STATUS_TEXT, hidden: say('puppylist.hidden') }).map(([v, t]) => `<option value="${v}"${v === pupStatus(p.status) ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>
           <button>${esc(say('puppylist.set'))}</button>`}</form>`).join('') || `<p class="muted">${esc(say('puppylist.no_puppies_yet'))}</p>`}
         <p><a class="button" href="${esc(`${base}/litters/${l.id}/puppies/new`)}">${esc(say('puppylist.add_a_puppy'))}</a></p></section>`);
     }

@@ -683,3 +683,29 @@ with new sections and a new building order. Docs only; nothing built yet.
   wording. C4 sends only `imported` and `import_country` (on a dog and each C7 ancestor);
   import-descended is worked out here from the ancestors, so C4 goes with C7.
 - Docs only: no code, no migration, no versioned file changed.
+
+## 2026-11-10: KennelOS contract step 1 (health order, not yet open, no reserved)
+
+- **Her health order stays** (`kennelos/bundle.js` `health`): with `rules.landing`
+  `health_order: 'hers'` (the new default) an update leaves each result's `sort` alone and
+  puts a new one after the dog's last; `'kennelos'` is the old behaviour. Set on the From
+  KennelOS screen (`manage/builder.js`). Test in `rules.test.js`.
+- **Born, not yet open** is a status row, `not_open` (`content/rules.js` `STATUS_ROWS`,
+  `render/parts.js` `pupRuleKey`): an available pup in a born litter whose deposits don't
+  open yet reads by it for words, pill, ribbon, price, ask, full registration and order.
+  Default is today's result. `price.before` is gone: a site's changed one is carried to
+  the row's words (`rulesFor`), and a snapshot from before reads as it did. No Show or
+  Older switch on it (decided at publish, and it moves on by itself). `statusRule`,
+  `puppyPriceText`, `regText` and `sortPuppies` take the litter and the day.
+- **No `reserved`**: out of the bundle (KennelOS sending it is refused; it never did), the
+  rules (five KennelOS rows), `model.js` `PUPPY_STATUSES` and the Site Manager's lists.
+  Live data isn't rewritten: `pupStatus` reads a stored `reserved` as `placed` everywhere
+  (rules, `statusText`, both status selects), and saving or importing one stores `placed`
+  (`was` on the enum field, `model.js` `cleanValue`). A site's stored `reserved` rule is
+  dropped. The AK sample, the linked sample and its notes, the demo's step notes and
+  `done/linked-sample.md` now say placed. New `tests/no-reserved.test.js`.
+- Not done: `front.js`'s "Mark a puppy reserved" waits on the owner's words. The Site
+  Manager's "Placed (shows as Reserved)" label is unchanged (still right).
+- No migration (the `puppies.status` CHECK still allows `reserved`, harmlessly). No file in
+  the versioned sets changed, so no version bump. The admin screens changed (rules, From
+  KennelOS) use their existing components; not yet checked side by side at 390px.

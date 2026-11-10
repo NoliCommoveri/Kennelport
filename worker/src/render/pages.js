@@ -701,7 +701,7 @@ export function litters(snap, ctx) {
     const lede = [pairNames(snap, l) && `${pairNames(snap, l)}.`, l.summary, l.ready_on && `Ready to go home ${fmtDate(l.ready_on)}.`, l.show_prices && l.price_note].filter(Boolean).join(' ');
     sections.push(`<section class="section${i ? '' : ' tight'}"${i ? '' : ' id="available"'}><div class="wrap">
       ${head(l.born_on ? `Born ${fmtDate(l.born_on)}` : word(snap, 'litter_current'), l.name, lede)}
-      ${slider(sortPuppies(snap, l.puppies).map((pup) => puppyCard(snap, l, pup, ctx)), { cls: 'three', ctl: `<a class="more" href="/litters/${attr(l.slug)}">The ${esc(l.name.replace(/^the /i, ''))} page</a>` })}
+      ${slider(sortPuppies(snap, l.puppies, l, ctx.today).map((pup) => puppyCard(snap, l, pup, ctx)), { cls: 'three', ctl: `<a class="more" href="/litters/${attr(l.slug)}">The ${esc(l.name.replace(/^the /i, ''))} page</a>` })}
     </div></section>`);
   });
   // Her badges after the puppies on offer, before older and upcoming ones (the
@@ -755,7 +755,7 @@ export function litter(snap, ctx, slug) {
   if (!l) return null;
   const pr = profileFor(snap, 'litter');
   const on = (x) => pr.parts.head.includes(x);
-  const pups = sortPuppies(snap, l.puppies);
+  const pups = sortPuppies(snap, l.puppies, l, ctx.today);
   // The parents' names under the litter's own, unless they are its name.
   const pair = pairNames(snap, l);
   const lede = [pair !== l.name ? pair : null, l.summary].filter(Boolean).join('. ');
@@ -843,10 +843,10 @@ export function puppy(snap, ctx, litterSlug, slug) {
   if (!p) return null;
   const pr = profileFor(snap, 'puppy');
   const photo = img(snap, p.photo_id, { alt: p.name, cls: 'photo', lazy: false }) ?? '<div class="photo" aria-hidden="true"></div>';
-  const rule = statusRule(snap, p);
+  const rule = statusRule(snap, p, l, ctx.today);
   const status = puppyStatus(snap, l, p, ctx.today);
-  const price = puppyPriceText(snap, l, p);
-  const reg = regText(snap, p);
+  const price = puppyPriceText(snap, l, p, ctx.today);
+  const reg = regText(snap, p, l, ctx.today);
   const fact = { sex: ['Sex', sexWord(p.sex)], color: ['Color', p.color], collar: ['Collar', p.collar], status: ['Status', status], price: [rulesOf(snap).price.price_label, price], registration: ['Registration', reg], registry: ['Registry', p.registry], parents: ['Parents', pairNames(snap, l)], born: ['Born', fmtDate(l.born_on)] };
   const facts = pr.facts.map((k) => fact[k]).filter(([, v]) => v);
   // Its own photos, where the litter publishes its puppies' tagged ones, and its own

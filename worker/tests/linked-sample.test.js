@@ -168,7 +168,7 @@ test('the series: each bundle and feed, in order, leaves the site as its expect 
   for (const name of ['Wren* × Moose*', 'Juniper* × Atlas*', 'Our next litter', "Lulu* (a friend's girl)'s next litter"]) assert.deepEqual(p.where(name), ['upcoming'], name);
   assert.match(p.older, /Sunny\*/);
   assert.doesNotMatch(p.page('/litters/the-gem-litter').html, /Garnet\*/);
-  assert.equal(pup('dog-ruby').status, 'reserved');
+  assert.equal(pup('dog-ruby').status, 'placed');
   assert.equal(n("portal_placements WHERE site_id = ? AND status = 'open'"), 4);
   // Her own wording and a photo on litter A, to see them come back at step 5.
   const gem = litter('litter', 'lit-a');
@@ -180,7 +180,7 @@ test('the series: each bundle and feed, in order, leaves the site as its expect 
   await send('/v1/bundle', load('bundle-2.json'));
   await send('/v1/portal', load('feed-2.json'));
   assert.equal(pup('dog-onyx').status, 'placed');
-  assert.equal(pup('dog-pearl').status, 'reserved');
+  assert.equal(pup('dog-pearl').status, 'placed');
   assert.equal(n("health_results WHERE site_id = ? AND dog_id = (SELECT id FROM dogs WHERE kennelos_id = 'dog-maple')"), 2);
   assert.equal(placement('sale-ruby').pickup_booked_at, '2026-11-22T16:00:00.000Z');
   assert.equal(placement('sale-pearl').status, 'open');

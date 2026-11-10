@@ -34,7 +34,7 @@ Two kinds of package, as KennelOS sends them today:
   with the family portal.
 
 It holds a series of them over time, not one, because much of what the site does
-happens between two bundles: a pup moves from reserved to placed, a pairing becomes a
+happens between two bundles: a pup moves from available to placed, a pairing becomes a
 litter, a litter leaves and its 30-day clock starts.
 
 ### The kennel
@@ -74,7 +74,7 @@ by no dog.
 | Heat H2 | a dam named only by `dam_name` (not a dog on the site) |
 | Litter E, no prices | `prices` missing; a sire named only by `sire_name` |
 
-**Pups:** every status (`available`, `reserved`, `placed`, `staying`, `undecided`,
+**Pups:** every status (`available`, `placed`, `staying`, `undecided`,
 `hidden`), with registration `limited`, `full` and unset, with and without a collar, and
 with a registry.
 
@@ -103,7 +103,7 @@ with a registry.
 | # | Sent on (sample dates) | What changes |
 |---|---|---|
 | 1 | Nov 1, 2026 | Everything above, first link |
-| 2 | Nov 20 | A pup reserved → placed; another available → reserved; a health result added |
+| 2 | Nov 20 | A pup available → placed; a health result added |
 | 3 | Dec 10 | Pairing P1 becomes litter D; heat H1 becomes pairing P2; litter B's deposits date passes |
 | 4 | Jan 15, 2027 | Litter A stops being sent (its 30-day clock starts); the deceased dog leaves; a partner kennel is renamed |
 | 5 | Jan 20 | Litter A sent again within its 30 days (comes back with its photos and wording) |
@@ -122,11 +122,10 @@ summary. From the code today:
 
 | Value | What KennelPort gets | What it stands for in KennelOS (plan 3.6, 5.3) |
 |---|---|---|
-| Pup `reserved` | summary | a waitlist pick awaiting its deposit, or a sale before delivery |
 | Pup `available` | summary | `isPupAvailable`: available and no open pick |
 | Pup `hidden` | summary | a health hold |
 | Pup `undecided` | summary | undecided, or no plan set |
-| Pup `placed`, `staying` | close to raw | placed; keeping |
+| Pup `placed`, `staying` | close to raw | placed (an open sale is Placed; there is no `reserved`, decided 2026-11-10 in `plans/kennelos-contract.md`); keeping |
 | Dog `status` | raw | mapped on arrival to the site's status, up and coming and for sale (`bundle.js` `DOG_STATUS`) |
 | A pairing's or heat's place on the site | summary | KennelOS's heat-to-pairing rules (decision 30) |
 | Dogs, litters and pairings sent at all | the breeder's Show on website | — |

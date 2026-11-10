@@ -24,7 +24,7 @@
 // Only for admin (admin.js); a breeder never reaches these.
 import { escapeHtml as esc } from '../lib/html.js';
 import {
-  PUP_STATUSES, STATUS_NOTES, PILLS, DEFAULT_RULES, DEFAULT_TIMING, RuleError, rulesFor, rulesFromForm, timingFromForm,
+  STATUS_ROWS, NOT_OPEN_FIXED, STATUS_NOTES, PILLS, DEFAULT_RULES, DEFAULT_TIMING, RuleError, rulesFor, rulesFromForm, timingFromForm,
   withPart, changedCount, loadBuild, saveBuild, partsFromForm, wordsOn, DATE_STYLES, DAY_STYLES, SEX_STYLES, COUNT_STYLES,
   DOG_PLACES, DOG_PLACE_WORDS, KOS_DOG_STATUSES, PUP_DISPOSITIONS, PUP_DISPOSITION_WORDS,
 } from '../content/rules.js';
@@ -199,21 +199,21 @@ async function preview(env, site) {
   const older = olderPuppies(snap, ctx.today);
   const olderIds = new Set(older.map((o) => o.litter.id));
   const card = (l, p) => {
-    const r = statusRule(snap, p);
+    const r = statusRule(snap, p, l, ctx.today);
     const words = puppyStatus(snap, l, p, ctx.today);
-    const reg = regText(snap, p);
-    const price = puppyPriceText(snap, l, p);
+    const reg = regText(snap, p, l, ctx.today);
+    const price = puppyPriceText(snap, l, p, ctx.today);
     const full = fullRegHref(snap, l, p, ctx);
     return `<div class="pvc"><span class="ph"></span><div class="t"><b>${esc(p.name)} ${sexMark(p.sex)}</b>${words ? `<span class="spill ${SPILL[r.pill] ?? 'plain'}">${esc(words)}</span>` : ''}${reg ? `<span class="muted">${esc(reg)}</span>` : ''}${price ? `<span class="price">${esc(price)}</span>` : ''}${r.ask ? `<span class="lnk">${esc(word(snap, 'ask_puppy'))} ›</span>` : ''}${full ? `<span class="lnk">${esc(rulesOf(snap).reg.ask)} ›</span>` : ''}</div></div>`;
   };
   const block = (eyebrow, heading, cards, cls = '') => `<div class="pvb${cls}"><span class="eyebrow">${esc(eyebrow)}</span><h3>${esc(heading)}</h3>${cards.length ? `<div class="pvg">${cards.join('')}</div>` : '<p class="small muted">No puppies to show.</p>'}</div>`;
   const blocks = [];
   for (const l of snap.litters.filter((x) => x.stage === 'current' && !depositsAhead(snap, x, ctx.today) && !olderIds.has(x.id) && x.puppies.length)) {
-    blocks.push(block('Current litter', l.name, sortPuppies(snap, l.puppies).map((p) => card(l, p))));
+    blocks.push(block('Current litter', l.name, sortPuppies(snap, l.puppies, l, ctx.today).map((p) => card(l, p))));
   }
   if (older.length) blocks.push(block('Ready now', 'Older puppies', older.map(({ litter, puppy }) => card(litter, puppy)), ' sand'));
   for (const l of snap.litters.filter((x) => depositsAhead(snap, x, ctx.today) && x.puppies.length)) {
-    blocks.push(block('Coming up', l.name, sortPuppies(snap, l.puppies).map((p) => card(l, p))));
+    blocks.push(block('Coming up', l.name, sortPuppies(snap, l.puppies, l, ctx.today).map((p) => card(l, p))));
   }
   const planned = snap.litters.filter((x) => x.stage === 'planned').length;
   if (planned) blocks.push(`<div class="pvb ghost">And ${planned} upcoming litter${planned === 1 ? '' : 's'} with no puppies yet</div>`);
@@ -240,18 +240,20 @@ function rulesScreen(site, rules, error) {
   const card = (k) => {
     const r = rules.status[k];
     const name = (f) => `status.${k}.${f}`;
+    const fixed = (f) => k === 'not_open' && NOT_OPEN_FIXED.includes(f);
     return `<section class="card status-card"><div class="between"><span class="stcode"><span class="code">${k}</span>${r.show && r.words ? `<span class="spill ${SPILL[r.pill]}">${esc(r.words)}</span>` : '<span class="small muted">Not shown</span>'}</span>${same(r, D.status[k]) ? '' : back(`status.${k}`)}</div>
       <p class="small muted">${esc(STATUS_NOTES[k])}</p>
       <div class="fgrid">${field(name('words'), r.words, { label: 'Shows as', ph: 'Words on the card' })}${select(name('pill'), r.pill, PILLS, 'Pill')}</div>
-      <div class="switches">${toggle(name('show'), r.show, 'Show the pup on the site')}${toggle(name('price'), r.price, 'Show its price')}${toggle(name('ask'), r.ask, '“Ask about this puppy”')}
-        ${toggle(name('fullreg'), r.fullreg, `“${rules.reg.ask}” (no registration set)`)}${toggle(name('older'), r.older, 'Can be an older puppy')}${toggle(name('ribbon'), r.ribbon, 'Ribbon across its photo')}</div>
+      <div class="switches">${fixed('show') ? '' : toggle(name('show'), r.show, 'Show the pup on the site')}${toggle(name('price'), r.price, 'Show its price')}${toggle(name('ask'), r.ask, '“Ask about this puppy”')}
+        ${toggle(name('fullreg'), r.fullreg, `“${rules.reg.ask}” (no registration set)`)}${fixed('older') ? '' : toggle(name('older'), r.older, 'Can be an older puppy')}${toggle(name('ribbon'), r.ribbon, 'Ribbon across its photo')}</div>
+      ${k === 'not_open' ? '<p class="small muted">Always shown, like an available pup; on the day deposits open it reads as available.</p>' : ''}
       <label>Order on the litter page<span class="hint">Lower comes first; equal keeps the breeder's order.</span><select name="${name('order')}">${Object.entries({ 1: 'First', 2: 'Second', 3: 'Third', 4: 'Last' }).map(([v, l]) => `<option value="${v}"${String(v) === String(r.order) ? ' selected' : ''}>${l}</option>`).join('')}</select></label></section>`;
   };
   const changed = (part) => (same(rules[part], D[part]) ? '' : back(part));
   return `<div class="stack">
       ${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
       <div class="fgroup"><h2>Pup statuses from KennelOS</h2></div>
-      <div class="twocol">${PUP_STATUSES.map(card).join('')}</div>
+      <div class="twocol">${STATUS_ROWS.map(card).join('')}</div>
       <section class="card"><div class="fgroup"><div class="between"><h2>Registration</h2>${changed('reg')}</div><div class="fgrid">
         ${field('reg.unset', rules.reg.unset, { label: 'No registration set reads', ph: 'Leave empty to say nothing' })}
         ${field('reg.limited', rules.reg.limited, { label: 'Limited reads' })}
@@ -261,8 +263,7 @@ function rulesScreen(site, rules, error) {
         ${field('price.off', rules.price.off, { label: 'When prices are off', cls: '' })}
         <div class="fld"><span class="fldt">A price range reads</span>${seg('price.style', rules.price.style, { range: '$2,800–$3,200', from: 'From $2,800' })}</div>
         ${field('price.price_label', rules.price.price_label, { label: 'Price label' })}
-        ${field('price.deposit_label', rules.price.deposit_label, { label: 'Deposit label' })}
-        ${field('price.before', rules.price.before, { label: 'Before deposits open', hint: '{date} is the day deposits open.', cls: '' })}</div></div></section>
+        ${field('price.deposit_label', rules.price.deposit_label, { label: 'Deposit label' })}</div></div></section>
     </div>`;
 }
 
@@ -340,7 +341,10 @@ function kennelosScreen(site, rules, error) {
     <p class="small muted">For each new record an Update website brings. Once it's on the site, its switches are the breeder's.</p>
     <div class="twocol">
     <section class="card"><div class="fgroup"><div class="between"><h2>Each new dog</h2>${backFor(['health_display'])}</div>
-      ${select('landing.health_display', L.health_display, { normal_only: 'Normal results only', all: 'All results', none: 'None' }, 'Health results shown', '')}</div></section>
+      ${select('landing.health_display', L.health_display, { normal_only: 'Normal results only', all: 'All results', none: 'None' }, 'Health results shown', '')}</div>
+      <div class="fgroup"><div class="between"><h2>Health results' order</h2>${backFor(['health_order'])}</div>
+      ${seg('landing.health_order', L.health_order, { hers: 'Hers', kennelos: 'KennelOS’s' })}
+      <span class="hint">Every dog, at each update. Hers: each result stays where she put it, a new one goes last. KennelOS’s: its order every time.</span></div></section>
     <section class="card"><div class="fgroup"><div class="between"><h2>Each new litter</h2>${backFor(['show_placed', 'show_prices'])}</div>
       <div class="switches">${toggle('landing.show_placed', L.show_placed, 'Show placed puppies')}</div>
       ${select('landing.show_prices', L.show_prices, { kos_prices: 'On, with Use my KennelOS prices', off: 'Off: the breeder switches them on' }, 'Show prices', '')}</div></section>

@@ -8,16 +8,27 @@
 // that over the defaults. The published snapshot carries the whole result, so
 // rendering stays pure. An older snapshot without it renders with the defaults.
 
+import { pupStatus } from './model.js';
+
 // The pup statuses the KennelOS package carries, in its words. A site stores
-// `undecided` as 'coming_soon' (kennelos/bundle.js PUPPY_STATUS).
-export const PUP_STATUSES = ['available', 'reserved', 'placed', 'staying', 'undecided', 'hidden'];
-export const ruleKey = (status) => (status === 'coming_soon' ? 'undecided' : status);
+// `undecided` as 'coming_soon' (kennelos/bundle.js PUPPY_STATUS). There is no
+// `reserved`: a pup with an open sale is Placed in KennelOS, and one stored as
+// reserved before reads as placed (content/model.js pupStatus).
+export const PUP_STATUSES = ['available', 'placed', 'staying', 'undecided', 'hidden'];
+export const ruleKey = (status) => (status === 'coming_soon' ? 'undecided' : pupStatus(status));
+// The status rows the owner sets: KennelOS's, and `not_open`, worked out here at
+// render (render/parts.js pupRuleKey): an available pup in a born litter whose
+// deposits don't open yet. It always shows, as an available pup does (whether it
+// shows is decided at publish, and it moves on to available on the day by itself),
+// and it can't be an older puppy (its litter isn't ready yet).
+export const STATUS_ROWS = ['available', 'not_open', ...PUP_STATUSES.filter((k) => k !== 'available')];
+export const NOT_OPEN_FIXED = ['show', 'older'];
 
 // What each one stands for in KennelOS (docs/plans/done/linked-sample.md, raw or summary).
 export const STATUS_NOTES = {
   available: 'Available, with no open pick',
-  reserved: 'Worked out by KennelOS: a pick waiting on its deposit, or sold before delivery',
-  placed: 'Placed with a family',
+  not_open: 'Available, in a born litter whose deposits don\'t open yet (worked out here, on the day). {date} is the day they open',
+  placed: 'Placed with a family, or sold and not yet home',
   staying: 'Kept: joining the breeder\'s program',
   undecided: 'Undecided, or no plan set',
   hidden: 'Health hold in KennelOS',
@@ -92,14 +103,14 @@ export const PUP_DISPOSITION_WORDS = { keeping: 'Keeping', available: 'Available
 export const DEFAULT_RULES = {
   status: {
     available: st('Available', 'avail', false, true, true, true, true, true, 1),
-    reserved: st('Reserved', 'res', true, true, false, false, true, false, 2),
+    not_open: st('Available on {date}', 'avail', false, true, true, true, true, true, 1),
     placed: st('Reserved', 'res', true, true, false, false, true, false, 2),
     staying: st('Joining our program', 'res', false, true, false, false, false, false, 1),
     undecided: st('Still deciding', 'res', false, true, false, false, true, false, 1),
     hidden: st('', 'res', false, false, false, false, true, false, 1),
   },
   reg: { unset: 'Limited', limited: 'Limited', full: 'Full', ask: 'Ask about full registration' },
-  price: { off: 'Contact us for pricing', style: 'range', price_label: 'Price', deposit_label: 'Deposit', before: 'Available on {date}' },
+  price: { off: 'Contact us for pricing', style: 'range', price_label: 'Price', deposit_label: 'Deposit' },
   // An adult for sale's price: 'site' follows the breeder's "Show prices of extras
   // and adults"; 'always' or 'never' whatever that says.
   dogs: { sale_price: 'site' },
@@ -108,6 +119,8 @@ export const DEFAULT_RULES = {
   // How KennelOS data lands (kennelos/bundle.js), for each new record.
   landing: {
     health_display: 'normal_only', show_placed: true, show_prices: 'kos_prices',
+    // A dog's health results: kept in her order ('hers'), or KennelOS's at every update.
+    health_order: 'hers',
     name_pair: '{dam} × {sire}', name_dam: "{dam}'s litter", name_heat: "{dam}'s next litter", name_none: 'Our next litter', name_upcoming: 'Upcoming litter',
     label_heat: 'Upcoming heat', label_pairing: 'Planned pairing',
     dog_puppy: 'upcoming', dog_active_breeding: 'breeding', dog_for_sale: 'for_sale', dog_retired_breeding: 'retired', dog_deceased: 'remembered',
@@ -136,8 +149,9 @@ const STATUS_FIELDS = {
 const REG_FIELDS = { unset: TEXT(30), limited: TEXT(30, true), full: TEXT(30, true), ask: TEXT(60, true) };
 const PRICE_FIELDS = {
   off: TEXT(60, true), style: { t: 'enum', values: ['range', 'from'] }, price_label: TEXT(30, true), deposit_label: TEXT(30, true),
-  before: { t: 'text', max: 60, req: true, needs: '{date}' },
 };
+// Its words were the price rules' `before` ("Available on {date}"), so they may be as long.
+const NOT_OPEN_WORDS = TEXT(60);
 const DOG_FIELDS = { sale_price: { t: 'enum', values: ['site', 'always', 'never'] } };
 const WORD_FIELDS = Object.fromEntries(WORD_LIST.map(([k, d]) => [k, { t: 'text', max: k === 'safe_notice' ? 400 : 120, req: true,
   needs: d.includes('{name}') ? '{name}' : null }]));
@@ -151,7 +165,7 @@ const FORMAT_FIELDS = {
 };
 const PLACE = { t: 'enum', values: Object.keys(DOG_PLACES) };
 const LANDING_FIELDS = {
-  health_display: { t: 'enum', values: ['normal_only', 'all', 'none'] }, show_placed: { t: 'bool' }, show_prices: { t: 'enum', values: ['kos_prices', 'off'] },
+  health_display: { t: 'enum', values: ['normal_only', 'all', 'none'] }, health_order: { t: 'enum', values: ['hers', 'kennelos'] }, show_placed: { t: 'bool' }, show_prices: { t: 'enum', values: ['kos_prices', 'off'] },
   name_pair: { t: 'text', max: 60, req: true, needs: '{dam}' }, name_dam: { t: 'text', max: 60, req: true, needs: '{dam}' },
   name_heat: { t: 'text', max: 60, req: true, needs: '{dam}' }, name_none: TEXT(60, true), name_upcoming: TEXT(60, true),
   label_heat: TEXT(40, true), label_pairing: TEXT(40, true),
@@ -215,7 +229,14 @@ function over(base, changes) {
 // The site's rules: its changes over the defaults. Unknown keys are dropped.
 export function rulesFor(build) {
   const b = build ?? {};
-  return { rules: over(DEFAULT_RULES, b.rules), timing: over(DEFAULT_TIMING, b.timing) };
+  return { rules: over(DEFAULT_RULES, carried(b.rules)), timing: over(DEFAULT_TIMING, b.timing) };
+}
+
+// A rule that moved: the price rules' `before` became the not_open row's words.
+function carried(r) {
+  const before = r?.price?.before;
+  if (!before || r.status?.not_open?.words !== undefined) return r;
+  return { ...r, status: { ...r.status, not_open: { ...r.status?.not_open, words: before } } };
 }
 
 // One screen's parts from its form (names like words.girls), laid over the site's
@@ -235,13 +256,16 @@ export function partsFromForm(screen, current, get) {
 }
 export const wordsOn = (screen) => WORDS.filter(([sc]) => sc === screen);
 
-// The editor's form, as names like status.reserved.words or timing.litter_days,
+// The editor's form, as names like status.placed.words or timing.litter_days,
 // to the full rules; a switch missing from the form is off.
 export function rulesFromForm(get, current = DEFAULT_RULES) {
   const rules = { ...structuredClone(current), status: {}, reg: {}, price: {} };
-  for (const k of PUP_STATUSES) {
+  for (const k of STATUS_ROWS) {
     rules.status[k] = {};
-    for (const [f, spec] of Object.entries(STATUS_FIELDS)) rules.status[k][f] = clean(spec, get(`status.${k}.${f}`), `${k}: ${f}`);
+    for (const [f, spec] of Object.entries(STATUS_FIELDS)) {
+      if (k === 'not_open' && NOT_OPEN_FIXED.includes(f)) { rules.status[k][f] = DEFAULT_RULES.status.not_open[f]; continue; }
+      rules.status[k][f] = clean(k === 'not_open' && f === 'words' ? NOT_OPEN_WORDS : spec, get(`status.${k}.${f}`), `${k}: ${f}`);
+    }
     if (rules.status[k].show && !rules.status[k].words) throw new RuleError(`${k}: a pup that shows needs words.`);
   }
   for (const [f, spec] of Object.entries(REG_FIELDS)) rules.reg[f] = clean(spec, get(`reg.${f}`), `Registration: ${f}`);

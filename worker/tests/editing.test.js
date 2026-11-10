@@ -47,11 +47,11 @@ test('every editing screen opens', async () => {
   }
 });
 
-test('mark a puppy reserved in one tap, see it in the change list, publish it', async () => {
+test('mark a puppy placed in one tap, see it in the change list, publish it', async () => {
   const b = await breeder();
   await b.post('/publish');
   const pup = b.id('puppies', "slug = 'opal'");
-  const res = await b.post(`/puppies/${pup}/status`, { status: 'reserved' });
+  const res = await b.post(`/puppies/${pup}/status`, { status: 'placed' });
   assert.equal(res.status, 303);
   const pub = await (await b.get('/publish')).text();
   assert.match(pub, /Opal: Reserved/);

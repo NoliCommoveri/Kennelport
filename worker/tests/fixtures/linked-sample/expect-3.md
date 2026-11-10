@@ -9,5 +9,5 @@ Checked by the series test in `tests/linked-sample.test.js`:
   Planned pairing, expected April 2027.
 - The Spice litter*'s deposits date (November 22) has passed: it has its own section
   under Available, and Sage* reads Available, not "Available on".
-- Ruby* is placed (home November 22). Portal: her 3-day vet visit is in her records
+- Ruby* stays placed (home November 22). Portal: her 3-day vet visit is in her records
   (three health events).
