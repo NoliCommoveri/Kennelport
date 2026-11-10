@@ -40,7 +40,7 @@ Each of these is blocked in one of two places:
 | Value | Today | What it costs |
 |---|---|---|
 | Puppy `status` | `puppyStatus()` maps her disposition to a site word (keeping → `staying`, health hold → `hidden`, none set → `undecided`). The raw disposition goes only on kept dogs, not on a litter's puppies | No telling "none set" from "undecided"; no new status |
-| Puppy `reserved` | Never sent. `rules.js` `STATUS_NOTES` and `done/linked-sample.md` say KennelOS works it out from a pick or a sale; the code doesn't | A rule row for a status that never arrives. Picks and sales don't reach the site |
+| Puppy `reserved` | Never sent, and not wanted (decided 2026-11-10, below). `bundle.js` still takes it, `rules.js` has a row for it and `STATUS_NOTES` says KennelOS works it out, and the Site Manager offers it by hand | A status that means nothing in KennelOS, shown beside Placed, which already reads "Reserved" |
 | Litter status | Expected, whelped, weaning and ready become dates only (`born = status !== 'expected'`). Sold and closed litters aren't sent | No weaning or ready stage; no past litters, so no offspring |
 | Titles | The abbreviation only, in the order earned. `bundle.js` joins them into one text of 120 characters, and writes it only when there is one | No "champions only": the organization and date are gone. A dog's last title removed never clears |
 | Health results | One row per test name, the latest, in the order first tested. No test type, no lab. `verify_url` is taken here and never sent | No grouping by kind of test; no verify links from KennelOS |
@@ -173,10 +173,22 @@ rule that gives today's result by default.
 Left as they are: a heat's month only; which records are sent (her Show on website
 marks); prices only with Use my KennelOS prices.
 
-**Picks and sales (`reserved`).** Not in this plan's build. Sending that a pup has an
-open pick or a sale is drawn from buyer records, and decision 30 said the site works
-nothing out from them. Until the owner decides (below), `reserved` stays a status a
-breeder sets by hand, and `STATUS_NOTES` is corrected to say so.
+**No `reserved` (the owner's decision, 2026-11-10).** KennelOS has no such status and
+sends nothing about picks or sales. A pup with an open sale is marked Placed there and
+follows the placed rules here. Step 1 takes `reserved` out:
+
+- `bundle.js`: out of the puppy `status` list and `PUPPY_STATUS`; out of this file's
+  header. KennelOS's `siteExport.js` drops the word from `PUPPY_WORDS`.
+- `rules.js`: the `reserved` row, its `STATUS_NOTES` line and `PUP_STATUSES` entry go.
+  The editor shows five rows (six with `not_open`, Part A).
+- The Site Manager's puppy form (`model.js` `PUPPY_STATUSES`, `manage/forms.js`) no
+  longer offers it. Placed keeps its default words, "Reserved", which the owner can
+  change in the placed row.
+- **Live data is not rewritten.** A pup stored as `reserved` (set by hand before this)
+  reads as `placed` wherever a status is read (`ruleKey`), and is saved as `placed` the
+  next time its form is saved. A site's stored rule for `reserved` is ignored.
+- The AK sample, the linked sample's bundles and expect files, the demo's step notes
+  and `done/linked-sample.md`'s raw-or-summary table are corrected to `placed`.
 
 ## Part D. Tags
 
@@ -204,8 +216,9 @@ A tag is a field like any other: a condition, a grouping, a card item.
 
 Each step is its own branch and merge, with at most one migration.
 
-1. **A1, A2.** Health order kept; the `not_open` status row. No migration (rules are in
-   `site_builds`). `STATUS_NOTES` corrected.
+1. **A1, A2, and `reserved` out.** Health order kept; the `not_open` status row;
+   `reserved` removed as above. No migration (rules are in `site_builds`; no stored
+   status is rewritten).
 2. **B1, B2, B4.** The field list, conditions, grouping and order for Dog cards and Pups
    blocks; old blocks read as conditions. The admin's block screen. No migration.
 3. **B3, B5.** Pick blocks, the breeder's picking screen, the Featured block. One
@@ -226,19 +239,16 @@ step that changes files under `public/_kp/` says which, and asks before a versio
 
 ## Open questions (the owner's)
 
-1. **`reserved`:** should KennelOS send that a pup has an open pick or a sale (as a yes
-   or no, nothing about the family), so Reserved can be automatic? Or does it stay by
-   hand?
-2. **Import:** a plain "Imported" tick, or a country too? How many generations still
+1. **Import:** a plain "Imported" tick, or a country too? How many generations still
    count as import-descended, and can she untick it on one dog whose pedigree in KennelOS
    is incomplete?
-3. **Select offspring:** picked in KennelOS (a new mark, sent to every site) or picked in
+2. **Select offspring:** picked in KennelOS (a new mark, sent to every site) or picked in
    KennelPort from the dogs and past pups it holds? The plan assumes KennelOS, since most
    offspring were never on the site.
-4. **Pick blocks:** is the list of picked dogs the breeder's (kept as her content, so a
+3. **Pick blocks:** is the list of picked dogs the breeder's (kept as her content, so a
    template change doesn't lose it) or part of the block (the owner's)? The plan assumes
    hers.
-5. **Colour:** group by the words she typed, or does KennelOS get a tidy colour list?
-6. **Her own tags:** allowed at all, or only the owner's rule tags to begin with?
-7. **Pups and litters:** conditions and picks for litters in step 2 as well, or dogs and
+4. **Colour:** group by the words she typed, or does KennelOS get a tidy colour list?
+5. **Her own tags:** allowed at all, or only the owner's rule tags to begin with?
+6. **Pups and litters:** conditions and picks for litters in step 2 as well, or dogs and
    pups first? The plan assumes dogs and pups.

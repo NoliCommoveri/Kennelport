@@ -666,5 +666,9 @@ with new sections and a new building order. Docs only; nothing built yet.
 - Found while reviewing: KennelOS never sends a pup as `reserved`, though `rules.js`
   `STATUS_NOTES` and `plans/done/linked-sample.md` say it works it out. The plan's step 1
   corrects the note.
-- Docs only: no code, no migration, no versioned file changed. Seven questions are open
+- The owner's decision the same day: no `reserved` status. A pup with an open sale is
+  marked Placed in KennelOS and follows the placed rules. The plan's step 1 takes
+  `reserved` out of the bundle, the rules and the Site Manager, without rewriting stored
+  pups.
+- Docs only: no code, no migration, no versioned file changed. Six questions are open
   for the owner (the plan's last section).
