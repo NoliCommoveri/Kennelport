@@ -160,10 +160,10 @@ rule that gives today's result by default.
 
 | # | Section | KennelOS sends | KennelPort does with it |
 |---|---|---|---|
-| C1 | `pup_disposition` | On each litter puppy: `disposition`, raw (`undecided`, `keeping`, `available`, `placed`, `health_hold`, or null when none is set) | `rules.landing` maps each to a site status (today's map by default). `status` is still sent and is used when the section is absent |
+| C1 | `pup_disposition` | On each litter puppy: `disposition`, raw (`undecided`, `keeping`, `available`, `placed`, `health_hold`, or null when none is set) | `rules.landing` maps each to a site status (today's map by default). `status` is still sent and is used when the section is absent. Unlike the `disposition` section on a marked puppy-status dog, which sends `undecided` when none is set, this one sends null, and null reads as `undecided` by default |
 | C2 | `litter_status` | On each litter: `status`, raw (`expected`, `whelped`, `weaning`, `ready`) | A field for conditions and for the litter card's eyebrow rule; default eyebrows as today |
 | C3 | `titles_detail` | `titles` as `[{ abbr, organization, date }]` | Stored as rows (a small `dog_titles` table, in this step's one migration); the joined text is made at publish. An empty list clears. Fields: `title`, `title_organization` |
-| C4 | `origin` | On a dog: `imported` (yes or no), `import_country` (text, optional), and `import_ancestors`: `[{ generations }]`, the nearest first, worked out in KennelOS from its pedigree | Fields `import`, `import_descended`. A rule sets how many generations still count (default 3) and what each tag reads |
+| C4 | `origin` | On a dog, and on each C7 ancestor: `imported` (yes or no) and `import_country` (text, optional), as she set them. Nothing worked out | Fields `import`, and `import_descended` worked out here from the C7 ancestors, so it needs the `lineage` section too. A rule sets how many generations still count (default 3, at most the four C7 sends) and what each tag reads |
 | C5 | `health_detail` | On a result: `type` (KennelOS's event type), `verify_url` where she has one | Fields for grouping on a dog's page ("OFA", "Genetic"); the default is one list, as today |
 | C6 | `account_type` | On a product: `account_type`, raw | A rule maps each type to where it shows (Recommended products, Getting your pup home, or a group the owner names). `transport` stays until both sides have moved |
 | C7 | `lineage` | On a dog: `breed`, `sire_id`, `dam_id`, and `ancestors`: up to four generations as `[{ id, role path ("sire", "sire.dam"…), call_name, registered_name, titles }]`, including pedigree-only dogs, by name only | A Pedigree block on a dog's page (off by default); `sire` and `dam` link to a dog on the site when it is one |
@@ -183,12 +183,20 @@ follows the placed rules here. Step 1 takes `reserved` out:
   The editor shows five rows (six with `not_open`, Part A).
 - The Site Manager's puppy form (`model.js` `PUPPY_STATUSES`, `manage/forms.js`) no
   longer offers it. Placed keeps its default words, "Reserved", which the owner can
-  change in the placed row.
+  change in the placed row. Its form label, now "Placed (shows as Reserved)" in
+  `forms.js` LABELS, is breeder-facing: the owner gives its new words before the step
+  is built.
+- `render/parts.js`: `STATUS_TEXT` loses `reserved` (it is where a stored pup's status
+  becomes words, so it reads a stored `reserved` as `placed` too), and the comment on a
+  litter's puppy order (the one naming reserved) is corrected.
+- `front.js`, KennelPort's own front page: "Mark a puppy reserved" in the Site Manager
+  line is the owner's copy to reword (for example "mark a puppy placed").
 - **Live data is not rewritten.** A pup stored as `reserved` (set by hand before this)
   reads as `placed` wherever a status is read (`ruleKey`), and is saved as `placed` the
   next time its form is saved. A site's stored rule for `reserved` is ignored.
 - The AK sample, the linked sample's bundles and expect files, the demo's step notes
-  and `done/linked-sample.md`'s raw-or-summary table are corrected to `placed`.
+  and `done/linked-sample.md`'s raw-or-summary table are corrected to `placed`, and so
+  are `tests/rules.test.js` and `tests/linked-sample.test.js`.
 
 ## Part D. Tags
 
@@ -198,7 +206,8 @@ A dog (and a puppy) gets `tags`: a list of short labels. Two sources:
   pill. "Import" (`import yes`), "Import-descended" (`import_descended yes`) and
   "Champion" (`title includes CH`) are three rows, not three builds.
 - **Her own tags**, typed in the Site Manager on a dog, from a list the owner allows
-  for the site.
+  for the site. That screen's label, hint and empty message are breeder-facing: the
+  owner writes them, and they go in `manage/wording.js`.
 
 A tag is a field like any other: a condition, a grouping, a card item.
 
@@ -228,7 +237,8 @@ Each step is its own branch and merge, with at most one migration.
    coverage test checks them.
 5. **C3, D.** Titles as rows; tags. Migration: `dog_titles`, `tags`.
 6. **C4, C7, C8.** Origin, lineage, offspring: the Pedigree block and Select offspring.
-   Migration: the columns and an `ancestors` store.
+   Migration: the columns and an `ancestors` store. C4 and C7 go together: import-descended
+   is worked out from the ancestors.
 7. **C9.** Waitlist facts and the wording templates.
 
 Steps 1 to 3 need nothing from KennelOS. Steps 4 to 7 can be released on either side

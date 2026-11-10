@@ -672,3 +672,14 @@ with new sections and a new building order. Docs only; nothing built yet.
   pups.
 - Docs only: no code, no migration, no versioned file changed. Six questions are open
   for the owner (the plan's last section).
+
+## 2026-11-10: the KennelOS contract plan, corrected after review
+
+- `docs/plans/kennelos-contract.md`: C1 notes that it sends null for a pup with no
+  disposition, where the existing `disposition` section (marked puppy-status dogs) sends
+  `undecided`. Taking `reserved` out now also covers `render/parts.js` `STATUS_TEXT`, the
+  front page's "Mark a puppy reserved" (the owner's copy), and the two tests that name it.
+  The placed form label and Part D's tag screen are marked breeder-facing, for the owner's
+  wording. C4 sends only `imported` and `import_country` (on a dog and each C7 ancestor);
+  import-descended is worked out here from the ancestors, so C4 goes with C7.
+- Docs only: no code, no migration, no versioned file changed.
