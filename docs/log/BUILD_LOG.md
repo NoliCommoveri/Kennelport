@@ -651,3 +651,20 @@ with new sections and a new building order. Docs only; nothing built yet.
 - No migration; no file in the three versioned sets changed (`public/_kp/o/` is new and
   outside them), so no version bump. Wording: the two `/ops` pages are the owner's own
   screens, so their words are in `src/ops/backup.js`, not `manage/wording.js`.
+
+## 2026-11-10: the KennelOS contract reviewed; a plan for raw data and shapeable blocks
+
+- Reviewed what KennelOS sends (`shared/data/siteExport.js` there) against what this side
+  takes and fixes (`kennelos/bundle.js`, `content/rules.js`, `render/parts.js`). This is
+  the review `plans/site-builder.md` leaves for its step 7.
+- Plan written: `docs/plans/kennelos-contract.md`. KennelOS sends facts and the site's
+  rules shape them; her health order kept; "born, not yet open" as a status row; data
+  blocks over any field (conditions, grouping, order) or hand-picked records; a Featured
+  dog or pup block on a schedule; raw fields by section (disposition, litter status,
+  titles, origin, health detail, account type, lineage, offspring, waitlist facts); tags.
+  KennelOS's half is its `docs/KennelOS_Website_Contract_Plan.md`.
+- Found while reviewing: KennelOS never sends a pup as `reserved`, though `rules.js`
+  `STATUS_NOTES` and `plans/done/linked-sample.md` say it works it out. The plan's step 1
+  corrects the note.
+- Docs only: no code, no migration, no versioned file changed. Seven questions are open
+  for the owner (the plan's last section).

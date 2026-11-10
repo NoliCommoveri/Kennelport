@@ -47,7 +47,7 @@ anyone outside the family.
 | 4. The owner's own blocks and styling | Banners, buttons, dividers, spacers, photos, collages, photo beside words, text over a photo, text, gallery strip, block backgrounds and spacing built. **Next, the photo system:** albums from photos she has, then the duplicate check. Still to come: videos as blocks, links to a dog/litter/puppy, fonts and the font library, text size on built-in blocks |
 | 5. Templates (save, apply, reset) | Not started |
 | 6. The family portal's build | Not started |
-| 7. After the KennelOS review | Not started |
+| 7. After the KennelOS review | Review done 2026-11-10; planned in [`plans/kennelos-contract.md`](plans/kennelos-contract.md) (raw fields, blocks over any field, picks, Featured block, tags). Not built; seven questions open for the owner |
 
 ## Family portal ([`plans/family-portal.md`](plans/family-portal.md))
 
