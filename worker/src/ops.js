@@ -13,6 +13,7 @@ import { readCookie } from './lib/http.js';
 import { escapeHtml as esc, htmlPage } from './lib/html.js';
 import { handleSites, sitesSection } from './ops/sites.js';
 import { usageSection } from './ops/usage.js';
+import { handleBackup } from './ops/backup.js';
 import { mailMode, outboxRecent } from './mail.js';
 import { vapidConfig, generateVapidKeys } from './push.js';
 import { turnstileOn } from './siteforms.js';
@@ -150,6 +151,10 @@ add <code>OPS_TOKEN</code> as a <em>Secret</em> (a long random string). Ops is c
 
   if (url.pathname === '/ops/push-keys' && request.method === 'POST') return statusPage(env, null, null, await generateVapidKeys());
   if (url.pathname === '/ops' && request.method === 'GET') return statusPage(env, null, url.searchParams.get('note'));
+  if (url.pathname.startsWith('/ops/backup/') || url.pathname.startsWith('/ops/restore')) {
+    const res = await handleBackup(request, env, url);
+    if (res) return res;
+  }
   if (url.pathname.startsWith('/ops/sites')) {
     const res = await handleSites(request, env, url);
     if (res) return res;

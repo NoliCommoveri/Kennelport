@@ -119,7 +119,7 @@ export function makeBucket() {
       const from = cursor ? all.findIndex((k) => k > cursor) : 0;
       const start = from === -1 ? all.length : from;
       const page = all.slice(start, start + limit);
-      return { objects: page.map((key) => ({ key, uploaded: store.get(key).uploaded })), truncated: start + page.length < all.length, cursor: page.at(-1) };
+      return { objects: page.map((key) => ({ key, size: store.get(key).bytes.length, httpMetadata: store.get(key).httpMetadata, uploaded: store.get(key).uploaded })), truncated: start + page.length < all.length, cursor: page.at(-1) };
     },
     async delete(keys) {
       const list = [].concat(keys);

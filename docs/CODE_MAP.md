@@ -83,6 +83,11 @@ read that before the rest. Update this map when you add, move or split a file.
 
 - `src/ops.js` sign-in, setup checks, migrations; `src/ops/sites.js` site screens;
   `src/ops/usage.js` usage against the free tiers.
+- `src/backup.js` a whole site out and back in (every table's rows, every file);
+  `src/ops/backup.js` its pages and routes; `public/_kp/o/backup.js` makes and reads the
+  zip in the browser (not a versioned set: only the operator loads it). The format:
+  `docs/plans/backup-format.md`. A new table with `site_id` goes in `sites.js`
+  `SITE_TABLES`; a test fails until it does.
 - `src/sites.js` create, suspend, close; `src/domains.js` custom domains;
   `src/cleanup.js` the daily cleanup (what KennelPort promises not to keep).
 
@@ -96,4 +101,5 @@ read that before the rest. Update this map when you add, move or split a file.
   (`worker.js`, `sql-hooks.js`), static files (`assets.js`), tiny test images (`images.js`). `tests/versions.test.js` fails when a
   versioned file changes without its bump. `tests/fixtures/linked-sample/`: a made-up
   kennel as KennelOS would send it.
+- `.github/workflows/test.yml`: the tests, on every pull request and push.
 - Run: `node --test` from the repo root, or `npm test` in `worker/` (Node 22 or later).
