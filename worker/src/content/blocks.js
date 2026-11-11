@@ -433,11 +433,37 @@ export function pageBlocks(build, key) {
   if (!Array.isArray(saved)) return defaultsOf(key).map((b) => cleanBlock(b));
   const seen = new Set();
   const once = new Set();
-  return saved.map(cleanBlock).filter((b) => {
+  const out = saved.map(cleanBlock).filter((b) => {
     if (!b || seen.has(b.id) || !fits(key, b)) return false;
     seen.add(b.id);
     if (BLOCK_TYPES[b.type].once) { if (once.has(b.type)) return false; once.add(b.type); }
     return true;
+  });
+  return key === 'litters' && !build.soon_page ? withSoonBlock(out) : out;
+}
+
+// Available Soon (2026-11-11) reaches every site, the owner's changed ones too: a
+// Puppies page or menu saved before it existed gets it once, where the default has
+// it (before Coming up; after Available). Storing either again marks the build
+// (`soon_page` in withPage, `soon_menu` in withMenu), and from then on what she
+// saved stands, so she can take it out.
+function withSoonBlock(blocks) {
+  if (blocks.some((b) => b.id === 'soon')) return blocks;
+  const i = blocks.findIndex((b) => b.type === 'builtin' && b.id === 'upcoming');
+  const at = i < 0 ? blocks.length : i;
+  return [...blocks.slice(0, at), cleanBlock({ id: 'soon', type: 'builtin' }), ...blocks.slice(at)];
+}
+function withSoonPlace(menu) {
+  const has = (p) => menu.some((g) => g.items.some((it) => it.type === 'place' && it.place === p));
+  if (has('litters#soon')) return menu;
+  const after = has('litters#available') ? 'litters#available' : null;
+  const before = !after && has('litters#upcoming') ? 'litters#upcoming' : null;
+  if (!after && !before) return menu;
+  return menu.map((g) => {
+    const i = g.items.findIndex((it) => it.type === 'place' && it.place === (after ?? before));
+    if (i < 0 || g.items.length >= MENU_LIMITS.items) return g;
+    const at = after ? i + 1 : i;
+    return { ...g, items: [...g.items.slice(0, at), { type: 'place', place: 'litters#soon' }, ...g.items.slice(at)] };
   });
 }
 export const homeBlocks = (build) => pageBlocks(build, 'home');
@@ -575,6 +601,7 @@ export function withPage(build, key, blocks) {
     if (next.pages && !Object.keys(next.pages).length) delete next.pages;
   } else {
     next.pages = { ...(next.pages ?? {}), [key]: { blocks: blocks.map(cleanBlock) } };
+    if (key === 'litters') next.soon_page = true;
   }
   return next;
 }
@@ -750,7 +777,11 @@ export function cleanMenu(menu, custom = []) {
 }
 
 // The menu a build has: the owner's, or today's.
-export const menuOf = (build) => cleanMenu(build?.menu, customPages(build)) ?? defaultMenu(customPages(build));
+export function menuOf(build) {
+  const saved = cleanMenu(build?.menu, customPages(build));
+  if (!saved) return defaultMenu(customPages(build));
+  return build.soon_menu ? saved : withSoonPlace(saved);
+}
 export const menuChanged = (build) => Array.isArray(build?.menu);
 
 // What would stop it working (decision 16): a group with no name, an outside link
@@ -776,7 +807,7 @@ export function withMenu(build, menu) {
   const m = cleanMenu(menu, custom) ?? [];
   checkMenu(m);
   if (JSON.stringify(m) === JSON.stringify(defaultMenu(custom))) delete next.menu;
-  else next.menu = m;
+  else { next.menu = m; next.soon_menu = true; }
   return next;
 }
 

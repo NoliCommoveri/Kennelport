@@ -763,10 +763,11 @@ with new sections and a new building order. Docs only; nothing built yet.
   Available and Upcoming litters; it shows while such a litter is on the page. The
   Available place now reads **Available Now**. Upcoming litters shows only for planned
   litters when the page has Available Soon.
-- Sites change at once on merge (the owner said they may). A site whose Puppies page or
-  menu the owner had already changed keeps its stored version: no Available Soon section
-  or link until she adds them in the page editor and the Menu screen; its born litters
-  stay under Coming up, as before.
+- Every site changes at once on merge, the owner's changed ones too (her decision): a
+  Puppies page or menu stored before this gets Available Soon when it's read
+  (`content/blocks.js` `withSoonBlock`, `withSoonPlace`: before Coming up, after
+  Available). Storing either again marks the build (`soon_page`, `soon_menu`), and from
+  then on what she stored stands, so she can take it out. No stored build is rewritten.
 - The builder's Puppies preview names the section by its heading. Tests: the linked
   sample and KennelOS tests now expect such litters under Available Soon; a new test in
   `rules.test.js`. No migration, no versioned file.
