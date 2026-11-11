@@ -387,7 +387,9 @@ export function litterFacts(snap, l, ctx) {
 }
 
 // show: what the card shows (content/blocks.js SHOW_DEFAULT.litters is today's).
-export function litterCard(snap, l, ctx, { link = true, show = SHOW_DEFAULT.litters } = {}) {
+// `label: false` leaves out its small label over the name (the Available soon section's
+// heading already says it).
+export function litterCard(snap, l, ctx, { link = true, show = SHOW_DEFAULT.litters, label: withLabel = true } = {}) {
   const parent = (role) => parentPhoto(snap, l, role);
   const ahead = depositsAhead(snap, l, ctx.today);
   const older = pastReady(snap, l, ctx.today);
@@ -401,7 +403,7 @@ export function litterCard(snap, l, ctx, { link = true, show = SHOW_DEFAULT.litt
   const names = [has('name') ? `<b>${esc(l.name)}</b>` : '', has('parents') ? `<span class="small muted">${esc(pairNames(snap, l))}</span>` : ''].join('');
   const pair = (has('photos') || names) ? `<div class="pair">${has('photos') ? `${parent('dam')}<span class="x">×</span>${parent('sire')}` : ''}${names ? `<div class="names">${names}</div>` : ''}</div>` : '';
   const item = {
-    eyebrow: () => `<span class="eyebrow">${esc(eyebrow)}</span>\n    `,
+    eyebrow: () => (withLabel ? `<span class="eyebrow">${esc(eyebrow)}</span>\n    ` : ''),
     pair: () => (pair ? `${pair}\n    ` : ''),
     facts: () => kvList(rows),
     summary: () => (l.summary && l.stage === 'planned' ? `<p class="small muted">${esc(l.summary)}</p>` : ''),

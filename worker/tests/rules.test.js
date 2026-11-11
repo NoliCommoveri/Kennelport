@@ -156,7 +156,7 @@ test('only admin reaches the build screens; signing in to /ops makes the device 
 // ---------- the rest of step 1: dogs, wording, formats, how KennelOS data lands ----------
 
 test('wording, formats and the adult-for-sale price change the sample site; each screen keeps the others', async (t) => {
-  const { env, admin, page, post } = await sampleSite(t);
+  const { env, site, admin, page, post } = await sampleSite(t);
   const formOf = async (screen, changes = {}) => {
     const html = await (await call(env, M, `/admin/tuxedolane/${screen}`, { headers: { cookie: admin } })).text();
     const f = {};
@@ -181,7 +181,11 @@ test('wording, formats and the adult-for-sale price change the sample site; each
   assert.match(dogs, /Meet Rocco\*/);
   assert.match(dogs, /Tuxedo Lane Bostons\*, 2026/);
   const litters = text((await page('/litters')).html);
-  assert.match(litters, /Soon .*The Spice litter\*/);
+  // The born-not-open label reads her words on a litter card (not in Available soon,
+  // whose heading says it already).
+  const { litterCard } = await import('../src/render/parts.js');
+  const snapNow = await buildSnapshot(env, site.id);
+  assert.match(text(litterCard(snapNow, snapNow.litters.find((l) => l.name === 'The Spice litter*'), { today: TODAY })), /^\s*Soon /);
   assert.match(litters, /Born 20 September 2026/);
   assert.match(text((await page('/litters/the-spice-litter/sage')).html), /Available on Nov 22/);
   assert.match(text((await page('/litters/the-gem-litter/ruby')).html), /Sex Girl/);
@@ -295,6 +299,7 @@ test('Available soon: born litters before deposits open, with its own menu link,
   let html = (await page('/litters')).html;
   const soon = html.split('id="soon"')[1].split('id="upcoming"')[0];
   assert.match(text(soon), /Available soon .*The Spice litter\*/);
+  assert.doesNotMatch(soon, /<span class="eyebrow">Coming up<\/span>/, 'no Coming up label on its cards');
   assert.doesNotMatch(text(html.split('id="upcoming"')[1]), /The Spice litter\*/);
   assert.match(html, /href="\/litters#soon"[^>]*>Available soon</);
   assert.match(html, /href="\/litters#available"[^>]*>Available now</);

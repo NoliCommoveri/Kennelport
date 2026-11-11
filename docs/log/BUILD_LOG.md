@@ -776,3 +776,9 @@ with new sections and a new building order. Docs only; nothing built yet.
 
 - The menu links and the section heading read "Available now" and "Available soon", in
   the menu's sentence case ("Upcoming litters"). The entries above say them in title case.
+
+## 2026-11-11: no "Coming up" label on cards in Available soon
+
+- `render/parts.js` `litterCard` takes `label: false`; the Available soon section uses it,
+  so its litter cards carry no small label over the name (the section's heading says it).
+  Elsewhere (a Litters block, Coming up on a page without the section) the label stays.

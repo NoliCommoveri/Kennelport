@@ -623,7 +623,7 @@ export function litters(snap, ctx) {
   let upcomingHtml = '';
   const soonHtml = soon.length ? `<section class="section" id="soon"><div class="wrap">
       ${head(word(snap, 'soon_eyebrow'), word(snap, 'soon_heading'), word(snap, 'soon_lede'))}
-      <div class="litters">${soon.map((l) => litterCard(snap, l, ctx)).join('')}</div>
+      <div class="litters">${soon.map((l) => litterCard(snap, l, ctx, { label: false })).join('')}</div>
     </div></section>` : '';
   if (olderList.length && pageOn(snap, 'older', ctx) && has(snap, 'litters', 'older')) {
     olderHtml = (`<section class="section band" id="older"><div class="wrap">
