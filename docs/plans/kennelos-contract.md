@@ -81,6 +81,10 @@ extra's one price is sent as a range of the same number twice; `collar` and
    decided at publish, and this row moves on to available on the day by itself. Its words
    needn't hold `{date}` (60 characters, as `price.before` had). A site's changed
    `price.before` is carried to the row's words; an older snapshot reads as before.
+   **Added (the owner, 2026-11-11):** those litters get their own section on the Puppies
+   page, **Available Soon** (`soon`, between Older puppies and Coming up, on by default),
+   with its own menu link; Coming up keeps planned litters only. The Available link
+   reads **Available Now**.
 
 ## Part B. Fields, conditions and picks: blocks over any data
 

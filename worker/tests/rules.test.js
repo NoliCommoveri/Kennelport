@@ -289,3 +289,20 @@ test('a snapshot from before the not_open row reads as it did', async () => {
   assert.equal(statusRule(snap, p, l, '2026-11-01').pill, 'avail');
   assert.equal(puppyStatus(snap, l, p, '2026-12-01'), 'Available');
 });
+
+test('Available Soon: born litters before deposits open, with its own menu link; Available is Available Now', async (t) => {
+  const { env, site, page } = await sampleSite(t);
+  let html = (await page('/litters')).html;
+  const soon = html.split('id="soon"')[1].split('id="upcoming"')[0];
+  assert.match(text(soon), /Available Soon .*The Spice litter\*/);
+  assert.doesNotMatch(text(html.split('id="upcoming"')[1]), /The Spice litter\*/);
+  assert.match(html, /href="\/litters#soon"[^>]*>Available Soon</);
+  assert.match(html, /href="\/litters#available"[^>]*>Available Now</);
+  // A Puppies page the owner changed before Available Soon existed keeps them under Coming up.
+  const { PAGE_DEFAULTS } = await import('../src/content/blocks.js');
+  await saveBuild(env, site.id, { pages: { litters: { blocks: PAGE_DEFAULTS.litters.filter((b) => b.id !== 'soon') } } });
+  html = (await page('/litters')).html;
+  assert.doesNotMatch(html, /id="soon"/);
+  assert.match(text(html.split('id="upcoming"')[1]), /The Spice litter\*/);
+  assert.doesNotMatch(html, /href="\/litters#soon"/);
+});

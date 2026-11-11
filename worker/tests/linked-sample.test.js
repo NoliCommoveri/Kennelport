@@ -163,8 +163,8 @@ test('the series: each bundle and feed, in order, leaves the site as its expect 
   let p = await puppiesPage(env, site, today);
   assert.deepEqual(p.where('The Gem litter*'), ['current']);
   assert.deepEqual(p.where('The Summer litter*'), ['older']);
-  assert.deepEqual(p.where('The Spice litter*'), ['upcoming']);
-  assert.match(p.sections.find((s) => s.id === 'upcoming').words, /The Spice litter\* .*Deposits from November 22, 2026/);
+  assert.deepEqual(p.where('The Spice litter*'), ['soon']);
+  assert.match(p.sections.find((s) => s.id === 'soon').words, /Available Soon .*The Spice litter\* .*Deposits from November 22, 2026/);
   for (const name of ['Wren* × Moose*', 'Juniper* × Atlas*', 'Our next litter', "Lulu* (a friend's girl)'s next litter"]) assert.deepEqual(p.where(name), ['upcoming'], name);
   assert.match(p.older, /Sunny\*/);
   assert.doesNotMatch(p.page('/litters/the-gem-litter').html, /Garnet\*/);
@@ -203,7 +203,7 @@ test('the series: each bundle and feed, in order, leaves the site as its expect 
   assert.deepEqual([p2.name, p2.plan_label, p2.expected_label], ['Maple* × Bishop*', 'Planned pairing', 'April 2027']);
   assert.equal(litter('heat', 'heat-h1'), undefined);
   p = await puppiesPage(env, site, today);
-  assert.deepEqual(p.where('The Forest litter*'), ['upcoming'], 'deposits open January 2');
+  assert.deepEqual(p.where('The Forest litter*'), ['soon'], 'deposits open January 2');
   assert.deepEqual(p.where('The Spice litter*'), ['current'], 'deposits open: its own section');
   assert.doesNotMatch(p.page('/litters/the-spice-litter').html, /Available on/);
   assert.match(text(p.page('/litters/the-spice-litter/sage').html), /Sage\* .*Available/);

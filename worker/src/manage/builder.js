@@ -33,7 +33,7 @@ import {
 } from '../content/rules.js';
 import { buildSnapshot } from '../publish.js';
 import {
-  olderPuppies, depositsAhead, puppyStatus, puppyPriceText, regText, statusRule, sortPuppies, fullRegHref, rulesOf, useFormats, word, litterRows,
+  olderPuppies, depositsAhead, soonSection, puppyStatus, puppyPriceText, regText, statusRule, sortPuppies, fullRegHref, rulesOf, useFormats, word, litterRows,
   dogGroups, sitePrice, pricesOff, dogsFor, label, placedFaqs, addedOn, addedWords, customPage, menuGroups,
 } from '../render/parts.js';
 import { makePreviewToken, servePhoto, SITE_CSP } from '../site.js';
@@ -176,7 +176,7 @@ async function preview(env, site) {
   }
   if (older.length) blocks.push(block('Ready now', 'Older puppies', older.map(({ litter, puppy }) => card(litter, puppy)), ' sand'));
   for (const l of snap.litters.filter((x) => depositsAhead(snap, x, ctx.today) && x.puppies.length)) {
-    blocks.push(block('Coming up', l.name, sortPuppies(snap, l.puppies, l, ctx.today).map((p) => card(l, p))));
+    blocks.push(block(soonSection(snap) ? word(snap, 'soon_heading') : 'Coming up', l.name, sortPuppies(snap, l.puppies, l, ctx.today).map((p) => card(l, p))));
   }
   const planned = snap.litters.filter((x) => x.stage === 'planned').length;
   if (planned) blocks.push(`<div class="pvb ghost">And ${planned} upcoming litter${planned === 1 ? '' : 's'} with no puppies yet</div>`);

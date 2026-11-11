@@ -1,6 +1,6 @@
 // Pieces of the "ak" template shared by its pages: formatting, photos, cards and
 // the menu. Every value from a snapshot passes through esc() (or attr()) here.
-import { SHOW_DEFAULT, isCustom, hersOn, BLOCK_TYPES, defaultMenu, MENU_PLACES } from '../content/blocks.js';
+import { SHOW_DEFAULT, isCustom, hersOn, BLOCK_TYPES, defaultMenu, MENU_PLACES, PAGE_DEFAULTS } from '../content/blocks.js';
 import { escapeHtml as esc } from '../lib/html.js';
 import { PAGES, pupStatus } from '../content/model.js';
 import { puppyPrice, litterPriceRange, depositRange } from '../content/prices.js';
@@ -165,7 +165,8 @@ export function menuGroups(snap, ctx) {
   const placeShows = {
     'dogs#girls': () => { const b = dogGroups(snap).breeding; return b.some((d) => d.sex === 'female') && b.some((d) => d.sex === 'male'); },
     'litters#available': () => snap.litters.some((l) => l.stage === 'current' && !depositsAhead(snap, l, ctx.today)),
-    'litters#upcoming': () => snap.litters.some((l) => l.stage === 'planned' || depositsAhead(snap, l, ctx.today)),
+    'litters#upcoming': () => snap.litters.some((l) => l.stage === 'planned' || (!soonSection(snap) && depositsAhead(snap, l, ctx.today))),
+    'litters#soon': () => soonSection(snap) && snap.litters.some((l) => depositsAhead(snap, l, ctx.today)),
   };
   placeShows['dogs#boys'] = placeShows['dogs#girls'];
   const placeText = { 'dogs#girls': () => word(snap, 'girls'), 'dogs#boys': () => word(snap, 'boys') };
@@ -205,6 +206,10 @@ const depositsOpen = (snap, l) => (l.deposits_on ? addDays(l.deposits_on, timing
 // A born litter whose deposits don't open yet (plan 5.3): it sits under Coming up,
 // and its Available puppies read by the not_open row ("Available on <date>"). The
 // site moves it on the day, from the published snapshot.
+// Whether the Puppies page has the Available soon section (content/blocks.js PAGE_PARTS;
+// on by default): then born litters whose deposits don't open yet go there, not under
+// Coming up. A page the owner changed before it existed has it only once she adds it.
+export const soonSection = (snap) => (snap.layout?.litters ?? PAGE_DEFAULTS.litters).some((b) => b.type === 'builtin' && b.id === 'soon');
 export const depositsAhead = (snap, l, today) => l.stage === 'current' && Boolean(l.deposits_on) && depositsOpen(snap, l) > today;
 
 // A current litter past its going-home date, by the site's timing rule (today: from

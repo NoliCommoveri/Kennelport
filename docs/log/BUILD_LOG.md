@@ -749,3 +749,24 @@ with new sections and a new building order. Docs only; nothing built yet.
 
 - `front.js`: the Site Manager line now says "Update a puppy's status" (was "Mark a puppy
   reserved"; there is no reserved status). The owner's words. Not a cached file: no bump.
+
+## 2026-11-11: Available Soon, and Available Now (the owner's request; live sites change)
+
+- Puppies page: a new built-in section, `soon` ("Available soon" in the page editor), on
+  by default between Older puppies and Coming up (`content/blocks.js` PAGE_PARTS and
+  PAGE_DEFAULTS). Born litters whose deposits haven't opened go there, not under Coming
+  up, and move to the litters taking deposits on the day (`render/pages.js` litters,
+  `render/parts.js` `soonSection`). Its words are in the Wording screen: `soon_eyebrow`
+  "Born", `soon_heading` "Available Soon", `soon_lede` "Deposits open on the date on each
+  litter." (placeholders for the owner's words).
+- Menu: a new place, `litters#soon` "Available Soon", in the default menu between
+  Available and Upcoming litters; it shows while such a litter is on the page. The
+  Available place now reads **Available Now**. Upcoming litters shows only for planned
+  litters when the page has Available Soon.
+- Sites change at once on merge (the owner said they may). A site whose Puppies page or
+  menu the owner had already changed keeps its stored version: no Available Soon section
+  or link until she adds them in the page editor and the Menu screen; its born litters
+  stay under Coming up, as before.
+- The builder's Puppies preview names the section by its heading. Tests: the linked
+  sample and KennelOS tests now expect such litters under Available Soon; a new test in
+  `rules.test.js`. No migration, no versioned file.

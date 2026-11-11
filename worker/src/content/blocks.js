@@ -211,7 +211,8 @@ export const PAGE_PARTS = Object.freeze({
   litters: {
     current: { name: 'Litters taking deposits', hint: "Each born litter whose deposits are open, with its pups. With nothing on the page, it says there are no litters." },
     older: { name: 'Older puppies', hint: 'Shows while the Older puppies page is on.' },
-    upcoming: { name: 'Coming up', hint: 'Planned litters, and born ones whose deposits open later.' },
+    soon: { name: 'Available soon', hint: 'Born litters whose deposits open later; each moves to the litters taking deposits on the day. Removed, they sit under Coming up.' },
+    upcoming: { name: 'Coming up', hint: 'Planned litters, and born ones whose deposits open later when the page has no Available soon.' },
   },
   older: { list: { name: 'Every older puppy' } },
   how_it_works: { steps: { name: 'Her steps', inside: true } },
@@ -258,7 +259,7 @@ export const PAGE_DEFAULTS = Object.freeze(Object.fromEntries(Object.entries({
   reviews: [H, part('list')],
   contact: [H, F, part('main'), BG],
   dogs: [H, F, part('all'), part('upcoming'), part('for_sale'), part('co_owned')],
-  litters: [H, F, part('current'), BG, part('older'), part('upcoming')],
+  litters: [H, F, part('current'), BG, part('older'), part('soon'), part('upcoming')],
   older: [H, part('list')],
   how_it_works: [H, F, part('steps'), BG],
   extras: [H, F, part('list'), BG],
@@ -689,8 +690,9 @@ export class MenuError extends Error {}
 export const MENU_PLACES = Object.freeze({
   'dogs#girls': { page: 'dogs', name: 'Girls', when: 'while there are breeding dogs of both sexes' },
   'dogs#boys': { page: 'dogs', name: 'Boys', when: 'while there are breeding dogs of both sexes' },
-  'litters#available': { page: 'litters', name: 'Available', when: 'while a litter has puppies to choose from' },
-  'litters#upcoming': { page: 'litters', name: 'Upcoming litters', when: 'while a litter is planned, or its deposits haven\'t opened' },
+  'litters#available': { page: 'litters', name: 'Available Now', when: 'while a litter has puppies to choose from' },
+  'litters#upcoming': { page: 'litters', name: 'Upcoming litters', when: 'while a litter is planned, or its deposits haven\'t opened (unless the Puppies page has Available soon)' },
+  'litters#soon': { page: 'litters', name: 'Available Soon', when: 'while a born litter\'s deposits haven\'t opened, and the Puppies page has Available soon' },
 });
 // Pages that can't be in the menu: Privacy sits in the footer's fine print.
 const MENU_PAGES = Object.keys(PAGES).filter((k) => k !== 'privacy');
@@ -704,7 +706,7 @@ export function defaultMenu(custom = []) {
     for (const [key, p] of Object.entries(PAGES)) {
       if (p.group !== g.key) continue;
       if (key === 'litters') {
-        items.push({ type: 'place', place: 'litters#available' }, { type: 'place', place: 'litters#upcoming' }, { type: 'page', page: 'litters', fallback: true });
+        items.push({ type: 'place', place: 'litters#available' }, { type: 'place', place: 'litters#soon' }, { type: 'place', place: 'litters#upcoming' }, { type: 'page', page: 'litters', fallback: true });
         continue;
       }
       items.push({ type: 'page', page: key });

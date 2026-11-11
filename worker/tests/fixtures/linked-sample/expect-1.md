@@ -10,7 +10,7 @@ Checked by `tests/linked-sample.test.js`:
 Checked by the series test, and by eye on a demo site (step 3 of the plan):
 
 - Puppies page: the Gem litter* under Available, the Summer litter* under Older
-  puppies, the Spice litter* under Coming up with "Deposits from November 22, 2026";
+  puppies, the Spice litter* under Available Soon with "Deposits from November 22, 2026";
   Wren* × Moose*, P1 (Juniper* × Atlas*), heat H1 (Our next litter) and heat H2
   (Lulu*'s next litter) under Coming up.
 - Older puppies: Sunny*.

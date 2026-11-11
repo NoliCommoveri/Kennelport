@@ -8,7 +8,7 @@
 import {
   esc, attr, fmtDate, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, litterCard, parentCards, litterFacts, dogCard, coCard,
   besideCard, partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, paySection,
-  payShown, litterChoices, ANY_LITTER, ABOUT_LABEL, dogGroups, dogsFor, depositsAhead, rulesOf, pricesOff, sitePrice, word, sexWord, fullRegLink,
+  payShown, litterChoices, ANY_LITTER, ABOUT_LABEL, dogGroups, dogsFor, depositsAhead, soonSection, rulesOf, pricesOff, sitePrice, word, sexWord, fullRegLink,
   fullRegSurchargeRow, galleryHtml, faqBlock, addedOn, addedWords, addedRow, customPage,
 } from './parts.js';
 import { embedView } from '../embeds.js';
@@ -602,8 +602,11 @@ export function litters(snap, ctx) {
   const p = snap.pages.litters;
   const older = new Set(olderPuppies(snap, ctx.today).map((o) => o.litter.id));
   const current = snap.litters.filter((l) => l.stage === 'current' && !depositsAhead(snap, l, ctx.today) && !older.has(l.id) && l.puppies.length);
-  // Coming up: planned litters, and born ones whose deposits date is still ahead.
-  const planned = snap.litters.filter((l) => l.stage === 'planned' || depositsAhead(snap, l, ctx.today));
+  // Coming up: planned litters, and born ones whose deposits date is still ahead,
+  // unless the page has Available soon: then those are there.
+  const soonOn = soonSection(snap);
+  const soon = soonOn ? snap.litters.filter((l) => depositsAhead(snap, l, ctx.today)) : [];
+  const planned = snap.litters.filter((l) => l.stage === 'planned' || (!soonOn && depositsAhead(snap, l, ctx.today)));
   const sections = [];
     current.forEach((l, i) => {
     const lede = [pairNames(snap, l) && `${pairNames(snap, l)}.`, l.summary, l.ready_on && `Ready to go home ${fmtDate(l.ready_on)}.`, l.show_prices && l.price_note].filter(Boolean).join(' ');
@@ -618,6 +621,10 @@ export function litters(snap, ctx) {
   const olderList = olderPuppies(snap, ctx.today);
   let olderHtml = '';
   let upcomingHtml = '';
+  const soonHtml = soon.length ? `<section class="section" id="soon"><div class="wrap">
+      ${head(word(snap, 'soon_eyebrow'), word(snap, 'soon_heading'), word(snap, 'soon_lede'))}
+      <div class="litters">${soon.map((l) => litterCard(snap, l, ctx)).join('')}</div>
+    </div></section>` : '';
   if (olderList.length && pageOn(snap, 'older', ctx) && has(snap, 'litters', 'older')) {
     olderHtml = (`<section class="section band" id="older"><div class="wrap">
       ${head(word(snap, 'older_eyebrow'), label(snap, 'older'), null)}
@@ -632,7 +639,7 @@ export function litters(snap, ctx) {
     </div></section>`);
   }
   // With nothing else on the page, the litters' place says so.
-  const empty = !sections.length && !row && !olderHtml && !upcomingHtml;
+  const empty = !sections.length && !row && !olderHtml && !soonHtml && !upcomingHtml;
   return {
     title: snap.pages.litters.heading || label(snap, 'litters'), section: '/litters', description: p.lede,
     body: assemble(snap, ctx, 'litters', {
@@ -641,6 +648,7 @@ export function litters(snap, ctx) {
       current: empty ? `<section class="section tight"><div class="wrap notice"><p class="muted">${esc(word(snap, 'no_litters'))}</p></div></section>` : sections.join('\n'),
       badges: row,
       older: olderHtml,
+      soon: soonHtml,
       upcoming: upcomingHtml,
     }),
   };
