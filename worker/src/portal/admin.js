@@ -6,17 +6,19 @@
 //
 // Uses the manage app's own page frame and styles (public/_kp/m/app.css), so it
 // needs no change to the app's cached files.
+//
+// Split out into admin/ (docs/review/senior-review-2026-11.md, item 7): templates.js,
+// settings.js, today.js, and parts.js, the pieces they share.
 import { escapeHtml as esc } from '../lib/html.js';
 import {
-  getSettings, saveSettings, listFamilies, getFamily, familyEmails, createFamily, updateFamily, deleteFamily,
-  placementFor, createPlacement, updatePlacement, markPickedUp, confirmPickup, pickupNotYet, acceptProof, setLifeStatus,
-  addHealthRecord, removeHealthRecord, healthRecords, saveFile, getFile, fileResponse, emailLog, history, placeablePuppies, puppyFor,
-  PortalError, RECORD_TYPES, MAX_FILE_BYTES, DEFAULT_DISCLOSURE,
+  getSettings, saveSettings, listFamilies, getFamily, familyEmails, createFamily, updateFamily, deleteFamily, placementFor, createPlacement,
+  updatePlacement, markPickedUp, confirmPickup, pickupNotYet, acceptProof, setLifeStatus, addHealthRecord, removeHealthRecord, healthRecords,
+  saveFile, getFile, fileResponse, emailLog, history, placeablePuppies, puppyFor, PortalError, RECORD_TYPES, MAX_FILE_BYTES,
 } from './store.js';
 import { sendInvites, portalBase } from './auth.js';
 import {
   listItems, saveItem, removeItem, moveItem, addSuggested, stepsFor, programsFor, setDone, setHidden, setDueOn, setProgramStatus, setProgramCode,
-  CHECK_AUTO, TASK_AUTO, PROGRAM_WORDS,
+  PROGRAM_WORDS,
 } from './steps.js';
 import { sendDueFor } from './reminders.js';
 import { vetStatus, formatAt, formatDay, localParts, timeLeft, clockRunning, VET_RULES } from './vet.js';
@@ -30,6 +32,10 @@ import { suggestionsFor, takeSuggestion, ignoreSuggestion, QUIET_MS } from './fe
 import {
   thread, markRead, breederWrites, markLoss, isLoss, lossDraft, saveLossNote, scheduleDelete, undoDelete, recentlyDeleted, eraseFamily, erasedRecords, MAX_MESSAGE, UNDO_DAYS,
 } from './account.js';
+import { redirect, note, errorBox, pupName, familyFilters, SUGGEST_LABEL, ZONE_NAMES } from './admin/parts.js';
+import { products, KIND_WORDS, itemFields, whenWords, formOffset, templateScreen } from './admin/templates.js';
+import { settingsScreen } from './admin/settings.js';
+import { waitlistCount, waitlistPart, setupScreen } from './admin/today.js';
 
 // "2 hours ago", for Last from KennelOS.
 export function ago(at, now = new Date()) {
@@ -42,42 +48,6 @@ export function ago(at, now = new Date()) {
   return `${d} days ago`;
 }
 const CLOSED = { died: 'the puppy died', failed_health: 'the puppy failed a health check', backed_out: 'the family backed out', other: 'the sale was voided' };
-const SUGGEST_LABEL = { name: 'Family name', puppy_id: 'Puppy', puppy_name: 'Puppy', go_home_on: 'Go-home', pickup_booked_at: 'Pickup booked for', microchip: 'Microchip', registration_no: 'Registration number', vet_clinic: 'Vet\'s clinic', vet_doctor: 'Vet\'s name', vet_phone: 'Vet\'s phone', vet_address: 'Vet\'s address' };
-
-const redirect = (location) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store' } });
-
-const NOTES = {
-  added: 'Family added. Send their invite when you\'re ready.',
-  saved: 'Saved.',
-  invited: 'Invite sent to every address.',
-  pickedup: 'Marked picked up. The vet clock has started and the family has been emailed.',
-  confirmed: 'Confirmed.',
-  notyet: 'Clock stopped. Mark the real pickup when it happens.',
-  accepted: 'Vet record accepted.',
-  record: 'Record added.',
-  removed: 'Record removed.',
-  contract: 'Contract added. The family can see it under Records.',
-  deleted: `Family deleted. Their portal is closed now; you can undo this for ${30} days.`,
-  undone: 'Family brought back. They can sign in again.',
-  erased: 'Their account is erased. Their sale records stay, under the name you know them by.',
-  sent: 'Sent. They see it in the portal and by email.',
-  lossnote: 'Saved. The family sees your note now.',
-  losssent: 'Saved and emailed to the family.',
-  extra: 'Extra added.',
-  extraremoved: 'Extra removed.',
-  update: 'Update saved and emailed to the family.',
-  loss: 'Recorded. Their portal is now the quiet page; write your note to them below.',
-  suggested: 'Suggested steps added. Change, reorder or remove any of them.',
-  stepadded: 'Step added.',
-  stepremoved: 'Step removed.',
-  step: 'Saved. The family sees it.',
-};
-const note = (url) => (NOTES[url.searchParams.get('note')] ? `<p class="notice" role="status">${esc(NOTES[url.searchParams.get('note')])}</p>` : '');
-const errorBox = (err) => (err ? `<p class="error" role="alert">Not saved: ${esc(err)}</p>` : '');
-const pupName = (p) => p.call_name || p.puppy_name;
-
-const ZONES = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Phoenix', 'America/Los_Angeles', 'America/Anchorage', 'Pacific/Honolulu', 'America/Halifax', 'America/Toronto', 'America/Winnipeg', 'America/Edmonton', 'America/Vancouver'];
-const ZONE_NAMES = { 'America/New_York': 'Eastern', 'America/Chicago': 'Central', 'America/Denver': 'Mountain', 'America/Phoenix': 'Arizona', 'America/Los_Angeles': 'Pacific', 'America/Anchorage': 'Alaska', 'Pacific/Honolulu': 'Hawaii', 'America/Halifax': 'Atlantic (Halifax)', 'America/Toronto': 'Eastern (Toronto)', 'America/Winnipeg': 'Central (Winnipeg)', 'America/Edmonton': 'Mountain (Edmonton)', 'America/Vancouver': 'Pacific (Vancouver)' };
 
 // ---------- Today ----------
 
@@ -199,12 +169,6 @@ function familiesScreen(site, families, s, url, { deleted = [], erased = [], wai
     <dl class="kv">${erased.map((r) => `<dt>${esc(r.name)}</dt><dd><b>${esc(r.call_name || r.puppy_name)}</b>${r.picked_up_at ? ` · went home ${esc(formatAt(r.picked_up_at, s.time_zone, { weekday: false }))}` : ''}${r.proof_file_id ? ` · <a href="${base}/file/${esc(r.proof_file_id)}">vet record</a>${r.proof_accepted_at ? ' (accepted)' : ''}` : ''}${r.contract_file_id ? ` · <a href="${base}/file/${esc(r.contract_file_id)}">contract</a>` : ''} <span class="hint">erased ${esc(formatAt(r.erased_at, s.time_zone, { weekday: false }))}</span></dd>`).join('')}</dl></details>` : ''}`;
 }
 
-function familyFilters(site, on, waitlistCount) {
-  const base = `/s/${esc(site.subdomain)}/portal`;
-  return `<nav class="filters" aria-label="Show">${[['puppy', base, 'Puppy families'], ['wait', `${base}?show=waitlist`, `Waitlist${waitlistCount === null ? '' : ` (${waitlistCount})`}`]]
-    .map(([k, href, label]) => `<a href="${href}"${k === on ? ' aria-current="page"' : ''}>${label}</a>`).join('')}</nav>`;
-}
-
 function puppyOptions(puppies, current) {
   return `<option value="">Choose…</option>${puppies.map((p) => `<option value="${esc(p.id)}"${p.id === current ? ' selected' : ''}${p.family && p.id !== current ? ' disabled' : ''}>${esc(p.name)} · ${esc(p.litter_name)}${p.family && p.id !== current ? ` (${esc(p.family)})` : ''}</option>`).join('')}`;
 }
@@ -303,7 +267,6 @@ async function familyScreen(env, site, familyId, url, { error } = {}, now = new 
       ${proof && !p.proof_accepted_at ? form('accept', '<button class="primary">Accept the vet record</button>') : ''}
     </section>`);
 
-
     // The checklist, the timeline and the programs, as this family has them.
     const steps = await stepsFor(env, site.id, p, await puppyFor(env, site.id, p.puppy_id), s, { now, all: true, name });
     const op = (kind, x, what, label, cls = 'link') => form(`step/${kind}/${esc(x.id)}/${what}`, `<button class="${cls}">${label}</button>`, 'inline');
@@ -337,7 +300,6 @@ async function familyScreen(env, site, familyId, url, { error } = {}, now = new 
           ${x.portal_per_family ? `<label>Their code or certificate<input name="code" value="${esc(x.family_code ?? '')}" maxlength="80"></label>` : ''}</div>
           <p><button>Save</button></p></div>`)).join('')}</section>`);
     }
-
 
     // Extras (plan 8.1): what they bought, and for a stay its skills and weekly updates.
     const cat = await catalog(env, site.id);
@@ -440,188 +402,6 @@ async function familyScreen(env, site, familyId, url, { error } = {}, now = new 
     <p>Erases their account now, for good: sign-in, email addresses, messages and their ticks. Your records of the sale (the placement, health records, contract, vet record and reminder log) stay, under the name ${esc(f.name)}, for your guarantee. A family can also do this themselves from their Account page.</p>
     <label>Type <strong>erase</strong> to confirm<input name="confirm" autocomplete="off" required></label><p><button>Erase their account</button></p></details>`));
   return parts.join('\n');
-}
-
-function settingsScreen(site, s, products, { error, waiting = [], extras = [] } = {}, url) {
-  const zones = ZONES.includes(s.time_zone) ? ZONES : [s.time_zone, ...ZONES];
-  const TYPES = { '': 'Not shown', food: 'Food', insurance: 'Insurance', registration: 'Registration', product: 'Product', other: 'Other' };
-  return `${url ? note(url) : ''}${errorBox(error)}<form method="post" action="/s/${esc(site.subdomain)}/portal/settings" class="card">
-    <h1>Portal settings</h1>
-    <section class="fgroup"><h2>The vet visit</h2><div class="fgrid">
-      <fieldset><legend>How your contract counts it</legend>${Object.entries(VET_RULES).map(([k, l]) => `<label class="check"><input type="radio" name="vet_rule" value="${k}"${s.vet_rule === k ? ' checked' : ''}> <span>${esc(l)}</span></label>`).join('')}
-        <span class="hint">Applies to clocks that start from now on; a clock already running keeps its deadline.</span></fieldset>
-      <label>Your time zone<select name="time_zone">${zones.map((z) => `<option value="${esc(z)}"${z === s.time_zone ? ' selected' : ''}>${esc(ZONE_NAMES[z] ?? z)}</option>`).join('')}</select></label>
-      <label>What counts as proof<input name="proof_note" value="${esc(s.proof_note ?? '')}" maxlength="400" placeholder="The vet's exam record or receipt, showing the date and Opal's microchip"><span class="hint">Shown on the vet page and in reminders.</span></label>
-    </div></section>
-    <section class="fgroup"><h2>Contacts for families, once the puppy is home</h2><div class="fgrid">
-      <p class="hint">From pickup, each family's Home leads with these as one-tap buttons for the first weeks, so a question goes to you or your vet, who already knows the puppy. They stay under Records after that.</p>
-      ${waiting.map((g) => `<div class="box"><p><b>KennelOS has</b> ${esc(SUGGEST_LABEL[g.field] ?? g.field)}: <strong>${esc(g.value ?? '')}</strong></p><div class="row">
-        <button form="sug-use-${esc(g.field)}" class="primary">Use it</button><button form="sug-ignore-${esc(g.field)}">Ignore</button></div></div>`).join('')}
-      <div class="row"><label>Your phone for families<input name="her_phone" type="tel" value="${esc(s.her_phone ?? '')}" maxlength="40" placeholder="${esc(site.contactPhone ?? '')}"><span class="hint">Call and text.${site.contactPhone ? ' Blank: your website\'s number.' : ''}</span></label>
-      <label>Your email for families<input name="her_email" type="email" value="${esc(s.her_email ?? '')}" maxlength="254" placeholder="${esc(site.contactEmail ?? '')}"><span class="hint">${site.contactEmail ? 'Blank: your website\'s address.' : 'Optional.'}</span></label></div>
-      <div class="row"><label>Your vet's clinic<input name="vet_clinic" value="${esc(s.vet_clinic ?? '')}" maxlength="120" placeholder="Maple Street Animal Hospital"></label>
-      <label>Vet's name<input name="vet_doctor" value="${esc(s.vet_doctor ?? '')}" maxlength="120" placeholder="Dr. Lee"></label></div>
-      <div class="row"><label>Vet's phone<input name="vet_phone" type="tel" value="${esc(s.vet_phone ?? '')}" maxlength="40"></label>
-      <label>Vet's address<input name="vet_address" value="${esc(s.vet_address ?? '')}" maxlength="200"><span class="hint">Opens in maps.</span></label></div>
-      <label>A note for families<input name="vet_note" value="${esc(s.vet_note ?? '')}" maxlength="400" placeholder="Dr. Lee has seen every puppy since birth and is happy to take your questions."></label>
-      <label>On Home for this many weeks after pickup<input name="help_weeks" inputmode="numeric" value="${esc(s.help_weeks ?? 8)}" maxlength="2"></label>
-    </div></section>
-    <section class="fgroup"><h2>What the puppies eat now</h2><div class="fgrid">
-      <p class="hint">The food band on each family's Home: the exact food, so they buy the same. Its button opens your food program, if you show one.</p>
-      <label>The food<input name="food_name" value="${esc(s.food_name ?? '')}" maxlength="160" placeholder="Small-breed puppy formula, chicken and rice"><span class="hint">Brand and formula. Blank: no food band.</span></label>
-      <div class="row"><label>Bag<input name="food_bag" value="${esc(s.food_bag ?? '')}" maxlength="80" placeholder="4 lb bag"></label>
-      <label>How much and how often<input name="food_how" value="${esc(s.food_how ?? '')}" maxlength="160" placeholder="⅓ cup, three times a day"></label></div>
-      <label>A note<input name="food_note" value="${esc(s.food_note ?? '')}" maxlength="300" placeholder="Soak it in warm water for the first week."></label>
-    </div></section>
-    ${extras.length ? `<section class="fgroup"><h2>Extras the portal delivers</h2><div class="fgrid">
-      <p class="hint">An extended stay gets a Stay page for the family, its "What's included" list as skills, and your updates on a rhythm you set.</p>
-      ${extras.map((x) => `<div class="row"><label>${esc(x.name)}<select name="delivery.${esc(x.id)}"><option value="">Listed only</option><option value="stay"${x.portal_delivery === 'stay' ? ' selected' : ''}>An extended stay, with updates</option></select></label>
-        <label>Update every (days)<input name="every.${esc(x.id)}" inputmode="numeric" maxlength="2" value="${esc(x.portal_every_days ?? 7)}"></label></div>`).join('')}
-    </div></section>` : ''}
-    <section class="fgroup" id="programs"><h2>Programs families see</h2><div class="fgrid">
-      ${products.length ? products.map((x) => `<div class="fgrid box"><b>${esc(x.name)}</b>
-        <div class="row"><label>Show as<select name="type.${esc(x.id)}">${Object.entries(TYPES).map(([k, l]) => `<option value="${k}"${(x.portal_show ? x.portal_type ?? 'other' : '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
-        <label>What the family does<input name="action.${esc(x.id)}" value="${esc(x.family_action ?? '')}" maxlength="200" placeholder="${x.portal_type === 'insurance' ? 'Activate the free trial within 5 days of pickup' : 'Use the code at checkout'}"></label></div>
-        <label class="check"><input type="checkbox" name="own.${esc(x.id)}" value="1"${x.portal_per_family ? ' checked' : ''}> <span>Each family gets its own code or certificate <span class="hint">You type it on their screen; they see theirs instead of the program's code.</span></span></label></div>`).join('') : '<p class="muted">Add your programs under Recommended products first; their links and codes are used here too.</p>'}
-      <label>Disclosure line<input name="disclosure" value="${esc(s.disclosure ?? '')}" maxlength="400" placeholder="${esc(DEFAULT_DISCLOSURE)}"><span class="hint">At the foot of every page with program links.</span></label>
-    </div></section>
-    <p><button class="primary">Save</button></p></form>
-  ${waiting.map((g) => ['use', 'ignore'].map((a) => `<form id="sug-${a}-${esc(g.field)}" method="post" action="/s/${esc(site.subdomain)}/portal/settings/suggestion"><input type="hidden" name="field" value="${esc(g.field)}"><input type="hidden" name="act" value="${a}"></form>`).join('')).join('')}
-  <ul class="items"><li class="item"><a href="/s/${esc(site.subdomain)}/portal/checklist"><b>Go-home checklist</b><span>Your list for every family</span></a></li>
-    <li class="item"><a href="/s/${esc(site.subdomain)}/portal/timeline"><b>First-weeks timeline</b><span>Tasks dated from birth or pickup</span></a></li></ul>`;
-}
-
-
-// ---------- the checklist and timeline templates ----------
-
-const products = async (env, siteId) => (await env.DB.prepare('SELECT id, name, portal_show, portal_type, family_action, portal_per_family FROM products WHERE site_id = ? ORDER BY sort, name').bind(siteId).all()).results;
-
-const KIND_WORDS = {
-  checklist: { title: 'Go-home checklist', one: 'item', hint: 'What to have ready before the puppy comes home. Every family gets this list from two weeks before go-home; you can hide an item or add one for a family on their screen.' },
-  task: { title: 'First-weeks timeline', one: 'task', hint: 'Each task is dated from the puppy\'s birth or from pickup. A task counted from birth that falls by go-home is yours: families see it as done by you. Write {name} for the puppy\'s name.' },
-};
-
-function programSelect(products, current) {
-  const shown = products.filter((x) => x.portal_show || x.id === current);
-  return `<label>Links to<select name="product_id"><option value="">No program</option>${shown.map((x) => `<option value="${esc(x.id)}"${x.id === current ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select><span class="hint">A program families see (Portal settings). Its link and code go with the step.</span></label>`;
-}
-
-function itemFields(kind, x, products) {
-  const auto = kind === 'checklist' ? CHECK_AUTO : TASK_AUTO;
-  const autoField = `<label>Ticks itself<select name="auto"><option value="">No: the family ticks it</option>${Object.entries(auto).map(([k, l]) => `<option value="${k}"${x?.auto === k ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
-  if (kind === 'checklist') {
-    return `<label>Item<input name="title" value="${esc(x?.title ?? '')}" required maxlength="160" placeholder="A crate with a divider"><span class="hint">Write {food} for the food in Portal settings.</span></label>
-      ${programSelect(products, x?.product_id)}${autoField}`;
-  }
-  const days = x ? Math.abs(x.offset_days) : '';
-  const when = x ? (x.offset_days < 0 ? 'before' : 'after') : 'after';
-  return `<label>Task<input name="title" value="${esc(x?.title ?? '')}" required maxlength="160" placeholder="Register {name}"></label>
-    <label>What to do<input name="body" value="${esc(x?.body ?? '')}" maxlength="600" placeholder="Your registration paper is in the go-home folder."></label>
-    <div class="row"><label>Days<input name="days" inputmode="numeric" value="${esc(days)}" maxlength="4" required></label>
-      <label>&nbsp;<select name="when"><option value="after"${when === 'after' ? ' selected' : ''}>after</option><option value="before"${when === 'before' ? ' selected' : ''}>before</option></select></label>
-      <label>&nbsp;<select name="count_from"><option value="pickup"${x?.count_from !== 'birth' ? ' selected' : ''}>pickup</option><option value="birth"${x?.count_from === 'birth' ? ' selected' : ''}>birth</option></select></label></div>
-    ${programSelect(products, x?.product_id)}
-    <label>Button words<input name="button_label" value="${esc(x?.button_label ?? '')}" maxlength="60" placeholder="Activate the trial"><span class="hint">On the program's link. Blank: the program's own.</span></label>
-    ${autoField}`;
-}
-
-// "5 days after pickup", "70 days from birth".
-const whenWords = (t) => (t.count_from === 'birth' ? `${t.offset_days} days from birth` : t.offset_days === 0 ? 'Pickup day' : `${Math.abs(t.offset_days)} day${Math.abs(t.offset_days) === 1 ? '' : 's'} ${t.offset_days < 0 ? 'before' : 'after'} pickup`);
-
-// The form's "days" and "when" as one signed number.
-export const formOffset = (values) => ({ ...values, offset_days: values.days === undefined ? values.offset_days : `${values.when === 'before' ? '-' : ''}${String(values.days ?? '').trim().replace(/^-/, '')}` });
-
-function itemMeta(kind, x, products) {
-  const bits = [];
-  if (kind === 'task') bits.push(whenWords(x));
-  const prod = products.find((y) => y.id === x.product_id);
-  if (prod) bits.push(`${prod.name}${prod.portal_show ? '' : ' (not shown)'}`);
-  if (x.auto) bits.push(kind === 'checklist' ? 'ticks itself' : 'done by itself');
-  return bits.join(' · ');
-}
-
-function templateScreen(site, kind, items, products, url, { error } = {}) {
-  const w = KIND_WORDS[kind];
-  const base = `/s/${esc(site.subdomain)}/portal/${kind === 'checklist' ? 'checklist' : 'timeline'}`;
-  const rows = items.map((x, i) => `<details class="card"><summary><b>${esc(x.title)}</b><br><span class="hint">${esc(itemMeta(kind, x, products))}</span></summary>
-    <form method="post" action="${base}/${esc(x.id)}"><div class="fgrid">${itemFields(kind, x, products)}<p><button class="primary">Save</button></p></div></form>
-    <div class="row">${i ? `<form method="post" action="${base}/${esc(x.id)}/up"><button>Move up</button></form>` : ''}${i < items.length - 1 ? `<form method="post" action="${base}/${esc(x.id)}/down"><button>Move down</button></form>` : ''}
-    <form method="post" action="${base}/${esc(x.id)}/remove"><button class="link">Remove from every family's list</button></form></div></details>`).join('');
-  return `${note(url)}${errorBox(error)}<section class="card"><h1>${esc(w.title)}</h1><p class="hint">${esc(w.hint)}</p>
-    ${items.length ? '' : `<form method="post" action="${base}/suggested"><p><button class="primary">Start with the suggested ${kind === 'checklist' ? 'list' : 'timeline'}</button></p><p class="hint">${kind === 'checklist' ? 'Crate, bed, food, bowls, collar and leash, pads, chews, the vet booking and a carrier.' : 'The vet booking, pickup, the vet visit, insurance, food, registration, deworming and vaccines.'} Each links to your programs of that kind. Change anything after.</p></form>`}</section>
-    ${rows}
-    <form method="post" action="${base}/new" class="card"><h2>Add ${kind === 'checklist' ? 'an item' : 'a task'}</h2><div class="fgrid">${itemFields(kind, null, products)}<p><button>Add</button></p></div></form>`;
-}
-
-// ---------- the Families and Portal tabs (plan 7.3, build chunk 6) ----------
-
-// Vet visits: each placement's status in words and time left; red only in trouble.
-// Vet visits: each placement with its status in words, red only when in trouble.
-function vetVisits(site, families, s, now = new Date()) {
-  const rows = families.filter((f) => f.placement_id && f.status === 'open' && f.life_status === 'with_family');
-  if (!rows.length) return '<section class="card" id="vet-visits"><h2>Vet visits</h2><p class="muted">None running. The clock starts when you mark a puppy picked up.</p></section>';
-  return `<section class="card" id="vet-visits"><h2>Vet visits</h2><ul class="list">${rows.map((f) => {
-    const v = vetStatus(f, now);
-    const tone = v.trouble ? 'bad' : v.word === 'Accepted' ? 'ok' : v.word === 'Record uploaded' ? 'next' : v.word === 'Not booked' && clockRunning(f) ? 'warn' : '';
-    const running = f.vet_deadline_at && clockRunning(f);
-    const when = running ? `Due ${formatAt(f.vet_deadline_at, s.time_zone, { weekday: false })}${Date.parse(f.vet_deadline_at) > now.getTime() && !f.proof_uploaded_at ? ` · ${timeLeft(f.vet_deadline_at, now)} left` : ''}`
-      : f.pickup_booked_at ? `Clock starts at pickup, ${formatAt(f.pickup_booked_at, s.time_zone, { weekday: false })}` : 'Clock starts at pickup';
-    return `<li>${roundPhoto(site.subdomain, f.photo_id, pupName(f))}<span class="grow"><a class="rowlink" href="/s/${esc(site.subdomain)}/portal/f/${esc(f.id)}"><b>${esc(pupName(f))}</b></a> · <span class="small">${esc(f.name)}</span><br><span class="small muted">${esc(when)}</span></span><span class="st${tone ? ` ${tone}` : ''}">${esc(v.word)}</span></li>`;
-  }).join('')}</ul></section>`;
-}
-
-// Activity: what families did (ticks, uploads, bookings, programs), not page views.
-const ACTIVITY = { checklist: 'ticked', task: 'marked done', vet_booked_at: 'booked the vet visit', vet_booked_for: null, vet_clinic: null, proof_uploaded_at: 'uploaded the vet record', proof_file_id: null, program: 'program', account_erased: 'erased their account' };
-async function activity(env, site, s, now = new Date()) {
-  const { results } = await env.DB.prepare(`SELECT h.field, h.new_value, h.changed_at, f.id AS family_id, f.name FROM portal_history h
-    JOIN portal_placements p ON p.id = h.row_id AND h.tbl = 'portal_placements' JOIN portal_families f ON f.id = p.family_id
-    WHERE h.site_id = ? AND h.changed_by = 'family' AND h.changed_at > ? AND h.new_value IS NOT NULL AND f.status = 'active' AND f.deleted_at IS NULL
-    ORDER BY h.id DESC LIMIT 60`).bind(site.id, new Date(now.getTime() - 14 * 86400000).toISOString()).all();
-  const rows = results.filter((h) => ACTIVITY[h.field]).slice(0, 15);
-  const what = (h) => (h.field === 'checklist' || h.field === 'task' ? `${ACTIVITY[h.field]} ${h.new_value}` : h.field === 'program' ? h.new_value : ACTIVITY[h.field]);
-  return `<section class="card" id="activity"><h2>Recent activity</h2>${rows.length
-    ? `<ul class="list">${rows.map((h) => `<li><span class="grow"><a class="rowlink" href="/s/${esc(site.subdomain)}/portal/f/${esc(h.family_id)}"><b>${esc(h.name)}</b></a><br><span class="small">${esc(what(h)).replace(/^./, (c) => c.toUpperCase())}</span></span><span class="small muted">${esc(formatAt(h.changed_at, s.time_zone, { weekday: false }))}</span></li>`).join('')}</ul>`
-    : '<p class="muted">What families do in their portal (ticks, bookings, uploads) shows here for two weeks.</p>'}</section>`;
-}
-
-// Today's lower half (the prototype's): vet visits beside recent activity.
-export async function todayLists(env, site, now = new Date()) {
-  const s = await getSettings(env, site.id);
-  const families = await listFamilies(env, site.id);
-  return `<div class="cols">${vetVisits(site, families, s, now)}${await activity(env, site, s, now)}</div>`;
-}
-
-// The Waitlist side of Families: the website's list, in order (offering a puppy stays in KennelOS).
-async function waitlistCount(env, site) {
-  const linked = await env.DB.prepare('SELECT 1 FROM links WHERE site_id = ? AND revoked_at IS NULL LIMIT 1').bind(site.id).first();
-  if (linked) return { linked: true, n: null };
-  return { linked: false, n: await env.DB.prepare("SELECT COUNT(*) AS n FROM waitlist_entries WHERE site_id = ? AND status = 'waiting'").bind(site.id).first('n') };
-}
-async function waitlistPart(env, site, kennel, w) {
-  const sub = esc(site.subdomain);
-  if (w.linked) {
-    return `<span class="eyebrow">${esc(kennel)}</span><h1>Families</h1>${familyFilters(site, 'wait', null)}
-      <section class="card band" id="waitlist"><h2>Waitlist</h2><p>Your waitlist is in KennelOS. When a family's contract is signed there, they arrive under Puppy families to invite.</p></section>`;
-  }
-  const { results } = await env.DB.prepare("SELECT id, name, wants, added_on FROM waitlist_entries WHERE site_id = ? AND status = 'waiting' ORDER BY sort LIMIT 100").bind(site.id).all();
-  return `<span class="eyebrow">${esc(kennel)}</span><h1>Families</h1>${familyFilters(site, 'wait', w.n)}
-    <section class="card" id="waitlist"><div class="between"><h2>Waitlist</h2><a class="button small" href="/s/${sub}/waitlist">Your waitlist</a></div>
-    ${results.length ? `<ul class="list">${results.map((x, i) => `<li><span class="grow"><b>${i + 1}. ${esc(x.name)}</b><br><span class="small muted">${x.wants ? `${esc(x.wants)} · ` : ''}on the list since ${esc(formatDay(x.added_on))}</span></span></li>`).join('')}</ul>`
-      : '<p class="muted">No families waiting.</p>'}</section>
-    <p class="small muted">The same list your website's Waitlist page shows. When a family signs their contract, add them as a puppy family and send their invite.</p>`;
-}
-
-function setupScreen(site, s) {
-  const b = `/s/${esc(site.subdomain)}/portal`;
-  const item = (href, label, note) => `<li class="item"><a href="${href}"><b>${esc(label)}</b><span>${esc(note)}</span></a></li>`;
-  return `<section class="card"><h1>What families see</h1><p class="muted small">Families sign in at <strong>${esc(site.portalUrl)}</strong>.</p></section>
-    <ul class="items">
-      ${item(`${b}/settings`, 'Portal settings', `Vet visit (${VET_RULES[s.vet_rule].toLowerCase()}), contacts, the food, programs, extras`)}
-      ${item(`${b}/checklist`, 'Go-home checklist', 'What every family has ready')}
-      ${item(`${b}/timeline`, 'First-weeks timeline', 'Tasks dated from birth or pickup')}
-      ${item(`${b}/settings#programs`, 'Programs and where they show', 'Your recommended products, as families see them')}
-      ${item(`/s/${esc(site.subdomain)}/lists/extras`, 'Extras', 'The catalog; how the portal delivers each is in Portal settings')}
-    </ul>`;
 }
 
 // ---------- routes ----------

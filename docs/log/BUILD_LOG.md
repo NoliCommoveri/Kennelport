@@ -672,3 +672,136 @@ with new sections and a new building order. Docs only; nothing built yet.
   pups.
 - Docs only: no code, no migration, no versioned file changed. Six questions are open
   for the owner (the plan's last section).
+
+## 2026-11-10: the KennelOS contract plan, corrected after review
+
+- `docs/plans/kennelos-contract.md`: C1 notes that it sends null for a pup with no
+  disposition, where the existing `disposition` section (marked puppy-status dogs) sends
+  `undecided`. Taking `reserved` out now also covers `render/parts.js` `STATUS_TEXT`, the
+  front page's "Mark a puppy reserved" (the owner's copy), and the two tests that name it.
+  The placed form label and Part D's tag screen are marked breeder-facing, for the owner's
+  wording. C4 sends only `imported` and `import_country` (on a dog and each C7 ancestor);
+  import-descended is worked out here from the ancestors, so C4 goes with C7.
+- Docs only: no code, no migration, no versioned file changed.
+
+## 2026-11-10: KennelOS contract step 1 (health order, not yet open, no reserved)
+
+- **Her health order stays** (`kennelos/bundle.js` `health`): with `rules.landing`
+  `health_order: 'hers'` (the new default) an update leaves each result's `sort` alone and
+  puts a new one after the dog's last; `'kennelos'` is the old behaviour. Set on the From
+  KennelOS screen (`manage/builder.js`). Test in `rules.test.js`.
+- **Born, not yet open** is a status row, `not_open` (`content/rules.js` `STATUS_ROWS`,
+  `render/parts.js` `pupRuleKey`): an available pup in a born litter whose deposits don't
+  open yet reads by it for words, pill, ribbon, price, ask, full registration and order.
+  Default is today's result. `price.before` is gone: a site's changed one is carried to
+  the row's words (`rulesFor`), and a snapshot from before reads as it did. No Show or
+  Older switch on it (decided at publish, and it moves on by itself). `statusRule`,
+  `puppyPriceText`, `regText` and `sortPuppies` take the litter and the day.
+- **No `reserved`**: out of the bundle (KennelOS sending it is refused; it never did), the
+  rules (five KennelOS rows), `model.js` `PUPPY_STATUSES` and the Site Manager's lists.
+  Live data isn't rewritten: `pupStatus` reads a stored `reserved` as `placed` everywhere
+  (rules, `statusText`, both status selects), and saving or importing one stores `placed`
+  (`was` on the enum field, `model.js` `cleanValue`). A site's stored `reserved` rule is
+  dropped. The AK sample, the linked sample and its notes, the demo's step notes and
+  `done/linked-sample.md` now say placed. New `tests/no-reserved.test.js`.
+- Not done: `front.js`'s "Mark a puppy reserved" waits on the owner's words. The Site
+  Manager's "Placed (shows as Reserved)" label is unchanged (still right).
+- No migration (the `puppies.status` CHECK still allows `reserved`, harmlessly). No file in
+  the versioned sets changed, so no version bump. The admin screens changed (rules, From
+  KennelOS) use their existing components; not yet checked side by side at 390px.
+
+## 2026-11-11: the screens step 1 touched, split out of the big files
+
+- Following `review/senior-review-2026-11.md` item 7 (split a screen at a time as it's
+  touched). From `manage/builder.js`: the Pups screen to `manage/builder/rules.js`, From
+  KennelOS (and its panel) to `manage/builder/kennelos.js`, and the form controls they
+  share (`field`, `select`, `toggle`, `seg`, `back`, `svg`, `same`, `SPILL`) to
+  `manage/builder/controls.js`. From `render/pages.js`: a puppy's page to
+  `render/pages/puppy.js`; `profileFor`, `profileBody`, `shareRow` and `litterAlbums` are
+  now exported from `pages.js` for it, and `render/index.js` routes to it. Unused imports
+  dropped from both. Moved as they were: no change to what they draw.
+- `manage/screens.js` left whole (step 1 changed three lines of its puppy list). Steps 2
+  and 3 split the Dog cards block and the block screens as they reach them.
+- No migration, no versioned file. Tests: all 359 pass unchanged.
+
+## 2026-11-11: more split out of the five big files
+
+- Further to the entry before, a few self-contained screens from each of the five files
+  `review/senior-review-2026-11.md` item 7 names, none of them one the KennelOS contract
+  plan's later steps change. Moved as they were; what they draw is unchanged.
+  - `manage/builder.js` (1,172 → 1,031 lines): Every site, Timing, Formats and her
+    instructions to `manage/builder/`; the nav and redirect to `builder/frame.js`.
+  - `render/pages.js` (1,240 → 984): About, Reviews, Contact, Albums and Privacy each to
+    `render/pages/` (routed by `render/index.js`); album lists, the visitor forms and
+    KennelOS's application form to `pages/` too, used by `pages.js`. Imports run one way:
+    `pages/*` may import the frame from `pages.js`; `pages.js` imports only the pieces.
+  - `manage/screens.js` (1,436 → 1,248): Share, Inbox, Reviews to approve and Account to
+    `manage/screens/`, each a factory given what `createScreens` holds (the code inside
+    unchanged). An unused `ic` dropped; `FRESH_SIGN_IN_MS` now in `screens/parts.js`.
+  - `portal/admin.js` (856 → 633): the templates, settings and Today/tabs lists to
+    `portal/admin/`; `manage/index.js` imports `todayLists` from there.
+  - `portal/family.js` (803 → 700): icons, the extended stay, and files and photos to
+    `portal/family/`.
+- Checked with a scope-aware pass (every name each file uses resolves; no import left
+  unused) and the tests: all 359 pass unchanged. No migration, no versioned file.
+
+## 2026-11-11: front page wording
+
+- `front.js`: the Site Manager line now says "Update a puppy's status" (was "Mark a puppy
+  reserved"; there is no reserved status). The owner's words. Not a cached file: no bump.
+
+## 2026-11-11: Available Soon, and Available Now (the owner's request; live sites change)
+
+- Puppies page: a new built-in section, `soon` ("Available soon" in the page editor), on
+  by default between Older puppies and Coming up (`content/blocks.js` PAGE_PARTS and
+  PAGE_DEFAULTS). Born litters whose deposits haven't opened go there, not under Coming
+  up, and move to the litters taking deposits on the day (`render/pages.js` litters,
+  `render/parts.js` `soonSection`). Its words are in the Wording screen: `soon_eyebrow`
+  "Born", `soon_heading` "Available Soon", `soon_lede` "Deposits open on the date on each
+  litter." (placeholders for the owner's words).
+- Menu: a new place, `litters#soon` "Available Soon", in the default menu between
+  Available and Upcoming litters; it shows while such a litter is on the page. The
+  Available place now reads **Available Now**. Upcoming litters shows only for planned
+  litters when the page has Available Soon.
+- Every site changes at once on merge, the owner's changed ones too (her decision): a
+  Puppies page or menu stored before this gets Available Soon when it's read
+  (`content/blocks.js` `withSoonBlock`, `withSoonPlace`: before Coming up, after
+  Available). Storing either again marks the build (`soon_page`, `soon_menu`), and from
+  then on what she stored stands, so she can take it out. No stored build is rewritten.
+- The builder's Puppies preview names the section by its heading. Tests: the linked
+  sample and KennelOS tests now expect such litters under Available Soon; a new test in
+  `rules.test.js`. No migration, no versioned file.
+
+## 2026-11-11: Available now, Available soon (sentence case)
+
+- The menu links and the section heading read "Available now" and "Available soon", in
+  the menu's sentence case ("Upcoming litters"). The entries above say them in title case.
+
+## 2026-11-11: no "Coming up" label on cards in Available soon
+
+- `render/parts.js` `litterCard` takes `label: false`; the Available soon section uses it,
+  so its litter cards carry no small label over the name (the section's heading says it).
+  Elsewhere (a Litters block, Coming up on a page without the section) the label stays.
+
+## 2026-11-11: plan: litters get what dogs get
+
+- `plans/kennelos-contract.md`: the owner's answer to open question 6. Litter cards
+  blocks get conditions, grouping and order in step 2 and picks in step 3, like dogs.
+  Litter fields: the site's stage (available now, available soon…), each parent's dog
+  fields (`dam.`, `sire.`, `a_parent.`), pups' colours and `standard_colors`. New for all
+  three kinds: Leave out (`b.omit`), records a conditions block skips. Question 4 now asks
+  where the standard colours list lives. Docs only.
+
+## 2026-11-11: plan: colours by picker
+
+- `plans/kennelos-contract.md` B1/B2: no standard-colours list or field. A colour
+  condition uses a colour picker over the colours the site holds; "standard colours" is a
+  block with those ticked (for a litter: every pup or any pup). Open question 4 answered.
+
+## 2026-11-11: plan: the owner's answers
+
+- `plans/kennelos-contract.md`: every open question answered. Import: a tick with Country
+  of origin (cleared when unticked), import-descended within 3 generations, and her
+  untick per dog (`import_descended_off`). Featured offspring is KennelPort's own: C8
+  leaves the contract and becomes B6 (her list on a dog, picked or typed; `dog_offspring`
+  in step 3's migration). Picks are hers. Her own tags are allowed. Docs only.

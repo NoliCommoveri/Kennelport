@@ -282,7 +282,7 @@
      "id": "dog-pearl",
      "name": "Pearl*",
      "sex": "female",
-     "status": "reserved",
+     "status": "placed",
      "color": "Black & white",
      "registration": "limited"
     }

@@ -282,10 +282,10 @@ test('litters: her dates place them, a pairing becomes its litter, and puppies c
   assert.ok(b.row("SELECT left_site_at FROM litters WHERE kennelos_kind = 'heat'").left_site_at);
 
   await b.post('/publish');
-  // Before the deposits date: under Coming up, Available on the date, Still deciding.
+  // Before the deposits date: under Available soon, Available on the date, Still deciding.
   const html = await b.page('/litters');
-  assert.match(html.split('id="upcoming"')[1], /Nova × Max/);
-  assert.doesNotMatch(html.split('id="upcoming"')[0], /Nova × Max/);
+  assert.match(html.split('id="soon"')[1].split('id="upcoming"')[0], /Nova × Max/);
+  assert.doesNotMatch(html.split('id="soon"')[0], /Nova × Max/);
   assert.match(html, /Deposits from[\s\S]*December 12, 2099/);
   const pup = await b.page(`/litters/${l.slug}/fern`);
   assert.match(pup, /Available on December 12/);

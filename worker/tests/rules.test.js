@@ -10,7 +10,7 @@ import { load } from './fixtures/linked-sample/sample.js';
 const { buildSnapshot } = await import('../src/publish.js');
 const { renderPage } = await import('../src/render/index.js');
 const { leavingLitters, expireLitters } = await import('../src/kennelos/clock.js');
-const { rulesFor, withPart, DEFAULT_RULES, DEFAULT_TIMING } = await import('../src/content/rules.js');
+const { rulesFor, withPart, saveBuild, DEFAULT_RULES, DEFAULT_TIMING } = await import('../src/content/rules.js');
 
 const M = 'manage.kennelport.com';
 const API = 'api.kennelport.com';
@@ -33,7 +33,8 @@ async function sampleSite(t) {
   assert.equal(r.status, 200);
   const page = async (path) => renderPage(await buildSnapshot(env, site.id), { path, origin: 'https://x', today: TODAY, preview: false, portal: false });
   const post = (path, fields) => call(env, M, path, { method: 'POST', headers: { cookie: admin, origin: `https://${M}` }, body: form(fields) });
-  return { env, site, admin, page, post };
+  const send = (body) => call(env, API, '/v1/bundle', { method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` } });
+  return { env, site, admin, page, post, send };
 }
 
 // The rules screen's form as it stands, with some fields changed.
@@ -76,16 +77,16 @@ test('display rules change how the sample\'s pups read', async (t) => {
   assert.match(gem, /Onyx\* .*Reserved/);
   const r = await post('/admin/tuxedolane/rules', await rulesForm(env, admin, {
     'status.hidden.show': 'on', 'status.hidden.words': 'Health hold',
-    'status.reserved.words': 'Spoken for', 'status.placed.words': 'Home with family',
+    'status.placed.words': 'Spoken for',
     'status.undecided.show': null,
     'reg.unset': 'To be decided',
-    'price.off': 'Ask us', 'price.before': 'Deposits open {date}',
+    'price.off': 'Ask us', 'status.not_open.words': 'Deposits open {date}',
   }));
   assert.equal(r.status, 303);
   gem = text((await page('/litters/the-gem-litter')).html);
   assert.match(gem, /Garnet\* .*Health hold/);
   assert.match(gem, /Onyx\* .*Spoken for/);
-  assert.match(text((await page('/litters/the-gem-litter/jade')).html), /Home with family/);
+  assert.match(text((await page('/litters/the-gem-litter/jade')).html), /Spoken for/);
   assert.doesNotMatch(gem, /Topaz\*/, 'undecided switched off');
   assert.match(text((await page('/litters/the-gem-litter/ruby')).html), /Registration To be decided/);
   assert.match(gem, /Ask us/);
@@ -94,8 +95,8 @@ test('display rules change how the sample\'s pups read', async (t) => {
   await post('/admin/tuxedolane/rules', { ...(await rulesForm(env, admin)), default: 'status.hidden' });
   assert.doesNotMatch(text((await page('/litters/the-gem-litter')).html), /Garnet\*/);
   // A bad value is refused, with the reason, and nothing saved.
-  const bad = await post('/admin/tuxedolane/rules', await rulesForm(env, admin, { 'price.before': 'Available soon' }));
-  assert.match(await bad.text(), /needs \{date\}/);
+  const bad = await post('/admin/tuxedolane/rules', await rulesForm(env, admin, { 'status.not_open.words': 'x'.repeat(61) }));
+  assert.match(await bad.text(), /at most 60 characters/);
   assert.match(text((await page('/litters/the-spice-litter/sage')).html), /Deposits open/);
 });
 
@@ -155,7 +156,7 @@ test('only admin reaches the build screens; signing in to /ops makes the device 
 // ---------- the rest of step 1: dogs, wording, formats, how KennelOS data lands ----------
 
 test('wording, formats and the adult-for-sale price change the sample site; each screen keeps the others', async (t) => {
-  const { env, admin, page, post } = await sampleSite(t);
+  const { env, site, admin, page, post } = await sampleSite(t);
   const formOf = async (screen, changes = {}) => {
     const html = await (await call(env, M, `/admin/tuxedolane/${screen}`, { headers: { cookie: admin } })).text();
     const f = {};
@@ -180,7 +181,11 @@ test('wording, formats and the adult-for-sale price change the sample site; each
   assert.match(dogs, /Meet Rocco\*/);
   assert.match(dogs, /Tuxedo Lane Bostons\*, 2026/);
   const litters = text((await page('/litters')).html);
-  assert.match(litters, /Soon .*The Spice litter\*/);
+  // The born-not-open label reads her words on a litter card (not in Available soon,
+  // whose heading says it already).
+  const { litterCard } = await import('../src/render/parts.js');
+  const snapNow = await buildSnapshot(env, site.id);
+  assert.match(text(litterCard(snapNow, snapNow.litters.find((l) => l.name === 'The Spice litter*'), { today: TODAY })), /^\s*Soon /);
   assert.match(litters, /Born 20 September 2026/);
   assert.match(text((await page('/litters/the-spice-litter/sage')).html), /Available on Nov 22/);
   assert.match(text((await page('/litters/the-gem-litter/ruby')).html), /Sex Girl/);
@@ -236,4 +241,83 @@ test('how KennelOS data lands follows the site\'s settings, for new records', as
   // First in her order: the last one sent has the lowest place.
   const sorts = env.DB.raw.prepare('SELECT sort FROM dogs WHERE site_id = ?').all(site.id).map((r) => r.sort);
   assert.ok(Math.max(...sorts) < 0);
+});
+
+test('her health order stays through an update, a new result goes last; KennelOS\'s order is a rule', async (t) => {
+  const { env, site, send } = await sampleSite(t);
+  const dog = env.DB.raw.prepare("SELECT id FROM dogs WHERE site_id = ? AND kennelos_id = 'dog-clover'").get(site.id).id;
+  const order = () => env.DB.raw.prepare('SELECT kennelos_id FROM health_results WHERE dog_id = ? ORDER BY sort, id').all(dog).map((h) => h.kennelos_id);
+  assert.deepEqual(order(), ['h-clover-1', 'h-clover-2', 'h-clover-3'], "KennelOS's order, the first time");
+  // She moves the last one to the top in the Site Manager.
+  env.DB.raw.prepare("UPDATE health_results SET sort = 1 WHERE dog_id = ? AND kennelos_id = 'h-clover-3'").run(dog);
+  const bundle = load('bundle-1.json');
+  bundle.bundle_id = 'b-health-1';
+  const clover = bundle.dogs.find((d) => d.id === 'dog-clover');
+  clover.health.unshift({ ...clover.health[0], id: 'h-clover-new', test: 'Cardiac (OFA)' });
+  assert.equal((await send(bundle)).status, 200);
+  assert.deepEqual(order(), ['h-clover-3', 'h-clover-1', 'h-clover-2', 'h-clover-new'], 'hers kept, the new one last');
+
+  // With KennelOS's order, every update puts them back in its order.
+  await saveBuild(env, site.id, withPart({}, 'rules', { ...DEFAULT_RULES, landing: { ...DEFAULT_RULES.landing, health_order: 'kennelos' } }));
+  bundle.bundle_id = 'b-health-2';
+  assert.equal((await send(bundle)).status, 200);
+  assert.deepEqual(order(), ['h-clover-new', 'h-clover-1', 'h-clover-2', 'h-clover-3']);
+});
+
+test('born, not yet open is its own status row; her old "before deposits open" words carry over', async (t) => {
+  const { env, site, page } = await sampleSite(t);
+  // Today's result by default: Sage* reads "Available on November 22", the available pill.
+  let sage = text((await page('/litters/the-spice-litter/sage')).html);
+  assert.match(sage, /Available on November 22/);
+  // A site that changed the price rules' "before" keeps its words, now on the row.
+  assert.equal(rulesFor({ rules: { price: { before: 'Deposits open {date}' } } }).rules.status.not_open.words, 'Deposits open {date}');
+  assert.equal('before' in rulesFor({}).rules.price, false);
+  // The row's own words, pill and price.
+  await saveBuild(env, site.id, withPart({}, 'rules', { ...DEFAULT_RULES, status: { ...DEFAULT_RULES.status, not_open: { ...DEFAULT_RULES.status.not_open, words: 'Born {date}? No: opens {date}', pill: 'res', price: false } } }));
+  sage = (await page('/litters/the-spice-litter/sage')).html;
+  assert.match(text(sage), /No: opens November 22/);
+  assert.match(sage, /status res">Born November 22\? No: opens November 22/);
+  // Pearl*, in a litter already open, still reads by the available row.
+  assert.match(text((await page('/litters/the-gem-litter/pearl')).html), /Status Available/);
+});
+
+test('a snapshot from before the not_open row reads as it did', async () => {
+  const { statusRule, puppyStatus } = await import('../src/render/parts.js');
+  const old = structuredClone(DEFAULT_RULES);
+  delete old.status.not_open;
+  old.price.before = 'Opens {date}';
+  const snap = { rules: old, timing: DEFAULT_TIMING };
+  const l = { stage: 'current', deposits_on: '2026-12-01', puppies: [] };
+  const p = { status: 'available' };
+  assert.equal(puppyStatus(snap, l, p, '2026-11-01'), 'Opens December 1');
+  assert.equal(statusRule(snap, p, l, '2026-11-01').pill, 'avail');
+  assert.equal(puppyStatus(snap, l, p, '2026-12-01'), 'Available');
+});
+
+test('Available soon: born litters before deposits open, with its own menu link, on every site; Available is Available now', async (t) => {
+  const { env, site, page } = await sampleSite(t);
+  let html = (await page('/litters')).html;
+  const soon = html.split('id="soon"')[1].split('id="upcoming"')[0];
+  assert.match(text(soon), /Available soon .*The Spice litter\*/);
+  assert.doesNotMatch(soon, /<span class="eyebrow">Coming up<\/span>/, 'no Coming up label on its cards');
+  assert.doesNotMatch(text(html.split('id="upcoming"')[1]), /The Spice litter\*/);
+  assert.match(html, /href="\/litters#soon"[^>]*>Available soon</);
+  assert.match(html, /href="\/litters#available"[^>]*>Available now</);
+  // A Puppies page and menu the owner changed before Available soon existed get it too.
+  const { PAGE_DEFAULTS, defaultMenu, withPage } = await import('../src/content/blocks.js');
+  const oldPage = PAGE_DEFAULTS.litters.filter((b) => b.id !== 'soon').reverse();
+  const oldMenu = defaultMenu([]).map((g) => ({ ...g, items: g.items.filter((it) => it.place !== 'litters#soon') }));
+  await saveBuild(env, site.id, { pages: { litters: { blocks: oldPage } }, menu: oldMenu });
+  html = (await page('/litters')).html;
+  assert.match(text(html.split('id="soon"')[1]), /The Spice litter\*/);
+  assert.match(html, /href="\/litters#soon"[^>]*>Available soon</);
+  // Once she stores her page and menu without it, they stay without it.
+  const { withMenu } = await import('../src/content/blocks.js');
+  const removed = withMenu(withPage({}, 'litters', PAGE_DEFAULTS.litters.filter((b) => b.id !== 'soon')), oldMenu);
+  assert.equal(removed.soon_page && removed.soon_menu, true);
+  await saveBuild(env, site.id, removed);
+  html = (await page('/litters')).html;
+  assert.doesNotMatch(html, /id="soon"/);
+  assert.match(text(html.split('id="upcoming"')[1]), /The Spice litter\*/);
+  assert.doesNotMatch(html, /href="\/litters#soon"/);
 });

@@ -14,7 +14,7 @@ test('the AK sample imports, and exports back as the same content', async () => 
   assert.deepEqual(doc.dogs.map((d) => d.slug), ['willow', 'ziva', 'peaches', 'pearl', 'boone']);
   assert.equal(doc.dogs[4].health.length, 5);
   assert.equal(doc.litters[0].dam, 'willow');
-  assert.deepEqual(doc.litters[0].puppies.map((p) => p.status), ['available', 'available', 'reserved']);
+  assert.deepEqual(doc.litters[0].puppies.map((p) => p.status), ['available', 'available', 'placed']);
   assert.equal(doc.extras[2].featured, true);
   assert.deepEqual(doc.home.facts.items[0], ['5', 'Bostons at home']);
   // Importing the export changes nothing.

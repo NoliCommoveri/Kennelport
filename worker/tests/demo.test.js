@@ -77,7 +77,7 @@ test('the buttons step through the series and back to step 1; her rules for it s
   assert.equal((await opsPost('demo/next')).headers.get('location'), `/ops/sites/${id}?note=demo_sent`);
   assert.equal(step(), 2);
   assert.equal(pup('dog-onyx').status, 'placed');
-  assert.equal(pup('dog-pearl').status, 'reserved');
+  assert.equal(pup('dog-pearl').status, 'placed');
   await opsPost('demo/next');
   assert.equal(step(), 3);
   assert.equal(n("litters WHERE site_id = ? AND kennelos_kind = 'litter' AND kennelos_id = 'lit-d'"), 1);
@@ -98,7 +98,7 @@ test('the buttons step through the series and back to step 1; her rules for it s
   assert.equal(step(), 1);
   assert.equal(n("dogs WHERE site_id = ? AND id = 'mine'"), 0);
   assert.equal(n("dogs WHERE site_id = ? AND source = 'kennelos'"), 10);
-  assert.equal(pup('dog-onyx').status !== 'placed', true);
+  assert.equal(pup('dog-pearl').status, 'available');
   assert.equal(n('links WHERE site_id = ? AND revoked_at IS NULL'), 1);
   assert.match(row('SELECT build FROM site_builds WHERE site_id = ?', id).build, /"litter_days":10/);
 });

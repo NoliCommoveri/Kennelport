@@ -34,8 +34,8 @@ export const DEMO_DEVICE = 'The linked sample';
 // What each step brings, for her buttons (the sample README's series table).
 export const STEP_NOTES = Object.freeze({
   1: 'Everything: 10 dogs, 5 litters and pairings, 2 heats, 11 pups, the family feed.',
-  2: 'Onyx* placed, Pearl* reserved, a health result for Maple*; the Reeds*\' pickup booked.',
-  3: 'Pairing P1 becomes the Forest litter*, heat H1 becomes a pairing, Ruby* placed.',
+  2: 'Pearl* placed, a health result for Maple*; the Reeds*\' pickup booked.',
+  3: 'Pairing P1 becomes the Forest litter*, heat H1 becomes a pairing.',
   4: 'The Gem litter* and Ginger* stop being sent; Harbor Light* renamed.',
   5: 'The Gem litter* sent again, within its 30 days; the Kims* back out.',
 });

@@ -1,14 +1,20 @@
 // The "ak" template's pages. Each takes the snapshot and the request context and
 // returns { title, description, image, section, body } for layout(), or null for
-// "no such page".
+// "no such page". Split out into pages/, a page at a time (docs/review/
+// senior-review-2026-11.md, item 7): about, reviews, contact, albums, privacy, puppy
+// (routed by index.js), and pieces used here (albumLists, formParts, applicationForm).
+// The frame they share (assemble, badgeRow, embedsBlock, framed, shareRow,
+// faqSection, profileFor, profileBody) is exported from this file.
 import {
-  esc, attr, fmtDate, priceText, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, parentName,
-  litterCard, parentCards, litterFacts, dogCard, coCard, besideCard, partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
-  paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
-  dogGroups, dogsFor, depositsAhead, puppyStatus, puppyPriceText, regText, statusRule, rulesOf, pricesOff, sitePrice, word, sexWord, fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
-  faqBlock, familyLogin as familyLoginLink, addedOn, addedWords, addedRow, customPage,
+  esc, attr, fmtDate, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, litterCard, parentCards, litterFacts, dogCard, coCard,
+  besideCard, partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, paySection,
+  payShown, litterChoices, ANY_LITTER, ABOUT_LABEL, dogGroups, dogsFor, depositsAhead, soonSection, rulesOf, pricesOff, sitePrice, word, sexWord, fullRegLink,
+  fullRegSurchargeRow, galleryHtml, faqBlock, addedOn, addedWords, addedRow, customPage,
 } from './parts.js';
 import { embedView } from '../embeds.js';
+import { litterAlbums, dogAlbums } from './pages/albumLists.js';
+import { v, honeypot, turnstileBox, formResult } from './pages/formParts.js';
+import { kennelosForm } from './pages/applicationForm.js';
 import { homeBlocks, pageBlocks, hersOn, BREEDER_SWITCH, PAGE_PARTS, PAGE_HEADS, headFor, BLOCK_TYPES, cleanProfile } from '../content/blocks.js';
 import { HOME_WORDS, COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk, badgeAddress, PAGES } from '../content/model.js';
 
@@ -17,14 +23,14 @@ import { HOME_WORDS, COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImage
 // spacing every other section has. A record's own page (a dog, a litter, a puppy)
 // puts the same block inside its first wrap instead, under the breadcrumb, which
 // is why that one is `faqBlock` and this one wraps it in a section.
-const faqSection = (snap, place) => {
+export const faqSection = (snap, place) => {
   const html = faqBlock(snap, place);
   return html ? `<section class="section tight"><div class="wrap">${html}</div></section>` : '';
 };
 
 // A Share button (plan 5.4): the phone's own share sheet, or the link copied.
 // Shown only with the template's script.
-const shareRow = (center = false) => `<p class="share-row${center ? ' center' : ''}" data-share-row hidden><button type="button" class="btn line" data-share>Share</button><span class="small muted" role="status"></span></p>`;
+export const shareRow = (center = false) => `<p class="share-row${center ? ' center' : ''}" data-share-row hidden><button type="button" class="btn line" data-share>Share</button><span class="small muted" role="status"></span></p>`;
 
 // ---------- Videos and posts (plan 3.3) ----------
 // A preview (stored on the site) with a play button, linking to the original. The
@@ -50,7 +56,7 @@ export function embedsBlock(snap, place, { heading = 'Videos and posts', band = 
 const VINE_PARTS = ['t', 'b', 'l', 'r', 'c tl', 'c tr', 'c bl', 'c br'];
 const VINE = `<div class="vine" aria-hidden="true">${VINE_PARTS.map((p) => `<i class="${p}"></i>`).join('')}</div>`;
 // A photo in one of the collage's frames (FRAMES), or bare: the story photos' choice.
-const framed = (pic, frame) => (pic && frame && frame !== 'none' ? `<div class="story-pic frame-${frame}"><div class="box">${pic}${frame === 'sprig' ? VINE : ''}</div></div>` : pic);
+export const framed = (pic, frame) => (pic && frame && frame !== 'none' ? `<div class="story-pic frame-${frame}"><div class="box">${pic}${frame === 'sprig' ? VINE : ''}</div></div>` : pic);
 const sprigs = '<svg class="sprig l" aria-hidden="true"><use href="#sprig"/></svg><svg class="sprig r" aria-hidden="true"><use href="#sprig"/></svg>';
 // A collage: photos ({id, focus}) in a layout's boxes (model.js COLLAGE_LAYOUTS),
 // each its own shape with the part to keep, in one of the frames; never an empty
@@ -186,7 +192,7 @@ function transportBadges(snap, p, list, { own = false } = {}) {
 // it into its own wrap (`inWrap`), as today; elsewhere the row is its own section.
 // A FAQ spot or badge row the page doesn't draw itself (one the owner added, step
 // 3.6) shows what the breeder placed on this page, by its key.
-function assemble(snap, ctx, key, parts) {
+export function assemble(snap, ctx, key, parts) {
   const blocks = snap.layout?.[key] ?? pageBlocks(null, key);
   parts = { faq: faqSection(snap, key), badges: badgeRow(snap, key), badgesIn: badgeRow(snap, key, { inWrap: true }), ...parts };
   const out = [];
@@ -472,104 +478,6 @@ function reviewsBlock(snap, ctx, b, key = 'home') {
     </div></section>`;
 }
 
-// ---------- About us ----------
-
-export function about(snap, ctx) {
-  const p = snap.pages.about;
-  const photo = framed(img(snap, p.photo_id) ?? '', p.photo_frame);
-  const facts = p.facts?.length ? `<dl class="kv">${p.facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : '';
-  const text = p.text ? `<div class="story-copy">${paras(p.text)}${facts}</div>` : facts;
-  return {
-    title: snap.pages.about.heading || label(snap, 'about'), section: '/about', description: p.lede, image: p.photo_id,
-    body: assemble(snap, ctx, 'about', {
-      head: pagehead(p, PAGE_HEADS.about),
-      story: `<section class="section tight"><div class="wrap ${photo ? 'story' : 'prose'}">${photo}${text}</div></section>`,
-      badges: badgeRow(snap, 'about'),
-      embeds: embedsBlock(snap, 'about', { band: true }),
-    }),
-  };
-}
-
-export function reviews(snap, ctx) {
-  const p = snap.pages.reviews;
-  const topics = [...new Set(snap.reviews.map((r) => r.topic).filter(Boolean))];
-  const filter = topics.length > 1 ? `<div class="filter"><label for="review-topic">Show</label><select id="review-topic"><option value="all">All reviews</option>${topics.map((t) => `<option value="${attr(t)}">${esc(t[0].toUpperCase() + t.slice(1))}</option>`).join('')}</select></div>` : '';
-  return {
-    title: snap.pages.reviews.heading || label(snap, 'reviews'), section: '/reviews', description: p.lede,
-    body: assemble(snap, ctx, 'reviews', {
-      head: pagehead(p, PAGE_HEADS.reviews),
-      list: `<section class="section tight"><div class="wrap">${filter}${snap.reviews.length ? `<div class="grid" id="all-reviews">${snap.reviews.map((r) => reviewCard(snap, r)).join('')}</div>` : ''}
-      ${reviewForm(snap, ctx)}</div></section>`,
-    }),
-  };
-}
-
-// ---------- the forms visitors send (siteforms.js receives them) ----------
-
-// What she typed, or (before any send) what a link filled in (ctx.prefill).
-const v = (ctx, name) => attr(ctx.form?.values?.[name] ?? ctx.prefill?.[name] ?? '');
-const honeypot = '<div class="hp" aria-hidden="true"><label>Leave this empty<input name="website" tabindex="-1" autocomplete="off"></label></div>';
-const turnstileBox = (ctx) => (ctx.turnstileKey ? `<div class="cf-turnstile" data-sitekey="${attr(ctx.turnstileKey)}"></div><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>` : '');
-const formResult = (ctx, page, thanks) => {
-  if (ctx.form?.page !== page) return '';
-  if (ctx.form.ok) return `<p class="done" role="status">${esc(thanks(ctx.form.name))}</p>`;
-  return `<p class="done bad" role="alert">${esc(ctx.form.error)}</p>`;
-};
-
-function reviewForm(snap, ctx) {
-  const sent = ctx.form?.page === 'reviews' && ctx.form.ok;
-  const stars = [5, 4, 3, 2, 1].map((n) => `<input type="radio" name="rating" id="r-s${n}" value="${n}"${String(ctx.form?.values?.rating ?? '5') === String(n) ? ' checked' : ''}><label for="r-s${n}" title="${n} star${n === 1 ? '' : 's'}">★</label>`).join('');
-  return `<details class="review-share" id="share-review"${ctx.form?.page === 'reviews' ? ' open' : ''}>
-    <summary class="btn line">Share your review</summary>
-    <form class="apply-form review-form" method="post" action="/reviews#share-review" enctype="multipart/form-data" data-photo-form>
-      <div><span class="eyebrow">${esc(snap.site.monogram || snap.site.kennel_name)} families</span><h2 class="mt-6">Share your review</h2><p class="muted small mt-6">Reviews appear on our site once we've read and approved them. We show your first name and town only.</p></div>
-      ${formResult(ctx, 'reviews', (name) => `Thank you, ${name}! Your review goes to ${snap.site.kennel_name} to read, and it appears here once they approve it.`)}
-      ${sent ? '' : `<div class="row"><label for="r-name">First name<input id="r-name" name="first_name" autocomplete="given-name" maxlength="60" required value="${v(ctx, 'first_name')}"></label><label for="r-town">Town<input id="r-town" name="town" maxlength="60" value="${v(ctx, 'town')}"></label></div>
-      <div class="row"><label for="r-pup">Your puppy's name<input id="r-pup" name="puppy_name" maxlength="40" value="${v(ctx, 'puppy_name')}"></label><label for="r-home">Brought home<input id="r-home" type="month" name="home_month" value="${v(ctx, 'home_month')}"></label></div>
-      <fieldset class="stars-in"><legend>Rating</legend><div class="star-row">${stars}</div></fieldset>
-      <label for="r-text">Your review<textarea id="r-text" name="quote" rows="4" maxlength="1500" required>${v(ctx, 'quote')}</textarea></label>
-      <label for="r-photo">A photo of your puppy (optional)<input id="r-photo" type="file" name="photo" accept="image/*"></label>
-      <label class="consent" for="r-ok"><input id="r-ok" type="checkbox" name="consent" value="1" required> You may show this on your website with my first name and town.</label>
-      ${honeypot}${turnstileBox(ctx)}
-      <div><button class="btn solid" type="submit">Send review</button></div>`}
-    </form></details>`;
-}
-
-function contactForm(snap, ctx) {
-  const sent = ctx.form?.page === 'contact' && ctx.form.ok;
-  return `<form class="apply-form" method="post" action="/contact#message" id="message">
-    <div><span class="eyebrow">Message us</span><h2 class="mt-6">Send us a message</h2><p class="muted small mt-6">We'll reply to the email address you give.</p></div>
-    ${formResult(ctx, 'contact', (name) => `Thanks${name ? `, ${name.split(/\s+/)[0]}` : ''}. Your message is on its way to ${snap.site.kennel_name}.`)}
-    ${sent ? '' : `<div class="row"><label for="c-name">Your name<input id="c-name" name="name" autocomplete="name" maxlength="80" required value="${v(ctx, 'name')}"></label><label for="c-email">Email<input id="c-email" type="email" name="email" autocomplete="email" maxlength="254" required value="${v(ctx, 'email')}"></label></div>
-    <div class="row"><label for="c-phone">Phone (optional)<input id="c-phone" type="tel" name="phone" autocomplete="tel" maxlength="30" value="${v(ctx, 'phone')}"></label><label for="c-topic">About (optional)<input id="c-topic" name="topic" maxlength="80" placeholder="A puppy, the waitlist, extras…" value="${v(ctx, 'topic')}"></label></div>
-    <label for="c-msg">Message<textarea id="c-msg" name="message" rows="5" maxlength="3000" required>${v(ctx, 'message')}</textarea></label>
-    ${honeypot}${turnstileBox(ctx)}
-    <div><button class="btn solid" type="submit">Send message</button></div>`}
-  </form>`;
-}
-
-export function contact(snap, ctx) {
-  const p = snap.pages.contact;
-  const s = snap.site;
-  const cards = [];
-  if (s.facebook_url || s.facebook_label) cards.push(['Message us', s.facebook_url ? `<a href="${attr(s.facebook_url)}" rel="noopener">${esc(s.facebook_label || 'Facebook')}</a>` : `Facebook: ${esc(s.facebook_label)}`]);
-  if (s.instagram_url) cards.push(['Instagram', `<a href="${attr(s.instagram_url)}" rel="noopener">${esc(new URL(s.instagram_url).pathname.replace(/\//g, '') || 'Instagram')}</a>`]);
-  if (s.contact_email) cards.push(['Email', `<a href="mailto:${attr(s.contact_email)}">${esc(s.contact_email)}</a>`]);
-  if (s.contact_phone) cards.push(['Phone', `<a href="tel:${attr(s.contact_phone.replace(/[^\d+]/g, ''))}">${esc(s.contact_phone)}</a>`]);
-  const place = [s.town, s.region].filter(Boolean).join(', ');
-  if (place || p.location_note) cards.push(['Location', [place && esc(place), p.location_note && esc(p.location_note)].filter(Boolean).join('<br>')]);
-  return {
-    title: snap.pages.contact.heading || label(snap, 'contact'), section: '/contact', description: p.lede,
-    body: assemble(snap, ctx, 'contact', {
-      head: pagehead(p, PAGE_HEADS.contact),
-      faq: faqSection(snap, 'contact'),
-      main: ({ badges }) => `<section class="section tight"><div class="wrap"><div class="contact">${cards.map(([h, val]) => `<div><b>${esc(h)}</b><p class="muted small">${val}</p></div>`).join('')}</div>${badges}${contactForm(snap, ctx)}</div></section>`,
-      badges: badgeRow(snap, 'contact'),
-      badgesIn: badgeRow(snap, 'contact', { inWrap: true }),
-    }),
-  };
-}
-
 // ---------- Kennel residents ----------
 
 // An adult looking for a home (plan 3.7): its asking price with Show other prices
@@ -627,13 +535,13 @@ function coOwnedSection(snap, p, away) {
 }
 
 // A profile page's setting (content/blocks.js PROFILE_*): the owner's, or today's.
-const profileFor = (snap, kind) => cleanProfile(kind, snap.layout?.profiles?.[kind]);
+export const profileFor = (snap, kind) => cleanProfile(kind, snap.layout?.profiles?.[kind]);
 
 // A dog's or a puppy's page: the breadcrumb, what sits under it, the photo with what
 // sits beside it, then what sits under it, each part's items in the owner's order.
 // Under the breadcrumb, every item after the first gets the space between them;
 // under the photo, an item that doesn't bring its own (`spaced`) gets it.
-function profileBody(pr, pieces, { crumb, photo, spaced }) {
+export function profileBody(pr, pieces, { crumb, photo, spaced }) {
   const of = (part) => (pr.parts[part] ?? []).map((x) => [x, pieces[x] ?? '']).filter(([, h]) => h);
   const gap = (x, h) => (spaced.has(x) ? h : `<div class="mt-26">${h}</div>`);
   const above = of('above').map(([x, h], i) => (i ? gap(x, h) : h)).join('\n      ');
@@ -694,14 +602,17 @@ export function litters(snap, ctx) {
   const p = snap.pages.litters;
   const older = new Set(olderPuppies(snap, ctx.today).map((o) => o.litter.id));
   const current = snap.litters.filter((l) => l.stage === 'current' && !depositsAhead(snap, l, ctx.today) && !older.has(l.id) && l.puppies.length);
-  // Coming up: planned litters, and born ones whose deposits date is still ahead.
-  const planned = snap.litters.filter((l) => l.stage === 'planned' || depositsAhead(snap, l, ctx.today));
+  // Coming up: planned litters, and born ones whose deposits date is still ahead,
+  // unless the page has Available soon: then those are there.
+  const soonOn = soonSection(snap);
+  const soon = soonOn ? snap.litters.filter((l) => depositsAhead(snap, l, ctx.today)) : [];
+  const planned = snap.litters.filter((l) => l.stage === 'planned' || (!soonOn && depositsAhead(snap, l, ctx.today)));
   const sections = [];
     current.forEach((l, i) => {
     const lede = [pairNames(snap, l) && `${pairNames(snap, l)}.`, l.summary, l.ready_on && `Ready to go home ${fmtDate(l.ready_on)}.`, l.show_prices && l.price_note].filter(Boolean).join(' ');
     sections.push(`<section class="section${i ? '' : ' tight'}"${i ? '' : ' id="available"'}><div class="wrap">
       ${head(l.born_on ? `Born ${fmtDate(l.born_on)}` : word(snap, 'litter_current'), l.name, lede)}
-      ${slider(sortPuppies(snap, l.puppies).map((pup) => puppyCard(snap, l, pup, ctx)), { cls: 'three', ctl: `<a class="more" href="/litters/${attr(l.slug)}">The ${esc(l.name.replace(/^the /i, ''))} page</a>` })}
+      ${slider(sortPuppies(snap, l.puppies, l, ctx.today).map((pup) => puppyCard(snap, l, pup, ctx)), { cls: 'three', ctl: `<a class="more" href="/litters/${attr(l.slug)}">The ${esc(l.name.replace(/^the /i, ''))} page</a>` })}
     </div></section>`);
   });
   // Her badges after the puppies on offer, before older and upcoming ones (the
@@ -710,6 +621,10 @@ export function litters(snap, ctx) {
   const olderList = olderPuppies(snap, ctx.today);
   let olderHtml = '';
   let upcomingHtml = '';
+  const soonHtml = soon.length ? `<section class="section" id="soon"><div class="wrap">
+      ${head(word(snap, 'soon_eyebrow'), word(snap, 'soon_heading'), word(snap, 'soon_lede'))}
+      <div class="litters">${soon.map((l) => litterCard(snap, l, ctx, { label: false })).join('')}</div>
+    </div></section>` : '';
   if (olderList.length && pageOn(snap, 'older', ctx) && has(snap, 'litters', 'older')) {
     olderHtml = (`<section class="section band" id="older"><div class="wrap">
       ${head(word(snap, 'older_eyebrow'), label(snap, 'older'), null)}
@@ -724,7 +639,7 @@ export function litters(snap, ctx) {
     </div></section>`);
   }
   // With nothing else on the page, the litters' place says so.
-  const empty = !sections.length && !row && !olderHtml && !upcomingHtml;
+  const empty = !sections.length && !row && !olderHtml && !soonHtml && !upcomingHtml;
   return {
     title: snap.pages.litters.heading || label(snap, 'litters'), section: '/litters', description: p.lede,
     body: assemble(snap, ctx, 'litters', {
@@ -733,6 +648,7 @@ export function litters(snap, ctx) {
       current: empty ? `<section class="section tight"><div class="wrap notice"><p class="muted">${esc(word(snap, 'no_litters'))}</p></div></section>` : sections.join('\n'),
       badges: row,
       older: olderHtml,
+      soon: soonHtml,
       upcoming: upcomingHtml,
     }),
   };
@@ -755,7 +671,7 @@ export function litter(snap, ctx, slug) {
   if (!l) return null;
   const pr = profileFor(snap, 'litter');
   const on = (x) => pr.parts.head.includes(x);
-  const pups = sortPuppies(snap, l.puppies);
+  const pups = sortPuppies(snap, l.puppies, l, ctx.today);
   // The parents' names under the litter's own, unless they are its name.
   const pair = pairNames(snap, l);
   const lede = [pair !== l.name ? pair : null, l.summary].filter(Boolean).join('. ');
@@ -785,94 +701,6 @@ export function litter(snap, ctx, slug) {
         <p class="breadcrumb center"><a href="/litters">${esc(label(snap, 'litters'))}</a></p>
         ${body}
       </div></section>`,
-  };
-}
-
-// ---------- Albums (phase 5) ----------
-// Each photo is a link to its full size; the template's script turns the set into
-// a viewer with previous and next (without it, the link opens the picture).
-
-function albumCard(snap, a) {
-  const cover = img(snap, a.cover_photo_id, { alt: '', thumb: true }) ?? '<div class="ph-photo" aria-hidden="true"></div>';
-  return `<a class="album-card" href="/albums/${attr(a.slug)}">${cover}<span class="album-meta"><b>${esc(a.title)}</b><span class="small muted">${a.photos.length} photo${a.photos.length === 1 ? '' : 's'}</span></span></a>`;
-}
-// A litter's albums, under its card on the litter's page.
-// Its albums, on the litter's page under "Photos". A puppy's page names the litter
-// instead, so it doesn't read "Photos" twice above its own photos.
-function litterAlbums(snap, ctx, l, { eyebrow = 'Photos', heading = null } = {}) {
-  const list = pageOn(snap, 'albums', ctx) ? (snap.albums ?? []).filter((a) => a.litter_id === l.id) : [];
-  return list.length ? `<div class="mt-26">${head(eyebrow, heading)}<div class="albums">${list.map((a) => albumCard(snap, a)).join('')}</div></div>` : '';
-}
-
-// Every album with a photo she tagged as this dog, at the foot of the dog's page.
-function dogAlbums(snap, ctx, d) {
-  const list = pageOn(snap, 'albums', ctx) ? (snap.albums ?? []).filter((a) => (a.dog_ids ?? []).includes(d.id)) : [];
-  return list.length ? `<div class="mt-26">${head('Albums', `With ${d.call_name}`)}<div class="albums">${list.map((a) => albumCard(snap, a)).join('')}</div></div>` : '';
-}
-
-export function albums(snap, ctx) {
-  const p = snap.pages.albums;
-  return {
-    title: p.heading || label(snap, 'albums'), section: '/litters', description: p.lede, image: snap.albums[0]?.cover_photo_id,
-    body: assemble(snap, ctx, 'albums', {
-      head: pagehead(p, PAGE_HEADS.albums),
-      list: `<section class="section tight"><div class="wrap"><div class="albums">${snap.albums.map((a) => albumCard(snap, a)).join('')}</div></div></section>`,
-    }),
-  };
-}
-
-export function album(snap, ctx, slug) {
-  const a = (snap.albums ?? []).find((x) => x.slug === slug);
-  if (!a) return null;
-  const l = a.litter_id && snap.litters.find((x) => x.id === a.litter_id);
-  return {
-    title: a.title, section: '/litters', description: a.description || `${a.photos.length} photos from ${snap.site.kennel_name}`, image: a.cover_photo_id,
-    body: `${pagehead({}, { eyebrow: l ? l.name : 'Photo album', heading: a.title, lede: a.description })}
-      <section class="section tight"><div class="wrap">
-        <p class="breadcrumb center">${l && snap.pages.litters.enabled ? `<a href="/litters/${attr(l.slug)}">${esc(l.name)}</a> · ` : ''}<a href="/albums">${esc(label(snap, 'albums'))}</a></p>
-        ${galleryHtml(snap, a.photos, a.title)}${morePhotosHtml(a)}${shareRow(true)}
-        ${embedsBlock(snap, `album:${a.id}`, { inWrap: true })}
-      </div></section>
-      ${viewerHtml()}`,
-  };
-}
-
-export function puppy(snap, ctx, litterSlug, slug) {
-  const l = snap.litters.find((x) => x.slug === litterSlug);
-  const p = l?.puppies.find((x) => x.slug === slug);
-  if (!p) return null;
-  const pr = profileFor(snap, 'puppy');
-  const photo = img(snap, p.photo_id, { alt: p.name, cls: 'photo', lazy: false }) ?? '<div class="photo" aria-hidden="true"></div>';
-  const rule = statusRule(snap, p);
-  const status = puppyStatus(snap, l, p, ctx.today);
-  const price = puppyPriceText(snap, l, p);
-  const reg = regText(snap, p);
-  const fact = { sex: ['Sex', sexWord(p.sex)], color: ['Color', p.color], collar: ['Collar', p.collar], status: ['Status', status], price: [rulesOf(snap).price.price_label, price], registration: ['Registration', reg], registry: ['Registry', p.registry], parents: ['Parents', pairNames(snap, l)], born: ['Born', fmtDate(l.born_on)] };
-  const facts = pr.facts.map((k) => fact[k]).filter(([, v]) => v);
-  // Its own photos, where the litter publishes its puppies' tagged ones, and its own
-  // "See more photos" link where she set one (its gallery elsewhere, never the
-  // litter's). Either alone is enough for the block. Then the litter's albums: its
-  // photos are usually in those too.
-  const gallery = galleryHtml(snap, p.photos ?? [], p.name);
-  const morePup = morePhotosHtml(p);
-  const pupGallery = (gallery || morePup) && Object.values(pr.parts).some((x) => x.includes('photos'))
-    ? `<div class="mt-26">${head('Photos', `${p.name}'s photos`)}${gallery}${morePup}</div>` : '';
-  return {
-    title: `${p.name}, ${l.name}`, section: '/litters', description: p.bio || `${p.name}: ${status}`, image: p.photo_id,
-    body: `${profileBody(pr, {
-      faq: faqBlock(snap, 'puppy'),
-      status: status ? `<span class="status ${attr(rule.pill)}">${esc(status)}</span>` : '',
-      name: `<h1>${esc(p.name)}</h1>`,
-      facts: `<dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`,
-      bio: p.bio ? `<p class="bio">${esc(p.bio)}</p>` : '',
-      ask: rule.ask || fullRegLink(snap, l, p, ctx, '') ? `<p>${rule.ask ? `<a class="btn solid" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">${esc(word(snap, 'ask_pup', { name: p.name }))}</a> ` : ''}${fullRegLink(snap, l, p, ctx, 'btn line')}</p>` : '',
-      surcharge: fullRegSurchargeRow(snap, l, p, ctx, 'kv'),
-      notice: safeNotice(snap, ctx),
-      share: shareRow(),
-      badges: badgeRow(snap, 'puppy', { inWrap: true }),
-      photos: pupGallery,
-      albums: litterAlbums(snap, ctx, l, { eyebrow: 'Albums', heading: `From ${l.name}` }),
-    }, { crumb: `<p class="breadcrumb"><a href="/litters/${attr(l.slug)}">${esc(l.name)}</a></p>`, photo, spaced: new Set(['badges', 'photos', 'albums']) })}${pupGallery ? viewerHtml() : ''}`,
   };
 }
 
@@ -1044,101 +872,6 @@ function applicationForm(snap, ctx) {
   </form>`;
 }
 
-// ---------- KennelOS's application form, drawn in the site's style (plan 3.8) ----------
-// The feed's `form` is what KennelOS's own /apply page draws; this draws the same
-// questions here. site.js (the template's script) seals the answers to her form
-// key in the visitor's browser and sends them straight to KennelOS, then takes
-// the emailed code. Without scripts (or WebCrypto) the form stays hidden and the
-// link to KennelOS's own page shows instead.
-
-const kosReq = (q) => (q.required ? ' <span class="req" aria-label="required">*</span>' : '');
-const kosHelp = (q) => (q.help && q.type !== 'notice' ? `<span class="q-hint">${esc(q.help)}</span>` : '');
-const kosId = (q) => `k-${String(q.id).replace(/[^A-Za-z0-9_-]/g, '_')}`;
-const radios = (name, options, required = false) => `<div class="choices">${options.map(([value, text]) => `<label class="choice"><input type="radio" name="${attr(name)}" value="${attr(value)}"${required ? ' required' : ''}> ${esc(text)}</label>`).join('')}</div>`;
-const boxes = (options) => `<div class="choices">${options.map(([value, text]) => `<label class="choice"><input type="checkbox" value="${attr(value)}"> ${esc(text)}</label>`).join('')}</div>`;
-
-function kosPreference(q, form) {
-  const c = form.choices ?? {};
-  const legend = (required) => `<legend><span>${esc(q.label)}${required ? kosReq({ required: true }) : ''}</span>${kosHelp(q)}</legend>`;
-  switch (q.key) {
-    case 'pref_sex': return `<fieldset class="kq" data-pref="pref_sex">${legend(false)}${radios('pref_sex', c.pref_sex ?? [])}</fieldset>`;
-    case 'pref_breed':
-      if (!form.breeds?.length) return '';
-      return `<label class="kq" for="k-pref_breed"><span>${esc(q.label)}</span>${kosHelp(q)}<select id="k-pref_breed" data-pref="pref_breed"><option value="">Any breed</option>${form.breeds.map((b) => `<option>${esc(b)}</option>`).join('')}</select></label>`;
-    case 'pref_purposes': return `<fieldset class="kq" data-pref="pref_purposes"><legend><span>${esc(q.label)}</span><span class="q-hint">Leave all unticked if any is fine.</span>${kosHelp(q)}</legend>${boxes(c.pref_purposes ?? [])}</fieldset>`;
-    case 'pref_colors': return `<label class="kq" for="k-pref_colors"><span>${esc(q.label)}</span><span class="q-hint">Separate colors with commas.${form.color_matching ? ' Only pups in a color you list will be offered.' : ''}</span>${kosHelp(q)}<input id="k-pref_colors" data-pref="pref_colors" maxlength="300" placeholder="Leave blank for any"></label>`;
-    case 'ready_timing': return `<fieldset class="kq" data-pref="ready_timing" data-required>${legend(true)}${radios('ready_timing', c.ready_timing ?? [], true)}</fieldset>`;
-    default: return '';
-  }
-}
-
-function kosQuestion(q, form, policiesHref = null) {
-  const id = kosId(q);
-  const data = `data-q="${attr(q.id)}" data-type="${attr(q.type)}"${q.key ? ` data-key="${attr(q.key)}"` : ''}${q.required ? ' data-required' : ''} data-label="${attr(q.label)}"`;
-  // "I've read the policies" (KennelOS): the word "policies" links to them.
-  let text = esc(q.label);
-  if (q.link === 'policies' && policiesHref) {
-    const a = (w) => `<a href="${attr(policiesHref)}"${/^https?:/.test(policiesHref) ? ' rel="noopener" target="_blank"' : ''}>${w}</a>`;
-    text = /\bpolicies\b/i.test(text) ? text.replace(/\bpolicies\b/i, (w) => a(w)) : `${text} ${a('Read our policies')}`;
-  }
-  const label = `<span>${text}${kosReq(q)}</span>${kosHelp(q)}`;
-  switch (q.type) {
-    case 'notice':
-      return `<div class="kq notice-q" ${data}><b>${esc(q.label)}</b><div class="small">${paras(q.help)}</div>
-        <label class="choice"><input type="checkbox" data-notice required> I understand</label>
-        <label class="choice"><input type="checkbox" data-private> Please show my name privately on the public list</label>
-        <span class="q-hint">Your first name shows as its first letter and an asterisk for each letter after it, then your last initial (Andrea Kim shows as A***** K). The breeder decides whether to allow it; your place in line is the same either way.</span></div>`;
-    case 'preference': return kosPreference(q, form);
-    case 'long_text': return `<label class="kq" for="${id}" ${data}>${label}<textarea id="${id}" rows="4" maxlength="10000"></textarea></label>`;
-    case 'email': return `<label class="kq" for="${id}" ${data}>${label}<input id="${id}" type="email" autocomplete="email" maxlength="254"></label>`;
-    case 'number': return `<label class="kq" for="${id}" ${data}>${label}<input id="${id}" inputmode="decimal" maxlength="30"></label>`;
-    case 'date': return `<label class="kq" for="${id}" ${data}>${label}<input id="${id}" type="date"></label>`;
-    case 'yes_no': return `<fieldset class="kq" ${data}><legend>${label}</legend>${radios(id, [['yes', 'Yes'], ['no', 'No']])}</fieldset>`;
-    case 'single_choice': return `<fieldset class="kq" ${data}><legend>${label}</legend>${radios(id, (q.options ?? []).map((o) => [o, o]))}</fieldset>`;
-    case 'checkboxes': return `<fieldset class="kq" ${data}><legend>${label}</legend>${boxes((q.options ?? []).map((o) => [o, o]))}</fieldset>`;
-    default: return `<label class="kq" for="${id}" ${data}>${label}<input id="${id}" maxlength="500"${q.key === 'name' ? ' autocomplete="name"' : ''}></label>`;
-  }
-}
-
-function kennelosForm(snap, ctx) {
-  const p = snap.pages.waitlist;
-  const { feed, origin, publicId } = ctx.feed;
-  const form = feed.form;
-  const applyUrl = `${origin}${feed.links?.apply ?? `/apply/${encodeURIComponent(publicId)}`}`;
-  const firstMatch = (form.questions ?? []).find((q) => (form.matching_keys ?? []).includes(q.key));
-  // Where "policies" in the application goes: her Policies page's waitlist part, or
-  // KennelOS's list page when her Policies page is off.
-  const policiesHref = !feed.kennel?.policies?.length ? null
-    : pageOn(snap, 'policies', ctx) ? '/policies#waitlist-policies' : `${origin}${feed.links?.list ?? `/list/${encodeURIComponent(publicId)}`}#policies`;
-  const questions = (form.questions ?? []).map((q) => {
-    const notice = q === firstMatch && form.matching_notice ? `<div class="kq notice-q"><b>Matching you with a pup</b><p class="small">${esc(form.matching_notice)}</p></div>` : '';
-    return notice + kosQuestion(q, form, policiesHref);
-  }).join('\n');
-  const faq = form.faq?.length ? `<div class="kos-faq"><b>Before you apply</b><div class="acc">${form.faq.map((x) => `<details class="x"><summary>${esc(x.question || 'Question')}</summary><div class="body">${paras(x.answer)}</div></details>`).join('')}</div></div>` : '';
-  const turnstile = form.turnstile_site_key ? `<div class="cf-turnstile" data-sitekey="${attr(form.turnstile_site_key)}"></div><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>` : '';
-  const fallback = `Apply on our <a href="${attr(applyUrl)}" rel="noopener" target="_blank">KennelOS application page</a> instead.`;
-  return `<div class="apply-form kos" id="apply" data-kos-form data-origin="${attr(origin)}" data-public-id="${attr(publicId)}" data-key-id="${attr(form.key_id)}" data-public-key="${attr(form.public_key)}" data-apply-url="${attr(applyUrl)}" data-kennel="${attr(snap.site.kennel_name)}">
-    <div><span class="eyebrow">Puppy application</span><h2 class="mt-6">${esc(p.form_heading || 'Apply to join the waitlist')}</h2>${p.form_intro ? `<p class="muted small mt-6">${esc(p.form_intro)}</p>` : ''}<p class="muted small mt-6">Fields marked * are required.</p></div>
-    <p class="done" data-kos-fallback>This form needs a browser with JavaScript on. ${fallback}</p>
-    ${faq}
-    <form data-kos-step="form" novalidate hidden>
-      ${questions}
-      ${turnstile}
-      <p class="done bad" data-kos-problems role="alert" hidden></p>
-      <div><button class="btn solid" type="submit">Send application</button></div>
-      <p class="muted small">Your answers are locked in this browser before they're sent, so only ${esc(snap.site.kennel_name)} can read them. They go to our waitlist in KennelOS, not to this website. You'll get an email with a code to confirm it's you.</p>
-    </form>
-    <form data-kos-step="confirm" hidden>
-      <div><h3>Check your email</h3><p class="small">We sent a 6-digit code to <b data-kos-email></b>. Enter it here to send your application. It works for 15 minutes.</p></div>
-      <div class="row"><label for="k-code">Code<input id="k-code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></label><div class="kos-confirm"><button class="btn solid" type="submit">Confirm</button></div></div>
-      <p class="small" data-kos-result role="status"></p>
-      <p class="muted small">No email after a few minutes? Check your spam folder, or <button type="button" class="linkish" data-kos-resend>send a new code</button>.</p>
-    </form>
-    <div data-kos-step="done" hidden><h3>Your application is in</h3><p class="small">${esc(snap.site.kennel_name)} will review it. To see your place in line and anything waiting for you, sign in on our KennelOS waitlist page with the email you applied with.</p>
-      <p><a class="btn solid" href="${attr(`${origin}${feed.links?.signin ?? `/list/${encodeURIComponent(publicId)}#signin`}`)}" rel="noopener noreferrer" target="_blank">See my details</a></p></div>
-  </div>`;
-}
-
 // ---------- the KennelOS list, drawn in the site's style (plan 3.8, decision 21) ----------
 // The families on her list, in KennelOS's own words (its cloud/public/family/
 // common.js is the model). Only the list: the site has its own puppy pages, so the
@@ -1246,26 +979,6 @@ export function waitlist(snap, ctx) {
       badges: badgeRow(snap, 'waitlist'),
       badgesIn: badgeRow(snap, 'waitlist', { inWrap: true }),
     }),
-  };
-}
-
-// ---------- Privacy (generated, plan 3.9) ----------
-
-export function privacy(snap, ctx) {
-  const s = snap.site;
-  const contactLine = [s.contact_email && `email <a href="mailto:${attr(s.contact_email)}">${esc(s.contact_email)}</a>`, s.contact_phone && `call ${esc(s.contact_phone)}`].filter(Boolean).join(' or ');
-  return {
-    title: 'Privacy', section: '/privacy', description: `How ${s.kennel_name}'s website handles your information.`,
-    body: `${pagehead({}, { eyebrow: 'Privacy', heading: 'Your privacy', lede: null })}
-      <section class="section tight"><div class="wrap prose">
-        <p>This website belongs to ${esc(s.kennel_name)} and is hosted by KennelPort. This page says what it collects and why.</p>
-        <h2>What this site collects</h2>
-        <p>Reading this site collects nothing about you: there are no accounts, no advertising, and no tracking cookies. Like every website, the servers that deliver it see your device's internet address for each page it loads; that is used only to deliver the page and keep the site safe, never to track you.</p>
-        <h2>Outside services</h2>
-        <p>Fonts and pictures are served by this site itself, not by outside companies. This site runs on Cloudflare's network, which delivers each page to you.</p>
-        <h2>Questions</h2>
-        <p>${contactLine ? `To ask about your information, ${contactLine}.` : `To ask about your information, use the contact details on the <a href="/contact">contact page</a>.`}</p>
-      </div></section>`,
   };
 }
 

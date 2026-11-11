@@ -211,7 +211,8 @@ export const PAGE_PARTS = Object.freeze({
   litters: {
     current: { name: 'Litters taking deposits', hint: "Each born litter whose deposits are open, with its pups. With nothing on the page, it says there are no litters." },
     older: { name: 'Older puppies', hint: 'Shows while the Older puppies page is on.' },
-    upcoming: { name: 'Coming up', hint: 'Planned litters, and born ones whose deposits open later.' },
+    soon: { name: 'Available soon', hint: 'Born litters whose deposits open later; each moves to the litters taking deposits on the day. Removed, they sit under Coming up.' },
+    upcoming: { name: 'Coming up', hint: 'Planned litters, and born ones whose deposits open later when the page has no Available soon.' },
   },
   older: { list: { name: 'Every older puppy' } },
   how_it_works: { steps: { name: 'Her steps', inside: true } },
@@ -258,7 +259,7 @@ export const PAGE_DEFAULTS = Object.freeze(Object.fromEntries(Object.entries({
   reviews: [H, part('list')],
   contact: [H, F, part('main'), BG],
   dogs: [H, F, part('all'), part('upcoming'), part('for_sale'), part('co_owned')],
-  litters: [H, F, part('current'), BG, part('older'), part('upcoming')],
+  litters: [H, F, part('current'), BG, part('older'), part('soon'), part('upcoming')],
   older: [H, part('list')],
   how_it_works: [H, F, part('steps'), BG],
   extras: [H, F, part('list'), BG],
@@ -432,11 +433,37 @@ export function pageBlocks(build, key) {
   if (!Array.isArray(saved)) return defaultsOf(key).map((b) => cleanBlock(b));
   const seen = new Set();
   const once = new Set();
-  return saved.map(cleanBlock).filter((b) => {
+  const out = saved.map(cleanBlock).filter((b) => {
     if (!b || seen.has(b.id) || !fits(key, b)) return false;
     seen.add(b.id);
     if (BLOCK_TYPES[b.type].once) { if (once.has(b.type)) return false; once.add(b.type); }
     return true;
+  });
+  return key === 'litters' && !build.soon_page ? withSoonBlock(out) : out;
+}
+
+// Available soon (2026-11-11) reaches every site, the owner's changed ones too: a
+// Puppies page or menu saved before it existed gets it once, where the default has
+// it (before Coming up; after Available). Storing either again marks the build
+// (`soon_page` in withPage, `soon_menu` in withMenu), and from then on what she
+// saved stands, so she can take it out.
+function withSoonBlock(blocks) {
+  if (blocks.some((b) => b.id === 'soon')) return blocks;
+  const i = blocks.findIndex((b) => b.type === 'builtin' && b.id === 'upcoming');
+  const at = i < 0 ? blocks.length : i;
+  return [...blocks.slice(0, at), cleanBlock({ id: 'soon', type: 'builtin' }), ...blocks.slice(at)];
+}
+function withSoonPlace(menu) {
+  const has = (p) => menu.some((g) => g.items.some((it) => it.type === 'place' && it.place === p));
+  if (has('litters#soon')) return menu;
+  const after = has('litters#available') ? 'litters#available' : null;
+  const before = !after && has('litters#upcoming') ? 'litters#upcoming' : null;
+  if (!after && !before) return menu;
+  return menu.map((g) => {
+    const i = g.items.findIndex((it) => it.type === 'place' && it.place === (after ?? before));
+    if (i < 0 || g.items.length >= MENU_LIMITS.items) return g;
+    const at = after ? i + 1 : i;
+    return { ...g, items: [...g.items.slice(0, at), { type: 'place', place: 'litters#soon' }, ...g.items.slice(at)] };
   });
 }
 export const homeBlocks = (build) => pageBlocks(build, 'home');
@@ -574,6 +601,7 @@ export function withPage(build, key, blocks) {
     if (next.pages && !Object.keys(next.pages).length) delete next.pages;
   } else {
     next.pages = { ...(next.pages ?? {}), [key]: { blocks: blocks.map(cleanBlock) } };
+    if (key === 'litters') next.soon_page = true;
   }
   return next;
 }
@@ -689,8 +717,9 @@ export class MenuError extends Error {}
 export const MENU_PLACES = Object.freeze({
   'dogs#girls': { page: 'dogs', name: 'Girls', when: 'while there are breeding dogs of both sexes' },
   'dogs#boys': { page: 'dogs', name: 'Boys', when: 'while there are breeding dogs of both sexes' },
-  'litters#available': { page: 'litters', name: 'Available', when: 'while a litter has puppies to choose from' },
-  'litters#upcoming': { page: 'litters', name: 'Upcoming litters', when: 'while a litter is planned, or its deposits haven\'t opened' },
+  'litters#available': { page: 'litters', name: 'Available now', when: 'while a litter has puppies to choose from' },
+  'litters#upcoming': { page: 'litters', name: 'Upcoming litters', when: 'while a litter is planned, or its deposits haven\'t opened (unless the Puppies page has Available soon)' },
+  'litters#soon': { page: 'litters', name: 'Available soon', when: 'while a born litter\'s deposits haven\'t opened, and the Puppies page has Available soon' },
 });
 // Pages that can't be in the menu: Privacy sits in the footer's fine print.
 const MENU_PAGES = Object.keys(PAGES).filter((k) => k !== 'privacy');
@@ -704,7 +733,7 @@ export function defaultMenu(custom = []) {
     for (const [key, p] of Object.entries(PAGES)) {
       if (p.group !== g.key) continue;
       if (key === 'litters') {
-        items.push({ type: 'place', place: 'litters#available' }, { type: 'place', place: 'litters#upcoming' }, { type: 'page', page: 'litters', fallback: true });
+        items.push({ type: 'place', place: 'litters#available' }, { type: 'place', place: 'litters#soon' }, { type: 'place', place: 'litters#upcoming' }, { type: 'page', page: 'litters', fallback: true });
         continue;
       }
       items.push({ type: 'page', page: key });
@@ -748,7 +777,11 @@ export function cleanMenu(menu, custom = []) {
 }
 
 // The menu a build has: the owner's, or today's.
-export const menuOf = (build) => cleanMenu(build?.menu, customPages(build)) ?? defaultMenu(customPages(build));
+export function menuOf(build) {
+  const saved = cleanMenu(build?.menu, customPages(build));
+  if (!saved) return defaultMenu(customPages(build));
+  return build.soon_menu ? saved : withSoonPlace(saved);
+}
 export const menuChanged = (build) => Array.isArray(build?.menu);
 
 // What would stop it working (decision 16): a group with no name, an outside link
@@ -774,7 +807,7 @@ export function withMenu(build, menu) {
   const m = cleanMenu(menu, custom) ?? [];
   checkMenu(m);
   if (JSON.stringify(m) === JSON.stringify(defaultMenu(custom))) delete next.menu;
-  else next.menu = m;
+  else { next.menu = m; next.soon_menu = true; }
   return next;
 }
 

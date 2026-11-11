@@ -125,7 +125,12 @@ export const LITTER_FIELDS = {
 // The litter's figures (plan 3.2): KennelOS's while Use my KennelOS prices is on.
 export const LITTER_PRICE_FIELDS = ['price_female', 'price_male', 'full_reg_female', 'full_reg_male', 'deposit_female', 'deposit_male'];
 
-export const PUPPY_STATUSES = ['available', 'reserved', 'placed', 'staying', 'coming_soon', 'hidden'];
+export const PUPPY_STATUSES = ['available', 'placed', 'staying', 'coming_soon', 'hidden'];
+// A status no longer offered, read as the one that replaced it: `reserved` became
+// `placed` (docs/plans/kennelos-contract.md, "No reserved"). Stored pups aren't
+// rewritten; each reads as placed and is saved as placed the next time.
+export const PUPPY_STATUS_WAS = { reserved: 'placed' };
+export const pupStatus = (s) => (Object.hasOwn(PUPPY_STATUS_WAS, s ?? '') ? PUPPY_STATUS_WAS[s] : s);
 
 export const PUPPY_FIELDS = {
   slug: { type: 'slug', required: true },
@@ -133,7 +138,7 @@ export const PUPPY_FIELDS = {
   collar: S(30),
   sex: { ...ENUM('female', 'male'), required: true },
   color: S(40),
-  status: ENUM(...PUPPY_STATUSES),
+  status: { ...ENUM(...PUPPY_STATUSES), was: PUPPY_STATUS_WAS },
   registration: ENUM('limited', 'full'),
   registry: S(30),
   price: INT(0, 100000),
@@ -515,6 +520,8 @@ export function cleanValue(f, v, path) {
       return v ? 1 : 0;
     case 'enum':
     case 'layout':
+      // An old value, from a stored record or an older file, saved as its new one.
+      if (f.was && Object.hasOwn(f.was, v)) return f.was[v];
       if (!f.values.includes(v)) throw new ContentError(path, `one of ${f.values.join(', ')}`);
       return v;
     case 'photo':

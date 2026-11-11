@@ -8,22 +8,29 @@
 //
 // Nothing here is cached, and nothing a family sees comes from another family:
 // every photo and file is checked against the signed-in family's own placement.
+//
+// Split out into family/ (docs/review/senior-review-2026-11.md, item 7): icons.js,
+// stay.js, files.js, and parts.js, the pieces they share.
 import { schemaReady } from '../gate.js';
 import { escapeHtml as esc, htmlPage } from '../lib/html.js';
 import {
   startFamilySignIn, verifyFamilySignIn, acceptInvite, currentFamily, signOutFamily, familyCookie, startSession, AuthError,
 } from './auth.js';
 import {
-  getSettings, placementFor, puppyFor, healthRecords, recordVetBooking, saveFile, getFile, fileResponse, familyEmails,
-  PortalError, RECORD_TYPES, MAX_FILE_BYTES, DEFAULT_DISCLOSURE, dialable,
+  getSettings, placementFor, puppyFor, healthRecords, recordVetBooking, saveFile, getFile, familyEmails, PortalError, RECORD_TYPES, MAX_FILE_BYTES,
+  DEFAULT_DISCLOSURE, dialable,
 } from './store.js';
 import { stage, vetDeadline, formatAt, formatDay, timeLeft, localParts, addDays, VET_RULES } from './vet.js';
-import { stepsFor, openTasks, programsFor, noteClick, setDone, setProgramStatus } from './steps.js';
+import { stepsFor, openTasks, programsFor, setDone, setProgramStatus } from './steps.js';
 import { PORTAL_VERSION } from './version.js';
 import { CODE_TTL_MS } from '../auth.js';
 import { redeemHandoff } from './feed.js';
-import { stayFor, skillsFor, updatesFor, skillProgress, stayWeeks, mediaFor, mediaResponse, LEVELS, LEVEL_ORDER } from './stays.js';
+import { stayFor, mediaFor, mediaResponse } from './stays.js';
 import { messagesOpen, thread, unreadFrom, markRead, familyWrites, isLoss, eraseFamily, MAX_MESSAGE } from './account.js';
+import { TYPE_ICON, SPRITE, ic } from './family/icons.js';
+import { skillsList, updateCard, stayContext } from './family/stay.js';
+import { active, puppyPhotos } from './family/parts.js';
+import { servePhoto, serveFile, goToProgram } from './family/files.js';
 
 export const PORTAL_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
 const HEADERS = {
@@ -34,35 +41,6 @@ const HEADERS = {
 const redirect = (location, headers = {}) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store', ...headers } });
 
 export const isPortalPath = (path) => path === '/family' || path.startsWith('/family/');
-
-// ---------- icons (Lucide-style strokes, one set) ----------
-
-const ICONS = {
-  paw: '<circle cx="6" cy="10" r="2"/><circle cx="10" cy="6" r="2"/><circle cx="14" cy="6" r="2"/><circle cx="18" cy="10" r="2"/><path d="M12 12c-3 0-6 4-6 6.5 0 1.5 1.5 2 3 1.6 1.2-.3 2-.6 3-.6s1.8.3 3 .6c1.5.4 3-.1 3-1.6C18 16 15 12 12 12z"/>',
-  home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>',
-  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
-  stethoscope: '<path d="M6 3v6a5 5 0 0 0 10 0V3"/><path d="M11 14v2a5 5 0 0 0 10 0v-1"/><circle cx="21" cy="13" r="2"/>',
-  file: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
-  upload: '<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>',
-  check: '<path d="m5 12 5 5 9-10"/>',
-  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',
-  shield: '<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/>',
-  bowl: '<path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 7c0-2 2-2 2-4M13 7c0-2 2-2 2-4"/>',
-  award: '<circle cx="12" cy="9" r="6"/><path d="m8.5 14-1.5 7 5-3 5 3-1.5-7"/>',
-  tag: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
-  arrow: '<path d="M7 17 17 7M9 7h8v8"/>',
-  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-  phone: '<path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2"/>',
-  message: '<path d="M4 5h16v11H9l-5 4z"/>',
-  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
-  pin: '<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
-  list: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="m3.5 6 1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2"/>',
-  chev: '<path d="m9 6 6 6-6 6"/>',
-  gift: '<rect x="3" y="8" width="18" height="13" rx="1.5"/><path d="M12 8v13M3 12h18"/><path d="M12 8c-2-4-6-4-6-1.5S10 8 12 8zM12 8c2-4 6-4 6-1.5S14 8 12 8z"/>',
-};
-const TYPE_ICON = { food: 'bowl', insurance: 'shield', registration: 'award', product: 'tag', other: 'tag' };
-const SPRITE = `<svg width="0" height="0" class="sprite" aria-hidden="true">${Object.entries(ICONS).map(([k, d]) => `<symbol id="i-${k}" viewBox="0 0 24 24">${d}</symbol>`).join('')}</svg>`;
-const ic = (n, cls = 'i') => `<svg class="${cls}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 
 // ---------- the page frame ----------
 
@@ -177,16 +155,6 @@ function programList(list, place, kennel) {
 
 const disclosure = (s) => `<p class="disclose">${esc(s.disclosure || DEFAULT_DISCLOSURE)}</p>`;
 
-// The puppy's photos: her main photo for it, then any she tagged with it.
-async function puppyPhotos(env, siteId, puppyId) {
-  if (!puppyId) return [];
-  const { results } = await env.DB.prepare(`SELECT ph.id, ph.alt FROM photos ph WHERE ph.site_id = ? AND ph.removed_at IS NULL AND (
-      ph.id = (SELECT photo_id FROM puppies WHERE id = ?) OR ph.id IN (SELECT photo_id FROM photo_tags WHERE site_id = ? AND subject = ?))
-    ORDER BY ph.id = (SELECT photo_id FROM puppies WHERE id = ?) DESC, ph.created_at DESC LIMIT 60`).bind(siteId, puppyId, siteId, `puppy:${puppyId}`, puppyId).all();
-  return results;
-}
-
-
 // ---------- the checklist, the timeline and the food ----------
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -253,38 +221,6 @@ function nextBand(tasks, name, kennel) {
     <p><a class="go" href="/family/timeline">The whole timeline ${ic('arrow')}</a></p></section>`;
 }
 
-
-// ---------- the extended stay ----------
-
-// A skill's level as four marks, filled to where it is.
-const meter = (level) => {
-  const n = level ? LEVEL_ORDER.indexOf(level) : -1;
-  return `<span class="meter" aria-label="${esc(level ? LEVELS[level] : 'Not started')}">${LEVEL_ORDER.slice(1).map((_, i) => `<i${i < n ? ' class="on"' : ''}></i>`).join('')}</span>`;
-};
-
-function skillsList(progress, { compact = false } = {}) {
-  if (!progress.length) return '';
-  return `<ul class="skills">${progress.map((sk) => `<li><span>${esc(sk.name)}</span>${meter(sk.now)}<b class="small">${esc(sk.now ? LEVELS[sk.now] : 'Not started')}</b>${!compact && sk.first && sk.first !== sk.now ? `<span class="small muted">from ${esc(LEVELS[sk.first].toLowerCase())} in the first update</span>` : ''}${!compact && sk.note ? `<span class="small muted">${esc(sk.note)}</span>` : ''}</li>`).join('')}</ul>`;
-}
-
-function updateCard(u, skills, name) {
-  const named = new Map(skills.map((sk) => [sk.id, sk.name]));
-  return `<article class="card update"><p class="eyebrow">Week ${u.week} · ${esc(formatDay(u.written_on))}</p>
-    ${u.note ? u.note.split(/\n{2,}/).map((x) => `<p>${esc(x).replace(/\n/g, '<br>')}</p>`).join('') : ''}
-    ${u.weight ? `<p class="small"><b>Weight:</b> ${esc(u.weight)}</p>` : ''}
-    ${u.photos.length ? `<ul class="gallery">${u.photos.map((id) => `<li><a href="/family/media/${esc(id)}"><img src="/family/media/${esc(id)}" alt="${esc(name)}, week ${u.week}" loading="lazy"></a></li>`).join('')}</ul>` : ''}
-    ${u.levels.some((l) => l.note) ? `<ul class="small muted">${u.levels.filter((l) => l.note).map((l) => `<li>${esc(named.get(l.skill_id) ?? '')}: ${esc(l.note)}</li>`).join('')}</ul>` : ''}</article>`;
-}
-
-async function stayContext(env, site, p, s, now) {
-  const pe = await stayFor(env, site.id, p.id);
-  if (!pe) return null;
-  const skills = await skillsFor(env, site.id, pe.id);
-  const updates = await updatesFor(env, site.id, pe.id);
-  const w = stayWeeks(pe.starts_on, p.go_home_on, localParts(now, s.time_zone).ymd);
-  return { pe, skills, updates, progress: skillProgress(skills, updates), ...w };
-}
-
 // ---------- signed in ----------
 
 async function loadContext(env, site, fam) {
@@ -294,10 +230,6 @@ async function loadContext(env, site, fam) {
   const photos = p ? await puppyPhotos(env, site.id, p.puppy_id) : [];
   return { p, s, pup, photos, main: photos[0] ? `/family/photo/${photos[0].id}` : null };
 }
-
-// Whether the checklist, timeline and programs show: not for a placement closed or
-// for a puppy no longer with the family (the loss page comes with chunk 4).
-const active = (p) => p.status === 'open' && p.life_status === 'with_family';
 
 function noPlacement(site, fam) {
   return frame(site, 'Welcome', `<section class="card narrow"><h1>Welcome, ${esc(fam.name)}</h1>
@@ -623,38 +555,6 @@ async function accountPage(env, site, fam, { error } = {}) {
     ${errorBox(error)}<details class="card"><summary><b>Delete our account</b></summary>
     <p>This deletes your sign-in, email addresses and messages here, now and for good. ${esc(kennel)} keeps the record of your puppy's sale, vet visit and contract, as your contract needs.</p>
     <form method="post" action="/family/account/delete" class="stack"><label>Type <strong>delete</strong> to confirm<input name="confirm" autocomplete="off" required></label><button class="btn line">Delete our account</button></form></details>`, { fam, status: error ? 400 : 200 });
-}
-
-// ---------- files and photos ----------
-
-async function servePhoto(env, site, fam, id, thumb) {
-  const { results: ps } = await env.DB.prepare('SELECT puppy_id FROM portal_placements WHERE site_id = ? AND family_id = ?').bind(site.id, fam.familyId).all();
-  let mine = false;
-  for (const p of ps) if (!mine) mine = (await puppyPhotos(env, site.id, p.puppy_id)).some((ph) => ph.id === id);
-  const row = mine ? await env.DB.prepare('SELECT r2_key, thumb_key, type FROM photos WHERE id = ? AND site_id = ?').bind(id, site.id).first() : null;
-  const obj = row && await env.FILES.get(thumb && row.thumb_key ? row.thumb_key : row.r2_key);
-  if (!obj) return new Response('Not found', { status: 404, headers: { 'cache-control': 'no-store' } });
-  return new Response(obj.body, { headers: { 'content-type': row.type || 'image/webp', 'cache-control': 'private, max-age=3600', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'none'" } });
-}
-
-async function serveFile(env, site, fam, id) {
-  const file = await getFile(env, site.id, id);
-  const p = file && await env.DB.prepare('SELECT family_id FROM portal_placements WHERE id = ? AND site_id = ?').bind(file.placement_id, site.id).first();
-  if (!p || p.family_id !== fam.familyId || file.kind === 'record') return new Response('Not found', { status: 404, headers: { 'cache-control': 'no-store' } });
-  return fileResponse(env, file);
-}
-
-// Where a click came from, for her report of which placements work (plan 12.1).
-const PLACES = new Set(['home', 'records', 'vet', 'timeline', 'checklist', 'food']);
-
-async function goToProgram(env, site, fam, id, from) {
-  const x = await env.DB.prepare('SELECT id, link_url FROM products WHERE id = ? AND site_id = ? AND portal_show = 1').bind(id, site.id).first();
-  if (!x?.link_url || !/^https:\/\//i.test(x.link_url)) return new Response('Not found', { status: 404 });
-  await env.DB.prepare('INSERT INTO portal_clicks (site_id, family_id, product_id, place, at) VALUES (?, ?, ?, ?, ?)')
-    .bind(site.id, fam.familyId, x.id, PLACES.has(from) ? from : 'other', new Date().toISOString()).run();
-  const p = await placementFor(env, site.id, fam.familyId);
-  if (p && active(p)) await noteClick(env, site.id, p, x.id);
-  return new Response(null, { status: 302, headers: { location: x.link_url, 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' } });
 }
 
 // ---------- routes ----------
