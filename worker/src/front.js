@@ -131,7 +131,7 @@ export function frontPage() {
   <section class="tile s2">
     ${icon(ICONS.phone)}
     <h2>You run it from your phone</h2>
-    <p>Site Manager installs on your phone like an app. Mark a puppy reserved, add photos from your camera roll, answer a message, then publish when it looks right.</p>
+    <p>Site Manager installs on your phone like an app. Update a puppy's status, add photos from your camera roll, answer a message, then publish when it looks right.</p>
   </section>
   <section class="tile band s2">
     ${icon(ICONS.family)}

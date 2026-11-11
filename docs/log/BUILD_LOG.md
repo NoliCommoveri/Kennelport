@@ -744,3 +744,8 @@ with new sections and a new building order. Docs only; nothing built yet.
     `portal/family/`.
 - Checked with a scope-aware pass (every name each file uses resolves; no import left
   unused) and the tests: all 359 pass unchanged. No migration, no versioned file.
+
+## 2026-11-11: front page wording
+
+- `front.js`: the Site Manager line now says "Update a puppy's status" (was "Mark a puppy
+  reserved"; there is no reserved status). The owner's words. Not a cached file: no bump.
