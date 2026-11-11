@@ -782,3 +782,12 @@ with new sections and a new building order. Docs only; nothing built yet.
 - `render/parts.js` `litterCard` takes `label: false`; the Available soon section uses it,
   so its litter cards carry no small label over the name (the section's heading says it).
   Elsewhere (a Litters block, Coming up on a page without the section) the label stays.
+
+## 2026-11-11: plan: litters get what dogs get
+
+- `plans/kennelos-contract.md`: the owner's answer to open question 6. Litter cards
+  blocks get conditions, grouping and order in step 2 and picks in step 3, like dogs.
+  Litter fields: the site's stage (available now, available soon…), each parent's dog
+  fields (`dam.`, `sire.`, `a_parent.`), pups' colours and `standard_colors`. New for all
+  three kinds: Leave out (`b.omit`), records a conditions block skips. Question 4 now asks
+  where the standard colours list lives. Docs only.

@@ -100,6 +100,14 @@ block may read, with its name for the owner, its kind (`bool`, `enum`, `text`, `
 - dog: `has_titles`, `title` (any of its titles), `age`, `has_health`, `tags` (Part D),
   `import`, `import_descended` (Part C4);
 - puppy: its litter's fields (`litter.stage`, `litter.born_on`), `status` by rule;
+- litter (the owner, 2026-11-11: litters get everything dogs get): `stage` as the site
+  shows it (`available_now`, `available_soon`, `older`, `planned`, `past`); each parent's
+  dog fields as `dam.<field>` and `sire.<field>`, and `a_parent.<field>` for either one
+  (so "from champions" is `a_parent.title includes CH`, "from imports" is
+  `a_parent.import yes`); `pups.color` (every pup's colour), and `standard_colors`, yes
+  when every pup's colour is on the breed's standard list (open question 4). A parent
+  that isn't a dog on the site (an outside sire by name) has only its name until C7
+  sends lineage, so its fields read as unknown and a condition on them doesn't hold;
 - a test fails when a field in `model.js` is in neither the list nor a short "not for
   blocks" list (photos, slugs, system columns).
 
@@ -114,6 +122,10 @@ A data block chooses its records one of two ways:
 - **Picks** (`b.pick`): record ids, in her order. A picked record that has left the site
   drops out quietly and returns if it comes back. A block that is picks only and has
   none left hides itself, as an empty block does now.
+- **Leave out** (`b.omit`): record ids a conditions block skips though they match ("these
+  litters, but not that one"). A left-out record that leaves the site is forgotten.
+
+Dog cards, Pups and Litter cards blocks all choose this way (the owner, 2026-11-11).
 
 Then, for both:
 
@@ -237,10 +249,14 @@ Each step is its own branch and merge, with at most one migration.
 1. **A1, A2, and `reserved` out.** Health order kept; the `not_open` status row;
    `reserved` removed as above. No migration (rules are in `site_builds`; no stored
    status is rewritten).
-2. **B1, B2, B4.** The field list, conditions, grouping and order for Dog cards and Pups
-   blocks; old blocks read as conditions. The admin's block screen. No migration.
-3. **B3, B5.** Pick blocks, the breeder's picking screen, the Featured block. One
-   migration if picks are kept outside the block (see the open question).
+2. **B1, B2, B4.** The field list, conditions, grouping and order for Dog cards, Pups and
+   Litter cards blocks; old blocks read as conditions (a Litter cards block's stages
+   become `stage is one of`). The admin's block screen. Litter fields that need data not
+   sent yet (imports: step 6; standard colours: open question 4) join the list when it
+   comes. No migration.
+3. **B3, B5.** Pick and Leave out for all three, the breeder's picking screen, the
+   Featured block. One migration if picks are kept outside the block (see the open
+   question).
 4. **C1, C2, C5, C6.** The small raw fields, each with its rule. Migration: the columns.
    The linked sample (`tests/fixtures/linked-sample/`) gains each value, and its
    coverage test checks them.
@@ -267,7 +283,11 @@ step that changes files under `public/_kp/` says which, and asks before a versio
 3. **Pick blocks:** is the list of picked dogs the breeder's (kept as her content, so a
    template change doesn't lose it) or part of the block (the owner's)? The plan assumes
    hers.
-4. **Colour:** group by the words she typed, or does KennelOS get a tidy colour list?
+4. **Colour and standard colours:** "litters from standard colours" needs, for each
+   breed, which colours are standard (for Bostons the AKC's: black, brindle or seal, each
+   with white). Where does that list live: one KennelPort keeps per breed, one the owner
+   sets per site, or a colour list in KennelOS that pups are marked from? And is a
+   litter "from standard colours" when every pup is, or when both parents are?
 5. **Her own tags:** allowed at all, or only the owner's rule tags to begin with?
-6. **Pups and litters:** conditions and picks for litters in step 2 as well, or dogs and
-   pups first? The plan assumes dogs and pups.
+6. ~~Pups and litters~~ Answered 2026-11-11: litters get the same as dogs, in step 2
+   (conditions, grouping, order) and step 3 (picks, leave out).
