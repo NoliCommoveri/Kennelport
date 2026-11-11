@@ -4,6 +4,7 @@
 import { layout } from './layout.js';
 import { pageOn, useFormats, viewerHtml } from './parts.js';
 import * as P from './pages.js';
+import { puppy } from './pages/puppy.js';
 import { PAGES } from '../content/model.js';
 
 // Fixed addresses (plan 3.1) → page key and renderer.
@@ -46,7 +47,7 @@ function pick(snap, ctx) {
   m = path.match(/^\/litters\/([a-z0-9-]+)$/);
   if (m) return snap.pages.litters.enabled ? P.litter(snap, ctx, m[1]) : null;
   m = path.match(/^\/litters\/([a-z0-9-]+)\/([a-z0-9-]+)$/);
-  if (m) return snap.pages.litters.enabled ? P.puppy(snap, ctx, m[1], m[2]) : null;
+  if (m) return snap.pages.litters.enabled ? puppy(snap, ctx, m[1], m[2]) : null;
   return null;
 }
 

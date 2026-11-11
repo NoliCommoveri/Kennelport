@@ -709,3 +709,17 @@ with new sections and a new building order. Docs only; nothing built yet.
 - No migration (the `puppies.status` CHECK still allows `reserved`, harmlessly). No file in
   the versioned sets changed, so no version bump. The admin screens changed (rules, From
   KennelOS) use their existing components; not yet checked side by side at 390px.
+
+## 2026-11-11: the screens step 1 touched, split out of the big files
+
+- Following `review/senior-review-2026-11.md` item 7 (split a screen at a time as it's
+  touched). From `manage/builder.js`: the Pups screen to `manage/builder/rules.js`, From
+  KennelOS (and its panel) to `manage/builder/kennelos.js`, and the form controls they
+  share (`field`, `select`, `toggle`, `seg`, `back`, `svg`, `same`, `SPILL`) to
+  `manage/builder/controls.js`. From `render/pages.js`: a puppy's page to
+  `render/pages/puppy.js`; `profileFor`, `profileBody`, `shareRow` and `litterAlbums` are
+  now exported from `pages.js` for it, and `render/index.js` routes to it. Unused imports
+  dropped from both. Moved as they were: no change to what they draw.
+- `manage/screens.js` left whole (step 1 changed three lines of its puppy list). Steps 2
+  and 3 split the Dog cards block and the block screens as they reach them.
+- No migration, no versioned file. Tests: all 359 pass unchanged.

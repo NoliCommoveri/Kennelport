@@ -22,11 +22,14 @@
 // Each POSTs to itself: save, or one part back to default.
 //
 // Only for admin (admin.js); a breeder never reaches these.
+//
+// Split out beside this file, a screen at a time as each is touched (docs/review/
+// senior-review-2026-11.md, item 7): builder/rules.js (Pups), builder/kennelos.js
+// (From KennelOS), and builder/controls.js, the form controls they all share.
 import { escapeHtml as esc } from '../lib/html.js';
 import {
-  STATUS_ROWS, NOT_OPEN_FIXED, STATUS_NOTES, PILLS, DEFAULT_RULES, DEFAULT_TIMING, RuleError, rulesFor, rulesFromForm, timingFromForm,
-  withPart, changedCount, loadBuild, saveBuild, partsFromForm, wordsOn, DATE_STYLES, DAY_STYLES, SEX_STYLES, COUNT_STYLES,
-  DOG_PLACES, DOG_PLACE_WORDS, KOS_DOG_STATUSES, PUP_DISPOSITIONS, PUP_DISPOSITION_WORDS,
+  DEFAULT_RULES, DEFAULT_TIMING, RuleError, rulesFor, rulesFromForm, timingFromForm, withPart, changedCount, loadBuild, saveBuild, partsFromForm,
+  wordsOn, DATE_STYLES, DAY_STYLES, SEX_STYLES, COUNT_STYLES,
 } from '../content/rules.js';
 import { buildSnapshot } from '../publish.js';
 import {
@@ -48,12 +51,13 @@ import {
 import { PAGES, COLLAGE_LAYOUTS, collageLayout, HOME_WORDS } from '../content/model.js';
 import { layoutChoice, boxHint, photoSlot } from './forms.js';
 import { siteLink } from '../ops/sites.js';
+import { field, select, toggle, seg, back, svg, same, SPILL } from './builder/controls.js';
+import { rulesScreen } from './builder/rules.js';
+import { kennelosScreen, landingPreview } from './builder/kennelos.js';
 import { SCREENS as WORD_SCREENS, CATALOG, itemsOn, everyWording, saveEveryWording, siteWording, withWording, WordingError, defaultSay } from './wording.js';
 
 const redirect = (location) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store' } });
 const ic = (n) => `<span class="ic" aria-hidden="true"><svg class="i"><use href="#i-${n}"/></svg></span>`;
-const svg = (n) => `<svg class="i" aria-hidden="true"><use href="#i-${n}"/></svg>`;
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 // Today's two starting templates (plan, decision 12), as the site's build stands
 // until templates are built (step 5): with the portal or without.
@@ -100,7 +104,6 @@ async function everySite(env) {
 
 // ---------- the preview: their Puppies page, with the saved rules ----------
 
-const SPILL = { avail: 'green', res: 'brass' };
 const sexMark = (sex) => `<span class="sex ${sex === 'female' ? 'girl' : 'boy'}" aria-label="${sex === 'female' ? 'Girl' : 'Boy'}">${sex === 'female' ? '♀' : '♂'}</span>`;
 
 const phone = (site, snap, path, cap, blocks) => `<span class="cap">${esc(cap)}</span>
@@ -229,44 +232,6 @@ async function preview(env, site) {
 
 // ---------- Display rules ----------
 
-const field = (name, value, { label, hint = '', cls = 'half', ph = '' } = {}) => `<label class="${cls}">${esc(label)}<input type="text" name="${name}" value="${esc(value)}"${ph ? ` placeholder="${esc(ph)}"` : ''}>${hint ? `<span class="hint">${esc(hint)}</span>` : ''}</label>`;
-const select = (name, value, opts, label, cls = 'half') => `<label class="${cls}">${esc(label)}<select name="${name}">${Object.entries(opts).map(([v, l]) => `<option value="${esc(v)}"${String(v) === String(value) ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
-const toggle = (name, on, label) => `<label class="check"><input type="checkbox" name="${name}"${on ? ' checked' : ''}>${esc(label)}</label>`;
-const seg = (name, cur, opts) => `<div class="seg sm" role="radiogroup">${Object.entries(opts).map(([v, l]) => `<label><input type="radio" name="${name}" value="${v}"${cur === v ? ' checked' : ''}><span>${esc(l)}</span></label>`).join('')}</div>`;
-const back = (key) => `<button class="link small" name="default" value="${esc(key)}">Back to default</button>`;
-
-function rulesScreen(site, rules, error) {
-  const D = DEFAULT_RULES;
-  const card = (k) => {
-    const r = rules.status[k];
-    const name = (f) => `status.${k}.${f}`;
-    const fixed = (f) => k === 'not_open' && NOT_OPEN_FIXED.includes(f);
-    return `<section class="card status-card"><div class="between"><span class="stcode"><span class="code">${k}</span>${r.show && r.words ? `<span class="spill ${SPILL[r.pill]}">${esc(r.words)}</span>` : '<span class="small muted">Not shown</span>'}</span>${same(r, D.status[k]) ? '' : back(`status.${k}`)}</div>
-      <p class="small muted">${esc(STATUS_NOTES[k])}</p>
-      <div class="fgrid">${field(name('words'), r.words, { label: 'Shows as', ph: 'Words on the card' })}${select(name('pill'), r.pill, PILLS, 'Pill')}</div>
-      <div class="switches">${fixed('show') ? '' : toggle(name('show'), r.show, 'Show the pup on the site')}${toggle(name('price'), r.price, 'Show its price')}${toggle(name('ask'), r.ask, '“Ask about this puppy”')}
-        ${toggle(name('fullreg'), r.fullreg, `“${rules.reg.ask}” (no registration set)`)}${fixed('older') ? '' : toggle(name('older'), r.older, 'Can be an older puppy')}${toggle(name('ribbon'), r.ribbon, 'Ribbon across its photo')}</div>
-      ${k === 'not_open' ? '<p class="small muted">Always shown, like an available pup; on the day deposits open it reads as available.</p>' : ''}
-      <label>Order on the litter page<span class="hint">Lower comes first; equal keeps the breeder's order.</span><select name="${name('order')}">${Object.entries({ 1: 'First', 2: 'Second', 3: 'Third', 4: 'Last' }).map(([v, l]) => `<option value="${v}"${String(v) === String(r.order) ? ' selected' : ''}>${l}</option>`).join('')}</select></label></section>`;
-  };
-  const changed = (part) => (same(rules[part], D[part]) ? '' : back(part));
-  return `<div class="stack">
-      ${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
-      <div class="fgroup"><h2>Pup statuses from KennelOS</h2></div>
-      <div class="twocol">${STATUS_ROWS.map(card).join('')}</div>
-      <section class="card"><div class="fgroup"><div class="between"><h2>Registration</h2>${changed('reg')}</div><div class="fgrid">
-        ${field('reg.unset', rules.reg.unset, { label: 'No registration set reads', ph: 'Leave empty to say nothing' })}
-        ${field('reg.limited', rules.reg.limited, { label: 'Limited reads' })}
-        ${field('reg.full', rules.reg.full, { label: 'Full reads' })}
-        ${field('reg.ask', rules.reg.ask, { label: 'The full-registration link' })}</div></div>
-      <div class="fgroup"><div class="between"><h2>Prices</h2>${changed('price')}</div><div class="fgrid">
-        ${field('price.off', rules.price.off, { label: 'When prices are off', cls: '' })}
-        <div class="fld"><span class="fldt">A price range reads</span>${seg('price.style', rules.price.style, { range: '$2,800–$3,200', from: 'From $2,800' })}</div>
-        ${field('price.price_label', rules.price.price_label, { label: 'Price label' })}
-        ${field('price.deposit_label', rules.price.deposit_label, { label: 'Deposit label' })}</div></div></section>
-    </div>`;
-}
-
 // ---------- Timing ----------
 
 const TIMING_ROWS = [
@@ -326,56 +291,6 @@ function formatsScreen(site, rules, error) {
     <div class="fgroup"><h2>Money</h2><div class="fgrid">
       ${field('format.currency', f.currency, { label: 'Currency sign' })}<div class="half fld"><span class="fldt">Reads</span><span class="code big">${esc(sample)}</span></div></div>
       <div class="switches">${toggle('format.currency_after', f.currency_after, 'The sign goes after the number')}${toggle('format.cents', f.cents, 'Show cents')}</div></div></section></div>`;
-}
-
-// ---------- From KennelOS: how its data lands ----------
-
-function kennelosScreen(site, rules, error) {
-  const L = rules.landing;
-  const D = DEFAULT_RULES.landing;
-  const backFor = (keys) => (keys.some((k) => L[k] !== D[k]) ? back(keys.map((k) => `landing.${k}`).join(',')) : '');
-  const nameKeys = ['name_pair', 'name_dam', 'name_heat', 'name_none', 'name_upcoming'];
-  const dogKeys = KOS_DOG_STATUSES.map((k) => `dog_${k}`);
-  const pupKeys = PUP_DISPOSITIONS.map((k) => `pup_${k}`);
-  return `<div class="stack">${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
-    <p class="small muted">For each new record an Update website brings. Once it's on the site, its switches are the breeder's.</p>
-    <div class="twocol">
-    <section class="card"><div class="fgroup"><div class="between"><h2>Each new dog</h2>${backFor(['health_display'])}</div>
-      ${select('landing.health_display', L.health_display, { normal_only: 'Normal results only', all: 'All results', none: 'None' }, 'Health results shown', '')}</div>
-      <div class="fgroup"><div class="between"><h2>Health results' order</h2>${backFor(['health_order'])}</div>
-      ${seg('landing.health_order', L.health_order, { hers: 'Hers', kennelos: 'KennelOS’s' })}
-      <span class="hint">Every dog, at each update. Hers: each result stays where she put it, a new one goes last. KennelOS’s: its order every time.</span></div></section>
-    <section class="card"><div class="fgroup"><div class="between"><h2>Each new litter</h2>${backFor(['show_placed', 'show_prices'])}</div>
-      <div class="switches">${toggle('landing.show_placed', L.show_placed, 'Show placed puppies')}</div>
-      ${select('landing.show_prices', L.show_prices, { kos_prices: 'On, with Use my KennelOS prices', off: 'Off: the breeder switches them on' }, 'Show prices', '')}</div></section>
-    </div>
-    <section class="card"><div class="fgroup"><div class="between"><h2>Where each KennelOS dog status goes</h2>${backFor(dogKeys)}</div>
-      <ul class="list">${KOS_DOG_STATUSES.map((k) => `<li><span class="grow"><span class="code">${k}</span></span><select name="landing.dog_${k}" aria-label="${esc(k)}" class="place">${Object.keys(DOG_PLACES).map((v) => `<option value="${v}"${L[`dog_${k}`] === v ? ' selected' : ''}>${esc(DOG_PLACE_WORDS[v])}</option>`).join('')}</select></li>`).join('')}</ul></div>
-      <div class="fgroup"><div class="between"><h2>Which <span class="code">puppy</span> dogs go on the site</h2>${backFor(pupKeys)}</div>
-      <p class="small muted">A KennelOS puppy dog marked Show on website, by her disposition for it in KennelOS. One switched on goes where <span class="code">puppy</span> goes above (Up and coming, to start); one left out is off the site, and waits in her draft under Not on your site. Until her KennelOS sends dispositions (an update of KennelOS, then Update website), every one shows.</p>
-      <div class="switches boxed">${PUP_DISPOSITIONS.map((k) => toggle(`landing.pup_${k}`, L[`pup_${k}`], PUP_DISPOSITION_WORDS[k])).join('')}</div></div></section>
-    <section class="card"><div class="fgroup"><div class="between"><h2>A litter's name, when KennelOS sends none</h2>${backFor(nameKeys)}</div><div class="fgrid">
-      ${field('landing.name_pair', L.name_pair, { label: 'Dam and sire known', hint: '{dam} and {sire} are their names.' })}${field('landing.name_dam', L.name_dam, { label: 'Only the dam' })}
-      ${field('landing.name_heat', L.name_heat, { label: 'A heat' })}${field('landing.name_none', L.name_none, { label: 'A heat with no dam named' })}
-      ${field('landing.name_upcoming', L.name_upcoming, { label: 'No parents named' })}</div></div>
-    <div class="fgroup"><div class="between"><h2>Planned-litter labels</h2>${backFor(['label_heat', 'label_pairing'])}</div><div class="fgrid">
-      ${field('landing.label_heat', L.label_heat, { label: 'From a heat' })}${field('landing.label_pairing', L.label_pairing, { label: 'From a pairing' })}</div></div>
-    <div class="fgroup"><div class="between"><h2>New dogs and litters go</h2>${backFor(['new_at'])}</div>${seg('landing.new_at', L.new_at, { end: 'At the end of her order', start: 'First' })}</div></section></div>`;
-}
-
-// What each new record would get, with these settings: the panel beside From KennelOS.
-function landingPreview(rules) {
-  const L = rules.landing;
-  const fill = (t, dam, sire) => t.replace('{dam}', dam).replace('{sire}', sire);
-  const rows = [
-    ['A pairing of Juniper* and Atlas*', fill(L.name_pair, 'Juniper*', 'Atlas*'), L.label_pairing],
-    ['A heat of Maple*', fill(L.name_heat, 'Maple*', ''), L.label_heat],
-    ['A heat, no dam named', L.name_none, L.label_heat],
-    ['A litter, only the dam named', fill(L.name_dam, 'Wren*', ''), null],
-  ];
-  return `<div class="pvwrap" id="preview"><span class="cap">The next Update website, with these settings</span>
-    <section class="card landing"><ul class="hl">${rows.map(([what, name, lbl]) => `<li><div><span class="badge">${svg('heart')}</span><span><span class="small muted">${esc(what)}</span><b>${esc(name)}</b>${lbl ? `<span class="spill brass">${esc(lbl)}</span>` : ''}</span></div></li>`).join('')}</ul>
-    <ul class="hl">${KOS_DOG_STATUSES.map((k) => `<li><div><span class="badge">${svg('star')}</span><span><span class="small muted">A <span class="code">${k}</span> dog</span><b>${esc(DOG_PLACE_WORDS[L[`dog_${k}`]])}</b></span></div></li>`).join('')}</ul></section></div>`;
 }
 
 // ---------- Pages: the list, and each page's blocks (step 2) ----------

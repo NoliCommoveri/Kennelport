@@ -1,12 +1,14 @@
 // The "ak" template's pages. Each takes the snapshot and the request context and
 // returns { title, description, image, section, body } for layout(), or null for
-// "no such page".
+// "no such page". Split out into pages/, a page at a time as each is touched
+// (docs/review/senior-review-2026-11.md, item 7): pages/puppy.js. What they share
+// with the pages here (profileFor, profileBody, shareRow, badgeRow, litterAlbums) is
+// exported from this file.
 import {
-  esc, attr, fmtDate, priceText, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, parentName,
-  litterCard, parentCards, litterFacts, dogCard, coCard, besideCard, partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, STATUS_TEXT,
-  paySection, safeNotice, payShown, litterChoices, ANY_LITTER, ABOUT_LABEL,
-  dogGroups, dogsFor, depositsAhead, puppyStatus, puppyPriceText, regText, statusRule, rulesOf, pricesOff, sitePrice, word, sexWord, fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
-  faqBlock, familyLogin as familyLoginLink, addedOn, addedWords, addedRow, customPage,
+  esc, attr, fmtDate, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, litterCard, parentCards, litterFacts, dogCard, coCard,
+  besideCard, partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, paySection,
+  payShown, litterChoices, ANY_LITTER, ABOUT_LABEL, dogGroups, dogsFor, depositsAhead, rulesOf, pricesOff, sitePrice, word, sexWord, fullRegLink,
+  fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml, faqBlock, addedOn, addedWords, addedRow, customPage,
 } from './parts.js';
 import { embedView } from '../embeds.js';
 import { homeBlocks, pageBlocks, hersOn, BREEDER_SWITCH, PAGE_PARTS, PAGE_HEADS, headFor, BLOCK_TYPES, cleanProfile } from '../content/blocks.js';
@@ -24,7 +26,7 @@ const faqSection = (snap, place) => {
 
 // A Share button (plan 5.4): the phone's own share sheet, or the link copied.
 // Shown only with the template's script.
-const shareRow = (center = false) => `<p class="share-row${center ? ' center' : ''}" data-share-row hidden><button type="button" class="btn line" data-share>Share</button><span class="small muted" role="status"></span></p>`;
+export const shareRow = (center = false) => `<p class="share-row${center ? ' center' : ''}" data-share-row hidden><button type="button" class="btn line" data-share>Share</button><span class="small muted" role="status"></span></p>`;
 
 // ---------- Videos and posts (plan 3.3) ----------
 // A preview (stored on the site) with a play button, linking to the original. The
@@ -627,13 +629,13 @@ function coOwnedSection(snap, p, away) {
 }
 
 // A profile page's setting (content/blocks.js PROFILE_*): the owner's, or today's.
-const profileFor = (snap, kind) => cleanProfile(kind, snap.layout?.profiles?.[kind]);
+export const profileFor = (snap, kind) => cleanProfile(kind, snap.layout?.profiles?.[kind]);
 
 // A dog's or a puppy's page: the breadcrumb, what sits under it, the photo with what
 // sits beside it, then what sits under it, each part's items in the owner's order.
 // Under the breadcrumb, every item after the first gets the space between them;
 // under the photo, an item that doesn't bring its own (`spaced`) gets it.
-function profileBody(pr, pieces, { crumb, photo, spaced }) {
+export function profileBody(pr, pieces, { crumb, photo, spaced }) {
   const of = (part) => (pr.parts[part] ?? []).map((x) => [x, pieces[x] ?? '']).filter(([, h]) => h);
   const gap = (x, h) => (spaced.has(x) ? h : `<div class="mt-26">${h}</div>`);
   const above = of('above').map(([x, h], i) => (i ? gap(x, h) : h)).join('\n      ');
@@ -799,7 +801,7 @@ function albumCard(snap, a) {
 // A litter's albums, under its card on the litter's page.
 // Its albums, on the litter's page under "Photos". A puppy's page names the litter
 // instead, so it doesn't read "Photos" twice above its own photos.
-function litterAlbums(snap, ctx, l, { eyebrow = 'Photos', heading = null } = {}) {
+export function litterAlbums(snap, ctx, l, { eyebrow = 'Photos', heading = null } = {}) {
   const list = pageOn(snap, 'albums', ctx) ? (snap.albums ?? []).filter((a) => a.litter_id === l.id) : [];
   return list.length ? `<div class="mt-26">${head(eyebrow, heading)}<div class="albums">${list.map((a) => albumCard(snap, a)).join('')}</div></div>` : '';
 }
@@ -834,45 +836,6 @@ export function album(snap, ctx, slug) {
         ${embedsBlock(snap, `album:${a.id}`, { inWrap: true })}
       </div></section>
       ${viewerHtml()}`,
-  };
-}
-
-export function puppy(snap, ctx, litterSlug, slug) {
-  const l = snap.litters.find((x) => x.slug === litterSlug);
-  const p = l?.puppies.find((x) => x.slug === slug);
-  if (!p) return null;
-  const pr = profileFor(snap, 'puppy');
-  const photo = img(snap, p.photo_id, { alt: p.name, cls: 'photo', lazy: false }) ?? '<div class="photo" aria-hidden="true"></div>';
-  const rule = statusRule(snap, p, l, ctx.today);
-  const status = puppyStatus(snap, l, p, ctx.today);
-  const price = puppyPriceText(snap, l, p, ctx.today);
-  const reg = regText(snap, p, l, ctx.today);
-  const fact = { sex: ['Sex', sexWord(p.sex)], color: ['Color', p.color], collar: ['Collar', p.collar], status: ['Status', status], price: [rulesOf(snap).price.price_label, price], registration: ['Registration', reg], registry: ['Registry', p.registry], parents: ['Parents', pairNames(snap, l)], born: ['Born', fmtDate(l.born_on)] };
-  const facts = pr.facts.map((k) => fact[k]).filter(([, v]) => v);
-  // Its own photos, where the litter publishes its puppies' tagged ones, and its own
-  // "See more photos" link where she set one (its gallery elsewhere, never the
-  // litter's). Either alone is enough for the block. Then the litter's albums: its
-  // photos are usually in those too.
-  const gallery = galleryHtml(snap, p.photos ?? [], p.name);
-  const morePup = morePhotosHtml(p);
-  const pupGallery = (gallery || morePup) && Object.values(pr.parts).some((x) => x.includes('photos'))
-    ? `<div class="mt-26">${head('Photos', `${p.name}'s photos`)}${gallery}${morePup}</div>` : '';
-  return {
-    title: `${p.name}, ${l.name}`, section: '/litters', description: p.bio || `${p.name}: ${status}`, image: p.photo_id,
-    body: `${profileBody(pr, {
-      faq: faqBlock(snap, 'puppy'),
-      status: status ? `<span class="status ${attr(rule.pill)}">${esc(status)}</span>` : '',
-      name: `<h1>${esc(p.name)}</h1>`,
-      facts: `<dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`,
-      bio: p.bio ? `<p class="bio">${esc(p.bio)}</p>` : '',
-      ask: rule.ask || fullRegLink(snap, l, p, ctx, '') ? `<p>${rule.ask ? `<a class="btn solid" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">${esc(word(snap, 'ask_pup', { name: p.name }))}</a> ` : ''}${fullRegLink(snap, l, p, ctx, 'btn line')}</p>` : '',
-      surcharge: fullRegSurchargeRow(snap, l, p, ctx, 'kv'),
-      notice: safeNotice(snap, ctx),
-      share: shareRow(),
-      badges: badgeRow(snap, 'puppy', { inWrap: true }),
-      photos: pupGallery,
-      albums: litterAlbums(snap, ctx, l, { eyebrow: 'Albums', heading: `From ${l.name}` }),
-    }, { crumb: `<p class="breadcrumb"><a href="/litters/${attr(l.slug)}">${esc(l.name)}</a></p>`, photo, spaced: new Set(['badges', 'photos', 'albums']) })}${pupGallery ? viewerHtml() : ''}`,
   };
 }
 

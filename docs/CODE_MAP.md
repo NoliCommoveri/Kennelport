@@ -21,7 +21,8 @@ read that before the rest. Update this map when you add, move or split a file.
 - `src/site.js`: serves a site: its published snapshot, or the draft behind a preview link.
 - `src/publish.js`: draft → snapshot in R2 → live; undo; redirects. `src/diff.js`: Publish's
   list of changes.
-- `src/render/`: the "ak" template. `index.js` path → page; `pages.js` every page;
+- `src/render/`: the "ak" template. `index.js` path → page; `pages.js` every page but those split
+  out into `pages/` (`puppy.js`, a puppy's page);
   `parts.js` shared cards, photos, menu; `layout.js` head, header, footer; `schemes.js` the
   colour schemes (source for `scripts/schemes.mjs`); `version.js` `ASSET_VERSION`.
 - `public/_kp/t/ak/`: the template's CSS, JS, scheme CSS and ornaments; `public/_kp/fonts/`.
@@ -57,7 +58,10 @@ read that before the rest. Update this map when you add, move or split a file.
 - `src/manage/hub.js`: Today, Families, Dogs, Website, Portal: the app for sites with the
   portal on.
 - `src/manage/builder.js` and `src/admin.js`: the owner's admin view (pages, blocks, menu,
-  rules, timing, wording).
+  rules, timing, wording). Screens split out of `builder.js` are in `src/manage/builder/`:
+  `rules.js` (Pups), `kennelos.js` (From KennelOS), and `controls.js`, the form controls
+  they share with it. The big screen files are split a screen at a time as they're touched
+  (`review/senior-review-2026-11.md`, item 7).
 - `src/push.js`: push notifications. `src/manage/version.js`: `APP_VERSION`.
 - `public/_kp/m/`: the app's CSS, JS, service worker, photo resizing, zip, icons. A change
   here needs an `APP_VERSION` bump (ask first).
