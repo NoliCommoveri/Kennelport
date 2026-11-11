@@ -178,6 +178,22 @@ schedule.
 No prototype screen exists for it. It is built from the prototype's components (the
 highlight row and the photo-beside-words block), and the build log says so.
 
+### B6. Featured offspring (KennelPort only)
+
+A sire's or dam's best offspring, on the dog's page (the owner, 2026-11-11: KennelPort's
+own; most of them predate KennelOS, so nothing comes from it).
+
+- In the Site Manager, on a dog: **Featured offspring**, a list in her order. Each is a
+  dog or pup the site holds (picked), or typed by her: call name, registered name,
+  titles, born (month and year), the other parent's name, a photo from her photos.
+- On the dog's page: a Featured offspring part (content/blocks.js PROFILE_PARTS), shown
+  where she has any; and a pick source for Dog cards blocks ("this dog's featured
+  offspring").
+- Hers, kept as her content (`dog_offspring`, one row each, in step 3's migration).
+  Its labels, hints and empty message are breeder-facing: the owner writes them, in
+  `manage/wording.js`.
+- Nothing about an owner, a buyer or where the dog lives is asked for or shown.
+
 ## Part C. Raw fields from KennelOS
 
 Each is a section in `SECTIONS`, sent only to a Worker that lists it. Beside each: the
@@ -188,11 +204,10 @@ rule that gives today's result by default.
 | C1 | `pup_disposition` | On each litter puppy: `disposition`, raw (`undecided`, `keeping`, `available`, `placed`, `health_hold`, or null when none is set) | `rules.landing` maps each to a site status (today's map by default). `status` is still sent and is used when the section is absent. Unlike the `disposition` section on a marked puppy-status dog, which sends `undecided` when none is set, this one sends null, and null reads as `undecided` by default |
 | C2 | `litter_status` | On each litter: `status`, raw (`expected`, `whelped`, `weaning`, `ready`) | A field for conditions and for the litter card's eyebrow rule; default eyebrows as today |
 | C3 | `titles_detail` | `titles` as `[{ abbr, organization, date }]` | Stored as rows (a small `dog_titles` table, in this step's one migration); the joined text is made at publish. An empty list clears. Fields: `title`, `title_organization` |
-| C4 | `origin` | On a dog, and on each C7 ancestor: `imported` (yes or no) and `import_country` (text, optional), as she set them. Nothing worked out | Fields `import`, and `import_descended` worked out here from the C7 ancestors, so it needs the `lineage` section too. A rule sets how many generations still count (default 3, at most the four C7 sends) and what each tag reads |
+| C4 | `origin` | On a dog, and on each C7 ancestor: `imported` (yes or no) and `import_country` (her Country of origin, only while Imported is ticked), as she set them. Nothing worked out | Fields `import`, and `import_descended` worked out here from the C7 ancestors, so it needs the `lineage` section too: a dog with an imported ancestor within 3 generations (the default; a rule, at most the four C7 sends). She can untick Import-descended on one dog in the Site Manager (`import_descended_off`, hers, for a pedigree KennelOS holds only in part). A rule sets what each tag reads |
 | C5 | `health_detail` | On a result: `type` (KennelOS's event type), `verify_url` where she has one | Fields for grouping on a dog's page ("OFA", "Genetic"); the default is one list, as today |
 | C6 | `account_type` | On a product: `account_type`, raw | A rule maps each type to where it shows (Recommended products, Getting your pup home, or a group the owner names). `transport` stays until both sides have moved |
 | C7 | `lineage` | On a dog: `breed`, `sire_id`, `dam_id`, and `ancestors`: up to four generations as `[{ id, role path ("sire", "sire.dam"…), call_name, registered_name, titles }]`, including pedigree-only dogs, by name only | A Pedigree block on a dog's page (off by default); `sire` and `dam` link to a dog on the site when it is one |
-| C8 | `offspring` | On a dog she marks **Feature offspring**: `offspring`: `[{ id, call_name, registered_name, titles, born_on, other_parent_name }]`, only ones she picked in KennelOS | A "Select offspring" part on a dog's page, and a pick source for blocks |
 | C9 | `waitlist_facts` | Her waitlist's settings as values: `online_form`, `has_fee`, `fee_due_days`, `respond_days`, `max_passes` | The steps' and the fee card's wording become templates in `rules.words` with those values filled in; today's sentences are the defaults. `steps` and `payment` are still taken when the section is absent |
 
 Left as they are: a heat's month only; which records are sent (her Show on website
@@ -240,10 +255,11 @@ A tag is a field like any other: a condition, a grouping, a card item.
 
 - Every new field is the breeder's to send: it rides the same Show on website mark, and
   KennelOS's Update website lists what will change before it sends.
-- C7 and C8 name dogs that aren't on her site, some not hers. They go by call name,
+- C7 names dogs that aren't on her site, some not hers. They go by call name,
   registered name and titles only: never an owner, a kennel she hasn't ticked, or a date
   of birth for a dog that isn't hers.
 - C4's `import_country` is hers to leave blank.
+- B6's featured offspring are what she types or picks; nothing else about them is kept.
 - Nothing from a buyer, contact, contract or sale goes, as now.
 
 ## Building it, in steps
@@ -258,14 +274,14 @@ Each step is its own branch and merge, with at most one migration.
    become `stage is one of`). The admin's block screen, with the colour picker. Litter
    fields that need data not sent yet (imports: step 6) join the list when it comes. No
    migration.
-3. **B3, B5.** Pick and Leave out for all three, the breeder's picking screen, the
-   Featured block. One migration if picks are kept outside the block (see the open
-   question).
+3. **B3, B5, B6.** Pick and Leave out for all three, the breeder's picking screen, the
+   Featured block, featured offspring. One migration: `dog_offspring`, and the picks if
+   they are kept outside the block (they are hers: question 3).
 4. **C1, C2, C5, C6.** The small raw fields, each with its rule. Migration: the columns.
    The linked sample (`tests/fixtures/linked-sample/`) gains each value, and its
    coverage test checks them.
 5. **C3, D.** Titles as rows; tags. Migration: `dog_titles`, `tags`.
-6. **C4, C7, C8.** Origin, lineage, offspring: the Pedigree block and Select offspring.
+6. **C4, C7.** Origin and lineage: the import tags and the Pedigree block.
    Migration: the columns and an `ancestors` store. C4 and C7 go together: import-descended
    is worked out from the ancestors.
 7. **C9.** Waitlist facts and the wording templates.
@@ -278,17 +294,13 @@ step that changes files under `public/_kp/` says which, and asks before a versio
 
 ## Open questions (the owner's)
 
-1. **Import:** a plain "Imported" tick, or a country too? How many generations still
-   count as import-descended, and can she untick it on one dog whose pedigree in KennelOS
-   is incomplete?
-2. **Select offspring:** picked in KennelOS (a new mark, sent to every site) or picked in
-   KennelPort from the dogs and past pups it holds? The plan assumes KennelOS, since most
-   offspring were never on the site.
-3. **Pick blocks:** is the list of picked dogs the breeder's (kept as her content, so a
-   template change doesn't lose it) or part of the block (the owner's)? The plan assumes
-   hers.
-4. ~~Colour~~ Answered 2026-11-11: a colour picker over the colours the site holds, no
-   list kept anywhere; "standard colours" is the owner's ticks on a block.
-5. **Her own tags:** allowed at all, or only the owner's rule tags to begin with?
-6. ~~Pups and litters~~ Answered 2026-11-11: litters get the same as dogs, in step 2
-   (conditions, grouping, order) and step 3 (picks, leave out).
+All answered (2026-11-11):
+
+1. **Import:** an Imported tick in KennelOS; ticked, it shows Country of origin;
+   unticked, the country is cleared. Import-descended: within 3 generations by default,
+   and she can untick it on one dog (C4).
+2. **Select offspring:** KennelPort's own, not KennelOS's (B6).
+3. **Pick blocks:** the picks are hers, kept as her content.
+4. **Colour:** a colour picker over the colours the site holds; no list kept anywhere.
+5. **Her own tags:** allowed, from a list the owner allows for the site (Part D).
+6. **Pups and litters:** litters get the same as dogs (steps 2 and 3).

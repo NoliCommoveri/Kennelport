@@ -797,3 +797,11 @@ with new sections and a new building order. Docs only; nothing built yet.
 - `plans/kennelos-contract.md` B1/B2: no standard-colours list or field. A colour
   condition uses a colour picker over the colours the site holds; "standard colours" is a
   block with those ticked (for a litter: every pup or any pup). Open question 4 answered.
+
+## 2026-11-11: plan: the owner's answers
+
+- `plans/kennelos-contract.md`: every open question answered. Import: a tick with Country
+  of origin (cleared when unticked), import-descended within 3 generations, and her
+  untick per dog (`import_descended_off`). Featured offspring is KennelPort's own: C8
+  leaves the contract and becomes B6 (her list on a dog, picked or typed; `dog_offspring`
+  in step 3's migration). Picks are hers. Her own tags are allowed. Docs only.
