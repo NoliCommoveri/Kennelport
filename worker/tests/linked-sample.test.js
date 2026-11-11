@@ -164,7 +164,7 @@ test('the series: each bundle and feed, in order, leaves the site as its expect 
   assert.deepEqual(p.where('The Gem litter*'), ['current']);
   assert.deepEqual(p.where('The Summer litter*'), ['older']);
   assert.deepEqual(p.where('The Spice litter*'), ['soon']);
-  assert.match(p.sections.find((s) => s.id === 'soon').words, /Available Soon .*The Spice litter\* .*Deposits from November 22, 2026/);
+  assert.match(p.sections.find((s) => s.id === 'soon').words, /Available soon .*The Spice litter\* .*Deposits from November 22, 2026/);
   for (const name of ['Wren* × Moose*', 'Juniper* × Atlas*', 'Our next litter', "Lulu* (a friend's girl)'s next litter"]) assert.deepEqual(p.where(name), ['upcoming'], name);
   assert.match(p.older, /Sunny\*/);
   assert.doesNotMatch(p.page('/litters/the-gem-litter').html, /Garnet\*/);

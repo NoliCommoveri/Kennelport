@@ -290,22 +290,22 @@ test('a snapshot from before the not_open row reads as it did', async () => {
   assert.equal(puppyStatus(snap, l, p, '2026-12-01'), 'Available');
 });
 
-test('Available Soon: born litters before deposits open, with its own menu link, on every site; Available is Available Now', async (t) => {
+test('Available soon: born litters before deposits open, with its own menu link, on every site; Available is Available now', async (t) => {
   const { env, site, page } = await sampleSite(t);
   let html = (await page('/litters')).html;
   const soon = html.split('id="soon"')[1].split('id="upcoming"')[0];
-  assert.match(text(soon), /Available Soon .*The Spice litter\*/);
+  assert.match(text(soon), /Available soon .*The Spice litter\*/);
   assert.doesNotMatch(text(html.split('id="upcoming"')[1]), /The Spice litter\*/);
-  assert.match(html, /href="\/litters#soon"[^>]*>Available Soon</);
-  assert.match(html, /href="\/litters#available"[^>]*>Available Now</);
-  // A Puppies page and menu the owner changed before Available Soon existed get it too.
+  assert.match(html, /href="\/litters#soon"[^>]*>Available soon</);
+  assert.match(html, /href="\/litters#available"[^>]*>Available now</);
+  // A Puppies page and menu the owner changed before Available soon existed get it too.
   const { PAGE_DEFAULTS, defaultMenu, withPage } = await import('../src/content/blocks.js');
   const oldPage = PAGE_DEFAULTS.litters.filter((b) => b.id !== 'soon').reverse();
   const oldMenu = defaultMenu([]).map((g) => ({ ...g, items: g.items.filter((it) => it.place !== 'litters#soon') }));
   await saveBuild(env, site.id, { pages: { litters: { blocks: oldPage } }, menu: oldMenu });
   html = (await page('/litters')).html;
   assert.match(text(html.split('id="soon"')[1]), /The Spice litter\*/);
-  assert.match(html, /href="\/litters#soon"[^>]*>Available Soon</);
+  assert.match(html, /href="\/litters#soon"[^>]*>Available soon</);
   // Once she stores her page and menu without it, they stay without it.
   const { withMenu } = await import('../src/content/blocks.js');
   const removed = withMenu(withPage({}, 'litters', PAGE_DEFAULTS.litters.filter((b) => b.id !== 'soon')), oldMenu);

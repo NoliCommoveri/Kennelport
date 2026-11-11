@@ -771,3 +771,8 @@ with new sections and a new building order. Docs only; nothing built yet.
 - The builder's Puppies preview names the section by its heading. Tests: the linked
   sample and KennelOS tests now expect such litters under Available Soon; a new test in
   `rules.test.js`. No migration, no versioned file.
+
+## 2026-11-11: Available now, Available soon (sentence case)
+
+- The menu links and the section heading read "Available now" and "Available soon", in
+  the menu's sentence case ("Upcoming litters"). The entries above say them in title case.

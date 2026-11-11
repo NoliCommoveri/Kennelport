@@ -138,12 +138,12 @@ test('a page of hers goes where the menu has room for it, and leaves with it', a
   assert.ok(!b.menu.some((g) => g.items.some((x) => x.page === out.id)));
 });
 
-test('today\'s Puppies link shows only while Available Now, Available Soon and Upcoming litters hide', async () => {
+test('today\'s Puppies link shows only while Available now, Available soon and Upcoming litters hide', async () => {
   const s = await setup();
   const snap = await buildSnapshot(s.env, s.site.id);
   const ctx = { today: '2027-03-10', origin: '', path: '/' };
   const puppies = (sn) => menuGroups(sn, ctx).find((g) => g.key === 'puppies').links.map((l) => l.text);
-  assert.deepEqual(puppies(snap).slice(0, 2), ['Available Now', 'Upcoming litters']);
+  assert.deepEqual(puppies(snap).slice(0, 2), ['Available now', 'Upcoming litters']);
   assert.ok(!puppies(snap).includes('Puppies'));
   const none = { ...snap, litters: snap.litters.map((l) => ({ ...l, stage: 'past' })) };
   assert.equal(puppies(none)[0], 'Puppies');

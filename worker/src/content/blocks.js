@@ -442,7 +442,7 @@ export function pageBlocks(build, key) {
   return key === 'litters' && !build.soon_page ? withSoonBlock(out) : out;
 }
 
-// Available Soon (2026-11-11) reaches every site, the owner's changed ones too: a
+// Available soon (2026-11-11) reaches every site, the owner's changed ones too: a
 // Puppies page or menu saved before it existed gets it once, where the default has
 // it (before Coming up; after Available). Storing either again marks the build
 // (`soon_page` in withPage, `soon_menu` in withMenu), and from then on what she
@@ -717,9 +717,9 @@ export class MenuError extends Error {}
 export const MENU_PLACES = Object.freeze({
   'dogs#girls': { page: 'dogs', name: 'Girls', when: 'while there are breeding dogs of both sexes' },
   'dogs#boys': { page: 'dogs', name: 'Boys', when: 'while there are breeding dogs of both sexes' },
-  'litters#available': { page: 'litters', name: 'Available Now', when: 'while a litter has puppies to choose from' },
+  'litters#available': { page: 'litters', name: 'Available now', when: 'while a litter has puppies to choose from' },
   'litters#upcoming': { page: 'litters', name: 'Upcoming litters', when: 'while a litter is planned, or its deposits haven\'t opened (unless the Puppies page has Available soon)' },
-  'litters#soon': { page: 'litters', name: 'Available Soon', when: 'while a born litter\'s deposits haven\'t opened, and the Puppies page has Available soon' },
+  'litters#soon': { page: 'litters', name: 'Available soon', when: 'while a born litter\'s deposits haven\'t opened, and the Puppies page has Available soon' },
 });
 // Pages that can't be in the menu: Privacy sits in the footer's fine print.
 const MENU_PAGES = Object.keys(PAGES).filter((k) => k !== 'privacy');

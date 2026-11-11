@@ -4,7 +4,7 @@ Checked by the series test in `tests/linked-sample.test.js`:
 
 - Pairing P1 became litter D, the Forest litter*: the same website litter (photos,
   wording), now named by KennelOS, at `/litters/the-forest-litter`, born, 4 pups, no
-  planned-litter label. Deposits open January 2, so it's under Available Soon.
+  planned-litter label. Deposits open January 2, so it's under Available soon.
 - Heat H1 became pairing P2: the same website litter, now Maple* × Bishop*, labelled
   Planned pairing, expected April 2027.
 - The Spice litter*'s deposits date (November 22) has passed: it has its own section

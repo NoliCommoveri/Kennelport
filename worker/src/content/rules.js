@@ -75,7 +75,7 @@ export const WORDS = [
   ['wording', 'The Puppies page', [
     ['older_eyebrow', 'Ready now', 'Over the older puppies'], ['upcoming_band_eyebrow', 'Coming up', 'Over upcoming litters'],
     ['upcoming_band_heading', 'Upcoming litters', 'Their heading'], ['upcoming_band_lede', 'Plans can change. Heat dates are estimates.', 'Their line'],
-    ['soon_eyebrow', 'Born', 'Over litters available soon'], ['soon_heading', 'Available Soon', 'Their heading'],
+    ['soon_eyebrow', 'Born', 'Over litters available soon'], ['soon_heading', 'Available soon', 'Their heading'],
     ['soon_lede', 'Deposits open on the date on each litter.', 'Their line'],
     ['no_litters', 'No litters to show right now.', 'With nothing to show'], ['ask_puppy', 'Ask about this puppy', 'On a pup card'],
     ['ask_pup', 'Ask about {name}', 'On a puppy\'s own page ({name} is the pup\'s)'],
