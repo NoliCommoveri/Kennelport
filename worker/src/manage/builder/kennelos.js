@@ -21,7 +21,7 @@ export function kennelosScreen(site, rules, error) {
       ${select('landing.health_display', L.health_display, { normal_only: 'Normal results only', all: 'All results', none: 'None' }, 'Health results shown', '')}</div>
       <div class="fgroup"><div class="between"><h2>Health results' order</h2>${backFor(['health_order'])}</div>
       ${seg('landing.health_order', L.health_order, { hers: 'Custom', kennelos: 'Fixed' })}
-      <span class="hint">Every dog, at each update. Custom: each result stays where the breeder put it, a new one goes last. Fixed: KennelOS’s order every time.</span></div></section>
+      <span class="hint">Custom: allow breeders to reorder presentation of test results. Fixed: use dated ordering from KennelOS</span></div></section>
     <section class="card"><div class="fgroup"><div class="between"><h2>Each new litter</h2>${backFor(['show_placed', 'show_prices'])}</div>
       <div class="switches">${toggle('landing.show_placed', L.show_placed, 'Show placed puppies')}</div>
       ${select('landing.show_prices', L.show_prices, { kos_prices: 'On, with Use my KennelOS prices', off: 'Off: the breeder switches them on' }, 'Show prices', '')}</div></section>
