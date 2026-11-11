@@ -5,14 +5,19 @@ import { layout } from './layout.js';
 import { pageOn, useFormats, viewerHtml } from './parts.js';
 import * as P from './pages.js';
 import { puppy } from './pages/puppy.js';
+import { about } from './pages/about.js';
+import { reviews } from './pages/reviews.js';
+import { contact } from './pages/contact.js';
+import { albums, album } from './pages/albums.js';
+import { privacy } from './pages/privacy.js';
 import { PAGES } from '../content/model.js';
 
 // Fixed addresses (plan 3.1) → page key and renderer.
 const FIXED = {
   '/': ['home', P.home],
-  '/about': ['about', P.about],
-  '/reviews': ['reviews', P.reviews],
-  '/contact': ['contact', P.contact],
+  '/about': ['about', about],
+  '/reviews': ['reviews', reviews],
+  '/contact': ['contact', contact],
   '/dogs': ['dogs', P.dogs],
   '/litters': ['litters', P.litters],
   '/litters/older': ['older', P.older],
@@ -24,8 +29,8 @@ const FIXED = {
   '/faq': ['faq', P.faq],
   '/waitlist': ['waitlist', P.waitlist],
   '/waitlist/help': ['waitlist_help', P.waitlistHelp],
-  '/albums': ['albums', P.albums],
-  '/privacy': ['privacy', P.privacy],
+  '/albums': ['albums', albums],
+  '/privacy': ['privacy', privacy],
 };
 
 function pick(snap, ctx) {
@@ -43,7 +48,7 @@ function pick(snap, ctx) {
   let m = path.match(/^\/dogs\/([a-z0-9-]+)$/);
   if (m) return pageOn(snap, 'dogs', ctx) || snap.dogs.length ? P.dog(snap, ctx, m[1]) : null;
   m = path.match(/^\/albums\/([a-z0-9-]+)$/);
-  if (m) return pageOn(snap, 'albums', ctx) ? P.album(snap, ctx, m[1]) : null;
+  if (m) return pageOn(snap, 'albums', ctx) ? album(snap, ctx, m[1]) : null;
   m = path.match(/^\/litters\/([a-z0-9-]+)$/);
   if (m) return snap.pages.litters.enabled ? P.litter(snap, ctx, m[1]) : null;
   m = path.match(/^\/litters\/([a-z0-9-]+)\/([a-z0-9-]+)$/);

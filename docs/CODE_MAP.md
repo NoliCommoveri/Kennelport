@@ -21,8 +21,10 @@ read that before the rest. Update this map when you add, move or split a file.
 - `src/site.js`: serves a site: its published snapshot, or the draft behind a preview link.
 - `src/publish.js`: draft → snapshot in R2 → live; undo; redirects. `src/diff.js`: Publish's
   list of changes.
-- `src/render/`: the "ak" template. `index.js` path → page; `pages.js` every page but those split
-  out into `pages/` (`puppy.js`, a puppy's page);
+- `src/render/`: the "ak" template. `index.js` path → page; `pages.js` the page frame and the pages
+  not yet split out; `pages/` one file per page split out (`about.js`, `reviews.js`,
+  `contact.js`, `albums.js`, `privacy.js`, `puppy.js`) and pieces `pages.js` uses
+  (`albumLists.js`, `formParts.js` the visitor forms, `applicationForm.js` KennelOS's form);
   `parts.js` shared cards, photos, menu; `layout.js` head, header, footer; `schemes.js` the
   colour schemes (source for `scripts/schemes.mjs`); `version.js` `ASSET_VERSION`.
 - `public/_kp/t/ak/`: the template's CSS, JS, scheme CSS and ornaments; `public/_kp/fonts/`.
@@ -52,24 +54,33 @@ read that before the rest. Update this map when you add, move or split a file.
 
 - `src/manage/index.js`: sign-in, her sites, home. `src/auth.js`, `src/mail.js`: email-code
   sign-in, invites, sessions.
-- `src/manage/screens.js`: the editing screens under `/s/<subdomain>/`.
+- `src/manage/screens.js`: the editing screens under `/s/<subdomain>/`, in `createScreens`.
+  Split out into `src/manage/screens/`, each a factory given what `createScreens` holds:
+  `share.js`, `inbox.js`, `queue.js` (reviews to approve), `account.js` (storage, download,
+  delete); `parts.js` small shared pieces.
 - `src/manage/forms.js`: an input per content field, with `LABELS` (field wording).
 - `src/manage/wording.js`: every other line she reads, as one list (`say('key')`).
 - `src/manage/hub.js`: Today, Families, Dogs, Website, Portal: the app for sites with the
   portal on.
 - `src/manage/builder.js` and `src/admin.js`: the owner's admin view (pages, blocks, menu,
   rules, timing, wording). Screens split out of `builder.js` are in `src/manage/builder/`:
-  `rules.js` (Pups), `kennelos.js` (From KennelOS), and `controls.js`, the form controls
-  they share with it. The big screen files are split a screen at a time as they're touched
-  (`review/senior-review-2026-11.md`, item 7).
+  `sites.js` (Every site), `rules.js` (Pups), `kennelos.js` (From KennelOS), `timing.js`,
+  `formats.js`, `instructions.js` (her instructions); `frame.js` the nav and redirect,
+  `controls.js` the form controls. The five big files (`builder.js`, `screens.js`,
+  `render/pages.js`, `portal/admin.js`, `portal/family.js`) are split further a screen at a
+  time as they're touched (`review/senior-review-2026-11.md`, item 7): don't grow them.
 - `src/push.js`: push notifications. `src/manage/version.js`: `APP_VERSION`.
 - `public/_kp/m/`: the app's CSS, JS, service worker, photo resizing, zip, icons. A change
   here needs an `APP_VERSION` bump (ask first).
 
 ## The family portal (`src/portal/`, sites with it switched on)
 
-- `family.js` the family's pages under `/family`; `auth.js` family sign-in.
-- `admin.js` her side (Puppy families, each family's screen).
+- `family.js` the family's pages under `/family`; `auth.js` family sign-in. Split out into
+  `family/`: `icons.js`, `stay.js` (the extended stay's pieces), `files.js` (photos, files,
+  program links), `parts.js`.
+- `admin.js` her side (Puppy families, each family's screen). Split out into `admin/`:
+  `templates.js` (checklist and timeline), `settings.js`, `today.js` (the Families and
+  Portal tabs' lists, Today's portal part), `parts.js`.
 - `store.js` the records; `steps.js` checklist, timeline, programs; `stays.js` extended
   stays; `vet.js` the 3-day vet visit; `reminders.js` the hourly job; `messages.js` emails;
   `bounces.js` Resend's delivery results; `account.js` the account over time (loss, delete).

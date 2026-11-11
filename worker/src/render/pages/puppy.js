@@ -8,7 +8,8 @@ import {
   esc, attr, fmtDate, img, pageOn, pairNames, head, faqBlock, safeNotice, puppyStatus, puppyPriceText, regText, statusRule, rulesOf, word, sexWord,
   fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
 } from '../parts.js';
-import { profileFor, profileBody, shareRow, badgeRow, litterAlbums } from '../pages.js';
+import { profileFor, profileBody, shareRow, badgeRow } from '../pages.js';
+import { litterAlbums } from './albumLists.js';
 
 export function puppy(snap, ctx, litterSlug, slug) {
   const l = snap.litters.find((x) => x.slug === litterSlug);

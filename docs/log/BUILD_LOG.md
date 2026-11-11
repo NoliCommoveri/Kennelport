@@ -723,3 +723,24 @@ with new sections and a new building order. Docs only; nothing built yet.
 - `manage/screens.js` left whole (step 1 changed three lines of its puppy list). Steps 2
   and 3 split the Dog cards block and the block screens as they reach them.
 - No migration, no versioned file. Tests: all 359 pass unchanged.
+
+## 2026-11-11: more split out of the five big files
+
+- Further to the entry before, a few self-contained screens from each of the five files
+  `review/senior-review-2026-11.md` item 7 names, none of them one the KennelOS contract
+  plan's later steps change. Moved as they were; what they draw is unchanged.
+  - `manage/builder.js` (1,172 → 1,031 lines): Every site, Timing, Formats and her
+    instructions to `manage/builder/`; the nav and redirect to `builder/frame.js`.
+  - `render/pages.js` (1,240 → 984): About, Reviews, Contact, Albums and Privacy each to
+    `render/pages/` (routed by `render/index.js`); album lists, the visitor forms and
+    KennelOS's application form to `pages/` too, used by `pages.js`. Imports run one way:
+    `pages/*` may import the frame from `pages.js`; `pages.js` imports only the pieces.
+  - `manage/screens.js` (1,436 → 1,248): Share, Inbox, Reviews to approve and Account to
+    `manage/screens/`, each a factory given what `createScreens` holds (the code inside
+    unchanged). An unused `ic` dropped; `FRESH_SIGN_IN_MS` now in `screens/parts.js`.
+  - `portal/admin.js` (856 → 633): the templates, settings and Today/tabs lists to
+    `portal/admin/`; `manage/index.js` imports `todayLists` from there.
+  - `portal/family.js` (803 → 700): icons, the extended stay, and files and photos to
+    `portal/family/`.
+- Checked with a scope-aware pass (every name each file uses resolves; no import left
+  unused) and the tests: all 359 pass unchanged. No migration, no versioned file.

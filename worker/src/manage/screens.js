@@ -1,6 +1,10 @@
 // The manage app's editing screens (phase 2): everything under /s/<subdomain>/.
 // Every form posts to its own address and redirects back with a note; a form with
 // a problem comes back with what was typed and the reason.
+//
+// Split out into screens/, a screen at a time (docs/review/senior-review-2026-11.md,
+// item 7): share, inbox, queue (reviews to approve), account. Each is a factory
+// given what createScreens holds for the request; screens/parts.js is shared.
 import { escapeHtml as esc } from '../lib/html.js';
 import { json } from '../lib/http.js';
 import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, HOME_WORDS, ALBUM_PHOTOS_MAX, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, CUSTOM_PAGE, ADDED_BLOCK_FIELDS, pupStatus } from '../content/model.js';
@@ -13,18 +17,14 @@ import { fields, field, parseForm, LABELS, labelFor, placeChoices } from './form
 import { savePhoto, PhotoError } from '../photos.js';
 import { subjects, isSubject, tagPhotos, untagPhoto, tagsByPhoto } from '../photoTags.js';
 import { photoPlaces } from '../photoPlaces.js';
-import { buildSnapshot, loadSnapshot, publish, undoPublish, listSnapshots, draftChanges } from '../publish.js';
+import { buildSnapshot, publish, undoPublish, listSnapshots, draftChanges } from '../publish.js';
 import { makePreviewToken } from '../site.js';
 import { siteLink } from '../ops/sites.js';
-import { APP_VERSION } from './version.js';
 import { defaultSay, NOTE_KEYS, sayError, sayMessage } from './wording.js';
 import { STATUS_TEXT, statusText, SAFE_NOTICE_TEXT, blockRows, pageOn as pageShows, label as pageMenuName } from '../render/parts.js';
-import { exportContent } from '../content/io.js';
-import { closeSite, SiteError } from '../sites.js';
 import { listEmbeds, addEmbed, removeEmbed, moveEmbed, EmbedError, EMBEDS_PER_PLACE } from '../embedStore.js';
 import { PROVIDERS } from '../embeds.js';
 import { readBadgeCode, storeBadgeImage, BadgeCodeError } from '../badgeCode.js';
-import { qrSvg } from '../qr.js';
 import { readFeed, parseFeedAddress, setFeed, FeedError, kennelosOrigin, kennelosState } from '../feed.js';
 import {
   waiting, fulfilled, getEntry, addEntry, updateEntry, setFulfilled, removeEntry, moveEntry, offerMailto, suggestWants, listNameFor, maskedNameFor, wantsPrivate, WaitlistError,
@@ -35,14 +35,12 @@ import { pendingMatches, matchChanges, confirmMatch, declineMatch, MatchError } 
 import { leavingLitters, keepLitter, deleteLitter } from '../kennelos/clock.js';
 import { NOT_FOR_DEMO } from '../lib/demo.js';
 import { litterDaysFor, loadBuild } from '../content/rules.js';
+import { shareScreens } from './screens/share.js';
+import { when, redirect, day } from './screens/parts.js';
+import { inboxScreens } from './screens/inbox.js';
+import { queueScreens } from './screens/queue.js';
+import { accountScreens } from './screens/account.js';
 
-export const FRESH_SIGN_IN_MS = 15 * 60 * 1000;
-
-const when = (iso) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }) + ' UTC';
-const redirect = (location) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store' } });
-
-const day = (ymd) => new Date(`${ymd}T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
-const ic = (n) => `<span class="ic" aria-hidden="true"><svg class="i"><use href="#i-${n}"/></svg></span>`;
 // The note after a change, and a form's error, in the owner's wording (wording.js).
 const noteFor = (url, say) => (NOTE_KEYS.includes(url.searchParams.get('note')) ? `<p class="notice" role="status">${esc(say(`note.${url.searchParams.get('note')}`))}</p>` : '');
 const errorFor = (err, say) => (err ? `<p class="error" role="alert">${esc(say('list.error', { error: sayError(err, say, fieldLabel(say)) }))}</p>` : '');
@@ -338,43 +336,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
   }
   const embedErr = () => url.searchParams.get('embed_error');
 
-  // ---------- sharing (plan 5.4): links and QR codes ----------
-  // The site and its litters and albums, as visitors see them: published ones only.
-  async function shareScreen() {
-    const rest = url.pathname.slice(`${base}/share`.length);
-    // The demo has nothing to share: no address, no preview link.
-    if (site.demo_step != null) return { title: say('share.share_2'), back: base, body: `<section class="card band"><p><strong>${esc(say('share.demo_site'))}</strong> ${esc(NOT_FOR_DEMO)}</p><p class="row"><a class="button" href="/admin/${esc(site.subdomain)}/site/">${esc(say('share.open_it_in_your'))}</a></p></section>` };
-    if (request.method !== 'GET') return null;
-    const row = await env.DB.prepare('SELECT published_snapshot_id FROM sites WHERE id = ?').bind(site.id).first();
-    const live = await loadSnapshot(env, site.id, row.published_snapshot_id);
-    const targets = [{ key: 'site', label: site.kennel_name || site.subdomain, path: '/' }];
-    if (live) {
-      if (live.pages?.litters?.enabled) for (const l of live.litters.filter((x) => x.stage !== 'past')) targets.push({ key: `litter-${l.slug}`, label: l.name, path: `/litters/${l.slug}` });
-      if (live.pages?.albums?.enabled) for (const a of live.albums ?? []) targets.push({ key: `album-${a.slug}`, label: a.title, path: `/albums/${a.slug}` });
-    }
-    const m = rest.match(/^\/qr\/([a-z0-9-]+)\.svg$/);
-    if (m) {
-      const t = targets.find((x) => x.key === m[1]);
-      if (!t) return null;
-      return new Response(qrSvg(siteLink(env, site.subdomain, t.path)), { headers: {
-        'content-type': 'image/svg+xml', 'cache-control': 'private, max-age=300', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'",
-        ...(url.searchParams.has('download') ? { 'content-disposition': `attachment; filename="${site.subdomain}-${m[1]}-qr.svg"` } : {}),
-      } });
-    }
-    if (rest) return null;
-    const card = (t) => {
-      const link = siteLink(env, site.subdomain, t.path);
-      return `<li class="card share-card"><img class="qr" src="${base}/share/qr/${t.key}.svg" alt="QR code for ${esc(t.label)}" width="132" height="132">
-        <div><b>${esc(t.label)}</b><p class="muted small share-link">${esc(link)}</p>
-        <p class="row"><button type="button" data-copy="${esc(link)}">${esc(say('share.copy_link'))}</button><a class="button" href="${base}/share/qr/${t.key}.svg?download">${esc(say('share.download_qr_code'))}</a></p></div></li>`;
-    };
-    return {
-      title: say('share.share'), back: base,
-      body: `<p class="muted">Links to your site and its pages, and a QR code for each, for puppy packets, business cards and show tables. A link pasted into Facebook, Messenger or a text shows a picture card.${live ? '' : ' Publish your site first: these are the pages visitors can see.'}</p>
-        <ul class="share-list">${targets.map(card).join('')}</ul>
-        <p class="muted small">${esc(say('share.litters_and_albums_show'))}</p>`,
-    };
-  }
+  const { shareScreen } = shareScreens({ base, env, request, say, site, url });
 
   // ---------- one list of records, generic ----------
   async function collection(path, kind, scopeId, { back, parentTitle } = {}) {
@@ -1123,52 +1085,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     };
   }
 
-  // ---------- inbox (plan 3.10, decision 12) ----------
-  // An application: already on the simple waitlist, or a button to add them.
-  async function listedLine(msg) {
-    const on = await env.DB.prepare("SELECT id, status FROM waitlist_entries WHERE site_id = ? AND inquiry_id = ?").bind(site.id, msg.id).first();
-    if (on) return `<p class="muted small">${on.status === 'waiting' ? esc(say('inbox.on_your_waitlist')) : esc(say('inbox.on_your_waitlist_marked'))} <a href="${base}/waitlist">${esc(say('inbox.see_the_waitlist'))}</a></p>`;
-    if ((await kos()).linked) return '';
-    return `<p><a class="button" href="${base}/waitlist/new?from=${esc(msg.id)}">${esc(say('inbox.add_to_waitlist'))}</a></p>`;
-  }
-  async function inbox() {
-    const rest = url.pathname.slice(`${base}/inbox`.length);
-    const post = request.method === 'POST';
-    const m = rest.match(/^\/([0-9a-f-]{36})(\/delete|\/unread)?$/);
-    if (m) {
-      const msg = await env.DB.prepare('SELECT * FROM inquiries WHERE id = ? AND site_id = ?').bind(m[1], site.id).first();
-      if (!msg) return null;
-      if (post && m[2] === '/delete') { await env.DB.prepare('DELETE FROM inquiries WHERE id = ? AND site_id = ?').bind(msg.id, site.id).run(); return redirect(`${base}/inbox?note=deleted`); }
-      if (post && m[2] === '/unread') { await env.DB.prepare('UPDATE inquiries SET read_at = NULL WHERE id = ?').bind(msg.id).run(); return redirect(`${base}/inbox`); }
-      if (post || m[2]) return null;
-      if (!msg.read_at) await env.DB.prepare('UPDATE inquiries SET read_at = ? WHERE id = ?').bind(new Date().toISOString(), msg.id).run();
-      const application = msg.kind === 'application';
-      const subject = application ? `Re: your puppy application to ${site.kennel_name || site.subdomain}` : `Re: ${msg.topic || `your message to ${site.kennel_name || site.subdomain}`}`;
-      const mailto = `mailto:${encodeURIComponent(msg.email)}?subject=${encodeURIComponent(subject)}`;
-      const answers = application ? JSON.parse(msg.answers || '[]') : [];
-      // An application's answers, each question with what they wrote under it.
-      const text = application
-        ? (answers.length ? `<dl class="answers">${answers.map(([q, a]) => `<dt>${esc(q)}</dt><dd>${esc(a).replace(/\n/g, '<br>')}</dd>`).join('')}</dl>` : `<p class="muted">${esc(say('inbox.no_questions_answered'))}</p>`)
-        : `<p class="message">${esc(msg.message).replace(/\n/g, '<br>')}</p>`;
-      return {
-        title: msg.name, back: `${base}/inbox`,
-        body: `<section class="card"><p class="muted small">${esc(when(msg.received_at))}${msg.topic ? ` · ${esc(msg.topic)}` : ''}</p>
-          ${text}
-          <dl class="kv"><dt>${esc(say('inbox.email'))}</dt><dd>${esc(msg.email)}</dd>${msg.phone ? `<dt>${esc(say('inbox.phone'))}</dt><dd><a href="tel:${esc(msg.phone.replace(/[^\d+]/g, ''))}">${esc(msg.phone)}</a></dd>` : ''}</dl>
-          <p class="row"><a class="button primary" href="${esc(mailto)}">${esc(say('inbox.reply'))}</a><button type="button" data-copy="${esc(msg.email)}">${esc(say('inbox.copy_email'))}</button></p>
-          ${application ? await listedLine(msg) : ''}</section>
-          <form method="post" action="${base}/inbox/${msg.id}/unread"><button class="link">${esc(say('inbox.mark_as_unread'))}</button></form>
-          <form method="post" action="${base}/inbox/${msg.id}/delete" class="card danger"><button>${esc(say('inbox.delete_this_message'))}</button></form>`,
-      };
-    }
-    if (rest || post) return null;
-    const { results } = await env.DB.prepare('SELECT id, name, topic, message, received_at, read_at FROM inquiries WHERE site_id = ? ORDER BY received_at DESC LIMIT 200').bind(site.id).all();
-    return {
-      title: say('inbox.inbox'), back: base,
-      body: `${note(url)}${results.length ? `<ul class="items">${results.map((r) => `<li class="item${r.read_at ? '' : ' unread'}"><a href="${base}/inbox/${r.id}"><b>${r.read_at ? '' : '<span class="dot-new" aria-label="Unread"></span>'}${esc(r.name)}</b><span>${esc(when(r.received_at))} · ${esc(r.topic || r.message.slice(0, 80))}</span></a></li>`).join('')}</ul>` : `<section class="card"><p class="muted">${esc(say('inbox.no_messages_yet_messages'))}</p></section>`}
-        <p class="muted small">${esc(say('inbox.messages_are_kept_for'))}</p>`,
-    };
-  }
+  const { inbox } = inboxScreens({ base, env, kos, note, request, say, site, url });
 
   // ---------- the simple waitlist (plan 3.8) ----------
   async function waitlistScreen() {
@@ -1266,110 +1183,9 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     };
   }
 
-  // ---------- reviews to approve (decision 13) ----------
-  async function queue() {
-    const rest = url.pathname.slice(`${base}/reviews-queue`.length);
-    const post = request.method === 'POST';
-    const m = rest.match(/^\/([0-9a-f-]{36})\/(approve|decline)$/);
-    if (m && post) {
-      const r = await env.DB.prepare("SELECT id, photo_id FROM stories WHERE id = ? AND site_id = ? AND status = 'pending'").bind(m[1], site.id).first();
-      if (!r) return redirect(`${base}/reviews-queue`);
-      const t = new Date().toISOString();
-      if (m[2] === 'approve') {
-        await env.DB.batch([
-          env.DB.prepare("UPDATE stories SET status = 'approved', sort = (SELECT COALESCE(MAX(sort), -1) + 1 FROM stories WHERE site_id = ? AND status != 'pending') WHERE id = ?").bind(site.id, r.id),
-          env.DB.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(t, site.id),
-        ]);
-        return redirect(`${base}/reviews-queue?note=approved`);
-      }
-      const s2 = [env.DB.prepare('DELETE FROM stories WHERE id = ?').bind(r.id)];
-      if (r.photo_id) s2.push(env.DB.prepare('UPDATE photos SET removed_at = ? WHERE id = ? AND site_id = ?').bind(t, r.photo_id, site.id));
-      await env.DB.batch(s2);
-      return redirect(`${base}/reviews-queue?note=declined`);
-    }
-    if (rest || post) return null;
-    const { results } = await env.DB.prepare("SELECT * FROM stories WHERE site_id = ? AND status = 'pending' ORDER BY submitted_at").bind(site.id).all();
-    return {
-      title: say('queue.reviews_to_approve'), back: base,
-      body: `${note(url)}${results.map((r) => `<section class="card review-q">
-          <p><b>${esc(r.first_name)}</b>${r.town ? `, ${esc(r.town)}` : ''} <span class="muted small">· ${esc(when(r.submitted_at))}</span></p>
-          <p class="stars" aria-label="${r.rating} stars">${'★'.repeat(r.rating ?? 0)}</p>
-          <p class="message">${esc(r.quote).replace(/\n/g, '<br>')}</p>
-          ${r.puppy_name || r.home_month ? `<p class="muted small">${esc([r.puppy_name, r.home_month].filter(Boolean).join(' · '))}</p>` : ''}
-          ${r.photo_id ? `<img class="q-photo" src="${esc(photoUrl(r.photo_id))}" alt="Photo sent with the review">` : ''}
-          <p class="muted small">${esc(say('queue.they_agreed_to_it'))}</p>
-          <div class="row"><form method="post" action="${base}/reviews-queue/${r.id}/approve"><button class="primary">${esc(say('queue.approve'))}</button></form>
-          <form method="post" action="${base}/reviews-queue/${r.id}/decline"><button>${esc(say('queue.decline_and_delete'))}</button></form></div></section>`).join('') || `<section class="card"><p class="muted">${esc(say('queue.no_reviews_waiting_families'))}</p></section>`}
-        <p class="muted small">${esc(say('queue.an_approved_review_shows'))}</p>`,
-    };
-  }
+  const { queue } = queueScreens({ base, env, note, photoUrl, request, say, site, url });
 
-  // ---------- storage, download a copy, delete my site (plan 4.3) ----------
-  async function usage() {
-    const limits = await env.DB.prepare('SELECT storage_limit, photo_limit FROM sites WHERE id = ?').bind(site.id).first();
-    const used = await env.DB.prepare('SELECT COUNT(*) AS n, COALESCE(SUM(bytes), 0) AS bytes FROM photos WHERE site_id = ? AND removed_at IS NULL').bind(site.id).first();
-    return { ...used, ...limits };
-  }
-  const mb = (b) => `${Math.round(b / 1024 / 1024 * 10) / 10} MB`;
-  async function usageLine() {
-    const u = await usage();
-    const parts = [`${u.n} photo${u.n === 1 ? '' : 's'}${u.photo_limit ? ` of ${u.photo_limit}` : ''}`, `${mb(u.bytes)}${u.storage_limit ? ` of ${mb(u.storage_limit)}` : ''} used`];
-    const near = (u.storage_limit && u.bytes > u.storage_limit * 0.9) || (u.photo_limit && u.n > u.photo_limit * 0.9);
-    return `<p class="${near ? 'error' : 'muted'} small">${esc(parts.join(' · '))}${near ? '. Nearly full: remove photos you no longer use, or ask KennelPort for more room.' : ''}</p>`;
-  }
-
-  async function exportManifest() {
-    const content = await exportContent(env, site.id);
-    const { results: rows } = await env.DB.prepare('SELECT kind, name, email, phone, topic, message, answers, received_at FROM inquiries WHERE site_id = ? ORDER BY received_at').bind(site.id).all();
-    const msgs = rows.map(({ answers, ...m }) => (m.kind === 'application' ? { ...m, answers: JSON.parse(answers || '[]') } : m));
-    const { results: ph } = await env.DB.prepare('SELECT id, alt, type, width, height, created_at FROM photos WHERE site_id = ? AND removed_at IS NULL ORDER BY created_at').bind(site.id).all();
-    const t = await tags();
-    const names = new Map((await subjects(env, site.id)).map((x) => [x.subject, x.label]));
-    const date = new Date().toISOString().slice(0, 10);
-    return json({
-      filename: `${site.subdomain}-kennelport-${date}.zip`,
-      readme: `A copy of ${site.kennel_name || site.subdomain}'s KennelPort website, made ${date}.\n\n`
-        + 'content.json: everything on the site (dogs, litters, puppies, pages, reviews, extras...), in the form KennelPort can load back.\n'
-        + 'messages.json: the messages and applications in your Inbox.\nwaitlist.json: your waitlist, in order, and the families marked fulfilled.\nphotos.json: each photo\'s description and what it\'s of; the photos are in photos/, named by their id.\n',
-      content, messages: msgs,
-      waitlist: (await env.DB.prepare('SELECT name, list_name, email, phone, wants, added_on, status, done_at FROM waitlist_entries WHERE site_id = ? ORDER BY status DESC, sort').bind(site.id).all()).results,
-      photos: ph.map((p) => ({ ...p, of: (t.get(p.id) ?? []).filter((x) => names.has(x)).map((x) => names.get(x)), file: `${p.id}.${p.type === 'image/webp' ? 'webp' : 'jpg'}`, url: `${base}/photos/${p.id}/full` })),
-    });
-  }
-
-  async function account() {
-    const rest = url.pathname.slice(`${base}/account`.length);
-    const owner = site.role === 'owner';
-    const fresh = Date.now() - Date.parse(user.signedInAt) <= FRESH_SIGN_IN_MS;
-    const storage = await usageLine();
-    const render = (err) => ({
-      title: say('account.your_site_2'), back: base,
-      body: `<section class="card"><h2>${esc(say('account.storage'))}</h2>${storage}</section>
-        <section class="card"><h2>${esc(say('account.download_a_copy_2'))}</h2><p class="muted">${esc(say('account.a_zip_of_your'))}</p>
-          <p><button id="export" data-manifest="${base}/export.json">${esc(say('account.download_a_copy'))}</button></p><p id="export-status" class="muted small" role="status"></p></section>
-        ${owner ? `<section class="card danger"><h2>${esc(say('account.delete_my_site_2'))}</h2>
-          <p>${esc(say('account.this_deletes_every_dog'))} <strong>${esc(say('account.straight_away'))}</strong>${esc(say('account.there_s_no_undo'))}</p>
-          <p class="muted small">${esc(say('account.your_address_then_shows'))}</p>
-          ${errorBox(err)}
-          ${fresh ? `<form method="post" action="${base}/account/delete">
-            <label>${esc(say('account.type'))} <strong>${esc(site.subdomain)}</strong> ${esc(say('account.to_confirm'))}<input name="confirm" autocomplete="off" autocapitalize="none" spellcheck="false" required></label>
-            <button>${esc(say('account.delete_my_site'))}</button></form>`
-          : `<p>${esc(say('account.for_safety_deleting_needs'))} <form method="post" action="/signout" class="inline"><button class="link">${esc(say('account.sign_out'))}</button></form>${esc(say('account.sign_in_again_then'))}</p>`}
-        </section>` : ''}
-        <script src="/_kp/m/zip.js?v=${APP_VERSION}" defer></script>`,
-    });
-    if (rest === '/delete' && request.method === 'POST') {
-      if (!owner) return { title: say('account.your_site'), back: base, body: `<p class="error">${esc(say('account.only_the_owner_can'))}</p>` };
-      if (!fresh) return render(say('account.sign_in_again_first'));
-      try { await closeSite(env, site.id, (await request.formData()).get('confirm')); } catch (err) {
-        if (err instanceof SiteError) return render(sayMessage('account', err.message, say));
-        throw err;
-      }
-      return new Response(null, { status: 303, headers: { location: '/deleted', 'cache-control': 'no-store' } });
-    }
-    if (rest || request.method === 'POST') return null;
-    return render();
-  }
+  const { usageLine, exportManifest, account } = accountScreens({ base, env, errorBox, request, say, site, tags, url, user });
 
   // ---------- routing ----------
   return async function route() {
