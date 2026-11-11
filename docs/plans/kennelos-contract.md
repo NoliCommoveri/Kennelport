@@ -104,8 +104,7 @@ block may read, with its name for the owner, its kind (`bool`, `enum`, `text`, `
   shows it (`available_now`, `available_soon`, `older`, `planned`, `past`); each parent's
   dog fields as `dam.<field>` and `sire.<field>`, and `a_parent.<field>` for either one
   (so "from champions" is `a_parent.title includes CH`, "from imports" is
-  `a_parent.import yes`); `pups.color` (every pup's colour), and `standard_colors`, yes
-  when every pup's colour is on the breed's standard list (open question 4). A parent
+  `a_parent.import yes`); `pups.color` (its pups' colours). A parent
   that isn't a dog on the site (an outside sire by name) has only its name until C7
   sends lineage, so its fields read as unknown and a condition on them doesn't hold;
 - a test fails when a field in `model.js` is in neither the list nor a short "not for
@@ -119,6 +118,11 @@ A data block chooses its records one of two ways:
   Ops by kind: is / is not / is one of (enum, text), has any / has none / includes
   (list, text), before / after (date), yes / no (bool). No nested and/or: one list covers
   every request so far, and a second block covers "or".
+  A colour (a dog's, a pup's, a litter's pups') is chosen with a **colour picker**: the
+  colours the site holds, as KennelOS sends them (case and spacing evened out), each a
+  tick. "Standard colours" is a block with black & white, brindle & white and seal & white
+  ticked and fawn, blue and lilac left off (the owner, 2026-11-11). For a litter, the
+  owner chooses whether every pup or any pup must be one of them.
 - **Picks** (`b.pick`): record ids, in her order. A picked record that has left the site
   drops out quietly and returns if it comes back. A block that is picks only and has
   none left hides itself, as an empty block does now.
@@ -251,9 +255,9 @@ Each step is its own branch and merge, with at most one migration.
    status is rewritten).
 2. **B1, B2, B4.** The field list, conditions, grouping and order for Dog cards, Pups and
    Litter cards blocks; old blocks read as conditions (a Litter cards block's stages
-   become `stage is one of`). The admin's block screen. Litter fields that need data not
-   sent yet (imports: step 6; standard colours: open question 4) join the list when it
-   comes. No migration.
+   become `stage is one of`). The admin's block screen, with the colour picker. Litter
+   fields that need data not sent yet (imports: step 6) join the list when it comes. No
+   migration.
 3. **B3, B5.** Pick and Leave out for all three, the breeder's picking screen, the
    Featured block. One migration if picks are kept outside the block (see the open
    question).
@@ -283,11 +287,8 @@ step that changes files under `public/_kp/` says which, and asks before a versio
 3. **Pick blocks:** is the list of picked dogs the breeder's (kept as her content, so a
    template change doesn't lose it) or part of the block (the owner's)? The plan assumes
    hers.
-4. **Colour and standard colours:** "litters from standard colours" needs, for each
-   breed, which colours are standard (for Bostons the AKC's: black, brindle or seal, each
-   with white). Where does that list live: one KennelPort keeps per breed, one the owner
-   sets per site, or a colour list in KennelOS that pups are marked from? And is a
-   litter "from standard colours" when every pup is, or when both parents are?
+4. ~~Colour~~ Answered 2026-11-11: a colour picker over the colours the site holds, no
+   list kept anywhere; "standard colours" is the owner's ticks on a block.
 5. **Her own tags:** allowed at all, or only the owner's rule tags to begin with?
 6. ~~Pups and litters~~ Answered 2026-11-11: litters get the same as dogs, in step 2
    (conditions, grouping, order) and step 3 (picks, leave out).

@@ -791,3 +791,9 @@ with new sections and a new building order. Docs only; nothing built yet.
   fields (`dam.`, `sire.`, `a_parent.`), pups' colours and `standard_colors`. New for all
   three kinds: Leave out (`b.omit`), records a conditions block skips. Question 4 now asks
   where the standard colours list lives. Docs only.
+
+## 2026-11-11: plan: colours by picker
+
+- `plans/kennelos-contract.md` B1/B2: no standard-colours list or field. A colour
+  condition uses a colour picker over the colours the site holds; "standard colours" is a
+  block with those ticked (for a litter: every pup or any pup). Open question 4 answered.
