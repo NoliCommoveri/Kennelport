@@ -12,6 +12,7 @@
 // pup's status row, a partner kennel's name): `rc`, the record context, made by
 // render/parts.js recordCtx. This file stays free of the renderer.
 import { DOG_FIELDS, PUPPY_FIELDS, LITTER_FIELDS } from './model.js';
+import { DOG_PLACE_WORDS } from './rules.js';
 
 // What a condition can ask of each kind of field, in the owner's words.
 export const OPS = Object.freeze({
@@ -49,13 +50,43 @@ function yearsSince(ymd, today) {
 const SEX = { female: 'Girl', male: 'Boy' };
 // A group's heading, where it differs from the value's name ("Sex is Girl", but Girls over the group).
 const SEX_GROUPS = { female: 'Girls', male: 'Boys' };
-const DOG_STATUS = { active: 'Active', retired: 'Retired', remembered: 'In memory' };
+// A dog's life stage (KennelOS's five, in the site's words: content/rules.js DOG_PLACES),
+// read from what's stored: `status`, then for an active dog `for_sale` before `upcoming`
+// (the Dogs page's own order, render/parts.js dogGroups).
+export const LIFE_STAGE = DOG_PLACE_WORDS;
+export function lifeStage(d) {
+  if (d.status === 'retired' || d.status === 'remembered') return d.status;
+  return d.for_sale ? 'for_sale' : d.upcoming ? 'upcoming' : 'breeding';
+}
+// Where a dog lives: with her (her own, or co-owned and living with her), with a
+// co-owner, or not hers at all (an outside dog: a stud, a featured offspring she sold).
+export const RESIDENCE = { home: 'With me', co_owner: 'With a co-owner', not_mine: 'Not my dog' };
+export const residence = (d) => (d.outside ? 'not_mine' : d.lives_away ? 'co_owner' : 'home');
+// How far back a dog's line is followed on the site (descends_from, offspring on a page).
+export const GENERATIONS = 4;
 // A pup's status as the site reads it: its status row (content/rules.js STATUS_ROWS).
 export const PUP_STATUS = { available: 'Available', not_open: 'Available, deposits not open yet', placed: 'Placed (shows as Reserved)', staying: 'Joining the program', undecided: 'Still deciding', hidden: 'Health hold' };
 // A litter's stage as the site shows it, on the day.
 export const LITTER_STAGE = { available_now: 'Available now', available_soon: 'Available soon (born, deposits not open)', older: 'Older puppies (past going home)', planned: 'Planned', past: 'Past' };
 
 const f = (label, kind, read, extra = {}) => ({ label, kind, read, ...extra });
+const parentName = (d, role, rc) => rc.dogById(d[`${role}_id`])?.call_name ?? d[`${role}_name`] ?? null;
+// The dogs on the site a dog descends from, nearest first, GENERATIONS back. A line
+// that loops (a mistake in the records) stops where it would repeat.
+export function ancestorsOf(d, rc) {
+  const out = [];
+  const seen = new Set([d.id]);
+  let gen = [d];
+  for (let g = 0; g < GENERATIONS && gen.length; g++) {
+    const next = [];
+    for (const x of gen) for (const role of ['sire', 'dam']) {
+      const p = rc.dogById(x[`${role}_id`]);
+      if (p && !seen.has(p.id)) { seen.add(p.id); out.push(p); next.push(p); }
+    }
+    gen = next;
+  }
+  return out;
+}
 const own = (k) => (r) => r[k] ?? null;
 
 const DOG = {
@@ -68,16 +99,18 @@ const DOG = {
   weight: f('Weight', 'text', own('weight')),
   date_of_birth: f('Date of birth', 'date', own('date_of_birth')),
   titles: f('Titles (as written)', 'text', own('titles')),
-  status: f('Status', 'enum', own('status'), { values: DOG_STATUS }),
-  upcoming: f('Up and coming', 'bool', (d) => flag(d.upcoming), { no: 'Not up and coming' }),
-  for_sale: f('Looking for a home', 'bool', (d) => flag(d.for_sale), { no: 'Not looking for a home' }),
+  life_stage: f('Life stage', 'enum', lifeStage, { values: LIFE_STAGE }),
+  residence: f('Lives', 'enum', residence, { values: RESIDENCE }),
   price: f('Price', 'number', own('price')),
   co_owned: f('Co-owned', 'bool', (d) => flag(d.co_owned), { no: 'Not co-owned' }),
-  lives_away: f('Lives with a co-owner', 'bool', (d) => flag(d.lives_away), { no: 'Lives at home' }),
   lives_with: f('The kennel it lives with', 'text', (d, rc) => rc.partnerName(d.lives_with_kennel_id)),
   co_owned_with: f('Co-owned with (kennels)', 'list', (d, rc) => (d.co_owned_with_ids ?? []).map((id) => rc.partnerName(id)).filter(Boolean)),
-  outside: f("Outside dog (another kennel's)", 'bool', (d) => flag(d.outside), { no: 'Her own dog (not an outside dog)' }),
-  owner_name: f("Outside dog's owner", 'text', own('owner_name')),
+  owner_name: f("Owner (not my dog)", 'text', own('owner_name')),
+  // Its parents: a dog on the site, or a name typed for one that isn't.
+  'sire.call_name': f("Sire's name", 'text', (d, rc) => parentName(d, 'sire', rc)),
+  'dam.call_name': f("Dam's name", 'text', (d, rc) => parentName(d, 'dam', rc)),
+  parent: f('A parent (sire or dam)', 'list', (d, rc) => ['sire', 'dam'].map((r) => parentName(d, r, rc)).filter(Boolean)),
+  descends_from: f(`Descends from (up to ${GENERATIONS} generations back)`, 'list', (d, rc) => ancestorsOf(d, rc).map((a) => a.call_name)),
   // Worked out.
   has_titles: f('Has titles', 'bool', (d) => titlesOf(d).length > 0, { no: 'No titles' }),
   title: f('A title', 'list', titlesOf),
@@ -115,7 +148,7 @@ const LITTER = {
 };
 // Each parent's dog fields (B1): dam.x, sire.x, and a_parent.x for either one.
 const lower = (t) => `${t.charAt(0).toLowerCase()}${t.slice(1)}`;
-for (const [k, d] of Object.entries(DOG)) {
+for (const [k, d] of Object.entries(DOG).filter(([k]) => !['sire.call_name', 'dam.call_name'].includes(k))) {
   const of = (role) => (l, rc) => { const p = parent(l, role, rc); return p === UNKNOWN ? UNKNOWN : d.read(p, rc); };
   const named = (who) => ({ label: `${who}: ${lower(d.label)}`, ...(d.no ? { no: `${who}: ${lower(d.no)}` } : {}) });
   LITTER[`dam.${k}`] = { ...d, ...named('Dam'), read: of('dam') };
@@ -131,7 +164,10 @@ export const FIELDS = Object.freeze({ dog: Object.freeze(DOG), puppy: Object.fre
 // The model's fields no block reads: photos, addresses, words, system settings, and
 // what the list above reads another way (a litter's dam and sire through dam.x).
 export const NOT_FOR_BLOCKS = Object.freeze({
-  dog: ['slug', 'bio', 'photo_id', 'died_on', 'health_display', 'show_on_site', 'owner_url'],
+  // status, upcoming and for_sale are read as life_stage; lives_away and outside as
+  // residence; a dog's sire and dam through sire.call_name, dam.call_name and parent.
+  dog: ['slug', 'bio', 'photo_id', 'died_on', 'health_display', 'show_on_site', 'owner_url', 'status', 'upcoming', 'for_sale', 'lives_away', 'outside',
+    'sire', 'dam', 'sire_name', 'dam_name'],
   puppy: ['slug', 'bio', 'photo_id', 'more_photos_url'],
   litter: ['slug', 'dam', 'sire', 'dam_name', 'sire_name', 'expected_label', 'ready_label', 'summary', 'price_female', 'price_male',
     'full_reg_female', 'full_reg_male', 'deposit_female', 'deposit_male', 'price_note', 'show_placed', 'ask_full_reg', 'show_puppy_photos', 'show_on_site'],

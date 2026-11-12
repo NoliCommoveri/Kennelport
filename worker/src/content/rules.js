@@ -66,6 +66,13 @@ export const WORDS = [
     ['outside_owner', 'Owned by {kennel}', 'On a card: an outside dog\'s owner ({kennel})'],
     ['outside_fact', 'Owned by', 'On an outside dog\'s page, in its facts'],
   ]],
+  ['dogs', 'Family', [
+    ['sire_fact', 'Sire', 'On a dog\'s page, in its facts'], ['dam_fact', 'Dam', 'On a dog\'s page, in its facts'],
+    ['offspring_1', 'Offspring', 'On a dog\'s page: its sons and daughters on the site'],
+    ['offspring_2', 'Grand offspring', 'On a dog\'s page: their sons and daughters'],
+    ['offspring_3', 'Great-grand offspring', 'On a dog\'s page: the next generation'],
+    ['offspring_4', 'Great-great-grand offspring', 'On a dog\'s page: the one after'],
+  ]],
   ['wording', 'Litter cards', [
     ['litter_current', 'Current litter', 'A current litter'], ['litter_coming', 'Coming up', 'Born, deposits not open yet'],
     ['litter_older', 'Older puppies', 'Past its going-home date'], ['litter_planned', 'Planned litter', 'Planned, with no label'],

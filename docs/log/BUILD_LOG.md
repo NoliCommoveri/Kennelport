@@ -878,3 +878,50 @@ with new sections and a new building order. Docs only; nothing built yet.
 - Tests: `fields.test.js` (new), plus `blocks.test.js` and `outside.test.js` moved to
   conditions (an editor test drives the colour picker and group headings through the
   form). All 374 pass.
+
+## 2026-11-12: Life stage and Lives; a dog's sire and dam; offspring chained (migration 0030)
+
+- The owner's decisions, the same day (`plans/kennelos-contract.md` B1 and B6, rewritten).
+- **Life stage and Lives** (`content/fields.js`). For blocks, a dog's status plus its
+  up-and-coming and for-sale flags are one field, **Life stage**: KennelOS's five in
+  the site's words (`rules.js` DOG_PLACE_WORDS). Lives with a co-owner plus Outside dog
+  are one field, **Lives**: With me, With a co-owner, Not my dog.
+  - Both are worked out from the stored columns, so no data changes.
+  - A new Dog cards block is Breeding dog and With me.
+  - Old blocks (`blocks.js` `legacyWhere`) keep each stage and each place a dog like it
+    would have been kept by its old filter. Identical over the same 1,700 combinations.
+    An old filter that kept nothing reads as two conditions no dog meets.
+  - Saving a dog keeps its flags to one life stage (`records.js` `stageRules`, also on
+    import): only an active dog is up and coming or looking for a home, and looking for
+    a home wins if both are ticked, as the Dogs page already shows it. A live dog
+    stored with both changes only when next saved.
+- **A dog's sire and dam** (migration 0030 adds `sire_id`, `dam_id`, `sire_name`,
+  `dam_name` to `dogs`; additive, and it applies itself on deploy).
+  - Each parent is a dog on the site or a typed name, as for a litter.
+  - Site Manager dog form: a Parents section; a dog isn't offered as its own parent,
+    and saving one is refused.
+  - Import and export name parents by slug. Removing a dog clears it as a parent.
+  - A parent not shown on the site is published as its name only, never linked.
+- **The dog's page**: Sire and Dam in its facts (linked when on the site; on by default
+  in `PROFILE_FACTS`). A new **Offspring** part (`offspring`, on by default, under the
+  photo after Litters) shows its offspring on the site, then grand offspring and on, up
+  to four generations (`render/parts.js` `descendantsOf`), as light cards a generation
+  at a time. A featured offspring she sold is a Not my dog record with her dog as sire
+  or dam; its own offspring chain on from it.
+  - Today no dog has parents, so no live page changes until she sets some.
+  - A site whose owner changed the dog page's items or facts gets the new ones only
+    when she adds them.
+- **Conditions on family**: `parent`, `descends_from` (four generations; a line that
+  loops stops), `sire.call_name`, `dam.call_name`.
+- Wording:
+  - The site's new words are in the Wording screen's list (`rules.js` WORDS, Family):
+    `sire_fact`, `dam_fact`, `offspring_1`…`offspring_4`.
+  - The Site Manager's new labels and hints are in `forms.js` LABELS: sire_id, dam_id,
+    sire_name, dam_name, and Outside dog reworded to include a sold puppy she features.
+    They're the owner's to reword.
+  - The "own parent" error is in `records.js` and `io.js` with the other content errors,
+    which aren't in the wording list yet.
+- Checked in a browser at 390px and 1280px (Boone's offspring, Ziva's facts, her
+  Parents section, the Life stage and Lives ticks): no sideways scroll, no script errors.
+- Tests: `dog-parents.test.js` (new); `fields.test.js` and `blocks.test.js` moved to
+  the two fields. All 379 pass. No versioned file changed.

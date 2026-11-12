@@ -79,6 +79,12 @@ export const DOG_FIELDS = {
   outside: BOOL,
   owner_name: S(80),
   owner_url: URL_,
+  // Its parents (migration 0030): a dog on the site by slug here (the forms use ids,
+  // records.js), or a name typed for one that isn't.
+  sire: { type: 'dogref' },
+  dam: { type: 'dogref' },
+  sire_name: S(60),
+  dam_name: S(60),
 };
 
 // A partner kennel (docs/plans/done/co-owned-dogs.md): one her co-owned dogs are shared

@@ -8,7 +8,7 @@
 import {
   esc, attr, fmtDate, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, litterCard, parentCards, litterFacts, dogCard, coCard,
   besideCard, partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, paySection,
-  payShown, litterChoices, ANY_LITTER, ABOUT_LABEL, dogGroups, dogsFor, blockRows, blockGroups, recordCtx, depositsAhead, soonSection, rulesOf, pricesOff, sitePrice, word, sexWord, fullRegLink,
+  payShown, litterChoices, ANY_LITTER, ABOUT_LABEL, dogGroups, dogsFor, blockRows, blockGroups, recordCtx, descendantsOf, depositsAhead, soonSection, rulesOf, pricesOff, sitePrice, word, sexWord, fullRegLink,
   fullRegSurchargeRow, galleryHtml, faqBlock, addedOn, addedWords, addedRow, customPage,
 } from './parts.js';
 import { embedView } from '../embeds.js';
@@ -599,10 +599,18 @@ export function dog(snap, ctx, slug) {
     fact.lives_with = ['Lives with', k ? `<span class="pk">${partnerLogo(snap, k)}${partnerLink(k)}</span>` : 'A partner kennel'];
   }
   // An outside dog (another kennel's): who owns it, linked to their website.
+  // Its sire and dam: linked when on the site, else the name typed for them.
+  for (const role of ['sire', 'dam']) {
+    const p = d[`${role}_id`] && snap.dogs.find((x) => x.id === d[`${role}_id`]);
+    const v = p ? `<a href="/dogs/${attr(p.slug)}">${esc(p.call_name)}</a>` : d[`${role}_name`] ? esc(d[`${role}_name`]) : null;
+    if (v) fact[role] = [word(snap, `${role}_fact`), v];
+  }
   if (d.outside && d.owner_name) fact.owner = [word(snap, 'outside_fact'), d.owner_url ? `<a href="${attr(d.owner_url)}" rel="noopener">${esc(d.owner_name)}</a>` : esc(d.owner_name)];
   const facts = pr.facts.map((k) => fact[k]).filter(Boolean);
   const tests = d.health.length ? `<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${h.verify_url ? `<a href="${attr(h.verify_url)}" rel="noopener">${esc(h.result)}</a>` : esc(h.result)}</span></li>`).join('')}</ul>` : '';
   const litters = snap.litters.filter((l) => l.dam_id === d.id || l.sire_id === d.id);
+  // Offspring, grand offspring and on: light cards a generation at a time.
+  const offspring = descendantsOf(snap, d).map((gen, i) => `<div class="mt-26">${head(word(snap, `offspring_${i + 1}`), null)}${slider(gen.map((x) => coCard(snap, x)), { cls: 'light' })}</div>`).join('');
   const sale = saleOf(snap, ctx, d);
   return {
     title: d.call_name, section: '/dogs', description: d.bio || `${d.call_name}, ${[snap.site.breed, d.role].filter(Boolean).join(' ')}`, image: d.photo_id,
@@ -619,8 +627,9 @@ export function dog(snap, ctx, slug) {
       badges: badgeRow(snap, 'dog', { inWrap: true }),
       embeds: embedsBlock(snap, `dog:${d.id}`, { inWrap: true }),
       litters: litters.length ? `<div class="mt-26">${head('Litters', null)}<div class="litters">${litters.map((l) => litterCard(snap, l, ctx)).join('')}</div></div>` : '',
+      offspring,
       albums: dogAlbums(snap, ctx, d),
-    }, { crumb: `<p class="breadcrumb"><a href="/dogs">${esc(label(snap, 'dogs'))}</a></p>`, photo, spaced: new Set(['badges', 'embeds', 'litters', 'albums']) }),
+    }, { crumb: `<p class="breadcrumb"><a href="/dogs">${esc(label(snap, 'dogs'))}</a></p>`, photo, spaced: new Set(['badges', 'embeds', 'litters', 'offspring', 'albums']) }),
   };
 }
 

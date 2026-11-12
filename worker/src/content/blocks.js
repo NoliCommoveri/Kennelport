@@ -14,7 +14,8 @@
 // the top block, two litters at most). Those stay as today on every existing site;
 // the prototype's Home goes into the Website template for new sites (step 5).
 import { PAGES, MENU_GROUPS, CUSTOM_KEY, slugify, COLLAGE_LAYOUTS, FRAMES, FOCUS } from './model.js';
-import { BLOCK_KIND, cleanWhere, cleanOrder, cleanGroup, cleanGroupWords, WHERE_MAX, TICK_OPS, FIELDS } from './fields.js';
+import { BLOCK_KIND, cleanWhere, cleanOrder, cleanGroup, cleanGroupWords, WHERE_MAX, TICK_OPS, FIELDS, LIFE_STAGE, RESIDENCE } from './fields.js';
+import { DOG_PLACES } from './rules.js';
 
 export class BlockError extends Error {}
 
@@ -153,19 +154,29 @@ const linkDefault = () => ({ to: 'page', page: 'waitlist' });
 // Blocks stored before (B4) had fixed filters, `f`: they read as the same conditions,
 // with identical results, and are stored in the new form the next time they're saved.
 // A litter's stored stage `current` is every stage the site shows a born litter in.
-const LEGACY_FLAGS = [['upcoming', 'upcoming'], ['sale', 'for_sale'], ['away', 'lives_away'], ['outside', 'outside']];
+// A dog's old filters were its status and four yes/no flags. They read as its life stage
+// and where it lives: each stage (rules.js DOG_PLACES: its status and flags) and each
+// place it can live is kept when the old filter would have kept a dog like that.
+const RESIDES = { home: [0, 0], co_owner: [1, 0], not_mine: [0, 1] };
 const LEGACY_STAGE = { current: ['available_now', 'available_soon', 'older'], planned: ['planned'], past: ['past'] };
+// None kept: two conditions no dog meets together (one condition with nothing ticked
+// would leave nothing out).
+const nobody = (field, v) => [{ field, op: 'is', value: v }, { field, op: 'is_not', value: v }];
+function oneOf(field, kept, all) {
+  if (kept.length === all.length) return [];
+  return kept.length ? [{ field, op: 'one_of', value: kept }] : nobody(field, all[0]);
+}
 export const LEGACY_DOG_ORDER = Object.freeze({ name: 'call_name:up', age: 'date_of_birth:up', young: 'date_of_birth:down' });
 function legacyWhere(b) {
   if (b.type === 'dogs') {
     const f = b.f ?? {};
-    const where = [{ field: 'status', op: 'one_of', value: list(f.status, DOG_STATUS) ?? ['active'] }];
+    const status = list(f.status, DOG_STATUS) ?? ['active'];
+    const flag = (k, has) => { const v = pick(f[k], ANY3, 'no'); return v === 'any' || (v === 'only' ? Boolean(has) : !has); };
+    const stages = Object.keys(LIFE_STAGE).filter((k) => { const [st, up, sale] = DOG_PLACES[k]; return status.includes(st) && flag('upcoming', up) && flag('sale', sale); });
+    const places = Object.keys(RESIDENCE).filter((k) => flag('away', RESIDES[k][0]) && flag('outside', RESIDES[k][1]));
+    const where = [...oneOf('life_stage', stages, Object.keys(LIFE_STAGE)), ...oneOf('residence', places, Object.keys(RESIDENCE))];
     const sex = pick(f.sex, SEXES, 'any');
     if (sex !== 'any') where.push({ field: 'sex', op: 'is', value: sex });
-    for (const [k, field] of LEGACY_FLAGS) {
-      const v = pick(f[k], ANY3, 'no');
-      if (v !== 'any') where.push({ field, op: v === 'only' ? 'yes' : 'no' });
-    }
     return where;
   }
   if (b.type === 'litters') {
@@ -176,7 +187,7 @@ function legacyWhere(b) {
 }
 // Today's defaults, as legacyWhere reads a block with no filters (written out: Home's
 // defaults are made while this file loads).
-const DOGS_WHERE = () => [{ field: 'status', op: 'one_of', value: ['active'] }, ...LEGACY_FLAGS.map(([, field]) => ({ field, op: 'no' }))];
+const DOGS_WHERE = () => [{ field: 'life_stage', op: 'one_of', value: ['breeding'] }, { field: 'residence', op: 'one_of', value: ['home'] }];
 const LITTERS_WHERE = () => [{ field: 'stage', op: 'one_of', value: [...LEGACY_STAGE.current, ...LEGACY_STAGE.planned] }];
 const PUPS_WHERE = () => [{ field: 'status', op: 'one_of', value: ['available', 'not_open'] }];
 
@@ -958,7 +969,7 @@ export const PROFILE_ITEMS = Object.freeze({
     faq: 'FAQ spot: the questions she ticks for every dog', role: 'Breed and role', name: 'Call name', reg: 'Registered name', facts: 'Facts',
     bio: 'Bio', sale: 'Looking for a home: price and “Ask about”', tests: 'Health testing (with verify links)', share: 'Share button',
     badges: 'Badge row: the badges she ticks for every dog', embeds: 'Videos and posts', litters: "The dog's litters",
-    albums: 'Albums with a photo tagged as the dog',
+    albums: 'Albums with a photo tagged as the dog', offspring: 'Offspring on the site, then grand offspring and on (four generations)',
   },
   puppy: {
     faq: 'FAQ spot: the questions she ticks for every puppy', status: 'Status', name: 'Name', facts: 'Facts', bio: 'Bio',
@@ -975,13 +986,13 @@ export const PROFILE_FIXED = Object.freeze({ dog: ['name'], puppy: ['name'], lit
 export const PROFILE_ONLY = Object.freeze({ dog: {}, puppy: {}, litter: { pair: 'head', summary: 'head', faq: 'body', parents: 'body', facts: 'body', note: 'body', fullreg: 'body', share: 'body', pups: 'body', badges: 'body', embeds: 'body', albums: 'body' } });
 // The facts on a dog's and a puppy's page, today's order.
 export const PROFILE_FACTS = Object.freeze({
-  dog: { sex: 'Sex', color: 'Color', born: 'Born', weight: 'Weight', registry: 'Registry', titles: 'Titles', co_owned: 'Co-owned with', lives_with: 'Lives with', owner: 'Owned by (outside dogs)' },
+  dog: { sex: 'Sex', color: 'Color', born: 'Born', weight: 'Weight', registry: 'Registry', titles: 'Titles', sire: 'Sire', dam: 'Dam', co_owned: 'Co-owned with', lives_with: 'Lives with', owner: 'Owned by (outside dogs)' },
   puppy: { sex: 'Sex', color: 'Color', collar: 'Collar', status: 'Status', price: 'Price', registration: 'Registration', registry: 'Registry', parents: 'Parents', born: 'Born' },
 });
 // Today's pages: each part's items in order. What isn't listed is off (a dog's
 // badge row: today's dog pages have none).
 export const PROFILE_DEFAULT = Object.freeze({
-  dog: { parts: { above: ['faq'], side: ['role', 'name', 'reg', 'facts', 'bio', 'sale', 'tests', 'share'], below: ['embeds', 'litters', 'albums'] }, facts: Object.keys(PROFILE_FACTS.dog) },
+  dog: { parts: { above: ['faq'], side: ['role', 'name', 'reg', 'facts', 'bio', 'sale', 'tests', 'share'], below: ['embeds', 'litters', 'offspring', 'albums'] }, facts: Object.keys(PROFILE_FACTS.dog) },
   puppy: { parts: { above: ['faq'], side: ['status', 'name', 'facts', 'bio', 'ask', 'surcharge', 'notice', 'share'], below: ['badges', 'photos', 'albums'] }, facts: Object.keys(PROFILE_FACTS.puppy) },
   litter: { parts: { head: ['pair', 'summary'], body: ['faq', 'parents', 'facts', 'note', 'fullreg', 'share', 'pups', 'badges', 'embeds', 'albums'] } },
 });

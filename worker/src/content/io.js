@@ -24,7 +24,7 @@ import {
   CUSTOM_KEY, CUSTOM_PAGE, ADDED_BLOCK_FIELDS,
 } from './model.js';
 import { PROVIDERS } from '../embeds.js';
-import { coOwnedRules, outsideRules, unlinkPartnerStatements } from './records.js';
+import { coOwnedRules, outsideRules, stageRules, unlinkPartnerStatements } from './records.js';
 
 const SECTIONS = ['site', 'pages', 'home', 'blocks', 'dogs', 'litters', 'reviews', 'steps', 'expanders', 'extras', 'products', 'partners', 'payment', 'questions', 'albums', 'embeds'];
 const MAX_ITEMS = 200;
@@ -134,6 +134,13 @@ export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = ne
       return { ...dog, health };
     });
     uniqueSlugs(out.dogs, 'dogs');
+    // A dog's sire and dam: another dog in the list.
+    const slugs = new Set(out.dogs.map((d) => d.slug));
+    out.dogs.forEach((d, i) => {
+      for (const role of ['sire', 'dam']) {
+        if (d[role] && (!slugs.has(d[role]) || d[role] === d.slug)) throw new ContentError(`dogs[${i}].${role}`, d[role] === d.slug ? "a dog can't be its own parent" : `no dog with slug "${d[role]}"`);
+      }
+    });
   }
   const dogSlugs = out.dogs ? new Set(out.dogs.map((d) => d.slug)) : existingDogSlugs;
 
@@ -304,8 +311,8 @@ export async function importContent(env, siteId, doc) {
 
   if (clean.dogs) {
     clean.dogs.forEach((d, i) => {
-      const { health, lives_with, co_owned_with, ...rest } = d;
-      const dog = outsideRules({ ...rest, outside: rest.outside ?? 0 });
+      const { health, lives_with, co_owned_with, sire, dam, ...rest } = d;
+      const dog = outsideRules(stageRules({ ...rest, outside: rest.outside ?? 0 }));
       const kennels = coOwnedRules({
         co_owned: dog.co_owned ?? 0, lives_away: dog.lives_away ?? 0,
         lives_with_kennel_id: lives_with ? partnerId.get(lives_with.toLowerCase()) : null,
@@ -318,6 +325,10 @@ export async function importContent(env, siteId, doc) {
       }));
     });
     const slugs = clean.dogs.map((d) => d.slug);
+    // Parents, once every dog is in: each by slug (none: cleared).
+    const dogId = '(SELECT id FROM dogs WHERE site_id = ? AND slug = ?)';
+    clean.dogs.forEach((d) => s.push(db.prepare(`UPDATE dogs SET sire_id = ${dogId}, dam_id = ${dogId} WHERE site_id = ? AND slug = ?`)
+      .bind(siteId, d.sire ?? null, siteId, d.dam ?? null, siteId, d.slug)));
     // Health results: replaced whole for every dog in the import.
     s.push(db.prepare(`DELETE FROM health_results WHERE site_id = ?`).bind(siteId));
     clean.dogs.forEach((d) => d.health.forEach((h, j) => {
@@ -469,6 +480,8 @@ export async function exportContent(env, siteId) {
   doc.dogs = dogs.map((d) => ({
     ...bools(pick(strip(d, SYSTEM), Object.keys(DOG_FIELDS)), ['show_on_site', 'upcoming', 'for_sale', 'co_owned', 'lives_away', 'outside']),
     ...kennelNames(d),
+    ...(d.sire_id && slugOf[d.sire_id] ? { sire: slugOf[d.sire_id] } : {}),
+    ...(d.dam_id && slugOf[d.dam_id] ? { dam: slugOf[d.dam_id] } : {}),
     health: health.filter((h) => h.dog_id === d.id).map((h) => bools(pick(strip(h, SYSTEM), Object.keys(HEALTH_FIELDS)), ['normal', 'show'])),
   }));
 

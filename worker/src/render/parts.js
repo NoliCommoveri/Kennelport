@@ -1,7 +1,7 @@
 // Pieces of the "ak" template shared by its pages: formatting, photos, cards and
 // the menu. Every value from a snapshot passes through esc() (or attr()) here.
 import { SHOW_DEFAULT, isCustom, hersOn, BLOCK_TYPES, defaultMenu, MENU_PLACES, PAGE_DEFAULTS, recordsOf } from '../content/blocks.js';
-import { BLOCK_KIND, matches, ordered, grouped } from '../content/fields.js';
+import { BLOCK_KIND, matches, ordered, grouped, GENERATIONS } from '../content/fields.js';
 import { escapeHtml as esc } from '../lib/html.js';
 import { PAGES, pupStatus } from '../content/model.js';
 import { puppyPrice, litterPriceRange, depositRange } from '../content/prices.js';
@@ -297,6 +297,24 @@ export function dogGroups(snap) {
     away: active.filter((d) => d.lives_away),
     outside: snap.dogs.filter((d) => d.status === 'active' && d.outside),
   };
+}
+
+// A dog's descendants on the site, a generation at a time (content/fields.js
+// GENERATIONS): its offspring (the dogs whose sire or dam it is), theirs, and on. A
+// featured offspring she sold is an outside dog with her dog as sire or dam; its
+// own offspring chain on from it. Each dog once, at its nearest generation.
+export function descendantsOf(snap, d) {
+  const gens = [];
+  const seen = new Set([d.id]);
+  let parents = new Set([d.id]);
+  for (let g = 0; g < GENERATIONS && parents.size; g++) {
+    const kids = snap.dogs.filter((x) => !seen.has(x.id) && (parents.has(x.sire_id) || parents.has(x.dam_id)));
+    if (!kids.length) break;
+    kids.forEach((x) => seen.add(x.id));
+    gens.push(kids);
+    parents = new Set(kids.map((x) => x.id));
+  }
+  return gens;
 }
 
 // A Dog cards block's dogs (content/blocks.js): its conditions, then its order. The

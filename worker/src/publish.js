@@ -103,6 +103,14 @@ export async function buildSnapshot(env, siteId) {
     .filter((p) => rules.status[ruleKey(p.status)]?.show);
   // Every dog's call name, shown or not, for parents who aren't on the site.
   const callNames = new Map((await all('SELECT id, call_name FROM dogs WHERE site_id = ?')).map((d) => [d.id, d.call_name]));
+  // A dog's parent that isn't shown on the site is named, never linked, as a litter's is.
+  for (const d of dogs) {
+    for (const role of ['dam', 'sire']) {
+      const id = d[`${role}_id`];
+      if (id && !dogById[id]) d[`${role}_name`] = d[`${role}_name`] || callNames.get(id) || null;
+      if (id && !dogById[id]) delete d[`${role}_id`];
+    }
+  }
   // A puppy's own photos, from the photos she tagged as that puppy (0005), for the
   // litters with Show each puppy's tagged photos on. Tags are private otherwise
   // (0018): nothing here without that tick. Removed photos are left out, newest

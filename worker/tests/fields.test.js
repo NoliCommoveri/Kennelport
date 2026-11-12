@@ -79,7 +79,9 @@ test('an old Dog cards block reads as the same conditions, with identical dogs i
   const b = cleanBlock({ id: 'dogs', type: 'dogs', f: { status: ['active'], sex: 'female', upcoming: 'only' }, order: 'young' });
   assert.equal(b.f, undefined);
   assert.equal(b.order, 'date_of_birth:down');
-  assert.deepEqual(b.where.slice(0, 3), [{ field: 'status', op: 'one_of', value: ['active'] }, { field: 'sex', op: 'is', value: 'female' }, { field: 'upcoming', op: 'yes' }]);
+  assert.deepEqual(b.where, [{ field: 'life_stage', op: 'one_of', value: ['upcoming'] }, { field: 'residence', op: 'one_of', value: ['home'] }, { field: 'sex', op: 'is', value: 'female' }]);
+  // A filter that kept nothing still keeps nothing.
+  assert.deepEqual(names(snap, { id: 'd', type: 'dogs', f: { status: ['retired'], upcoming: 'only' } }), []);
   assert.deepEqual(cleanBlock(b), b);
   // Home's default block is today's: the breeding dogs.
   assert.deepEqual(names(snap, HOME_DEFAULT.find((x) => x.id === 'dogs')), oldDogs(snap, { status: ['active'], sex: 'any', upcoming: 'no', sale: 'no', away: 'no', outside: 'no' }).map((d) => d.call_name.replace(/\*$/, '')));
@@ -105,11 +107,12 @@ test('conditions: a colour by ticks, titles, numbers, dates, and either parent',
   assert.deepEqual(dogs({ field: 'color', op: 'one_of', value: ['Seal & White', 'brindle & white'] }), ['Willow', 'Ziva']);
   assert.deepEqual(dogs({ field: 'title', op: 'includes', value: 'ch' }), ['Willow', 'Boone']);
   assert.deepEqual(dogs({ field: 'title', op: 'includes', value: 'gch' }), ['Willow']);
-  assert.deepEqual(dogs({ field: 'has_titles', op: 'no' }, { field: 'outside', op: 'no' }), ['Ziva', 'Peaches', 'Pearl']);
+  assert.deepEqual(dogs({ field: 'has_titles', op: 'no' }, { field: 'residence', op: 'is_not', value: 'not_mine' }), ['Ziva', 'Peaches', 'Pearl']);
   assert.deepEqual(dogs({ field: 'age', op: 'at_least', value: '6' }), ['Willow', 'Peaches', 'Boone']);
   assert.deepEqual(dogs({ field: 'date_of_birth', op: 'after', value: '2021-01-01' }), ['Ziva']);
   assert.deepEqual(dogs({ field: 'price', op: 'below', value: '2000' }), ['Pearl']);
-  assert.deepEqual(dogs({ field: 'outside', op: 'yes' }), ['Duke']);
+  assert.deepEqual(dogs({ field: 'residence', op: 'is', value: 'not_mine' }), ['Duke']);
+  assert.deepEqual(dogs({ field: 'life_stage', op: 'one_of', value: ['upcoming', 'for_sale'] }), ['Ziva', 'Pearl']);
 
   const litters = (...where) => names(snap, { id: 'l', type: 'litters', where });
   assert.deepEqual(litters({ field: 'a_parent.title', op: 'includes', value: 'ch' }), ['The Gem litter', 'Ziva × Boone', 'Peaches × Boone']);

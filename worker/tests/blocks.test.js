@@ -57,8 +57,8 @@ async function demo(t) {
   const render = async (p) => renderPage(await buildSnapshot(env, id), { path: p, origin: 'https://x', today: '2027-03-10', preview: true, portal: true }).html;
   const home = () => render('/');
   // Add a condition the way the owner does (Add a condition, then its value), on the
-  // block `b` of `page`; `i` is the new row's place (a new Dog cards block has five).
-  const cond = async (b, field, value, { op = null, i = 5, page = 'home' } = {}) => {
+  // block `b` of `page`; `i` is the new row's place (a new Dog cards block has two).
+  const cond = async (b, field, value, { op = null, i = 2, page = 'home' } = {}) => {
     await post({ [`b.${b}.addcond`]: field }, { open: b, act: `cond+:${b}`, page });
     return post({ [`b.${b}.where.${i}.value`]: value, ...(op ? { [`b.${b}.where.${i}.op`]: op } : {}) }, { open: b, page });
   };
@@ -119,9 +119,9 @@ test('a Dog cards block: its conditions, style, how many and what its cards show
   assert.doesNotMatch(card.slice(0, card.indexOf('face back')), /<span class="line1"><span>[^<]*<\/span><span>/);
   assert.ok(card.indexOf('class="bio"') < card.lastIndexOf('class="call"') || !/class="bio"/.test(card));
 
-  // Up and coming only: Pippa*. (Remove the sex condition; up and coming: yes.)
-  await post({}, { open: 'dogs', act: 'cond-:dogs:5' });
-  await post({ 'b.dogs.where.1.op': 'yes', 'b.dogs.limit': 'all' }, { open: 'dogs' });
+  // Up and coming only: Pippa*. (Remove the sex condition; life stage: up and coming.)
+  await post({}, { open: 'dogs', act: 'cond-:dogs:2' });
+  await post({ 'b.dogs.where.0.value': 'upcoming', 'b.dogs.limit': 'all' }, { open: 'dogs' });
   assert.match(text(await home()), /Meet our dogs .*Pippa\*/);
   // No status ticked: the condition is kept, unfinished, and leaves nothing out.
   await post({ 'b.dogs.where.0.value': null }, { open: 'dogs' });
@@ -132,16 +132,16 @@ test('the conditions editor: a colour by the colour picker, a heading per group'
   const { post, get, at, home, build } = await demo(t);
   // Add a colour condition and ask "is one of": its ticks are the colours the site holds.
   await post({ 'b.dogs.addcond': 'color' }, { open: 'dogs', act: 'cond+:dogs' });
-  await post({ 'b.dogs.where.5.op': 'one_of' }, { open: 'dogs' });
+  await post({ 'b.dogs.where.2.op': 'one_of' }, { open: 'dogs' });
   let screen = await get(`${at('home')}?open=dogs`);
   assert.match(text(screen), /Tick at least one, then save/);
-  const colours = [...screen.slice(screen.indexOf('aria-label="Colours on the site"')).matchAll(/name="b\.dogs\.where\.5\.value" value="([^"]+)"/g)].map((m) => m[1]);
+  const colours = [...screen.slice(screen.indexOf('aria-label="Colours on the site"')).matchAll(/name="b\.dogs\.where\.2\.value" value="([^"]+)"/g)].map((m) => m[1]);
   assert.ok(colours.length > 0);
-  await post({ 'b.dogs.where.5.value': colours[0] }, { open: 'dogs' });
-  assert.deepEqual((await build()).pages.home.blocks.find((b) => b.id === 'dogs').where[5], { field: 'color', op: 'one_of', value: [colours[0]] });
+  await post({ 'b.dogs.where.2.value': colours[0] }, { open: 'dogs' });
+  assert.deepEqual((await build()).pages.home.blocks.find((b) => b.id === 'dogs').where[2], { field: 'color', op: 'one_of', value: [colours[0]] });
   assert.match(text(await get(at('home'))), new RegExp(`Colour is one of ${colours[0].replace(/[&*]/g, '.')}`, 'i'));
   // Removed again; then grouped by sex, with a heading of the owner's for the boys.
-  await post({}, { open: 'dogs', act: 'cond-:dogs:5' });
+  await post({}, { open: 'dogs', act: 'cond-:dogs:2' });
   await post({ 'b.dogs.group': 'sex' }, { open: 'dogs' });
   screen = await get(`${at('home')}?open=dogs`);
   assert.match(text(screen), /A heading over each group .* Girls Boys/);
@@ -308,7 +308,7 @@ test('New page in the admin view: made, live at its address and in its menu grou
   assert.match(text(await r.text()), /\/dogs is taken .* value="Our dogs"|\/dogs is taken/);
   r = await asAdmin(`/admin/${sub}/pages`, { act: 'newpage', 'page.name': 'Our dams', 'page.path': '', 'page.start': 'dams', 'page.group': 'residents' });
   assert.equal(r.headers.get('location'), `/admin/${sub}/pages/x-our-dams?saved=made`);
-  assert.match(text(await get(at('x-our-dams'))), /Our dams .* The page Added .* Dog cards KennelOS Status is one of Active · Not up and coming · Not looking for a home · Lives at home · Her own dog \(not an outside dog\) · Sex is Girl · flip cards .* Demo · \/our-dams/);
+  assert.match(text(await get(at('x-our-dams'))), /Our dams .* The page Added .* Dog cards KennelOS Life stage is one of Breeding dog · Lives is one of With me · Sex is Girl · flip cards .* Demo · \/our-dams/);
   assert.match(text(await get(`/admin/${sub}/pages`)), /Pages you added Our dams \/our-dams · 2 blocks · Added · in Kennel residents/);
 
   const h = await render('/our-dams');
@@ -366,7 +366,7 @@ test('a block the owner added is the breeder\'s to switch off and reword, on Hom
   await hers('home', 'dogs-2', { heading: 'Meet the girls' });
   assert.doesNotMatch(await render('/'), /Meet the girls/);
   // The admin view shows it off; a block that isn't one of hers is refused.
-  assert.match(text(await (await call(env, M, at('home'), { headers: { cookie: admin } })).text()), /Dog cards KennelOS off by the breeder Status is one of Active .* Sex is Girl/);
+  assert.match(text(await (await call(env, M, at('home'), { headers: { cookie: admin } })).text()), /Dog cards KennelOS off by the breeder Life stage is one of Breeding dog .* Sex is Girl/);
   assert.equal((await hers('home', 'dogs', { heading: 'x' })).status, 404);
   assert.equal((await hers('about', 'nope', { heading: 'x' })).status, 404);
   // Exported and imported back as they are.

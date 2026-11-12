@@ -98,7 +98,13 @@ block may read, with its name for the owner, its kind (`bool`, `enum`, `text`, `
 `content/model.js` so the two can't drift, plus worked-out fields:
 
 - dog: `has_titles`, `title` (any of its titles), `age`, `has_health`, `tags` (Part D),
-  `import`, `import_descended` (Part C4);
+  `import`, `import_descended` (Part C4). **As built (the owner, 2026-11-12):** a dog's
+  status and its up-and-coming and for-sale flags are one field, **Life stage**
+  (KennelOS's five, in the site's words: Breeding dog, Up and coming, Looking for a
+  home, Retired, In memory). Lives with a co-owner and Outside dog are one field,
+  **Lives** (With me, With a co-owner, Not my dog). The default Dog cards block is
+  Breeding dog and With me. Both are worked out from the stored columns, which saving
+  keeps consistent (`records.js` `stageRules`);
 - puppy: its litter's fields (`litter.stage`, `litter.born_on`), `status` by rule;
 - litter (the owner, 2026-11-11: litters get everything dogs get): `stage` as the site
   shows it (`available_now`, `available_soon`, `older`, `planned`, `past`); each parent's
@@ -180,19 +186,33 @@ highlight row and the photo-beside-words block), and the build log says so.
 
 ### B6. Featured offspring (KennelPort only)
 
-A sire's or dam's best offspring, on the dog's page (the owner, 2026-11-11: KennelPort's
-own; most of them predate KennelOS, so nothing comes from it).
+A sire's or dam's best offspring, on the dog's page. This is KennelPort's own (the owner,
+2026-11-11), since most of them predate KennelOS and nothing comes from it.
+**Rewritten 2026-11-12 (the owner) and built:** a featured offspring is a dog record,
+not a separate list.
 
-- In the Site Manager, on a dog: **Featured offspring**, a list in her order. Each is a
-  dog or pup the site holds (picked), or typed by her: call name, registered name,
-  titles, born (month and year), the other parent's name, a photo from her photos.
-- On the dog's page: a Featured offspring part (content/blocks.js PROFILE_PARTS), shown
-  where she has any; and a pick source for Dog cards blocks ("this dog's featured
-  offspring").
-- Hers, kept as her content (`dog_offspring`, one row each, in step 3's migration).
-  Its labels, hints and empty message are breeder-facing: the owner writes them, in
-  `manage/wording.js`.
-- Nothing about an owner, a buyer or where the dog lives is asked for or shown.
+- Every dog she breeds is kept, co-owned or sold. Kept and co-owned dogs have ordinary
+  dog records. A sold one is on her site only if she features it, and then it is a dog
+  record with **Not my dog** (the Outside dog switch) and its sire or dam set to her dog.
+- **A dog's sire and dam** (migration 0030: `sire_id`, `dam_id`, `sire_name`,
+  `dam_name`): each is a dog on the site, or a name typed for one that isn't, as a
+  litter's parents are. The Site Manager's dog form has a Parents section; the import
+  names them by slug. A parent not shown on the site is named, never linked.
+  KennelOS's lineage (C7) fills the same columns for the dogs it sends.
+- **Chains:** an offspring's own offspring are found the same way, so a featured grand
+  offspring is a Not my dog record whose sire or dam is the featured offspring. A dog's
+  page has an **Offspring** part (on by default; `offspring` in the dog profile) listing
+  its offspring on the site, then grand offspring and on, four generations
+  (`fields.js` GENERATIONS), as light cards. Each generation's eyebrow is in the
+  Wording screen (`offspring_1`…`offspring_4`), and so are the Sire and Dam facts.
+- **No type or flags** for studs, offspring or ancestors: what a Not my dog record is
+  for shows in its links (a litter names it as a parent; its sire or dam is one of
+  hers). Blocks choose them by conditions: `parent`, `descends_from` (four
+  generations), `sire.call_name`, `dam.call_name`, with **Lives** (`residence`).
+- An ancestor stays a name in the Pedigree block (C7) unless she makes it a dog record
+  (Not my dog).
+- Nothing about a buyer is asked for or shown. An outside dog's owner is the name she
+  types, as now.
 
 ## Part C. Raw fields from KennelOS
 
@@ -259,7 +279,7 @@ A tag is a field like any other: a condition, a grouping, a card item.
   registered name and titles only: never an owner, a kennel she hasn't ticked, or a date
   of birth for a dog that isn't hers.
 - C4's `import_country` is hers to leave blank.
-- B6's featured offspring are what she types or picks; nothing else about them is kept.
+- B6's featured offspring are dog records she makes (Not my dog); their owner is only the name she types.
 - Nothing from a buyer, contact, contract or sale goes, as now.
 
 ## Building it, in steps
@@ -284,8 +304,9 @@ Each step is its own branch and merge, with at most one migration.
    changing them changes every live site's Dogs page. That belongs with step 3 or its
    own small step.
 3. **B3, B5, B6.** Pick and Leave out for all three, the breeder's picking screen, the
-   Featured block, featured offspring. One migration: `dog_offspring`, and the picks if
-   they are kept outside the block (they are hers: question 3).
+   Featured block. One migration: the picks, if they are kept outside the block (they are
+   hers: question 3). Featured offspring (B6) was built ahead of this, on 2026-11-12, with
+   step 2.
 4. **C1, C2, C5, C6.** The small raw fields, each with its rule. Migration: the columns.
    The linked sample (`tests/fixtures/linked-sample/`) gains each value, and its
    coverage test checks them.
