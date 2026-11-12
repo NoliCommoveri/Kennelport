@@ -951,3 +951,11 @@ with new sections and a new building order. Docs only; nothing built yet.
     record pressed in the browser.
 - Tests: `dog-parents.test.js` (the form's Life stage, KennelOS's kept; the card, made
   and linked). All 381 pass.
+
+## 2026-11-12: plan: the breeder controls individual records
+
+- `plans/kennelos-contract.md` B3, B5 and step 3: the owner's decision. On every data
+  block, her Site Manager shows the records the owner's settings display, each ticked,
+  and she can untick any. A Featured block's records are always hers to pick, order
+  and leave out. Her ticks and picks are her content, kept apart from the owner's
+  build. Docs only.

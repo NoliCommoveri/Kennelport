@@ -154,6 +154,17 @@ Then, for both:
 - The breeder (Site Manager): which records are in a pick block and their order, on a
   block the owner placed and marked "hers to pick". Its wording goes in
   `manage/wording.js`.
+- **The owner's decision (2026-11-12): the breeder controls individual records.**
+  - **Every data block** (Dog cards, Pup cards, Litter cards): her Site Manager shows
+    which records will display under the owner's settings, each ticked. She can untick
+    any of them, and an unticked one stays out (`b.omit`, hers). A record that later
+    matches the conditions comes in ticked. A record that stops matching, or leaves
+    the site, drops off her list, and its untick is forgotten.
+  - **Featured blocks** (B5): always hers to pick. She chooses which records and their
+    order, and can leave any out, whatever conditions the owner set. The owner places
+    the block and sets its schedule.
+  - Her ticks and picks are her content, kept per site (not in the owner's build), so a
+    change to the owner's settings never undoes them.
 
 ### B4. Existing sites
 
@@ -167,6 +178,10 @@ places `dogs#girls` and `dogs#boys` become "a group of a block" and keep their a
 
 A new block, **Featured**, for dogs or pups: a pick block (or conditions) plus a
 schedule.
+
+- **Which records are hers** (the owner, 2026-11-12; B3): she picks them and their
+  order in her Site Manager and can leave any out. The owner places the block and sets
+  its schedule.
 
 - Shows one record (or the owner's number) at a time, large: photo, name, the card items
   the owner chooses, its bio, a link to its profile.
@@ -307,8 +322,9 @@ Each step is its own branch and merge, with at most one migration.
    (`dogs#girls`, `dogs#boys`) as a group of a block. They stay built-in for now, because
    changing them changes every live site's Dogs page. That belongs with step 3 or its
    own small step.
-3. **B3, B5, B6.** Pick and Leave out for all three, the breeder's picking screen, the
-   Featured block. One migration: the picks, if they are kept outside the block (they are
+3. **B3, B5, B6.** Pick and Leave out for all three, the breeder's picking screen
+   (every data block: what shows, each ticked, hers to untick; Featured: hers to pick),
+   the Featured block. One migration: the picks, if they are kept outside the block (they are
    hers: question 3). Featured offspring (B6) was built ahead of this, on 2026-11-12, with
    step 2.
 4. **C1, C2, C5, C6.** The small raw fields, each with its rule. Migration: the columns.
