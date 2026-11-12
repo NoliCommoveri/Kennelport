@@ -62,7 +62,7 @@ read that before the rest. Update this map when you add, move or split a file.
 - `src/manage/screens.js`: the editing screens under `/s/<subdomain>/`, in `createScreens`.
   Split out into `src/manage/screens/`, each a factory given what `createScreens` holds:
   `share.js`, `inbox.js`, `queue.js` (reviews to approve), `account.js` (storage, download,
-  delete); `parts.js` small shared pieces.
+  delete), `dogform.js` (a dog's Life stage choice and its pedigree card); `parts.js` small shared pieces.
 - `src/manage/forms.js`: an input per content field, with `LABELS` (field wording).
 - `src/manage/wording.js`: every other line she reads, as one list (`say('key')`).
 - `src/manage/hub.js`: Today, Families, Dogs, Website, Portal: the app for sites with the

@@ -262,6 +262,21 @@ export async function setField(env, siteId, kind, id, field, value) {
   await env.DB.batch(touchAll(env, siteId, kind));
 }
 
+// A dog's parent known only by name, made a dog record (manage/screens/dogform.js
+// Make a dog record): Not my dog, that name and the parent's sex, linked in the name's
+// place. Its life stage, owner and parents she sets on its own form. Returns it.
+export async function makeParentRecord(env, siteId, childId, role) {
+  const child = await getRecord(env, siteId, 'dogs', childId);
+  const name = child?.[`${role}_name`];
+  if (!name || child[`${role}_id`]) return null;
+  const made = await saveRecord(env, siteId, 'dogs', null, { call_name: name, sex: role === 'sire' ? 'male' : 'female', outside: 1 });
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE dogs SET ${role}_id = ?, ${role}_name = NULL, updated_at = ? WHERE id = ? AND site_id = ?`).bind(made.id, now(), childId, siteId),
+    touch(env, siteId),
+  ]);
+  return made;
+}
+
 export async function removeRecord(env, siteId, kind, id) {
   const k = kindOf(kind);
   const s = untagStatements(env, siteId, kind, id);

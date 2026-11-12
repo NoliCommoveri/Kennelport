@@ -9,7 +9,7 @@ import { escapeHtml as esc } from '../lib/html.js';
 import { json } from '../lib/http.js';
 import { PAGES, HOME_BLOCKS, HOME_BLOCK_ORDER, HOME_WORDS, ALBUM_PHOTOS_MAX, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, CUSTOM_PAGE, ADDED_BLOCK_FIELDS, pupStatus } from '../content/model.js';
 import {
-  KINDS, listRecords, getRecord, saveRecord, setField, removeRecord, moveRecord,
+  KINDS, listRecords, getRecord, saveRecord, setField, removeRecord, moveRecord, makeParentRecord,
   saveSite, getPage, savePage, getBlock, saveBlock, getPayment, savePayment, getAddedBlock, saveAddedBlock,
 } from '../content/records.js';
 import { pageBlocks, customPages, addedBlocks, BLOCK_TYPES, isCustom, collageFromForm, PAGE_HEADS } from '../content/blocks.js';
@@ -40,6 +40,7 @@ import { when, redirect, day } from './screens/parts.js';
 import { inboxScreens } from './screens/inbox.js';
 import { queueScreens } from './screens/queue.js';
 import { accountScreens } from './screens/account.js';
+import { dogFormFields, withLifeStage, fromLifeStage, lockLifeStage, pedigreeCard } from './screens/dogform.js';
 
 // The note after a change, and a form's error, in the owner's wording (wording.js).
 const noteFor = (url, say) => (NOTE_KEYS.includes(url.searchParams.get('note')) ? `<p class="notice" role="status">${esc(say(`note.${url.searchParams.get('note')}`))}</p>` : '');
@@ -345,7 +346,11 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     const rest = url.pathname.slice(path.length).replace(/^\//, '');
     const post = request.method === 'POST';
     const formKind = FORM_KIND[kind] ?? kind;
-    const formFields = Object.fromEntries(Object.entries(k.fields).filter(([n]) => !(kind === 'reviews' && n === 'photo_id')));
+    const allFields = Object.fromEntries(Object.entries(k.fields).filter(([n]) => !(kind === 'reviews' && n === 'photo_id')));
+    // A dog's form has one Life stage for its status and two flags (screens/dogform.js).
+    const dogs = kind === 'dogs';
+    const formFields = dogs ? dogFormFields(allFields) : allFields;
+    const parsed = (fd) => (dogs ? fromLifeStage(parseForm(formFields, fd)) : parseForm(formFields, fd));
     const one = SUBJECT_OF[kind];
     const subsFor = (id) => [id && one ? `${one}:${id}` : null, kind === 'puppies' ? `litter:${scopeId}` : null, kind === 'partners' ? 'page:partners' : null].filter(Boolean);
     const pickFor = (rec) => {
@@ -364,9 +369,10 @@ export function createScreens({ env, request, url, site, user, page, say = defau
 
     const form = async (rec, err, values) => {
       const action = rec ? `${path}/${rec.id}` : `${path}/new`;
-      const lock = rec ? await lockedFor(kind, rec) : null;
+      const lock = rec ? (dogs ? lockLifeStage(await lockedFor(kind, rec)) : await lockedFor(kind, rec)) : null;
+      const shown = values ?? rec ?? { ...(k.defaults ?? {}) };
       const from = lock ? `<p class="notice">This ${esc(oneOf(kind))} comes from KennelOS. What's marked "from KennelOS" changes there, then Update website; everything else here is yours.</p>` : '';
-      const body = `${from}${errorBox(err)}<form method="post" action="${esc(action)}" data-save class="card">${fields(formFields, values ?? rec ?? { ...(k.defaults ?? {}) }, { ...await ctxFor(formKind, pickFor(rec)), locked: lock })}
+      const body = `${from}${errorBox(err)}<form method="post" action="${esc(action)}" data-save class="card">${fields(formFields, dogs ? withLifeStage(shown) : shown, { ...await ctxFor(formKind, pickFor(rec)), locked: lock })}
         ${kind === 'products' ? BADGE_CODE_FIELD(say) : kind === 'partners' ? PARTNER_BADGE_FIELD(say) : ''}<button class="primary">${esc(rec ? say('list.save') : say('list.add', { one: oneOf(kind) }))}</button></form>
         ${rec ? `<form method="post" action="${esc(`${path}/${rec.id}/remove`)}" class="card danger"><p class="muted small">${esc(say('lists.removing_takes_it_off'))}</p><button>Remove this ${esc(oneOf(kind))}</button></form>` : ''}`;
       return { title: rec ? L.name(rec) : say('list.new', { one: oneOf(kind) }), back: path, body };
@@ -385,7 +391,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     if (rest === 'new') {
       if (!post) return form(null);
       const fd = await request.formData();
-      const values = parseForm(formFields, fd);
+      const values = parsed(fd);
       let saved;
       try {
         if (kind === 'products' || kind === 'partners') await fromBadgeCode(fd, values, kind);
@@ -395,6 +401,13 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       }
       if (one) await tagFromForm(formFields, values, fd, subsFor(saved.id));
       return redirect(`${path}?note=added`);
+    }
+    // A parent known only by name, made a dog record (its pedigree card).
+    const mk = dogs && rest.match(/^([0-9a-f-]{36})\/make-(sire|dam)$/);
+    if (mk) {
+      if (!post) return null;
+      const made = await makeParentRecord(env, site.id, mk[1], mk[2]);
+      return redirect(made ? `${path}/${made.id}?note=made_parent` : `${path}/${mk[1]}`);
     }
     const m = rest.match(/^([0-9a-f-]{36})(?:\/(remove|up|down))?$/);
     if (!m) return null;
@@ -412,10 +425,11 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       if (kind === 'albums') view.body += await whosInCard(rec, `${path}/${rec.id}`);
       const place = { dogs: 'dog', litters: 'litter', albums: 'album' }[kind];
       if (place) view.body += await embedsCard(`${place}:${rec.id}`, `${path}/${rec.id}`, embedErr());
+      if (dogs) view.body += pedigreeCard(rec, await listRecords(env, site.id, 'dogs'), base, say);
       return { ...view, rec };
     }
     const fd = await request.formData();
-    const values = parseForm(formFields, fd);
+    const values = parsed(fd);
     // KennelOS's fields keep what's stored, whatever the form sent.
     for (const f of await lockedFor(kind, rec) ?? []) values[f] = rec[f];
     try {

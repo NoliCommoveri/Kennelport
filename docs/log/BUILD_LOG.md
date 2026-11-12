@@ -925,3 +925,29 @@ with new sections and a new building order. Docs only; nothing built yet.
   Parents section, the Life stage and Lives ticks): no sideways scroll, no script errors.
 - Tests: `dog-parents.test.js` (new); `fields.test.js` and `blocks.test.js` moved to
   the two fields. All 379 pass. No versioned file changed.
+
+## 2026-11-12: her dog form's Life stage; the pedigree card and Make a dog record
+
+- The owner's requests. No migration beyond this branch's 0030, no versioned file.
+- **Life stage on her dog form** (`manage/screens/dogform.js`, new; `screens.js` only
+  calls it): one select in place of the status select and the Up and coming and Looking
+  for a home switches. It's read from the record and written back to `status`,
+  `upcoming` and `for_sale` (`rules.js` DOG_PLACES). On a dog KennelOS sends, it is
+  KennelOS's: shown as "from KennelOS" and kept whatever is sent, as status was. Its
+  label and hint, and the choices' words, are in `forms.js` LABELS and ENUM_WORDS
+  (`life_stage`), so they're in the owner's list. The old `status`, `upcoming`,
+  `for_sale` labels and `status_dogs` choices went, since no form shows them.
+- **Pedigree card** on a dog in her Site Manager: its sire and dam and theirs, four
+  generations, from her dog records, nearest first ("Sire", "Sire's dam"…). A record
+  links to its form.
+  - A parent typed by name links to where it's typed and has **Make a dog record**
+    (`records.js` `makeParentRecord`, POST `/s/<site>/dogs/<id>/make-sire|dam`). It
+    makes a Not my dog record with that name and the parent's sex, links it in the
+    name's place, and opens it with a note saying to change Not my dog if it was hers
+    and add its own parents. Pressed again, nothing more is made.
+  - No prototype screen: built from the Site Manager's card and list rows (as Not on
+    your site). Its wording is in `manage/wording.js` (`dogform.*`, `note.made_parent`).
+  - Checked at 390px and 1280px: no sideways scroll, no script errors; Make a dog
+    record pressed in the browser.
+- Tests: `dog-parents.test.js` (the form's Life stage, KennelOS's kept; the card, made
+  and linked). All 381 pass.

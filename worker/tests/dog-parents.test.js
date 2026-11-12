@@ -111,3 +111,83 @@ test('saving a dog: never its own parent; one life stage', async () => {
   const retired = await saveRecord(env, s.id, 'dogs', pearl, { ...p, status: 'retired', upcoming: 1 });
   assert.deepEqual([retired.upcoming, retired.for_sale], [0, 0]);
 });
+
+// ---------- her Site Manager: Life stage, and the pedigree card ----------
+
+const { call } = await import('./helpers/env.js');
+const { inviteToSite } = await import('../src/auth.js');
+const M = 'manage.kennelport.com';
+
+async function signedIn() {
+  const { env, s } = await site();
+  await env.DB.prepare('UPDATE sites SET subdomain = ? WHERE id = ?').bind('akparents', s.id).run();
+  await inviteToSite(env, s.id, 'b@example.com', 'owner', { manageUrl: 'x', siteUrl: 'y' });
+  const headers = { origin: `https://${M}` };
+  await call(env, M, '/signin', { method: 'POST', headers, body: new URLSearchParams({ email: 'b@example.com' }) });
+  const code = env.DB.raw.prepare("SELECT subject FROM dev_outbox WHERE kind = 'code' ORDER BY id DESC").get().subject.match(/\d{6}/)[0];
+  const cookie = (await call(env, M, '/signin/verify', { method: 'POST', headers, body: new URLSearchParams({ email: 'b@example.com', code }) })).headers.get('set-cookie').split(';')[0];
+  const get = async (p) => (await call(env, M, `/s/akparents${p}`, { headers: { cookie } })).text();
+  const post = (p, body) => call(env, M, `/s/akparents${p}`, { method: 'POST', headers: { cookie, origin: `https://${M}` }, body: new URLSearchParams(body) });
+  const dog = (slug) => env.DB.raw.prepare('SELECT * FROM dogs WHERE site_id = ? AND slug = ?').get(s.id, slug);
+  return { env, s, get, post, dog };
+}
+// The form as drawn, with changes: its inputs, selects and text areas.
+async function formOf(get, p, changes) {
+  const html = await get(p);
+  const f = html.slice(html.indexOf('<form method="post" action="/s/akparents/dogs/'), html.indexOf('</form>', html.indexOf('data-save')));
+  const body = {};
+  for (const m of f.matchAll(/<input([^>]*)>/g)) {
+    const name = m[1].match(/name="([^"]+)"/)?.[1];
+    const type = m[1].match(/type="([^"]+)"/)?.[1];
+    if (!name || ((type === 'checkbox' || type === 'radio') && !/ checked/.test(m[1]))) continue;
+    body[name] = (m[1].match(/value="([^"]*)"/)?.[1] ?? '').replace(/&amp;/g, '&').replace(/&#39;/g, "'");
+  }
+  for (const m of f.matchAll(/<select[^>]*name="([^"]+)"[^>]*>([\s\S]*?)<\/select>/g)) body[m[1]] = m[2].match(/<option value="([^"]*)" selected/)?.[1] ?? '';
+  for (const m of f.matchAll(/<textarea[^>]*name="([^"]+)"[^>]*>([\s\S]*?)<\/textarea>/g)) body[m[1]] = m[2];
+  return { ...body, ...changes };
+}
+
+test('her dog form: one Life stage for its status and two flags; KennelOS\'s on a dog it sends', async () => {
+  const { env, get, post, dog } = await signedIn();
+  const pearl = dog('pearl');
+  const html = await get(`/dogs/${pearl.id}`);
+  assert.match(html, /<select id="f-life_stage" name="life_stage"[^>]*>[^]*<option value="breeding" selected>Breeding dog<\/option>/);
+  assert.doesNotMatch(html, /name="upcoming"|name="for_sale"|name="status"/);
+  assert.equal((await post(`/dogs/${pearl.id}`, await formOf(get, `/dogs/${pearl.id}`, { life_stage: 'for_sale' }))).status, 303);
+  assert.deepEqual([dog('pearl').status, dog('pearl').upcoming, dog('pearl').for_sale], ['active', 0, 1]);
+  await post(`/dogs/${pearl.id}`, await formOf(get, `/dogs/${pearl.id}`, { life_stage: 'remembered' }));
+  assert.deepEqual([dog('pearl').status, dog('pearl').upcoming, dog('pearl').for_sale], ['remembered', 0, 0]);
+  // A dog from KennelOS: shown, not editable, and kept whatever is sent.
+  env.DB.raw.prepare("UPDATE dogs SET source = 'kennelos', upcoming = 1 WHERE id = ?").run(dog('ziva').id);
+  const ziva = dog('ziva');
+  const form = await get(`/dogs/${ziva.id}`);
+  assert.match(form, /<p class="locked"><b>Life stage<\/b><br>Up and coming <span class="muted small">· from KennelOS/);
+  await post(`/dogs/${ziva.id}`, { ...(await formOf(get, `/dogs/${ziva.id}`, {})), life_stage: 'retired' });
+  assert.deepEqual([dog('ziva').status, dog('ziva').upcoming], ['active', 1]);
+});
+
+test('the pedigree card: her records four generations back; a name made a dog record, linked', async () => {
+  const { get, post, dog } = await signedIn();
+  const comet = dog('comet');
+  const card = (html) => html.slice(html.indexOf('id="pedigree"'));
+  const html = card(await get(`/dogs/${comet.id}`));
+  // Rocket (a record), his sire Boone and dam Willow; Luna, typed by name.
+  assert.match(html, /<b>Rocket<\/b><span>Sire<\/span>/);
+  assert.match(html, /<b>Boone\*<\/b><span>Sire&#39;s sire<\/span>/);
+  assert.match(html, /<b>Willow<\/b><span>Sire&#39;s dam<\/span>/);
+  assert.match(html, /<b>Luna<\/b><span>Dam · name only<\/span><\/a>\s*<form method="post" action="\/s\/akparents\/dogs\/[0-9a-f-]{36}\/make-dam"><button class="button small">Make a dog record<\/button>/);
+  // Made: a Not my dog record, a female called Luna, linked as Comet's dam.
+  const made = await post(`/dogs/${comet.id}/make-dam`, {});
+  assert.equal(made.status, 303);
+  const luna = dog('luna');
+  assert.equal(made.headers.get('location'), `/s/akparents/dogs/${luna.id}?note=made_parent`);
+  assert.deepEqual([luna.call_name, luna.sex, luna.outside, luna.status], ['Luna', 'female', 1, 'active']);
+  assert.deepEqual([dog('comet').dam_id, dog('comet').dam_name], [luna.id, null]);
+  assert.match(await get(`/dogs/${luna.id}?note=made_parent`), /Made a dog record for this parent and linked it/);
+  assert.match(card(await get(`/dogs/${comet.id}`)), /<b>Luna<\/b><span>Dam<\/span>/);
+  // Again: nothing more is made.
+  await post(`/dogs/${comet.id}/make-dam`, {});
+  assert.equal(dog('luna-2'), undefined);
+  // A dog with no parents says so.
+  assert.match(card(await get(`/dogs/${dog('boone').id}`)), /No sire or dam yet/);
+});

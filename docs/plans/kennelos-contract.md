@@ -210,7 +210,11 @@ not a separate list.
   hers). Blocks choose them by conditions: `parent`, `descends_from` (four
   generations), `sire.call_name`, `dam.call_name`, with **Lives** (`residence`).
 - An ancestor stays a name in the Pedigree block (C7) unless she makes it a dog record
-  (Not my dog).
+  (Not my dog). **Built:** her Site Manager's dog page has a **Pedigree** card (four
+  generations from her records). A parent typed by name has **Make a dog record**,
+  which makes a Not my dog record with that name and links it in the name's place. When
+  C7 sends ancestors by name, the card and the site's Pedigree block offer the same
+  button for them.
 - Nothing about a buyer is asked for or shown. An outside dog's owner is the name she
   types, as now.
 

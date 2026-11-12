@@ -176,6 +176,7 @@ const NOTES = {
   apart: 'Kept apart. KennelOS\'s one is added as new.',
   stopped: 'That device is no longer linked.',
   unlinked: 'Unlinked. Everything from KennelOS is now yours to edit here.',
+  made_parent: 'Made a dog record for this parent and linked it. It\'s marked Not my dog: change that below if it was yours, and add its own parents.',
 };
 export const NOTE_KEYS = Object.keys(NOTES);
 
@@ -265,6 +266,13 @@ const SCREEN_LINES = {
   "doglist.not_on_your_site": ["doglist", "Heading", "Not on your site"],
   "doglist.remove": ["doglist", "Button", "Remove"],
   "doglist.outside": ["doglist", "Line", "Outside dog"],
+  "dogform.pedigree": ["dogs", "Heading", "Pedigree"],
+  "dogform.pedigree_hint": ["dogs", "Line", "Its sire and dam, and theirs, from your dog records. A parent you typed by name can be made a dog record of its own, with a page and its own parents."],
+  "dogform.no_parents": ["dogs", "Empty", "No sire or dam yet. Set them above, under Parents."],
+  "dogform.name_only": ["dogs", "Line", "name only"],
+  "dogform.make_record": ["dogs", "Button", "Make a dog record"],
+  "dogform.sire": ["dogs", "Line", "Sire"],
+  "dogform.dam": ["dogs", "Line", "Dam"],
   "kennelos.your_code": ["kennelos", "Notice", "Your code:"],
   "kennelos.each_phone_or_computer": ["kennelos", "Help line", "Each phone or computer you use KennelOS on links once, with its own code."],
   "kennelos.devices": ["kennelos", "Heading", "Devices"],
