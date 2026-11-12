@@ -959,3 +959,67 @@ with new sections and a new building order. Docs only; nothing built yet.
   and she can untick any. A Featured block's records are always hers to pick, order
   and leave out. Her ticks and picks are her content, kept apart from the owner's
   build. Docs only.
+
+
+## 2026-11-12: KennelOS contract step 3: her ticks and picks, the Featured block (migration 0031)
+
+- `plans/kennelos-contract.md` B3 and B5, as the owner decided on 2026-11-12.
+- **Migration 0031 `block_picks`** (additive: a new table). One row per site, page and
+  block, holding her choice as JSON. It applies itself on deploy. It's in `sites.js`
+  `SITE_TABLES`, so the full backup carries it.
+  - **Not carried:** the `/ops` content JSON import and export (`content/io.js`).
+    Import gives records new ids, so the ids in her picks wouldn't carry over.
+- **Her ticks on every data block** (`content/picks.js`; applied in `render/parts.js`
+  `blockRows`, which now takes the page key).
+  - Dog cards, Litter cards and Pup cards: her new screen lists what the owner's
+    settings show, each ticked. An untick is stored as `omit` and stays off.
+  - A record that matches later comes in ticked.
+  - A record that stops matching or leaves the site drops off her list. Its untick is
+    forgotten the next time she saves; until then it leaves nothing out.
+  - The owner's limit counts after her unticks.
+- **Featured dog and Featured pup** (new block types `featured_dog`, `featured_pup`).
+  - Records: hers to pick and order (`pick`), whatever the owner's conditions. Until
+    she picks, it shows what the owner's conditions hold for, in the owner's order;
+    "Let my website choose again" goes back to that.
+  - A picked record that leaves the site drops out quietly and comes back if it
+    returns. A picked pup stays featured after it's placed (her pick wins); a pup chosen
+    by conditions drops out by itself.
+  - Schedule (the owner's; `content/featured.js`): a day, a week or a month each; her
+    order or a fixed shuffle seeded by site and block; a start date; one to three at
+    once.
+  - With no start date, weeks turn on a Monday and months on the 1st.
+  - She can feature one on set dates (`fixed`, up to 6), which wins over the turn.
+  - It turns over by itself: no Update website needed.
+  - No groups (one at a time).
+  - What shows under the name is the owner's list (`FEATURE_DOG_ITEMS`,
+    `FEATURE_PUP_ITEMS`). Its button, "Meet {name}", is in the Wording screen
+    (`featured_meet`).
+  - **No prototype screen:** drawn as the Home story's photo-beside-words (`.story`),
+    the photo in a soft mat, under the block's heading. With two or three at once,
+    every other one has its photo on the right on a computer.
+  - **Not done: the share row** that shares the featured record's own page (B5). It
+    needs a change to the template's `site.js`, so an `ASSET_VERSION` bump; that waits
+    for the owner. The "Meet {name}" button goes to the record's page, which has its own
+    share row.
+- **Her screen** (`manage/screens/picks.js`, new): `/s/<site>/blocks/<page>/<block>/records`.
+  - The button to it is on each data block's card in Pages and wording, and on Home's
+    Dog cards and Litter cards screens, with "{n} left out by you".
+  - Featured: ticks, ↑ ↓ order (a move saves the ticks with it), set dates, and who
+    shows today.
+  - No prototype screen: built from her app's switch list and the list rows with ↑ ↓,
+    so no app CSS changed.
+  - Its wording is in `manage/wording.js` (`picks.*`, `note.picked`).
+- **The owner's view:** the Featured block's settings: its conditions as the starting
+  set, Schedule, What it shows, and who shows today. Every data block says what she
+  left out or picked. The page preview draws Featured.
+- **Split out** (`review/senior-review-2026-11.md` item 7), moved unchanged:
+  - her Pages and Home screens: `screens.js` → `manage/screens/pages.js` (−27 KB);
+  - the site's data blocks: `render/pages.js` → `render/pages/blocks.js`;
+  - a data block's settings: `builder.js` → `manage/builder/blocks.js`, with the shared
+    controls moved to `builder/controls.js`.
+- Checked in a browser at 390px and 1280px: her picking screens (Dog cards and
+  Featured), the site's Featured block with photos, and the owner's settings. No
+  sideways scroll, no script errors.
+- No versioned file changed (`public/_kp/` untouched).
+- Tests: `picks.test.js` (new: the rotation, picks, her screens end to end, the
+  snapshot); `blocks.test.js` gains the owner's Featured settings. All 387 pass.

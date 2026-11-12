@@ -83,7 +83,7 @@ export function scheduleSettings(snap, key, b, k) {
       ${fld('Each one stays', seg(k('sched.every'), s.every, FEATURE_EVERY))}
       ${fld('In what order', seg(k('sched.order'), s.order, FEATURE_ORDER), 'Shuffled is a fixed shuffle: the same for every visitor, and it doesn\'t change on reload.')}
       <div class="fgrid">${select(k('sched.count'), String(s.count), FEATURE_COUNT, 'How many at once')}
-        <label class="half">Starting on<input type="date" name="${k('sched.start')}" value="${esc(s.start)}"><span class="hint">Empty: weeks turn over on a Monday, months on the 5th.</span></label></div>
+        <label class="half">Starting on<input type="date" name="${k('sched.start')}" value="${esc(s.start)}"><span class="hint">Empty: weeks turn over on a Monday, months on the 1st.</span></label></div>
       <p class="result">${now.length ? `Showing today: <b>${now.map((x) => esc(name(x))).join(', ')}</b>` : '<b>Nothing to show</b>, so this block hides itself on the site.'}</p></div>`;
 }
 

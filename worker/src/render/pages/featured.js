@@ -48,7 +48,7 @@ export function featuredBlock(snap, ctx, b, key) {
     const href = profileOf(snap, ctx, b, x, rc);
     const lines = dog ? dogFace(snap, x, b.show.items, { sale: saleOf(snap, ctx, x) }) : pupLines(snap, ctx, b, x, rc);
     const more = href && (dog || pageOn(snap, 'litters', ctx)) ? `<div><a class="btn solid" href="${href}">${esc(word(snap, 'featured_meet', { name }))}</a></div>` : '';
-    return `<div class="wrap story${pic ? '' : ' no-photo'}${i % 2 ? ' pic-right' : ''}${i ? ' mt-26' : ''}">${pic}<div class="story-copy">
+    return `<div class="wrap story${pic ? (i % 2 ? ' pic-right' : '') : ' no-photo'}${i ? ' mt-26' : ''}">${pic}<div class="story-copy">
         <h2>${esc(name)}</h2>${lines}${more}</div></div>`;
   };
   return `<section class="section band own-featured"><div class="wrap">${head(w.eyebrow, w.heading, w.lede)}</div>

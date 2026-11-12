@@ -10,7 +10,7 @@
 export const FEATURE_EVERY = Object.freeze({ day: 'A day', week: 'A week', month: 'A month' });
 export const FEATURE_ORDER = Object.freeze({ hers: 'In her order', shuffle: 'Shuffled' });
 export const FEATURE_COUNT = Object.freeze({ 1: 'One at a time', 2: 'Two at a time', 3: 'Three at a time' });
-// Weeks turn on a Monday when no start date is set.
+// With no start date set, weeks turn on a Monday and months on the 1st.
 const EPOCH = '2026-01-05';
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -27,7 +27,7 @@ export function cleanSchedule(s) {
 const utc = (d) => Date.UTC(Number(d.slice(0, 4)), Number(d.slice(5, 7)) - 1, Number(d.slice(8, 10)));
 // Whole periods from the start to today (negative before it).
 export function periodsSince(start, today, every) {
-  const a = start || EPOCH;
+  const a = start || (every === 'month' ? '2026-01-01' : EPOCH);
   if (every === 'month') {
     const m = (Number(today.slice(0, 4)) - Number(a.slice(0, 4))) * 12 + Number(today.slice(5, 7)) - Number(a.slice(5, 7));
     return today.slice(8) < a.slice(8) ? m - 1 : m;

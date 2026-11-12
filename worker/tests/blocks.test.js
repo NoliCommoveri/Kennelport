@@ -378,3 +378,27 @@ test('a block the owner added is the breeder\'s to switch off and reword, on Hom
   await assert.rejects(importContent(env, id, { pages: { 'x-': {} } }), /not a page/);
   await assert.rejects(importContent(env, id, { blocks: { nope: {} } }), /<page>\/<block>/);
 });
+
+test('a Featured dog block in the owner\'s view: its schedule and items saved, today\'s shown, and what the breeder picked', async (t) => {
+  const { env, id, get, post, home, build, at } = await demo(t);
+  await post({}, { act: 'add:featured_dog' });
+  const b = (await build()).pages.home.blocks.at(-1);
+  assert.equal(b.type, 'featured_dog');
+  let html = await get(`${at('home')}?open=${b.id}`);
+  assert.match(text(html), /Schedule .*Each one stays/);
+  assert.match(text(html), /She hasn't picked any yet/);
+  assert.doesNotMatch(html, new RegExp(`name="b\\.${b.id}\\.group"`));
+  await post({ [`b.${b.id}.sched.every`]: 'day', [`b.${b.id}.sched.count`]: '2', [`b.${b.id}.sched.start`]: '2027-03-10', [`b.${b.id}.show.items.titles`]: null, [`b.${b.id}.w.heading`]: 'Dog of the day' }, { open: b.id });
+  const saved = (await build()).pages.home.blocks.at(-1);
+  assert.deepEqual(saved.sched, { every: 'day', order: 'hers', start: '2027-03-10', count: 2 });
+  assert.ok(!saved.show.items.includes('titles'));
+  const h = text(await home());
+  assert.match(h, /Featured Dog of the day/);
+  assert.equal((h.match(/Meet /g) ?? []).length >= 2, true);
+  // Her picks show in the owner's view.
+  const dog = env.DB.raw.prepare('SELECT id FROM dogs WHERE site_id = ? AND outside = 0 LIMIT 1').get(id).id;
+  env.DB.raw.prepare('INSERT INTO block_picks (site_id, page, block, picks, updated_at) VALUES (?, ?, ?, ?, ?)').run(id, 'home', b.id, JSON.stringify({ pick: [dog] }), 'x');
+  html = text(await get(`${at('home')}?open=${b.id}`));
+  assert.match(html, /She has picked 1 in her Site Manager/);
+  assert.match(html, /Shows 1 dog/);
+});

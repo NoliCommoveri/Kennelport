@@ -327,6 +327,11 @@ Each step is its own branch and merge, with at most one migration.
    the Featured block. One migration: the picks, if they are kept outside the block (they are
    hers: question 3). Featured offspring (B6) was built ahead of this, on 2026-11-12, with
    step 2.
+   **Built 2026-11-12** (migration 0031 `block_picks`): her picks are her content, kept
+   outside the block. A Featured block's picks win over the owner's conditions; until
+   she picks, it shows what the conditions hold for. Her set dates win over the
+   rotation. **Not yet:** the share row sharing the featured record (needs a template
+   script change and an `ASSET_VERSION` bump).
 4. **C1, C2, C5, C6.** The small raw fields, each with its rule. Migration: the columns.
    The linked sample (`tests/fixtures/linked-sample/`) gains each value, and its
    coverage test checks them.

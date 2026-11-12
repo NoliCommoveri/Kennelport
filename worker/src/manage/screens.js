@@ -3,7 +3,8 @@
 // a problem comes back with what was typed and the reason.
 //
 // Split out into screens/, a screen at a time (docs/review/senior-review-2026-11.md,
-// item 7): share, inbox, queue (reviews to approve), account, pages (her Pages and Home). Each is a factory
+// item 7): share, inbox, queue (reviews to approve), account, pages (her Pages and Home),
+// picks (which records a block shows). Each is a factory
 // given what createScreens holds for the request; screens/parts.js is shared.
 import { escapeHtml as esc } from '../lib/html.js';
 import { json } from '../lib/http.js';
@@ -39,6 +40,7 @@ import { inboxScreens } from './screens/inbox.js';
 import { queueScreens } from './screens/queue.js';
 import { accountScreens } from './screens/account.js';
 import { pagesScreens } from './screens/pages.js';
+import { picksScreens, isPicksPath } from './screens/picks.js';
 import { dogFormFields, withLifeStage, fromLifeStage, lockLifeStage, pedigreeCard } from './screens/dogform.js';
 
 // The note after a change, and a form's error, in the owner's wording (wording.js).
@@ -550,6 +552,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       <p class="muted small">${esc(say('waitlistpage.add_your_own_policies'))}</p></section>`;
   }
 
+  const { picksScreen } = picksScreens({ base, env, note, request, say, site, url });
   const { pages, home, addedAction } = pagesScreens({ base, ctxFor, embedErr, embedsCard, env, errorBox, kos, library, listTitle, note, photoUrl, photos, request, say, site, tagFromForm, url });
 
   // ---------- how to pay, and the safe-payment notice (plan 3.9) ----------
@@ -888,6 +891,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     else if (p === '/details') view = await details();
     else if (p.startsWith('/pages')) view = await pages();
     else if (p.startsWith('/home')) view = await home();
+    else if (isPicksPath(p)) view = await picksScreen();
     else if (p.startsWith('/blocks/')) view = await addedAction();
     else if (p.startsWith('/photos')) view = await photosScreen();
     else if (p === '/payment' || /^\/payment\/(application_fee|deposit|safe_notice)$/.test(p)) view = await payment();

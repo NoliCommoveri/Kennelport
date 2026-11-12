@@ -25,7 +25,8 @@ read that before the rest. Update this map when you add, move or split a file.
 - `src/render/`: the "ak" template. `index.js` path → page; `pages.js` the page frame and the pages
   not yet split out; `pages/` one file per page split out (`about.js`, `reviews.js`,
   `contact.js`, `albums.js`, `privacy.js`, `puppy.js`) and pieces `pages.js` uses
-  (`albumLists.js`, `formParts.js` the visitor forms, `applicationForm.js` KennelOS's form);
+  (`blocks.js` the data blocks, `featured.js` the Featured block,
+  `albumLists.js`, `formParts.js` the visitor forms, `applicationForm.js` KennelOS's form);
   `parts.js` shared cards, photos, menu; `layout.js` head, header, footer; `schemes.js` the
   colour schemes (source for `scripts/schemes.mjs`); `version.js` `ASSET_VERSION`.
 - `public/_kp/t/ak/`: the template's CSS, JS, scheme CSS and ornaments; `public/_kp/fonts/`.
@@ -49,6 +50,10 @@ read that before the rest. Update this map when you add, move or split a file.
   (dog, pup, litter), with the conditions, order and groups themselves
   (`plans/kennelos-contract.md` B1, B2). `render/parts.js` `recordCtx` gives it the day,
   a litter's stage and a pup's status row.
+- `src/content/picks.js`: the breeder's ticks and picks on a data block (`block_picks`):
+  Leave out, and a Featured block's picks and set dates (`plans/kennelos-contract.md`
+  B3). `src/content/featured.js`: a Featured block's schedule and which record shows
+  today (B5).
 - `src/content/prices.js`: every price shown, worked out from a litter's figures.
 - `src/content/akSample.js`: the AK sample as a content document.
 - Photos: `src/photos.js` (upload checks), `src/photoTags.js` (what a photo is of),
@@ -62,7 +67,9 @@ read that before the rest. Update this map when you add, move or split a file.
 - `src/manage/screens.js`: the editing screens under `/s/<subdomain>/`, in `createScreens`.
   Split out into `src/manage/screens/`, each a factory given what `createScreens` holds:
   `share.js`, `inbox.js`, `queue.js` (reviews to approve), `account.js` (storage, download,
-  delete), `dogform.js` (a dog's Life stage choice and its pedigree card); `parts.js` small shared pieces.
+  delete), `dogform.js` (a dog's Life stage choice and its pedigree card), `pages.js` (her
+  Pages and Home, and the blocks placed on them), `picks.js` (which records a data block
+  shows: her ticks and picks); `parts.js` small shared pieces.
 - `src/manage/forms.js`: an input per content field, with `LABELS` (field wording).
 - `src/manage/wording.js`: every other line she reads, as one list (`say('key')`).
 - `src/manage/hub.js`: Today, Families, Dogs, Website, Portal: the app for sites with the
@@ -71,7 +78,8 @@ read that before the rest. Update this map when you add, move or split a file.
   rules, timing, wording). Screens split out of `builder.js` are in `src/manage/builder/`:
   `sites.js` (Every site), `rules.js` (Pups), `kennelos.js` (From KennelOS), `timing.js`,
   `formats.js`, `instructions.js` (her instructions), `records.js` (a data block's
-  conditions, order and groups); `frame.js` the nav and redirect,
+  conditions, order and groups), `blocks.js` (a data block's settings and a Featured
+  block's schedule); `frame.js` the nav and redirect,
   `controls.js` the form controls. The five big files (`builder.js`, `screens.js`,
   `render/pages.js`, `portal/admin.js`, `portal/family.js`) are split further a screen at a
   time as they're touched (`review/senior-review-2026-11.md`, item 7): don't grow them.

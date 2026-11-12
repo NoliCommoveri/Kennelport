@@ -4,7 +4,7 @@ The one place for progress. Keep it short: one line per item, a link to where th
 is. When a step is built, change its line here and add the detail to the build log
 ([`log/BUILD_LOG.md`](log/BUILD_LOG.md)); the plans describe intent, not progress.
 
-Last updated 2026-11-10. Released on `main`: Site Manager (`APP_VERSION`) 17, site
+Last updated 2026-11-12. Released on `main`: Site Manager (`APP_VERSION`) 17, site
 template (`ASSET_VERSION`) 23.
 
 ## Platform
@@ -49,7 +49,7 @@ anyone outside the family.
 | 4. The owner's own blocks and styling | Banners, buttons, dividers, spacers, photos, collages, photo beside words, text over a photo, text, gallery strip, block backgrounds and spacing built. **Next, the photo system:** albums from photos she has, then the duplicate check. Still to come: videos as blocks, links to a dog/litter/puppy, fonts and the font library, text size on built-in blocks |
 | 5. Templates (save, apply, reset) | Not started |
 | 6. The family portal's build | Not started |
-| 7. After the KennelOS review | Planned in [`plans/kennelos-contract.md`](plans/kennelos-contract.md). Steps 1 and 2 built: blocks over any field (conditions, order, groups, the colour picker; Pup cards new; a dog's Life stage and Lives), 2026-11-12. Featured offspring (B6) built too: a dog's sire and dam (migration 0030), offspring chained on its page, her Pedigree card with Make a dog record, and one Life stage on her dog form. **Next:** step 3, picks, Leave out, Featured. The breeder unticks any record on any data block, and picks a Featured block's (the owner, 2026-11-12). Still to do from step 2: the Dogs page's Girls and boys as a group of a block |
+| 7. After the KennelOS review | Planned in [`plans/kennelos-contract.md`](plans/kennelos-contract.md). Steps 1 and 2 built: blocks over any field (conditions, order, groups, the colour picker; Pup cards new; a dog's Life stage and Lives), 2026-11-12. Featured offspring (B6) built too: a dog's sire and dam (migration 0030), offspring chained on its page, her Pedigree card with Make a dog record, and one Life stage on her dog form. Step 3 built (migration 0031): she unticks any record on any data block, and picks, orders and sets dates for a new Featured dog or Featured pup block that turns over by itself (2026-11-12). Not yet: Featured's share row (needs an `ASSET_VERSION` bump). **Next:** step 4, the small raw fields. Still to do from step 2: the Dogs page's Girls and boys as a group of a block |
 
 ## Family portal ([`plans/family-portal.md`](plans/family-portal.md))
 

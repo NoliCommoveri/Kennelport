@@ -15,6 +15,7 @@ import { blockRows, pageOn as pageShows, label as pageMenuName } from '../../ren
 import { readFeed, parseFeedAddress, setFeed, FeedError, kennelosOrigin } from '../../feed.js';
 import { loadBuild } from '../../content/rules.js';
 import { redirect } from './parts.js';
+import { picksLink } from './picks.js';
 
 export function pagesScreens({ base, ctxFor, embedErr, embedsCard, env, errorBox, kos, library, listTitle, note, photoUrl, photos, request, say, site, tagFromForm, url }) {
   // The KennelOS website feed (plan 3.8): pasted on the waitlist page's screen.
@@ -170,8 +171,8 @@ export function pagesScreens({ base, ctxFor, embedErr, embedsCard, env, errorBox
   // and reword, drawn like the rest of her page, where it sits. Its own small form.
   async function addedCard(key, b, snap) {
     if (BLOCK_TYPES[b.type].kind === 'own') return ownCard(key, b, snap);
-    const what = { dogs: say('pages.your_dogs_from_kennelos'), litters: say('pages.your_litters_from_kennelos'), pups: say('pages.your_pups_from_kennelos'), reviews: say('pages.your_reviews') };
-    const nameOf = { dogs: (d) => d.call_name, litters: (l) => l.name, pups: (p) => p.name, reviews: (r) => r.first_name || say('pages.a_family') };
+    const what = { dogs: say('pages.your_dogs_from_kennelos'), litters: say('pages.your_litters_from_kennelos'), pups: say('pages.your_pups_from_kennelos'), reviews: say('pages.your_reviews'), featured_dog: say('pages.your_dogs_from_kennelos'), featured_pup: say('pages.your_pups_from_kennelos') };
+    const nameOf = { dogs: (d) => d.call_name, litters: (l) => l.name, pups: (p) => p.name, reviews: (r) => r.first_name || say('pages.a_family'), featured_dog: (d) => d.call_name, featured_pup: (p) => p.name };
     const cur = await getAddedBlock(env, site.id, key, b.id);
     const rows = blockRows(snap, b, null, key);
     const names = (b.limit ? rows.slice(0, b.limit) : rows).map(nameOf[b.type]);
@@ -179,7 +180,7 @@ export function pagesScreens({ base, ctxFor, embedErr, embedsCard, env, errorBox
     return `<form method="post" action="${base}/blocks/${esc(key)}/${esc(b.id)}" data-save class="card added${cur.enabled ? '' : ' off'}" id="b-${esc(b.id)}">
         <div class="between"><h2 class="added-h">${esc(cur.heading || b.w.heading || BLOCK_TYPES[b.type].name)}</h2>
           <div class="switches"><label class="check">${esc(say('pages.show_it'))}<input type="checkbox" name="enabled" value="1"${cur.enabled ? ' checked' : ''}></label></div></div>
-        <p class="muted small">${esc(what[b.type])}: ${names.length ? esc(names.join(', ')) : 'none right now, so it hides'}.</p>
+        <p class="muted small">${esc(what[b.type])}: ${names.length ? esc(names.join(', ')) : 'none right now, so it hides'}.</p>${picksLink(base, say, key, b, snap)}
         <div class="fgrid">${input('eyebrow', say('pages.eyebrow'), ADDED_BLOCK_FIELDS.eyebrow.max, true)}${input('heading', say('pages.heading'), ADDED_BLOCK_FIELDS.heading.max, true)}${input('lede', say('pages.line_under_it'), ADDED_BLOCK_FIELDS.lede.max, false)}</div>
         <button class="primary">${esc(say('pages.save'))}</button></form>`;
   }
@@ -324,9 +325,12 @@ export function pagesScreens({ base, ctxFor, embedErr, embedsCard, env, errorBox
     const current = await getBlock(env, site.id, key);
     const defs = key === 'hero' ? { headline: site.kennel_name ?? null } : HOME_WORDS[key] ?? {};
     const pick = { groups: [{ label: say('homeblocks.photos_for_the_home'), subject: 'page:home' }], tags: ['page:home'], alt: '' };
+    // Her Dog cards and Litter cards on Home: which of them show is hers too (picks.js).
+    const data = pageBlocks(await loadBuild(env, site.id), 'home').find((b) => b.id === key && b.where);
+    const choose = data ? picksLink(base, say, 'home', data, await buildSnapshot(env, site.id)) : '';
     const render = async (err, values) => ({
       title: say(`homeblocks.title.${key}`), back: `${base}/home`,
-      body: `${note(url)}${errorBox(err)}<form method="post" action="${base}/home/${key}" data-save class="card">${fieldsWithLabel(all, shownWith(values ?? current, defs), await ctxFor(key, pick), { enabled: [say('homeblocks.this_block_is_on'), say('homeblocks.off_it_leaves_the')] })}<button class="primary">${esc(say('homeblocks.save'))}</button></form>`,
+      body: `${note(url)}${errorBox(err)}${choose}<form method="post" action="${base}/home/${key}" data-save class="card">${fieldsWithLabel(all, shownWith(values ?? current, defs), await ctxFor(key, pick), { enabled: [say('homeblocks.this_block_is_on'), say('homeblocks.off_it_leaves_the')] })}<button class="primary">${esc(say('homeblocks.save'))}</button></form>`,
     });
     if (request.method !== 'POST') return render();
     const fd = await request.formData();
