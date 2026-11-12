@@ -690,8 +690,8 @@ export function createScreens({ env, request, url, site, user, page, say = defau
   // and reword, drawn like the rest of her page, where it sits. Its own small form.
   async function addedCard(key, b, snap) {
     if (BLOCK_TYPES[b.type].kind === 'own') return ownCard(key, b, snap);
-    const what = { dogs: say('pages.your_dogs_from_kennelos'), litters: say('pages.your_litters_from_kennelos'), reviews: say('pages.your_reviews') };
-    const nameOf = { dogs: (d) => d.call_name, litters: (l) => l.name, reviews: (r) => r.first_name || say('pages.a_family') };
+    const what = { dogs: say('pages.your_dogs_from_kennelos'), litters: say('pages.your_litters_from_kennelos'), pups: say('pages.your_pups_from_kennelos'), reviews: say('pages.your_reviews') };
+    const nameOf = { dogs: (d) => d.call_name, litters: (l) => l.name, pups: (p) => p.name, reviews: (r) => r.first_name || say('pages.a_family') };
     const cur = await getAddedBlock(env, site.id, key, b.id);
     const rows = blockRows(snap, b);
     const names = (b.limit ? rows.slice(0, b.limit) : rows).map(nameOf[b.type]);

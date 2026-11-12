@@ -1,6 +1,7 @@
 // Pieces of the "ak" template shared by its pages: formatting, photos, cards and
 // the menu. Every value from a snapshot passes through esc() (or attr()) here.
-import { SHOW_DEFAULT, isCustom, hersOn, BLOCK_TYPES, defaultMenu, MENU_PLACES, PAGE_DEFAULTS } from '../content/blocks.js';
+import { SHOW_DEFAULT, isCustom, hersOn, BLOCK_TYPES, defaultMenu, MENU_PLACES, PAGE_DEFAULTS, recordsOf } from '../content/blocks.js';
+import { BLOCK_KIND, matches, ordered, grouped } from '../content/fields.js';
 import { escapeHtml as esc } from '../lib/html.js';
 import { PAGES, pupStatus } from '../content/model.js';
 import { puppyPrice, litterPriceRange, depositRange } from '../content/prices.js';
@@ -140,12 +141,50 @@ export function addedWords(snap, key, b) {
   return w;
 }
 
-// The records a data block would show (before its limit).
-export function blockRows(snap, b) {
-  if (b.type === 'dogs') return dogsFor(snap, b);
-  if (b.type === 'litters') return snap.litters.filter((l) => b.f.stage.includes(l.stage));
-  if (b.type === 'reviews') return snap.reviews;
-  return [];
+// What reading a record's fields needs from the site (content/fields.js `rc`): the day,
+// a litter's stage as the site shows it, a pup's status row, its litter, a dog by id,
+// a partner kennel's name. Without a day, today's (UTC), as the editor's lists use.
+export function recordCtx(snap, today = null) {
+  const day = today ?? new Date().toISOString().slice(0, 10);
+  const dogs = new Map(snap.dogs.map((d) => [d.id, d]));
+  const litterOfPup = new Map();
+  for (const l of snap.litters) for (const p of l.puppies ?? []) litterOfPup.set(p, l);
+  return {
+    today: day,
+    dogById: (id) => (id ? dogs.get(id) ?? null : null),
+    litterOf: (p) => litterOfPup.get(p) ?? null,
+    pupKey: (p) => pupRuleKey(snap, p, litterOfPup.get(p) ?? null, day),
+    litterStage: (l) => litterStage(snap, l, day),
+    partnerName: (id) => partnerOf(snap, id)?.name ?? null,
+  };
+}
+
+// A litter's stage as the site shows it on the day (content/fields.js LITTER_STAGE): a
+// born litter is available soon while its deposits don't open, older puppies once past
+// going home, else available now.
+export function litterStage(snap, l, today) {
+  if (l.stage !== 'current') return l.stage;
+  if (depositsAhead(snap, l, today)) return 'available_soon';
+  return pastReady(snap, l, today) ? 'older' : 'available_now';
+}
+
+// A data block's records (content/fields.js): those its conditions hold for, in its
+// order (before its limit). Reviews have no conditions: all of them.
+export function blockRows(snap, b, today = null) {
+  const kind = BLOCK_KIND[b.type];
+  if (!kind) return b.type === 'reviews' ? snap.reviews : [];
+  const r = recordsOf(b);
+  const rc = recordCtx(snap, today);
+  const all = kind === 'dog' ? snap.dogs : kind === 'litter' ? snap.litters : snap.litters.flatMap((l) => l.puppies ?? []);
+  return ordered(kind, all.filter((x) => matches(kind, x, r.where, rc)), r.order, rc);
+}
+
+// The rows in the block's groups ([{ heading, rows }]), or one group with no heading.
+export function blockGroups(snap, b, rows, today = null) {
+  const kind = BLOCK_KIND[b.type];
+  const r = recordsOf(b);
+  if (!kind || !r.group) return [{ key: '', heading: '', rows }];
+  return grouped(kind, rows, r.group, r.gw, recordCtx(snap, today));
 }
 
 // A page of hers shows while something on it does: a data block with records
@@ -260,18 +299,9 @@ export function dogGroups(snap) {
   };
 }
 
-// A Dog cards block's dogs (content/blocks.js): its filters, then its order. The
+// A Dog cards block's dogs (content/blocks.js): its conditions, then its order. The
 // default (active, at home, not up and coming, not for sale) is dogGroups' breeding.
-export function dogsFor(snap, b) {
-  const flag = (v, has) => v === 'any' || (v === 'only' ? has : !has);
-  const list = snap.dogs.filter((d) => b.f.status.includes(d.status) && (b.f.sex === 'any' || d.sex === b.f.sex)
-    && flag(b.f.upcoming, Boolean(d.upcoming)) && flag(b.f.sale, Boolean(d.for_sale)) && flag(b.f.away, Boolean(d.lives_away)) && flag(b.f.outside ?? 'no', Boolean(d.outside)));
-  const born = (d) => d.date_of_birth || '9999';
-  if (b.order === 'name') return [...list].sort((a, c) => a.call_name.localeCompare(c.call_name));
-  if (b.order === 'age') return [...list].sort((a, c) => born(a).localeCompare(born(c)));
-  if (b.order === 'young') return [...list].sort((a, c) => (c.date_of_birth || '').localeCompare(a.date_of_birth || ''));
-  return list;
-}
+export const dogsFor = (snap, b, today = null) => blockRows(snap, b, today);
 
 // A dog's partner kennels, as the site may name them: the one it lives with, and
 // the kennels of its co-owners. Older snapshots have none.

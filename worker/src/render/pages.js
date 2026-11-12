@@ -8,14 +8,14 @@
 import {
   esc, attr, fmtDate, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, litterCard, parentCards, litterFacts, dogCard, coCard,
   besideCard, partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, reviewCard, expanders, pagehead, head, ICONS, paySection,
-  payShown, litterChoices, ANY_LITTER, ABOUT_LABEL, dogGroups, dogsFor, depositsAhead, soonSection, rulesOf, pricesOff, sitePrice, word, sexWord, fullRegLink,
+  payShown, litterChoices, ANY_LITTER, ABOUT_LABEL, dogGroups, dogsFor, blockRows, blockGroups, recordCtx, depositsAhead, soonSection, rulesOf, pricesOff, sitePrice, word, sexWord, fullRegLink,
   fullRegSurchargeRow, galleryHtml, faqBlock, addedOn, addedWords, addedRow, customPage,
 } from './parts.js';
 import { embedView } from '../embeds.js';
 import { litterAlbums, dogAlbums } from './pages/albumLists.js';
 import { v, honeypot, turnstileBox, formResult } from './pages/formParts.js';
 import { kennelosForm } from './pages/applicationForm.js';
-import { homeBlocks, pageBlocks, hersOn, BREEDER_SWITCH, PAGE_PARTS, PAGE_HEADS, headFor, BLOCK_TYPES, cleanProfile } from '../content/blocks.js';
+import { homeBlocks, pageBlocks, hersOn, BREEDER_SWITCH, PAGE_PARTS, PAGE_HEADS, headFor, BLOCK_TYPES, cleanProfile, recordsOf } from '../content/blocks.js';
 import { HOME_WORDS, COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk, badgeAddress, PAGES } from '../content/model.js';
 
 // A question from her FAQ, where she has placed it (plan 3.9): its own band under
@@ -218,6 +218,7 @@ function dataBlock(snap, ctx, b, key) {
   if (!addedOn(snap, key, b)) return '';
   if (b.type === 'dogs') return dogsBlock(snap, ctx, b, key);
   if (b.type === 'litters') return littersBlock(snap, ctx, b, key);
+  if (b.type === 'pups') return pupsBlock(snap, ctx, b, key);
   if (b.type === 'reviews') return reviewsBlock(snap, ctx, b, key);
   return '';
 }
@@ -436,19 +437,30 @@ function storyBlock(snap, ctx) {
     </div></div></section>`;
 }
 
+// A grouped block (content/fields.js, B2): a heading per group over its cards, in the
+// block's style; ungrouped, the cards alone. The block's limit counts every card.
+function inGroups(snap, ctx, b, list, draw) {
+  const groups = blockGroups(snap, b, list, ctx.today);
+  if (groups.length === 1 && !groups[0].heading) return draw(list);
+  return groups.map((g, i) => `<div class="head${i ? ' mt-26' : ''}"><h3>${esc(g.heading)}</h3></div>${draw(g.rows)}`).join(`\n      `);
+}
+
 function dogsBlock(snap, ctx, b, key = 'home') {
-  const list = limited(dogsFor(snap, b), b);
+  const list = limited(dogsFor(snap, b, ctx.today), b);
   if (!list.length) return '';
   const w = blockWords(snap, b, key);
   const ctl = pageOn(snap, 'dogs', ctx) ? `<a class="more" href="/dogs">${esc(w.link_label || 'See all our dogs')}</a>` : '';
   const card = (d) => dogCard(snap, d, { sale: saleOf(snap, ctx, d), show: b.show });
   // lines: a 4px accent line between cards where they stack (site.css .lines).
   const lines = b.lines ? ' lines' : '';
+  const grouped = recordsOf(b).group;
+  // Grouped, the See all link goes once, under the last group.
   const more = ctl ? `<p class="center mt-26">${ctl}</p>` : '';
-  const body = b.style === 'light' ? slider(list.map((d) => coCard(snap, d, { show: b.show })), { cls: 'light', ctl })
-    : b.style === 'flip' ? `<div class="grid${list.length === 1 ? ' narrow-grid' : ''}${lines}">${list.map(card).join('')}</div>${more}`
-      : b.style === 'beside' ? `<div class="dogrows${list.length === 1 ? ' one' : ''}${lines}">${list.map((d) => besideCard(snap, d, { sale: saleOf(snap, ctx, d), show: b.show })).join('')}</div>${more}`
-        : slider(list.map(card), { ctl });
+  const draw = (rows) => (b.style === 'light' ? slider(rows.map((d) => coCard(snap, d, { show: b.show })), { cls: 'light', ctl: grouped ? '' : ctl })
+    : b.style === 'flip' ? `<div class="grid${rows.length === 1 ? ' narrow-grid' : ''}${lines}">${rows.map(card).join('')}</div>`
+      : b.style === 'beside' ? `<div class="dogrows${rows.length === 1 ? ' one' : ''}${lines}">${rows.map((d) => besideCard(snap, d, { sale: saleOf(snap, ctx, d), show: b.show })).join('')}</div>`
+        : slider(rows.map(card), { ctl: grouped ? '' : ctl }));
+  const body = inGroups(snap, ctx, b, list, draw) + (grouped || b.style === 'flip' || b.style === 'beside' ? more : '');
   return `<section class="section"><div class="wrap">
       ${head(w.eyebrow ?? HOME_WORDS.dogs.eyebrow, blockHead(key, b, w, HOME_WORDS.dogs.heading), w.lede, { ornament: true })}
       ${body}
@@ -456,13 +468,29 @@ function dogsBlock(snap, ctx, b, key = 'home') {
 }
 
 function littersBlock(snap, ctx, b, key = 'home') {
-  const list = limited(snap.litters.filter((l) => b.f.stage.includes(l.stage)), b);
+  const list = limited(blockRows(snap, b, ctx.today), b);
   if (!list.length) return '';
   const w = blockWords(snap, b, key);
   return `<section class="section band"><div class="wrap">
       ${head(w.eyebrow ?? HOME_WORDS.litters.eyebrow, blockHead(key, b, w, HOME_WORDS.litters.heading))}
-      <div class="litters">${list.map((l) => litterCard(snap, l, ctx, { show: b.show })).join('')}</div>
+      ${inGroups(snap, ctx, b, list, (rows) => `<div class="litters">${rows.map((l) => litterCard(snap, l, ctx, { show: b.show })).join('')}</div>`)}
       <p class="center mt-26"><a class="btn line" href="/litters">${esc(w.link_label || 'View all puppies')}</a></p>
+    </div></section>`;
+}
+
+// Pup cards (the owner's, kennelos-contract.md step 2): the pups its conditions hold
+// for, as flip cards in a grid (the Puppies page's own cards), each with its litter.
+function pupsBlock(snap, ctx, b, key = 'home') {
+  const list = limited(blockRows(snap, b, ctx.today), b);
+  if (!list.length) return '';
+  const w = blockWords(snap, b, key);
+  const rc = recordCtx(snap, ctx.today);
+  const draw = (rows) => `<div class="grid${rows.length === 1 ? ' narrow-grid' : ''}">${rows.map((p) => puppyCard(snap, rc.litterOf(p), p, ctx)).join('')}</div>`;
+  const ctl = pageOn(snap, 'litters', ctx) ? `<p class="center mt-26"><a class="btn line" href="/litters">${esc(w.link_label || 'View all puppies')}</a></p>` : '';
+  return `<section class="section"><div class="wrap">
+      ${head(w.eyebrow ?? 'Puppies', blockHead(key, b, w, 'Available puppies'), w.lede)}
+      ${inGroups(snap, ctx, b, list, draw)}
+      <p class="flip-hint">${esc(word(snap, 'flip_hint'))}</p>${ctl}
     </div></section>`;
 }
 

@@ -828,3 +828,53 @@ with new sections and a new building order. Docs only; nothing built yet.
 - No migration, no versioned file. Tests: `worker.test.js` (applies by itself, a failing
   one, a drifted one), `ops.test.js` (opening ops applies, Apply pending reruns, the
   limit, no tables yet). All 364 pass.
+
+## 2026-11-12: KennelOS contract step 2: blocks over any field
+
+- `plans/kennelos-contract.md` B1, B2, B4. No migration, no versioned file (nothing under
+  `public/_kp/` changed), so no bump.
+- **One list of fields** (`content/fields.js`, new): for dogs, pups and litters, every
+  field a block can use, with its name for the owner, its kind and how to read it.
+  - Worked out for dogs: has titles, a title, age in years, has health results.
+  - Pups: status as the site reads it (its status row, `not_open` included), and its
+    litter's name, stage and birth date.
+  - Litters: stage as the site shows it on the day (available now, available soon,
+    older, planned, past), each parent's dog fields (`dam.`, `sire.`, `a_parent.`), and
+    its pups' colours and count.
+  - A parent that isn't a dog on the site is unknown, and no condition on it holds.
+  - `tests/fields.test.js` fails when a field in `model.js` is in neither this list nor
+    `NOT_FOR_BLOCKS`.
+- **Conditions, order, groups** for Dog cards, Litter cards and the new **Pup cards**
+  block (the Puppies page's flip cards, by conditions; `render/pages.js` `pupsBlock`).
+  - `b.where` holds conditions, every one of which must hold. Text is compared with case
+    and spacing evened out.
+  - `b.order` is hers, or any field up or down, with records missing the value last.
+  - `b.group` and `b.gw` give a heading per value (an `h3` in the template's `.head`, no
+    new CSS), with the owner's words over the default. Sex groups read Girls and Boys.
+  - A condition whose value isn't set yet is kept and leaves nothing out, because the
+    editor works without script.
+- **Old blocks** (B4): a stored `f` reads as the same conditions (`blocks.js`
+  `recordsOf`, `legacyWhere`), and the old orders as fields.
+  - A litter's `current` becomes every stage a born litter shows in, so results are
+    identical: checked over 1,700 filter and order combinations against the old code.
+  - An older snapshot's blocks draw the same. The new form is stored when a block is
+    next saved; no stored build is rewritten.
+- **The owner's block screen** (`manage/builder/records.js`, new; `builder.js` gets only
+  the calls).
+  - Conditions as rows: field (grouped: the litter, its pups, either parent, dam,
+    sire), what it asks, and a value.
+  - Ticks for "is one of". For a colour, the ticks are the colours the site holds (the
+    colour picker).
+  - Add a condition, Remove this condition, Order, Group by, and a heading over each group.
+  - No prototype has this screen: it is built from the prototype's chips, select grid
+    and movable rows. Checked in a browser at 390px and 1280px against a local copy (a
+    colour ticked, grouped by sex, Pup cards added; the site's block drawn): no sideways
+    scroll, no script errors.
+- Her side: the Pup cards line in her page screen is in `manage/wording.js`
+  (`pages.your_pups_from_kennelos`).
+- **Not done:** the Dogs page's built-in Girls and boys and its `dogs#girls` and
+  `dogs#boys` menu places as a group of a block, since that changes every live Dogs
+  page. Leave out (`b.omit`) and picks are step 3.
+- Tests: `fields.test.js` (new), plus `blocks.test.js` and `outside.test.js` moved to
+  conditions (an editor test drives the colour picker and group headings through the
+  form). All 374 pass.

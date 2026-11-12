@@ -45,6 +45,10 @@ read that before the rest. Update this map when you add, move or split a file.
 - `src/content/blocks.js`: pages as lists of blocks (`PAGE_DEFAULTS`), each block's records
   and what its cards show.
 - `src/content/rules.js`: display and timing rules, set per site by the owner.
+- `src/content/fields.js`: every field a data block can choose by, order by or group by
+  (dog, pup, litter), with the conditions, order and groups themselves
+  (`plans/kennelos-contract.md` B1, B2). `render/parts.js` `recordCtx` gives it the day,
+  a litter's stage and a pup's status row.
 - `src/content/prices.js`: every price shown, worked out from a litter's figures.
 - `src/content/akSample.js`: the AK sample as a content document.
 - Photos: `src/photos.js` (upload checks), `src/photoTags.js` (what a photo is of),
@@ -66,7 +70,8 @@ read that before the rest. Update this map when you add, move or split a file.
 - `src/manage/builder.js` and `src/admin.js`: the owner's admin view (pages, blocks, menu,
   rules, timing, wording). Screens split out of `builder.js` are in `src/manage/builder/`:
   `sites.js` (Every site), `rules.js` (Pups), `kennelos.js` (From KennelOS), `timing.js`,
-  `formats.js`, `instructions.js` (her instructions); `frame.js` the nav and redirect,
+  `formats.js`, `instructions.js` (her instructions), `records.js` (a data block's
+  conditions, order and groups); `frame.js` the nav and redirect,
   `controls.js` the form controls. The five big files (`builder.js`, `screens.js`,
   `render/pages.js`, `portal/admin.js`, `portal/family.js`) are split further a screen at a
   time as they're touched (`review/senior-review-2026-11.md`, item 7): don't grow them.

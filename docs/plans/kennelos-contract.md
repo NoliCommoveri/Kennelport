@@ -274,6 +274,15 @@ Each step is its own branch and merge, with at most one migration.
    become `stage is one of`). The admin's block screen, with the colour picker. Litter
    fields that need data not sent yet (imports: step 6) join the list when it comes. No
    migration.
+   **Built 2026-11-12, with these changes:** there was no Pups block, so it adds one,
+   **Pup cards** (the Puppies page's flip cards, by conditions). A litter's `current`
+   stage reads as `stage is one of available now, available soon, older`, which is every
+   stage the site shows a born litter in, so results are identical. A condition whose
+   value isn't set yet is kept and leaves nothing out, because the editor works without
+   script. **Not yet:** the Dogs page's own Girls and boys section and its menu places
+   (`dogs#girls`, `dogs#boys`) as a group of a block. They stay built-in for now, because
+   changing them changes every live site's Dogs page. That belongs with step 3 or its
+   own small step.
 3. **B3, B5, B6.** Pick and Leave out for all three, the breeder's picking screen, the
    Featured block, featured offspring. One migration: `dog_offspring`, and the picks if
    they are kept outside the block (they are hers: question 3).

@@ -493,6 +493,7 @@ const SCREEN_LINES = {
   "waitlistpage.your_simple_waitlist_isn": ["waitlistpage", "Help line, up to a link or bold words", "Your simple waitlist isn't used while KennelOS is linked: your website shows your KennelOS list."],
   "pages.your_dogs_from_kennelos": ["pages", "Line", "Your dogs from KennelOS"],
   "pages.your_litters_from_kennelos": ["pages", "Line", "Your litters from KennelOS"],
+  "pages.your_pups_from_kennelos": ["pages", "Line", "Your pups from KennelOS"],
   "pages.your_reviews": ["pages", "Line", "Your reviews"],
   "pages.a_family": ["pages", "Line", "A family"],
   "pages.eyebrow": ["pages", "Line", "Eyebrow"],
