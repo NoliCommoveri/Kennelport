@@ -9,12 +9,13 @@ read that before the rest. Update this map when you add, move or split a file.
 - `src/index.js`: the router. `src/hosts.js` picks the part of KennelPort from the
   hostname: `kennelport.com` (front), `manage.` (Site Manager, `/ops`), `api.` (KennelOS),
   or a site.
-- `src/gate.js`: answers 503 between a deploy and its migrations. `src/migrate.js` runs
-  them; `src/migrations/` holds them (a `.sql` file plus its line in `index.js`; one per
+- `src/gate.js`: applies a deploy's pending migrations by itself, and answers 503 only
+  while that runs or if it failed. `src/migrate.js` runs them; `src/migrations/` holds them (a `.sql` file plus its line in `index.js`; one per
   branch, never edit one on `main`: see CLAUDE.md).
 - `src/lib/`: `http.js`, `html.js` (escaping), `sql.js`, `crypto.js`, `demo.js`,
-  `vendor/qrcode.js`. `sql.js`, `crypto.js`, `migrate.js` and `gate.js` are copied from
-  KennelOS cloud: a fix in one copy belongs in both.
+  `vendor/qrcode.js`. `sql.js`, `crypto.js` and `migrate.js` are copied from KennelOS
+  cloud: a fix in one copy belongs in both. `gate.js` started as a copy and now differs
+  (it applies migrations itself).
 
 ## A breeder's website
 

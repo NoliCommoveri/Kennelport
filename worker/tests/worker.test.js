@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeEnv, call, addSite } from './helpers/env.js';
+import { migrate, gate } from './helpers/worker.js';
 
 test('a site subdomain finds its site, and an unknown one is a 404', async () => {
   const env = await makeEnv();
@@ -30,11 +31,41 @@ test('reserved, two-level and unconnected custom hosts get nothing', async () =>
   }
 });
 
-test('sites answer 503 until migrations are applied; health says so', async () => {
+test('a new deploy applies its pending migrations by itself; sites answer at once', async () => {
   const env = await makeEnv({}, { migrated: false });
+  assert.equal((await call(env, 'akbostons.kennelport.com', '/')).status, 404); // no site yet, but not 503
+  assert.deepEqual(await (await call(env, 'manage.kennelport.com', '/health')).json(), { ok: true, maintenance: false });
+  const rows = await migrate.migrationStatus(env.DB);
+  assert.ok(rows.length > 1 && rows.every((r) => r.state === 'applied'));
+});
+
+test('a migration that fails leaves Back soon, and is not tried on every request', async () => {
+  const env = await makeEnv({}, { migrated: false });
+  const batch = env.DB.batch.bind(env.DB);
+  let tries = 0;
+  env.DB.batch = async () => { tries++; throw new Error('no such table: nothing'); };
+  const quiet = console.error;
+  console.error = () => {};
+  try {
+    assert.equal((await call(env, 'akbostons.kennelport.com', '/')).status, 503);
+    assert.deepEqual(await (await call(env, 'manage.kennelport.com', '/health')).json(), { ok: false, maintenance: true });
+    assert.equal(tries, 1);
+  } finally {
+    console.error = quiet;
+  }
+  // Fixed (the owner presses Apply pending in /ops): the next request goes straight through.
+  env.DB.batch = batch;
+  await migrate.applyPending(env.DB);
+  assert.equal((await call(env, 'akbostons.kennelport.com', '/')).status, 404);
+});
+
+test('a drifted migration is never re-run by itself: the sites wait for the owner', async () => {
+  const env = await makeEnv();
+  await env.DB.prepare("UPDATE _migrations SET checksum = 'changed' WHERE id = '0001'").run();
+  gate.resetGateCache();
+  const before = env.DB.batches;
   assert.equal((await call(env, 'akbostons.kennelport.com', '/')).status, 503);
-  const health = await (await call(env, 'manage.kennelport.com', '/health')).json();
-  assert.deepEqual(health, { ok: false, maintenance: true });
+  assert.equal(env.DB.batches, before);
 });
 
 test('home, manage and api answer', async () => {

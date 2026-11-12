@@ -805,3 +805,26 @@ with new sections and a new building order. Docs only; nothing built yet.
   untick per dog (`import_descended_off`). Featured offspring is KennelPort's own: C8
   leaves the contract and becomes B6 (her list on a dog, picked or typed; `dog_offspring`
   in step 3's migration). Picks are hers. Her own tags are allowed. Docs only.
+
+## 2026-11-12: migrations apply themselves; a limit on wrong /ops tokens
+
+- The owner's decisions on `review/senior-review-2026-11.md` items 1 and 4.
+- **Migrations apply themselves** (`src/gate.js`). When the code is newer than the
+  database, the first request, cron run or `/ops` visit applies every pending migration
+  with the same all-or-nothing runner as Apply pending, then checks again. Sites answer
+  "Back soon" only while that runs or if it fails; a failed try isn't repeated by that
+  isolate for a minute (`RETRY_MS`), and the error goes to the Worker's log. Drifted or
+  orphaned migrations are never touched: those still wait for the owner. Two isolates
+  trying at once is safe (each migration's batch carries its `_migrations` row, so the
+  loser's batch fails whole). `gate.js` now differs from KennelOS's copy.
+- `/ops` says a still-pending migration means one failed, and Apply pending reruns it and
+  shows the error. CLAUDE.md, `plans/setup.md` and the code map say the new way.
+- **Wrong `/ops` tokens** (`src/ops.js`): counted per hashed address in `rate_limits`;
+  after 10 in an hour that address is refused (429) for the rest of the hour, right token
+  or not. Signing in uses none up. With no tables yet, the token is checked unlimited, so
+  a new database can still be reached.
+- Recorded in STATUS: the portal's gate waits for a real litter (she has none); required
+  checks before a merge are descoped.
+- No migration, no versioned file. Tests: `worker.test.js` (applies by itself, a failing
+  one, a drifted one), `ops.test.js` (opening ops applies, Apply pending reruns, the
+  limit, no tables yet). All 364 pass.

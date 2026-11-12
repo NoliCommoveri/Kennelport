@@ -6,8 +6,15 @@
 // HttpOnly cookie, as in KennelOS cloud's /ops. Until the secret is set the page
 // refuses everything and says how to set it: it never falls open. Breeder
 // accounts have no way in.
+//
+// Wrong tokens are counted per address (hashed, as breeder sign-in does), in the shared
+// rate_limits table: OPS_FAILS_PER_HOUR wrong ones and that address is refused for the
+// rest of the hour, right token or not (review/senior-review-2026-11.md item 4). Only
+// failures count, so the owner signing in never uses any up. If the count can't be read
+// (a database with no tables yet) the token is still checked, unlimited, so /ops can
+// always be reached to set a database up.
 import { applyPending, migrationStatus } from './migrate.js';
-import { resetGateCache } from './gate.js';
+import { resetGateCache, schemaReady } from './gate.js';
 import { hmacHex, timingSafeEqual } from './lib/crypto.js';
 import { readCookie } from './lib/http.js';
 import { escapeHtml as esc, htmlPage } from './lib/html.js';
@@ -20,6 +27,7 @@ import { turnstileOn } from './siteforms.js';
 import { adminCookie, clearAdminCookie } from './admin.js';
 
 const COOKIE = 'ops_session';
+export const OPS_FAILS_PER_HOUR = 10;
 const SESSION_SECONDS = 12 * 60 * 60;
 const TITLE = 'KennelPort ops';
 
@@ -45,13 +53,33 @@ const redirectWithCookies = (location, cookies) => {
   return new Response(null, { status: 303, headers });
 };
 
-function loginPage(error) {
+const hourWindow = (now = new Date()) => `${now.toISOString().slice(0, 13)}:00:00Z`;
+const failBucket = async (env, request) => `ops:${await hmacHex(env.OPS_TOKEN, `ip:${request.headers.get('cf-connecting-ip') ?? 'unknown'}`)}`;
+
+async function failuresSoFar(env, bucket) {
+  try {
+    return (await env.DB.prepare('SELECT count FROM rate_limits WHERE bucket = ? AND window_start = ?').bind(bucket, hourWindow()).first('count')) ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+async function countFailure(env, bucket) {
+  try {
+    await env.DB.prepare(`INSERT INTO rate_limits (bucket, window_start, count) VALUES (?, ?, 1)
+      ON CONFLICT (bucket, window_start) DO UPDATE SET count = count + 1`).bind(bucket, hourWindow()).run();
+  } catch (err) {
+    console.error(`ops: wrong token not counted: ${err?.message ?? err}`);
+  }
+}
+
+function loginPage(error, status = 401) {
   return htmlPage(TITLE, `<h1>${TITLE}</h1>
 ${error ? `<p class="bad">${esc(error)}</p>` : ''}
 <form method="post" action="/ops/login">
   <p><label>Ops token<br><input type="password" name="token" autocomplete="current-password" required></label></p>
   <p><button>Sign in</button></p>
-</form>`, { status: error ? 401 : 200 });
+</form>`, { status: error ? status : 200 });
 }
 
 // Is each binding there and answering? Never throws: a missing binding is what
@@ -90,6 +118,7 @@ async function statusPage(env, log = null, note = null, keys = null) {
   const pushKeysHtml = vapidConfig(env).ready ? '' : `<h2>Push keys</h2>${keys ? `<p>Add this as the Worker <strong>secret</strong> <code>VAPID_PRIVATE_JWK</code> (it is shown once, and kept nowhere):</p><pre>${esc(keys.privateJwk)}</pre>` : '<form method="post" action="/ops/push-keys"><p><button>Make push keys</button></p></form>'}`;
   const checks = await bindingChecks(env);
   const dbOk = checks[0].ok;
+  if (dbOk) await schemaReady(env.DB); // applies anything pending, as any request would
   const rows = dbOk ? await migrationStatus(env.DB) : [];
   const pending = rows.some((r) => r.state !== 'applied');
   const envName = env.ENV_NAME || 'unknown';
@@ -112,7 +141,7 @@ ${sites}
 <table>${checkRows}</table>
 <h2>Migrations</h2>
 ${dbOk ? `<table><tr><th>Id</th><th>Name</th><th>State</th><th>Applied</th></tr>${migRows}</table>
-${pending ? '<form method="post" action="/ops/migrate"><p><button>Apply pending</button></p></form>' : '<p class="ok">The database matches this deploy.</p>'}` : '<p class="bad">D1 isn\'t working, so migrations can\'t be read.</p>'}
+${pending ? '<p class="bad">KennelPort applies new migrations by itself on the first request after a deploy, so one still pending here failed (the sites show Back soon until it\'s fixed). Apply pending runs it again and shows the error.</p><form method="post" action="/ops/migrate"><p><button>Apply pending</button></p></form>' : '<p class="ok">The database matches this deploy.</p>'}` : '<p class="bad">D1 isn\'t working, so migrations can\'t be read.</p>'}
 ${outboxHtml}
 ${logHtml}
 ${pushKeysHtml}
@@ -129,8 +158,13 @@ add <code>OPS_TOKEN</code> as a <em>Secret</em> (a long random string). Ops is c
   }
 
   if (url.pathname === '/ops/login' && request.method === 'POST') {
+    const bucket = await failBucket(env, request);
+    if ((await failuresSoFar(env, bucket)) >= OPS_FAILS_PER_HOUR) return loginPage('Too many wrong tokens from here. Try again in an hour.', 429);
     const form = await request.formData();
-    if (!timingSafeEqual(String(form.get('token') ?? ''), env.OPS_TOKEN)) return loginPage('That token is not right.');
+    if (!timingSafeEqual(String(form.get('token') ?? ''), env.OPS_TOKEN)) {
+      await countFailure(env, bucket);
+      return loginPage('That token is not right.');
+    }
     return redirectWithCookies('/ops', [
       `${COOKIE}=${await mintCookie(env.OPS_TOKEN)}; Path=/ops; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_SECONDS}`,
       await adminCookie(env),

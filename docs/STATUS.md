@@ -11,16 +11,18 @@ template (`ASSET_VERSION`) 23.
 
 - **Production is live** at `kennelport.com`: every built migration applied, every key
   and service connected (Resend, push, Turnstile). Work is deployed straight to
-  production: a merge to `main` deploys it (Workers Builds), then **Apply pending** in
-  `/ops` if it carries a migration. Setup steps, for a rebuild: [`plans/setup.md`](plans/setup.md).
+  production: a merge to `main` deploys it (Workers Builds), and a migration it carries
+  applies itself (2026-11-12); `/ops` is needed only if one fails. Setup steps, for a rebuild: [`plans/setup.md`](plans/setup.md).
 - **Staging** (`kennelport-staging.kennelport.workers.dev`) still deploys from `main` but
   isn't used regularly.
 - Custom domains are connected by hand ([`plans/setup.md`](plans/setup.md), Custom domains).
 - **Full backup and restore** in `/ops` (2026-11-10): every row and file of a site in one
   zip, and back in ([`plans/backup-format.md`](plans/backup-format.md)). Back up each
   site before any change that could lose data.
-- The tests run on every pull request and push (`.github/workflows/test.yml`). **To do
-  (owner):** require them to pass before a merge to `main`, in GitHub's branch settings.
+- The tests run on every pull request and push (`.github/workflows/test.yml`). Requiring
+  them to pass before a merge: **descoped** (the owner, 2026-11-12).
+- `/ops` sign-in: 10 wrong tokens an hour from one address, then that address is refused
+  for the hour (2026-11-12).
 
 ## Version 1, the first family site ([`plans/kennelport.md`](plans/kennelport.md) 8.1)
 
@@ -53,8 +55,8 @@ anyone outside the family.
 
 - Phase 1: all six build chunks built (2026-11-04), and KennelOS's side of the feed; the
   family Home, Today and Families in the prototype's look (2026-11-05).
-- **Next: phase 1's gate:** one litter run from signed contract to the vet visit with no
-  fixes by hand, including one pickup she forgot to mark (plan section 6).
+- Phase 1's gate (one litter run from signed contract to the vet visit with no fixes by
+  hand, plan section 6): **waits for a real litter**; she has none yet (2026-11-12).
 - Still open from "Before building" (plan section 14): her programs list, vet-visit
   wording, guarantee periods, handbook and food details, baseline sign-up rates,
   application-to-buyer mapping, photo and video package details, R2 and HEVC checks.
@@ -68,10 +70,9 @@ anyone outside the family.
 ## Review ([`review/senior-review-2026-11.md`](review/senior-review-2026-11.md), 2026-11-10)
 
 Verdict: keep the code, fix how it reaches production. Done: backup, tests on every
-change, a plain page for unexpected errors. **Open, the owner's to decide:** migrations
-applying themselves instead of every site showing "Back soon" until Apply pending
-(item 1); limiting wrong guesses at the `/ops` token (item 4). Recommended: no new
-features until the portal's gate has been run.
+change, a plain page for unexpected errors, migrations applying themselves (item 1), a
+limit on wrong `/ops` tokens (item 4). Descoped (the owner): required checks before a
+merge. The portal's gate waits for a real litter, so features carry on meanwhile.
 
 ## Parked
 
