@@ -104,11 +104,12 @@ For the forms and notifications (phase 2), on each Worker:
 ## 6. Check it works
 
 - **Staging:** open `https://kennelport-staging.kennelport.workers.dev/ops`, sign in with
-  the staging token, press **Apply pending**. Every setup check should read OK.
+  the staging token. Opening `/ops` (or any request) applies the migrations by itself;
+  **Apply pending** shows only if one failed. Every setup check should read OK.
   Staging can't receive real hostnames, so it acts as `manage.kennelport.com` by default;
   `/__host?h=thornfield.kennelport.com` makes your browser see it as that site, and
   `/__host?clear` goes back (staging only).
-- **Production:** `https://manage.kennelport.com/ops`, sign in, **Apply pending**, all OK.
+- **Production:** `https://manage.kennelport.com/ops`, sign in, all OK (migrations applied).
   Then `https://kennelport.com` shows the KennelPort placeholder, and
   `https://anything.kennelport.com` shows "No KennelPort site has this address" (404).
   That proves the wildcard DNS, the certificate and the route together.

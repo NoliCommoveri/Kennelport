@@ -21,9 +21,11 @@ split a file. Doc names are lowercase with hyphens; a new feature plan goes in
 
 Production is live with the real breeder's site and families, and there's no staging step
 in practice: a merge to `main` deploys to `kennelport.com` at once (Workers Builds). A
-merge carrying a migration makes the Worker answer 503 (`src/gate.js`) until the owner
-presses **Apply pending** in `/ops`, so say so whenever a branch adds one. Keep migrations
-safe to apply to live data (add, don't drop or rewrite), and never push to `main`.
+merge carrying a migration applies it by itself on the first request after the deploy
+(`src/gate.js`); only if it fails does every site answer "Back soon" (503) until the owner
+fixes it in `/ops` (**Apply pending** shows the error). So say so whenever a branch adds
+one, and keep migrations safe to apply to live data (add, don't drop or rewrite): they
+run unattended. Never push to `main`.
 
 ## Version bumps: ask first, every time
 

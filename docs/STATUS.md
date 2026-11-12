@@ -11,16 +11,18 @@ template (`ASSET_VERSION`) 23.
 
 - **Production is live** at `kennelport.com`: every built migration applied, every key
   and service connected (Resend, push, Turnstile). Work is deployed straight to
-  production: a merge to `main` deploys it (Workers Builds), then **Apply pending** in
-  `/ops` if it carries a migration. Setup steps, for a rebuild: [`plans/setup.md`](plans/setup.md).
+  production: a merge to `main` deploys it (Workers Builds), and a migration it carries
+  applies itself (2026-11-12); `/ops` is needed only if one fails. Setup steps, for a rebuild: [`plans/setup.md`](plans/setup.md).
 - **Staging** (`kennelport-staging.kennelport.workers.dev`) still deploys from `main` but
   isn't used regularly.
 - Custom domains are connected by hand ([`plans/setup.md`](plans/setup.md), Custom domains).
 - **Full backup and restore** in `/ops` (2026-11-10): every row and file of a site in one
   zip, and back in ([`plans/backup-format.md`](plans/backup-format.md)). Back up each
   site before any change that could lose data.
-- The tests run on every pull request and push (`.github/workflows/test.yml`). **To do
-  (owner):** require them to pass before a merge to `main`, in GitHub's branch settings.
+- The tests run on every pull request and push (`.github/workflows/test.yml`). Requiring
+  them to pass before a merge: **descoped** (the owner, 2026-11-12).
+- `/ops` sign-in: 10 wrong tokens an hour from one address, then that address is refused
+  for the hour (2026-11-12).
 
 ## Version 1, the first family site ([`plans/kennelport.md`](plans/kennelport.md) 8.1)
 
@@ -47,14 +49,14 @@ anyone outside the family.
 | 4. The owner's own blocks and styling | Banners, buttons, dividers, spacers, photos, collages, photo beside words, text over a photo, text, gallery strip, block backgrounds and spacing built. **Next, the photo system:** albums from photos she has, then the duplicate check. Still to come: videos as blocks, links to a dog/litter/puppy, fonts and the font library, text size on built-in blocks |
 | 5. Templates (save, apply, reset) | Not started |
 | 6. The family portal's build | Not started |
-| 7. After the KennelOS review | Planned in [`plans/kennelos-contract.md`](plans/kennelos-contract.md). Step 1 built (her health order kept, the born-not-yet-open row, `reserved` gone). **Next:** step 2, blocks over any field (dogs, pups and litters). The owner's questions answered |
+| 7. After the KennelOS review | Planned in [`plans/kennelos-contract.md`](plans/kennelos-contract.md). Steps 1 and 2 built: blocks over any field (conditions, order, groups, the colour picker; Pup cards new; a dog's Life stage and Lives), 2026-11-12. Featured offspring (B6) built too: a dog's sire and dam (migration 0030), offspring chained on its page, her Pedigree card with Make a dog record, and one Life stage on her dog form. **Next:** step 3, picks, Leave out, Featured. The breeder unticks any record on any data block, and picks a Featured block's (the owner, 2026-11-12). Still to do from step 2: the Dogs page's Girls and boys as a group of a block |
 
 ## Family portal ([`plans/family-portal.md`](plans/family-portal.md))
 
 - Phase 1: all six build chunks built (2026-11-04), and KennelOS's side of the feed; the
   family Home, Today and Families in the prototype's look (2026-11-05).
-- **Next: phase 1's gate:** one litter run from signed contract to the vet visit with no
-  fixes by hand, including one pickup she forgot to mark (plan section 6).
+- Phase 1's gate (one litter run from signed contract to the vet visit with no fixes by
+  hand, plan section 6): **waits for a real litter**; she has none yet (2026-11-12).
 - Still open from "Before building" (plan section 14): her programs list, vet-visit
   wording, guarantee periods, handbook and food details, baseline sign-up rates,
   application-to-buyer mapping, photo and video package details, R2 and HEVC checks.
@@ -68,10 +70,9 @@ anyone outside the family.
 ## Review ([`review/senior-review-2026-11.md`](review/senior-review-2026-11.md), 2026-11-10)
 
 Verdict: keep the code, fix how it reaches production. Done: backup, tests on every
-change, a plain page for unexpected errors. **Open, the owner's to decide:** migrations
-applying themselves instead of every site showing "Back soon" until Apply pending
-(item 1); limiting wrong guesses at the `/ops` token (item 4). Recommended: no new
-features until the portal's gate has been run.
+change, a plain page for unexpected errors, migrations applying themselves (item 1), a
+limit on wrong `/ops` tokens (item 4). Descoped (the owner): required checks before a
+merge. The portal's gate waits for a real litter, so features carry on meanwhile.
 
 ## Parked
 

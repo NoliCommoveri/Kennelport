@@ -37,9 +37,7 @@ export const LABELS = {
   dogs: {
     call_name: ['Call name', null], registered_name: ['Registered name', null], role: ['Role', 'For example Dam, Sire, or Retired.'],
     date_of_birth: ['Born', null], weight: ['Weight', 'For example "45 lb". Shown on the dog\'s card and page. Your website only: KennelOS never changes it.'], titles: ['Titles', 'For example CH, CGC.'],
-    status: ['Where they show', 'Retired and in-memory pages come later; for now only "At home" dogs show.'],
-    upcoming: ['Up and coming', 'A young dog you\'ve kept and aren\'t breeding yet. Shown under Up and coming on your Dogs page, not with your girls and boys.'],
-    for_sale: ['Looking for a home', 'An adult you are placing. Shown under Looking for a home, with Ask about this dog.'],
+    life_stage: ['Life stage', 'Breeding dog: with your girls and boys. Up and coming: a young dog you\'ve kept and aren\'t breeding yet. Looking for a home: an adult you\'re placing, with Ask about this dog. Retired and In memory: their pages come later. For a dog that isn\'t yours, only Breeding dog, Retired and In memory apply.'],
     price: ['Asking price, in dollars', 'Shown only with "Show prices of extras and adults" on under Kennel details; otherwise "Contact us for pricing".'],
     died_on: ['Date of death', 'For a dog in memory.'],
     health_display: ['Health results shown', 'Only results you tick below ever show.'],
@@ -47,7 +45,11 @@ export const LABELS = {
     lives_away: ['Lives with a co-owner', 'On: it shows only under Co-owned on your Dogs page, not with your own dogs or on Home. Off: it lives with you and shows like your own dogs.'],
     lives_with_kennel_id: ['Lives with', 'The co-owner\'s kennel it lives with now.'],
     co_owned_with_ids: ['Co-owned with', 'Its co-owners\' kennels. Add them under Partner kennels.'],
-    outside: ['Outside dog', 'Another kennel\'s dog, like a stud you bred to. It never shows with your own dogs or on Home; a litter can name it as dam or sire, and a Dog cards block can list outside dogs.'],
+    outside: ['Outside dog', 'Not your dog: another kennel\'s, like a stud you bred to, or a puppy you sold that you want to feature (set its sire or dam to your dog below). It never shows with your own dogs or on Home; a litter can name it as dam or sire, and a Dog cards block can list outside dogs.'],
+    sire_id: ['Sire', 'One of the dogs on your site. If he isn\'t, leave this empty and type his name below.'],
+    dam_id: ['Dam', 'One of the dogs on your site. If she isn\'t, leave this empty and type her name below.'],
+    sire_name: ['Sire, if not one of your dogs', null],
+    dam_name: ['Dam, if not one of your dogs', null],
     owner_name: ['Owned by', 'The kennel that owns it, for example "Oakridge Bostons".'],
     owner_url: ['Owner\'s website', 'Their name links here on its page.'],
     co_owned_heading: ['Co-owned section heading', 'Leave empty for "Shared with friends". The section lists co-owned dogs living with a co-owner.'],
@@ -182,7 +184,7 @@ export const ENUM_WORDS = {
     pickup: 'Getting your pup home page', policies: 'Policies page', faq: 'FAQ page', waitlist: 'Waitlist page', waitlist_help: 'The "Using your status page" page',
     dog: "Every dog's profile", litter: "Every litter's page", puppy: "Every puppy's profile",
   },
-  status_dogs: { active: 'At home', retired: 'Retired', remembered: 'In memory' },
+  life_stage: { breeding: 'Breeding dog', upcoming: 'Up and coming', for_sale: 'Looking for a home', retired: 'Retired', remembered: 'In memory' },
   status_puppies: { available: 'Available', placed: 'Placed (shows as Reserved)', staying: 'Joining our program', coming_soon: 'Still deciding', hidden: 'Hidden' },
   registration: { limited: 'Limited', full: 'Full' },
   status_reviews: { approved: 'Shown', hidden: 'Hidden' },
@@ -294,7 +296,8 @@ export function field(name, f, value, ctx) {
       return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"><option value="">—</option>${partners.map((k) => `<option value="${esc(k.id)}"${k.id === value ? ' selected' : ''}>${esc(k.name)}</option>`).join('')}</select></label>`;
     }
     case 'dogid': {
-      const dogs = ctx.dogs ?? [];
+      // A dog's own form doesn't offer the dog as its own parent.
+      const dogs = (ctx.dogs ?? []).filter((d) => !(ctx.kind === 'dogs' && ctx.values?.id && d.id === ctx.values.id));
       return `<label for="${id}">${esc(label)}${h}<select id="${id}" name="${name}"><option value="">—</option>${dogs.map((d) => `<option value="${esc(d.id)}"${d.id === value ? ' selected' : ''}>${esc(d.call_name)}${d.outside && ctx.say ? ` (${esc(ctx.say('doglist.outside'))})` : ''}</option>`).join('')}</select></label>`;
     }
     case 'photo':
@@ -404,7 +407,7 @@ export function photoSlot(name, label, hint, chosen, ctx, { multiple = false, ma
 // name still shows, under More, so a new field is never lost. Kinds without groups keep
 // the one plain list.
 const GROUPS = {
-  dogs: [['About', ['call_name', 'sex', 'registered_name', 'date_of_birth', 'color', 'weight', 'role', 'registry', 'titles']], ['Photo and story', ['photo_id', 'bio']], ['Where they show', ['status', 'health_display', 'price', 'died_on']], ['Co-owned', ['lives_with_kennel_id', 'co_owned_with_ids'], (v) => Boolean(v?.co_owned)], ['Outside dog', ['owner_name', 'owner_url'], (v) => Boolean(v?.outside)]],
+  dogs: [['About', ['call_name', 'sex', 'registered_name', 'date_of_birth', 'color', 'weight', 'role', 'registry', 'titles']], ['Parents', ['sire_id', 'dam_id', 'sire_name', 'dam_name']], ['Photo and story', ['photo_id', 'bio']], ['Where they show', ['life_stage', 'health_display', 'price', 'died_on']], ['Co-owned', ['lives_with_kennel_id', 'co_owned_with_ids'], (v) => Boolean(v?.co_owned)], ['Outside dog', ['owner_name', 'owner_url'], (v) => Boolean(v?.outside)]],
   partners: [['The kennel', ['name', 'url', 'photo_id']]],
   litters: [['The litter', ['name', 'stage', 'summary']], ['Parents', ['dam_id', 'sire_id', 'dam', 'sire', 'dam_name', 'sire_name']], ['Dates', ['born_on', 'ready_on', 'deposits_on']], ['For a planned litter', ['plan_label', 'expected_label', 'ready_label'], (v) => v?.stage === 'planned'], ['Prices', ['price_female', 'price_male', 'full_reg_female', 'full_reg_male', 'deposit_female', 'deposit_male', 'price_note']]],
   puppies: [['The puppy', ['name', 'collar', 'sex', 'color', 'status', 'registration', 'registry', 'price']], ['Photo and story', ['photo_id', 'bio', 'more_photos_url']]],

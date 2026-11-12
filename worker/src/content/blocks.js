@@ -14,6 +14,8 @@
 // the top block, two litters at most). Those stay as today on every existing site;
 // the prototype's Home goes into the Website template for new sites (step 5).
 import { PAGES, MENU_GROUPS, CUSTOM_KEY, slugify, COLLAGE_LAYOUTS, FRAMES, FOCUS } from './model.js';
+import { BLOCK_KIND, cleanWhere, cleanOrder, cleanGroup, cleanGroupWords, WHERE_MAX, TICK_OPS, FIELDS, LIFE_STAGE, RESIDENCE } from './fields.js';
+import { DOG_PLACES } from './rules.js';
 
 export class BlockError extends Error {}
 
@@ -30,6 +32,7 @@ export const BLOCK_TYPES = Object.freeze({
   text: { name: 'Photo and words', ic: 'draft', kind: 'content', once: true, hint: 'Her story: photo, heading, words and features.' },
   dogs: { name: 'Dog cards', ic: 'paw', kind: 'data' },
   litters: { name: 'Litter cards', ic: 'heart', kind: 'data' },
+  pups: { name: 'Pup cards', ic: 'paw', kind: 'data' },
   reviews: { name: 'Reviews', ic: 'star', kind: 'data' },
   embeds: { name: 'Videos and posts', ic: 'camera', kind: 'content', once: true, hint: 'The videos and posts she puts on Home.' },
   band: { name: 'Call-to-action band', ic: 'heart', kind: 'content', once: true, hint: 'Her waitlist band. Shows only while the waitlist page is on.' },
@@ -102,17 +105,16 @@ export const looksLikeEmail = (v) => EMAIL.test(String(v ?? '').trim());
 // Blocks that draw her Home content (home_blocks): on Home only.
 export const HOME_ONLY = Object.freeze(['hero', 'facts', 'text', 'band']);
 
-// Filters and choices, with the editor's words.
+// The filters blocks had before conditions (B4): kept only to read a block stored then
+// (legacyWhere). The editor's choices now come from content/fields.js.
 export const DOG_STATUS = Object.freeze({ active: 'Active', retired: 'Retired', remembered: 'In memory' });
 export const ANY3 = Object.freeze({ no: 'Leave out', any: 'Include', only: 'Only these' });
-export const DOG_FLAGS = Object.freeze([['upcoming', 'Up and coming'], ['sale', 'Looking for a home'], ['away', 'Lives with a co-owner'], ['outside', 'Outside dogs (other kennels\' studs)']]);
-export const DOG_ORDER = Object.freeze({ own: "The breeder's order", age: 'Oldest first', young: 'Youngest first', name: 'By name' });
+export const STAGES = Object.freeze({ current: 'Current', planned: 'Planned', past: 'Past' });
+export const SEXES = Object.freeze({ any: 'Any', female: 'Girls', male: 'Boys' });
 export const DOG_STYLE = Object.freeze({ slider: 'Slider', flip: 'Flip cards', light: 'Light cards', beside: 'Photo beside details' });
 // The styles whose cards stack one under another on a phone: they can have a line between cards.
 export const DOG_STACKED = Object.freeze(['flip', 'beside']);
-export const STAGES = Object.freeze({ current: 'Current', planned: 'Planned', past: 'Past' });
 export const REVIEW_STYLE = Object.freeze({ slider: 'Slider', grid: 'Cards' });
-export const SEXES = Object.freeze({ any: 'Any', female: 'Girls', male: 'Boys' });
 export const LIMIT_MAX = 24;
 // A facts row of the owner's: up to four [value, label] pairs, Home's facts' look.
 export const FACTS_MAX = 4;
@@ -147,13 +149,54 @@ export const SHOW_DEFAULT = Object.freeze({
 });
 
 const linkDefault = () => ({ to: 'page', page: 'waitlist' });
-const dogsF = (o = {}) => ({ sex: 'any', status: ['active'], upcoming: 'no', sale: 'no', away: 'no', outside: 'no', ...o });
+
+// A data block's records by conditions (docs/plans/kennelos-contract.md B2, content/fields.js).
+// Blocks stored before (B4) had fixed filters, `f`: they read as the same conditions,
+// with identical results, and are stored in the new form the next time they're saved.
+// A litter's stored stage `current` is every stage the site shows a born litter in.
+// A dog's old filters were its status and four yes/no flags. They read as its life stage
+// and where it lives: each stage (rules.js DOG_PLACES: its status and flags) and each
+// place it can live is kept when the old filter would have kept a dog like that.
+const RESIDES = { home: [0, 0], co_owner: [1, 0], not_mine: [0, 1] };
+const LEGACY_STAGE = { current: ['available_now', 'available_soon', 'older'], planned: ['planned'], past: ['past'] };
+// None kept: two conditions no dog meets together (one condition with nothing ticked
+// would leave nothing out).
+const nobody = (field, v) => [{ field, op: 'is', value: v }, { field, op: 'is_not', value: v }];
+function oneOf(field, kept, all) {
+  if (kept.length === all.length) return [];
+  return kept.length ? [{ field, op: 'one_of', value: kept }] : nobody(field, all[0]);
+}
+export const LEGACY_DOG_ORDER = Object.freeze({ name: 'call_name:up', age: 'date_of_birth:up', young: 'date_of_birth:down' });
+function legacyWhere(b) {
+  if (b.type === 'dogs') {
+    const f = b.f ?? {};
+    const status = list(f.status, DOG_STATUS) ?? ['active'];
+    const flag = (k, has) => { const v = pick(f[k], ANY3, 'no'); return v === 'any' || (v === 'only' ? Boolean(has) : !has); };
+    const stages = Object.keys(LIFE_STAGE).filter((k) => { const [st, up, sale] = DOG_PLACES[k]; return status.includes(st) && flag('upcoming', up) && flag('sale', sale); });
+    const places = Object.keys(RESIDENCE).filter((k) => flag('away', RESIDES[k][0]) && flag('outside', RESIDES[k][1]));
+    const where = [...oneOf('life_stage', stages, Object.keys(LIFE_STAGE)), ...oneOf('residence', places, Object.keys(RESIDENCE))];
+    const sex = pick(f.sex, SEXES, 'any');
+    if (sex !== 'any') where.push({ field: 'sex', op: 'is', value: sex });
+    return where;
+  }
+  if (b.type === 'litters') {
+    const stages = list(b.f?.stage, STAGES) ?? ['current', 'planned'];
+    return [{ field: 'stage', op: 'one_of', value: stages.flatMap((x) => LEGACY_STAGE[x]) }];
+  }
+  return PUPS_WHERE();
+}
+// Today's defaults, as legacyWhere reads a block with no filters (written out: Home's
+// defaults are made while this file loads).
+const DOGS_WHERE = () => [{ field: 'life_stage', op: 'one_of', value: ['breeding'] }, { field: 'residence', op: 'one_of', value: ['home'] }];
+const LITTERS_WHERE = () => [{ field: 'stage', op: 'one_of', value: [...LEGACY_STAGE.current, ...LEGACY_STAGE.planned] }];
+const PUPS_WHERE = () => [{ field: 'status', op: 'one_of', value: ['available', 'not_open'] }];
 
 // A new block of a type, as Add a block makes it.
 export function newBlock(type, id) {
   const b = { id, type };
-  if (type === 'dogs') Object.assign(b, { f: dogsF(), order: 'own', style: 'slider', limit: null, show: structuredClone(SHOW_DEFAULT.dogs), w: { eyebrow: 'Our dogs', heading: 'Meet our dogs' } });
-  if (type === 'litters') Object.assign(b, { f: { stage: ['current', 'planned'] }, limit: null, show: structuredClone(SHOW_DEFAULT.litters), w: { eyebrow: 'Litters', heading: 'Current and upcoming' } });
+  if (type === 'dogs') Object.assign(b, { where: DOGS_WHERE(), order: 'own', group: '', gw: {}, style: 'slider', limit: null, show: structuredClone(SHOW_DEFAULT.dogs), w: { eyebrow: 'Our dogs', heading: 'Meet our dogs' } });
+  if (type === 'litters') Object.assign(b, { where: LITTERS_WHERE(), order: 'own', group: '', gw: {}, limit: null, show: structuredClone(SHOW_DEFAULT.litters), w: { eyebrow: 'Litters', heading: 'Current and upcoming' } });
+  if (type === 'pups') Object.assign(b, { where: PUPS_WHERE(), order: 'own', group: '', gw: {}, limit: null, w: { eyebrow: 'Puppies', heading: 'Available puppies' } });
   if (type === 'reviews') Object.assign(b, { style: 'slider', limit: null, show: structuredClone(SHOW_DEFAULT.reviews), w: { eyebrow: 'Families', heading: 'What our families say' } });
   if (type === 'banner') Object.assign(b, { w: { ...OWN_WORDS.banner }, link: linkDefault(), s: { bg: 'accent' } });
   if (type === 'button') Object.assign(b, { w: { ...OWN_WORDS.button }, link: linkDefault(), size: 'm', look: 'solid', align: 'center' });
@@ -323,6 +366,20 @@ export const cleanCols = (v) => (Array.isArray(v) ? v : [])
   .map(([a, t]) => [String(a ?? '').replace(/\s+/g, ' ').trim().slice(0, COL_SIZES[0]), String(t ?? '').replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, COL_SIZES[1])])
   .filter(([a, t]) => a || t).slice(0, COLS_MAX);
 
+// A data block's records: its conditions, order, grouping and the headings per group.
+// The renderer reads a published block through this too, so an older snapshot's
+// blocks (with `f`) draw the same.
+export function recordsOf(b) {
+  const kind = BLOCK_KIND[b.type];
+  const group = cleanGroup(kind, b.group);
+  return {
+    where: cleanWhere(kind, Array.isArray(b.where) ? b.where : legacyWhere(b)),
+    order: cleanOrder(kind, LEGACY_DOG_ORDER[b.order] ?? b.order),
+    group,
+    gw: group ? cleanGroupWords(b.gw) : {},
+  };
+}
+
 // One block, every field present and in range: what the renderer and the editor use.
 export function cleanBlock(b) {
   if (!b || typeof b !== 'object' || !Object.hasOwn(BLOCK_TYPES, b.type)) return null;
@@ -331,9 +388,7 @@ export function cleanBlock(b) {
   const out = { id, type: b.type };
   if (b.type === 'dogs') {
     const D = SHOW_DEFAULT.dogs;
-    const f = b.f ?? {};
-    out.f = { sex: pick(f.sex, SEXES, 'any'), status: list(f.status, DOG_STATUS) ?? ['active'], upcoming: pick(f.upcoming, ANY3, 'no'), sale: pick(f.sale, ANY3, 'no'), away: pick(f.away, ANY3, 'no'), outside: pick(f.outside, ANY3, 'no') };
-    out.order = pick(b.order, DOG_ORDER, 'own');
+    Object.assign(out, recordsOf(b));
     out.style = pick(b.style, DOG_STYLE, 'slider');
     out.limit = limitOf(b.limit);
     out.show = { front: list(b.show?.front, DOG_ITEMS) ?? [...D.front], back: list(b.show?.back, DOG_ITEMS) ?? [...D.back],
@@ -342,10 +397,13 @@ export function cleanBlock(b) {
     out.lines = b.lines === true;
   } else if (b.type === 'litters') {
     const D = SHOW_DEFAULT.litters;
-    out.f = { stage: list(b.f?.stage, STAGES) ?? ['current', 'planned'] };
+    Object.assign(out, recordsOf(b));
     out.limit = limitOf(b.limit);
     const names = Number(b.show?.names);
     out.show = { items: list(b.show?.items, LITTER_ITEMS) ?? [...D.items], pair: list(b.show?.pair, LITTER_PAIR) ?? [...D.pair], rows: list(b.show?.rows, LITTER_ROWS) ?? [...D.rows], names: Number.isInteger(names) && names >= 0 && names <= 12 ? names : D.names };
+  } else if (b.type === 'pups') {
+    Object.assign(out, recordsOf(b));
+    out.limit = limitOf(b.limit);
   } else if (b.type === 'reviews') {
     const D = SHOW_DEFAULT.reviews;
     out.style = pick(b.style, REVIEW_STYLE, 'slider');
@@ -523,17 +581,17 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
       const all = [...ord, ...Object.keys(items).filter((x) => !ord.includes(x))];
       return all.filter((x) => get(k(`show.${face}.${x}`)) != null);
     };
+    if (BLOCK_KIND[b.type]) Object.assign(next, recordsFromForm(b, get, getAll));
     if (b.type === 'dogs') {
-      next.f = { sex: get(k('f.sex')), status: getAll(k('f.status')), upcoming: get(k('f.upcoming')), sale: get(k('f.sale')), away: get(k('f.away')), outside: get(k('f.outside')) };
-      next.order = get(k('order'));
       next.style = get(k('style'));
       next.limit = get(k('limit'));
       next.show = { front: order('front', DOG_ITEMS), back: order('back', DOG_ITEMS), light: order('light', LIGHT_ITEMS), beside: order('beside', DOG_ITEMS) };
       next.lines = DOG_STACKED.includes(b.style) ? get(k('lines')) != null : b.lines;
     } else if (b.type === 'litters') {
-      next.f = { stage: getAll(k('f.stage')) };
       next.limit = get(k('limit'));
       next.show = { items: order('items', LITTER_ITEMS), pair: order('pair', LITTER_PAIR), rows: order('rows', LITTER_ROWS), names: get(k('show.names')) };
+    } else if (b.type === 'pups') {
+      next.limit = get(k('limit'));
     } else if (b.type === 'reviews') {
       next.style = get(k('style'));
       next.limit = get(k('limit'));
@@ -561,10 +619,47 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
       if (b.type === 'collage') Object.assign(next, collageFromForm((n) => get(k(n)), str('layout')), { mayChange: get(k('mayChange')) != null });
     }
     if (get(k('s.present')) != null) next.s = { bg: str2(k('s.bg')), py: str2(k('s.py')), px: str2(k('s.px')), text: str2(k('s.text')) };
-    if (b.type === 'dogs' && !next.f.status.length) throw new BlockError('A Dog cards block needs at least one status.');
-    if (b.type === 'litters' && !next.f.stage.length) throw new BlockError('A Litter cards block needs at least one stage.');
     return cleanBlock(next);
   });
+}
+
+// A data block's conditions, order and grouping from the form (manage/builder.js
+// blockSettings): b.<id>.where.<i>.field / .op / .value (ticks: several .value), a
+// row's Remove (act cond-) and Add a condition (act cond+, with .addcond the field) are
+// handled by the caller through `act`; b.<id>.gw.<i>.k and .w the headings per value.
+export function recordsFromForm(b, get, getAll) {
+  const k = (f) => `b.${b.id}.${f}`;
+  const kind = BLOCK_KIND[b.type];
+  const where = [];
+  for (let i = 0; i < WHERE_MAX; i++) {
+    const field = get(k(`where.${i}.field`));
+    if (field == null) continue;
+    const was = b.where?.[i];
+    const op = String(get(k(`where.${i}.op`)) ?? '');
+    // Changed field: its value starts empty (another field's values mean nothing here).
+    const changed = was && was.field !== field;
+    const value = changed ? '' : TICK_OPS.includes(op) ? getAll(k(`where.${i}.value`)) : get(k(`where.${i}.value`));
+    where.push({ field: String(field), op, value });
+  }
+  const gw = {};
+  for (let i = 0; i < 40; i++) {
+    const key = get(k(`gw.${i}.k`));
+    if (key == null) continue;
+    gw[String(key)] = String(get(k(`gw.${i}.w`)) ?? '');
+  }
+  const group = String(get(k('group')) ?? '');
+  return { where: cleanWhere(kind, where), order: String(get(k('order')) ?? 'own'), group, gw: group === b.group ? gw : {} };
+}
+
+// The owner's Add a condition and Remove on one block (manage/builder.js `act`).
+export function withCondition(blocks, id, field) {
+  return blocks.map((b) => {
+    if (b.id !== id || !BLOCK_KIND[b.type] || !FIELDS[BLOCK_KIND[b.type]][field] || b.where.length >= WHERE_MAX) return b;
+    return cleanBlock({ ...b, where: [...b.where, { field, op: '', value: '' }] });
+  });
+}
+export function withoutCondition(blocks, id, i) {
+  return blocks.map((b) => (b.id === id && Array.isArray(b.where) ? cleanBlock({ ...b, where: b.where.filter((_, n) => n !== Number(i)) }) : b));
 }
 
 // A collage's photos from a form: the layout's boxes in order (photos.<i>, focus.<i>);
@@ -664,7 +759,7 @@ export function addPage(build, input) {
   const blocks = [{ id: 'head', type: 'head' }];
   if (input.start === 'dams' || input.start === 'sires') {
     const b = newBlock('dogs', 'dogs-2');
-    b.f.sex = input.start === 'dams' ? 'female' : 'male';
+    b.where.push({ field: 'sex', op: 'is', value: input.start === 'dams' ? 'female' : 'male' });
     b.style = 'flip';
     b.w = { eyebrow: '', heading: '' };
     blocks.push(b);
@@ -874,7 +969,7 @@ export const PROFILE_ITEMS = Object.freeze({
     faq: 'FAQ spot: the questions she ticks for every dog', role: 'Breed and role', name: 'Call name', reg: 'Registered name', facts: 'Facts',
     bio: 'Bio', sale: 'Looking for a home: price and “Ask about”', tests: 'Health testing (with verify links)', share: 'Share button',
     badges: 'Badge row: the badges she ticks for every dog', embeds: 'Videos and posts', litters: "The dog's litters",
-    albums: 'Albums with a photo tagged as the dog',
+    albums: 'Albums with a photo tagged as the dog', offspring: 'Offspring on the site, then grand offspring and on (four generations)',
   },
   puppy: {
     faq: 'FAQ spot: the questions she ticks for every puppy', status: 'Status', name: 'Name', facts: 'Facts', bio: 'Bio',
@@ -891,13 +986,13 @@ export const PROFILE_FIXED = Object.freeze({ dog: ['name'], puppy: ['name'], lit
 export const PROFILE_ONLY = Object.freeze({ dog: {}, puppy: {}, litter: { pair: 'head', summary: 'head', faq: 'body', parents: 'body', facts: 'body', note: 'body', fullreg: 'body', share: 'body', pups: 'body', badges: 'body', embeds: 'body', albums: 'body' } });
 // The facts on a dog's and a puppy's page, today's order.
 export const PROFILE_FACTS = Object.freeze({
-  dog: { sex: 'Sex', color: 'Color', born: 'Born', weight: 'Weight', registry: 'Registry', titles: 'Titles', co_owned: 'Co-owned with', lives_with: 'Lives with', owner: 'Owned by (outside dogs)' },
+  dog: { sex: 'Sex', color: 'Color', born: 'Born', weight: 'Weight', registry: 'Registry', titles: 'Titles', sire: 'Sire', dam: 'Dam', co_owned: 'Co-owned with', lives_with: 'Lives with', owner: 'Owned by (outside dogs)' },
   puppy: { sex: 'Sex', color: 'Color', collar: 'Collar', status: 'Status', price: 'Price', registration: 'Registration', registry: 'Registry', parents: 'Parents', born: 'Born' },
 });
 // Today's pages: each part's items in order. What isn't listed is off (a dog's
 // badge row: today's dog pages have none).
 export const PROFILE_DEFAULT = Object.freeze({
-  dog: { parts: { above: ['faq'], side: ['role', 'name', 'reg', 'facts', 'bio', 'sale', 'tests', 'share'], below: ['embeds', 'litters', 'albums'] }, facts: Object.keys(PROFILE_FACTS.dog) },
+  dog: { parts: { above: ['faq'], side: ['role', 'name', 'reg', 'facts', 'bio', 'sale', 'tests', 'share'], below: ['embeds', 'litters', 'offspring', 'albums'] }, facts: Object.keys(PROFILE_FACTS.dog) },
   puppy: { parts: { above: ['faq'], side: ['status', 'name', 'facts', 'bio', 'ask', 'surcharge', 'notice', 'share'], below: ['badges', 'photos', 'albums'] }, facts: Object.keys(PROFILE_FACTS.puppy) },
   litter: { parts: { head: ['pair', 'summary'], body: ['faq', 'parents', 'facts', 'note', 'fullreg', 'share', 'pups', 'badges', 'embeds', 'albums'] } },
 });

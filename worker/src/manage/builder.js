@@ -34,13 +34,13 @@ import {
 import { buildSnapshot } from '../publish.js';
 import {
   olderPuppies, depositsAhead, soonSection, puppyStatus, puppyPriceText, regText, statusRule, sortPuppies, fullRegHref, rulesOf, useFormats, word, litterRows,
-  dogGroups, sitePrice, pricesOff, dogsFor, label, placedFaqs, addedOn, addedWords, customPage, menuGroups,
+  dogGroups, sitePrice, pricesOff, blockRows, label, placedFaqs, addedOn, addedWords, customPage, menuGroups,
 } from '../render/parts.js';
 import { makePreviewToken, servePhoto, SITE_CSP } from '../site.js';
 import { renderPage } from '../render/index.js';
 import { DEMO_STEPS } from '../kennelos/demo.js';
 import {
-  BLOCK_TYPES, DOG_STATUS, ANY3, DOG_FLAGS, DOG_ORDER, DOG_STYLE, STAGES, REVIEW_STYLE, SEXES, DOG_ITEMS, LIGHT_ITEMS, DOG_STACKED, LITTER_ITEMS,
+  BLOCK_TYPES, DOG_STYLE, REVIEW_STYLE, DOG_ITEMS, withCondition, withoutCondition, LIGHT_ITEMS, DOG_STACKED, LITTER_ITEMS,
   LITTER_PAIR, LITTER_ROWS, REVIEW_ITEMS, REVIEW_WHO, BlockError, blocksFromForm, moved, newBlock, pageBlocks, pageChanged, withPage, addable, fits,
   hersOn, blockName, blockHint, isBuilt, BUILT_PAGES, PAGE_PARTS, headFor, isCustom, customPages, addPage, withPageInfo, withoutPage, STARTS, menuOf,
   menuChanged, withMenu, groupOf, MenuError, MENU_PLACES, MENU_LIMITS, PROFILES, PROFILE_PATHS, PROFILE_PARTS, PROFILE_ITEMS, PROFILE_FIXED,
@@ -61,6 +61,7 @@ import { everySite } from './builder/sites.js';
 import { timingScreen } from './builder/timing.js';
 import { formatsScreen } from './builder/formats.js';
 import { wordingRoute } from './builder/instructions.js';
+import { recordsSettings, recordsSummary } from './builder/records.js';
 
 // ---------- the preview: their Puppies page, with the saved rules ----------
 
@@ -223,7 +224,6 @@ const isData = (b) => BLOCK_TYPES[b.type].kind === 'data';
 const isOwn = (b) => BLOCK_TYPES[b.type].kind === 'own';
 const ownWords = (key, b) => isData(b) && !hersOn(key, b);
 const mvBtns = (act, i, n) => `<div class="mv"><button name="act" value="${esc(act)}:up" aria-label="Move up"${i === 0 ? ' disabled' : ''}>${svg('up1')}</button><button name="act" value="${esc(act)}:down" aria-label="Move down"${i === n - 1 ? ' disabled' : ''}>${svg('down1')}</button></div>`;
-const chips = (name, cur, opts) => `<div class="chips">${Object.entries(opts).map(([v, l]) => `<label><input type="checkbox" name="${name}" value="${esc(v)}"${cur.includes(v) ? ' checked' : ''}>${esc(l)}</label>`).join('')}</div>`;
 const fld = (title, inner, hint = '') => `<div class="fld"><span class="fldt">${esc(title)}</span>${inner}${hint ? `<span class="hint">${esc(hint)}</span>` : ''}</div>`;
 const LIMITS = { all: 'All of them', ...Object.fromEntries(Array.from({ length: 12 }, (_, i) => [String(i + 1), String(i + 1)])) };
 const resultLine = (names, what) => (names.length
@@ -242,20 +242,16 @@ const badgesOn = (snap, key) => (snap.products ?? []).filter((x) => (key === 'ho
 // The records a data block shows now, from the draft.
 function blockRecords(snap, b) {
   const lim = (rows) => (b.limit ? rows.slice(0, b.limit) : rows);
-  if (b.type === 'dogs') return lim(dogsFor(snap, b)).map((d) => d.call_name);
-  if (b.type === 'litters') return lim(snap.litters.filter((l) => b.f.stage.includes(l.stage))).map((l) => l.name);
+  if (b.type === 'dogs') return lim(blockRows(snap, b)).map((d) => d.call_name);
+  if (b.type === 'litters' || b.type === 'pups') return lim(blockRows(snap, b)).map((x) => x.name);
   if (b.type === 'reviews') return lim(snap.reviews).map((r) => [r.first_name, r.town].filter(Boolean).join(', ') || 'A family');
   return [];
 }
-const WHAT = { dogs: 'dog', litters: 'litter', reviews: 'review' };
+const WHAT = { dogs: 'dog', litters: 'litter', pups: 'pup', reviews: 'review' };
 
 function blockSummary(snap, key, b) {
-  if (b.type === 'dogs') {
-    const bits = [SEXES[b.f.sex] === 'Any' ? 'Girls and boys' : SEXES[b.f.sex], b.f.status.map((x) => DOG_STATUS[x]).join(', ')];
-    for (const [k, l] of DOG_FLAGS) if (b.f[k] === 'only') bits.push(`only ${l.toLowerCase()}`); else if (b.f[k] === 'any') bits.push(`with ${l.toLowerCase()}`);
-    return `${bits.join(' · ')} · ${DOG_STYLE[b.style].toLowerCase()}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b).length} now`;
-  }
-  if (b.type === 'litters') return `${b.f.stage.map((x) => STAGES[x]).join(', ')}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b).length} now`;
+  if (b.type === 'dogs') return `${recordsSummary(b)} · ${DOG_STYLE[b.style].toLowerCase()}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b).length} now`;
+  if (b.type === 'litters' || b.type === 'pups') return `${recordsSummary(b)}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b).length} now`;
   if (b.type === 'reviews') return `${REVIEW_STYLE[b.style]}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b).length} now`;
   if (b.type === 'builtin') return blockHint(key, b) ?? '';
   if (isOwn(b)) return ownSummary(snap, b);
@@ -313,9 +309,7 @@ function blockSettings(snap, key, b, pics) {
   let data = '';
   let show = '';
   if (b.type === 'dogs') {
-    data = `${fld('Sex', seg(k('f.sex'), b.f.sex, SEXES))}${fld('Status', chips(k('f.status'), b.f.status, DOG_STATUS))}
-      <div class="fgrid">${DOG_FLAGS.map(([f, l]) => select(k(`f.${f}`), b.f[f], ANY3, l)).join('')}${select(k('order'), b.order, DOG_ORDER, 'Order')}</div>
-      ${fld('Style', seg(k('style'), b.style, DOG_STYLE))}`;
+    data = `${recordsSettings(snap, b, k)}${fld('Style', seg(k('style'), b.style, DOG_STYLE))}`;
     // The lists for the style it has now (save after changing the style to see its own).
     const lines = DOG_STACKED.includes(b.style) ? `<label class="check"><input type="checkbox" name="${k('lines')}"${b.lines ? ' checked' : ''}> <span>A line between cards where they stack<span class="hint">A 4px bar in the scheme's accent colour between one card and the next, where they sit one under another${b.style === 'flip' ? ' (on a phone)' : ' (on a phone or a tablet)'}.</span></span></label>` : '';
     show = b.style === 'light' ? showList(b, 'light', LIGHT_ITEMS, 'Top to bottom', 'Where it lives shows only for a co-owned dog living with a co-owner, or an outside dog with its owner filled in.')
@@ -323,9 +317,12 @@ function blockSettings(snap, key, b, pics) {
         : `<div class="twocol">${showList(b, 'front', DOG_ITEMS, 'Front of the card', 'The photo always fills the front when it is on.')}${showList(b, 'back', DOG_ITEMS, 'Back of the card')}</div>`;
     show += lines;
   } else if (b.type === 'litters') {
-    data = fld('Stage', chips(k('f.stage'), b.f.stage, STAGES));
+    data = recordsSettings(snap, b, k);
     show = `${showList(b, 'items', LITTER_ITEMS, 'Top to bottom')}<div class="twocol">${showSwitches(b, 'pair', LITTER_PAIR, 'The pair')}${showSwitches(b, 'rows', LITTER_ROWS, 'Facts')}</div>
       <div class="fgrid">${select(k('show.names'), b.show.names, Object.fromEntries(Array.from({ length: 7 }, (_, i) => [String(i), i ? `Up to ${i}, then count them` : 'Count them only'])), 'Puppies: names', '')}</div>`;
+  } else if (b.type === 'pups') {
+    data = recordsSettings(snap, b, k);
+    show = '<p class="small muted">The Puppies page\'s own flip cards: photo, name, colour and status on the front; details, price and a way to ask on the back, by the pup rules.</p>';
   } else if (b.type === 'reviews') {
     data = fld('Style', seg(k('style'), b.style, REVIEW_STYLE));
     show = `${showList(b, 'items', REVIEW_ITEMS, 'Top to bottom')}${showSwitches(b, 'who', REVIEW_WHO, 'Who it is from')}`;
@@ -500,6 +497,7 @@ function pagePreview(snap, key, blocks, site) {
     else if (b.type === 'band') out.push(`<div class="pvb deep">${(h.waitlist.heading ?? HOME_WORDS.waitlist.heading) ? `<h3>${esc(h.waitlist.heading ?? HOME_WORDS.waitlist.heading)}</h3>` : ''}<span class="pv-pill">${esc(h.waitlist.button_label || 'Join the waitlist')}</span></div>`);
     else if (b.type === 'dogs') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Our dogs', 'Meet our dogs')}<div class="pvg${b.style === 'flip' || b.style === 'beside' ? '' : ' slide'}">${names.map((nm) => `<div class="pvc${b.style === 'light' ? ' light' : b.style === 'beside' ? ' beside' : ' flip'}"><span class="ph"></span><div class="t"><b>${esc(nm)}</b></div></div>`).join('')}</div></div>`);
     else if (b.type === 'litters') out.push(`<div class="pvb sand">${headOf(wordsOf(b), 'Litters', 'Current and upcoming')}${names.map((nm) => `<div class="pv-row"><b>${esc(nm)}</b></div>`).join('')}</div>`);
+    else if (b.type === 'pups') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Puppies', 'Available puppies')}<div class="pvg">${names.map((nm) => `<div class="pvc flip"><span class="ph"></span><div class="t"><b>${esc(nm)}</b></div></div>`).join('')}</div></div>`);
     else if (b.type === 'banner') out.push(`<div class="pvb deep">${b.w.heading ? `<h3>${esc(addedWords(snap, key, b).heading)}</h3>` : ''}${b.w.label && b.link ? `<span class="pv-pill">${esc(addedWords(snap, key, b).label)}</span>` : ''}</div>`);
     else if (b.type === 'button') out.push(`<div class="pvb"><div class="pv-row"><span class="pv-pill">${esc(addedWords(snap, key, b).label || 'Button')}</span></div></div>`);
     else if (b.type === 'divider') out.push(`<div class="pvb"><div class="pv-row small muted">${esc(DIVIDER_STYLE[b.style])}</div></div>`);
@@ -624,6 +622,8 @@ function pageFromForm(build, key, form) {
   else if (verb === 'mv' && at >= 0) blocks = moved(blocks, at, face);
   else if (verb === 'open' && at >= 0) open = id;
   else if (verb === 'remove' && at >= 0) blocks = blocks.filter((b) => b.id !== id);
+  else if (verb === 'cond+' && at >= 0) { blocks = withCondition(blocks, id, String(form.get(`b.${id}.addcond`) ?? '')); open = id; }
+  else if (verb === 'cond-' && at >= 0) { blocks = withoutCondition(blocks, id, face); open = id; }
   else if (verb === 'add' && id === 'builtin') {
     // A built-in she removed, back at the bottom.
     if (Object.hasOwn(PAGE_PARTS[key] ?? {}, face) && !blocks.some((b) => b.id === face)) blocks = [...blocks, { id: face, type: 'builtin' }];

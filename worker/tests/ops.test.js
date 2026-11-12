@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeEnv, call } from './helpers/env.js';
 
+const { OPS_FAILS_PER_HOUR } = await import('../src/ops.js');
+
 const M = 'manage.kennelport.com';
 
 async function signIn(env) {
@@ -36,13 +38,46 @@ test('a forged or expired cookie is not a session', async () => {
   assert.match(await (await call(env, M, '/ops', { headers: { cookie: forged } })).text(), /Ops token/);
 });
 
-test('Apply pending migrates a new database, after which sites are served', async () => {
+test('opening ops applies a new database\'s migrations; Apply pending reruns a failed one', async () => {
   const env = await makeEnv({}, { migrated: false });
   const cookie = await signIn(env);
-  assert.match(await (await call(env, M, '/ops', { headers: { cookie } })).text(), /Apply pending/);
-  const run = await (await call(env, M, '/ops/migrate', { method: 'POST', headers: { cookie } })).text();
+  const page = await (await call(env, M, '/ops', { headers: { cookie } })).text();
+  assert.match(page, /The database matches this deploy/);
+  assert.doesNotMatch(page, /Apply pending/);
+
+  const failing = await makeEnv({}, { migrated: false });
+  const batch = failing.DB.batch.bind(failing.DB);
+  failing.DB.batch = async () => { throw new Error('broken'); };
+  const quiet = console.error;
+  console.error = () => {};
+  const c2 = await signIn(failing);
+  try {
+    assert.match(await (await call(failing, M, '/ops', { headers: { cookie: c2 } })).text(), /one still pending here failed[\s\S]*Apply pending/);
+  } finally {
+    console.error = quiet;
+  }
+  failing.DB.batch = batch;
+  const run = await (await call(failing, M, '/ops/migrate', { method: 'POST', headers: { cookie: c2 } })).text();
   assert.match(run, /0001 schema: applied/);
-  assert.equal((await call(env, 'akbostons.kennelport.com', '/')).status, 404); // no site yet, but no longer 503
+  assert.equal((await call(failing, 'akbostons.kennelport.com', '/')).status, 404); // no site yet, but no longer 503
+});
+
+test('wrong tokens are limited per address; the right one still works from elsewhere', async () => {
+  const env = await makeEnv();
+  const from = (ip, token) => call(env, M, '/ops/login', { method: 'POST', body: new URLSearchParams({ token }), headers: { 'cf-connecting-ip': ip } });
+  for (let i = 0; i < OPS_FAILS_PER_HOUR; i++) assert.equal((await from('203.0.113.9', 'guess' + i)).status, 401);
+  const locked = await from('203.0.113.9', 'ops-token');
+  assert.equal(locked.status, 429);
+  assert.match(await locked.text(), /Too many wrong tokens/);
+  assert.equal((await from('198.51.100.4', 'ops-token')).status, 303);
+  // Signing in doesn't count against anyone.
+  for (let i = 0; i < OPS_FAILS_PER_HOUR + 2; i++) assert.equal((await from('198.51.100.4', 'ops-token')).status, 303);
+});
+
+test('ops can still be signed in to before the database has any tables', async () => {
+  const env = await makeEnv({}, { migrated: false });
+  assert.equal((await call(env, M, '/ops/login', { method: 'POST', body: new URLSearchParams({ token: 'nope' }) })).status, 401);
+  assert.equal((await call(env, M, '/ops/login', { method: 'POST', body: new URLSearchParams({ token: 'ops-token' }) })).status, 303);
 });
 
 test('missing bindings are reported, not thrown', async () => {

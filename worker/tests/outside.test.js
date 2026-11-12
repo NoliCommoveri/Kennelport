@@ -36,7 +36,7 @@ test('an outside dog is in none of her groups, nor on Home, but has its page wit
 
 test('light cards of her own dogs say nothing about partner kennels; an outside dog names its owner', async () => {
   const { draw } = await site();
-  const light = cleanBlock({ ...newBlock('dogs', 'dogs-2'), style: 'light', f: { status: ['active'], sex: 'any', outside: 'any' } });
+  const light = cleanBlock({ ...newBlock('dogs', 'dogs-2'), style: 'light', where: undefined, f: { status: ['active'], sex: 'any', outside: 'any' } });
   const html = draw([...HOME_DEFAULT, light]);
   assert.doesNotMatch(html, /Lives with a partner kennel/);
   assert.match(html, /class="cocard"[^]*Owned by Oakridge Bostons/);
@@ -44,7 +44,7 @@ test('light cards of her own dogs say nothing about partner kennels; an outside 
 
 test('photo beside details: its items beside the photo, the bio under them; the line between cards is the block\'s', async () => {
   const { draw } = await site();
-  const b = cleanBlock({ ...newBlock('dogs', 'dogs-2'), style: 'beside', lines: true, f: { status: ['active'], sex: 'any', outside: 'only' } });
+  const b = cleanBlock({ ...newBlock('dogs', 'dogs-2'), style: 'beside', lines: true, where: undefined, f: { status: ['active'], sex: 'any', outside: 'only' } });
   const html = draw([...HOME_DEFAULT, b]);
   assert.match(html, /<div class="dogrows one lines"><article class="dogrow[^"]*"><div class="dr-top">[^]*?<div class="dr-info"><span class="call">Duke<\/span>[^]*?<\/div><\/div><div class="dr-under"><p class="bio">A gentle stud\.<\/p>/);
   assert.doesNotMatch(draw([...HOME_DEFAULT, { ...b, lines: false }]), /dogrows one lines/);

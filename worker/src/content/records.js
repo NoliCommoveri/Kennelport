@@ -16,8 +16,11 @@ const omit = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) 
 // Litters name their parents by dog id here (the import uses slugs).
 const LITTER_RECORD_FIELDS = { ...omit(LITTER_FIELDS, ['dam', 'sire']), dam_id: { type: 'dogid' }, sire_id: { type: 'dogid' } };
 // Co-owned dogs name their partner kennels by id here (the import uses names).
+// Dogs name their parents by dog id here, like litters (the import uses slugs).
 const DOG_RECORD_FIELDS = {
-  ...omit(DOG_FIELDS, ['lives_with', 'co_owned_with']),
+  ...omit(DOG_FIELDS, ['lives_with', 'co_owned_with', 'sire', 'dam']),
+  sire_id: { type: 'dogid' },
+  dam_id: { type: 'dogid' },
   lives_with_kennel_id: { type: 'kennelid' },
   co_owned_with_ids: { type: 'list', item: 'kennel', max: PARTNERS_PER_DOG },
 };
@@ -175,7 +178,8 @@ export async function saveRecord(env, siteId, kind, id, input, scopeId = null) {
     }
   }
   if (kind === 'albums' && clean.photos) clean.photos = [...new Set(clean.photos)];
-  if (kind === 'dogs') coOwnedRules(outsideRules(clean));
+  if (kind === 'dogs') coOwnedRules(outsideRules(stageRules(clean)));
+  if (kind === 'dogs' && id && (clean.sire_id === id || clean.dam_id === id)) throw new ContentError(clean.sire_id === id ? 'sire_id' : 'dam_id', "a dog can't be its own parent");
   if (kind === 'partners') {
     const twin = await env.DB.prepare('SELECT id FROM partner_kennels WHERE site_id = ? AND lower(name) = lower(?) AND id != ?').bind(siteId, clean.name, id ?? '').first();
     if (twin) throw new ContentError('name', 'that kennel is already on your list');
@@ -231,6 +235,14 @@ export function coOwnedRules(d) {
   return d;
 }
 
+// One life stage (content/fields.js lifeStage): only an active dog is up and coming
+// or looking for a home, and not both (looking for a home wins, as on the Dogs page).
+export function stageRules(d) {
+  if ((d.status ?? 'active') !== 'active') { d.upcoming = 0; d.for_sale = 0; }
+  if (d.for_sale) d.upcoming = 0;
+  return d;
+}
+
 // An outside dog is another kennel's: not up and coming, for sale or co-owned
 // with her. Only an outside dog names an owner.
 export function outsideRules(d) {
@@ -250,6 +262,21 @@ export async function setField(env, siteId, kind, id, field, value) {
   await env.DB.batch(touchAll(env, siteId, kind));
 }
 
+// A dog's parent known only by name, made a dog record (manage/screens/dogform.js
+// Make a dog record): Not my dog, that name and the parent's sex, linked in the name's
+// place. Its life stage, owner and parents she sets on its own form. Returns it.
+export async function makeParentRecord(env, siteId, childId, role) {
+  const child = await getRecord(env, siteId, 'dogs', childId);
+  const name = child?.[`${role}_name`];
+  if (!name || child[`${role}_id`]) return null;
+  const made = await saveRecord(env, siteId, 'dogs', null, { call_name: name, sex: role === 'sire' ? 'male' : 'female', outside: 1 });
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE dogs SET ${role}_id = ?, ${role}_name = NULL, updated_at = ? WHERE id = ? AND site_id = ?`).bind(made.id, now(), childId, siteId),
+    touch(env, siteId),
+  ]);
+  return made;
+}
+
 export async function removeRecord(env, siteId, kind, id) {
   const k = kindOf(kind);
   const s = untagStatements(env, siteId, kind, id);
@@ -257,6 +284,9 @@ export async function removeRecord(env, siteId, kind, id) {
     s.push(env.DB.prepare('UPDATE litters SET dam_id = NULL WHERE site_id = ? AND dam_id = ?').bind(siteId, id));
     s.push(env.DB.prepare('UPDATE litters SET sire_id = NULL WHERE site_id = ? AND sire_id = ?').bind(siteId, id));
     s.push(env.DB.prepare('DELETE FROM health_results WHERE site_id = ? AND dog_id = ?').bind(siteId, id));
+    // Its offspring keep their own records; their sire or dam is no longer on the site.
+    s.push(env.DB.prepare('UPDATE dogs SET sire_id = NULL WHERE site_id = ? AND sire_id = ?').bind(siteId, id));
+    s.push(env.DB.prepare('UPDATE dogs SET dam_id = NULL WHERE site_id = ? AND dam_id = ?').bind(siteId, id));
   }
   if (kind === 'partners') s.push(...await unlinkPartnerStatements(env, siteId, id));
   if (kind === 'litters') s.push(env.DB.prepare('DELETE FROM puppies WHERE site_id = ? AND litter_id = ?').bind(siteId, id));

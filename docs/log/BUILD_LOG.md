@@ -805,3 +805,157 @@ with new sections and a new building order. Docs only; nothing built yet.
   untick per dog (`import_descended_off`). Featured offspring is KennelPort's own: C8
   leaves the contract and becomes B6 (her list on a dog, picked or typed; `dog_offspring`
   in step 3's migration). Picks are hers. Her own tags are allowed. Docs only.
+
+## 2026-11-12: migrations apply themselves; a limit on wrong /ops tokens
+
+- The owner's decisions on `review/senior-review-2026-11.md` items 1 and 4.
+- **Migrations apply themselves** (`src/gate.js`). When the code is newer than the
+  database, the first request, cron run or `/ops` visit applies every pending migration
+  with the same all-or-nothing runner as Apply pending, then checks again. Sites answer
+  "Back soon" only while that runs or if it fails; a failed try isn't repeated by that
+  isolate for a minute (`RETRY_MS`), and the error goes to the Worker's log. Drifted or
+  orphaned migrations are never touched: those still wait for the owner. Two isolates
+  trying at once is safe (each migration's batch carries its `_migrations` row, so the
+  loser's batch fails whole). `gate.js` now differs from KennelOS's copy.
+- `/ops` says a still-pending migration means one failed, and Apply pending reruns it and
+  shows the error. CLAUDE.md, `plans/setup.md` and the code map say the new way.
+- **Wrong `/ops` tokens** (`src/ops.js`): counted per hashed address in `rate_limits`;
+  after 10 in an hour that address is refused (429) for the rest of the hour, right token
+  or not. Signing in uses none up. With no tables yet, the token is checked unlimited, so
+  a new database can still be reached.
+- Recorded in STATUS: the portal's gate waits for a real litter (she has none); required
+  checks before a merge are descoped.
+- No migration, no versioned file. Tests: `worker.test.js` (applies by itself, a failing
+  one, a drifted one), `ops.test.js` (opening ops applies, Apply pending reruns, the
+  limit, no tables yet). All 364 pass.
+
+## 2026-11-12: KennelOS contract step 2: blocks over any field
+
+- `plans/kennelos-contract.md` B1, B2, B4. No migration, no versioned file (nothing under
+  `public/_kp/` changed), so no bump.
+- **One list of fields** (`content/fields.js`, new): for dogs, pups and litters, every
+  field a block can use, with its name for the owner, its kind and how to read it.
+  - Worked out for dogs: has titles, a title, age in years, has health results.
+  - Pups: status as the site reads it (its status row, `not_open` included), and its
+    litter's name, stage and birth date.
+  - Litters: stage as the site shows it on the day (available now, available soon,
+    older, planned, past), each parent's dog fields (`dam.`, `sire.`, `a_parent.`), and
+    its pups' colours and count.
+  - A parent that isn't a dog on the site is unknown, and no condition on it holds.
+  - `tests/fields.test.js` fails when a field in `model.js` is in neither this list nor
+    `NOT_FOR_BLOCKS`.
+- **Conditions, order, groups** for Dog cards, Litter cards and the new **Pup cards**
+  block (the Puppies page's flip cards, by conditions; `render/pages.js` `pupsBlock`).
+  - `b.where` holds conditions, every one of which must hold. Text is compared with case
+    and spacing evened out.
+  - `b.order` is hers, or any field up or down, with records missing the value last.
+  - `b.group` and `b.gw` give a heading per value (an `h3` in the template's `.head`, no
+    new CSS), with the owner's words over the default. Sex groups read Girls and Boys.
+  - A condition whose value isn't set yet is kept and leaves nothing out, because the
+    editor works without script.
+- **Old blocks** (B4): a stored `f` reads as the same conditions (`blocks.js`
+  `recordsOf`, `legacyWhere`), and the old orders as fields.
+  - A litter's `current` becomes every stage a born litter shows in, so results are
+    identical: checked over 1,700 filter and order combinations against the old code.
+  - An older snapshot's blocks draw the same. The new form is stored when a block is
+    next saved; no stored build is rewritten.
+- **The owner's block screen** (`manage/builder/records.js`, new; `builder.js` gets only
+  the calls).
+  - Conditions as rows: field (grouped: the litter, its pups, either parent, dam,
+    sire), what it asks, and a value.
+  - Ticks for "is one of". For a colour, the ticks are the colours the site holds (the
+    colour picker).
+  - Add a condition, Remove this condition, Order, Group by, and a heading over each group.
+  - No prototype has this screen: it is built from the prototype's chips, select grid
+    and movable rows. Checked in a browser at 390px and 1280px against a local copy (a
+    colour ticked, grouped by sex, Pup cards added; the site's block drawn): no sideways
+    scroll, no script errors.
+- Her side: the Pup cards line in her page screen is in `manage/wording.js`
+  (`pages.your_pups_from_kennelos`).
+- **Not done:** the Dogs page's built-in Girls and boys and its `dogs#girls` and
+  `dogs#boys` menu places as a group of a block, since that changes every live Dogs
+  page. Leave out (`b.omit`) and picks are step 3.
+- Tests: `fields.test.js` (new), plus `blocks.test.js` and `outside.test.js` moved to
+  conditions (an editor test drives the colour picker and group headings through the
+  form). All 374 pass.
+
+## 2026-11-12: Life stage and Lives; a dog's sire and dam; offspring chained (migration 0030)
+
+- The owner's decisions, the same day (`plans/kennelos-contract.md` B1 and B6, rewritten).
+- **Life stage and Lives** (`content/fields.js`). For blocks, a dog's status plus its
+  up-and-coming and for-sale flags are one field, **Life stage**: KennelOS's five in
+  the site's words (`rules.js` DOG_PLACE_WORDS). Lives with a co-owner plus Outside dog
+  are one field, **Lives**: With me, With a co-owner, Not my dog.
+  - Both are worked out from the stored columns, so no data changes.
+  - A new Dog cards block is Breeding dog and With me.
+  - Old blocks (`blocks.js` `legacyWhere`) keep each stage and each place a dog like it
+    would have been kept by its old filter. Identical over the same 1,700 combinations.
+    An old filter that kept nothing reads as two conditions no dog meets.
+  - Saving a dog keeps its flags to one life stage (`records.js` `stageRules`, also on
+    import): only an active dog is up and coming or looking for a home, and looking for
+    a home wins if both are ticked, as the Dogs page already shows it. A live dog
+    stored with both changes only when next saved.
+- **A dog's sire and dam** (migration 0030 adds `sire_id`, `dam_id`, `sire_name`,
+  `dam_name` to `dogs`; additive, and it applies itself on deploy).
+  - Each parent is a dog on the site or a typed name, as for a litter.
+  - Site Manager dog form: a Parents section; a dog isn't offered as its own parent,
+    and saving one is refused.
+  - Import and export name parents by slug. Removing a dog clears it as a parent.
+  - A parent not shown on the site is published as its name only, never linked.
+- **The dog's page**: Sire and Dam in its facts (linked when on the site; on by default
+  in `PROFILE_FACTS`). A new **Offspring** part (`offspring`, on by default, under the
+  photo after Litters) shows its offspring on the site, then grand offspring and on, up
+  to four generations (`render/parts.js` `descendantsOf`), as light cards a generation
+  at a time. A featured offspring she sold is a Not my dog record with her dog as sire
+  or dam; its own offspring chain on from it.
+  - Today no dog has parents, so no live page changes until she sets some.
+  - A site whose owner changed the dog page's items or facts gets the new ones only
+    when she adds them.
+- **Conditions on family**: `parent`, `descends_from` (four generations; a line that
+  loops stops), `sire.call_name`, `dam.call_name`.
+- Wording:
+  - The site's new words are in the Wording screen's list (`rules.js` WORDS, Family):
+    `sire_fact`, `dam_fact`, `offspring_1`…`offspring_4`.
+  - The Site Manager's new labels and hints are in `forms.js` LABELS: sire_id, dam_id,
+    sire_name, dam_name, and Outside dog reworded to include a sold puppy she features.
+    They're the owner's to reword.
+  - The "own parent" error is in `records.js` and `io.js` with the other content errors,
+    which aren't in the wording list yet.
+- Checked in a browser at 390px and 1280px (Boone's offspring, Ziva's facts, her
+  Parents section, the Life stage and Lives ticks): no sideways scroll, no script errors.
+- Tests: `dog-parents.test.js` (new); `fields.test.js` and `blocks.test.js` moved to
+  the two fields. All 379 pass. No versioned file changed.
+
+## 2026-11-12: her dog form's Life stage; the pedigree card and Make a dog record
+
+- The owner's requests. No migration beyond this branch's 0030, no versioned file.
+- **Life stage on her dog form** (`manage/screens/dogform.js`, new; `screens.js` only
+  calls it): one select in place of the status select and the Up and coming and Looking
+  for a home switches. It's read from the record and written back to `status`,
+  `upcoming` and `for_sale` (`rules.js` DOG_PLACES). On a dog KennelOS sends, it is
+  KennelOS's: shown as "from KennelOS" and kept whatever is sent, as status was. Its
+  label and hint, and the choices' words, are in `forms.js` LABELS and ENUM_WORDS
+  (`life_stage`), so they're in the owner's list. The old `status`, `upcoming`,
+  `for_sale` labels and `status_dogs` choices went, since no form shows them.
+- **Pedigree card** on a dog in her Site Manager: its sire and dam and theirs, four
+  generations, from her dog records, nearest first ("Sire", "Sire's dam"…). A record
+  links to its form.
+  - A parent typed by name links to where it's typed and has **Make a dog record**
+    (`records.js` `makeParentRecord`, POST `/s/<site>/dogs/<id>/make-sire|dam`). It
+    makes a Not my dog record with that name and the parent's sex, links it in the
+    name's place, and opens it with a note saying to change Not my dog if it was hers
+    and add its own parents. Pressed again, nothing more is made.
+  - No prototype screen: built from the Site Manager's card and list rows (as Not on
+    your site). Its wording is in `manage/wording.js` (`dogform.*`, `note.made_parent`).
+  - Checked at 390px and 1280px: no sideways scroll, no script errors; Make a dog
+    record pressed in the browser.
+- Tests: `dog-parents.test.js` (the form's Life stage, KennelOS's kept; the card, made
+  and linked). All 381 pass.
+
+## 2026-11-12: plan: the breeder controls individual records
+
+- `plans/kennelos-contract.md` B3, B5 and step 3: the owner's decision. On every data
+  block, her Site Manager shows the records the owner's settings display, each ticked,
+  and she can untick any. A Featured block's records are always hers to pick, order
+  and leave out. Her ticks and picks are her content, kept apart from the owner's
+  build. Docs only.
