@@ -86,7 +86,8 @@ export function recordsSettings(snap, b, k, today = null) {
     return opts.length ? `<optgroup label="${esc(title)}">${opts.map(([v, l]) => option(v, l, b.order)).join('')}</optgroup>` : '';
   }).join('')}</select></label>`;
   const canGroup = new Set(groupable(kind).map(([f]) => f));
-  const groupSel = fieldSelect(k('group'), kind, b.group, { label: 'Group by', first: ['', 'No groups'], filter: (f) => canGroup.has(f) });
+  // A Featured block shows one at a time, so it has no groups.
+  const groupSel = b.type.startsWith('featured_') ? '' : fieldSelect(k('group'), kind, b.group, { label: 'Group by', first: ['', 'No groups'], filter: (f) => canGroup.has(f) });
   let headings = '';
   if (b.group) {
     // The groups the block would draw now (from every record of its kind, so a group

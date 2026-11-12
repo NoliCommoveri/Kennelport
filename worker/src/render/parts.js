@@ -2,6 +2,7 @@
 // the menu. Every value from a snapshot passes through esc() (or attr()) here.
 import { SHOW_DEFAULT, isCustom, hersOn, BLOCK_TYPES, defaultMenu, MENU_PLACES, PAGE_DEFAULTS, recordsOf } from '../content/blocks.js';
 import { BLOCK_KIND, matches, ordered, grouped, GENERATIONS } from '../content/fields.js';
+import { applyPicks } from '../content/picks.js';
 import { escapeHtml as esc } from '../lib/html.js';
 import { PAGES, pupStatus } from '../content/model.js';
 import { puppyPrice, litterPriceRange, depositRange } from '../content/prices.js';
@@ -169,14 +170,24 @@ export function litterStage(snap, l, today) {
 }
 
 // A data block's records (content/fields.js): those its conditions hold for, in its
-// order (before its limit). Reviews have no conditions: all of them.
-export function blockRows(snap, b, today = null) {
+// order (before its limit), less the ones the breeder left out on this page's block;
+// on a Featured block, the ones she picked, in her order, once she has picked
+// (content/picks.js). Reviews have no conditions: all of them.
+export function blockRows(snap, b, today = null, key = null) {
   const kind = BLOCK_KIND[b.type];
   if (!kind) return b.type === 'reviews' ? snap.reviews : [];
+  const all = recordsOfKind(snap, kind);
+  return applyPicks(b, matchingRows(snap, b, today), all, key ? snap.picks?.[key]?.[b.id] : null);
+}
+// Every record of a kind on the site; and those a block's conditions hold for, in its
+// order, before her picks (her picking screen lists these).
+export const recordsOfKind = (snap, kind) => (kind === 'dog' ? snap.dogs : kind === 'litter' ? snap.litters : snap.litters.flatMap((l) => l.puppies ?? []));
+export function matchingRows(snap, b, today = null) {
+  const kind = BLOCK_KIND[b.type];
+  if (!kind) return [];
   const r = recordsOf(b);
   const rc = recordCtx(snap, today);
-  const all = kind === 'dog' ? snap.dogs : kind === 'litter' ? snap.litters : snap.litters.flatMap((l) => l.puppies ?? []);
-  return ordered(kind, all.filter((x) => matches(kind, x, r.where, rc)), r.order, rc);
+  return ordered(kind, recordsOfKind(snap, kind).filter((x) => matches(kind, x, r.where, rc)), r.order, rc);
 }
 
 // The rows in the block's groups ([{ heading, rows }]), or one group with no heading.
@@ -191,7 +202,7 @@ export function blockGroups(snap, b, rows, today = null) {
 // (and switched on), or, with no data blocks, its heading alone.
 function customHas(snap, key) {
   const data = (snap.layout?.[key] ?? []).filter((b) => BLOCK_TYPES[b.type].kind === 'data' && addedOn(snap, key, b));
-  return !data.length ? (snap.layout?.[key] ?? []).length > 0 : data.some((b) => blockRows(snap, b).length > 0);
+  return !data.length ? (snap.layout?.[key] ?? []).length > 0 : data.some((b) => blockRows(snap, b, null, key).length > 0);
 }
 
 // The menu: the owner's (snap.layout.menu), or today's. Each item shows while what it
@@ -319,7 +330,7 @@ export function descendantsOf(snap, d) {
 
 // A Dog cards block's dogs (content/blocks.js): its conditions, then its order. The
 // default (active, at home, not up and coming, not for sale) is dogGroups' breeding.
-export const dogsFor = (snap, b, today = null) => blockRows(snap, b, today);
+export const dogsFor = (snap, b, today = null, key = null) => blockRows(snap, b, today, key);
 
 // A dog's partner kennels, as the site may name them: the one it lives with, and
 // the kennels of its co-owners. Older snapshots have none.
@@ -518,6 +529,9 @@ function faceOf(item, items) {
   }
   return out;
 }
+
+// A dog's items, in order, as its cards draw them (a Featured block's lines).
+export const dogFace = (snap, d, items, { sale = null } = {}) => faceOf(dogItems(snap, d, { sale }), items);
 
 // show: what each face shows, in order (content/blocks.js SHOW_DEFAULT.dogs is today's card).
 export function dogCard(snap, d, { sale = null, show = SHOW_DEFAULT.dogs } = {}) {

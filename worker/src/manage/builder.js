@@ -35,7 +35,7 @@ import {
 import { buildSnapshot } from '../publish.js';
 import {
   olderPuppies, depositsAhead, soonSection, puppyStatus, puppyPriceText, regText, statusRule, sortPuppies, fullRegHref, rulesOf, useFormats, word, litterRows,
-  dogGroups, sitePrice, pricesOff, label, placedFaqs, addedOn, addedWords, customPage, menuGroups,
+  dogGroups, sitePrice, pricesOff, blockRows, label, placedFaqs, addedOn, addedWords, customPage, menuGroups,
 } from '../render/parts.js';
 import { makePreviewToken, servePhoto, SITE_CSP } from '../site.js';
 import { renderPage } from '../render/index.js';
@@ -53,7 +53,8 @@ import { PAGES, COLLAGE_LAYOUTS, collageLayout, HOME_WORDS } from '../content/mo
 import { layoutChoice, boxHint, photoSlot } from './forms.js';
 import { siteLink } from '../ops/sites.js';
 import { field, select, toggle, seg, back, svg, SPILL, mvBtns, fld, LIMITS, resultLine } from './builder/controls.js';
-import { blockRecords, WHAT, dataSettings } from './builder/blocks.js';
+import { FEATURE_EVERY, featuredNow } from '../content/featured.js';
+import { blockRecords, WHAT, dataSettings, scheduleSettings, hersLine as hersPicks } from './builder/blocks.js';
 import { rulesScreen } from './builder/rules.js';
 import { kennelosScreen, landingPreview } from './builder/kennelos.js';
 import { defaultSay } from './wording.js';
@@ -236,9 +237,10 @@ const badgesOn = (snap, key) => (snap.products ?? []).filter((x) => (key === 'ho
 
 
 function blockSummary(snap, key, b) {
-  if (b.type === 'dogs') return `${recordsSummary(b)} · ${DOG_STYLE[b.style].toLowerCase()}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b).length} now`;
-  if (b.type === 'litters' || b.type === 'pups') return `${recordsSummary(b)}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b).length} now`;
-  if (b.type === 'reviews') return `${REVIEW_STYLE[b.style]}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b).length} now`;
+  if (b.type === 'dogs') return `${recordsSummary(b)} · ${DOG_STYLE[b.style].toLowerCase()}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b, key).length} now`;
+  if (b.type === 'litters' || b.type === 'pups') return `${recordsSummary(b)}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b, key).length} now`;
+  if (b.type === 'featured_dog' || b.type === 'featured_pup') return `${recordsSummary(b)} · ${FEATURE_EVERY[b.sched.every].toLowerCase()} each · ${blockRecords(snap, b, key).length} in turn`;
+  if (b.type === 'reviews') return `${REVIEW_STYLE[b.style]}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b, key).length} now`;
   if (b.type === 'builtin') return blockHint(key, b) ?? '';
   if (isOwn(b)) return ownSummary(snap, b);
   const faqs = placedFaqs(snap, key).map((e) => e.heading).join(' · ');
@@ -277,14 +279,16 @@ function blockSettings(snap, key, b, pics) {
       <div class="row"><button class="link small danger" name="act" value="remove:${esc(b.id)}">${svg('trash')} Remove this block</button></div></div>`;
   }
   const { data, show } = dataSettings(snap, b, k);
+  const featured = b.type === 'featured_dog' || b.type === 'featured_pup';
   const words = ownWords(key, b)
     ? `<div class="fgroup"><h2>Starting wording</h2><p class="small muted">The breeder can reword it, and switch the block off, in ${esc(hersAt(snap, key))}.</p><div class="fgrid">
       ${field(k('w.eyebrow'), b.w.eyebrow ?? '', { label: 'Eyebrow' })}${field(k('w.heading'), b.w.heading ?? '', { label: 'Heading' })}${field(k('w.lede'), b.w.lede ?? '', { label: 'Line under it', cls: '' })}</div></div>`
     : '<p class="small muted">Its words are hers: she words this block in her Site Manager, under Pages and wording, Home.</p>';
   return `<div class="set"><input type="hidden" name="${k('present')}" value="1">
     <div class="fgroup"><h2>Which ${WHAT[b.type]}s <span class="kos-tag">${svg('link')}${b.type === 'reviews' ? 'Her records' : 'KennelOS'}</span></h2>${data}
-      <div class="fgrid">${select(k('limit'), b.limit ?? 'all', LIMITS, 'How many')}</div>${resultLine(blockRecords(snap, b), WHAT[b.type])}</div>
-    <div class="fgroup"><h2>What its cards show</h2>${show}</div>
+      ${featured ? '' : `<div class="fgrid">${select(k('limit'), b.limit ?? 'all', LIMITS, 'How many')}</div>`}${resultLine(blockRecords(snap, b, key), WHAT[b.type])}${b.type === 'reviews' ? '' : hersPicks(snap, key, b)}</div>
+    ${featured ? scheduleSettings(snap, key, b, k) : ''}
+    <div class="fgroup"><h2>${featured ? 'What it shows' : 'What its cards show'}</h2>${show}</div>
     ${words}${lookSettings(b)}
     <div class="row"><button class="link small danger" name="act" value="remove:${esc(b.id)}">${svg('trash')} Remove this block</button></div></div>`;
 }
@@ -429,7 +433,7 @@ function pagePreview(snap, key, blocks, site) {
   const out = [];
   for (const b of blocks) {
     if (hersOn(key, b) ? !h[b.id]?.enabled : !addedOn(snap, key, b)) { out.push(ghost(b, 'switched off by the breeder')); continue; }
-    const names = blockRecords(snap, b);
+    const names = blockRecords(snap, b, key);
     if (isData(b) && !names.length) { out.push(ghost(b, 'nothing matches, so it hides')); continue; }
     if (b.type === 'hero') out.push(`<div class="pv-hero"><span class="ph"></span><div>${h.hero.eyebrow ? `<span class="eyebrow">${esc(h.hero.eyebrow)}</span>` : ''}${(h.hero.headline ?? snap.site.kennel_name) ? `<h3>${esc(h.hero.headline ?? snap.site.kennel_name)}</h3>` : ''}${h.hero.script ? `<span class="script">${esc(h.hero.script)}</span>` : ''}</div></div>`);
     else if (b.type === 'head') {
@@ -448,6 +452,7 @@ function pagePreview(snap, key, blocks, site) {
     else if (b.type === 'dogs') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Our dogs', 'Meet our dogs')}<div class="pvg${b.style === 'flip' || b.style === 'beside' ? '' : ' slide'}">${names.map((nm) => `<div class="pvc${b.style === 'light' ? ' light' : b.style === 'beside' ? ' beside' : ' flip'}"><span class="ph"></span><div class="t"><b>${esc(nm)}</b></div></div>`).join('')}</div></div>`);
     else if (b.type === 'litters') out.push(`<div class="pvb sand">${headOf(wordsOf(b), 'Litters', 'Current and upcoming')}${names.map((nm) => `<div class="pv-row"><b>${esc(nm)}</b></div>`).join('')}</div>`);
     else if (b.type === 'pups') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Puppies', 'Available puppies')}<div class="pvg">${names.map((nm) => `<div class="pvc flip"><span class="ph"></span><div class="t"><b>${esc(nm)}</b></div></div>`).join('')}</div></div>`);
+    else if (b.type === 'featured_dog' || b.type === 'featured_pup') { const today = new Date().toISOString().slice(0, 10); const x = featuredNow(blockRows(snap, b, null, key), b.sched, snap.picks?.[key]?.[b.id]?.fixed ?? [], `${snap.site.id ?? ''}/${key}/${b.id}`, today); out.push(`<div class="pvb sand">${headOf(wordsOf(b), null, null)}${x.map((r) => `<div class="pvg"><span class="ph"></span><div><h3>${esc(r.call_name ?? r.name)}</h3><div class="lines"><i></i><i></i></div></div></div>`).join('')}</div>`); }
     else if (b.type === 'banner') out.push(`<div class="pvb deep">${b.w.heading ? `<h3>${esc(addedWords(snap, key, b).heading)}</h3>` : ''}${b.w.label && b.link ? `<span class="pv-pill">${esc(addedWords(snap, key, b).label)}</span>` : ''}</div>`);
     else if (b.type === 'button') out.push(`<div class="pvb"><div class="pv-row"><span class="pv-pill">${esc(addedWords(snap, key, b).label || 'Button')}</span></div></div>`);
     else if (b.type === 'divider') out.push(`<div class="pvb"><div class="pv-row small muted">${esc(DIVIDER_STYLE[b.style])}</div></div>`);

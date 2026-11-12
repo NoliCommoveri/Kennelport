@@ -73,6 +73,9 @@ export const WORDS = [
     ['offspring_3', 'Great-grand offspring', 'On a dog\'s page: the next generation'],
     ['offspring_4', 'Great-great-grand offspring', 'On a dog\'s page: the one after'],
   ]],
+  ['dogs', 'Featured', [
+    ['featured_meet', 'Meet {name}', 'A Featured block\'s button to the dog\'s or pup\'s own page ({name} is its name)'],
+  ]],
   ['wording', 'Litter cards', [
     ['litter_current', 'Current litter', 'A current litter'], ['litter_coming', 'Coming up', 'Born, deposits not open yet'],
     ['litter_older', 'Older puppies', 'Past its going-home date'], ['litter_planned', 'Planned litter', 'Planned, with no label'],

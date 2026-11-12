@@ -173,7 +173,7 @@ export function pagesScreens({ base, ctxFor, embedErr, embedsCard, env, errorBox
     const what = { dogs: say('pages.your_dogs_from_kennelos'), litters: say('pages.your_litters_from_kennelos'), pups: say('pages.your_pups_from_kennelos'), reviews: say('pages.your_reviews') };
     const nameOf = { dogs: (d) => d.call_name, litters: (l) => l.name, pups: (p) => p.name, reviews: (r) => r.first_name || say('pages.a_family') };
     const cur = await getAddedBlock(env, site.id, key, b.id);
-    const rows = blockRows(snap, b);
+    const rows = blockRows(snap, b, null, key);
     const names = (b.limit ? rows.slice(0, b.limit) : rows).map(nameOf[b.type]);
     const input = (n, label, max, half) => `<div class="f${half ? ' half' : ''}"><label>${esc(label)}<input name="${n}" value="${esc(cur[n] ?? b.w[n] ?? '')}" maxlength="${max}"><span class="hint">${esc(say('pages.own.empty_none'))}</span></label></div>`;
     return `<form method="post" action="${base}/blocks/${esc(key)}/${esc(b.id)}" data-save class="card added${cur.enabled ? '' : ' off'}" id="b-${esc(b.id)}">

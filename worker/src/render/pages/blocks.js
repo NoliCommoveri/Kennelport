@@ -9,6 +9,7 @@ import {
 } from '../parts.js';
 import { hersOn, recordsOf } from '../../content/blocks.js';
 import { HOME_WORDS } from '../../content/model.js';
+import { featuredBlock } from './featured.js';
 
 // A data block's words: hers (home_blocks) for Home's own blocks; for a block the
 // owner added, hers (block_switches) over the owner's starting wording.
@@ -37,6 +38,7 @@ export function dataBlock(snap, ctx, b, key) {
   if (b.type === 'litters') return littersBlock(snap, ctx, b, key);
   if (b.type === 'pups') return pupsBlock(snap, ctx, b, key);
   if (b.type === 'reviews') return reviewsBlock(snap, ctx, b, key);
+  if (b.type === 'featured_dog' || b.type === 'featured_pup') return featuredBlock(snap, ctx, b, key);
   return '';
 }
 
@@ -49,7 +51,7 @@ function inGroups(snap, ctx, b, list, draw) {
 }
 
 function dogsBlock(snap, ctx, b, key = 'home') {
-  const list = limited(dogsFor(snap, b, ctx.today), b);
+  const list = limited(dogsFor(snap, b, ctx.today, key), b);
   if (!list.length) return '';
   const w = blockWords(snap, b, key);
   const ctl = pageOn(snap, 'dogs', ctx) ? `<a class="more" href="/dogs">${esc(w.link_label || 'See all our dogs')}</a>` : '';
@@ -71,7 +73,7 @@ function dogsBlock(snap, ctx, b, key = 'home') {
 }
 
 function littersBlock(snap, ctx, b, key = 'home') {
-  const list = limited(blockRows(snap, b, ctx.today), b);
+  const list = limited(blockRows(snap, b, ctx.today, key), b);
   if (!list.length) return '';
   const w = blockWords(snap, b, key);
   return `<section class="section band"><div class="wrap">
@@ -84,7 +86,7 @@ function littersBlock(snap, ctx, b, key = 'home') {
 // Pup cards (the owner's, kennelos-contract.md step 2): the pups its conditions hold
 // for, as flip cards in a grid (the Puppies page's own cards), each with its litter.
 function pupsBlock(snap, ctx, b, key = 'home') {
-  const list = limited(blockRows(snap, b, ctx.today), b);
+  const list = limited(blockRows(snap, b, ctx.today, key), b);
   if (!list.length) return '';
   const w = blockWords(snap, b, key);
   const rc = recordCtx(snap, ctx.today);

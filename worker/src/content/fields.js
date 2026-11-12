@@ -175,7 +175,7 @@ export const NOT_FOR_BLOCKS = Object.freeze({
 export const MODEL_FIELDS = Object.freeze({ dog: DOG_FIELDS, puppy: PUPPY_FIELDS, litter: LITTER_FIELDS });
 
 // Which kind of record each data block shows.
-export const BLOCK_KIND = Object.freeze({ dogs: 'dog', pups: 'puppy', litters: 'litter' });
+export const BLOCK_KIND = Object.freeze({ dogs: 'dog', pups: 'puppy', litters: 'litter', featured_dog: 'dog', featured_pup: 'puppy' });
 
 // ---------- a condition, cleaned ----------
 

@@ -16,6 +16,7 @@
 import { PAGES, MENU_GROUPS, CUSTOM_KEY, slugify, COLLAGE_LAYOUTS, FRAMES, FOCUS } from './model.js';
 import { BLOCK_KIND, cleanWhere, cleanOrder, cleanGroup, cleanGroupWords, WHERE_MAX, TICK_OPS, FIELDS, LIFE_STAGE, RESIDENCE } from './fields.js';
 import { DOG_PLACES } from './rules.js';
+import { cleanSchedule } from './featured.js';
 
 export class BlockError extends Error {}
 
@@ -33,6 +34,9 @@ export const BLOCK_TYPES = Object.freeze({
   dogs: { name: 'Dog cards', ic: 'paw', kind: 'data' },
   litters: { name: 'Litter cards', ic: 'heart', kind: 'data' },
   pups: { name: 'Pup cards', ic: 'paw', kind: 'data' },
+  // B5: one record at a time, large, turning over on a schedule; its records are hers to pick.
+  featured_dog: { name: 'Featured dog', ic: 'star', kind: 'data', hint: 'One dog at a time, large, turning over by itself: a day, a week or a month each. She picks the dogs and their order in her Site Manager.' },
+  featured_pup: { name: 'Featured pup', ic: 'star', kind: 'data', hint: 'One pup at a time, large, turning over by itself. She picks the pups in her Site Manager; until she does, it shows what your conditions hold for.' },
   reviews: { name: 'Reviews', ic: 'star', kind: 'data' },
   embeds: { name: 'Videos and posts', ic: 'camera', kind: 'content', once: true, hint: 'The videos and posts she puts on Home.' },
   band: { name: 'Call-to-action band', ic: 'heart', kind: 'content', once: true, hint: 'Her waitlist band. Shows only while the waitlist page is on.' },
@@ -137,6 +141,10 @@ export const LITTER_ITEMS = Object.freeze({ eyebrow: 'Eyebrow (Current litter, C
 export const LITTER_PAIR = Object.freeze({ photos: "The parents' photos", name: "The litter's name", parents: "The pair's names" });
 export const LITTER_ROWS = Object.freeze({ born: 'Born', deposits: 'Deposits from', puppies: 'Puppies', going: 'Going home or Ready now', expected: 'Expected (planned)', price: 'Price', deposit: 'Deposit' });
 export const REVIEW_ITEMS = Object.freeze({ stars: 'Stars', quote: 'The quote', who: 'Who it is from' });
+// A Featured block's items beside its photo, under the name (B5). A dog's are its
+// card's (render/parts.js dogItems); a pup's its own.
+export const FEATURE_DOG_ITEMS = Object.freeze({ reg: 'Registered name', role: 'Breed and role', titles: 'Titles', where: 'Where it lives (co-owned) or its owner (outside dogs)', tests: 'Health tests (or details)', bio: 'Bio', ask: '“Ask about” and price (for sale)' });
+export const FEATURE_PUP_ITEMS = Object.freeze({ line: 'Sex and colour', status: 'Status', litter: 'Its litter and parents', price: 'Price', bio: 'Bio' });
 export const REVIEW_WHO = Object.freeze({ photo: 'Photo', name: 'First name and town', family: '“{pup}’s family, home {month}”' });
 
 export const SHOW_DEFAULT = Object.freeze({
@@ -146,6 +154,8 @@ export const SHOW_DEFAULT = Object.freeze({
     beside: ['photo', 'call', 'reg', 'role', 'titles', 'where', 'tests', 'bio', 'ask', 'profile'] },
   litters: { items: ['eyebrow', 'pair', 'facts', 'summary', 'link'], pair: ['photos', 'name', 'parents'], rows: Object.keys(LITTER_ROWS), names: 2 },
   reviews: { items: ['stars', 'quote', 'who'], who: ['photo', 'name', 'family'] },
+  featured_dog: { items: ['reg', 'role', 'titles', 'bio'] },
+  featured_pup: { items: ['line', 'status', 'litter', 'bio'] },
 });
 
 const linkDefault = () => ({ to: 'page', page: 'waitlist' });
@@ -183,6 +193,7 @@ function legacyWhere(b) {
     const stages = list(b.f?.stage, STAGES) ?? ['current', 'planned'];
     return [{ field: 'stage', op: 'one_of', value: stages.flatMap((x) => LEGACY_STAGE[x]) }];
   }
+  if (b.type === 'featured_dog') return DOGS_WHERE();
   return PUPS_WHERE();
 }
 // Today's defaults, as legacyWhere reads a block with no filters (written out: Home's
@@ -197,6 +208,8 @@ export function newBlock(type, id) {
   if (type === 'dogs') Object.assign(b, { where: DOGS_WHERE(), order: 'own', group: '', gw: {}, style: 'slider', limit: null, show: structuredClone(SHOW_DEFAULT.dogs), w: { eyebrow: 'Our dogs', heading: 'Meet our dogs' } });
   if (type === 'litters') Object.assign(b, { where: LITTERS_WHERE(), order: 'own', group: '', gw: {}, limit: null, show: structuredClone(SHOW_DEFAULT.litters), w: { eyebrow: 'Litters', heading: 'Current and upcoming' } });
   if (type === 'pups') Object.assign(b, { where: PUPS_WHERE(), order: 'own', group: '', gw: {}, limit: null, w: { eyebrow: 'Puppies', heading: 'Available puppies' } });
+  if (type === 'featured_dog') Object.assign(b, { where: DOGS_WHERE(), order: 'own', sched: cleanSchedule(null), show: structuredClone(SHOW_DEFAULT.featured_dog), w: { eyebrow: 'Featured', heading: 'Meet one of our dogs' } });
+  if (type === 'featured_pup') Object.assign(b, { where: PUPS_WHERE(), order: 'own', sched: cleanSchedule(null), show: structuredClone(SHOW_DEFAULT.featured_pup), w: { eyebrow: 'Featured', heading: 'Puppy spotlight' } });
   if (type === 'reviews') Object.assign(b, { style: 'slider', limit: null, show: structuredClone(SHOW_DEFAULT.reviews), w: { eyebrow: 'Families', heading: 'What our families say' } });
   if (type === 'banner') Object.assign(b, { w: { ...OWN_WORDS.banner }, link: linkDefault(), s: { bg: 'accent' } });
   if (type === 'button') Object.assign(b, { w: { ...OWN_WORDS.button }, link: linkDefault(), size: 'm', look: 'solid', align: 'center' });
@@ -404,6 +417,12 @@ export function cleanBlock(b) {
   } else if (b.type === 'pups') {
     Object.assign(out, recordsOf(b));
     out.limit = limitOf(b.limit);
+  } else if (b.type === 'featured_dog' || b.type === 'featured_pup') {
+    // No groups: one record at a time. How many at once is its schedule's.
+    Object.assign(out, recordsOf(b), { group: '', gw: {} });
+    out.sched = cleanSchedule(b.sched);
+    const items = b.type === 'featured_dog' ? FEATURE_DOG_ITEMS : FEATURE_PUP_ITEMS;
+    out.show = { items: list(b.show?.items, items) ?? [...SHOW_DEFAULT[b.type].items] };
   } else if (b.type === 'reviews') {
     const D = SHOW_DEFAULT.reviews;
     out.style = pick(b.style, REVIEW_STYLE, 'slider');
@@ -592,6 +611,9 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
       next.show = { items: order('items', LITTER_ITEMS), pair: order('pair', LITTER_PAIR), rows: order('rows', LITTER_ROWS), names: get(k('show.names')) };
     } else if (b.type === 'pups') {
       next.limit = get(k('limit'));
+    } else if (b.type === 'featured_dog' || b.type === 'featured_pup') {
+      next.sched = { every: get(k('sched.every')), order: get(k('sched.order')), start: String(get(k('sched.start')) ?? ''), count: get(k('sched.count')) };
+      next.show = { items: order('items', b.type === 'featured_dog' ? FEATURE_DOG_ITEMS : FEATURE_PUP_ITEMS) };
     } else if (b.type === 'reviews') {
       next.style = get(k('style'));
       next.limit = get(k('limit'));
