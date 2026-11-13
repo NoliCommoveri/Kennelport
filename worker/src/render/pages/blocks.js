@@ -5,7 +5,7 @@
 // pages.js (docs/review/senior-review-2026-11.md, item 7).
 import {
   esc, pageOn, litterCard, dogCard, coCard, besideCard, puppyCard, slider, reviewCard, head, dogsFor, blockRows, blockGroups, recordCtx,
-  rulesOf, pricesOff, sitePrice, word, addedOn, addedWords,
+  rulesOf, pricesOff, sitePrice, word, addedOn, addedWords, filterBlockOf,
 } from '../parts.js';
 import { hersOn, recordsOf } from '../../content/blocks.js';
 import { HOME_WORDS } from '../../content/model.js';
@@ -50,9 +50,30 @@ function inGroups(snap, ctx, b, list, draw) {
   return groups.map((g, i) => `<div class="head${i ? ' mt-26' : ''}"><h3>${esc(g.heading)}</h3></div>${draw(g.rows)}`).join(`\n      `);
 }
 
+// A grouped block as one grid of flip cards with a Show filter over it, one choice per
+// group (kennelos-contract.md B2, B4): the Dogs page's Girls and boys, drawn as it
+// always was. Each card carries its group's key; the template's script (site.js)
+// hides the others, and takes #girls and #boys from the address for a sex grouping.
+// The attribute keeps its old name, data-sex, so the script needs no change.
+function filterBlock(snap, ctx, b, key, list) {
+  const w = blockWords(snap, b, key);
+  const groups = blockGroups(snap, b, list, ctx.today);
+  const sexes = recordsOf(b).group === 'sex';
+  const name = (g) => (sexes && !b.gw?.[g.key] && (g.key === 'female' || g.key === 'male') ? word(snap, g.key === 'female' ? 'girls' : 'boys') : g.heading);
+  const keyOf = new Map();
+  for (const g of groups) for (const d of g.rows) if (!keyOf.has(d)) keyOf.set(d, g.key);
+  const filter = groups.length > 1 ? `<div class="filter"><label for="dog-filter">Show</label><select id="dog-filter"><option value="all">${esc(word(snap, 'dogs_all'))}</option>${groups.map((g) => `<option value="${esc(g.key)}">${esc(name(g))}</option>`).join('')}</select></div>` : '';
+  const top = w.eyebrow || w.heading || w.lede ? head(w.eyebrow, w.heading, w.lede) : '';
+  return `<section class="section tight"><div class="wrap">${sexes ? '<span id="girls"></span><span id="boys"></span>' : ''}${top}
+      ${filter}
+      <div class="grid" id="all-dogs">${list.map((d) => `<div data-sex="${esc(keyOf.get(d) ?? '')}">${dogCard(snap, d, { sale: saleOf(snap, ctx, d), show: b.show })}</div>`).join('')}</div>
+      <p class="flip-hint">${esc(word(snap, 'flip_hint'))}</p></div></section>`;
+}
+
 function dogsBlock(snap, ctx, b, key = 'home') {
   const list = limited(dogsFor(snap, b, ctx.today, key), b);
   if (!list.length) return '';
+  if (b.gshow === 'filter' && recordsOf(b).group && filterBlockOf(snap, key)?.id === b.id) return filterBlock(snap, ctx, b, key, list);
   const w = blockWords(snap, b, key);
   const ctl = pageOn(snap, 'dogs', ctx) ? `<a class="more" href="/dogs">${esc(w.link_label || 'See all our dogs')}</a>` : '';
   const card = (d) => dogCard(snap, d, { sale: saleOf(snap, ctx, d), show: b.show });

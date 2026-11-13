@@ -1,6 +1,6 @@
 // Pieces of the "ak" template shared by its pages: formatting, photos, cards and
 // the menu. Every value from a snapshot passes through esc() (or attr()) here.
-import { SHOW_DEFAULT, isCustom, hersOn, BLOCK_TYPES, defaultMenu, MENU_PLACES, PAGE_DEFAULTS, recordsOf } from '../content/blocks.js';
+import { SHOW_DEFAULT, isCustom, hersOn, BLOCK_TYPES, defaultMenu, MENU_PLACES, PAGE_DEFAULTS, recordsOf, pageBlocks, DOGS_ALL } from '../content/blocks.js';
 import { BLOCK_KIND, matches, ordered, grouped, GENERATIONS } from '../content/fields.js';
 import { applyPicks } from '../content/picks.js';
 import { escapeHtml as esc } from '../lib/html.js';
@@ -169,6 +169,16 @@ export function litterStage(snap, l, today) {
   return pastReady(snap, l, today) ? 'older' : 'available_now';
 }
 
+// The first grouped Dog cards block on a page shown as a Show filter (only one per page:
+// the template's script filters one grid). An older snapshot's Dogs page holds Girls
+// and boys as the built-in part 'all': read as the block it now is (blocks.js DOGS_ALL).
+export function filterBlockOf(snap, key) {
+  const b = (snap.layout?.[key] ?? pageBlocks(null, key))
+    .map((x) => (key === 'dogs' && x.type === 'builtin' && x.id === 'all' ? DOGS_ALL : x))
+    .find((x) => x.type === 'dogs' && recordsOf(x).group && x.gshow === 'filter');
+  return b ?? null;
+}
+
 // A data block's records (content/fields.js): those its conditions hold for, in its
 // order (before its limit), less the ones the breeder left out on this page's block;
 // on a Featured block, the ones she picked, in her order, once she has picked
@@ -213,7 +223,13 @@ function customHas(snap, key) {
 export function menuGroups(snap, ctx) {
   const menu = snap.layout?.menu ?? defaultMenu(snap.layout?.custom ?? []);
   const placeShows = {
-    'dogs#girls': () => { const b = dogGroups(snap).breeding; return b.some((d) => d.sex === 'female') && b.some((d) => d.sex === 'male'); },
+    // Girls and Boys: while the Dogs page's Show filter, grouped by sex, has both.
+    'dogs#girls': () => {
+      const b = filterBlockOf(snap, 'dogs');
+      if (!b || recordsOf(b).group !== 'sex' || !addedOn(snap, 'dogs', b)) return false;
+      const rows = b.limit ? blockRows(snap, b, ctx.today, 'dogs').slice(0, b.limit) : blockRows(snap, b, ctx.today, 'dogs');
+      return rows.some((d) => d.sex === 'female') && rows.some((d) => d.sex === 'male');
+    },
     'litters#available': () => snap.litters.some((l) => l.stage === 'current' && !depositsAhead(snap, l, ctx.today)),
     'litters#upcoming': () => snap.litters.some((l) => l.stage === 'planned' || (!soonSection(snap) && depositsAhead(snap, l, ctx.today))),
     'litters#soon': () => soonSection(snap) && snap.litters.some((l) => depositsAhead(snap, l, ctx.today)),

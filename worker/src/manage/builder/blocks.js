@@ -8,7 +8,7 @@ import { escapeHtml as esc } from '../../lib/html.js';
 import { blockRows } from '../../render/parts.js';
 import {
   DOG_STYLE, REVIEW_STYLE, DOG_ITEMS, LIGHT_ITEMS, DOG_STACKED, LITTER_ITEMS, LITTER_PAIR, LITTER_ROWS, REVIEW_ITEMS, REVIEW_WHO,
-  FEATURE_DOG_ITEMS, FEATURE_PUP_ITEMS,
+  FEATURE_DOG_ITEMS, FEATURE_PUP_ITEMS, GROUP_SHOW,
 } from '../../content/blocks.js';
 import { featuredNow, FEATURE_EVERY, FEATURE_ORDER, FEATURE_COUNT } from '../../content/featured.js';
 import { seg, select, fld, mvBtns } from './controls.js';
@@ -47,7 +47,10 @@ export function dataSettings(snap, b, k) {
   let data = '';
   let show = '';
   if (b.type === 'dogs') {
-    data = `${recordsSettings(snap, b, k)}${fld('Style', seg(k('style'), b.style, DOG_STYLE))}`;
+    // Grouped, its groups can show as a Show filter over one grid of flip cards (the
+    // Dogs page's Girls and boys): then its style is that.
+    const filter = b.group ? fld('Its groups', seg(k('gshow'), b.gshow, GROUP_SHOW), 'A Show filter is one grid of flip cards with a choice per group, as the Dogs page\'s Girls and boys. One per page: a second shows headings. Grouped by sex, the menu\'s Girls and Boys open it.') : '';
+    data = `${recordsSettings(snap, b, k)}${filter}${b.group && b.gshow === 'filter' ? '' : fld('Style', seg(k('style'), b.style, DOG_STYLE))}`;
     // The lists for the style it has now (save after changing the style to see its own).
     const lines = DOG_STACKED.includes(b.style) ? `<label class="check"><input type="checkbox" name="${k('lines')}"${b.lines ? ' checked' : ''}> <span>A line between cards where they stack<span class="hint">A 4px bar in the scheme's accent colour between one card and the next, where they sit one under another${b.style === 'flip' ? ' (on a phone)' : ' (on a phone or a tablet)'}.</span></span></label>` : '';
     show = b.style === 'light' ? showList(b, 'light', LIGHT_ITEMS, 'Top to bottom', 'Where it lives shows only for a co-owned dog living with a co-owner, or an outside dog with its owner filled in.')

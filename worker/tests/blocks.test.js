@@ -218,7 +218,7 @@ test('the Pages list has every page; a page\'s editor moves, removes, puts back 
   const page = text(await get(at('dogs')));
   assert.match(page, /The page Starting name .* All our dogs .*\/dogs/);
   assert.match(page, /This is today's page/);
-  for (const n of ['Page heading', 'FAQ spot', 'Girls and boys Built-in', 'Up and coming Built-in', 'Looking for a home Built-in', 'Shared with friends Built-in']) assert.match(page, new RegExp(n));
+  for (const n of ['Page heading', 'FAQ spot', 'Dog cards KennelOS Life stage is one of Breeding dog · Lives is one of With me · grouped by sex · as a Show filter', 'Up and coming Built-in', 'Looking for a home Built-in', 'Shared with friends Built-in']) assert.match(page, new RegExp(n));
   const before = await render('/dogs');
 
   // Shared with friends to the top, under the heading: four moves up.
@@ -237,11 +237,20 @@ test('the Pages list has every page; a page\'s editor moves, removes, puts back 
   await post({ 'b.dogs-2.w.eyebrow': 'Dams', 'b.dogs-2.w.heading': 'Our girls' }, { page: 'dogs', open: 'dogs-2' });
   h = await render('/dogs');
   assert.match(text(h), /Dams Our girls .*Clover\*/);
-  // Girls and boys is offered back, and comes back at the bottom.
-  assert.match(text(await get(`${at('dogs')}?open=add`)), /This page's own Girls and boys .* Add/);
-  await post({}, { page: 'dogs', act: 'add:builtin:all' });
-  assert.equal((await build()).pages.dogs.blocks.at(-1).id, 'all');
-  assert.ok(order(await render('/dogs'), ['Our girls', 'id="all-dogs"']));
+  // Girls and boys is a Dog cards block now (kennelos-contract.md B4): not offered as a
+  // built-in. Grouped by sex as a Show filter, a new one draws it, under Our girls.
+  assert.doesNotMatch(text(await get(`${at('dogs')}?open=add`)), /Girls and boys/);
+  await post({}, { page: 'dogs', act: 'add:dogs' });
+  await post({ 'b.dogs-3.group': 'sex' }, { page: 'dogs', open: 'dogs-3' });
+  assert.match(text(await get(`${at('dogs')}?open=dogs-3`)), /Its groups A heading over each group A Show filter/);
+  await post({ 'b.dogs-3.gshow': 'filter' }, { page: 'dogs', open: 'dogs-3' });
+  h = await render('/dogs');
+  assert.ok(order(h, ['Our girls', 'id="all-dogs"']));
+  assert.match(h, /<option value="female">Girls<\/option><option value="male">Boys<\/option>/);
+  assert.match(h, /href="\/dogs#girls"/);
+  // Removed, the menu's Girls and Boys go with it (they'd open nothing).
+  await post({}, { page: 'dogs', open: 'dogs-3', act: 'remove:dogs-3' });
+  assert.doesNotMatch(await render('/dogs'), /href="\/dogs#girls"/);
 
   // Back to today's: nothing stored for the page, and it is as before.
   await post({}, { page: 'dogs', act: 'default' });
@@ -401,4 +410,25 @@ test('a Featured dog block in the owner\'s view: its schedule and items saved, t
   html = text(await get(`${at('home')}?open=${b.id}`));
   assert.match(html, /She has picked 1 in her Site Manager/);
   assert.match(html, /Shows 1 dog/);
+});
+
+test('Girls and boys: a build from before B4 holds it as a built-in part, and reads as the block', async (t) => {
+  const { env, id, render } = await demo(t);
+  const before = await render('/dogs');
+  const { saveBuild } = await import('../src/content/rules.js');
+  // The owner's Dogs page as stored before: the built-in part, moved under Up and coming.
+  await saveBuild(env, id, { pages: { dogs: { blocks: [{ id: 'head', type: 'head' }, { id: 'upcoming', type: 'builtin' }, { id: 'all', type: 'builtin' }] } } });
+  const blocks = pageBlocks(await loadBuild(env, id), 'dogs');
+  assert.deepEqual(blocks.map((b) => `${b.id}:${b.type}`), ['head:head', 'upcoming:builtin', 'all:dogs']);
+  assert.equal(blocks[2].group, 'sex');
+  assert.equal(blocks[2].gshow, 'filter');
+  const h = await render('/dogs');
+  const grid = (x) => x.slice(x.indexOf('<section class="section tight">'), x.indexOf('</section>', x.indexOf('id="all-dogs"')));
+  assert.equal(grid(h), grid(before));
+  // An older snapshot, with the part in its layout, draws it the same.
+  const snap = await buildSnapshot(env, id);
+  snap.layout.dogs = [{ id: 'head', type: 'head' }, { id: 'all', type: 'builtin' }];
+  const old = renderPage(snap, { path: '/dogs', origin: 'https://x', today: '2027-03-10', preview: true, portal: true }).html;
+  assert.equal(grid(old), grid(before));
+  assert.match(renderPage(snap, { path: '/', origin: 'https://x', today: '2027-03-10', preview: true, portal: true }).html, /href="\/dogs#girls"/);
 });

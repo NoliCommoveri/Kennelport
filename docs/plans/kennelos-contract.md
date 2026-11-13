@@ -322,6 +322,8 @@ Each step is its own branch and merge, with at most one migration.
    (`dogs#girls`, `dogs#boys`) as a group of a block. They stay built-in for now, because
    changing them changes every live site's Dogs page. That belongs with step 3 or its
    own small step.
+   **Built 2026-11-13:** a Dog cards block grouped by sex, shown as a Show filter;
+   every live Dogs page draws as before (checked byte for byte).
 3. **B3, B5, B6.** Pick and Leave out for all three, the breeder's picking screen
    (every data block: what shows, each ticked, hers to untick; Featured: hers to pick),
    the Featured block. One migration: the picks, if they are kept outside the block (they are

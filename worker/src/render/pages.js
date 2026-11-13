@@ -17,7 +17,7 @@ import { litterAlbums, dogAlbums } from './pages/albumLists.js';
 import { v, honeypot, turnstileBox, formResult } from './pages/formParts.js';
 import { kennelosForm } from './pages/applicationForm.js';
 import { dataBlock, saleOf } from './pages/blocks.js';
-import { homeBlocks, pageBlocks, BREEDER_SWITCH, PAGE_PARTS, PAGE_HEADS, headFor, BLOCK_TYPES, cleanProfile } from '../content/blocks.js';
+import { homeBlocks, pageBlocks, BREEDER_SWITCH, PAGE_PARTS, PAGE_HEADS, headFor, BLOCK_TYPES, cleanProfile, DOGS_ALL } from '../content/blocks.js';
 import { HOME_WORDS, COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk, badgeAddress, PAGES } from '../content/model.js';
 
 // A question from her FAQ, where she has placed it (plan 3.9): its own band under
@@ -429,8 +429,6 @@ function storyBlock(snap, ctx) {
 export function dogs(snap, ctx) {
   const p = snap.pages.dogs;
   const g = dogGroups(snap);
-  const list = g.breeding;
-  const both = list.some((d) => d.sex === 'female') && list.some((d) => d.sex === 'male');
   // A group with nothing in it doesn't appear (plan 3.12).
   const group = (id, eyebrow, heading, lede, dogsIn) => (dogsIn.length ? `<section class="section band" id="${id}"><div class="wrap">
       ${head(eyebrow, heading, lede)}
@@ -441,10 +439,8 @@ export function dogs(snap, ctx) {
     body: assemble(snap, ctx, 'dogs', {
       head: pagehead(p, PAGE_HEADS.dogs),
       faq: faqSection(snap, 'dogs'),
-      all: list.length ? `<section class="section tight"><div class="wrap"><span id="girls"></span><span id="boys"></span>
-      ${both ? `<div class="filter"><label for="dog-filter">Show</label><select id="dog-filter"><option value="all">${esc(word(snap, 'dogs_all'))}</option><option value="female">${esc(word(snap, 'girls'))}</option><option value="male">${esc(word(snap, 'boys'))}</option></select></div>` : ''}
-      <div class="grid" id="all-dogs">${list.map((d) => `<div data-sex="${d.sex}">${dogCard(snap, d)}</div>`).join('')}</div>
-      <p class="flip-hint">${esc(word(snap, 'flip_hint'))}</p></div></section>` : '',
+      // A build or snapshot from before B4 holds Girls and boys as a built-in part.
+      all: () => dataBlock(snap, ctx, DOGS_ALL, 'dogs'),
       upcoming: group('up-and-coming', word(snap, 'upcoming_eyebrow'), word(snap, 'upcoming_heading'), word(snap, 'upcoming_lede'), g.upcoming),
       for_sale: group('looking-for-a-home', word(snap, 'for_sale_eyebrow'), word(snap, 'for_sale_heading'), word(snap, 'for_sale_lede'), g.for_sale),
       co_owned: coOwnedSection(snap, p, g.away),

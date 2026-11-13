@@ -35,7 +35,7 @@ import {
 import { buildSnapshot } from '../publish.js';
 import {
   olderPuppies, depositsAhead, soonSection, puppyStatus, puppyPriceText, regText, statusRule, sortPuppies, fullRegHref, rulesOf, useFormats, word, litterRows,
-  dogGroups, sitePrice, pricesOff, blockRows, label, placedFaqs, addedOn, addedWords, customPage, menuGroups,
+  dogGroups, sitePrice, pricesOff, blockRows, blockGroups, filterBlockOf, label, placedFaqs, addedOn, addedWords, customPage, menuGroups,
 } from '../render/parts.js';
 import { makePreviewToken, servePhoto, SITE_CSP } from '../site.js';
 import { renderPage } from '../render/index.js';
@@ -237,7 +237,7 @@ const badgesOn = (snap, key) => (snap.products ?? []).filter((x) => (key === 'ho
 
 
 function blockSummary(snap, key, b) {
-  if (b.type === 'dogs') return `${recordsSummary(b)} · ${DOG_STYLE[b.style].toLowerCase()}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b, key).length} now`;
+  if (b.type === 'dogs') return `${recordsSummary(b)} · ${b.group && b.gshow === 'filter' ? 'as a Show filter' : DOG_STYLE[b.style].toLowerCase()}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b, key).length} now`;
   if (b.type === 'litters' || b.type === 'pups') return `${recordsSummary(b)}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b, key).length} now`;
   if (b.type === 'featured_dog' || b.type === 'featured_pup') return `${recordsSummary(b)} · ${FEATURE_EVERY[b.sched.every].toLowerCase()} each · ${blockRecords(snap, b, key).length} in turn`;
   if (b.type === 'reviews') return `${REVIEW_STYLE[b.style]}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b, key).length} now`;
@@ -449,6 +449,13 @@ function pagePreview(snap, key, blocks, site) {
     else if (b.type === 'text') out.push(h.story.heading || h.story.text ? `<div class="pvb sand">${headOf(h.story, null, h.story.heading)}<div class="pvg"><span class="ph"></span><div class="lines"><i></i><i></i><i></i></div></div></div>` : ghost(b, 'no story yet, so it hides'));
     else if (b.type === 'embeds') out.push(ghost(b, `shows the videos and posts she puts on ${pageLabel(snap, key)}`));
     else if (b.type === 'band') out.push(`<div class="pvb deep">${(h.waitlist.heading ?? HOME_WORDS.waitlist.heading) ? `<h3>${esc(h.waitlist.heading ?? HOME_WORDS.waitlist.heading)}</h3>` : ''}<span class="pv-pill">${esc(h.waitlist.button_label || 'Join the waitlist')}</span></div>`);
+    else if (b.type === 'dogs' && b.gshow === 'filter' && b.group && filterBlockOf({ ...snap, layout: { ...snap.layout, [key]: blocks } }, key)?.id === b.id) {
+      // As a Show filter: its own words only (none by default), the filter's choices, one grid.
+      const w = wordsOf(b);
+      const gs = blockGroups(snap, b, blockRows(snap, b, null, key), null);
+      const chip = (g) => (b.group === 'sex' && !b.gw?.[g.key] ? word(snap, g.key === 'female' ? 'girls' : 'boys') : g.heading);
+      out.push(`<div class="pvb">${headOf(w, null, null)}${gs.length > 1 ? `<div class="pv-chips"><span class="on">${esc(word(snap, 'dogs_all'))}</span>${gs.map((g) => `<span>${esc(chip(g))}</span>`).join('')}</div>` : ''}<div class="pvg">${names.map((nm) => `<div class="pvc flip"><span class="ph"></span><div class="t"><b>${esc(nm)}</b></div></div>`).join('')}</div></div>`);
+    }
     else if (b.type === 'dogs') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Our dogs', 'Meet our dogs')}<div class="pvg${b.style === 'flip' || b.style === 'beside' ? '' : ' slide'}">${names.map((nm) => `<div class="pvc${b.style === 'light' ? ' light' : b.style === 'beside' ? ' beside' : ' flip'}"><span class="ph"></span><div class="t"><b>${esc(nm)}</b></div></div>`).join('')}</div></div>`);
     else if (b.type === 'litters') out.push(`<div class="pvb sand">${headOf(wordsOf(b), 'Litters', 'Current and upcoming')}${names.map((nm) => `<div class="pv-row"><b>${esc(nm)}</b></div>`).join('')}</div>`);
     else if (b.type === 'pups') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Puppies', 'Available puppies')}<div class="pvg">${names.map((nm) => `<div class="pvc flip"><span class="ph"></span><div class="t"><b>${esc(nm)}</b></div></div>`).join('')}</div></div>`);

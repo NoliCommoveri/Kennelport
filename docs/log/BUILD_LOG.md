@@ -1035,3 +1035,43 @@ with new sections and a new building order. Docs only; nothing built yet.
   waits for the owner's yes. Until then `versions.test.js` fails, as expected.
 - Checked at 390px and 1280px: every ↑ at one x and every ↓ at the next, no sideways
   scroll, no script errors.
+
+## 2026-11-13: her lists' arrows in their own columns; Girls and boys as a block (B4)
+
+- **Up and down arrows** (the owner's request: find any not lined up). Three lists in her
+  Site Manager drew ↑ and ↓ only where there was a move, so the first and last rows'
+  buttons (and the rows' widths) shifted:
+  - her lists (dogs, litters, extras, FAQ…);
+  - videos and posts;
+  - her waitlist.
+
+  Each now draws an empty cell where a row has no move. `app.css` `.item .order` and
+  `.wl-entry .order` are two fixed 44px columns, and a list of one hides them.
+  - The owner's admin rows were already lined up: they always draw both buttons and
+    grey out the one that can't be used.
+  - Checked at 390px and 1280px: every ↑ at one x and every ↓ at the next.
+- **Girls and boys** (`plans/kennelos-contract.md` B2 and B4, the leftover from step 2):
+  - The Dogs page's built-in part is now a Dog cards block (`blocks.js` `DOGS_ALL`): breeding
+    dogs with her, in her order, grouped by sex, shown with a new choice, **Its groups:
+    a Show filter** (`gshow: 'filter'`). That's one grid of flip cards with a Show select
+    built from the groups, as the page always had. Other blocks keep a heading per group.
+  - Only the first filter block on a page is drawn as one: the template's script filters
+    one grid. The cards keep the attribute name `data-sex` (now any group's key), so the
+    template's script didn't change and no `ASSET_VERSION` bump is needed.
+  - Old builds and older snapshots holding the built-in part `all` read as the block
+    (`pageBlocks`, `render/parts.js` `filterBlockOf`).
+  - **Checked against `main`'s code:** the Dogs page and Home rendered for 9 sites (the
+    sample, girls only, no breeding dogs; each with no build, the part moved, the part
+    removed). 16 of 18 pages are byte-identical.
+  - The two that differ are a fix. Where the owner removed Girls and boys, the menu's
+    Girls and Boys used to show and open nothing; now they hide.
+  - The menu's `dogs#girls` and `dogs#boys` show while that block has both sexes.
+  - Being a block, it's hers like any other: her Dogs page screen has its card (Show it,
+    words, and Choose which show to untick dogs).
+  - The owner's view: Girls and boys is no longer offered as a built-in to put back. Add
+    a Dog cards block grouped by sex as a Show filter instead. The page preview draws the
+    filter's choices.
+- `public/_kp/m/app.css` changed (this entry and the one before), so an `APP_VERSION`
+  bump waits for the owner's yes; `versions.test.js` fails until then.
+- Tests: `blocks.test.js` (the Dogs page editor with the block; old builds and older
+  snapshots). 387 pass; the version test fails as expected.
