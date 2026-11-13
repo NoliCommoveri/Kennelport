@@ -16,6 +16,8 @@ import {
   saveFile, getFile, fileResponse, emailLog, history, placeablePuppies, puppyFor, PortalError, RECORD_TYPES, MAX_FILE_BYTES,
 } from './store.js';
 import { sendInvites, portalBase } from './auth.js';
+import { makeViewLink } from './view.js';
+import { defaultSay } from '../manage/wording.js';
 import {
   listItems, saveItem, removeItem, moveItem, addSuggested, stepsFor, programsFor, setDone, setHidden, setDueOn, setProgramStatus, setProgramCode,
   PROGRAM_WORDS,
@@ -194,7 +196,7 @@ function newScreen(site, puppies, s, { error, values = {} } = {}) {
   </form>`;
 }
 
-async function familyScreen(env, site, familyId, url, { error } = {}, now = new Date()) {
+async function familyScreen(env, site, familyId, url, { error, say = defaultSay } = {}, now = new Date()) {
   const f = await getFamily(env, site.id, familyId);
   if (!f) return null;
   const s = await getSettings(env, site.id);
@@ -225,6 +227,7 @@ async function familyScreen(env, site, familyId, url, { error } = {}, now = new 
     <dl class="kv">${emails.map((e, i) => `<dt>${i ? '' : 'Emails'}</dt><dd>${esc(e.email)}${e.invited_at ? ` <span class="muted small">invited ${esc(formatAt(e.invited_at, s.time_zone, { weekday: false }))}${e.invite_hash ? '' : ', link used'}</span>` : ''}</dd>`).join('')}
       <dt>Signed in</dt><dd>${f.first_signed_in_at ? `First ${esc(formatAt(f.first_signed_in_at, s.time_zone, { weekday: false }))}; last seen ${esc(formatAt(f.last_activity_at, s.time_zone, { weekday: false }))}` : 'Not yet'}</dd></dl>
     ${form('invite', `<button${f.invited_at ? '' : ' class="primary"'}>${f.invited_at ? 'Resend invite' : 'Send invite'}</button> <span class="hint">A sign-in link to each address, working once for 30 days. A resend replaces the old links.</span>`)}
+    <p><a class="button small" href="${base}/view" target="_blank" rel="noopener">${esc(say('familyview.button'))}</a> <span class="hint">${esc(say('familyview.button_hint'))}</span></p>
   </section>`);
 
   if (!p) {
@@ -406,7 +409,7 @@ async function familyScreen(env, site, familyId, url, { error } = {}, now = new 
 
 // ---------- routes ----------
 
-export async function handlePortalAdmin({ env, request, url, site: signedInSite, page }) {
+export async function handlePortalAdmin({ env, request, url, site: signedInSite, page, user = null, say = defaultSay }) {
   let site = signedInSite;
   const m = url.pathname.match(/^\/s\/[a-z0-9-]+\/portal(\/.*)?$/);
   if (!m) return null;
@@ -518,9 +521,16 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   if (!fm) return null;
   const [, familyId, action] = fm;
   const show = async (opts) => {
-    const body = await familyScreen(env, site, familyId, url, opts);
+    const body = await familyScreen(env, site, familyId, url, { say, ...opts });
     return body ? page('Family', body, { back: home, backLabel: 'Families', status: opts?.error ? 400 : 200 }) : page('Not found', '<section class="card"><p>No such family.</p></section>', { status: 404, back: home });
   };
+  // See their portal (plan family-view.md): a once-only link to her site's address.
+  // A GET, since the Site Manager's forms may only post to itself.
+  if (!post && action === 'view') {
+    if (!user || !(await getFamily(env, site.id, familyId))) return show();
+    const link = await makeViewLink(env, site.id, familyId, user.emailHash);
+    return new Response(null, { status: 303, headers: { location: `${portalBase(env, site)}/family/view?t=${link}`, 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' } });
+  }
   if (!post) return action ? null : show();
 
   const fam = await getFamily(env, site.id, familyId);

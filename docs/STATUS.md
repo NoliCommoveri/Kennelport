@@ -4,7 +4,7 @@ The one place for progress. Keep it short: one line per item, a link to where th
 is. When a step is built, change its line here and add the detail to the build log
 ([`log/BUILD_LOG.md`](log/BUILD_LOG.md)); the plans describe intent, not progress.
 
-Last updated 2026-11-12. Released on `main`: Site Manager (`APP_VERSION`) 17, site
+Last updated 2026-11-13. Released on `main`: Site Manager (`APP_VERSION`) 17, site
 template (`ASSET_VERSION`) 23.
 
 ## Platform
@@ -61,11 +61,14 @@ anyone outside the family.
   wording, guarantee periods, handbook and food details, baseline sign-up rates,
   application-to-buyer mapping, photo and video package details, R2 and HEVC checks.
 - Phases 2 and 3: not started.
+- Seeing a family's portal as they see it (read-only, live): built 2026-11-13
+  ([`plans/done/family-view.md`](plans/done/family-view.md)). No migration, no version bump.
 
 ## Finished feature plans
 
 - Co-owned dogs: KennelPort's half built 2026-11-04 ([`plans/done/co-owned-dogs.md`](plans/done/co-owned-dogs.md)).
 - Linked sample and the demo site: built ([`plans/done/linked-sample.md`](plans/done/linked-sample.md)).
+- Seeing a family's portal as they see it: built 2026-11-13 ([`plans/done/family-view.md`](plans/done/family-view.md)).
 
 ## Review ([`review/senior-review-2026-11.md`](review/senior-review-2026-11.md), 2026-11-10)
 

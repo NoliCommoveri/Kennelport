@@ -98,6 +98,8 @@ read that before the rest. Update this map when you add, move or split a file.
 - `store.js` the records; `steps.js` checklist, timeline, programs; `stays.js` extended
   stays; `vet.js` the 3-day vet visit; `reminders.js` the hourly job; `messages.js` emails;
   `bounces.js` Resend's delivery results; `account.js` the account over time (loss, delete).
+- `view.js` her read-only view of a family's portal (`plans/done/family-view.md`): the view
+  link and the view cookie; `family.js` refuses every write under one.
 - `feed.js` KennelOS's family feed. `version.js`: `PORTAL_VERSION`; files in `public/_kp/f/`
   (ask before bumping).
 

@@ -28,9 +28,12 @@ export const PLACES = new Set(['home', 'records', 'vet', 'timeline', 'checklist'
 export async function goToProgram(env, site, fam, id, from) {
   const x = await env.DB.prepare('SELECT id, link_url FROM products WHERE id = ? AND site_id = ? AND portal_show = 1').bind(id, site.id).first();
   if (!x?.link_url || !/^https:\/\//i.test(x.link_url)) return new Response('Not found', { status: 404 });
-  await env.DB.prepare('INSERT INTO portal_clicks (site_id, family_id, product_id, place, at) VALUES (?, ?, ?, ?, ?)')
-    .bind(site.id, fam.familyId, x.id, PLACES.has(from) ? from : 'other', new Date().toISOString()).run();
-  const p = await placementFor(env, site.id, fam.familyId);
-  if (p && active(p)) await noteClick(env, site.id, p, x.id);
+  // Her taps while seeing their portal (plan family-view.md) aren't theirs: not counted.
+  if (!fam.viewing) {
+    await env.DB.prepare('INSERT INTO portal_clicks (site_id, family_id, product_id, place, at) VALUES (?, ?, ?, ?, ?)')
+      .bind(site.id, fam.familyId, x.id, PLACES.has(from) ? from : 'other', new Date().toISOString()).run();
+    const p = await placementFor(env, site.id, fam.familyId);
+    if (p && active(p)) await noteClick(env, site.id, p, x.id);
+  }
   return new Response(null, { status: 302, headers: { location: x.link_url, 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' } });
 }

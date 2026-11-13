@@ -54,6 +54,7 @@ export const SCREENS = Object.freeze({
   errors: 'Errors: what to fix when a form isn\'t saved',
   signin: 'Signing in, and her sites',
   notifications: 'Notifications',
+  familyview: 'A family\'s portal, as they see it',
 });
 
 // Which screen a form's kind belongs to.
@@ -664,7 +665,18 @@ const SCREEN_LINES = {
   "picks.dates_none": ["pages", "Choice", "None"],
   "picks.dates_from": ["pages", "Field label", "From"],
   "picks.dates_to": ["pages", "Field label", "To"],
-  "picks.today": ["pages", "Line ({names}: who shows today)", "Showing today: {names}"]
+  "picks.today": ["pages", "Line ({names}: who shows today)", "Showing today: {names}"],
+  "familyview.button": ["familyview", "Button on a family's screen", "See their portal"],
+  "familyview.button_hint": ["familyview", "Line beside the button", "Opens their portal as they see it right now, in a new tab. Read-only: nothing you do there changes anything for them."],
+  "familyview.band": ["familyview", "Band at the top of every page of their portal while you view it ({family}: the family's name)", "You're seeing {family}'s portal as they see it. Read-only: nothing you tap changes anything for them."],
+  "familyview.refresh": ["familyview", "Button in the band", "Refresh"],
+  "familyview.stop": ["familyview", "Button in the band", "Stop viewing"],
+  "familyview.nochange": ["familyview", "Line in the band after a tap that would have changed something", "Nothing was changed. This is their portal, read-only."],
+  "familyview.ended_title": ["familyview", "Heading when viewing has stopped or can't start", "Viewing their portal"],
+  "familyview.stopped": ["familyview", "Line after Stop viewing", "You've stopped viewing their portal. You can close this tab."],
+  "familyview.expired": ["familyview", "Line when the hour's view has ended", "Viewing ends by itself after an hour. To look again, open the family in your Site Manager and tap See their portal."],
+  "familyview.used": ["familyview", "Line when the link has been used or has expired", "That link has been used or has expired. Open the family in your Site Manager and tap See their portal."],
+  "familyview.back": ["familyview", "Button when viewing has stopped", "Back to the Site Manager"]
 };
 
 // The errors that tell her what to fix (content/model.js and records.js checks,
