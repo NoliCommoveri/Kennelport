@@ -346,9 +346,14 @@ Each step is its own branch and merge, with at most one migration.
    (`landing.acct_group_*`, none by default; hers after). Both on the owner's From
    KennelOS screen. Fields: a pup's Disposition in KennelOS, a litter's Status in
    KennelOS (and a pup's litter's), a dog's Kinds of health test shown. A key an older
-   KennelOS doesn't send leaves the stored value as it is. **Not yet:** C2's litter
-   card eyebrow rule and C5's grouping on a dog's page; both read these fields when
-   built. KennelOS sends no `verify_url` (it holds none).
+   KennelOS doesn't send leaves the stored value as it is. KennelOS sends no
+   `verify_url` (it holds none).
+   **Display rules, built 2026-11-13:** C2, a litter card's line by its KennelOS status
+   (Wording, "Litter cards, by status in KennelOS": a line per status, empty by default,
+   so the usual lines show; an expected litter's plan label still comes first). C5, a
+   dog's page groups its health results by kind (Dogs, "Group them by kind on its
+   page", off by default), each kind under its line in Dogs, "Health results"; a result
+   with no type goes under the first line, Health testing (now wordable).
 5. **C3, D.** Titles as rows; tags. Migration: `dog_titles`, `tags`.
 6. **C4, C7.** Origin and lineage: the import tags and the Pedigree block.
    Migration: the columns and an `ancestors` store. C4 and C7 go together: import-descended

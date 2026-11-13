@@ -205,3 +205,36 @@ test("KennelOS's raw values as fields (contract step 4): a pup's disposition, a 
   // Not sent yet: no condition on them holds.
   assert.deepEqual(names(snap, { id: 'l', type: 'litters', where: [{ field: 'kennelos_status', op: 'is', value: 'ready' }] }), []);
 });
+
+test("display rules over KennelOS's raw values: a litter card's line by its KennelOS status, a dog's health results by kind", async () => {
+  const { DEFAULT_RULES } = await import('../src/content/rules.js');
+  const env = await makeEnv();
+  const s = await addSite(env, 'akshow');
+  await importContent(env, s.id, structuredClone(AK_SAMPLE));
+  const db = env.DB.raw;
+  db.prepare("UPDATE litters SET kennelos_status = 'weaning' WHERE site_id = ? AND slug = 'gem-2026'").run(s.id);
+  const willow = db.prepare("SELECT id FROM dogs WHERE site_id = ? AND slug = 'willow'").get(s.id);
+  db.prepare('DELETE FROM health_results WHERE dog_id = ?').run(willow.id);
+  const ins = db.prepare("INSERT INTO health_results (id, site_id, dog_id, test, result, normal, show, sort, test_type) VALUES (?, ?, ?, ?, 'Clear', 1, 1, ?, ?)");
+  ins.run('h1', s.id, willow.id, 'DM', 1, 'genetic_test');
+  ins.run('h2', s.id, willow.id, 'Hips', 2, 'ofa_pennhip');
+  ins.run('h3', s.id, willow.id, 'Her own note', 3, null);
+  const snap = await buildSnapshot(env, s.id);
+  const draw = (rules, p) => renderPage({ ...snap, rules }, { path: p, origin: 'https://x', today: TODAY, preview: true }).html;
+  const card = (html) => html.match(/<article class="litter">[\s\S]*?<\/article>/g).find((a) => a.includes('Gem'));
+
+  // As before by default: the usual line, one list under Health testing.
+  const plain = structuredClone(DEFAULT_RULES);
+  assert.match(card(draw(plain, '/')), /<span class="eyebrow">(Coming up|Current litter|Older puppies)<\/span>/);
+  const page = draw(plain, '/dogs/willow');
+  assert.equal(page.match(/<span class="eyebrow">Health testing<\/span>/g).length, 1);
+  assert.doesNotMatch(page, /Genetic testing/);
+
+  const set = structuredClone(DEFAULT_RULES);
+  set.words.litter_kos_weaning = 'Weaning now';
+  set.dogs.health_groups = true;
+  assert.match(card(draw(set, '/')), /<span class="eyebrow">Weaning now<\/span>/);
+  const grouped = draw(set, '/dogs/willow');
+  const heads = [...grouped.matchAll(/<span class="eyebrow">([^<]+)<\/span><ul class="tests">/g)].map((m) => m[1]);
+  assert.deepEqual(heads, ['Health testing', 'Genetic testing', 'OFA / PennHIP'], 'untyped first, then each kind present, in order');
+});

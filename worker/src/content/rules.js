@@ -73,6 +73,16 @@ export const WORDS = [
     ['offspring_3', 'Great-grand offspring', 'On a dog\'s page: the next generation'],
     ['offspring_4', 'Great-great-grand offspring', 'On a dog\'s page: the one after'],
   ]],
+  // A dog's health results on its page; grouped by kind with the Dogs rule "Group by
+  // kind" (rules.dogs.health_groups), from KennelOS's test type (contract C5). A result
+  // with no type (typed by her, or from a KennelOS before it sent types) goes under
+  // the first line.
+  ['dogs', 'Health results', [
+    ['health_heading', 'Health testing', 'On a dog\'s page, over its health results'],
+    ['health_genetic', 'Genetic testing', 'Grouped by kind: over its genetic results'],
+    ['health_ofa', 'OFA / PennHIP', 'Grouped by kind: over its OFA and PennHIP results'],
+    ['health_breed', 'Breed-specific testing', 'Grouped by kind: over its other tests (eyes, hearing, heart…)'],
+  ]],
   ['dogs', 'Featured', [
     ['featured_meet', 'Meet {name}', 'A Featured block\'s button to the dog\'s or pup\'s own page ({name} is its name)'],
   ]],
@@ -81,6 +91,14 @@ export const WORDS = [
     ['litter_older', 'Older puppies', 'Past its going-home date'], ['litter_planned', 'Planned litter', 'Planned, with no label'],
     ['litter_past', 'Past litter', 'A past litter'], ['meet_puppies', 'Meet the puppies', 'Its link'], ['see_waitlist', 'See the waitlist', 'A planned litter\'s link'],
     ['ready_now', 'Ready now', 'Going home, once it has passed'],
+  ]],
+  // A litter card's small line by the litter's status in KennelOS (contract C2), in
+  // place of the lines above. Empty (the default): the lines above, as before.
+  ['wording', 'Litter cards, by status in KennelOS', [
+    ['litter_kos_expected', '', 'Expected (empty: its plan label, else Planned litter)'],
+    ['litter_kos_whelped', '', 'Whelped (empty: as above)'],
+    ['litter_kos_weaning', '', 'Weaning (empty: as above)'],
+    ['litter_kos_ready', '', 'Ready (empty: as above)'],
   ]],
   ['wording', 'The Puppies page', [
     ['older_eyebrow', 'Ready now', 'Over the older puppies'], ['upcoming_band_eyebrow', 'Coming up', 'Over upcoming litters'],
@@ -139,7 +157,9 @@ export const DEFAULT_RULES = {
   price: { off: 'Contact us for pricing', style: 'range', price_label: 'Price', deposit_label: 'Deposit' },
   // An adult for sale's price: 'site' follows the breeder's "Show prices of extras
   // and adults"; 'always' or 'never' whatever that says.
-  dogs: { sale_price: 'site' },
+  // health_groups: a dog's page shows its health results grouped by kind (words
+  // health_*), from KennelOS's test type; off, one list as before.
+  dogs: { sale_price: 'site', health_groups: false },
   words: Object.fromEntries(WORD_LIST.map(([k, d]) => [k, d])),
   format: { date: 'mdy', day: 'md', sex: 'female_male', counts: 'girls_boys', currency: '$', currency_after: false, cents: false },
   // How KennelOS data lands (kennelos/bundle.js), for each new record.
@@ -181,8 +201,9 @@ const PRICE_FIELDS = {
 };
 // Its words were the price rules' `before` ("Available on {date}"), so they may be as long.
 const NOT_OPEN_WORDS = TEXT(60);
-const DOG_FIELDS = { sale_price: { t: 'enum', values: ['site', 'always', 'never'] } };
-const WORD_FIELDS = Object.fromEntries(WORD_LIST.map(([k, d]) => [k, { t: 'text', max: k === 'safe_notice' ? 400 : 120, req: true,
+const DOG_FIELDS = { sale_price: { t: 'enum', values: ['site', 'always', 'never'] }, health_groups: { t: 'bool' } };
+// A litter card's line by KennelOS status may be empty: the usual line then.
+const WORD_FIELDS = Object.fromEntries(WORD_LIST.map(([k, d]) => [k, { t: 'text', max: k === 'safe_notice' ? 400 : 120, req: !k.startsWith('litter_kos_'),
   needs: d.includes('{name}') ? '{name}' : null }]));
 export const DATE_STYLES = { mdy: 'December 12, 2026', dmy: '12 December 2026', short: 'Dec 12, 2026' };
 export const DAY_STYLES = { md: 'December 12', dm: '12 December', short: 'Dec 12' };

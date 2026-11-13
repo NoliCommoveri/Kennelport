@@ -1242,3 +1242,19 @@ let her give a deleted family back.
 - **This branch adds migration 0033**: it applies by itself on the first request after
   the merge deploys.
 - Tests: one new in `kennelos.test.js`, one in `fields.test.js`. All 404 pass.
+
+## 2026-11-13: KennelOS contract step 4, its two display rules
+
+- C2: a litter card's small line by the litter's status in KennelOS. Owner's Wording
+  screen, new group "Litter cards, by status in KennelOS" (`words.litter_kos_*`, empty
+  by default and allowed empty: the usual line). A planned litter's own plan label
+  still comes first. `render/parts.js` `litterCard`.
+- C5: a dog's health results grouped by kind on its page. Owner's Dogs screen, "A dog's
+  health results", Group them by kind (`rules.dogs.health_groups`, off by default), and
+  a new words group "Health results": `health_heading` (was the fixed "Health testing";
+  a result with no type goes under it), `health_genetic`, `health_ofa`, `health_breed`.
+  `render/pages.js` `healthLists`, built from the page's existing eyebrow and tests list.
+  Flip cards keep one list. Checked at 390px.
+- Defaults draw every live site as before. Server-rendered only: no version bump; no
+  migration beyond this branch's 0033.
+- Tests: one new in `fields.test.js`. All 405 pass.

@@ -10,7 +10,7 @@ import {
   esc, attr, fmtDate, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, litterCard, parentCards, litterFacts, dogCard, coCard,
   partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, expanders, pagehead, head, ICONS, paySection,
   payShown, litterChoices, ANY_LITTER, ABOUT_LABEL, dogGroups, descendantsOf, depositsAhead, soonSection, pricesOff, sitePrice, word, sexWord, fullRegLink,
-  fullRegSurchargeRow, galleryHtml, faqBlock, addedOn, addedWords, addedRow, customPage,
+  fullRegSurchargeRow, galleryHtml, faqBlock, addedOn, addedWords, addedRow, customPage, rulesOf,
 } from './parts.js';
 import { embedView } from '../embeds.js';
 import { litterAlbums, dogAlbums } from './pages/albumLists.js';
@@ -509,7 +509,7 @@ export function dog(snap, ctx, slug) {
   }
   if (d.outside && d.owner_name) fact.owner = [word(snap, 'outside_fact'), d.owner_url ? `<a href="${attr(d.owner_url)}" rel="noopener">${esc(d.owner_name)}</a>` : esc(d.owner_name)];
   const facts = pr.facts.map((k) => fact[k]).filter(Boolean);
-  const tests = d.health.length ? `<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${h.verify_url ? `<a href="${attr(h.verify_url)}" rel="noopener">${esc(h.result)}</a>` : esc(h.result)}</span></li>`).join('')}</ul>` : '';
+  const tests = healthLists(snap, d.health);
   const litters = snap.litters.filter((l) => l.dam_id === d.id || l.sire_id === d.id);
   // Offspring, grand offspring and on: light cards a generation at a time.
   const offspring = descendantsOf(snap, d).map((gen, i) => `<div class="mt-26">${head(word(snap, `offspring_${i + 1}`), null)}${slider(gen.map((x) => coCard(snap, x)), { cls: 'light' })}</div>`).join('');
@@ -929,4 +929,20 @@ export function unavailable(snap, ctx, { gone = false } = {}) {
     body: `<section class="section"><div class="wrap notice"><h1>${gone ? 'This page is gone' : "This page isn't available"}</h1>
       <p class="muted">It may have moved, or it isn't on the site right now.</p><a class="btn line" href="/">Go to the home page</a></div></section>`,
   };
+}
+
+// A dog's health results on its page: one list under its line, or, with the Dogs rule
+// "Group them by kind" (rules.dogs.health_groups), a list per kind by KennelOS's test
+// type (contract C5), in this order; a result with no type under the first line.
+const HEALTH_KINDS = [['genetic_test', 'health_genetic'], ['ofa_pennhip', 'health_ofa'], ['breed_specific_test', 'health_breed']];
+function healthLists(snap, health) {
+  if (!health.length) return '';
+  const list = (key, rows) => `<span class="eyebrow">${esc(word(snap, key))}</span><ul class="tests">${rows.map((h) => `<li><span>${esc(h.test)}</span><span>${h.verify_url ? `<a href="${attr(h.verify_url)}" rel="noopener">${esc(h.result)}</a>` : esc(h.result)}</span></li>`).join('')}</ul>`;
+  if (!rulesOf(snap).dogs?.health_groups) return list('health_heading', health);
+  const known = new Set(HEALTH_KINDS.map(([t]) => t));
+  const untyped = health.filter((h) => !known.has(h.test_type));
+  return [
+    untyped.length ? list('health_heading', untyped) : '',
+    ...HEALTH_KINDS.map(([t, key]) => { const rows = health.filter((h) => h.test_type === t); return rows.length ? list(key, rows) : ''; }),
+  ].join('');
 }

@@ -489,8 +489,10 @@ export function litterCard(snap, l, ctx, { link = true, show = SHOW_DEFAULT.litt
   const parent = (role) => parentPhoto(snap, l, role);
   const ahead = depositsAhead(snap, l, ctx.today);
   const older = pastReady(snap, l, ctx.today);
-  const eyebrow = l.stage === 'planned' ? (l.plan_label || word(snap, 'litter_planned')) : l.stage === 'past' ? word(snap, 'litter_past')
-    : ahead ? word(snap, 'litter_coming') : older ? word(snap, 'litter_older') : word(snap, 'litter_current');
+  // By its status in KennelOS where the owner gave that a line (contract C2), else as before.
+  const kos = l.kennelos_status ? word(snap, `litter_kos_${l.kennelos_status}`) : '';
+  const eyebrow = l.stage === 'planned' ? (l.plan_label || kos || word(snap, 'litter_planned')) : l.stage === 'past' ? word(snap, 'litter_past')
+    : kos || (ahead ? word(snap, 'litter_coming') : older ? word(snap, 'litter_older') : word(snap, 'litter_current'));
   const rows = litterRows(snap, l, ctx, { namesMax: show.names }).filter(([, , key]) => show.rows.includes(key));
   const more = !link ? '' : l.stage === 'planned'
     ? (pageOn(snap, 'waitlist', ctx) ? `<a class="more" href="/waitlist">${esc(word(snap, 'see_waitlist'))}</a>` : '')
