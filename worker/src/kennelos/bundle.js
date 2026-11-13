@@ -10,16 +10,17 @@
 //     dogs: [{ id, call_name, registered_name, registry, sex, date_of_birth, color,
 //              status: puppy | active_breeding | for_sale | retired_breeding | deceased,
 //              disposition? (a puppy's: keeping | available | placed | health_hold | undecided),
-//              died_on, titles: [..], health: [{ id, test, result, normal, date, verify_url }],
+//              died_on, titles: [..], health: [{ id, test, result, normal, date, verify_url, type? }],
 //              co_owned?, lives_away?, lives_with_kennel_id?, co_owner_kennel_ids?: [..] }],
 //     litters: [{ id, pairing_id, heat_id, name, dam_id, sire_id, dam_name, sire_name,
-//                 expected_on, born_on, ready_on, deposits_on, prices: { price_female, … },
+//                 expected_on, born_on, ready_on, deposits_on, status?, prices: { price_female, … },
 //                 puppies: [{ id, name, collar, sex, color, registration, registry,
-//                             status: available | placed | staying | undecided | hidden }] }],
+//                             status: available | placed | staying | undecided | hidden,
+//                             disposition? }] }],
 //     pairings: [{ id, heat_id, dam_id, sire_id, dam_name, sire_name, planned_on, expected_on }],
 //     heats: [{ id, dam_id, dam_name, month }],
 //     extras?: [{ id, name, group, description, price_from, price_to }],
-//     products?: [{ id, name, link_url, code, code_note, website?, transport? }],
+//     products?: [{ id, name, link_url, code, code_note, website?, transport?, account_type? }],
 //     steps?: [{ id, heading, body }],
 //     partner_kennels?: [{ id, name, website }],
 //     payment?: { application_fee?: {…}, deposit?: {…} } }
@@ -48,7 +49,10 @@ import { loadSnapshot } from '../publish.js';
 import { siteBase, siteFacts } from './link.js';
 import { litterClockStatements } from './clock.js';
 import { coOwnedRules } from '../content/records.js';
-import { DEFAULT_RULES, DOG_PLACES, PUP_DISPOSITIONS, rulesFor, loadBuild } from '../content/rules.js';
+import { DEFAULT_RULES, DOG_PLACES, PUP_DISPOSITIONS, ACCOUNT_TYPES, rulesFor, loadBuild } from '../content/rules.js';
+
+// A litter's KennelOS statuses (litter_status): only live litters are sent.
+export const LITTER_KOS_STATUSES = ['expected', 'whelped', 'weaning', 'ready'];
 
 export const BUNDLE_FORMAT = 1;
 export const MAX_BUNDLE_BYTES = 1024 * 1024;
@@ -63,7 +67,15 @@ export const MAX = { dogs: 200, litters: 100, puppies: 30, pairings: 50, heats: 
 // accounts, for the Getting your pup home page).
 // 'disposition': a puppy-status dog's disposition (keeping, available…), for the
 // owner's rule on which puppies go on the site (rules.landing pup_*).
-export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition'];
+// KennelOS's raw values (docs/plans/kennelos-contract.md Part C, step 4), each kept as
+// sent for the site's rules and blocks:
+// 'pup_disposition': a litter pup's disposition; its site status is then the owner's
+// rule for it (rules.landing pupst_*), not KennelOS's word.
+// 'litter_status': a litter's KennelOS status (expected, whelped, weaning, ready).
+// 'health_detail': a health result's KennelOS test type.
+// 'account_type': a product's KennelOS account type; where it goes is then the owner's
+// rule for it (rules.landing acct_*), and a new one starts in that type's group.
+export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type'];
 
 // ---------- checking ----------
 
@@ -87,12 +99,17 @@ const SHAPES = {
     co_owned: { type: 'bool' }, lives_away: { type: 'bool' }, lives_with_kennel_id: REF, co_owner_kennel_ids: { type: 'list', max: MAX.co_owner_kennels, itemMax: 80 } },
   // A partner kennel: its public name and website, never a person.
   partner_kennel: { id: ID, name: S(80, true), website: { type: 'url' } },
-  health: { id: ID, test: S(60, true), result: S(60, true), normal: { type: 'bool' }, date: DATE, verify_url: { type: 'url' } },
+  // type: KennelOS's test type (genetic_test, ofa_pennhip…). Text, not a fixed list,
+  // as a disposition: one KennelOS adds later is kept, not refused.
+  health: { id: ID, test: S(60, true), result: S(60, true), normal: { type: 'bool' }, date: DATE, verify_url: { type: 'url' }, type: S(30) },
   litter: { id: ID, pairing_id: REF, heat_id: REF, name: S(80), dam_id: REF, sire_id: REF, dam_name: S(60), sire_name: S(60),
-    expected_on: DATE, born_on: DATE, ready_on: DATE, deposits_on: DATE, prices: { object: 'prices' }, puppies: { list: 'puppy', max: MAX.puppies } },
+    expected_on: DATE, born_on: DATE, ready_on: DATE, deposits_on: DATE, status: ENUM(LITTER_KOS_STATUSES),
+    prices: { object: 'prices' }, puppies: { list: 'puppy', max: MAX.puppies } },
   prices: Object.fromEntries(LITTER_PRICE_FIELDS.map((k) => [k, INT])),
   puppy: { id: ID, name: S(40, true), collar: S(30), sex: SEX, color: S(40), registration: ENUM(['limited', 'full']), registry: S(30),
-    status: ENUM(['available', 'placed', 'staying', 'undecided', 'hidden'], true) },
+    status: ENUM(['available', 'placed', 'staying', 'undecided', 'hidden'], true),
+    // Her disposition as she set it, null when none (pup_disposition section).
+    disposition: S(30) },
   pairing: { id: ID, heat_id: REF, dam_id: REF, sire_id: REF, dam_name: S(60), sire_name: S(60), planned_on: DATE, expected_on: DATE },
   heat: { id: ID, dam_id: REF, dam_name: S(60), month: { type: 'month', required: true } },
   extra: { id: ID, name: S(80, true), group: S(40), description: ML(600), price_from: INT, price_to: INT },
@@ -101,7 +118,8 @@ const SHAPES = {
   // website: its referral link and code (meant to be handed out), never a login.
   // A transport account (flight nanny, ground transport) comes as one too, flagged
   // `transport`, with its website for the address under its badge.
-  product: { id: ID, name: S(80, true), link_url: { type: 'url' }, code: S(40), code_note: S(120), website: { type: 'url' }, transport: { type: 'bool' } },
+  product: { id: ID, name: S(80, true), link_url: { type: 'url' }, code: S(40), code_note: S(120), website: { type: 'url' }, transport: { type: 'bool' },
+    account_type: S(30) },
   pay: Object.fromEntries(Object.entries(PAYMENT_FIELDS).filter(([k]) => k !== 'show_on_site')),
 };
 
@@ -112,6 +130,9 @@ function cleanShape(shape, obj, path) {
   const fields = SHAPES[shape];
   for (const k of Object.keys(obj)) if (!(k in fields)) throw bad(`${path}.${k}`, 'not a field KennelPort takes');
   const out = {};
+  // Which keys came (not enumerable, so it never lands): a section's key sent as null
+  // ("none set") is told apart from one an older KennelOS doesn't send.
+  Object.defineProperty(out, 'sent', { value: new Set(Object.keys(obj)), enumerable: false });
   for (const [k, f] of Object.entries(fields)) {
     if (f.list) out[k] = cleanList(f.list, obj[k] ?? [], `${path}.${k}`, f.max);
     else if (f.object) out[k] = obj[k] == null ? null : cleanShape(f.object, obj[k], `${path}.${k}`);
@@ -193,11 +214,11 @@ export function cleanBundle(body) {
 export const OWNED = {
   dogs: ['call_name', 'registered_name', 'registry', 'sex', 'date_of_birth', 'color', 'status', 'upcoming', 'for_sale', 'died_on', 'titles', 'co_owned', 'lives_away', 'lives_with_kennel_id', 'co_owned_with_ids'],
   partners: ['name', 'url'],
-  litters: ['stage', 'dam_id', 'sire_id', 'dam_name', 'sire_name', 'born_on', 'ready_on', 'deposits_on', 'expected_label'],
-  puppies: ['name', 'collar', 'sex', 'color', 'status', 'registration', 'registry'],
-  health: ['test', 'result', 'normal', 'date', 'verify_url'],
+  litters: ['stage', 'dam_id', 'sire_id', 'dam_name', 'sire_name', 'born_on', 'ready_on', 'deposits_on', 'expected_label', 'kennelos_status'],
+  puppies: ['name', 'collar', 'sex', 'color', 'status', 'registration', 'registry', 'disposition'],
+  health: ['test', 'result', 'normal', 'date', 'verify_url', 'test_type'],
   extras: ['name', 'grp', 'description'],
-  products: ['name', 'link_url', 'code', 'code_note', 'website_url', 'transport'],
+  products: ['name', 'link_url', 'code', 'code_note', 'website_url', 'transport', 'account_type'],
   // Steps: none. KennelOS's wording only starts a step; her edits and order stay.
   steps: [],
 };
@@ -369,6 +390,7 @@ export class Writer {
     list.forEach((h, i) => {
       const cur = byKos.get(h.id);
       const values = { test: h.test, result: h.result, normal: h.normal ?? 1, date: h.date, verify_url: h.verify_url, sort: 100 + i };
+      if (h.sent?.has('type')) values.test_type = h.type;
       if (hers) { if (cur) delete values.sort; else values.sort = next++; }
       // A result Normal results only kept off for not being normal shows once it
       // is (KennelOS sends an unmarked result as normal now): the dog's rule, again.
@@ -410,6 +432,9 @@ export class Writer {
       expected_label: kind === 'heat' ? monthOf(`${e.month}-01`) : planned ? monthOf(e.expected_on ?? e.planned_on ?? null) : null,
     };
     if (this.prices && kind === 'litter') for (const k of LITTER_PRICE_FIELDS) v[k] = e.prices?.[k] ?? null;
+    // Its KennelOS status, from a KennelOS that sends it (litter_status); a planned
+    // litter from a pairing or heat has none.
+    if (e.sent?.has('status')) v.kennelos_status = kind === 'litter' ? e.status : null;
     return v;
   }
 
@@ -491,6 +516,13 @@ export class Writer {
     this.puppySlugs.set(litterId, taken);
     list.forEach((bp, i) => {
       const values = { name: bp.name, collar: bp.collar, sex: bp.sex, color: bp.color, status: PUPPY_STATUS[bp.status], registration: bp.registration, registry: bp.registry };
+      // With her disposition (pup_disposition), the owner's rule gives its status; none
+      // set, or one KennelOS adds later, reads as undecided.
+      if (bp.sent?.has('disposition')) {
+        const disp = PUP_DISPOSITIONS.includes(bp.disposition) ? bp.disposition : 'undecided';
+        values.disposition = disp;
+        values.status = this.L[`pupst_${disp}`];
+      }
       let cur = byKos.get(bp.id);
       if (cur && cur.litter_id !== litterId) cur = null;
       if (!cur) {
@@ -643,6 +675,10 @@ export async function applyBundle(env, device, body) {
       // Its website and transport flag are KennelOS's too (OWNED); a KennelOS from
       // before the 'transport' section sends neither, and never a transport account.
       const values = { name: x.name, link_url: x.link_url, code: x.code, code_note: x.code_note, website_url: x.website, transport: x.transport ? 1 : 0 };
+      // With its account type (account_type), the owner's rule says where it goes.
+      const type = x.sent?.has('account_type') && ACCOUNT_TYPES.includes(x.account_type) ? x.account_type : null;
+      if (x.sent?.has('account_type')) values.account_type = type;
+      if (type) values.transport = w.L[`acct_${type}`] === 'pickup' ? 1 : 0;
       let cur = byKos.get(x.id);
       if (!cur) {
         const j = free.findIndex((p) => lower(p.name) === lower(x.name));
@@ -652,7 +688,7 @@ export async function applyBundle(env, device, body) {
         if (w.update('products', cur, { ...values, source: 'kennelos', kennelos_id: x.id })) w.counts.updated++;
         continue;
       }
-      w.insert('products', { id: crypto.randomUUID(), site_id: site.id, ...values, home_badge: 0, sort: ++sort, source: 'kennelos', kennelos_id: x.id });
+      w.insert('products', { id: crypto.randomUUID(), site_id: site.id, ...values, grp: (type && w.L[`acct_group_${type}`]) || null, home_badge: 0, sort: ++sort, source: 'kennelos', kennelos_id: x.id });
       w.counts.created++;
     }
     const sent = new Set(clean.products.map((x) => x.id));

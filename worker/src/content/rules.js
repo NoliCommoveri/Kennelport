@@ -8,7 +8,7 @@
 // that over the defaults. The published snapshot carries the whole result, so
 // rendering stays pure. An older snapshot without it renders with the defaults.
 
-import { pupStatus } from './model.js';
+import { pupStatus, PUPPY_STATUSES } from './model.js';
 
 // The pup statuses the KennelOS package carries, in its words. A site stores
 // `undecided` as 'coming_soon' (kennelos/bundle.js PUPPY_STATUS). There is no
@@ -111,6 +111,20 @@ export const KOS_DOG_STATUSES = ['puppy', 'active_breeding', 'for_sale', 'retire
 // rest left off. Today's default is every one, as before KennelOS sent it.
 export const PUP_DISPOSITIONS = ['keeping', 'available', 'placed', 'health_hold', 'undecided'];
 export const PUP_DISPOSITION_WORDS = { keeping: 'Keeping', available: 'Available', placed: 'Placed', health_hold: 'Health hold', undecided: 'Undecided (or none set)' };
+// A litter pup's status on the site from its KennelOS disposition (the pup_disposition
+// section; rules.landing pupst_*). The defaults are what KennelOS worked out before it
+// sent the disposition itself. A pup stored by status, as before.
+export const PUP_STATUS_FROM = { keeping: 'staying', available: 'available', placed: 'placed', health_hold: 'hidden', undecided: 'coming_soon' };
+export const PUPPY_STATUS_WORDS = { available: 'Available', placed: 'Placed (shows as Reserved)', staying: 'Joining the program', coming_soon: 'Still deciding', hidden: 'Hidden' };
+// A KennelOS account's type (the account_type section): where a product of that type
+// goes (rules.landing acct_*: Recommended products, or Getting your pup home), and the
+// group a new one starts in (acct_group_*, empty for none; the group is hers after).
+export const ACCOUNT_TYPES = ['registry', 'marketplace', 'supplier', 'health', 'insurance', 'software', 'form_service', 'payment_service', 'transport'];
+export const ACCOUNT_TYPE_WORDS = {
+  registry: 'Registry / club', marketplace: 'Puppy marketplace', supplier: 'Supplier / store', health: 'Health / testing lab', insurance: 'Insurance',
+  software: 'Software / service', form_service: 'Form service', payment_service: 'Payment service', transport: 'Transport (flight nanny, ground)',
+};
+export const ACCOUNT_PLACES = { products: 'Recommended products', pickup: 'Getting your pup home' };
 
 export const DEFAULT_RULES = {
   status: {
@@ -137,6 +151,9 @@ export const DEFAULT_RULES = {
     label_heat: 'Upcoming heat', label_pairing: 'Planned pairing',
     dog_puppy: 'upcoming', dog_active_breeding: 'breeding', dog_for_sale: 'for_sale', dog_retired_breeding: 'retired', dog_deceased: 'remembered',
     pup_keeping: true, pup_available: true, pup_placed: true, pup_health_hold: true, pup_undecided: true,
+    ...Object.fromEntries(PUP_DISPOSITIONS.map((k) => [`pupst_${k}`, PUP_STATUS_FROM[k]])),
+    ...Object.fromEntries(ACCOUNT_TYPES.map((k) => [`acct_${k}`, k === 'transport' ? 'pickup' : 'products'])),
+    ...Object.fromEntries(ACCOUNT_TYPES.map((k) => [`acct_group_${k}`, ''])),
     new_at: 'end',
   },
 };
@@ -183,6 +200,9 @@ const LANDING_FIELDS = {
   label_heat: TEXT(40, true), label_pairing: TEXT(40, true),
   ...Object.fromEntries(KOS_DOG_STATUSES.map((k) => [`dog_${k}`, PLACE])),
   ...Object.fromEntries(PUP_DISPOSITIONS.map((k) => [`pup_${k}`, { t: 'bool' }])),
+  ...Object.fromEntries(PUP_DISPOSITIONS.map((k) => [`pupst_${k}`, { t: 'enum', values: PUPPY_STATUSES }])),
+  ...Object.fromEntries(ACCOUNT_TYPES.map((k) => [`acct_${k}`, { t: 'enum', values: Object.keys(ACCOUNT_PLACES) }])),
+  ...Object.fromEntries(ACCOUNT_TYPES.map((k) => [`acct_group_${k}`, TEXT(40)])),
   new_at: { t: 'enum', values: ['end', 'start'] },
 };
 const PARTS = { dogs: DOG_FIELDS, words: WORD_FIELDS, format: FORMAT_FIELDS, landing: LANDING_FIELDS };

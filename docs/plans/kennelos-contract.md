@@ -337,6 +337,18 @@ Each step is its own branch and merge, with at most one migration.
 4. **C1, C2, C5, C6.** The small raw fields, each with its rule. Migration: the columns.
    The linked sample (`tests/fixtures/linked-sample/`) gains each value, and its
    coverage test checks them.
+   **Built 2026-11-13** (migration 0033 `kennelos_raw`: `puppies.disposition`,
+   `litters.kennelos_status`, `health_results.test_type`, `products.account_type`).
+   The four sections are in `SECTIONS`. C1: with a pup's disposition, its site status
+   is the owner's rule (`landing.pupst_*`, today's map by default). C6: where each
+   account type goes (`landing.acct_*`: Recommended products or Getting your pup
+   home, today's split by default) and the group a new one starts in
+   (`landing.acct_group_*`, none by default; hers after). Both on the owner's From
+   KennelOS screen. Fields: a pup's Disposition in KennelOS, a litter's Status in
+   KennelOS (and a pup's litter's), a dog's Kinds of health test shown. A key an older
+   KennelOS doesn't send leaves the stored value as it is. **Not yet:** C2's litter
+   card eyebrow rule and C5's grouping on a dog's page; both read these fields when
+   built. KennelOS sends no `verify_url` (it holds none).
 5. **C3, D.** Titles as rows; tags. Migration: `dog_titles`, `tags`.
 6. **C4, C7.** Origin and lineage: the import tags and the Pedigree block.
    Migration: the columns and an `ancestors` store. C4 and C7 go together: import-descended

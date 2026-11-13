@@ -184,3 +184,24 @@ test('an older snapshot whose blocks still have filters draws the same as the ne
   assert.equal(page(old), page(old.map(cleanBlock)));
   assert.match(page(old), /Peaches/);
 });
+
+test("KennelOS's raw values as fields (contract step 4): a pup's disposition, a litter's KennelOS status, a dog's kinds of health test", async () => {
+  const env = await makeEnv();
+  const s = await addSite(env, 'akraw');
+  await importContent(env, s.id, structuredClone(AK_SAMPLE));
+  const db = env.DB.raw;
+  const pup = db.prepare("SELECT p.id FROM puppies p JOIN litters l ON l.id = p.litter_id WHERE p.site_id = ? AND p.name LIKE 'Opal%'").get(s.id);
+  db.prepare('UPDATE puppies SET disposition = ? WHERE id = ?').run('keeping', pup.id);
+  const gem = db.prepare("SELECT id FROM litters WHERE site_id = ? AND slug = 'gem-2026'").get(s.id);
+  db.prepare('UPDATE litters SET kennelos_status = ? WHERE id = ?').run('weaning', gem.id);
+  const willow = db.prepare("SELECT id FROM dogs WHERE site_id = ? AND slug = 'willow'").get(s.id);
+  db.prepare("INSERT INTO health_results (id, site_id, dog_id, test, result, normal, show, sort, test_type) VALUES ('hr1', ?, ?, 'DM', 'Clear', 1, 1, 1, 'genetic_test')").run(s.id, willow.id);
+  const snap = await buildSnapshot(env, s.id);
+  assert.deepEqual(names(snap, { id: 'p', type: 'pups', where: [{ field: 'disposition', op: 'is', value: 'keeping' }] }), ['Opal']);
+  assert.deepEqual(names(snap, { id: 'l', type: 'litters', where: [{ field: 'kennelos_status', op: 'is', value: 'weaning' }] }), ['The Gem litter']);
+  const gemPups = snap.litters.find((l) => l.slug === 'gem-2026').puppies.map((p) => p.name.replace(/\*$/, ''));
+  assert.deepEqual(names(snap, { id: 'p', type: 'pups', where: [{ field: 'litter.kennelos_status', op: 'is', value: 'weaning' }] }), gemPups);
+  assert.deepEqual(names(snap, { id: 'd', type: 'dogs', f: {}, where: [{ field: 'test_kind', op: 'includes', value: 'genetic' }] }), ['Willow']);
+  // Not sent yet: no condition on them holds.
+  assert.deepEqual(names(snap, { id: 'l', type: 'litters', where: [{ field: 'kennelos_status', op: 'is', value: 'ready' }] }), []);
+});

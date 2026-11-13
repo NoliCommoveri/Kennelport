@@ -1217,3 +1217,28 @@ let her give a deleted family back.
 - Docs: `plans/kennelport.md` (who owns which field), `plans/kennelos-contract.md` C9.
 - No change to `public/_kp/`: no version bump. No migration.
 - Tests: one new in `kennelos.test.js`. All 402 pass.
+
+## 2026-11-13: KennelOS contract step 4, the small raw fields
+
+- `kennelos/bundle.js`: four new sections in `SECTIONS`, `pup_disposition`,
+  `litter_status`, `health_detail`, `account_type` (KennelOS sends them since its PR
+  #210). Each value is kept as sent (migration **0033** `kennelos_raw`: four new columns,
+  additive). A key an older KennelOS doesn't send leaves what's stored (`cleanShape`
+  notes which keys came).
+- C1: a litter pup with a disposition gets its status from the owner's rule
+  (`rules.landing.pupst_*`, today's map by default); none set or unknown reads undecided.
+- C6: a product with an account type goes where the owner's rule says
+  (`landing.acct_*`: Recommended products or Getting your pup home; transport to the
+  latter by default) and a new one starts in that type's group (`acct_group_*`, empty
+  by default). Both on the owner's From KennelOS screen (`manage/builder/kennelos.js`),
+  built from that screen's existing list, select and text pieces.
+- `content/fields.js`: a pup's Disposition in KennelOS, a litter's Status in KennelOS
+  (and `litter.kennelos_status` on a pup), a dog's Kinds of health test shown (and so a
+  litter's parents').
+- Not yet: the litter card's eyebrow by KennelOS status (C2) and health results grouped
+  by kind on a dog's page (C5).
+- Linked sample: every bundle gains the four values; results are unchanged.
+- Server-rendered only: no change to `public/_kp/`, no version bump.
+- **This branch adds migration 0033**: it applies by itself on the first request after
+  the merge deploys.
+- Tests: one new in `kennelos.test.js`, one in `fields.test.js`. All 404 pass.

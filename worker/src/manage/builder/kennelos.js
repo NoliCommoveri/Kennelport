@@ -1,10 +1,16 @@
 // From KennelOS, in the owner's build tools (GET/POST /admin/<sub>/kennelos, routed
 // by manage/builder.js): how its data lands on the site (content/rules.js
 // rules.landing): each new dog's and litter's switches, a dog's health order, where
-// each KennelOS dog status goes, which puppy dogs show, a litter's name and labels
-// when KennelOS sends none, and where new records go; with the panel beside it.
+// each KennelOS dog status goes, which puppy dogs show, a litter pup's status from its
+// KennelOS disposition, where each KennelOS account type goes and the group it starts
+// in, a litter's name and labels when KennelOS sends none, and where new records go;
+// with the panel beside it.
 import { escapeHtml as esc } from '../../lib/html.js';
-import { DEFAULT_RULES, DOG_PLACES, DOG_PLACE_WORDS, KOS_DOG_STATUSES, PUP_DISPOSITIONS, PUP_DISPOSITION_WORDS } from '../../content/rules.js';
+import {
+  DEFAULT_RULES, DOG_PLACES, DOG_PLACE_WORDS, KOS_DOG_STATUSES, PUP_DISPOSITIONS, PUP_DISPOSITION_WORDS,
+  PUPPY_STATUS_WORDS, ACCOUNT_TYPES, ACCOUNT_TYPE_WORDS, ACCOUNT_PLACES,
+} from '../../content/rules.js';
+import { PUPPY_STATUSES } from '../../content/model.js';
 import { field, select, toggle, seg, back, svg } from './controls.js';
 
 export function kennelosScreen(site, rules, error) {
@@ -14,6 +20,9 @@ export function kennelosScreen(site, rules, error) {
   const nameKeys = ['name_pair', 'name_dam', 'name_heat', 'name_none', 'name_upcoming'];
   const dogKeys = KOS_DOG_STATUSES.map((k) => `dog_${k}`);
   const pupKeys = PUP_DISPOSITIONS.map((k) => `pup_${k}`);
+  const pupStKeys = PUP_DISPOSITIONS.map((k) => `pupst_${k}`);
+  const acctKeys = ACCOUNT_TYPES.flatMap((k) => [`acct_${k}`, `acct_group_${k}`]);
+  const choose = (name, value, opts, label) => `<select name="${name}" aria-label="${esc(label)}" class="place">${Object.entries(opts).map(([v, l]) => `<option value="${esc(v)}"${value === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
   return `<div class="stack">${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
     <p class="small muted">For each new record an Update website brings. Once it's on the site, its switches are the breeder's.</p>
     <div class="twocol">
@@ -30,7 +39,13 @@ export function kennelosScreen(site, rules, error) {
       <ul class="list">${KOS_DOG_STATUSES.map((k) => `<li><span class="grow"><span class="code">${k}</span></span><select name="landing.dog_${k}" aria-label="${esc(k)}" class="place">${Object.keys(DOG_PLACES).map((v) => `<option value="${v}"${L[`dog_${k}`] === v ? ' selected' : ''}>${esc(DOG_PLACE_WORDS[v])}</option>`).join('')}</select></li>`).join('')}</ul></div>
       <div class="fgroup"><div class="between"><h2>Which <span class="code">puppy</span> dogs go on the site</h2>${backFor(pupKeys)}</div>
       <p class="small muted">A KennelOS puppy dog marked Show on website, by her disposition for it in KennelOS. One switched on goes where <span class="code">puppy</span> goes above (Up and coming, to start); one left out is off the site, and waits in her draft under Not on your site. Until her KennelOS sends dispositions (an update of KennelOS, then Update website), every one shows.</p>
-      <div class="switches boxed">${PUP_DISPOSITIONS.map((k) => toggle(`landing.pup_${k}`, L[`pup_${k}`], PUP_DISPOSITION_WORDS[k])).join('')}</div></div></section>
+      <div class="switches boxed">${PUP_DISPOSITIONS.map((k) => toggle(`landing.pup_${k}`, L[`pup_${k}`], PUP_DISPOSITION_WORDS[k])).join('')}</div></div>
+      <div class="fgroup"><div class="between"><h2>A litter pup's status, by its disposition</h2>${backFor(pupStKeys)}</div>
+      <p class="small muted">From a KennelOS that sends each pup's disposition (an update of KennelOS, then Update website). Until then, KennelOS's own word for the pup is used.</p>
+      <ul class="list">${PUP_DISPOSITIONS.map((k) => `<li><span class="grow">${esc(PUP_DISPOSITION_WORDS[k])}</span>${choose(`landing.pupst_${k}`, L[`pupst_${k}`], Object.fromEntries(PUPPY_STATUSES.map((s) => [s, PUPPY_STATUS_WORDS[s]])), PUP_DISPOSITION_WORDS[k])}</li>`).join('')}</ul></div></section>
+    <section class="card"><div class="fgroup"><div class="between"><h2>Where each KennelOS account type goes</h2>${backFor(acctKeys)}</div>
+      <p class="small muted">An account she marks Show on website in KennelOS, by its type: Recommended products, or her Getting your pup home page. A group here is where a new one starts; the group is hers after. Until her KennelOS sends types, transport accounts go to Getting your pup home and the rest to Recommended products.</p>
+      <ul class="list">${ACCOUNT_TYPES.map((k) => `<li><span class="grow">${esc(ACCOUNT_TYPE_WORDS[k])}</span>${choose(`landing.acct_${k}`, L[`acct_${k}`], ACCOUNT_PLACES, ACCOUNT_TYPE_WORDS[k])}<input type="text" name="landing.acct_group_${k}" value="${esc(L[`acct_group_${k}`])}" placeholder="Group (optional)" aria-label="${esc(`${ACCOUNT_TYPE_WORDS[k]}: group`)}" maxlength="40"></li>`).join('')}</ul></div></section>
     <section class="card"><div class="fgroup"><div class="between"><h2>A litter's name, when KennelOS sends none</h2>${backFor(nameKeys)}</div><div class="fgrid">
       ${field('landing.name_pair', L.name_pair, { label: 'Dam and sire known', hint: '{dam} and {sire} are their names.' })}${field('landing.name_dam', L.name_dam, { label: 'Only the dam' })}
       ${field('landing.name_heat', L.name_heat, { label: 'A heat' })}${field('landing.name_none', L.name_none, { label: 'A heat with no dam named' })}
