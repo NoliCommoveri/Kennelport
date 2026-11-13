@@ -31,6 +31,7 @@
 import { escapeHtml as esc } from '../lib/html.js';
 import {
   DEFAULT_RULES, DEFAULT_TIMING, RuleError, rulesFor, rulesFromForm, timingFromForm, withPart, loadBuild, saveBuild, partsFromForm, wordsOn,
+  HEALTH_KINDS, HEALTH_KIND_PLACES,
 } from '../content/rules.js';
 import { buildSnapshot } from '../publish.js';
 import {
@@ -213,6 +214,9 @@ function dogsScreen(site, rules, error) {
     <section class="card"><div class="fgroup"><div class="between"><h2>An adult looking for a home</h2>${sale === DEFAULT_RULES.dogs.sale_price ? '' : back('dogs.sale_price')}</div>
       <div class="fld"><span class="fldt">Its price</span>${seg('dogs.sale_price', sale, { site: 'As the breeder sets', always: 'Always', never: 'Never' })}
       <span class="hint">“As the breeder sets” follows her “Show prices of extras and adults”. Never shows no price line at all.</span></div></div></section>
+    <section class="card"><div class="fgroup"><div class="between"><h2>Health result headings' order</h2>${HEALTH_KIND_PLACES.every((k) => rules.dogs[k] === DEFAULT_RULES.dogs[k]) ? '' : back(HEALTH_KIND_PLACES.map((k) => `dogs.${k}`).join(','))}</div>
+      <div class="fgrid">${HEALTH_KIND_PLACES.map((k, i) => select(`dogs.${k}`, rules.dogs[k], Object.fromEntries(Object.entries(HEALTH_KINDS).map(([kind, [w]]) => [kind, rules.words[w]])), ['First', 'Second', 'Third', 'Fourth'][i])).join('')}</div>
+      <span class="hint">When the breeder groups a dog's health results by kind (her Kennel details). Each heading once; one with no results on a dog doesn't show. The words are under Health results below.</span></div></section>
     ${wordCards('dogs', rules)}
     <section class="card band"><p class="small">Which health results a new dog shows, and where each KennelOS status puts a dog, are under From KennelOS.</p></section></div>`;
 }

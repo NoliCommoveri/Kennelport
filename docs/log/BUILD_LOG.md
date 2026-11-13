@@ -1273,3 +1273,15 @@ let her give a deleted family back.
   genetic tests, OFA / PennHIP and other tests each under their own heading, sorted by
   KennelOS. Off: one list."), for the owner to reword. Checked at 390px and 1280px.
 - Tests: one new in `editing.test.js`; `fields.test.js` reads her switch. All 406 pass.
+
+## 2026-11-13: health result headings' order
+
+- The owner's Dogs screen: "Health result headings' order", four places (First to
+  Fourth), each a choice of the four headings (`rules.dogs.health_kind_1`…`_4`; default
+  Health testing, Genetic, OFA / PennHIP, Breed-specific, as before). Saving with one
+  heading in two places is refused. The choices read in the owner's current words.
+- `render/pages.js` `healthLists` follows it; `content/rules.js` `HEALTH_KINDS`,
+  `HEALTH_KIND_PLACES`. Within a heading the results keep her order.
+- Built from the screen's existing card, select and hint pieces; checked at 390px and
+  1280px. No version bump, no new migration.
+- Tests: `fields.test.js` (the order, and a repeated heading refused). All 406 pass.

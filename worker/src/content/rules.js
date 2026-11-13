@@ -157,7 +157,9 @@ export const DEFAULT_RULES = {
   price: { off: 'Contact us for pricing', style: 'range', price_label: 'Price', deposit_label: 'Deposit' },
   // An adult for sale's price: 'site' follows the breeder's "Show prices of extras
   // and adults"; 'always' or 'never' whatever that says.
-  dogs: { sale_price: 'site' },
+  // The order of a dog's health result headings when she groups them by kind
+  // (sites.group_health): four places, each one of HEALTH_KINDS, each used once.
+  dogs: { sale_price: 'site', health_kind_1: 'other', health_kind_2: 'genetic', health_kind_3: 'ofa', health_kind_4: 'breed' },
   words: Object.fromEntries(WORD_LIST.map(([k, d]) => [k, d])),
   format: { date: 'mdy', day: 'md', sex: 'female_male', counts: 'girls_boys', currency: '$', currency_after: false, cents: false },
   // How KennelOS data lands (kennelos/bundle.js), for each new record.
@@ -199,7 +201,14 @@ const PRICE_FIELDS = {
 };
 // Its words were the price rules' `before` ("Available on {date}"), so they may be as long.
 const NOT_OPEN_WORDS = TEXT(60);
-const DOG_FIELDS = { sale_price: { t: 'enum', values: ['site', 'always', 'never'] } };
+// A health result heading by kind: its words key (rules.words) and KennelOS's test
+// type ('other': a result with no type).
+export const HEALTH_KINDS = { other: ['health_heading', null], genetic: ['health_genetic', 'genetic_test'], ofa: ['health_ofa', 'ofa_pennhip'], breed: ['health_breed', 'breed_specific_test'] };
+export const HEALTH_KIND_PLACES = ['health_kind_1', 'health_kind_2', 'health_kind_3', 'health_kind_4'];
+const DOG_FIELDS = {
+  sale_price: { t: 'enum', values: ['site', 'always', 'never'] },
+  ...Object.fromEntries(HEALTH_KIND_PLACES.map((k) => [k, { t: 'enum', values: Object.keys(HEALTH_KINDS) }])),
+};
 // A litter card's line by KennelOS status may be empty: the usual line then.
 const WORD_FIELDS = Object.fromEntries(WORD_LIST.map(([k, d]) => [k, { t: 'text', max: k === 'safe_notice' ? 400 : 120, req: !k.startsWith('litter_kos_'),
   needs: d.includes('{name}') ? '{name}' : null }]));
@@ -302,6 +311,9 @@ export function partsFromForm(screen, current, get) {
       if (part === 'words' && !wordsHere.has(f)) continue;
       out[part][f] = clean(spec, get(`${part}.${f}`), WORD_LIST.find(([k]) => k === f)?.[2] ?? f);
     }
+  }
+  if (out.dogs && new Set(HEALTH_KIND_PLACES.map((k) => out.dogs[k])).size !== HEALTH_KIND_PLACES.length) {
+    throw new RuleError('Health result headings: put each heading in one place only.');
   }
   return out;
 }

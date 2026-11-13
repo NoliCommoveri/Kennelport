@@ -354,8 +354,10 @@ Each step is its own branch and merge, with at most one migration.
    dog's page groups its health results by kind with the breeder's **Group health
    results by kind** (Site Manager, Kennel details; `sites.group_health`, in migration
    0033; off by default, the owner's decision 2026-11-13), each kind under the owner's
-   line for it in Dogs, "Health results"; a result with no type goes under the first
-   line, Health testing (now wordable).
+   line for it in Dogs, "Health results"; a result with no type goes under
+   Health testing (now wordable). The headings' order is the owner's (Dogs, "Health
+   result headings' order": four places, each heading once; Health testing, Genetic,
+   OFA / PennHIP, Breed-specific by default). Within a heading, her own order of results.
 5. **C3, D.** Titles as rows; tags. Migration: `dog_titles`, `tags`.
 6. **C4, C7.** Origin and lineage: the import tags and the Pedigree block.
    Migration: the columns and an `ancestors` store. C4 and C7 go together: import-descended

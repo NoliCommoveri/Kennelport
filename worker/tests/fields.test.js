@@ -239,4 +239,17 @@ test("display rules over KennelOS's raw values: a litter card's line by its Kenn
   const grouped = draw(set, '/dogs/willow');
   const heads = [...grouped.matchAll(/<span class="eyebrow">([^<]+)<\/span><ul class="tests">/g)].map((m) => m[1]);
   assert.deepEqual(heads, ['Health testing', 'Genetic testing', 'OFA / PennHIP'], 'untyped first, then each kind present, in order');
+
+  // The owner's order of headings (Dogs screen); one with no results doesn't show.
+  Object.assign(set.dogs, { health_kind_1: 'ofa', health_kind_2: 'breed', health_kind_3: 'genetic', health_kind_4: 'other' });
+  const reordered = [...draw(set, '/dogs/willow').matchAll(/<span class="eyebrow">([^<]+)<\/span><ul class="tests">/g)].map((m) => m[1]);
+  assert.deepEqual(reordered, ['OFA / PennHIP', 'Genetic testing', 'Health testing']);
+
+  // Saving the Dogs screen with one heading in two places is refused.
+  const { partsFromForm, RuleError } = await import('../src/content/rules.js');
+  const form = { 'dogs.sale_price': 'site', 'dogs.health_kind_1': 'ofa', 'dogs.health_kind_2': 'ofa', 'dogs.health_kind_3': 'genetic', 'dogs.health_kind_4': 'other' };
+  for (const [k, v] of Object.entries(DEFAULT_RULES.words)) form[`words.${k}`] ??= v;
+  assert.throws(() => partsFromForm('dogs', structuredClone(DEFAULT_RULES), (n) => form[n]), RuleError);
+  form['dogs.health_kind_2'] = 'breed';
+  assert.equal(partsFromForm('dogs', structuredClone(DEFAULT_RULES), (n) => form[n]).dogs.health_kind_2, 'breed');
 });

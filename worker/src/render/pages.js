@@ -10,8 +10,9 @@ import {
   esc, attr, fmtDate, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, litterCard, parentCards, litterFacts, dogCard, coCard,
   partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, expanders, pagehead, head, ICONS, paySection,
   payShown, litterChoices, ANY_LITTER, ABOUT_LABEL, dogGroups, descendantsOf, depositsAhead, soonSection, pricesOff, sitePrice, word, sexWord, fullRegLink,
-  fullRegSurchargeRow, galleryHtml, faqBlock, addedOn, addedWords, addedRow, customPage,
+  fullRegSurchargeRow, galleryHtml, faqBlock, addedOn, addedWords, addedRow, customPage, rulesOf,
 } from './parts.js';
+import { DEFAULT_RULES, HEALTH_KINDS, HEALTH_KIND_PLACES } from '../content/rules.js';
 import { embedView } from '../embeds.js';
 import { litterAlbums, dogAlbums } from './pages/albumLists.js';
 import { v, honeypot, turnstileBox, formResult } from './pages/formParts.js';
@@ -935,15 +936,19 @@ export function unavailable(snap, ctx, { gone = false } = {}) {
 // Group health results by kind (sites.group_health), a list per kind by KennelOS's test
 // type (contract C5), in this order, each under the owner's words for it (Dogs, Health
 // results); a result with no type under the first line.
-const HEALTH_KINDS = [['genetic_test', 'health_genetic'], ['ofa_pennhip', 'health_ofa'], ['breed_specific_test', 'health_breed']];
 function healthLists(snap, health) {
   if (!health.length) return '';
   const list = (key, rows) => `<span class="eyebrow">${esc(word(snap, key))}</span><ul class="tests">${rows.map((h) => `<li><span>${esc(h.test)}</span><span>${h.verify_url ? `<a href="${attr(h.verify_url)}" rel="noopener">${esc(h.result)}</a>` : esc(h.result)}</span></li>`).join('')}</ul>`;
   if (!snap.site.group_health) return list('health_heading', health);
-  const known = new Set(HEALTH_KINDS.map(([t]) => t));
-  const untyped = health.filter((h) => !known.has(h.test_type));
-  return [
-    untyped.length ? list('health_heading', untyped) : '',
-    ...HEALTH_KINDS.map(([t, key]) => { const rows = health.filter((h) => h.test_type === t); return rows.length ? list(key, rows) : ''; }),
-  ].join('');
+  // In the owner's order of headings (rules.dogs health_kind_*); a type the site
+  // doesn't know reads as no type.
+  const known = new Set(Object.values(HEALTH_KINDS).map(([, t]) => t).filter(Boolean));
+  const dogsRule = rulesOf(snap).dogs ?? {};
+  const order = HEALTH_KIND_PLACES.map((k) => dogsRule[k] ?? DEFAULT_RULES.dogs[k]);
+  return order.map((kind) => {
+    const [key, type] = HEALTH_KINDS[kind] ?? [];
+    if (!key) return '';
+    const rows = health.filter((h) => (type ? h.test_type === type : !known.has(h.test_type)));
+    return rows.length ? list(key, rows) : '';
+  }).join('');
 }
