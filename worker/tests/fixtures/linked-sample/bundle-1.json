@@ -15,9 +15,21 @@
    "color": "Black & white",
    "status": "active_breeding",
    "titles": [
-    "CGC",
-    "TKN",
-    "CH"
+    {
+     "abbr": "CGC",
+     "organization": "AKC",
+     "date": "2024-01-10"
+    },
+    {
+     "abbr": "TKN",
+     "organization": "AKC",
+     "date": "2024-02-11"
+    },
+    {
+     "abbr": "CH",
+     "organization": "AKC",
+     "date": "2024-03-12"
+    }
    ],
    "health": [
     {
@@ -26,21 +38,24 @@
      "result": "Normal, both ears",
      "normal": true,
      "date": "2021-06-10",
-     "verify_url": "https://www.ofa.org/advanced-search?q=clover"
+     "verify_url": "https://www.ofa.org/advanced-search?q=clover",
+     "type": "breed_specific_test"
     },
     {
      "id": "h-clover-2",
      "test": "Patellas (OFA)",
      "result": "Normal",
      "normal": true,
-     "date": "2022-05-02"
+     "date": "2022-05-02",
+     "type": "ofa_pennhip"
     },
     {
      "id": "h-clover-3",
      "test": "JHC (HSF4 DNA)",
      "result": "Carrier",
      "normal": false,
-     "date": "2021-07-19"
+     "date": "2021-07-19",
+     "type": "genetic_test"
     }
    ]
   },
@@ -59,7 +74,8 @@
      "id": "h-maple-1",
      "test": "Eyes (CAER)",
      "result": "Normal",
-     "normal": true
+     "normal": true,
+     "type": "breed_specific_test"
     }
    ]
   },
@@ -73,7 +89,11 @@
    "color": "Brindle & white",
    "status": "active_breeding",
    "titles": [
-    "CGC"
+    {
+     "abbr": "CGC",
+     "organization": "AKC",
+     "date": "2024-01-10"
+    }
    ],
    "health": [],
    "co_owned": true,
@@ -99,8 +119,16 @@
    "color": "Black & white",
    "status": "active_breeding",
    "titles": [
-    "CH",
-    "GCH"
+    {
+     "abbr": "CH",
+     "organization": "AKC",
+     "date": "2024-01-10"
+    },
+    {
+     "abbr": "GCH",
+     "organization": "AKC",
+     "date": "2024-02-10"
+    }
    ],
    "health": [
     {
@@ -108,14 +136,16 @@
      "test": "BAER hearing",
      "result": "Normal, both ears",
      "normal": true,
-     "date": "2021-01-15"
+     "date": "2021-01-15",
+     "type": "breed_specific_test"
     },
     {
      "id": "h-atlas-2",
      "test": "Cardiac (OFA)",
      "result": "Normal",
      "normal": true,
-     "date": "2022-03-08"
+     "date": "2022-03-08",
+     "type": "ofa_pennhip"
     }
    ]
   },
@@ -160,7 +190,11 @@
    "color": "Brindle & white",
    "status": "for_sale",
    "titles": [
-    "CGC"
+    {
+     "abbr": "CGC",
+     "organization": null,
+     "date": "2024-01-10"
+    }
    ],
    "health": [
     {
@@ -168,7 +202,8 @@
      "test": "Patellas (OFA)",
      "result": "Grade 1",
      "normal": false,
-     "date": "2025-06-01"
+     "date": "2025-06-01",
+     "type": "ofa_pennhip"
     }
    ]
   },
@@ -182,7 +217,11 @@
    "color": "Black & white",
    "status": "retired_breeding",
    "titles": [
-    "CH"
+    {
+     "abbr": "CH",
+     "organization": "UKC",
+     "date": "2024-01-10"
+    }
    ],
    "health": []
   },
@@ -226,7 +265,8 @@
      "status": "placed",
      "collar": "Red",
      "color": "Black & white",
-     "registry": "AKC"
+     "registry": "AKC",
+     "disposition": "placed"
     },
     {
      "id": "dog-onyx",
@@ -236,7 +276,8 @@
      "collar": "Black",
      "color": "Black & white",
      "registration": "limited",
-     "registry": "AKC"
+     "registry": "AKC",
+     "disposition": "placed"
     },
     {
      "id": "dog-jade",
@@ -246,7 +287,8 @@
      "collar": "Green",
      "color": "Seal & white",
      "registration": "full",
-     "registry": "AKC"
+     "registry": "AKC",
+     "disposition": "placed"
     },
     {
      "id": "dog-opal",
@@ -254,7 +296,8 @@
      "sex": "female",
      "status": "staying",
      "collar": "Pink",
-     "color": "Black & white"
+     "color": "Black & white",
+     "disposition": "keeping"
     },
     {
      "id": "dog-topaz",
@@ -262,14 +305,16 @@
      "sex": "male",
      "status": "undecided",
      "collar": "Yellow",
-     "color": "Brindle & white"
+     "color": "Brindle & white",
+     "disposition": null
     },
     {
      "id": "dog-garnet",
      "name": "Garnet*",
      "sex": "male",
      "status": "hidden",
-     "collar": "Purple"
+     "collar": "Purple",
+     "disposition": "health_hold"
     },
     {
      "id": "dog-pearl",
@@ -277,9 +322,11 @@
      "sex": "female",
      "status": "available",
      "color": "Black & white",
-     "registration": "limited"
+     "registration": "limited",
+     "disposition": "available"
     }
-   ]
+   ],
+   "status": "weaning"
   },
   {
    "id": "lit-b",
@@ -299,16 +346,19 @@
      "name": "Sage*",
      "sex": "female",
      "status": "available",
-     "collar": "Teal"
+     "collar": "Teal",
+     "disposition": "available"
     },
     {
      "id": "dog-basil",
      "name": "Basil*",
      "sex": "male",
      "status": "undecided",
-     "collar": "Lime"
+     "collar": "Lime",
+     "disposition": "undecided"
     }
-   ]
+   ],
+   "status": "whelped"
   },
   {
    "id": "lit-c",
@@ -332,16 +382,19 @@
      "status": "available",
      "collar": "Orange",
      "registration": "limited",
-     "registry": "AKC"
+     "registry": "AKC",
+     "disposition": "available"
     },
     {
      "id": "dog-skye",
      "name": "Skye*",
      "sex": "female",
      "status": "placed",
-     "collar": "Blue"
+     "collar": "Blue",
+     "disposition": "placed"
     }
-   ]
+   ],
+   "status": "ready"
   },
   {
    "id": "lit-e",
@@ -351,7 +404,8 @@
    "expected_on": "2026-12-28",
    "puppies": [],
    "heat_id": "heat-wren-old",
-   "dam_name": "Wren*"
+   "dam_name": "Wren*",
+   "status": "expected"
   }
  ],
  "pairings": [
@@ -415,26 +469,30 @@
    "name": "Puppy food program*",
    "link_url": "https://food.example.com/r/tuxedo",
    "code": "TUXEDO15",
-   "code_note": "15% off your first order"
+   "code_note": "15% off your first order",
+   "account_type": "supplier"
   },
   {
    "id": "prod-ins",
    "name": "Pet insurance trial*",
-   "link_url": "https://insure.example.com/r/tuxedo"
+   "link_url": "https://insure.example.com/r/tuxedo",
+   "account_type": "insurance"
   },
   {
    "id": "prod-nanny",
    "name": "Sky Nanny Flights*",
    "link_url": "https://skynanny.example.com/book",
    "website": "https://skynanny.example.com",
-   "transport": true
+   "transport": true,
+   "account_type": "transport"
   },
   {
    "id": "prod-ground",
    "name": "Paws on the Road*",
    "website": "https://pawsroad.example.com",
    "transport": true,
-   "code": "TL-RIDE"
+   "code": "TL-RIDE",
+   "account_type": "transport"
   }
  ],
  "steps": [

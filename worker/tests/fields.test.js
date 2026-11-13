@@ -184,3 +184,72 @@ test('an older snapshot whose blocks still have filters draws the same as the ne
   assert.equal(page(old), page(old.map(cleanBlock)));
   assert.match(page(old), /Peaches/);
 });
+
+test("KennelOS's raw values as fields (contract step 4): a pup's disposition, a litter's KennelOS status, a dog's kinds of health test", async () => {
+  const env = await makeEnv();
+  const s = await addSite(env, 'akraw');
+  await importContent(env, s.id, structuredClone(AK_SAMPLE));
+  const db = env.DB.raw;
+  const pup = db.prepare("SELECT p.id FROM puppies p JOIN litters l ON l.id = p.litter_id WHERE p.site_id = ? AND p.name LIKE 'Opal%'").get(s.id);
+  db.prepare('UPDATE puppies SET disposition = ? WHERE id = ?').run('keeping', pup.id);
+  const gem = db.prepare("SELECT id FROM litters WHERE site_id = ? AND slug = 'gem-2026'").get(s.id);
+  db.prepare('UPDATE litters SET kennelos_status = ? WHERE id = ?').run('weaning', gem.id);
+  const willow = db.prepare("SELECT id FROM dogs WHERE site_id = ? AND slug = 'willow'").get(s.id);
+  db.prepare("INSERT INTO health_results (id, site_id, dog_id, test, result, normal, show, sort, test_type) VALUES ('hr1', ?, ?, 'DM', 'Clear', 1, 1, 1, 'genetic_test')").run(s.id, willow.id);
+  const snap = await buildSnapshot(env, s.id);
+  assert.deepEqual(names(snap, { id: 'p', type: 'pups', where: [{ field: 'disposition', op: 'is', value: 'keeping' }] }), ['Opal']);
+  assert.deepEqual(names(snap, { id: 'l', type: 'litters', where: [{ field: 'kennelos_status', op: 'is', value: 'weaning' }] }), ['The Gem litter']);
+  const gemPups = snap.litters.find((l) => l.slug === 'gem-2026').puppies.map((p) => p.name.replace(/\*$/, ''));
+  assert.deepEqual(names(snap, { id: 'p', type: 'pups', where: [{ field: 'litter.kennelos_status', op: 'is', value: 'weaning' }] }), gemPups);
+  assert.deepEqual(names(snap, { id: 'd', type: 'dogs', f: {}, where: [{ field: 'test_kind', op: 'includes', value: 'genetic' }] }), ['Willow']);
+  // Not sent yet: no condition on them holds.
+  assert.deepEqual(names(snap, { id: 'l', type: 'litters', where: [{ field: 'kennelos_status', op: 'is', value: 'ready' }] }), []);
+});
+
+test("display rules over KennelOS's raw values: a litter card's line by its KennelOS status, a dog's health results by kind", async () => {
+  const { DEFAULT_RULES } = await import('../src/content/rules.js');
+  const env = await makeEnv();
+  const s = await addSite(env, 'akshow');
+  await importContent(env, s.id, structuredClone(AK_SAMPLE));
+  const db = env.DB.raw;
+  db.prepare("UPDATE litters SET kennelos_status = 'weaning' WHERE site_id = ? AND slug = 'gem-2026'").run(s.id);
+  const willow = db.prepare("SELECT id FROM dogs WHERE site_id = ? AND slug = 'willow'").get(s.id);
+  db.prepare('DELETE FROM health_results WHERE dog_id = ?').run(willow.id);
+  const ins = db.prepare("INSERT INTO health_results (id, site_id, dog_id, test, result, normal, show, sort, test_type) VALUES (?, ?, ?, ?, 'Clear', 1, 1, ?, ?)");
+  ins.run('h1', s.id, willow.id, 'DM', 1, 'genetic_test');
+  ins.run('h2', s.id, willow.id, 'Hips', 2, 'ofa_pennhip');
+  ins.run('h3', s.id, willow.id, 'Her own note', 3, null);
+  let snap = await buildSnapshot(env, s.id);
+  const draw = (rules, p) => renderPage({ ...snap, rules }, { path: p, origin: 'https://x', today: TODAY, preview: true }).html;
+  const card = (html) => html.match(/<article class="litter">[\s\S]*?<\/article>/g).find((a) => a.includes('Gem'));
+
+  // As before by default: the usual line, one list under Health testing.
+  const plain = structuredClone(DEFAULT_RULES);
+  assert.match(card(draw(plain, '/')), /<span class="eyebrow">(Coming up|Current litter|Older puppies)<\/span>/);
+  const page = draw(plain, '/dogs/willow');
+  assert.equal(page.match(/<span class="eyebrow">Health testing<\/span>/g).length, 1);
+  assert.doesNotMatch(page, /Genetic testing/);
+
+  const set = structuredClone(DEFAULT_RULES);
+  set.words.litter_kos_weaning = 'Weaning now';
+  // Her Group health results by kind, on Kennel details.
+  db.prepare('UPDATE sites SET group_health = 1 WHERE id = ?').run(s.id);
+  snap = await buildSnapshot(env, s.id);
+  assert.match(card(draw(set, '/')), /<span class="eyebrow">Weaning now<\/span>/);
+  const grouped = draw(set, '/dogs/willow');
+  const heads = [...grouped.matchAll(/<span class="eyebrow">([^<]+)<\/span><ul class="tests">/g)].map((m) => m[1]);
+  assert.deepEqual(heads, ['Health testing', 'Genetic testing', 'OFA / PennHIP'], 'untyped first, then each kind present, in order');
+
+  // The owner's order of headings (Dogs screen); one with no results doesn't show.
+  Object.assign(set.dogs, { health_kind_1: 'ofa', health_kind_2: 'breed', health_kind_3: 'genetic', health_kind_4: 'other' });
+  const reordered = [...draw(set, '/dogs/willow').matchAll(/<span class="eyebrow">([^<]+)<\/span><ul class="tests">/g)].map((m) => m[1]);
+  assert.deepEqual(reordered, ['OFA / PennHIP', 'Genetic testing', 'Health testing']);
+
+  // Saving the Dogs screen with one heading in two places is refused.
+  const { partsFromForm, RuleError } = await import('../src/content/rules.js');
+  const form = { 'dogs.sale_price': 'site', 'dogs.sale_pill': 'ok', 'dogs.health_kind_1': 'ofa', 'dogs.health_kind_2': 'ofa', 'dogs.health_kind_3': 'genetic', 'dogs.health_kind_4': 'other' };
+  for (const [k, v] of Object.entries(DEFAULT_RULES.words)) form[`words.${k}`] ??= v;
+  assert.throws(() => partsFromForm('dogs', structuredClone(DEFAULT_RULES), (n) => form[n]), RuleError);
+  form['dogs.health_kind_2'] = 'breed';
+  assert.equal(partsFromForm('dogs', structuredClone(DEFAULT_RULES), (n) => form[n]).dogs.health_kind_2, 'breed');
+});

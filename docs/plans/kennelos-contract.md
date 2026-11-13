@@ -243,11 +243,11 @@ rule that gives today's result by default.
 | C1 | `pup_disposition` | On each litter puppy: `disposition`, raw (`undecided`, `keeping`, `available`, `placed`, `health_hold`, or null when none is set) | `rules.landing` maps each to a site status (today's map by default). `status` is still sent and is used when the section is absent. Unlike the `disposition` section on a marked puppy-status dog, which sends `undecided` when none is set, this one sends null, and null reads as `undecided` by default |
 | C2 | `litter_status` | On each litter: `status`, raw (`expected`, `whelped`, `weaning`, `ready`) | A field for conditions and for the litter card's eyebrow rule; default eyebrows as today |
 | C3 | `titles_detail` | `titles` as `[{ abbr, organization, date }]` | Stored as rows (a small `dog_titles` table, in this step's one migration); the joined text is made at publish. An empty list clears. Fields: `title`, `title_organization` |
-| C4 | `origin` | On a dog, and on each C7 ancestor: `imported` (yes or no) and `import_country` (her Country of origin, only while Imported is ticked), as she set them. Nothing worked out | Fields `import`, and `import_descended` worked out here from the C7 ancestors, so it needs the `lineage` section too: a dog with an imported ancestor within 3 generations (the default; a rule, at most the four C7 sends). She can untick Import-descended on one dog in the Site Manager (`import_descended_off`, hers, for a pedigree KennelOS holds only in part). A rule sets what each tag reads |
+| C4 | `origin` | On a dog, and on each C7 ancestor: `imported` (yes or no) and `import_country` (her Country of origin, only while Imported is ticked), as she set them. Nothing worked out | Fields `import`, and `import_descended` worked out here from the C7 ancestors, so it needs the `lineage` section too: a dog with an imported ancestor within 3 generations (the default; a rule, at most the four C7 sends). She can untick Import-descended on one dog in the Site Manager (`import_descended_off`, hers, for a pedigree KennelOS holds only in part). A rule sets what each tag reads. **On a dog card** (the owner's words, 2026-11-13): an item labelled **Origin**, reading **Import • Romania** for an imported dog and **Import Ancestry • Romania** for an import-descended one, the countries being every different `import_country` among the imported ancestors it counts, comma separated, nearest ancestor's first (Import Ancestry • Romania, Hungary), and the word alone when none has a country. Never KennelOS's own "Yes, from …" |
 | C5 | `health_detail` | On a result: `type` (KennelOS's event type), `verify_url` where she has one | Fields for grouping on a dog's page ("OFA", "Genetic"); the default is one list, as today |
 | C6 | `account_type` | On a product: `account_type`, raw | A rule maps each type to where it shows (Recommended products, Getting your pup home, or a group the owner names). `transport` stays until both sides have moved |
 | C7 | `lineage` | On a dog: `breed`, `sire_id`, `dam_id`, and `ancestors`: up to four generations as `[{ id, role path ("sire", "sire.dam"…), call_name, registered_name, titles }]`, including pedigree-only dogs, by name only | A Pedigree block on a dog's page (off by default); `sire` and `dam` link to a dog on the site when it is one |
-| C9 | `waitlist_facts` | Her waitlist's settings as values: `online_form`, `has_fee`, `fee_due_days`, `respond_days`, `max_passes` | The steps' and the fee card's wording become templates in `rules.words` with those values filled in; today's sentences are the defaults. `steps` and `payment` are still taken when the section is absent |
+| C9 | `waitlist_facts` | Her waitlist's settings as values: `online_form`, `has_fee`, `fee_due_days`, `respond_days`, `max_passes` | The steps' and the fee card's wording become templates in `rules.words` with those values filled in; today's sentences are the defaults. `steps` and `payment` are still taken when the section is absent. **Modified (2026-11-13):** a step's wording only starts it: once on her site its heading, body and place are hers, so a template fills only a new step |
 
 Left as they are: a heat's month only; which records are sent (her Show on website
 marks); prices only with Use my KennelOS prices.
@@ -337,7 +337,48 @@ Each step is its own branch and merge, with at most one migration.
 4. **C1, C2, C5, C6.** The small raw fields, each with its rule. Migration: the columns.
    The linked sample (`tests/fixtures/linked-sample/`) gains each value, and its
    coverage test checks them.
+   **Built 2026-11-13** (migration 0033 `kennelos_raw`: `puppies.disposition`,
+   `litters.kennelos_status`, `health_results.test_type`, `products.account_type`).
+   The four sections are in `SECTIONS`. C1: with a pup's disposition, its site status
+   is the owner's rule (`landing.pupst_*`, today's map by default). C6: where each
+   account type goes (`landing.acct_*`: Recommended products or Getting your pup
+   home, today's split by default) and the group a new one starts in
+   (`landing.acct_group_*`, none by default; hers after). Both on the owner's From
+   KennelOS screen. Fields: a pup's Disposition in KennelOS, a litter's Status in
+   KennelOS (and a pup's litter's), a dog's Kinds of health test shown. A key an older
+   KennelOS doesn't send leaves the stored value as it is. KennelOS sends no
+   `verify_url` (it holds none).
+   **Display rules, built 2026-11-13:** C2, a litter card's line by its KennelOS status
+   (Wording, "Litter cards, by status in KennelOS": a line per status, empty by default,
+   so the usual lines show; an expected litter's plan label still comes first). C5, a
+   dog's page groups its health results by kind with the breeder's **Group health
+   results by kind** (Site Manager, Kennel details; `sites.group_health`, in migration
+   0033; off by default, the owner's decision 2026-11-13), each kind under the owner's
+   line for it in Dogs, "Health results"; a result with no type goes under
+   Health testing (now wordable). The headings' order is the owner's (Dogs, "Health
+   result headings' order": four places, each heading once; Health testing, Genetic,
+   OFA / PennHIP, Breed-specific by default). Within a heading, her own order of results.
 5. **C3, D.** Titles as rows; tags. Migration: `dog_titles`, `tags`.
+   **Built 2026-11-13**, in this branch's one migration (0033: the `dog_titles` table and
+   `dogs.tags`). C3: `titles_detail` in `SECTIONS`; a dog's titles come as
+   `{ abbr, organization, date }`, kept as rows; the titles line stays their
+   abbreviations, written at each update rather than at publish. A bundle where any
+   dog's titles are rows is from such a KennelOS: there a dog's empty list clears its
+   rows and line (an empty list alone can't be told from an older KennelOS's). Field:
+   A title's organization. D: the owner's **Tags** screen (build tools): tags by rule,
+   each words, a pill (the site's two status pills), Dogs or Pups, and conditions (the
+   block screen's rows; never on tags); and tags the breeder may choose, which she
+   ticks on a dog's form (her tags only on dogs). A tag is the field Tags (dogs and
+   pups; a litter's parents' too) and a card item (Tags), on no card by default. The
+   import tags of C4 come with step 6. The tags kept in the build (`build.tags`), not a
+   table. Her field's label and hint are the builder's, for the owner to reword.
+   **Pills (the owner, 2026-11-13):** every pill on her site (a pup's status, tags, a
+   dog looking for a home) is drawn in the site's one **pill style** (Dot, today's;
+   Ribbon tag; Outlined capsule; Soft chip; Wavy ribbon; Wavy ribbon, satin), set by
+   the owner on Formats and hers to change on Kennel details (`sites.pill_style`, in
+   0033). Each pill's colour is one of its scheme's colours, named per scheme
+   (`render/schemes.js` `PILL_COLOURS`), in place of Green and Brass outline, which
+   read as the scheme's ok and held.
 6. **C4, C7.** Origin and lineage: the import tags and the Pedigree block.
    Migration: the columns and an `ancestors` store. C4 and C7 go together: import-descended
    is worked out from the ancestors.

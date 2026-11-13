@@ -1200,3 +1200,145 @@ let her give a deleted family back.
   bundles cleanly; all 401 tests pass). This entry is the change for a fresh merge to
   start a new build. If a build of #54 fails again, its log is in the Worker's build
   history, not in its Deployments list.
+
+## 2026-11-13: How it works steps keep her wording and order
+
+- Her edits to a KennelOS step were dropped and every Update website rewrote them: the
+  heading and body were KennelOS's (`OWNED.steps`), shown as "from KennelOS, change it
+  there", though KennelOS has nowhere to change them (it words them from her waitlist
+  settings). Her own steps were also moved after KennelOS's on every update.
+- `kennelos/bundle.js`: KennelOS's steps only start a step. The first time, KennelOS's go
+  first and hers follow, as before; after that each step's heading, body and place are
+  hers. A step KennelOS adds later goes last; one it stops sending leaves. `OWNED.steps`
+  is empty, and `manage/screens.js` `lockedFor` treats a record with nothing of
+  KennelOS's on it as hers (no "comes from KennelOS" notice).
+- Not changed: a KennelOS step she removes comes back, last, on the next update (no
+  record of a removal is kept). Wording edits made before this were never saved.
+- Docs: `plans/kennelport.md` (who owns which field), `plans/kennelos-contract.md` C9.
+- No change to `public/_kp/`: no version bump. No migration.
+- Tests: one new in `kennelos.test.js`. All 402 pass.
+
+## 2026-11-13: KennelOS contract step 4, the small raw fields
+
+- `kennelos/bundle.js`: four new sections in `SECTIONS`, `pup_disposition`,
+  `litter_status`, `health_detail`, `account_type` (KennelOS sends them since its PR
+  #210). Each value is kept as sent (migration **0033** `kennelos_raw`: four new columns,
+  additive). A key an older KennelOS doesn't send leaves what's stored (`cleanShape`
+  notes which keys came).
+- C1: a litter pup with a disposition gets its status from the owner's rule
+  (`rules.landing.pupst_*`, today's map by default); none set or unknown reads undecided.
+- C6: a product with an account type goes where the owner's rule says
+  (`landing.acct_*`: Recommended products or Getting your pup home; transport to the
+  latter by default) and a new one starts in that type's group (`acct_group_*`, empty
+  by default). Both on the owner's From KennelOS screen (`manage/builder/kennelos.js`),
+  built from that screen's existing list, select and text pieces.
+- `content/fields.js`: a pup's Disposition in KennelOS, a litter's Status in KennelOS
+  (and `litter.kennelos_status` on a pup), a dog's Kinds of health test shown (and so a
+  litter's parents').
+- Not yet: the litter card's eyebrow by KennelOS status (C2) and health results grouped
+  by kind on a dog's page (C5).
+- Linked sample: every bundle gains the four values; results are unchanged.
+- Server-rendered only: no change to `public/_kp/`, no version bump.
+- **This branch adds migration 0033**: it applies by itself on the first request after
+  the merge deploys.
+- Tests: one new in `kennelos.test.js`, one in `fields.test.js`. All 404 pass.
+
+## 2026-11-13: KennelOS contract step 4, its two display rules
+
+- C2: a litter card's small line by the litter's status in KennelOS. Owner's Wording
+  screen, new group "Litter cards, by status in KennelOS" (`words.litter_kos_*`, empty
+  by default and allowed empty: the usual line). A planned litter's own plan label
+  still comes first. `render/parts.js` `litterCard`.
+- C5: a dog's health results grouped by kind on its page. Owner's Dogs screen, "A dog's
+  health results", Group them by kind (`rules.dogs.health_groups`, off by default), and
+  a new words group "Health results": `health_heading` (was the fixed "Health testing";
+  a result with no type goes under it), `health_genetic`, `health_ofa`, `health_breed`.
+  `render/pages.js` `healthLists`, built from the page's existing eyebrow and tests list.
+  Flip cards keep one list. Checked at 390px.
+- Defaults draw every live site as before. Server-rendered only: no version bump; no
+  migration beyond this branch's 0033.
+- Tests: one new in `fields.test.js`. All 405 pass.
+
+## 2026-11-13: health results by kind, her switch
+
+- The owner's decision: the breeder turns grouping on and off for her whole site. Her
+  **Group health results by kind** on Kennel details (`SITE_FIELDS.group_health`,
+  `sites.group_health`, added to this branch's migration 0033; off by default). The
+  owner's Dogs switch from the entry above is gone (never released); the headings stay
+  the owner's words (Dogs, Health results).
+- Kennel details' switches heading is now "On your website", like the other forms',
+  since it holds more than prices.
+- Breeder-facing wording, new and mine for now: the switch's label and hint in
+  `manage/forms.js` LABELS ("Group health results by kind"; "On each dog's page:
+  genetic tests, OFA / PennHIP and other tests each under their own heading, sorted by
+  KennelOS. Off: one list."), for the owner to reword. Checked at 390px and 1280px.
+- Tests: one new in `editing.test.js`; `fields.test.js` reads her switch. All 406 pass.
+
+## 2026-11-13: health result headings' order
+
+- The owner's Dogs screen: "Health result headings' order", four places (First to
+  Fourth), each a choice of the four headings (`rules.dogs.health_kind_1`…`_4`; default
+  Health testing, Genetic, OFA / PennHIP, Breed-specific, as before). Saving with one
+  heading in two places is refused. The choices read in the owner's current words.
+- `render/pages.js` `healthLists` follows it; `content/rules.js` `HEALTH_KINDS`,
+  `HEALTH_KIND_PLACES`. Within a heading the results keep her order.
+- Built from the screen's existing card, select and hint pieces; checked at 390px and
+  1280px. No version bump, no new migration.
+- Tests: `fields.test.js` (the order, and a repeated heading refused). All 406 pass.
+
+## 2026-11-13: KennelOS contract step 5, titles as rows and tags
+
+- C3 (`kennelos/bundle.js`): `titles_detail` in `SECTIONS`. A dog's titles may come as
+  `{ abbr, organization, date }` (`cleanTitles`): kept as rows in `dog_titles` (new table,
+  added to this branch's migration 0033; in `SITE_TABLES`, so backups and site deletes
+  carry it; removed with its dog, `records.js`, `io.js`). The titles line stays their
+  abbreviations. In a bundle where any dog's titles are rows, a dog's empty list clears.
+  The snapshot gives each dog `title_rows`; field: A title's organization.
+- D: `content/tags.js` (new): tags by rule (words, pill, Dogs or Pups, conditions) and
+  tags the breeder may choose, kept in the build (`build.tags`). The owner's **Tags**
+  screen (`manage/builder/tags.js`, new; in the build tools' nav), built from the block
+  screen's condition rows (`records.js` `conditionRows`, split out of
+  `recordsSettings`) and the builder's cards and selects; no prototype screen. Her ticks
+  on a dog's form (`dogs.tags`, ids, in migration 0033; `forms.js` item `tag`, shown only
+  when the owner allows some). `fields.js` `tagsOf` and the field Tags (dogs, pups, a
+  litter's parents); a card item Tags on dog cards, light cards and Featured blocks,
+  drawn as the site's `.status` pills: no stylesheet change, no version bump.
+- Breeder-facing wording, mine for now (the owner to reword): her dog form's Tags field,
+  label "Tags", hint "Shown as small labels on this dog's cards, where your site shows
+  them." (`forms.js` LABELS).
+- Checked the Tags screen at 390px and 1280px, and her dog form at 390px.
+- Tests: `tags.test.js` (new, two), one in `kennelos.test.js`; the linked sample's dogs
+  send titles as rows. All 409 pass.
+
+## 2026-11-13: pill styles, and pill colours from the scheme
+
+- The owner's decisions: every pill on a breeder's site (a pup's status on cards, its
+  page and a Featured block; tags; a dog's "Looking for a home") is drawn in one style
+  for the site, and each pill's colour is one of the site's scheme's colours, by name,
+  in place of Green and Brass outline.
+- Styles (`content/model.js` `PILL_STYLES`): Dot (today's), Ribbon tag, Outlined capsule,
+  Soft chip, Wavy ribbon, Wavy ribbon satin. `sites.pill_style` (added to this branch's
+  migration 0033, `dot` by default): the owner's Formats screen (a new Pills card,
+  saved to the site, not the build), and her Kennel details (Look). The page carries
+  `data-pills` (`render/layout.js`); `site.css` draws each, the wavy ones with a
+  repeating SVG mask and forked ends.
+- Colours (`PILL_KEYS`: accent, brass, ok, held, ink, muted): `render/schemes.js`
+  `PILL_COLOURS` names each scheme's (Lawn: Moss, Brass, Fern, Toffee, Ink, Stone; and
+  so on), leaving out a colour that repeats one before it (Midnight's brass is its
+  accent). Pills draw as `.status.c-<key>`; a stored `avail`/`res` reads as ok/held
+  (`pillKey`, `rules.js` `carried`), so every site looks as it did. Chosen on the
+  owner's Pups screen (each status row), Tags (each tag) and Dogs (the new "Looking for
+  a home" pill colour, `rules.dogs.sale_pill`); the build tools show a colour as an SVG
+  dot, since they take no inline styles. The colour names are mine, for the owner to
+  approve.
+- Breeder-facing wording, mine for now: Kennel details' "Pill style" label and hint
+  (`forms.js` LABELS) and the style names (`PILL_STYLES`).
+- `public/_kp/t/ak/site.css` changed: `ASSET_VERSION` (24, released) needs a bump; asked.
+- Checked each style on a pup card at 390px.
+- Tests: `pills.test.js` (new, two); class names updated in `editing`, `rules`, `tags`
+  tests. All pass bar `versions.test.js`, which waits on the bump.
+
+## 2026-11-13: ASSET_VERSION 25
+
+- The owner said yes: `ASSET_VERSION` 24 → 25 for the pill styles in `site.css`, with
+  `TEMPLATE_FILES` from `node worker/scripts/fingerprint.mjs`. All 411 tests pass.

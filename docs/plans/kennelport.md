@@ -1269,8 +1269,9 @@ the same way Older puppies appears by itself once a litter's going-home date pas
   (3.4), Recommended products' names, referral links, codes and code notes (from the
   KennelOS Accounts she marks **Show on website**; picture, Home badge, button wording,
   group, description and order stay hers), a dog's retired, deceased (with the date of death) and for-sale status (3.7), a
-  planned litter's status (3.11), the waitlist steps behind How it works (3.11), How to
-  pay (3.9), and program names and public descriptions. With **Use my KennelOS prices** on
+  planned litter's status (3.11), the waitlist steps behind How it works (3.11) only to
+  start them (once on her site, a step's wording and place are hers; a step KennelOS
+  stops sending leaves), How to pay (3.9), and program names and public descriptions. With **Use my KennelOS prices** on
   (decision 6): the litter's price and deposit per sex, the full-registration surcharge,
   and the extras prices.
   **Not in phase 4:** pickup places, transport distances and the fee per mile wait for the

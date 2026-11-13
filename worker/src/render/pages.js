@@ -10,8 +10,9 @@ import {
   esc, attr, fmtDate, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, litterCard, parentCards, litterFacts, dogCard, coCard,
   partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, expanders, pagehead, head, ICONS, paySection,
   payShown, litterChoices, ANY_LITTER, ABOUT_LABEL, dogGroups, descendantsOf, depositsAhead, soonSection, pricesOff, sitePrice, word, sexWord, fullRegLink,
-  fullRegSurchargeRow, galleryHtml, faqBlock, addedOn, addedWords, addedRow, customPage,
+  fullRegSurchargeRow, galleryHtml, faqBlock, addedOn, addedWords, addedRow, customPage, rulesOf, pillClass,
 } from './parts.js';
+import { DEFAULT_RULES, HEALTH_KINDS, HEALTH_KIND_PLACES } from '../content/rules.js';
 import { embedView } from '../embeds.js';
 import { litterAlbums, dogAlbums } from './pages/albumLists.js';
 import { v, honeypot, turnstileBox, formResult } from './pages/formParts.js';
@@ -509,7 +510,7 @@ export function dog(snap, ctx, slug) {
   }
   if (d.outside && d.owner_name) fact.owner = [word(snap, 'outside_fact'), d.owner_url ? `<a href="${attr(d.owner_url)}" rel="noopener">${esc(d.owner_name)}</a>` : esc(d.owner_name)];
   const facts = pr.facts.map((k) => fact[k]).filter(Boolean);
-  const tests = d.health.length ? `<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${h.verify_url ? `<a href="${attr(h.verify_url)}" rel="noopener">${esc(h.result)}</a>` : esc(h.result)}</span></li>`).join('')}</ul>` : '';
+  const tests = healthLists(snap, d.health);
   const litters = snap.litters.filter((l) => l.dam_id === d.id || l.sire_id === d.id);
   // Offspring, grand offspring and on: light cards a generation at a time.
   const offspring = descendantsOf(snap, d).map((gen, i) => `<div class="mt-26">${head(word(snap, `offspring_${i + 1}`), null)}${slider(gen.map((x) => coCard(snap, x)), { cls: 'light' })}</div>`).join('');
@@ -523,7 +524,7 @@ export function dog(snap, ctx, slug) {
       reg: d.registered_name ? `<p class="reg">${esc(d.registered_name)}</p>` : '',
       facts: `<dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>`,
       bio: d.bio ? `<p class="bio">${esc(d.bio)}</p>` : '',
-      sale: sale ? `<p class="status avail">${esc(word(snap, 'for_sale_status'))}${sale.price ? ` · ${esc(sale.price)}` : ''}</p><p><a class="btn solid" href="${attr(sale.ask)}">${esc(word(snap, 'ask_dog', { name: d.call_name }))}</a></p>` : '',
+      sale: sale ? `<p class="${pillClass(rulesOf(snap).dogs?.sale_pill ?? 'ok')}">${esc(word(snap, 'for_sale_status'))}${sale.price ? ` · ${esc(sale.price)}` : ''}</p><p><a class="btn solid" href="${attr(sale.ask)}">${esc(word(snap, 'ask_dog', { name: d.call_name }))}</a></p>` : '',
       tests,
       share: shareRow(),
       badges: badgeRow(snap, 'dog', { inWrap: true }),
@@ -929,4 +930,25 @@ export function unavailable(snap, ctx, { gone = false } = {}) {
     body: `<section class="section"><div class="wrap notice"><h1>${gone ? 'This page is gone' : "This page isn't available"}</h1>
       <p class="muted">It may have moved, or it isn't on the site right now.</p><a class="btn line" href="/">Go to the home page</a></div></section>`,
   };
+}
+
+// A dog's health results on its page: one list under its line, or, with the breeder's
+// Group health results by kind (sites.group_health), a list per kind by KennelOS's test
+// type (contract C5), in this order, each under the owner's words for it (Dogs, Health
+// results); a result with no type under the first line.
+function healthLists(snap, health) {
+  if (!health.length) return '';
+  const list = (key, rows) => `<span class="eyebrow">${esc(word(snap, key))}</span><ul class="tests">${rows.map((h) => `<li><span>${esc(h.test)}</span><span>${h.verify_url ? `<a href="${attr(h.verify_url)}" rel="noopener">${esc(h.result)}</a>` : esc(h.result)}</span></li>`).join('')}</ul>`;
+  if (!snap.site.group_health) return list('health_heading', health);
+  // In the owner's order of headings (rules.dogs health_kind_*); a type the site
+  // doesn't know reads as no type.
+  const known = new Set(Object.values(HEALTH_KINDS).map(([, t]) => t).filter(Boolean));
+  const dogsRule = rulesOf(snap).dogs ?? {};
+  const order = HEALTH_KIND_PLACES.map((k) => dogsRule[k] ?? DEFAULT_RULES.dogs[k]);
+  return order.map((kind) => {
+    const [key, type] = HEALTH_KINDS[kind] ?? [];
+    if (!key) return '';
+    const rows = health.filter((h) => (type ? h.test_type === type : !known.has(h.test_type)));
+    return rows.length ? list(key, rows) : '';
+  }).join('');
 }

@@ -23,13 +23,15 @@ const DOG_RECORD_FIELDS = {
   dam_id: { type: 'dogid' },
   lives_with_kennel_id: { type: 'kennelid' },
   co_owned_with_ids: { type: 'list', item: 'kennel', max: PARTNERS_PER_DOG },
+  // Her tags on it, from those the owner allows the site (content/tags.js), by id.
+  tags: { type: 'list', item: 'tag', max: 20 },
 };
 // Albums name their litter by id here (the import uses its slug).
 const ALBUM_RECORD_FIELDS = { ...omit(ALBUM_FIELDS, ['litter']), litter_id: { type: 'litterid' } };
 
 // kind → where it lives and what it holds. `scope` is the parent column, if any.
 export const KINDS = {
-  dogs: { table: 'dogs', fields: DOG_RECORD_FIELDS, slug: 'call_name', label: 'call_name', defaults: { status: 'active', health_display: 'normal_only', show_on_site: 1, upcoming: 0, for_sale: 0, co_owned: 0, lives_away: 0, outside: 0 }, json: ['co_owned_with_ids'], stamps: true },
+  dogs: { table: 'dogs', fields: DOG_RECORD_FIELDS, slug: 'call_name', label: 'call_name', defaults: { status: 'active', health_display: 'normal_only', show_on_site: 1, upcoming: 0, for_sale: 0, co_owned: 0, lives_away: 0, outside: 0 }, json: ['co_owned_with_ids', 'tags'], stamps: true },
   health: { table: 'health_results', fields: HEALTH_FIELDS, scope: 'dog_id', label: 'test', defaults: { normal: 1, show: 0 } },
   litters: { table: 'litters', fields: LITTER_RECORD_FIELDS, slug: 'name', label: 'name', defaults: { show_on_site: 1, show_prices: 0, show_placed: 1, ask_full_reg: 0 }, stamps: true },
   puppies: { table: 'puppies', fields: PUPPY_FIELDS, scope: 'litter_id', slug: 'name', label: 'name', defaults: { status: 'coming_soon' }, stamps: true },
@@ -284,6 +286,7 @@ export async function removeRecord(env, siteId, kind, id) {
     s.push(env.DB.prepare('UPDATE litters SET dam_id = NULL WHERE site_id = ? AND dam_id = ?').bind(siteId, id));
     s.push(env.DB.prepare('UPDATE litters SET sire_id = NULL WHERE site_id = ? AND sire_id = ?').bind(siteId, id));
     s.push(env.DB.prepare('DELETE FROM health_results WHERE site_id = ? AND dog_id = ?').bind(siteId, id));
+    s.push(env.DB.prepare('DELETE FROM dog_titles WHERE site_id = ? AND dog_id = ?').bind(siteId, id));
     // Its offspring keep their own records; their sire or dam is no longer on the site.
     s.push(env.DB.prepare('UPDATE dogs SET sire_id = NULL WHERE site_id = ? AND sire_id = ?').bind(siteId, id));
     s.push(env.DB.prepare('UPDATE dogs SET dam_id = NULL WHERE site_id = ? AND dam_id = ?').bind(siteId, id));
@@ -329,6 +332,8 @@ export async function saveSite(env, siteId, input) {
   await checkRefs(env, siteId, { fields: SITE_FIELDS }, clean);
   for (const c of ['dark_mode']) if (clean[c] === null) clean[c] = 'auto';
   if (clean.show_other_prices === null) clean.show_other_prices = 0;
+  if (clean.group_health === null) clean.group_health = 0;
+  if (clean.pill_style === null) delete clean.pill_style;
   // A form without the scheme picker leaves the scheme as it is.
   if (clean.scheme === null) delete clean.scheme;
   const cols = Object.keys(clean);

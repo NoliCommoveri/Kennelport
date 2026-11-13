@@ -31,6 +31,7 @@
 import { escapeHtml as esc } from '../lib/html.js';
 import {
   DEFAULT_RULES, DEFAULT_TIMING, RuleError, rulesFor, rulesFromForm, timingFromForm, withPart, loadBuild, saveBuild, partsFromForm, wordsOn,
+  HEALTH_KINDS, HEALTH_KIND_PLACES,
 } from '../content/rules.js';
 import { buildSnapshot } from '../publish.js';
 import {
@@ -49,14 +50,16 @@ import {
   STRIP_FRAME, OVER_V, OVER_SHADE, BG_COLOURS, PAD, TEXT_SIZE, FACTS_MAX, FACT_SIZES, COLS_MAX, COL_SIZES, COLS_ACROSS, COLLAGE_LAYOUT,
   COLLAGE_FRAME, COLLAGE_MAX,
 } from '../content/blocks.js';
-import { PAGES, COLLAGE_LAYOUTS, collageLayout, HOME_WORDS } from '../content/model.js';
+import { PAGES, COLLAGE_LAYOUTS, collageLayout, HOME_WORDS, PILL_STYLES } from '../content/model.js';
 import { layoutChoice, boxHint, photoSlot } from './forms.js';
 import { siteLink } from '../ops/sites.js';
-import { field, select, toggle, seg, back, svg, SPILL, mvBtns, fld, LIMITS, resultLine } from './builder/controls.js';
+import { field, select, toggle, seg, back, svg, pillChip, pillSelect, mvBtns, fld, LIMITS, resultLine } from './builder/controls.js';
 import { FEATURE_EVERY, featuredNow } from '../content/featured.js';
 import { blockRecords, WHAT, dataSettings, scheduleSettings, hersLine as hersPicks } from './builder/blocks.js';
 import { rulesScreen } from './builder/rules.js';
 import { kennelosScreen, landingPreview } from './builder/kennelos.js';
+import { tagsScreen } from './builder/tags.js';
+import { cleanTags, tagsFromForm } from '../content/tags.js';
 import { defaultSay } from './wording.js';
 import { redirect, ic, isDemo, whereIs, SCREENS, adminNav } from './builder/frame.js';
 import { everySite } from './builder/sites.js';
@@ -171,7 +174,7 @@ async function preview(env, site) {
     const reg = regText(snap, p, l, ctx.today);
     const price = puppyPriceText(snap, l, p, ctx.today);
     const full = fullRegHref(snap, l, p, ctx);
-    return `<div class="pvc"><span class="ph"></span><div class="t"><b>${esc(p.name)} ${sexMark(p.sex)}</b>${words ? `<span class="spill ${SPILL[r.pill] ?? 'plain'}">${esc(words)}</span>` : ''}${reg ? `<span class="muted">${esc(reg)}</span>` : ''}${price ? `<span class="price">${esc(price)}</span>` : ''}${r.ask ? `<span class="lnk">${esc(word(snap, 'ask_puppy'))} ›</span>` : ''}${full ? `<span class="lnk">${esc(rulesOf(snap).reg.ask)} ›</span>` : ''}</div></div>`;
+    return `<div class="pvc"><span class="ph"></span><div class="t"><b>${esc(p.name)} ${sexMark(p.sex)}</b>${words ? pillChip(snap.site.scheme, r.pill, words) : ''}${reg ? `<span class="muted">${esc(reg)}</span>` : ''}${price ? `<span class="price">${esc(price)}</span>` : ''}${r.ask ? `<span class="lnk">${esc(word(snap, 'ask_puppy'))} ›</span>` : ''}${full ? `<span class="lnk">${esc(rulesOf(snap).reg.ask)} ›</span>` : ''}</div></div>`;
   };
   const block = (eyebrow, heading, cards, cls = '') => `<div class="pvb${cls}"><span class="eyebrow">${esc(eyebrow)}</span><h3>${esc(heading)}</h3>${cards.length ? `<div class="pvg">${cards.join('')}</div>` : '<p class="small muted">No puppies to show.</p>'}</div>`;
   const blocks = [];
@@ -211,8 +214,12 @@ function dogsScreen(site, rules, error) {
   const sale = rules.dogs.sale_price;
   return `<div class="stack">${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
     <section class="card"><div class="fgroup"><div class="between"><h2>An adult looking for a home</h2>${sale === DEFAULT_RULES.dogs.sale_price ? '' : back('dogs.sale_price')}</div>
+      <div class="fgrid">${pillSelect('dogs.sale_pill', site.scheme, rules.dogs.sale_pill, 'Its “Looking for a home” pill')}<div class="half fld"><span class="fldt">Reads</span>${pillChip(site.scheme, rules.dogs.sale_pill, word({ rules }, 'for_sale_status'))}</div></div>
       <div class="fld"><span class="fldt">Its price</span>${seg('dogs.sale_price', sale, { site: 'As the breeder sets', always: 'Always', never: 'Never' })}
       <span class="hint">“As the breeder sets” follows her “Show prices of extras and adults”. Never shows no price line at all.</span></div></div></section>
+    <section class="card"><div class="fgroup"><div class="between"><h2>Health result headings' order</h2>${HEALTH_KIND_PLACES.every((k) => rules.dogs[k] === DEFAULT_RULES.dogs[k]) ? '' : back(HEALTH_KIND_PLACES.map((k) => `dogs.${k}`).join(','))}</div>
+      <div class="fgrid">${HEALTH_KIND_PLACES.map((k, i) => select(`dogs.${k}`, rules.dogs[k], Object.fromEntries(Object.entries(HEALTH_KINDS).map(([kind, [w]]) => [kind, rules.words[w]])), ['First', 'Second', 'Third', 'Fourth'][i])).join('')}</div>
+      <span class="hint">When the breeder groups a dog's health results by kind (her Kennel details). Each heading once; one with no results on a dog doesn't show. The words are under Health results below.</span></div></section>
     ${wordCards('dogs', rules)}
     <section class="card band"><p class="small">Which health results a new dog shows, and where each KennelOS status puts a dog, are under From KennelOS.</p></section></div>`;
 }
@@ -776,9 +783,9 @@ export async function handleBuilder({ env, request, url, user, page }) {
   const wm = path.match(/^\/admin\/wording(?:\/([a-z]+))?$/);
   if (wm) return wordingRoute({ env, request, url, page, site: null, screen: wm[1] ?? null });
   const sv = path.match(/^\/admin\/([a-z0-9-]+)\/site(\/.*)?$/);
-  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z0-9_-]+|menu|rules|dogs|wording|formats|kennelos|timing|instructions|instructions\/[a-z]+)$/);
+  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z0-9_-]+|menu|rules|dogs|tags|wording|formats|kennelos|timing|instructions|instructions\/[a-z]+)$/);
   if (!m) return null;
-  const site = await env.DB.prepare("SELECT id, subdomain, kennel_name, status, portal_on, demo_step FROM sites WHERE subdomain = ? AND status != 'closed'").bind(m[1]).first();
+  const site = await env.DB.prepare("SELECT id, subdomain, kennel_name, status, portal_on, demo_step, scheme, pill_style FROM sites WHERE subdomain = ? AND status != 'closed'").bind(m[1]).first();
   if (!site) return null;
   if (sv) {
     if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Forms don\'t send from the admin view.', { status: 405, headers: { allow: 'GET, HEAD', 'cache-control': 'no-store' } });
@@ -789,6 +796,7 @@ export async function handleBuilder({ env, request, url, user, page }) {
   if (screen === 'instructions' || screen.startsWith('instructions/')) return wordingRoute({ env, request, url, page, site, build, screen: screen.split('/')[1] ?? null });
   if (screen === 'pages' || screen.startsWith('pages/')) return pagesRoute({ env, request, url, site, build, page, screen });
   if (screen === 'menu') return menuRoute({ env, request, url, site, build, page });
+  if (screen === 'tags') return tagsRoute({ env, request, url, site, build, page });
   let { rules, timing } = rulesFor(build);
   let error = null;
   if (request.method === 'POST') {
@@ -806,6 +814,11 @@ export async function handleBuilder({ env, request, url, user, page }) {
       return next;
     };
     try {
+      // The site's pill style is its own setting (sites.pill_style), not a rule.
+      const pillStyle = String(get('site.pill_style') ?? '');
+      if (screen === 'formats' && Object.hasOwn(PILL_STYLES, pillStyle) && pillStyle !== site.pill_style) {
+        await env.DB.prepare('UPDATE sites SET pill_style = ?, draft_changed_at = ? WHERE id = ?').bind(pillStyle, new Date().toISOString(), site.id).run();
+      }
       if (screen === 'rules') {
         await saveBuild(env, site.id, withPart(build, 'rules', toDefault(rulesFromForm(get, rules))));
       } else if (screen !== 'timing') {
@@ -844,6 +857,27 @@ export async function handleBuilder({ env, request, url, user, page }) {
     <form method="post" id="build" class="build${side ? '' : ' solo'}"><button class="sr" tabindex="-1" aria-hidden="true">Save</button>${editor}${side}
       <div class="actionbar"><div class="in"><span class="ico">${ic('eye')}</span><p><b>Their website</b>Save, then the preview shows it. Publishing puts it live.</p>${side ? '<a class="button small seeit" href="#preview">See it</a>' : ''}<button class="primary small">Save</button></div></div></form>`;
   return page(`${title} · ${site.kennel_name || site.subdomain}`, body, { admin: { nav: adminNav(site, screen), site } });
+}
+
+// Tags (content/tags.js): the owner's tags by rule, and those the breeder may choose.
+// Any button saves the screen with what it does.
+async function tagsRoute({ env, request, url, site, build, page }) {
+  if (request.method === 'POST') {
+    const form = await request.formData();
+    const tags = tagsFromForm(build.tags, (k) => form.get(k), (k) => form.getAll(k).map(String));
+    const next = { ...build, tags };
+    if (!tags.rules.length && !tags.own.length) delete next.tags;
+    await saveBuild(env, site.id, next);
+    return redirect(`/admin/${site.subdomain}/tags?saved=1`);
+  }
+  const snap = await buildSnapshot(env, site.id);
+  const saved = url.searchParams.get('saved');
+  const body = `<p class="crumb"><a href="/admin">‹ Every site</a></p><span class="eyebrow">${esc(site.kennel_name || site.subdomain)}</span>${isDemo(site) ? ' <span class="spill brass">Demo</span>' : ''}<h1>Tags</h1>
+    <p class="muted">Short labels on dogs and pups, as pills. Nothing shows until a card has the Tags item (a block's card settings).</p>
+    ${saved ? '<p class="notice" role="status">Saved. The site shows it once the breeder (or you) publishes.</p>' : ''}
+    <form method="post" id="build" class="build solo"><button class="sr" tabindex="-1" aria-hidden="true">Save</button>${tagsScreen(snap, cleanTags(build.tags), null)}
+      <div class="actionbar"><div class="in"><span class="ico">${ic('eye')}</span><p><b>Their website</b>Save, then the preview shows it. Publishing puts it live.</p><button class="primary small">Save</button></div></div></form>`;
+  return page(`Tags · ${site.kennel_name || site.subdomain}`, body, { admin: { nav: adminNav(site, 'tags'), site } });
 }
 
 async function pagesRoute({ env, request, url, site, build, page, screen }) {

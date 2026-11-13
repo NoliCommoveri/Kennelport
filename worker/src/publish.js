@@ -20,6 +20,7 @@ import { NOT_FOR_DEMO } from './lib/demo.js';
 import { layoutFor, customPages } from './content/blocks.js';
 import { changes } from './diff.js';
 import { sitePicks } from './content/picks.js';
+import { cleanTags } from './content/tags.js';
 
 export const SNAPSHOT_VERSION = 1;
 export const KEEP = 10;
@@ -84,6 +85,8 @@ export async function buildSnapshot(env, siteId) {
 
   const dogsRaw = await all('SELECT * FROM dogs WHERE site_id = ? AND show_on_site = 1 AND hidden_by_kennelos = 0 ORDER BY sort, call_name');
   const health = await all('SELECT * FROM health_results WHERE site_id = ? AND show = 1 ORDER BY sort');
+  // KennelOS's titles as rows (titles_detail): each with its organization and date.
+  const titleRows = await all('SELECT dog_id, abbr, organization, earned_on FROM dog_titles WHERE site_id = ? ORDER BY sort');
   const dogs = dogsRaw.map((d) => ({
     // An asking price only for a dog looking for a home, with Show other prices on.
     ...keep(d, [...SYSTEM, 'health_display', 'died_on', ...(d.for_sale && site.show_other_prices ? [] : ['price'])]),
@@ -92,6 +95,9 @@ export async function buildSnapshot(env, siteId) {
     co_owned: Boolean(d.co_owned), lives_away: Boolean(d.co_owned && d.lives_away),
     lives_with_kennel_id: d.co_owned && d.lives_away && partnerIds.has(d.lives_with_kennel_id) ? d.lives_with_kennel_id : null,
     co_owned_with_ids: d.co_owned ? (json(d.co_owned_with_ids, []) ?? []).filter((id) => partnerIds.has(id)) : [],
+    title_rows: titleRows.filter((t) => t.dog_id === d.id).map((t) => keep(t, ['dog_id'])),
+    // Her tags on it, by id (content/tags.js); which show is the render's.
+    tags: json(d.tags, []) ?? [],
     health: d.health_display === 'none' ? []
       : health.filter((h) => h.dog_id === d.id && (d.health_display === 'all' || h.normal))
         .map((h) => keep(h, ['id', 'site_id', 'dog_id', 'show', 'sort', 'source'])),
@@ -266,12 +272,16 @@ export async function buildSnapshot(env, siteId) {
       contact_phone: site.contact_phone, facebook_url: site.facebook_url, facebook_label: site.facebook_label,
       instagram_url: site.instagram_url, template: site.template, scheme: site.scheme, dark_mode: site.dark_mode,
       show_other_prices: Boolean(site.show_other_prices),
+      group_health: Boolean(site.group_health),
+      pill_style: site.pill_style ?? 'dot',
       // Families on her KennelOS waitlist sign in there (plan 3.8): the footer's,
       // the menu's and the status-page help's Family login link.
       family_login: kennelosOrigin(env) && site.kennelos_public_id ? `${kennelosOrigin(env)}/list/${encodeURIComponent(site.kennelos_public_id)}#signin` : null,
     },
     pages, home, dogs, litters, reviews, steps, expanders, extras, products, partners, payment, questions, albums, embeds, photos,
     rules, timing,
+    // Tags (content/tags.js): the owner's by rule, and those she may tick on a dog.
+    tags: cleanTags(build?.tags),
     // Her build's pages as blocks (content/blocks.js), and the pages she added.
     layout: layoutFor(build),
     added,

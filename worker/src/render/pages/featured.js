@@ -8,7 +8,7 @@
 // Home story's grid, .story) under the block's heading, the photo in a soft mat. With
 // two or three at once, every other one has its photo on the right on a computer.
 import {
-  esc, attr, img, head, pageOn, dogFace, sexWord, puppyStatus, puppyPriceText, statusRule, pairNames, recordCtx, rulesOf, blockRows, addedWords, word,
+  esc, attr, img, head, pageOn, dogFace, sexWord, puppyStatus, puppyPriceText, statusRule, pairNames, recordCtx, rulesOf, blockRows, addedWords, word, tagPills, pillClass,
 } from '../parts.js';
 import { featuredNow } from '../../content/featured.js';
 import { framed } from '../pages.js';
@@ -27,10 +27,11 @@ function pupLines(snap, ctx, b, p, rc) {
   const rule = statusRule(snap, p, l, ctx.today);
   const items = {
     line: () => `<span>${esc([sexWord(p.sex), p.color].filter(Boolean).join(' · '))}</span>`,
-    status: () => (status ? `<span class="status ${attr(rule.pill)}">${esc(status)}</span>` : ''),
+    status: () => (status ? `<span class="${pillClass(rule.pill)}">${esc(status)}</span>` : ''),
     litter: () => (l ? `<span class="small muted">${esc([l.name, pairNames(snap, l)].filter(Boolean).join(' · '))}</span>` : ''),
     price: () => (price ? `<span class="small">${esc(rulesOf(snap).price.price_label)}: ${esc(price)}</span>` : ''),
     bio: () => (p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''),
+    tags: () => tagPills(snap, 'puppy', p, rc),
   };
   return b.show.items.map((k) => items[k]?.() ?? '').join('');
 }

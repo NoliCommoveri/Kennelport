@@ -58,7 +58,7 @@ test('mark a puppy placed in one tap, see it in the change list, publish it', as
   assert.match(pub, /Publish 1 change/);
   assert.doesNotMatch(await (await call(b.env, SITE, '/litters/gem-2026/opal')).text(), /<h1>Opal<\/h1>[\s\S]*Reserved/);
   assert.equal((await b.post('/publish')).status, 303);
-  assert.match(await (await call(b.env, SITE, '/litters/gem-2026/opal')).text(), /status res">Reserved/);
+  assert.match(await (await call(b.env, SITE, '/litters/gem-2026/opal')).text(), /status c-held">Reserved/);
   assert.match(await (await b.get('/publish')).text(), /Nothing to publish/);
 });
 
@@ -106,6 +106,19 @@ test('switch a page off, reword a Home block, edit the kennel details', async ()
   const home = await (await call(b.env, SITE, '/')).text();
   assert.match(home, /Bostons with heart/);
   assert.match(home, /<title>AK Bostons<\/title>/);
+});
+
+test('Kennel details: her Group health results by kind switch shows, saves, and says so before publishing', async () => {
+  const b = await breeder();
+  await b.post('/publish');
+  const form = await (await b.get('/details')).text();
+  assert.match(form, /name="group_health"/);
+  assert.match(form, /Group health results by kind/);
+  await b.post('/details', { kennel_name: 'AK Boston Terriers', group_health: '1', dark_mode: 'auto' });
+  assert.equal(b.env.DB.raw.prepare('SELECT group_health FROM sites').get().group_health, 1);
+  assert.match(await (await b.get('/publish')).text(), /health results by kind/);
+  await b.post('/details', { kennel_name: 'AK Boston Terriers', dark_mode: 'auto' });
+  assert.equal(b.env.DB.raw.prepare('SELECT group_health FROM sites').get().group_health, 0, 'unticked: off');
 });
 
 test('lists: add an extra with a checklist, reorder, remove', async () => {

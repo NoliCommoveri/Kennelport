@@ -19,6 +19,14 @@ const BOOL = { type: 'bool' };
 const ENUM = (...values) => ({ type: 'enum', values });
 // The colour schemes' ids (render/schemes.js holds the schemes themselves).
 export const SCHEME_IDS = ['lawn', 'harbor', 'heather', 'clay', 'slate', 'midnight', 'tuxedo'];
+// Pills on her site (a pup's status, tags, a dog looking for a home): how they're drawn,
+// one style for the site (sites.pill_style), and the colour each one has: one of its
+// scheme's colours, by palette key (render/schemes.js names them per scheme).
+export const PILL_STYLES = Object.freeze({ dot: 'Dot', ribbon: 'Ribbon tag', capsule: 'Outlined capsule', chip: 'Soft chip', wave: 'Wavy ribbon', satin: 'Wavy ribbon, satin' });
+export const PILL_KEYS = Object.freeze(['accent', 'brass', 'ok', 'held', 'ink', 'muted']);
+// Before colours were the scheme's: Green and Brass outline (they drew as ok and held).
+const PILL_WAS = { avail: 'ok', res: 'held' };
+export const pillKey = (v, fallback = 'held') => (PILL_KEYS.includes(v) ? v : PILL_WAS[v] ?? fallback);
 
 export const SITE_FIELDS = {
   kennel_name: S(80, { required: true }),
@@ -37,6 +45,10 @@ export const SITE_FIELDS = {
   scheme: { ...ENUM(...SCHEME_IDS), ui: 'scheme' },
   dark_mode: ENUM('auto', 'light_only'),
   show_other_prices: BOOL,
+  // A dog's health results grouped by kind on its page (KennelOS's test type).
+  group_health: BOOL,
+  // How her site draws its pills (PILL_STYLES); the owner sets it in the build tools.
+  pill_style: ENUM(...Object.keys(PILL_STYLES)),
 };
 
 export const PARTNERS_PER_DOG = 10;
@@ -551,6 +563,15 @@ export function cleanValue(f, v, path) {
           return k;
         });
         return [...PLACE_KEYS.filter((x) => seen.includes(x)), ...[...new Set(seen)].filter((x) => !PLACE_KEYS.includes(x))];
+      }
+      // Tag ids (content/tags.js TAG_ID): whether the owner still allows each is the
+      // render's to say, so one taken away comes back if it returns.
+      if (f.item === 'tag') {
+        return [...new Set(v.map((x, i) => {
+          const k = String(x ?? '');
+          if (!/^t[a-z0-9]{6,20}$/.test(k)) throw new ContentError(`${path}[${i}]`, 'not a tag');
+          return k;
+        }))];
       }
       if (f.item === 'enum') {
         const seen = v.map((x, i) => cleanValue({ type: 'enum', values: f.values, required: true }, x, `${path}[${i}]`));

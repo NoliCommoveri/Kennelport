@@ -276,7 +276,8 @@ test('born, not yet open is its own status row; her old "before deposits open" w
   await saveBuild(env, site.id, withPart({}, 'rules', { ...DEFAULT_RULES, status: { ...DEFAULT_RULES.status, not_open: { ...DEFAULT_RULES.status.not_open, words: 'Born {date}? No: opens {date}', pill: 'res', price: false } } }));
   sage = (await page('/litters/the-spice-litter/sage')).html;
   assert.match(text(sage), /No: opens November 22/);
-  assert.match(sage, /status res">Born November 22\? No: opens November 22/);
+  // A stored Brass outline (res) reads as the scheme's held colour.
+  assert.match(sage, /status c-held">Born November 22\? No: opens November 22/);
   // Pearl*, in a litter already open, still reads by the available row.
   assert.match(text((await page('/litters/the-gem-litter/pearl')).html), /Status Available/);
 });
@@ -290,7 +291,7 @@ test('a snapshot from before the not_open row reads as it did', async () => {
   const l = { stage: 'current', deposits_on: '2026-12-01', puppies: [] };
   const p = { status: 'available' };
   assert.equal(puppyStatus(snap, l, p, '2026-11-01'), 'Opens December 1');
-  assert.equal(statusRule(snap, p, l, '2026-11-01').pill, 'avail');
+  assert.equal(statusRule(snap, p, l, '2026-11-01').pill, 'ok');
   assert.equal(puppyStatus(snap, l, p, '2026-12-01'), 'Available');
 });
 

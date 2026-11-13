@@ -26,7 +26,7 @@ export async function setSuspended(env, siteId, suspended) {
 }
 
 // Every table that holds a site's content, children before parents.
-const SITE_TABLES = ['portal_update_skills', 'portal_media', 'portal_stay_updates', 'portal_stay_skills', 'portal_placement_extras', 'portal_messages', 'portal_suggestions', 'portal_tombstones', 'portal_handoffs', 'portal_placement_progress', 'portal_placements_programs', 'portal_checklist_items', 'portal_timeline_tasks', 'portal_sessions', 'portal_codes', 'portal_clicks', 'portal_history', 'portal_email_log', 'portal_health_records', 'portal_files', 'portal_placements', 'portal_emails', 'portal_families', 'portal_settings', 'link_codes', 'links', 'link_pending', 'link_declines', 'notices', 'health_results', 'puppies', 'litters', 'dogs', 'stories', 'steps', 'expanders', 'extras', 'products', 'partner_kennels', 'home_blocks', 'block_switches', 'block_picks', 'site_pages', 'snapshots', 'redirects', 'photo_tags', 'photos', 'inquiries', 'notify_items', 'site_users', 'payment_info', 'form_fields', 'feed_cache', 'waitlist_entries', 'albums', 'embeds', 'custom_domains', 'site_builds'];
+const SITE_TABLES = ['portal_update_skills', 'portal_media', 'portal_stay_updates', 'portal_stay_skills', 'portal_placement_extras', 'portal_messages', 'portal_suggestions', 'portal_tombstones', 'portal_handoffs', 'portal_placement_progress', 'portal_placements_programs', 'portal_checklist_items', 'portal_timeline_tasks', 'portal_sessions', 'portal_codes', 'portal_clicks', 'portal_history', 'portal_email_log', 'portal_health_records', 'portal_files', 'portal_placements', 'portal_emails', 'portal_families', 'portal_settings', 'link_codes', 'links', 'link_pending', 'link_declines', 'notices', 'dog_titles', 'health_results', 'puppies', 'litters', 'dogs', 'stories', 'steps', 'expanders', 'extras', 'products', 'partner_kennels', 'home_blocks', 'block_switches', 'block_picks', 'site_pages', 'snapshots', 'redirects', 'photo_tags', 'photos', 'inquiries', 'notify_items', 'site_users', 'payment_info', 'form_fields', 'feed_cache', 'waitlist_entries', 'albums', 'embeds', 'custom_domains', 'site_builds'];
 
 // Close a site (plan 4.3): delete everything now, keep only the marker row.
 export async function closeSite(env, siteId, confirmSubdomain) {
@@ -48,7 +48,7 @@ export async function closeSite(env, siteId, confirmSubdomain) {
     env.DB.prepare(`UPDATE sites SET status = 'closed', closed_at = ?, kennel_name = NULL, tagline = NULL, blurb = NULL, breed = NULL,
       monogram = NULL, town = NULL, region = NULL, contact_email = NULL, contact_phone = NULL, facebook_url = NULL, facebook_label = NULL,
       instagram_url = NULL, kennelos_public_id = NULL, published_snapshot_id = NULL, storage_limit = NULL, photo_limit = NULL,
-      album_limit = NULL, draft_changed_at = NULL, template = 'ak', scheme = 'lawn', dark_mode = 'auto', show_other_prices = 0, use_kennelos_prices = 0 WHERE id = ?`).bind(t, siteId),
+      album_limit = NULL, draft_changed_at = NULL, template = 'ak', scheme = 'lawn', dark_mode = 'auto', show_other_prices = 0, group_health = 0, pill_style = 'dot', use_kennelos_prices = 0 WHERE id = ?`).bind(t, siteId),
   ]);
   forgetSnapshots();
   return { subdomain: site.subdomain };

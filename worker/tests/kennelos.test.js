@@ -587,6 +587,103 @@ test('steps, How to pay, extras and her public list come with a bundle; whether 
   assert.equal(b.row("SELECT COUNT(*) AS n FROM extras WHERE kennelos_id = 'x1'").n, 0);
 });
 
+test('steps: KennelOS only starts them; her wording, her own steps and her order stay through every update', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (body) => api(b.env, '/v1/bundle', { body, token });
+  const sent = [{ id: 'apply', heading: 'Apply', body: 'Send us your application.' }, { id: 'turn', heading: 'Your turn', body: 'We offer you a puppy.' }];
+  await send(bundle({ steps: sent }));
+  const order = () => b.rows("SELECT heading FROM steps WHERE site_id = ? AND page = 'how_it_works' ORDER BY sort, rowid", b.site.id).map((x) => x.heading);
+  assert.deepEqual(order().slice(0, 2), ['Apply', 'Your turn'], 'the first time, KennelOS first');
+  // She rewords one, adds her own, and puts hers between KennelOS's two.
+  const apply = b.row("SELECT * FROM steps WHERE kennelos_id = 'apply'");
+  const turn = b.row("SELECT * FROM steps WHERE kennelos_id = 'turn'");
+  b.env.DB.raw.prepare("UPDATE steps SET heading = 'Send your application', body = 'My words.' WHERE id = ?").run(apply.id);
+  b.env.DB.raw.prepare("DELETE FROM steps WHERE site_id = ? AND source IS NOT 'kennelos'").run(b.site.id);
+  b.env.DB.raw.prepare("INSERT INTO steps (id, site_id, page, heading, body, sort, pay_link, source) VALUES ('mine', ?, 'how_it_works', 'Meet us', 'Come visit.', 1, 0, 'kennelport')").run(b.site.id);
+  b.env.DB.raw.prepare('UPDATE steps SET sort = 2 WHERE id = ?').run(turn.id);
+  await send(bundle({ steps: [...sent, { id: 'home', heading: 'Going home', body: 'Pickup day.' }] }));
+  assert.deepEqual(order(), ['Send your application', 'Meet us', 'Your turn', 'Going home'], 'her edits and order stay; a new KennelOS step goes last');
+  assert.equal(b.row("SELECT body FROM steps WHERE kennelos_id = 'apply'").body, 'My words.');
+  // One KennelOS stops sending leaves; hers stay.
+  await send(bundle({ steps: sent }));
+  assert.deepEqual(order(), ['Send your application', 'Meet us', 'Your turn']);
+});
+
+test("KennelOS's raw values (contract step 4) land as sent, and the owner's rules place pups and products by them", async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const { saveBuild, withPart, DEFAULT_RULES } = await import('../src/content/rules.js');
+  const landing = { ...DEFAULT_RULES.landing, pupst_keeping: 'available', acct_supplier: 'pickup', acct_group_insurance: 'Insurance' };
+  await saveBuild(b.env, b.site.id, withPart({}, 'rules', { ...DEFAULT_RULES, landing }));
+  const send = (body) => api(b.env, '/v1/bundle', { body, token });
+  const pups = (more = {}) => [
+    { id: 'p1', name: 'Fern', sex: 'female', status: 'staying', disposition: 'keeping', ...more },
+    { id: 'p2', name: 'Moss', sex: 'male', status: 'undecided', disposition: null },
+    { id: 'p3', name: 'Rue', sex: 'male', status: 'available', disposition: 'something_new' },
+  ];
+  const r = await send(bundle({
+    dogs: [DOG('juno', 'Junebug', { health: [{ id: 'h1', test: 'DM', result: 'Clear', normal: true, type: 'genetic_test' }] })],
+    litters: [{ id: 'l1', dam_id: 'juno', born_on: '2026-10-01', status: 'weaning', puppies: pups() }],
+    products: [
+      { id: 'a1', name: 'TLC', code: 'AK10', account_type: 'supplier' },
+      { id: 'a2', name: 'Trupanion', code: 'X', account_type: 'insurance' },
+      { id: 'a3', name: 'Sky Nanny', transport: true, account_type: 'transport' },
+    ],
+  }));
+  assert.equal(r.status, 200, await r.clone().text());
+  const pup = (name) => b.row('SELECT status, disposition FROM puppies WHERE site_id = ? AND name = ?', b.site.id, name);
+  assert.deepEqual({ ...pup('Fern') }, { status: 'available', disposition: 'keeping' }, "the owner's rule, not KennelOS's word");
+  assert.deepEqual({ ...pup('Moss') }, { status: 'coming_soon', disposition: 'undecided' }, 'none set reads undecided');
+  assert.deepEqual({ ...pup('Rue') }, { status: 'coming_soon', disposition: 'undecided' }, 'one KennelOS adds later reads undecided');
+  assert.equal(b.row("SELECT kennelos_status FROM litters WHERE kennelos_id = 'l1'").kennelos_status, 'weaning');
+  assert.equal(b.row("SELECT test_type FROM health_results WHERE kennelos_id = 'h1'").test_type, 'genetic_test');
+  const prod = (id) => b.row('SELECT transport, account_type, grp FROM products WHERE kennelos_id = ?', id);
+  assert.deepEqual({ ...prod('a1') }, { transport: 1, account_type: 'supplier', grp: null }, 'a supplier sent to Getting your pup home by the rule');
+  assert.deepEqual({ ...prod('a2') }, { transport: 0, account_type: 'insurance', grp: 'Insurance' }, 'a new one starts in its type\'s group');
+  assert.deepEqual({ ...prod('a3') }, { transport: 1, account_type: 'transport', grp: null });
+
+  // Her group stays; an older KennelOS (no new keys) leaves the raw values as they are.
+  b.env.DB.raw.prepare("UPDATE products SET grp = 'Cover' WHERE kennelos_id = 'a2'").run();
+  await send(bundle({
+    dogs: [DOG('juno', 'Junebug', { health: [{ id: 'h1', test: 'DM', result: 'Clear', normal: true }] })],
+    litters: [{ id: 'l1', dam_id: 'juno', born_on: '2026-10-01', puppies: [{ id: 'p1', name: 'Fern', sex: 'female', status: 'staying' }] }],
+    products: [{ id: 'a2', name: 'Trupanion', code: 'X', account_type: 'insurance' }],
+  }));
+  assert.equal(prod('a2').grp, 'Cover');
+  assert.deepEqual({ ...pup('Fern') }, { status: 'staying', disposition: 'keeping' }, "without the disposition, KennelOS's word, as before");
+  assert.equal(b.row("SELECT kennelos_status FROM litters WHERE kennelos_id = 'l1'").kennelos_status, 'weaning');
+  assert.equal(b.row("SELECT test_type FROM health_results WHERE kennelos_id = 'h1'").test_type, 'genetic_test');
+});
+
+test('titles as rows (titles_detail): kept with organization and date; the line is their abbreviations; an empty list clears', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (dogs) => api(b.env, '/v1/bundle', { body: bundle({ dogs }), token });
+  const rows = () => b.rows("SELECT t.abbr, t.organization, t.earned_on FROM dog_titles t JOIN dogs d ON d.id = t.dog_id WHERE d.kennelos_id = 'juno' ORDER BY t.sort").map((r) => ({ ...r }));
+  const line = () => b.row("SELECT titles FROM dogs WHERE kennelos_id = 'juno'").titles;
+  const r = await send([DOG('juno', 'Junebug', { titles: [{ abbr: 'CH', organization: 'AKC', date: '2024-01-02' }, { abbr: 'CH', organization: 'UKC', date: null }] })]);
+  assert.equal(r.status, 200, await r.clone().text());
+  assert.deepEqual(rows(), [{ abbr: 'CH', organization: 'AKC', earned_on: '2024-01-02' }, { abbr: 'CH', organization: 'UKC', earned_on: null }]);
+  assert.equal(line(), 'CH CH');
+  // An older KennelOS (abbreviations only) leaves the rows as they are.
+  await send([DOG('juno', 'Junebug', { titles: ['CH'] })]);
+  assert.equal(rows().length, 2);
+  // With the section, an empty list clears both.
+  await send([DOG('juno', 'Junebug', { titles: [{ abbr: 'GCH', organization: 'AKC', date: '2025-05-05' }] })]);
+  assert.deepEqual(rows().map((x) => x.abbr), ['GCH']);
+  const bad = await send([DOG('juno', 'Junebug', { titles: [{ organization: 'AKC' }] })]);
+  assert.equal(bad.status, 400, 'a title needs its abbreviation');
+  // An empty list alone can't be told from an older KennelOS's: rows stay, as the line does.
+  await send([DOG('juno', 'Junebug', { titles: [] })]);
+  assert.equal(rows().length, 1);
+  assert.equal(line(), 'GCH');
+  // In a bundle where any dog's titles come as rows, an empty list clears.
+  await send([DOG('juno', 'Junebug', { titles: [] }), DOG('kit', 'Kit', { titles: [{ abbr: 'CGC', organization: 'AKC', date: null }] })]);
+  assert.equal(rows().length, 0);
+  assert.equal(line(), null);
+});
+
 test('staging: the link API answers /v1/ on its own host, since KennelOS sends no cookie', async () => {
   const env = await makeEnv({ ALLOW_HOST_OVERRIDE: '1', KENNELOS_APP_ORIGINS: APP });
   const res = await call(env, 'kennelport-staging.kennelport.workers.dev', '/v1/link', { method: 'GET', headers: { origin: APP } });
@@ -603,7 +700,7 @@ test('Recommended products from KennelOS: name, link, code and note are KennelOS
   const token = await linked(b);
   const send = async (body) => (await api(b.env, '/v1/bundle', { body, token })).json();
   // Answers say which optional sections this Worker takes.
-  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition']);
+  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail']);
   // One she made by hand, with a picture and a Home badge.
   const site = b.site.id;
   const MINE = '00000000-0000-4000-8000-0000000000aa';
