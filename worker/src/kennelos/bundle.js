@@ -10,7 +10,8 @@
 //     dogs: [{ id, call_name, registered_name, registry, sex, date_of_birth, color,
 //              status: puppy | active_breeding | for_sale | retired_breeding | deceased,
 //              disposition? (a puppy's: keeping | available | placed | health_hold | undecided),
-//              died_on, titles: [..], health: [{ id, test, result, normal, date, verify_url, type? }],
+//              died_on, titles: [..] (abbreviations, or with titles_detail
+//              [{ abbr, organization, date }]), health: [{ id, test, result, normal, date, verify_url, type? }],
 //              co_owned?, lives_away?, lives_with_kennel_id?, co_owner_kennel_ids?: [..] }],
 //     litters: [{ id, pairing_id, heat_id, name, dam_id, sire_id, dam_name, sire_name,
 //                 expected_on, born_on, ready_on, deposits_on, status?, prices: { price_female, … },
@@ -75,7 +76,9 @@ export const MAX = { dogs: 200, litters: 100, puppies: 30, pairings: 50, heats: 
 // 'health_detail': a health result's KennelOS test type.
 // 'account_type': a product's KennelOS account type; where it goes is then the owner's
 // rule for it (rules.landing acct_*), and a new one starts in that type's group.
-export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type'];
+// 'titles_detail': a dog's titles as { abbr, organization, date }, kept as rows
+// (dog_titles); its titles line is their abbreviations, as before.
+export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail'];
 
 // ---------- checking ----------
 
@@ -95,8 +98,10 @@ const SHAPES = {
     // (rules.landing pup_*). Text, not a fixed list: a disposition KennelOS adds
     // later reads as undecided rather than refusing the bundle.
     disposition: S(30),
-    titles: { type: 'list', max: MAX.titles, itemMax: 30 }, health: { list: 'health', max: MAX.health },
+    titles: { titles: true, list: 'title', max: MAX.titles }, health: { list: 'health', max: MAX.health },
     co_owned: { type: 'bool' }, lives_away: { type: 'bool' }, lives_with_kennel_id: REF, co_owner_kennel_ids: { type: 'list', max: MAX.co_owner_kennels, itemMax: 80 } },
+  // A title with its organization and date (titles_detail).
+  title: { abbr: S(30, true), organization: S(60), date: DATE },
   // A partner kennel: its public name and website, never a person.
   partner_kennel: { id: ID, name: S(80, true), website: { type: 'url' } },
   // type: KennelOS's test type (genetic_test, ofa_pennhip…). Text, not a fixed list,
@@ -134,7 +139,8 @@ function cleanShape(shape, obj, path) {
   // ("none set") is told apart from one an older KennelOS doesn't send.
   Object.defineProperty(out, 'sent', { value: new Set(Object.keys(obj)), enumerable: false });
   for (const [k, f] of Object.entries(fields)) {
-    if (f.list) out[k] = cleanList(f.list, obj[k] ?? [], `${path}.${k}`, f.max);
+    if (f.titles) Object.assign(out, cleanTitles(obj[k] ?? [], `${path}.${k}`, f.max));
+    else if (f.list) out[k] = cleanList(f.list, obj[k] ?? [], `${path}.${k}`, f.max);
     else if (f.object) out[k] = obj[k] == null ? null : cleanShape(f.object, obj[k], `${path}.${k}`);
     else {
       try { out[k] = cleanValue(f, obj[k], `${path}.${k}`) ?? (f.type === 'list' ? [] : null); } catch (err) {
@@ -144,6 +150,19 @@ function cleanShape(shape, obj, path) {
     }
   }
   return out;
+}
+
+// A dog's titles: abbreviations (as before), or with titles_detail each one as
+// { abbr, organization, date }. → { titles: [abbr…], title_rows: [{…}] | null }; null
+// rows: an older KennelOS, whose titles leave a dog's rows as they are.
+function cleanTitles(v, path, max) {
+  if (!Array.isArray(v)) throw bad(path, 'must be a list');
+  if (v.length > max) throw bad(path, `at most ${max}`);
+  if (!v.some((x) => x && typeof x === 'object')) {
+    return { titles: cleanValue({ type: 'list', max, itemMax: 30 }, v, path) ?? [], title_rows: null };
+  }
+  const rows = v.map((x, i) => cleanShape('title', x, `${path}[${i}]`));
+  return { titles: rows.map((r) => r.abbr), title_rows: rows };
 }
 
 function cleanList(shape, v, path, max) {
@@ -185,6 +204,9 @@ export function cleanBundle(body) {
     partner_kennels: 'partner_kennels' in body ? cleanList('partner_kennel', body.partner_kennels, 'partner_kennels', MAX.partner_kennels) : null,
     payment: null,
   };
+  // Titles as rows: a bundle with any dog's titles as { abbr, … } is from a KennelOS
+  // that sends them so, and there a dog's empty list means none (its rows cleared).
+  if (out.dogs.some((d) => d.title_rows)) for (const d of out.dogs) d.title_rows ??= [];
   // A dog names only kennels this bundle sends.
   if (out.partner_kennels) {
     const sent = new Set(out.partner_kennels.map((x) => x.id));
@@ -311,7 +333,9 @@ export class Writer {
       call_name: bd.call_name, registered_name: bd.registered_name, registry: bd.registry, sex: bd.sex, date_of_birth: bd.date_of_birth, color: bd.color,
       ...dogPlace(this.L, bd.status), died_on: bd.status === 'deceased' ? bd.died_on : null,
     };
-    if (bd.titles.length) v.titles = bd.titles.join(' ').slice(0, 120);
+    // A derived line: it overwrites only with something, unless KennelOS sends its
+    // titles as rows (titles_detail), where an empty list clears.
+    if (bd.titles.length || bd.title_rows) v.titles = bd.titles.length ? bd.titles.join(' ').slice(0, 120) : null;
     // Co-owned, only from a bundle with partner_kennels (this.partnerByKos).
     if (this.partnerByKos) {
       const kennel = (kos) => (kos ? this.partnerByKos.get(kos) ?? null : null);
@@ -370,7 +394,16 @@ export class Writer {
     });
     this.dogByKos.set(bd.id, id);
     this.health(id, display, bd.health);
+    this.titleRows(id, bd.title_rows);
     return id;
+  }
+
+  // A dog's titles as rows (titles_detail): replaced with what KennelOS sent; none
+  // sent (an older KennelOS) leaves them be.
+  titleRows(dogId, rows) {
+    if (!rows) return;
+    this.s.push(this.db.prepare('DELETE FROM dog_titles WHERE site_id = ? AND dog_id = ?').bind(this.siteId, dogId));
+    rows.forEach((r, i) => this.insert('dog_titles', { id: crypto.randomUUID(), site_id: this.siteId, dog_id: dogId, abbr: r.abbr, organization: r.organization, earned_on: r.date, sort: i }));
   }
 
   // Health results as data (plan 3.7): her own (typed) results stay; KennelOS's
@@ -410,6 +443,7 @@ export class Writer {
     if (cur.hidden_by_kennelos) this.counts.back++;
     if (this.update('dogs', cur, values)) this.counts.updated++;
     this.health(cur.id, cur.health_display, bd.health, this.st.health);
+    this.titleRows(cur.id, bd.title_rows);
   }
 
   // ----- litters -----

@@ -84,6 +84,8 @@ export async function buildSnapshot(env, siteId) {
 
   const dogsRaw = await all('SELECT * FROM dogs WHERE site_id = ? AND show_on_site = 1 AND hidden_by_kennelos = 0 ORDER BY sort, call_name');
   const health = await all('SELECT * FROM health_results WHERE site_id = ? AND show = 1 ORDER BY sort');
+  // KennelOS's titles as rows (titles_detail): each with its organization and date.
+  const titleRows = await all('SELECT dog_id, abbr, organization, earned_on FROM dog_titles WHERE site_id = ? ORDER BY sort');
   const dogs = dogsRaw.map((d) => ({
     // An asking price only for a dog looking for a home, with Show other prices on.
     ...keep(d, [...SYSTEM, 'health_display', 'died_on', ...(d.for_sale && site.show_other_prices ? [] : ['price'])]),
@@ -92,6 +94,7 @@ export async function buildSnapshot(env, siteId) {
     co_owned: Boolean(d.co_owned), lives_away: Boolean(d.co_owned && d.lives_away),
     lives_with_kennel_id: d.co_owned && d.lives_away && partnerIds.has(d.lives_with_kennel_id) ? d.lives_with_kennel_id : null,
     co_owned_with_ids: d.co_owned ? (json(d.co_owned_with_ids, []) ?? []).filter((id) => partnerIds.has(id)) : [],
+    title_rows: titleRows.filter((t) => t.dog_id === d.id).map((t) => keep(t, ['dog_id'])),
     health: d.health_display === 'none' ? []
       : health.filter((h) => h.dog_id === d.id && (d.health_display === 'all' || h.normal))
         .map((h) => keep(h, ['id', 'site_id', 'dog_id', 'show', 'sort', 'source'])),

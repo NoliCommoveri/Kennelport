@@ -122,6 +122,8 @@ const DOG = {
   // Worked out.
   has_titles: f('Has titles', 'bool', (d) => titlesOf(d).length > 0, { no: 'No titles' }),
   title: f('A title', 'list', titlesOf),
+  // Its titles' organizations, from KennelOS's titles as rows (titles_detail).
+  title_organization: f("A title's organization", 'list', (d) => [...new Set((d.title_rows ?? []).map((t) => t.organization).filter(Boolean))]),
   age: f('Age in years', 'number', (d, rc) => yearsSince(d.date_of_birth, rc.today)),
   has_health: f('Has health results shown', 'bool', (d) => (d.health ?? []).length > 0, { no: 'No health results shown' }),
   test_kind: f('Kinds of health test shown (from KennelOS)', 'list', testKinds),

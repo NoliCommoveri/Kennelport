@@ -284,6 +284,7 @@ export async function removeRecord(env, siteId, kind, id) {
     s.push(env.DB.prepare('UPDATE litters SET dam_id = NULL WHERE site_id = ? AND dam_id = ?').bind(siteId, id));
     s.push(env.DB.prepare('UPDATE litters SET sire_id = NULL WHERE site_id = ? AND sire_id = ?').bind(siteId, id));
     s.push(env.DB.prepare('DELETE FROM health_results WHERE site_id = ? AND dog_id = ?').bind(siteId, id));
+    s.push(env.DB.prepare('DELETE FROM dog_titles WHERE site_id = ? AND dog_id = ?').bind(siteId, id));
     // Its offspring keep their own records; their sire or dam is no longer on the site.
     s.push(env.DB.prepare('UPDATE dogs SET sire_id = NULL WHERE site_id = ? AND sire_id = ?').bind(siteId, id));
     s.push(env.DB.prepare('UPDATE dogs SET dam_id = NULL WHERE site_id = ? AND dam_id = ?').bind(siteId, id));

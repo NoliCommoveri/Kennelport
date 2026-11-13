@@ -342,6 +342,7 @@ export async function importContent(env, siteId, doc) {
     const gone = `SELECT id FROM dogs WHERE site_id = ?${notIn('slug', slugs)}`;
     s.push(db.prepare(`UPDATE litters SET dam_id = NULL WHERE site_id = ? AND dam_id IN (${gone})`).bind(siteId, siteId, ...slugs));
     s.push(db.prepare(`UPDATE litters SET sire_id = NULL WHERE site_id = ? AND sire_id IN (${gone})`).bind(siteId, siteId, ...slugs));
+    s.push(db.prepare(`DELETE FROM dog_titles WHERE site_id = ? AND dog_id IN (${gone})`).bind(siteId, siteId, ...slugs));
     s.push(db.prepare(`DELETE FROM dogs WHERE site_id = ?${notIn('slug', slugs)}`).bind(siteId, ...slugs));
   }
 

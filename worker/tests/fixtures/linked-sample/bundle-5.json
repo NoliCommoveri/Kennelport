@@ -15,9 +15,21 @@
    "color": "Black & white",
    "status": "active_breeding",
    "titles": [
-    "CGC",
-    "TKN",
-    "CH"
+    {
+     "abbr": "CGC",
+     "organization": "AKC",
+     "date": "2024-01-10"
+    },
+    {
+     "abbr": "TKN",
+     "organization": "AKC",
+     "date": "2024-02-11"
+    },
+    {
+     "abbr": "CH",
+     "organization": "AKC",
+     "date": "2024-03-12"
+    }
    ],
    "health": [
     {
@@ -85,7 +97,11 @@
    "color": "Brindle & white",
    "status": "active_breeding",
    "titles": [
-    "CGC"
+    {
+     "abbr": "CGC",
+     "organization": "AKC",
+     "date": "2024-01-10"
+    }
    ],
    "health": [],
    "co_owned": true,
@@ -111,8 +127,16 @@
    "color": "Black & white",
    "status": "active_breeding",
    "titles": [
-    "CH",
-    "GCH"
+    {
+     "abbr": "CH",
+     "organization": "AKC",
+     "date": "2024-01-10"
+    },
+    {
+     "abbr": "GCH",
+     "organization": "AKC",
+     "date": "2024-02-10"
+    }
    ],
    "health": [
     {
@@ -174,7 +198,11 @@
    "color": "Brindle & white",
    "status": "for_sale",
    "titles": [
-    "CGC"
+    {
+     "abbr": "CGC",
+     "organization": null,
+     "date": "2024-01-10"
+    }
    ],
    "health": [
     {
@@ -197,7 +225,11 @@
    "color": "Black & white",
    "status": "retired_breeding",
    "titles": [
-    "CH"
+    {
+     "abbr": "CH",
+     "organization": "UKC",
+     "date": "2024-01-10"
+    }
    ],
    "health": []
   }

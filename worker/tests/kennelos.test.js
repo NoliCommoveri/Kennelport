@@ -656,6 +656,34 @@ test("KennelOS's raw values (contract step 4) land as sent, and the owner's rule
   assert.equal(b.row("SELECT test_type FROM health_results WHERE kennelos_id = 'h1'").test_type, 'genetic_test');
 });
 
+test('titles as rows (titles_detail): kept with organization and date; the line is their abbreviations; an empty list clears', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (dogs) => api(b.env, '/v1/bundle', { body: bundle({ dogs }), token });
+  const rows = () => b.rows("SELECT t.abbr, t.organization, t.earned_on FROM dog_titles t JOIN dogs d ON d.id = t.dog_id WHERE d.kennelos_id = 'juno' ORDER BY t.sort").map((r) => ({ ...r }));
+  const line = () => b.row("SELECT titles FROM dogs WHERE kennelos_id = 'juno'").titles;
+  const r = await send([DOG('juno', 'Junebug', { titles: [{ abbr: 'CH', organization: 'AKC', date: '2024-01-02' }, { abbr: 'CH', organization: 'UKC', date: null }] })]);
+  assert.equal(r.status, 200, await r.clone().text());
+  assert.deepEqual(rows(), [{ abbr: 'CH', organization: 'AKC', earned_on: '2024-01-02' }, { abbr: 'CH', organization: 'UKC', earned_on: null }]);
+  assert.equal(line(), 'CH CH');
+  // An older KennelOS (abbreviations only) leaves the rows as they are.
+  await send([DOG('juno', 'Junebug', { titles: ['CH'] })]);
+  assert.equal(rows().length, 2);
+  // With the section, an empty list clears both.
+  await send([DOG('juno', 'Junebug', { titles: [{ abbr: 'GCH', organization: 'AKC', date: '2025-05-05' }] })]);
+  assert.deepEqual(rows().map((x) => x.abbr), ['GCH']);
+  const bad = await send([DOG('juno', 'Junebug', { titles: [{ organization: 'AKC' }] })]);
+  assert.equal(bad.status, 400, 'a title needs its abbreviation');
+  // An empty list alone can't be told from an older KennelOS's: rows stay, as the line does.
+  await send([DOG('juno', 'Junebug', { titles: [] })]);
+  assert.equal(rows().length, 1);
+  assert.equal(line(), 'GCH');
+  // In a bundle where any dog's titles come as rows, an empty list clears.
+  await send([DOG('juno', 'Junebug', { titles: [] }), DOG('kit', 'Kit', { titles: [{ abbr: 'CGC', organization: 'AKC', date: null }] })]);
+  assert.equal(rows().length, 0);
+  assert.equal(line(), null);
+});
+
 test('staging: the link API answers /v1/ on its own host, since KennelOS sends no cookie', async () => {
   const env = await makeEnv({ ALLOW_HOST_OVERRIDE: '1', KENNELOS_APP_ORIGINS: APP });
   const res = await call(env, 'kennelport-staging.kennelport.workers.dev', '/v1/link', { method: 'GET', headers: { origin: APP } });
@@ -672,7 +700,7 @@ test('Recommended products from KennelOS: name, link, code and note are KennelOS
   const token = await linked(b);
   const send = async (body) => (await api(b.env, '/v1/bundle', { body, token })).json();
   // Answers say which optional sections this Worker takes.
-  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type']);
+  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail']);
   // One she made by hand, with a picture and a Home badge.
   const site = b.site.id;
   const MINE = '00000000-0000-4000-8000-0000000000aa';
