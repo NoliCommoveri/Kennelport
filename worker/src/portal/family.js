@@ -31,6 +31,9 @@ import { TYPE_ICON, SPRITE, ic } from './family/icons.js';
 import { skillsList, updateCard, stayContext } from './family/stay.js';
 import { active, puppyPhotos } from './family/parts.js';
 import { servePhoto, serveFile, goToProgram } from './family/files.js';
+import { redeemViewLink, currentView, viewCookie } from './view.js';
+import { sayer, everyWording, siteWording } from '../manage/wording.js';
+import { loadBuild } from '../content/rules.js';
 
 export const PORTAL_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
 const HEADERS = {
@@ -64,14 +67,14 @@ function frame(site, title, body, { status = 200, fam = null, tab = null, action
   return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title>${esc(title)} · ${esc(kennel)}</title>
+<title>${esc(title)}${fam?.viewing ? ' (viewing)' : ''} · ${esc(kennel)}</title>
 <link rel="stylesheet" href="/_kp/f/portal.css?v=${PORTAL_VERSION}">
 <script src="/_kp/f/portal.js?v=${PORTAL_VERSION}" defer></script>
 </head><body class="${fam ? 'in' : 'out'}">
 ${SPRITE}
 <header class="top"><a class="brand" href="/family">${brandMark(site)}<span class="bt"><b>${esc(kennel)}</b><span class="sub">${ic('paw')}Puppy Parent Portal</span></span></a>
 <span class="top-end"><button type="button" class="aa" id="aa" aria-label="Text size">Aa</button>${fam && !fam.loss ? `<a class="acct" href="/family/messages" aria-label="${fam.unread ? `Messages, ${fam.unread} new` : 'Messages'}">${ic('message')}${fam.unread ? `<b class="small">${fam.unread}</b>` : ''}</a>` : ''}${fam ? `<a class="acct" href="/family/account" aria-label="Account">${ic('user')}</a>` : ''}</span></header>
-<main>${body}</main>
+<main>${fam?.viewing ? fam.band : ''}${body}</main>
 ${action}${tabs}
 </body></html>`, { status, headers: { ...HEADERS, ...headers } });
 }
@@ -536,7 +539,7 @@ async function messagesPage(env, site, fam, { error, draft = '' } = {}) {
       ${statusUrl ? `<p><a class="btn solid" href="${esc(statusUrl)}">Message ${esc(kennel)} ${ic('arrow')}</a></p>` : email ? `<p><a class="btn line" href="mailto:${esc(email)}">${ic('mail')} Email ${esc(kennel)}</a></p>` : ''}</section>`, { fam, status: error ? 400 : 200 });
   }
   const list = await thread(env, site.id, fam.familyId);
-  await markRead(env, site.id, fam.familyId, 'breeder');
+  if (!fam.viewing) await markRead(env, site.id, fam.familyId, 'breeder');
   const body = `${errorBox(error)}<section class="card" id="messages"><h1>Messages with ${esc(kennel)}</h1>
     ${list.length ? `<ol class="thread">${list.map((m) => `<li class="${m.sender === 'family' ? 'mine' : 'theirs'}"><p class="small muted">${m.sender === 'family' ? 'You' : esc(kennel)} · ${esc(formatAt(m.sent_at, s.time_zone, { weekday: false }))}</p>${m.body.split(/\n{2,}/).map((x) => `<p>${esc(x).replace(/\n/g, '<br>')}</p>`).join('')}</li>`).join('')}</ol>` : `<p class="muted">Questions about your puppy go to ${esc(kennel)} here. You'll get an email when they answer.</p>`}
     <form method="post" action="/family/messages" class="stack"><label>Your message<textarea name="body" rows="4" maxlength="${MAX_MESSAGE}" required>${esc(draft)}</textarea></label><button class="btn solid">Send</button></form>
@@ -555,6 +558,37 @@ async function accountPage(env, site, fam, { error } = {}) {
     ${errorBox(error)}<details class="card"><summary><b>Delete our account</b></summary>
     <p>This deletes your sign-in, email addresses and messages here, now and for good. ${esc(kennel)} keeps the record of your puppy's sale, vet visit and contract, as your contract needs.</p>
     <form method="post" action="/family/account/delete" class="stack"><label>Type <strong>delete</strong> to confirm<input name="confirm" autocomplete="off" required></label><button class="btn line">Delete our account</button></form></details>`, { fam, status: error ? 400 : 200 });
+}
+
+// ---------- seeing their portal (plan family-view.md) ----------
+
+// The band at the top of every page while she's viewing: whose portal, read-only,
+// Refresh and Stop viewing. Her wording (manage/wording.js, familyview.*).
+function viewBand(fam, path, refused) {
+  const say = fam.say;
+  return `<div class="note" role="status"><p><b>${esc(say('familyview.band', { family: fam.name }))}</b></p>${refused ? `<p>${esc(say('familyview.nochange'))}</p>` : ''}
+  <form method="post" action="/family/view/exit" class="two"><a class="btn line" href="${esc(path)}">${esc(say('familyview.refresh'))}</a><button class="btn line">${esc(say('familyview.stop'))}</button></form></div>`;
+}
+
+// Where a refused tap goes back to: the portal page it was sent from.
+function viewBack(request, url) {
+  try {
+    const from = new URL(request.headers.get('referer') ?? '');
+    if (from.origin === url.origin && isPortalPath(from.pathname) && !from.pathname.startsWith('/family/view')) return from.pathname;
+  } catch { /* no referer */ }
+  return '/family';
+}
+
+// When viewing stops, or a link no longer works: a page saying so, the cookie
+// cleared, and the way back to her Site Manager.
+async function viewEnded(env, site, why, familyId = null) {
+  const say = sayer({ every: await everyWording(env), site: siteWording(await loadBuild(env, site.id)) }, { kennel: site.kennel_name || site.subdomain });
+  const back = `https://manage.${env.ROOT_DOMAIN}/s/${encodeURIComponent(site.subdomain)}/portal${familyId ? `/f/${encodeURIComponent(familyId)}` : ''}`;
+  const res = frame(site, say('familyview.ended_title'), `<section class="card narrow"><h1>${esc(say('familyview.ended_title'))}</h1>
+  <p>${esc(say(`familyview.${why}`))}</p>
+  <p><a class="btn line" href="${esc(back)}">${esc(say('familyview.back'))}</a></p></section>`, { status: why === 'stopped' ? 200 : 403 });
+  res.headers.append('set-cookie', viewCookie('', 0));
+  return res;
 }
 
 // ---------- routes ----------
@@ -579,6 +613,19 @@ export async function servePortal(request, env, ctx, subdomain, { onDomain = fal
   const post = request.method === 'POST';
   if (!post && request.method !== 'GET' && request.method !== 'HEAD') return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD, POST' } });
   if (post && !sameOrigin(request, url)) return new Response('Forbidden', { status: 403 });
+
+  // Seeing their portal (plan family-view.md): her view link, once, to a view cookie
+  // that wins over a family session in the same browser while it lasts.
+  if (path === '/family/view' && !post) {
+    const value = await redeemViewLink(env, site.id, url.searchParams.get('t'));
+    if (value) return redirect('/family', { 'set-cookie': viewCookie(value) });
+    return viewEnded(env, site, 'used');
+  }
+  const view = await currentView(env, request, site);
+  if (path === '/family/view/exit' && post) return viewEnded(env, site, 'stopped', view?.familyId);
+  if (view?.stale) return viewEnded(env, site, 'expired');
+  // Read-only: no write of any kind (sign-in too), back to the page she was on, with a note.
+  if (view && post) return redirect(`${viewBack(request, url)}?viewing=nochange`);
 
   try {
     if (path === '/family/signin' && post) {
@@ -611,7 +658,8 @@ export async function servePortal(request, env, ctx, subdomain, { onDomain = fal
     return signInPage(site, { note: 'That sign-in link has been used or has expired. Sign in with your email instead.' });
   }
 
-  const fam = await currentFamily(env, request, site);
+  if (view) view.say = sayer({ every: await everyWording(env), site: siteWording(await loadBuild(env, site.id)) }, { kennel: site.kennel_name || site.subdomain });
+  const fam = view ?? await currentFamily(env, request, site);
   if (path === '/family/signout' && post) {
     if (fam) await signOutFamily(env, fam);
     return redirect('/family', { 'set-cookie': familyCookie('', 0) });
@@ -622,6 +670,7 @@ export async function servePortal(request, env, ctx, subdomain, { onDomain = fal
   fam.stay = Boolean(!fam.loss && current && active(current) && !current.picked_up_at && await stayFor(env, site.id, current.id));
   // On Messages itself they're read as the page shows them.
   fam.unread = fam.loss || path === '/family/messages' ? 0 : await unreadFrom(env, site.id, fam.familyId, 'breeder');
+  if (fam.viewing) fam.band = viewBand(fam, path, url.searchParams.get('viewing') === 'nochange');
 
   if (!post) {
     if (path === '/family') return homePage(env, site, fam);

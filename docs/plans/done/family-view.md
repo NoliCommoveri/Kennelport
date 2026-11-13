@@ -2,7 +2,7 @@
 
 The breeder asks to see what a puppy family sees in their portal, live and read-only,
 so she can answer "where do I find…?" on the phone, and check what a family is shown
-before and after she changes something. Written 2026-11-13. Not built.
+before and after she changes something. Written and built 2026-11-13.
 
 Builds on the family portal ([`family-portal.md`](family-portal.md), sections 2 and 7):
 `portal/family.js` (their pages), `portal/auth.js` (their sign-in), `portal/admin.js`
@@ -35,8 +35,9 @@ and the two are kept apart on purpose (`portal/auth.js` top comment). So the but
 can't just link across; it hands her over once, the same way KennelOS's status page
 does (`feed.js` `redeemHandoff`):
 
-1. **See their portal** is a small form on her family screen
-   (`POST /s/<sub>/portal/f/<id>/view`). The Site Manager checks she's signed in and
+1. **See their portal** is a link on her family screen
+   (`GET /s/<sub>/portal/f/<id>/view`; a link, not a form, because the Site Manager's
+   forms may only post to itself, `form-action 'self'`, and that covers the redirect). The Site Manager checks she's signed in and
    has this site, then makes a **view link**: the site, the family, her account
    (`site_users` email hash), a random once-only value and an expiry 2 minutes out,
    signed with a key made from `EMAIL_HMAC_KEY` (`family-view:<site id>`). It
@@ -68,9 +69,10 @@ it lasts, and **Stop viewing** clears only it.
 ### 2.3 Read-only, enforced on the server
 
 - **Every POST** under a view is refused before it reaches a handler (step ticks,
-  "I've done this", vet booking, proof upload, messages, sign-out, account delete). The
+  "I've done this", vet booking, proof upload, messages, sign-in, sign-out, account delete). The
   answer is a 303 back to the page it came from (`back`, else `/family`) with
-  `?viewing=nochange`, which shows the note. Only `POST /family/view/exit` is allowed.
+  `?viewing=nochange`, which shows the note. (Built: the page it came from is read
+  from the Referer, same origin only.) Only `POST /family/view/exit` is allowed.
 - **Reads that write** are made quiet under a view:
   - Messages: `markRead` is skipped, so her messages don't turn "read" for the family
     because she opened their Messages page;
@@ -132,17 +134,12 @@ than `.note`), that's a `portal.css` change and a `PORTAL_VERSION` bump: ask fir
 - Photos and files: the viewed family's open; another family's are refused.
 - A site on its own domain: the link goes to that domain.
 
-## 5. Decisions to confirm with the owner
+## 5. Decisions (the owner, 2026-11-13)
 
-1. **Who may use it**: everyone with the site in the Site Manager (owner and editor), as
-   planned here, or only the site's owner role?
-2. **Does the family know?** Planned: nothing shown to them, since she already sees all
-   of it on her own screens. Alternatively, a line in their Account page's history, or
-   in her family screen's history ("You viewed their portal, 13 Nov").
-3. **"Live" as reload** (planned, with a Refresh link in the band) or the page refreshing
-   itself every minute or so? Refreshing itself needs a change to `portal.js`, and so a
-   `PORTAL_VERSION` bump.
-4. **An hour** before the view ends by itself: long enough?
+1. Everyone with the site in the Site Manager (owner and editor) may use it.
+2. Nothing records that she looked, for the family or for her.
+3. "Live" is a reload, with Refresh in the band; the page doesn't refresh itself.
+4. A view ends by itself after an hour.
 
 ## 6. Later, not in this plan
 

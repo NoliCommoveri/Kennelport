@@ -404,7 +404,7 @@ export async function handleManage(request, env, url) {
     if (portalOn && !post && m[2] === '/website') return siteHome(env, user, site, 'website', sitePage, say);
     if (portalOn && !post && m[2] === '/kennel') return sitePage('Dogs', await dogsTab(env, site), { nav: { sub: site.subdomain, tab: 'dogs' } });
     if (m[2]?.startsWith('/portal')) {
-      const res = await handlePortalAdmin({ env, request, url, site, page: sitePage });
+      const res = await handlePortalAdmin({ env, request, url, site, page: sitePage, user, say });
       if (res) return res;
     } else if (m[2]) {
       const res = await createScreens({ env, request, url, site, user, page: sitePage, say })();

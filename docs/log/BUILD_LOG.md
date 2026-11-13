@@ -1114,7 +1114,7 @@ with new sections and a new building order. Docs only; nothing built yet.
 
 ## 2026-11-13: Plan for seeing a family's portal as they see it
 
-- New plan, [`plans/family-view.md`](../plans/family-view.md): a **See their portal**
+- New plan, [`plans/done/family-view.md`](../plans/done/family-view.md): a **See their portal**
   button on her family screen opens that family's portal on her site's address,
   read-only and drawn live from the records, with a band saying so. Handed over once
   with a signed link (as the status page's one tap), then a signed view cookie for an
@@ -1122,3 +1122,29 @@ with new sections and a new building order. Docs only; nothing built yet.
   and the family's activity date left untouched.
 - No migration and no version bump planned. Four decisions wait for the owner (plan
   section 5). Nothing built yet.
+
+## 2026-11-13: seeing a family's portal as they see it, built
+
+- The owner's answers (plan section 5): everyone with the site; nothing recorded; reload
+  is live enough; an hour.
+- `portal/view.js` (new): the view link (signed, once only through `portal_handoffs`, 2
+  minutes) and the view cookie `kp_family_view` (signed, not stored, an hour, Path=/family).
+  Each request checks again that her account still has the site (`site_users`) and the
+  family is active.
+- Her family screen (`portal/admin.js`): **See their portal**, a link (the Site Manager's
+  `form-action 'self'` would block a form's redirect to her site), opening in a new tab.
+  `handlePortalAdmin` now gets `user` and `say`.
+- `portal/family.js`: `/family/view` and `/family/view/exit`; the view cookie comes before
+  the family's own; every POST under a view (sign-in included) goes back to the page it
+  came from with "Nothing was changed"; the band at the top of `<main>` in the portal's
+  `.note`, with Refresh and Stop viewing in `.two`; "(viewing)" in the title. Messages
+  aren't marked read, and `family/files.js` records no program click, while viewing.
+  The family's session and activity date are never touched.
+- Wording: a new **A family's portal, as they see it** group in `manage/wording.js`
+  (`familyview.*`). No prototype screen for it: built from the prototype's note, `.two`
+  and line buttons; checked at 390px and 1200px.
+- No migration. No change to `public/_kp/f/`, `m/` or `t/`: no version bump.
+- Tests: `portal-view.test.js` (the page matches the family's own apart from the band;
+  once-only link, other site, changed cookie; every POST changes no row; no read marks,
+  clicks, activity or sessions; removed from the site or family deleted ends it; files
+  stay the family's own; her own domain). All 395 pass.
