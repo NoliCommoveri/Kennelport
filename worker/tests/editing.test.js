@@ -108,6 +108,19 @@ test('switch a page off, reword a Home block, edit the kennel details', async ()
   assert.match(home, /<title>AK Bostons<\/title>/);
 });
 
+test('Kennel details: her Group health results by kind switch shows, saves, and says so before publishing', async () => {
+  const b = await breeder();
+  await b.post('/publish');
+  const form = await (await b.get('/details')).text();
+  assert.match(form, /name="group_health"/);
+  assert.match(form, /Group health results by kind/);
+  await b.post('/details', { kennel_name: 'AK Boston Terriers', group_health: '1', dark_mode: 'auto' });
+  assert.equal(b.env.DB.raw.prepare('SELECT group_health FROM sites').get().group_health, 1);
+  assert.match(await (await b.get('/publish')).text(), /health results by kind/);
+  await b.post('/details', { kennel_name: 'AK Boston Terriers', dark_mode: 'auto' });
+  assert.equal(b.env.DB.raw.prepare('SELECT group_health FROM sites').get().group_health, 0, 'unticked: off');
+});
+
 test('lists: add an extra with a checklist, reorder, remove', async () => {
   const b = await breeder();
   assert.equal((await b.post('/lists/extras/new', { kind: 'item', name: 'Puppy pack', price_from: '150', checklist: 'Blanket\nToy\n\nFood' })).status, 303);

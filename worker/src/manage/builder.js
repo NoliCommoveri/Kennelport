@@ -213,9 +213,6 @@ function dogsScreen(site, rules, error) {
     <section class="card"><div class="fgroup"><div class="between"><h2>An adult looking for a home</h2>${sale === DEFAULT_RULES.dogs.sale_price ? '' : back('dogs.sale_price')}</div>
       <div class="fld"><span class="fldt">Its price</span>${seg('dogs.sale_price', sale, { site: 'As the breeder sets', always: 'Always', never: 'Never' })}
       <span class="hint">“As the breeder sets” follows her “Show prices of extras and adults”. Never shows no price line at all.</span></div></div></section>
-    <section class="card"><div class="fgroup"><div class="between"><h2>A dog's health results</h2>${rules.dogs.health_groups === DEFAULT_RULES.dogs.health_groups ? '' : back('dogs.health_groups')}</div>
-      <div class="switches">${toggle('dogs.health_groups', rules.dogs.health_groups, 'Group them by kind on its page')}</div>
-      <span class="hint">By the test type KennelOS sends: genetic, OFA / PennHIP, and breed-specific, each under its line in Health results below. A result with no type goes under the first line. Off: one list.</span></div></section>
     ${wordCards('dogs', rules)}
     <section class="card band"><p class="small">Which health results a new dog shows, and where each KennelOS status puts a dog, are under From KennelOS.</p></section></div>`;
 }

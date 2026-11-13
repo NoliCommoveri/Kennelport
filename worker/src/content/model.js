@@ -37,6 +37,8 @@ export const SITE_FIELDS = {
   scheme: { ...ENUM(...SCHEME_IDS), ui: 'scheme' },
   dark_mode: ENUM('auto', 'light_only'),
   show_other_prices: BOOL,
+  // A dog's health results grouped by kind on its page (KennelOS's test type).
+  group_health: BOOL,
 };
 
 export const PARTNERS_PER_DOG = 10;

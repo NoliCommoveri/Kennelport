@@ -10,7 +10,7 @@ import {
   esc, attr, fmtDate, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, litterCard, parentCards, litterFacts, dogCard, coCard,
   partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, expanders, pagehead, head, ICONS, paySection,
   payShown, litterChoices, ANY_LITTER, ABOUT_LABEL, dogGroups, descendantsOf, depositsAhead, soonSection, pricesOff, sitePrice, word, sexWord, fullRegLink,
-  fullRegSurchargeRow, galleryHtml, faqBlock, addedOn, addedWords, addedRow, customPage, rulesOf,
+  fullRegSurchargeRow, galleryHtml, faqBlock, addedOn, addedWords, addedRow, customPage,
 } from './parts.js';
 import { embedView } from '../embeds.js';
 import { litterAlbums, dogAlbums } from './pages/albumLists.js';
@@ -931,14 +931,15 @@ export function unavailable(snap, ctx, { gone = false } = {}) {
   };
 }
 
-// A dog's health results on its page: one list under its line, or, with the Dogs rule
-// "Group them by kind" (rules.dogs.health_groups), a list per kind by KennelOS's test
-// type (contract C5), in this order; a result with no type under the first line.
+// A dog's health results on its page: one list under its line, or, with the breeder's
+// Group health results by kind (sites.group_health), a list per kind by KennelOS's test
+// type (contract C5), in this order, each under the owner's words for it (Dogs, Health
+// results); a result with no type under the first line.
 const HEALTH_KINDS = [['genetic_test', 'health_genetic'], ['ofa_pennhip', 'health_ofa'], ['breed_specific_test', 'health_breed']];
 function healthLists(snap, health) {
   if (!health.length) return '';
   const list = (key, rows) => `<span class="eyebrow">${esc(word(snap, key))}</span><ul class="tests">${rows.map((h) => `<li><span>${esc(h.test)}</span><span>${h.verify_url ? `<a href="${attr(h.verify_url)}" rel="noopener">${esc(h.result)}</a>` : esc(h.result)}</span></li>`).join('')}</ul>`;
-  if (!rulesOf(snap).dogs?.health_groups) return list('health_heading', health);
+  if (!snap.site.group_health) return list('health_heading', health);
   const known = new Set(HEALTH_KINDS.map(([t]) => t));
   const untyped = health.filter((h) => !known.has(h.test_type));
   return [

@@ -17,7 +17,7 @@ function canon(v) {
 const same = (a, b) => (blank(a) && blank(b)) || JSON.stringify(canon(a)) === JSON.stringify(canon(b));
 const strip = (o, keys) => Object.fromEntries(Object.entries(o ?? {}).filter(([k]) => !keys.includes(k)));
 const BLOCK_NAMES = { hero: 'top of the page', facts: 'facts row', story: 'story', dogs: 'dogs row', litters: 'litters', reviews: 'reviews', waitlist: 'waitlist band' };
-const SITE_NAMES = { kennel_name: 'name', tagline: 'line under the name', blurb: 'about-you line', breed: 'breed', monogram: 'monogram', logo_photo_id: 'logo', town: 'town', region: 'region', contact_email: 'email', contact_phone: 'phone', facebook_url: 'Facebook', facebook_label: 'Facebook', instagram_url: 'Instagram', dark_mode: 'dark mode', show_other_prices: 'showing prices' };
+const SITE_NAMES = { kennel_name: 'name', tagline: 'line under the name', blurb: 'about-you line', breed: 'breed', monogram: 'monogram', logo_photo_id: 'logo', town: 'town', region: 'region', contact_email: 'email', contact_phone: 'phone', facebook_url: 'Facebook', facebook_label: 'Facebook', instagram_url: 'Instagram', dark_mode: 'dark mode', show_other_prices: 'showing prices', group_health: 'health results by kind' };
 
 function byId(list) { return Object.fromEntries((list ?? []).map((x) => [x.id, x])); }
 

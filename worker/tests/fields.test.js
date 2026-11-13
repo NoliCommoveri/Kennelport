@@ -219,7 +219,7 @@ test("display rules over KennelOS's raw values: a litter card's line by its Kenn
   ins.run('h1', s.id, willow.id, 'DM', 1, 'genetic_test');
   ins.run('h2', s.id, willow.id, 'Hips', 2, 'ofa_pennhip');
   ins.run('h3', s.id, willow.id, 'Her own note', 3, null);
-  const snap = await buildSnapshot(env, s.id);
+  let snap = await buildSnapshot(env, s.id);
   const draw = (rules, p) => renderPage({ ...snap, rules }, { path: p, origin: 'https://x', today: TODAY, preview: true }).html;
   const card = (html) => html.match(/<article class="litter">[\s\S]*?<\/article>/g).find((a) => a.includes('Gem'));
 
@@ -232,7 +232,9 @@ test("display rules over KennelOS's raw values: a litter card's line by its Kenn
 
   const set = structuredClone(DEFAULT_RULES);
   set.words.litter_kos_weaning = 'Weaning now';
-  set.dogs.health_groups = true;
+  // Her Group health results by kind, on Kennel details.
+  db.prepare('UPDATE sites SET group_health = 1 WHERE id = ?').run(s.id);
+  snap = await buildSnapshot(env, s.id);
   assert.match(card(draw(set, '/')), /<span class="eyebrow">Weaning now<\/span>/);
   const grouped = draw(set, '/dogs/willow');
   const heads = [...grouped.matchAll(/<span class="eyebrow">([^<]+)<\/span><ul class="tests">/g)].map((m) => m[1]);

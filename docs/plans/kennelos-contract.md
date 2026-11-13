@@ -351,9 +351,11 @@ Each step is its own branch and merge, with at most one migration.
    **Display rules, built 2026-11-13:** C2, a litter card's line by its KennelOS status
    (Wording, "Litter cards, by status in KennelOS": a line per status, empty by default,
    so the usual lines show; an expected litter's plan label still comes first). C5, a
-   dog's page groups its health results by kind (Dogs, "Group them by kind on its
-   page", off by default), each kind under its line in Dogs, "Health results"; a result
-   with no type goes under the first line, Health testing (now wordable).
+   dog's page groups its health results by kind with the breeder's **Group health
+   results by kind** (Site Manager, Kennel details; `sites.group_health`, in migration
+   0033; off by default, the owner's decision 2026-11-13), each kind under the owner's
+   line for it in Dogs, "Health results"; a result with no type goes under the first
+   line, Health testing (now wordable).
 5. **C3, D.** Titles as rows; tags. Migration: `dog_titles`, `tags`.
 6. **C4, C7.** Origin and lineage: the import tags and the Pedigree block.
    Migration: the columns and an `ancestors` store. C4 and C7 go together: import-descended

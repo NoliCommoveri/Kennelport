@@ -329,6 +329,7 @@ export async function saveSite(env, siteId, input) {
   await checkRefs(env, siteId, { fields: SITE_FIELDS }, clean);
   for (const c of ['dark_mode']) if (clean[c] === null) clean[c] = 'auto';
   if (clean.show_other_prices === null) clean.show_other_prices = 0;
+  if (clean.group_health === null) clean.group_health = 0;
   // A form without the scheme picker leaves the scheme as it is.
   if (clean.scheme === null) delete clean.scheme;
   const cols = Object.keys(clean);

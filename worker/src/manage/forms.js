@@ -33,6 +33,7 @@ export const LABELS = {
     scheme: ['Colour scheme', 'Colours, fonts and the little ornaments by headings, each with a light and a dark version. Preview, then Publish, to see it on your site.'],
     dark_mode: ['Dark mode', 'Follow each visitor\'s phone or computer setting, or always show the light version.'],
     show_other_prices: ['Show prices of extras and adults', 'Extras, and dogs looking for a home. Off: visitors see "Contact us for pricing". Litter prices have their own switch on each litter.'],
+    group_health: ['Group health results by kind', 'On each dog\'s page: genetic tests, OFA / PennHIP and other tests each under their own heading, sorted by KennelOS. Off: one list.'],
   },
   dogs: {
     call_name: ['Call name', null], registered_name: ['Registered name', null], role: ['Role', 'For example Dam, Sire, or Retired.'],
@@ -418,7 +419,7 @@ const GROUPS = {
   products: [['The product', ['name', 'grp', 'description', 'photo_id', 'image_url', 'website_url']], ['Link and code', ['link_url', 'link_label', 'code', 'code_note']], ['Badges on other pages', ['badge_places']]],
   albums: [['The album', ['title', 'litter_id', 'litter', 'description', 'cover_photo_id']], ['Photos', ['photos', 'more_photos_url']]],
 };
-const SWITCHES_TITLE = { site: 'Prices', health: 'This result' };
+const SWITCHES_TITLE = { health: 'This result' };
 // Two to a row: numbers, dates, choices, and one-line text of 80 characters or fewer.
 const half = (f) => !f.ui && (['int', 'date', 'month', 'enum', 'dogid', 'dogref', 'litterid', 'litterref', 'kennelid'].includes(f.type) || (f.type === 'text' && !f.multiline && (f.max ?? 999) <= 80));
 const group = (title, inner, cls = '') => `<section class="fgroup${cls}"><h2>${esc(title)}</h2><div class="fgrid">${inner}</div></section>`;

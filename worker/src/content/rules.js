@@ -73,8 +73,8 @@ export const WORDS = [
     ['offspring_3', 'Great-grand offspring', 'On a dog\'s page: the next generation'],
     ['offspring_4', 'Great-great-grand offspring', 'On a dog\'s page: the one after'],
   ]],
-  // A dog's health results on its page; grouped by kind with the Dogs rule "Group by
-  // kind" (rules.dogs.health_groups), from KennelOS's test type (contract C5). A result
+  // A dog's health results on its page; grouped by kind with the breeder's Group health
+  // results by kind (sites.group_health), from KennelOS's test type (contract C5). A result
   // with no type (typed by her, or from a KennelOS before it sent types) goes under
   // the first line.
   ['dogs', 'Health results', [
@@ -157,9 +157,7 @@ export const DEFAULT_RULES = {
   price: { off: 'Contact us for pricing', style: 'range', price_label: 'Price', deposit_label: 'Deposit' },
   // An adult for sale's price: 'site' follows the breeder's "Show prices of extras
   // and adults"; 'always' or 'never' whatever that says.
-  // health_groups: a dog's page shows its health results grouped by kind (words
-  // health_*), from KennelOS's test type; off, one list as before.
-  dogs: { sale_price: 'site', health_groups: false },
+  dogs: { sale_price: 'site' },
   words: Object.fromEntries(WORD_LIST.map(([k, d]) => [k, d])),
   format: { date: 'mdy', day: 'md', sex: 'female_male', counts: 'girls_boys', currency: '$', currency_after: false, cents: false },
   // How KennelOS data lands (kennelos/bundle.js), for each new record.
@@ -201,7 +199,7 @@ const PRICE_FIELDS = {
 };
 // Its words were the price rules' `before` ("Available on {date}"), so they may be as long.
 const NOT_OPEN_WORDS = TEXT(60);
-const DOG_FIELDS = { sale_price: { t: 'enum', values: ['site', 'always', 'never'] }, health_groups: { t: 'bool' } };
+const DOG_FIELDS = { sale_price: { t: 'enum', values: ['site', 'always', 'never'] } };
 // A litter card's line by KennelOS status may be empty: the usual line then.
 const WORD_FIELDS = Object.fromEntries(WORD_LIST.map(([k, d]) => [k, { t: 'text', max: k === 'safe_notice' ? 400 : 120, req: !k.startsWith('litter_kos_'),
   needs: d.includes('{name}') ? '{name}' : null }]));

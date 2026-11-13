@@ -1258,3 +1258,18 @@ let her give a deleted family back.
 - Defaults draw every live site as before. Server-rendered only: no version bump; no
   migration beyond this branch's 0033.
 - Tests: one new in `fields.test.js`. All 405 pass.
+
+## 2026-11-13: health results by kind, her switch
+
+- The owner's decision: the breeder turns grouping on and off for her whole site. Her
+  **Group health results by kind** on Kennel details (`SITE_FIELDS.group_health`,
+  `sites.group_health`, added to this branch's migration 0033; off by default). The
+  owner's Dogs switch from the entry above is gone (never released); the headings stay
+  the owner's words (Dogs, Health results).
+- Kennel details' switches heading is now "On your website", like the other forms',
+  since it holds more than prices.
+- Breeder-facing wording, new and mine for now: the switch's label and hint in
+  `manage/forms.js` LABELS ("Group health results by kind"; "On each dog's page:
+  genetic tests, OFA / PennHIP and other tests each under their own heading, sorted by
+  KennelOS. Off: one list."), for the owner to reword. Checked at 390px and 1280px.
+- Tests: one new in `editing.test.js`; `fields.test.js` reads her switch. All 406 pass.
