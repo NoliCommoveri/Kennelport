@@ -55,6 +55,7 @@ export const SCREENS = Object.freeze({
   signin: 'Signing in, and her sites',
   notifications: 'Notifications',
   familyview: 'A family\'s portal, as they see it',
+  familydupes: 'Puppy families: the same family twice, and deleted families',
 });
 
 // Which screen a form's kind belongs to.
@@ -676,7 +677,25 @@ const SCREEN_LINES = {
   "familyview.stopped": ["familyview", "Line after Stop viewing", "You've stopped viewing their portal. You can close this tab."],
   "familyview.expired": ["familyview", "Line when the hour's view has ended", "Viewing ends by itself after an hour. To look again, open the family in your Site Manager and tap See their portal."],
   "familyview.used": ["familyview", "Line when the link has been used or has expired", "That link has been used or has expired. Open the family in your Site Manager and tap See their portal."],
-  "familyview.back": ["familyview", "Button when viewing has stopped", "Back to the Site Manager"]
+  "familyview.back": ["familyview", "Button when viewing has stopped", "Back to the Site Manager"],
+  "familydupes.twice_tag": ["familydupes", "Tag on a family in the list when they have two puppy records", "Twice: merge"],
+  "familydupes.placements_title": ["familydupes", "Heading on a family's screen when they have a puppy record you typed in and one from KennelOS", "Two puppy records for this family"],
+  "familydupes.placements_line": ["familydupes", "Line under it ({typed}: the one you typed in, {kennelos}: KennelOS's)", "One you typed in ({typed}) and one from KennelOS ({kennelos}). Merge them so there's one: what you typed stays, KennelOS fills in the blanks and keeps it up to date, and its shots and vet visits join yours. Files, ticks and history move across."],
+  "familydupes.placements_choose": ["familydupes", "Field label, when there's more than one KennelOS record to merge into", "KennelOS's record to merge it into"],
+  "familydupes.placements_button": ["familydupes", "Button", "Merge them"],
+  "familydupes.family_title": ["familydupes", "Heading of the fold-out on a family's screen", "The same family twice?"],
+  "familydupes.family_line_typed": ["familydupes", "Line in it, on a family you typed in ({family}: their name)", "If KennelOS has sent {family} too, merge the two: everything here moves onto the KennelOS family, what you typed stays, and KennelOS keeps it up to date."],
+  "familydupes.family_line_kennelos": ["familydupes", "Line in it, on a family from KennelOS ({family}: their name)", "If you also typed {family} in yourself, merge the two: everything on that one moves onto this one, what you typed stays, and KennelOS keeps it up to date."],
+  "familydupes.family_choose": ["familydupes", "Field label", "The other one"],
+  "familydupes.family_button": ["familydupes", "Button", "Merge the families"],
+  "familydupes.delete_now": ["familydupes", "Fold-out under Recently deleted, beside Undo", "Delete now"],
+  "familydupes.delete_now_line": ["familydupes", "Line in it", "Deletes them for good today, instead of in 30 days. You can still let KennelOS send them again afterwards."],
+  "familydupes.confirm_label": ["familydupes", "Field label in it", "Type delete to confirm"],
+  "familydupes.confirm_button": ["familydupes", "Button in it", "Delete for good now"],
+  "familydupes.gone_title": ["familydupes", "Heading of the fold-out listing families deleted for good", "Deleted for good"],
+  "familydupes.gone_line": ["familydupes", "Line in it", "KennelOS doesn't send these families again. To have one back, let KennelOS send them: they come back as a new family to invite, the next time KennelOS sends them."],
+  "familydupes.gone_no_name": ["familydupes", "In the list, for a family deleted before their name was kept", "A family whose name wasn't kept"],
+  "familydupes.give_back": ["familydupes", "Button beside each", "Let KennelOS send them again"]
 };
 
 // The errors that tell her what to fix (content/model.js and records.js checks,

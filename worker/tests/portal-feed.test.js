@@ -184,8 +184,9 @@ test('gone from KennelOS is marked, not removed; deleted here stays deleted', as
   await runPortalDaily(env, new Date(Date.now() + 31 * DAY));
   assert.equal(row('SELECT COUNT(*) AS n FROM portal_families').n, 0);
   assert.equal((await (await feed({ families: [REED()] })).json()).summary.skipped_deleted, 1);
-  // The tombstone holds no name or address.
-  assert.doesNotMatch(JSON.stringify(row('SELECT * FROM portal_tombstones')), /Reed|example/);
+  // The tombstone holds no address; the family's keeps the name she knew them by, to give them back.
+  assert.doesNotMatch(JSON.stringify(env.DB.raw.prepare('SELECT * FROM portal_tombstones').all()), /example/);
+  assert.equal(row("SELECT label FROM portal_tombstones WHERE type = 'family'").label, 'The Reed family · Opal');
 });
 
 test('the facts that go back: the real pickup time, then portal only', async () => {
@@ -241,4 +242,106 @@ test('her vet arrives as suggested contacts; a quiet feed shows on Today', async
   assert.doesNotMatch(await (await her('')).text(), /Open KennelOS so your families/);
   env.DB.raw.prepare('UPDATE sites SET portal_feed_at = ? WHERE id = ?').run(new Date(Date.now() - 30 * 3600000).toISOString(), site.id);
   assert.match(await (await her('')).text(), /Open KennelOS so your families/);
+});
+
+// ---------- the same family twice; deleting sooner; giving a family back ----------
+
+const famIdOf = (res) => res.headers.get('location').match(/\/f\/([0-9a-f-]{36})/)[1];
+
+test('a family\'s only typed placement is linked whatever puppy she chose, and KennelOS\'s puppy waits beside hers', async () => {
+  const { her, feed, row } = await setup();
+  const id = famIdOf(await her('/portal/new', { name: 'Reeds', emails: 'sam@example.com', puppy_id: 'pup2' }));
+  const out = await (await feed({ families: [REED()] })).json();
+  assert.equal(out.summary.placements_linked, 1);
+  assert.equal(row('SELECT COUNT(*) AS n FROM portal_placements').n, 1);
+  const p = row('SELECT * FROM portal_placements WHERE family_id = ?', id);
+  assert.equal(p.kennelos_id, 'sale-1');
+  assert.equal(p.puppy_id, 'pup2');
+  assert.equal(row("SELECT value FROM portal_suggestions WHERE row_id = ? AND field = 'puppy_id'", p.id).value, 'pup1');
+  assert.equal(row("SELECT COUNT(*) AS n FROM portal_health_records WHERE placement_id = ? AND kennelos_id = 'ev-1'", p.id).n, 1);
+});
+
+test('two puppy records on one family merge into KennelOS\'s: hers wins, KennelOS fills the blanks, everything moves', async () => {
+  const { env, site, her, feed, row } = await setup();
+  await feed({ families: [REED()] });
+  const fam = row("SELECT id FROM portal_families WHERE kennelos_id = 'fam-reed'").id;
+  const k = row('SELECT id FROM portal_placements WHERE family_id = ?', fam).id;
+  // A record she typed onto the same family, with a name, a shot (one KennelOS has too) and a tick.
+  const t = new Date().toISOString();
+  env.DB.raw.prepare("INSERT INTO portal_placements (id, site_id, family_id, puppy_id, puppy_name, call_name, vet_clinic, created_at, updated_at) VALUES ('typed-1', ?, ?, NULL, 'Opal', 'Pip', 'Maple Vets', ?, ?)").run(site.id, fam, t, t);
+  for (const [id, name] of [['hr1', 'DHPP, first round'], ['hr2', 'Pyrantel']]) env.DB.raw.prepare("INSERT INTO portal_health_records (id, site_id, placement_id, type, given_on, name, created_at) VALUES (?, ?, 'typed-1', ?, '2026-11-03', ?, ?)").run(id, site.id, id === 'hr1' ? 'vaccine' : 'deworming', name, t);
+  env.DB.raw.prepare("INSERT INTO portal_placement_progress (site_id, placement_id, item_type, item_id, done_at, done_by, updated_at) VALUES (?, 'typed-1', 'checklist', 'item-1', ?, 'family', ?)").run(site.id, t, t);
+  env.DB.raw.prepare("INSERT INTO portal_history (site_id, tbl, row_id, field, old_value, new_value, changed_at, changed_by) VALUES (?, 'portal_placements', 'typed-1', 'call_name', NULL, 'Pip', ?, 'breeder')").run(site.id, t);
+  const list = await (await her('/portal')).text();
+  assert.equal(list.match(/The Reed family<\/b>/g).length, 1);
+  assert.match(list, /Twice: merge/);
+  const screen = await (await her(`/portal/f/${fam}`)).text();
+  assert.match(screen, /Two puppy records for this family/);
+  const res = await her(`/portal/f/${fam}/merge-placement`, { from: 'typed-1', into: k });
+  assert.match(res.headers.get('location'), /note=merged/);
+  assert.equal(row('SELECT COUNT(*) AS n FROM portal_placements').n, 1);
+  const p = row('SELECT * FROM portal_placements WHERE id = ?', k);
+  assert.equal(p.call_name, 'Pip');
+  assert.equal(p.vet_clinic, 'Maple Vets');
+  assert.equal(p.puppy_id, 'pup1'); // hers was blank: KennelOS's stays
+  assert.ok(JSON.parse(p.edited_fields).includes('call_name'));
+  assert.deepEqual(env.DB.raw.prepare('SELECT name FROM portal_health_records WHERE placement_id = ? ORDER BY name').all(k).map((r) => r.name), ['DHPP, first round', 'Pyrantel']);
+  assert.equal(row('SELECT COUNT(*) AS n FROM portal_placement_progress WHERE placement_id = ?', k).n, 1);
+  assert.equal(row("SELECT COUNT(*) AS n FROM portal_history WHERE row_id = ? AND field = 'call_name'", k).n, 1);
+  assert.doesNotMatch(await (await her(`/portal/f/${fam}`)).text(), /Two puppy records/);
+  // KennelOS's next send updates the one record.
+  await feed({ families: [REED()] });
+  assert.equal(row('SELECT COUNT(*) AS n FROM portal_placements').n, 1);
+});
+
+test('a family she typed in under another address merges into KennelOS\'s, puppy records and all', async () => {
+  const { her, feed, row } = await setup();
+  const typed = famIdOf(await her('/portal/new', { name: 'Reeds', emails: 'other@example.com', puppy_id: 'pup1' }));
+  await feed({ families: [REED()] });
+  assert.equal(row('SELECT COUNT(*) AS n FROM portal_families').n, 2);
+  const kos = row("SELECT id FROM portal_families WHERE kennelos_id = 'fam-reed'").id;
+  assert.match(await (await her(`/portal/f/${typed}`)).text(), /The same family twice\?/);
+  const res = await her(`/portal/f/${typed}/merge-family`, { other: kos });
+  assert.match(res.headers.get('location'), new RegExp(`/f/${kos}\\?note=familymerged`));
+  assert.equal(row('SELECT COUNT(*) AS n FROM portal_families').n, 1);
+  assert.equal(row('SELECT COUNT(*) AS n FROM portal_emails WHERE family_id = ?', kos).n, 3);
+  assert.equal(row('SELECT name FROM portal_families WHERE id = ?', kos).name, 'Reeds');
+  assert.equal(row('SELECT COUNT(*) AS n FROM portal_placements').n, 1);
+  const p = row('SELECT * FROM portal_placements');
+  assert.equal(p.kennelos_id, 'sale-1');
+  assert.equal(p.puppy_id, 'pup1');
+});
+
+test('Delete now makes it final today; Let KennelOS send them again brings the family back', async () => {
+  const { her, feed, row } = await setup();
+  await feed({ families: [REED()] });
+  const fam = row("SELECT id FROM portal_families WHERE kennelos_id = 'fam-reed'").id;
+  await her(`/portal/f/${fam}/delete`, { confirm: 'delete' });
+  await her(`/portal/gone/${fam}`, { confirm: 'nope' });
+  assert.equal(row('SELECT COUNT(*) AS n FROM portal_families').n, 1);
+  assert.match((await her(`/portal/gone/${fam}`, { confirm: 'delete' })).headers.get('location'), /note=gonenow/);
+  assert.equal(row('SELECT COUNT(*) AS n FROM portal_families').n, 0);
+  assert.equal((await (await feed({ families: [REED()] })).json()).summary.skipped_deleted, 1);
+  const list = await (await her('/portal')).text();
+  assert.match(list, /Deleted for good/);
+  assert.match(list, /The Reed family · Opal/);
+  await her('/portal/giveback', { kennelos_id: 'fam-reed' });
+  assert.equal(row('SELECT COUNT(*) AS n FROM portal_tombstones').n, 0);
+  const out = await (await feed({ families: [REED()] })).json();
+  assert.equal(out.summary.families_new, 1);
+  assert.equal(out.summary.placements_new, 1);
+  assert.equal(row("SELECT COUNT(*) AS n FROM portal_health_records WHERE kennelos_id = 'ev-1'").n, 1);
+});
+
+test('a family deleted before names were kept can be given back too, with its puppy record and shots', async () => {
+  const { site, env, her, feed, row } = await setup();
+  const at = '2026-11-01T10:00:00.000Z';
+  for (const [type, id] of [['family', 'fam-reed'], ['placement', 'sale-1'], ['health', 'ev-1']]) env.DB.raw.prepare('INSERT INTO portal_tombstones (site_id, type, kennelos_id, deleted_at) VALUES (?, ?, ?, ?)').run(site.id, type, id, at);
+  env.DB.raw.prepare("INSERT INTO portal_tombstones (site_id, type, kennelos_id, deleted_at) VALUES (?, 'health', 'ev-other', '2026-11-02T10:00:00.000Z')").run(site.id);
+  assert.match(await (await her('/portal')).text(), /A family whose name wasn&#39;t kept|A family whose name wasn't kept/);
+  await her('/portal/giveback', { kennelos_id: 'fam-reed' });
+  assert.equal(row('SELECT COUNT(*) AS n FROM portal_tombstones').n, 1); // the shot removed by itself stays removed
+  const out = await (await feed({ families: [REED()] })).json();
+  assert.equal(out.summary.families_new, 1);
+  assert.equal(out.summary.health_new, 1);
 });

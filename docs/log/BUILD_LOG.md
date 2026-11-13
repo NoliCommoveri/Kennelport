@@ -1148,3 +1148,44 @@ with new sections and a new building order. Docs only; nothing built yet.
   once-only link, other site, changed cookie; every POST changes no row; no read marks,
   clicks, activity or sessions; removed from the site or family deleted ends it; files
   stay the family's own; her own domain). All 395 pass.
+
+## 2026-11-13: the same family twice, Delete now, and giving a deleted family back
+
+What happened on production: she typed a family in, then signed the contract in KennelOS.
+The family linked by address, but her typed placement didn't (it named no puppy, or not
+KennelOS's), so the feed added a second placement. The list showed the family twice
+(`listFamilies` gives a row per open placement), and deleting "the typed one" deleted the
+family. The owner's decisions: merge duplicates, allow deleting sooner than 30 days, and
+let her give a deleted family back.
+
+- **Linking** (`portal/feed.js` `upsertPlacement`): after the same-puppy match, a
+  family's only open typed placement is linked whatever puppy she chose, if the family
+  has no open KennelOS placement yet. Her filled fields stay hers; KennelOS's differing
+  puppy waits as a suggestion.
+- **Merge** (`portal/merge.js`, new): `mergePlacement` folds a typed placement into the
+  family's KennelOS one (her `PLACEMENT_FIELDS` win, KennelOS's differing value becomes a
+  suggestion; pickup, vet booking, proof, contract and loss fill KennelOS's blanks; files,
+  shots less duplicates, checklist and timeline items, extras, photos, the reminder log,
+  history move; ticks and programs keep the later row). `mergeFamily` folds a typed family
+  into a KennelOS one (addresses, sessions, messages, logs, clicks, placements, history;
+  her name wins), then its placements if there's one of each. One batch each.
+  Her screens: the list shows a family once, tagged **Twice: merge**; the family screen
+  has **Two puppy records for this family** with **Merge them**, and **The same family
+  twice?** with a list of the other kind.
+- **Delete now** (`account.deleteNow`): under Recently deleted, typed confirmation; final
+  as the daily cleanup would make it.
+- **Giving back** (`account.deletedForGood`, `giveBack`): **Deleted for good** on Puppy
+  families lists family tombstones (not erased families) with **Let KennelOS send them
+  again**, which lifts the family's tombstones and its placements' and shots'. A shot she
+  removed by itself stays removed. KennelOS's next send brings them back as a new family.
+- **Migration 0032** (`tombstone_labels`): `portal_tombstones.label` (the family's name and
+  puppy, no address: the test now checks only that no address is kept) and
+  `family_kennelos_id`. Additive. Older tombstones are grouped by their shared `deleted_at`.
+- Wording: new group **Puppy families: the same family twice, and deleted families**
+  (`familydupes.*`) in `manage/wording.js`. The four new notes (merged, familymerged,
+  gonenow, givenback) are in `portal/admin/parts.js` NOTES with the portal's other notes,
+  to move with step 2.4. No prototype screen: built from the existing card, kv, tag and
+  details pieces; checked at 390px and 1280px.
+- No change to `public/_kp/`: no version bump.
+- Not here: KennelOS sending a family again without a change. That's in KennelOS.
+- Tests: five new in `portal-feed.test.js`. All 400 pass.

@@ -39,6 +39,7 @@ import demo from './0028_demo.sql';
 import outsideDogs from './0029_outside_dogs.sql';
 import dogParents from './0030_dog_parents.sql';
 import blockPicks from './0031_block_picks.sql';
+import tombstoneLabels from './0032_tombstone_labels.sql';
 
 export const MIGRATIONS = [
   { id: '0001', name: 'schema', sql: schema },
@@ -72,4 +73,5 @@ export const MIGRATIONS = [
   { id: '0029', name: 'outside_dogs', sql: outsideDogs },
   { id: '0030', name: 'dog_parents', sql: dogParents },
   { id: '0031', name: 'block_picks', sql: blockPicks },
+  { id: '0032', name: 'tombstone_labels', sql: tombstoneLabels },
 ];

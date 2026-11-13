@@ -177,6 +177,38 @@ export async function finishDeletes(env, at = new Date()) {
   return results.length;
 }
 
+// Her Delete now, on a family under Recently deleted: final today, as the daily
+// cleanup would make it after UNDO_DAYS.
+export async function deleteNow(env, siteId, familyId) {
+  const f = await env.DB.prepare("SELECT id FROM portal_families WHERE id = ? AND site_id = ? AND status = 'active' AND deleted_at IS NOT NULL").bind(familyId, siteId).first();
+  if (!f) throw new PortalError('That family isn\'t waiting to be deleted.');
+  await env.DB.batch(await tombstoneStatements(env, siteId, familyId));
+  await deleteFamily(env, siteId, familyId);
+}
+
+// The families deleted for good that KennelOS won't send again (feed.js
+// tombstones): hers to give back. Not a family erased at their own request.
+export async function deletedForGood(env, siteId) {
+  return (await env.DB.prepare(`SELECT t.kennelos_id, t.label, t.deleted_at FROM portal_tombstones t WHERE t.site_id = ? AND t.type = 'family'
+    AND NOT EXISTS (SELECT 1 FROM portal_families f WHERE f.site_id = t.site_id AND f.kennelos_id = t.kennelos_id AND f.status = 'erased')
+    ORDER BY t.deleted_at DESC`).bind(siteId).all()).results;
+}
+
+// Her "Let KennelOS send them again": the family's tombstones go (its puppy
+// records' and shots' too, written with it), so KennelOS's next send brings them
+// back as a new family to invite. A shot she removed by itself stays removed.
+export async function giveBack(env, siteId, kennelosId) {
+  const t = await env.DB.prepare("SELECT kennelos_id, deleted_at, family_kennelos_id FROM portal_tombstones WHERE site_id = ? AND type = 'family' AND kennelos_id = ?").bind(siteId, kennelosId).first();
+  if (!t) throw new PortalError('KennelOS can already send that family.');
+  if (await env.DB.prepare("SELECT 1 FROM portal_families WHERE site_id = ? AND kennelos_id = ? AND status = 'erased'").bind(siteId, kennelosId).first()) throw new PortalError('That family asked for their data to be erased, so they can\'t be brought back.');
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM portal_tombstones WHERE site_id = ? AND family_kennelos_id = ?').bind(siteId, kennelosId),
+    // Written before tombstones kept the family: those of the same delete, which share its time.
+    ...(t.family_kennelos_id ? [] : [env.DB.prepare("DELETE FROM portal_tombstones WHERE site_id = ? AND family_kennelos_id IS NULL AND type != 'family' AND deleted_at = ?").bind(siteId, t.deleted_at)]),
+    env.DB.prepare("DELETE FROM portal_tombstones WHERE site_id = ? AND type = 'family' AND kennelos_id = ?").bind(siteId, kennelosId),
+  ]);
+}
+
 // The erase (plan 10.4), asked for by the family (from Account) or by her for them:
 // their account goes now, for good; her sale records stay, with the family reduced
 // to the name she knows them by. From KennelOS: a tombstone, so it isn't sent again.
