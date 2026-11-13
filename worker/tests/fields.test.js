@@ -156,7 +156,7 @@ test('groups: a heading per value in the field\'s order, the owner\'s words over
   const b = cleanBlock({ ...newBlock('dogs', 'dogs-2'), style: 'flip', group: 'sex', gw: { male: 'Our boys' }, w: { eyebrow: 'Dogs', heading: 'By sex' } });
   const html = draw([b]);
   const sec = html.slice(html.indexOf('By sex'));
-  assert.match(sec, /<div class="head"><h3>Girls<\/h3><\/div><div class="grid( narrow-grid)?">[^]*<div class="head mt-26"><h3>Our boys<\/h3><\/div><div class="grid( narrow-grid)?">/);
+  assert.match(sec, /<div class="head" id="g-dogs-2-female"><h3>Girls<\/h3><\/div><div class="grid( narrow-grid)?">[^]*<div class="head mt-26" id="g-dogs-2-male"><h3>Our boys<\/h3><\/div><div class="grid( narrow-grid)?">/);
   assert.ok(sec.indexOf('Willow') < sec.indexOf('Our boys') && sec.indexOf('Boone') > sec.indexOf('Our boys'));
   // Grouped by titles: a dog with two is under both; with none, under Other, last.
   const t = draw([cleanBlock({ ...newBlock('dogs', 'dogs-2'), style: 'flip', where: [], group: 'title', w: { heading: 'By title' } })]);

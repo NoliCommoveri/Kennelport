@@ -1,9 +1,10 @@
 // Pieces of the "ak" template shared by its pages: formatting, photos, cards and
 // the menu. Every value from a snapshot passes through esc() (or attr()) here.
-import { SHOW_DEFAULT, isCustom, hersOn, BLOCK_TYPES, defaultMenu, MENU_PLACES, PAGE_DEFAULTS, recordsOf } from '../content/blocks.js';
+import { SHOW_DEFAULT, isCustom, hersOn, BLOCK_TYPES, defaultMenu, MENU_PLACES, PAGE_DEFAULTS, recordsOf, pageBlocks, DOGS_ALL } from '../content/blocks.js';
 import { BLOCK_KIND, matches, ordered, grouped, GENERATIONS } from '../content/fields.js';
+import { applyPicks } from '../content/picks.js';
 import { escapeHtml as esc } from '../lib/html.js';
-import { PAGES, pupStatus } from '../content/model.js';
+import { PAGES, pupStatus, slugify } from '../content/model.js';
 import { puppyPrice, litterPriceRange, depositRange } from '../content/prices.js';
 import { DEFAULT_RULES, DEFAULT_TIMING, ruleKey, addDays } from '../content/rules.js';
 
@@ -168,15 +169,53 @@ export function litterStage(snap, l, today) {
   return pastReady(snap, l, today) ? 'older' : 'available_now';
 }
 
+// Where a group of a block starts on its page (a menu link's #): g-<block>-<value>.
+export const groupAnchor = (b, key) => `g-${b.id}-${slugify(key) || 'other'}`;
+// A group's name: the owner's heading for it, else, grouped by sex, the site's Girls and
+// Boys words, else its value.
+export const groupLabel = (snap, b, g) => (recordsOf(b).group === 'sex' && !b.gw?.[g.key] && (g.key === 'female' || g.key === 'male') ? word(snap, g.key === 'female' ? 'girls' : 'boys') : g.heading);
+// A block on a page as the site has it (an older snapshot's Girls and boys read as the block).
+export const blockOn = (snap, key, id) => (snap.layout?.[key] ?? pageBlocks(null, key))
+  .map((x) => (key === 'dogs' && x.type === 'builtin' && x.id === 'all' ? DOGS_ALL : x)).find((x) => x.id === id) ?? null;
+// A group of a block, as a menu link shows it: while the block is on and the group has
+// anything in it (after her ticks and the block's limit). Null when it doesn't show.
+export function groupLink(snap, ctx, it) {
+  const b = blockOn(snap, it.page, it.block);
+  if (!b || !BLOCK_KIND[b.type] || !recordsOf(b).group || !addedOn(snap, it.page, b)) return null;
+  const rows = blockRows(snap, b, ctx.today, it.page);
+  const g = blockGroups(snap, b, b.limit ? rows.slice(0, b.limit) : rows, ctx.today).find((x) => x.key === it.key);
+  return g?.rows.length ? { hash: groupAnchor(b, g.key), text: groupLabel(snap, b, g) } : null;
+}
+
+// The first grouped Dog cards block on a page shown as a Show filter (only one per page:
+// the template's script filters one grid). An older snapshot's Dogs page holds Girls
+// and boys as the built-in part 'all': read as the block it now is (blocks.js DOGS_ALL).
+export function filterBlockOf(snap, key) {
+  const b = (snap.layout?.[key] ?? pageBlocks(null, key))
+    .map((x) => (key === 'dogs' && x.type === 'builtin' && x.id === 'all' ? DOGS_ALL : x))
+    .find((x) => x.type === 'dogs' && recordsOf(x).group && x.gshow === 'filter');
+  return b ?? null;
+}
+
 // A data block's records (content/fields.js): those its conditions hold for, in its
-// order (before its limit). Reviews have no conditions: all of them.
-export function blockRows(snap, b, today = null) {
+// order (before its limit), less the ones the breeder left out on this page's block;
+// on a Featured block, the ones she picked, in her order, once she has picked
+// (content/picks.js). Reviews have no conditions: all of them.
+export function blockRows(snap, b, today = null, key = null) {
   const kind = BLOCK_KIND[b.type];
   if (!kind) return b.type === 'reviews' ? snap.reviews : [];
+  const all = recordsOfKind(snap, kind);
+  return applyPicks(b, matchingRows(snap, b, today), all, key ? snap.picks?.[key]?.[b.id] : null);
+}
+// Every record of a kind on the site; and those a block's conditions hold for, in its
+// order, before her picks (her picking screen lists these).
+export const recordsOfKind = (snap, kind) => (kind === 'dog' ? snap.dogs : kind === 'litter' ? snap.litters : snap.litters.flatMap((l) => l.puppies ?? []));
+export function matchingRows(snap, b, today = null) {
+  const kind = BLOCK_KIND[b.type];
+  if (!kind) return [];
   const r = recordsOf(b);
   const rc = recordCtx(snap, today);
-  const all = kind === 'dog' ? snap.dogs : kind === 'litter' ? snap.litters : snap.litters.flatMap((l) => l.puppies ?? []);
-  return ordered(kind, all.filter((x) => matches(kind, x, r.where, rc)), r.order, rc);
+  return ordered(kind, recordsOfKind(snap, kind).filter((x) => matches(kind, x, r.where, rc)), r.order, rc);
 }
 
 // The rows in the block's groups ([{ heading, rows }]), or one group with no heading.
@@ -191,7 +230,7 @@ export function blockGroups(snap, b, rows, today = null) {
 // (and switched on), or, with no data blocks, its heading alone.
 function customHas(snap, key) {
   const data = (snap.layout?.[key] ?? []).filter((b) => BLOCK_TYPES[b.type].kind === 'data' && addedOn(snap, key, b));
-  return !data.length ? (snap.layout?.[key] ?? []).length > 0 : data.some((b) => blockRows(snap, b).length > 0);
+  return !data.length ? (snap.layout?.[key] ?? []).length > 0 : data.some((b) => blockRows(snap, b, null, key).length > 0);
 }
 
 // The menu: the owner's (snap.layout.menu), or today's. Each item shows while what it
@@ -202,7 +241,13 @@ function customHas(snap, key) {
 export function menuGroups(snap, ctx) {
   const menu = snap.layout?.menu ?? defaultMenu(snap.layout?.custom ?? []);
   const placeShows = {
-    'dogs#girls': () => { const b = dogGroups(snap).breeding; return b.some((d) => d.sex === 'female') && b.some((d) => d.sex === 'male'); },
+    // Girls and Boys: while the Dogs page's Show filter, grouped by sex, has both.
+    'dogs#girls': () => {
+      const b = filterBlockOf(snap, 'dogs');
+      if (!b || recordsOf(b).group !== 'sex' || !addedOn(snap, 'dogs', b)) return false;
+      const rows = b.limit ? blockRows(snap, b, ctx.today, 'dogs').slice(0, b.limit) : blockRows(snap, b, ctx.today, 'dogs');
+      return rows.some((d) => d.sex === 'female') && rows.some((d) => d.sex === 'male');
+    },
     'litters#available': () => snap.litters.some((l) => l.stage === 'current' && !depositsAhead(snap, l, ctx.today)),
     'litters#upcoming': () => snap.litters.some((l) => l.stage === 'planned' || (!soonSection(snap) && depositsAhead(snap, l, ctx.today))),
     'litters#soon': () => soonSection(snap) && snap.litters.some((l) => depositsAhead(snap, l, ctx.today)),
@@ -215,12 +260,15 @@ export function menuGroups(snap, ctx) {
     const links = [];
     for (const it of g.items) {
       if (it.type === 'link') { links.push({ key: null, href: it.url, text: it.text, external: true }); continue; }
-      const key = it.type === 'page' ? it.page : MENU_PLACES[it.place].page;
+      const key = it.type === 'page' || it.type === 'group' ? it.page : MENU_PLACES[it.place].page;
       const path = pathOf(key);
       if (!path || !pageOn(snap, key, ctx)) continue;
       if (it.type === 'page') {
         if (it.fallback && links.some((l) => l.key === key)) continue;
         links.push({ key, href: path, text: label(snap, key) });
+      } else if (it.type === 'group') {
+        const g = groupLink(snap, ctx, it);
+        if (g) links.push({ key, href: `${path}#${g.hash}`, text: it.text || g.text });
       } else if (placeShows[it.place]()) {
         links.push({ key, href: `${path}#${it.place.split('#')[1]}`, text: it.text || placeText[it.place]?.() || MENU_PLACES[it.place].name });
       }
@@ -319,7 +367,7 @@ export function descendantsOf(snap, d) {
 
 // A Dog cards block's dogs (content/blocks.js): its conditions, then its order. The
 // default (active, at home, not up and coming, not for sale) is dogGroups' breeding.
-export const dogsFor = (snap, b, today = null) => blockRows(snap, b, today);
+export const dogsFor = (snap, b, today = null, key = null) => blockRows(snap, b, today, key);
 
 // A dog's partner kennels, as the site may name them: the one it lives with, and
 // the kennels of its co-owners. Older snapshots have none.
@@ -518,6 +566,9 @@ function faceOf(item, items) {
   }
   return out;
 }
+
+// A dog's items, in order, as its cards draw them (a Featured block's lines).
+export const dogFace = (snap, d, items, { sale = null } = {}) => faceOf(dogItems(snap, d, { sale }), items);
 
 // show: what each face shows, in order (content/blocks.js SHOW_DEFAULT.dogs is today's card).
 export function dogCard(snap, d, { sale = null, show = SHOW_DEFAULT.dogs } = {}) {

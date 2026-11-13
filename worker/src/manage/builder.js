@@ -25,8 +25,9 @@
 //
 // Split out beside this file, a screen at a time as each is touched (docs/review/
 // senior-review-2026-11.md, item 7): builder/sites.js, rules.js (Pups), kennelos.js,
-// timing.js, formats.js, instructions.js; builder/frame.js (nav, redirect) and
-// builder/controls.js (form controls) are what they all share.
+// timing.js, formats.js, instructions.js, records.js, blocks.js (a data block's
+// settings); builder/frame.js (nav, redirect) and builder/controls.js (form controls)
+// are what they all share.
 import { escapeHtml as esc } from '../lib/html.js';
 import {
   DEFAULT_RULES, DEFAULT_TIMING, RuleError, rulesFor, rulesFromForm, timingFromForm, withPart, loadBuild, saveBuild, partsFromForm, wordsOn,
@@ -34,14 +35,13 @@ import {
 import { buildSnapshot } from '../publish.js';
 import {
   olderPuppies, depositsAhead, soonSection, puppyStatus, puppyPriceText, regText, statusRule, sortPuppies, fullRegHref, rulesOf, useFormats, word, litterRows,
-  dogGroups, sitePrice, pricesOff, blockRows, label, placedFaqs, addedOn, addedWords, customPage, menuGroups,
+  dogGroups, sitePrice, pricesOff, blockRows, blockGroups, filterBlockOf, label, placedFaqs, addedOn, addedWords, customPage, menuGroups,
 } from '../render/parts.js';
 import { makePreviewToken, servePhoto, SITE_CSP } from '../site.js';
 import { renderPage } from '../render/index.js';
 import { DEMO_STEPS } from '../kennelos/demo.js';
 import {
-  BLOCK_TYPES, DOG_STYLE, REVIEW_STYLE, DOG_ITEMS, withCondition, withoutCondition, LIGHT_ITEMS, DOG_STACKED, LITTER_ITEMS,
-  LITTER_PAIR, LITTER_ROWS, REVIEW_ITEMS, REVIEW_WHO, BlockError, blocksFromForm, moved, newBlock, pageBlocks, pageChanged, withPage, addable, fits,
+  BLOCK_TYPES, DOG_STYLE, REVIEW_STYLE, withCondition, withoutCondition, BlockError, blocksFromForm, moved, newBlock, pageBlocks, pageChanged, withPage, addable, fits,
   hersOn, blockName, blockHint, isBuilt, BUILT_PAGES, PAGE_PARTS, headFor, isCustom, customPages, addPage, withPageInfo, withoutPage, STARTS, menuOf,
   menuChanged, withMenu, groupOf, MenuError, MENU_PLACES, MENU_LIMITS, PROFILES, PROFILE_PATHS, PROFILE_PARTS, PROFILE_ITEMS, PROFILE_FIXED,
   PROFILE_ONLY, PROFILE_FACTS, profileOf, profileChanged, withProfile, profileFromForm, homePart, LINK_TO, BUTTON_SIZE, BUTTON_LOOK, ALIGN,
@@ -52,16 +52,19 @@ import {
 import { PAGES, COLLAGE_LAYOUTS, collageLayout, HOME_WORDS } from '../content/model.js';
 import { layoutChoice, boxHint, photoSlot } from './forms.js';
 import { siteLink } from '../ops/sites.js';
-import { field, select, toggle, seg, back, svg, SPILL } from './builder/controls.js';
+import { field, select, toggle, seg, back, svg, SPILL, mvBtns, fld, LIMITS, resultLine } from './builder/controls.js';
+import { FEATURE_EVERY, featuredNow } from '../content/featured.js';
+import { blockRecords, WHAT, dataSettings, scheduleSettings, hersLine as hersPicks } from './builder/blocks.js';
 import { rulesScreen } from './builder/rules.js';
 import { kennelosScreen, landingPreview } from './builder/kennelos.js';
 import { defaultSay } from './wording.js';
 import { redirect, ic, isDemo, whereIs, SCREENS, adminNav } from './builder/frame.js';
 import { everySite } from './builder/sites.js';
+import { groupChoices, groupItem, groupItemLine, groupItemName } from './builder/menugroups.js';
 import { timingScreen } from './builder/timing.js';
 import { formatsScreen } from './builder/formats.js';
 import { wordingRoute } from './builder/instructions.js';
-import { recordsSettings, recordsSummary } from './builder/records.js';
+import { recordsSummary } from './builder/records.js';
 
 // ---------- the preview: their Puppies page, with the saved rules ----------
 
@@ -223,12 +226,6 @@ function wordingScreen(site, rules, error) {
 const isData = (b) => BLOCK_TYPES[b.type].kind === 'data';
 const isOwn = (b) => BLOCK_TYPES[b.type].kind === 'own';
 const ownWords = (key, b) => isData(b) && !hersOn(key, b);
-const mvBtns = (act, i, n) => `<div class="mv"><button name="act" value="${esc(act)}:up" aria-label="Move up"${i === 0 ? ' disabled' : ''}>${svg('up1')}</button><button name="act" value="${esc(act)}:down" aria-label="Move down"${i === n - 1 ? ' disabled' : ''}>${svg('down1')}</button></div>`;
-const fld = (title, inner, hint = '') => `<div class="fld"><span class="fldt">${esc(title)}</span>${inner}${hint ? `<span class="hint">${esc(hint)}</span>` : ''}</div>`;
-const LIMITS = { all: 'All of them', ...Object.fromEntries(Array.from({ length: 12 }, (_, i) => [String(i + 1), String(i + 1)])) };
-const resultLine = (names, what) => (names.length
-  ? `<p class="result">Shows <b>${names.length} ${what}${names.length === 1 ? '' : 's'}</b>: ${names.map(esc).join(', ')}</p>`
-  : '<p class="result none"><b>Nothing matches</b>, so this block hides itself on the site.</p>');
 
 // A page's name and address as the breeder's site has them (Home is not in PAGES).
 const pageLabel = (snap, key) => (key === 'home' ? 'Home' : label(snap, key));
@@ -239,20 +236,12 @@ const hersAt = (snap, key) => `her Site Manager, under Pages and wording, ${page
 // Her products with a badge on this page (Home's are her Home badges).
 const badgesOn = (snap, key) => (snap.products ?? []).filter((x) => (key === 'home' ? x.home_badge : (x.badge_places ?? []).includes(key))).slice(0, 2);
 
-// The records a data block shows now, from the draft.
-function blockRecords(snap, b) {
-  const lim = (rows) => (b.limit ? rows.slice(0, b.limit) : rows);
-  if (b.type === 'dogs') return lim(blockRows(snap, b)).map((d) => d.call_name);
-  if (b.type === 'litters' || b.type === 'pups') return lim(blockRows(snap, b)).map((x) => x.name);
-  if (b.type === 'reviews') return lim(snap.reviews).map((r) => [r.first_name, r.town].filter(Boolean).join(', ') || 'A family');
-  return [];
-}
-const WHAT = { dogs: 'dog', litters: 'litter', pups: 'pup', reviews: 'review' };
 
 function blockSummary(snap, key, b) {
-  if (b.type === 'dogs') return `${recordsSummary(b)} · ${DOG_STYLE[b.style].toLowerCase()}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b).length} now`;
-  if (b.type === 'litters' || b.type === 'pups') return `${recordsSummary(b)}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b).length} now`;
-  if (b.type === 'reviews') return `${REVIEW_STYLE[b.style]}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b).length} now`;
+  if (b.type === 'dogs') return `${recordsSummary(b)} · ${b.group && b.gshow === 'filter' ? 'as a Show filter' : DOG_STYLE[b.style].toLowerCase()}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b, key).length} now`;
+  if (b.type === 'litters' || b.type === 'pups') return `${recordsSummary(b)}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b, key).length} now`;
+  if (b.type === 'featured_dog' || b.type === 'featured_pup') return `${recordsSummary(b)} · ${FEATURE_EVERY[b.sched.every].toLowerCase()} each · ${blockRecords(snap, b, key).length} in turn`;
+  if (b.type === 'reviews') return `${REVIEW_STYLE[b.style]}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b, key).length} now`;
   if (b.type === 'builtin') return blockHint(key, b) ?? '';
   if (isOwn(b)) return ownSummary(snap, b);
   const faqs = placedFaqs(snap, key).map((e) => e.heading).join(' · ');
@@ -270,22 +259,6 @@ function blockSummary(snap, key, b) {
   return said || { facts: 'No facts yet', text: 'No story yet' }[b.type] || '';
 }
 
-// One ordered list of a card's items: on ones in their order, then the rest; each
-// with its switch, and up and down within the list.
-function showList(b, face, items, title, hint = '') {
-  const on = b.show[face];
-  const order = [...on, ...Object.keys(items).filter((k) => !on.includes(k))];
-  const n = `b.${b.id}.show.${face}`;
-  return `<div class="fld"><span class="fldt">${esc(title)}</span>${hint ? `<span class="hint">${esc(hint)}</span>` : ''}<input type="hidden" name="${n}" value="${esc(order.join(','))}">
-    <ul class="mvl">${order.map((k, i) => `<li class="mvr item${on.includes(k) ? '' : ' off'}">${mvBtns(`smv:${b.id}:${face}:${k}`, i, order.length)}<span class="ttl">${esc(items[k])}</span>
-      <span class="end switches"><label class="check"><input type="checkbox" name="${n}.${k}"${on.includes(k) ? ' checked' : ''} aria-label="${esc(items[k])}"></label></span></li>`).join('')}</ul></div>`;
-}
-// On or off only (their order is fixed).
-function showSwitches(b, face, items, title) {
-  const on = b.show[face];
-  const n = `b.${b.id}.show.${face}`;
-  return `<div class="fld"><span class="fldt">${esc(title)}</span><input type="hidden" name="${n}" value="${esc(Object.keys(items).join(','))}"><div class="switches boxed">${Object.entries(items).map(([k, l]) => `<label class="check"><input type="checkbox" name="${n}.${k}"${on.includes(k) ? ' checked' : ''}>${esc(l)}</label>`).join('')}</div></div>`;
-}
 
 // Where the breeder's side of a content block is, in her words.
 function hersLine(snap, key, b) {
@@ -306,35 +279,17 @@ function blockSettings(snap, key, b, pics) {
       <p class="small muted">${esc(hersLine(snap, key, b))}</p>${lookSettings(b)}
       <div class="row"><button class="link small danger" name="act" value="remove:${esc(b.id)}">${svg('trash')} Remove this block</button></div></div>`;
   }
-  let data = '';
-  let show = '';
-  if (b.type === 'dogs') {
-    data = `${recordsSettings(snap, b, k)}${fld('Style', seg(k('style'), b.style, DOG_STYLE))}`;
-    // The lists for the style it has now (save after changing the style to see its own).
-    const lines = DOG_STACKED.includes(b.style) ? `<label class="check"><input type="checkbox" name="${k('lines')}"${b.lines ? ' checked' : ''}> <span>A line between cards where they stack<span class="hint">A 4px bar in the scheme's accent colour between one card and the next, where they sit one under another${b.style === 'flip' ? ' (on a phone)' : ' (on a phone or a tablet)'}.</span></span></label>` : '';
-    show = b.style === 'light' ? showList(b, 'light', LIGHT_ITEMS, 'Top to bottom', 'Where it lives shows only for a co-owned dog living with a co-owner, or an outside dog with its owner filled in.')
-      : b.style === 'beside' ? showList(b, 'beside', DOG_ITEMS, 'Beside the photo, then under it', 'The bio and everything after it go under the photo and details, across the card.')
-        : `<div class="twocol">${showList(b, 'front', DOG_ITEMS, 'Front of the card', 'The photo always fills the front when it is on.')}${showList(b, 'back', DOG_ITEMS, 'Back of the card')}</div>`;
-    show += lines;
-  } else if (b.type === 'litters') {
-    data = recordsSettings(snap, b, k);
-    show = `${showList(b, 'items', LITTER_ITEMS, 'Top to bottom')}<div class="twocol">${showSwitches(b, 'pair', LITTER_PAIR, 'The pair')}${showSwitches(b, 'rows', LITTER_ROWS, 'Facts')}</div>
-      <div class="fgrid">${select(k('show.names'), b.show.names, Object.fromEntries(Array.from({ length: 7 }, (_, i) => [String(i), i ? `Up to ${i}, then count them` : 'Count them only'])), 'Puppies: names', '')}</div>`;
-  } else if (b.type === 'pups') {
-    data = recordsSettings(snap, b, k);
-    show = '<p class="small muted">The Puppies page\'s own flip cards: photo, name, colour and status on the front; details, price and a way to ask on the back, by the pup rules.</p>';
-  } else if (b.type === 'reviews') {
-    data = fld('Style', seg(k('style'), b.style, REVIEW_STYLE));
-    show = `${showList(b, 'items', REVIEW_ITEMS, 'Top to bottom')}${showSwitches(b, 'who', REVIEW_WHO, 'Who it is from')}`;
-  }
+  const { data, show } = dataSettings(snap, b, k);
+  const featured = b.type === 'featured_dog' || b.type === 'featured_pup';
   const words = ownWords(key, b)
     ? `<div class="fgroup"><h2>Starting wording</h2><p class="small muted">The breeder can reword it, and switch the block off, in ${esc(hersAt(snap, key))}.</p><div class="fgrid">
       ${field(k('w.eyebrow'), b.w.eyebrow ?? '', { label: 'Eyebrow' })}${field(k('w.heading'), b.w.heading ?? '', { label: 'Heading' })}${field(k('w.lede'), b.w.lede ?? '', { label: 'Line under it', cls: '' })}</div></div>`
     : '<p class="small muted">Its words are hers: she words this block in her Site Manager, under Pages and wording, Home.</p>';
   return `<div class="set"><input type="hidden" name="${k('present')}" value="1">
     <div class="fgroup"><h2>Which ${WHAT[b.type]}s <span class="kos-tag">${svg('link')}${b.type === 'reviews' ? 'Her records' : 'KennelOS'}</span></h2>${data}
-      <div class="fgrid">${select(k('limit'), b.limit ?? 'all', LIMITS, 'How many')}</div>${resultLine(blockRecords(snap, b), WHAT[b.type])}</div>
-    <div class="fgroup"><h2>What its cards show</h2>${show}</div>
+      ${featured ? '' : `<div class="fgrid">${select(k('limit'), b.limit ?? 'all', LIMITS, 'How many')}</div>`}${resultLine(blockRecords(snap, b, key), WHAT[b.type])}${b.type === 'reviews' ? '' : hersPicks(snap, key, b)}</div>
+    ${featured ? scheduleSettings(snap, key, b, k) : ''}
+    <div class="fgroup"><h2>${featured ? 'What it shows' : 'What its cards show'}</h2>${show}</div>
     ${words}${lookSettings(b)}
     <div class="row"><button class="link small danger" name="act" value="remove:${esc(b.id)}">${svg('trash')} Remove this block</button></div></div>`;
 }
@@ -479,7 +434,7 @@ function pagePreview(snap, key, blocks, site) {
   const out = [];
   for (const b of blocks) {
     if (hersOn(key, b) ? !h[b.id]?.enabled : !addedOn(snap, key, b)) { out.push(ghost(b, 'switched off by the breeder')); continue; }
-    const names = blockRecords(snap, b);
+    const names = blockRecords(snap, b, key);
     if (isData(b) && !names.length) { out.push(ghost(b, 'nothing matches, so it hides')); continue; }
     if (b.type === 'hero') out.push(`<div class="pv-hero"><span class="ph"></span><div>${h.hero.eyebrow ? `<span class="eyebrow">${esc(h.hero.eyebrow)}</span>` : ''}${(h.hero.headline ?? snap.site.kennel_name) ? `<h3>${esc(h.hero.headline ?? snap.site.kennel_name)}</h3>` : ''}${h.hero.script ? `<span class="script">${esc(h.hero.script)}</span>` : ''}</div></div>`);
     else if (b.type === 'head') {
@@ -495,9 +450,17 @@ function pagePreview(snap, key, blocks, site) {
     else if (b.type === 'text') out.push(h.story.heading || h.story.text ? `<div class="pvb sand">${headOf(h.story, null, h.story.heading)}<div class="pvg"><span class="ph"></span><div class="lines"><i></i><i></i><i></i></div></div></div>` : ghost(b, 'no story yet, so it hides'));
     else if (b.type === 'embeds') out.push(ghost(b, `shows the videos and posts she puts on ${pageLabel(snap, key)}`));
     else if (b.type === 'band') out.push(`<div class="pvb deep">${(h.waitlist.heading ?? HOME_WORDS.waitlist.heading) ? `<h3>${esc(h.waitlist.heading ?? HOME_WORDS.waitlist.heading)}</h3>` : ''}<span class="pv-pill">${esc(h.waitlist.button_label || 'Join the waitlist')}</span></div>`);
+    else if (b.type === 'dogs' && b.gshow === 'filter' && b.group && filterBlockOf({ ...snap, layout: { ...snap.layout, [key]: blocks } }, key)?.id === b.id) {
+      // As a Show filter: its own words only (none by default), the filter's choices, one grid.
+      const w = wordsOf(b);
+      const gs = blockGroups(snap, b, blockRows(snap, b, null, key), null);
+      const chip = (g) => (b.group === 'sex' && !b.gw?.[g.key] ? word(snap, g.key === 'female' ? 'girls' : 'boys') : g.heading);
+      out.push(`<div class="pvb">${headOf(w, null, null)}${gs.length > 1 ? `<div class="pv-chips"><span class="on">${esc(word(snap, 'dogs_all'))}</span>${gs.map((g) => `<span>${esc(chip(g))}</span>`).join('')}</div>` : ''}<div class="pvg">${names.map((nm) => `<div class="pvc flip"><span class="ph"></span><div class="t"><b>${esc(nm)}</b></div></div>`).join('')}</div></div>`);
+    }
     else if (b.type === 'dogs') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Our dogs', 'Meet our dogs')}<div class="pvg${b.style === 'flip' || b.style === 'beside' ? '' : ' slide'}">${names.map((nm) => `<div class="pvc${b.style === 'light' ? ' light' : b.style === 'beside' ? ' beside' : ' flip'}"><span class="ph"></span><div class="t"><b>${esc(nm)}</b></div></div>`).join('')}</div></div>`);
     else if (b.type === 'litters') out.push(`<div class="pvb sand">${headOf(wordsOf(b), 'Litters', 'Current and upcoming')}${names.map((nm) => `<div class="pv-row"><b>${esc(nm)}</b></div>`).join('')}</div>`);
     else if (b.type === 'pups') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Puppies', 'Available puppies')}<div class="pvg">${names.map((nm) => `<div class="pvc flip"><span class="ph"></span><div class="t"><b>${esc(nm)}</b></div></div>`).join('')}</div></div>`);
+    else if (b.type === 'featured_dog' || b.type === 'featured_pup') { const today = new Date().toISOString().slice(0, 10); const x = featuredNow(blockRows(snap, b, null, key), b.sched, snap.picks?.[key]?.[b.id]?.fixed ?? [], `${snap.site.id ?? ''}/${key}/${b.id}`, today); out.push(`<div class="pvb sand">${headOf(wordsOf(b), null, null)}${x.map((r) => `<div class="pvg"><span class="ph"></span><div><h3>${esc(r.call_name ?? r.name)}</h3><div class="lines"><i></i><i></i></div></div></div>`).join('')}</div>`); }
     else if (b.type === 'banner') out.push(`<div class="pvb deep">${b.w.heading ? `<h3>${esc(addedWords(snap, key, b).heading)}</h3>` : ''}${b.w.label && b.link ? `<span class="pv-pill">${esc(addedWords(snap, key, b).label)}</span>` : ''}</div>`);
     else if (b.type === 'button') out.push(`<div class="pvb"><div class="pv-row"><span class="pv-pill">${esc(addedWords(snap, key, b).label || 'Button')}</span></div></div>`);
     else if (b.type === 'divider') out.push(`<div class="pvb"><div class="pv-row small muted">${esc(DIVIDER_STYLE[b.style])}</div></div>`);
@@ -652,8 +615,9 @@ function pageFromForm(build, key, form) {
 // ---------- the menu (step 3.4) ----------
 
 // One item's title and the line under it.
-function itemLine(snap, it) {
+function itemLine(snap, it, build) {
   if (it.type === 'link') return [it.text || 'An outside link', `Outside link · ${it.url}`];
+  if (it.type === 'group') return groupItemLine(snap, build, it, (k) => pageLabel(snap, k));
   if (it.type === 'place') {
     const P = MENU_PLACES[it.place];
     return [it.text || P.name, `A place on ${pageLabel(snap, P.page)} · #${it.place.split('#')[1]} · shows ${P.when}`];
@@ -669,6 +633,8 @@ function addOptions(snap, build) {
     '': 'Choose…',
     ...Object.fromEntries(pages.map((k) => [`page:${k}`, `Page: ${pageLabel(snap, k)}`])),
     ...Object.fromEntries(Object.entries(MENU_PLACES).map(([k, P]) => [`place:${k}`, `Place: ${P.name} (${pageLabel(snap, P.page)})`])),
+    // Each group of a grouped block, on any page (builder/menugroups.js).
+    ...groupChoices(snap, build, (k) => pageLabel(snap, k)),
     link: 'An outside link (words and address below)',
   };
 }
@@ -692,7 +658,7 @@ function menuScreen(snap, build, site, menu, { open = null, error = null } = {})
   const listed = new Set(menu.flatMap((g) => g.items.filter((it) => it.type === 'page').map((it) => it.page)));
   const out = [...Object.keys(PAGES).filter((k) => k !== 'privacy'), ...customPages(build).map((c) => c.id)].filter((k) => !listed.has(k));
   const item = (g, gi, it, ii) => {
-    const [title, line] = itemLine(snap, it);
+    const [title, line] = itemLine(snap, it, build);
     const id = `${gi}.${ii}`;
     const isOpen = open === id;
     const pre = `i.${gi}.${ii}`;
@@ -700,7 +666,8 @@ function menuScreen(snap, build, site, menu, { open = null, error = null } = {})
     const set = !isOpen ? '' : `<div class="set"><input type="hidden" name="${pre}.present" value="1"><div class="fgrid">
         ${select(`${pre}.to`, String(gi), groupOpts, 'In the group')}
         ${it.type === 'link' ? `${field(`${pre}.text`, it.text, { label: 'Its words' })}${field(`${pre}.url`, it.url, { label: 'Its address', ph: 'https://', hint: 'Opens in a new tab.' })}` : ''}
-        ${it.type === 'place' ? field(`${pre}.text`, it.text ?? '', { label: 'Its words', ph: MENU_PLACES[it.place].name, hint: 'Leave empty for the site\'s own.' }) : ''}</div>
+        ${it.type === 'place' ? field(`${pre}.text`, it.text ?? '', { label: 'Its words', ph: MENU_PLACES[it.place].name, hint: 'Leave empty for the site\'s own.' }) : ''}
+        ${it.type === 'group' ? field(`${pre}.text`, it.text ?? '', { label: 'Its words', ph: groupItemName(snap, build, it, (k) => pageLabel(snap, k)), hint: 'Leave empty for the group\'s own name.' }) : ''}</div>
         ${it.type === 'page' ? `<div class="switches boxed">${toggle(`${pre}.fallback`, it.fallback, 'Show only while no other link to this page in the group shows')}</div>${twin ? '' : '<p class="small muted">Only matters with another link to the same page in this group, like today\'s Puppies after Available and Upcoming litters.</p>'}` : ''}
         ${it.type === 'page' ? '<p class="small muted">The breeder names it in her menu.</p>' : ''}</div>`;
     return `<li class="mvr item" id="i-${gi}-${ii}">${mvBtns(`imv:${gi}:${ii}`, ii, g.items.length)}<span class="ttl">${esc(title)}<small>${esc(line)}</small></span>
@@ -736,7 +703,7 @@ function menuFromForm(menu, form, snap) {
     const pre = `i.${gi}.${ii}`;
     if (get(`${pre}.present`) == null) return;
     if (it.type === 'link') { it.text = String(get(`${pre}.text`) ?? ''); it.url = String(get(`${pre}.url`) ?? ''); }
-    if (it.type === 'place') { const t = String(get(`${pre}.text`) ?? '').trim(); if (t) it.text = t; else delete it.text; }
+    if (it.type === 'place' || it.type === 'group') { const t = String(get(`${pre}.text`) ?? '').trim(); if (t) it.text = t; else delete it.text; }
     if (it.type === 'page') { if (get(`${pre}.fallback`) != null) it.fallback = true; else delete it.fallback; }
     const to = Number(get(`${pre}.to`));
     if (Number.isInteger(to) && to !== gi && groups[to]) moves.push([gi, ii, to]);
@@ -763,6 +730,7 @@ function menuFromForm(menu, form, snap) {
     const items = groups[gi].items;
     if (kind === 'page' && ref) items.push({ type: 'page', page: ref });
     else if (kind === 'place' && Object.hasOwn(MENU_PLACES, ref)) items.push({ type: 'place', place: ref });
+    else if (kind === 'group' && groupItem(ref)) items.push(groupItem(ref));
     else if (kind === 'link') items.push({ type: 'link', text: String(get(`addtext.${gi}`) ?? ''), url: String(get(`addurl.${gi}`) ?? '') });
     else throw new MenuError('Choose what to add first.');
     if (items.length > MENU_LIMITS.items) throw new MenuError(`A group holds ${MENU_LIMITS.items} links at most.`);

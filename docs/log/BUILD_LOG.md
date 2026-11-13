@@ -959,3 +959,155 @@ with new sections and a new building order. Docs only; nothing built yet.
   and she can untick any. A Featured block's records are always hers to pick, order
   and leave out. Her ticks and picks are her content, kept apart from the owner's
   build. Docs only.
+
+
+## 2026-11-12: KennelOS contract step 3: her ticks and picks, the Featured block (migration 0031)
+
+- `plans/kennelos-contract.md` B3 and B5, as the owner decided on 2026-11-12.
+- **Migration 0031 `block_picks`** (additive: a new table). One row per site, page and
+  block, holding her choice as JSON. It applies itself on deploy. It's in `sites.js`
+  `SITE_TABLES`, so the full backup carries it.
+  - **Not carried:** the `/ops` content JSON import and export (`content/io.js`).
+    Import gives records new ids, so the ids in her picks wouldn't carry over.
+- **Her ticks on every data block** (`content/picks.js`; applied in `render/parts.js`
+  `blockRows`, which now takes the page key).
+  - Dog cards, Litter cards and Pup cards: her new screen lists what the owner's
+    settings show, each ticked. An untick is stored as `omit` and stays off.
+  - A record that matches later comes in ticked.
+  - A record that stops matching or leaves the site drops off her list. Its untick is
+    forgotten the next time she saves; until then it leaves nothing out.
+  - The owner's limit counts after her unticks.
+- **Featured dog and Featured pup** (new block types `featured_dog`, `featured_pup`).
+  - Records: hers to pick and order (`pick`), whatever the owner's conditions. Until
+    she picks, it shows what the owner's conditions hold for, in the owner's order;
+    "Let my website choose again" goes back to that.
+  - A picked record that leaves the site drops out quietly and comes back if it
+    returns. A picked pup stays featured after it's placed (her pick wins); a pup chosen
+    by conditions drops out by itself.
+  - Schedule (the owner's; `content/featured.js`): a day, a week or a month each; her
+    order or a fixed shuffle seeded by site and block; a start date; one to three at
+    once.
+  - With no start date, weeks turn on a Monday and months on the 1st.
+  - She can feature one on set dates (`fixed`, up to 6), which wins over the turn.
+  - It turns over by itself: no Update website needed.
+  - No groups (one at a time).
+  - What shows under the name is the owner's list (`FEATURE_DOG_ITEMS`,
+    `FEATURE_PUP_ITEMS`). Its button, "Meet {name}", is in the Wording screen
+    (`featured_meet`).
+  - **No prototype screen:** drawn as the Home story's photo-beside-words (`.story`),
+    the photo in a soft mat, under the block's heading. With two or three at once,
+    every other one has its photo on the right on a computer.
+  - **Not done: the share row** that shares the featured record's own page (B5). It
+    needs a change to the template's `site.js`, so an `ASSET_VERSION` bump; that waits
+    for the owner. The "Meet {name}" button goes to the record's page, which has its own
+    share row.
+- **Her screen** (`manage/screens/picks.js`, new): `/s/<site>/blocks/<page>/<block>/records`.
+  - The button to it is on each data block's card in Pages and wording, and on Home's
+    Dog cards and Litter cards screens, with "{n} left out by you".
+  - Featured: ticks, ↑ ↓ order (a move saves the ticks with it), set dates, and who
+    shows today.
+  - No prototype screen: built from her app's switch list and the list rows with ↑ ↓,
+    so no app CSS changed.
+  - Its wording is in `manage/wording.js` (`picks.*`, `note.picked`).
+- **The owner's view:** the Featured block's settings: its conditions as the starting
+  set, Schedule, What it shows, and who shows today. Every data block says what she
+  left out or picked. The page preview draws Featured.
+- **Split out** (`review/senior-review-2026-11.md` item 7), moved unchanged:
+  - her Pages and Home screens: `screens.js` → `manage/screens/pages.js` (−27 KB);
+  - the site's data blocks: `render/pages.js` → `render/pages/blocks.js`;
+  - a data block's settings: `builder.js` → `manage/builder/blocks.js`, with the shared
+    controls moved to `builder/controls.js`.
+- Checked in a browser at 390px and 1280px: her picking screens (Dog cards and
+  Featured), the site's Featured block with photos, and the owner's settings. No
+  sideways scroll, no script errors.
+- No versioned file changed (`public/_kp/` untouched).
+- Tests: `picks.test.js` (new: the rotation, picks, her screens end to end, the
+  snapshot); `blocks.test.js` gains the owner's Featured settings. All 387 pass.
+
+## 2026-11-13: her Featured order as a grid
+
+- The owner's request: on a Featured block's choosing screen, ↑ and ↓ didn't line up
+  from row to row (each sat right after the name, and a row with one move was shorter).
+- Each row is now a grid (`app.css` `.picks`, `.pickrow`): the tick and name, then ↑ and
+  ↓ in two fixed 44px columns, with an empty cell where a row has no move.
+  `manage/screens/picks.js` draws it.
+- `public/_kp/m/app.css` changed: it needs an `APP_VERSION` bump (17 is on `main`), which
+  waits for the owner's yes. Until then `versions.test.js` fails, as expected.
+- Checked at 390px and 1280px: every ↑ at one x and every ↓ at the next, no sideways
+  scroll, no script errors.
+
+## 2026-11-13: her lists' arrows in their own columns; Girls and boys as a block (B4)
+
+- **Up and down arrows** (the owner's request: find any not lined up). Three lists in her
+  Site Manager drew ↑ and ↓ only where there was a move, so the first and last rows'
+  buttons (and the rows' widths) shifted:
+  - her lists (dogs, litters, extras, FAQ…);
+  - videos and posts;
+  - her waitlist.
+
+  Each now draws an empty cell where a row has no move. `app.css` `.item .order` and
+  `.wl-entry .order` are two fixed 44px columns, and a list of one hides them.
+  - The owner's admin rows were already lined up: they always draw both buttons and
+    grey out the one that can't be used.
+  - Checked at 390px and 1280px: every ↑ at one x and every ↓ at the next.
+- **Girls and boys** (`plans/kennelos-contract.md` B2 and B4, the leftover from step 2):
+  - The Dogs page's built-in part is now a Dog cards block (`blocks.js` `DOGS_ALL`): breeding
+    dogs with her, in her order, grouped by sex, shown with a new choice, **Its groups:
+    a Show filter** (`gshow: 'filter'`). That's one grid of flip cards with a Show select
+    built from the groups, as the page always had. Other blocks keep a heading per group.
+  - Only the first filter block on a page is drawn as one: the template's script filters
+    one grid. The cards keep the attribute name `data-sex` (now any group's key), so the
+    template's script didn't change and no `ASSET_VERSION` bump is needed.
+  - Old builds and older snapshots holding the built-in part `all` read as the block
+    (`pageBlocks`, `render/parts.js` `filterBlockOf`).
+  - **Checked against `main`'s code:** the Dogs page and Home rendered for 9 sites (the
+    sample, girls only, no breeding dogs; each with no build, the part moved, the part
+    removed). 16 of 18 pages are byte-identical.
+  - The two that differ are a fix. Where the owner removed Girls and boys, the menu's
+    Girls and Boys used to show and open nothing; now they hide.
+  - The menu's `dogs#girls` and `dogs#boys` show while that block has both sexes.
+  - Being a block, it's hers like any other: her Dogs page screen has its card (Show it,
+    words, and Choose which show to untick dogs).
+  - The owner's view: Girls and boys is no longer offered as a built-in to put back. Add
+    a Dog cards block grouped by sex as a Show filter instead. The page preview draws the
+    filter's choices.
+- `public/_kp/m/app.css` changed (this entry and the one before), so an `APP_VERSION`
+  bump waits for the owner's yes; `versions.test.js` fails until then.
+- Tests: `blocks.test.js` (the Dogs page editor with the block; old builds and older
+  snapshots). 387 pass; the version test fails as expected.
+
+## 2026-11-13: menu links to any group of a block; the bumps
+
+- The owner's request: Girls and Boys' siblings, a menu link for any group of any
+  grouped block.
+- **A new menu item, a group of a block** (`{ type: 'group', page, block, key, text? }`;
+  `blocks.js` `cleanItem`).
+  - The Menu screen's Add offers every group of every grouped data block on every page,
+    for example "Group: Retired (All our dogs, Every dog)" (`manage/builder/menugroups.js`,
+    new; `builder.js` only calls it).
+  - A field with set values (a life stage, a sex) offers every value, so a group that's
+    empty today can be placed; it hides until it has something.
+  - The Dogs page's Girls and boys isn't offered: it has its places.
+  - Its words: the group's name (the owner's heading for it, or the Girls and Boys
+    words), or the owner's own, like a place's.
+- **On the site** (`render/parts.js` `groupLink`), the link shows while its block is on
+  and the group has anything in it (after her ticks and the block's limit). It hides when
+  the page is off, the block is gone or no longer grouped (the editor says so), or the
+  group is empty.
+  - It goes to `<page>#g-<block>-<value>`.
+  - A block with a heading per group: each heading carries that id, so the link lands
+    on it.
+  - A Show filter block: each choice carries it as `data-hash`, and the template's script
+    (`public/_kp/t/ak/site.js`) chooses it from the address, on load and on a hash
+    change.
+  - `#girls` and `#boys` work as before. Checked in a browser: `#girls`, `#boys`,
+    `#g-all-female`, `#g-all-male`, and a hash change on the page, with no script errors.
+- Live HTML gains only attributes: an id on each group heading and a `data-hash` on each
+  Show filter choice. Nothing changes visibly.
+- **Bumps, with the owner's yes:**
+  - `APP_VERSION` 17 → 18, for the Site Manager's arrows (`app.css`);
+  - `ASSET_VERSION` 23 → 24, for the template's filter script;
+  - both fingerprints updated (`scripts/fingerprint.mjs`).
+- Tests: `menu.test.js` (Add offers the groups; shown, hidden, reworded, the block gone; a
+  Show filter's group). `blocks.test.js` and `fields.test.js` follow the new attributes.
+  All 390 pass.

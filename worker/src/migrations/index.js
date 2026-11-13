@@ -38,6 +38,7 @@ import siteBuilds from './0027_site_builds.sql';
 import demo from './0028_demo.sql';
 import outsideDogs from './0029_outside_dogs.sql';
 import dogParents from './0030_dog_parents.sql';
+import blockPicks from './0031_block_picks.sql';
 
 export const MIGRATIONS = [
   { id: '0001', name: 'schema', sql: schema },
@@ -70,4 +71,5 @@ export const MIGRATIONS = [
   { id: '0028', name: 'demo', sql: demo },
   { id: '0029', name: 'outside_dogs', sql: outsideDogs },
   { id: '0030', name: 'dog_parents', sql: dogParents },
+  { id: '0031', name: 'block_picks', sql: blockPicks },
 ];

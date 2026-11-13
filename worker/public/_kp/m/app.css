@@ -88,8 +88,21 @@ legend { font-weight: 700; font-size: .9rem; padding: 0; margin-bottom: 6px; }
 .item { display: flex; align-items: stretch; gap: 8px; }
 .item > a { flex: 1; display: grid; gap: 2px; padding: 12px 14px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); text-decoration: none; color: var(--ink); min-width: 0; }
 .item > a span { font-size: .82rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.item .order { display: flex; gap: 4px; }
+/* Up and down each keep their own column (an empty cell where a row has no move), so
+   the arrows line up from row to row; anything after them (Remove) follows. */
+.item .order { display: grid; grid-template-columns: 44px 44px; grid-auto-flow: column; grid-auto-columns: auto; gap: 4px; align-items: center; flex: none; }
 .item .order button { min-height: 44px; min-width: 44px; padding: 0; }
+/* A list of one has nothing to move: no empty cells. */
+.order:not(:has(button)) { display: none; }
+/* A Featured block's order (screens/picks.js): the tick and name, then up and down
+   in two fixed columns, so the arrows line up from row to row (an empty cell where a
+   row has no move). */
+.picks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.pickrow { display: grid; grid-template-columns: minmax(0, 1fr) 44px 44px; gap: 6px; align-items: center; }
+.pickrow label.check { align-items: center; min-width: 0; }
+.pickrow label.check b { display: block; }
+.pickrow label.check .hint { display: block; overflow-wrap: anywhere; }
+.pickrow button { min-height: 44px; min-width: 44px; padding: 0; }
 .pup { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 150px) auto; gap: 8px; align-items: center; border-top: 1px solid var(--line); padding-top: 10px; }
 .pup a { display: grid; text-decoration: none; color: var(--ink); min-width: 0; }
 .pup a span { font-size: .82rem; color: var(--muted); }
@@ -110,7 +123,7 @@ legend { font-weight: 700; font-size: .9rem; padding: 0; margin-bottom: 6px; }
 .wl-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .wl-entry { gap: 8px; } .wl-entry p { margin: 0; }
 .wl-entry .row form { flex: 1 1 110px; } .wl-entry .row form button { width: 100%; }
-.wl-entry .order { display: flex; gap: 4px; flex: 0 0 auto; } .wl-entry .order button { min-height: 44px; min-width: 44px; padding: 0; }
+.wl-entry .order { display: grid; grid-template-columns: 44px 44px; gap: 4px; flex: 0 0 auto; } .wl-entry .order button { min-height: 44px; min-width: 44px; padding: 0; }
 .ph-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .ph-list img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--r); }
 .ph-list .card { padding: 10px; gap: 8px; }

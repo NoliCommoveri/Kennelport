@@ -16,6 +16,7 @@
 import { PAGES, MENU_GROUPS, CUSTOM_KEY, slugify, COLLAGE_LAYOUTS, FRAMES, FOCUS } from './model.js';
 import { BLOCK_KIND, cleanWhere, cleanOrder, cleanGroup, cleanGroupWords, WHERE_MAX, TICK_OPS, FIELDS, LIFE_STAGE, RESIDENCE } from './fields.js';
 import { DOG_PLACES } from './rules.js';
+import { cleanSchedule } from './featured.js';
 
 export class BlockError extends Error {}
 
@@ -33,6 +34,9 @@ export const BLOCK_TYPES = Object.freeze({
   dogs: { name: 'Dog cards', ic: 'paw', kind: 'data' },
   litters: { name: 'Litter cards', ic: 'heart', kind: 'data' },
   pups: { name: 'Pup cards', ic: 'paw', kind: 'data' },
+  // B5: one record at a time, large, turning over on a schedule; its records are hers to pick.
+  featured_dog: { name: 'Featured dog', ic: 'star', kind: 'data', hint: 'One dog at a time, large, turning over by itself: a day, a week or a month each. She picks the dogs and their order in her Site Manager.' },
+  featured_pup: { name: 'Featured pup', ic: 'star', kind: 'data', hint: 'One pup at a time, large, turning over by itself. She picks the pups in her Site Manager; until she does, it shows what your conditions hold for.' },
   reviews: { name: 'Reviews', ic: 'star', kind: 'data' },
   embeds: { name: 'Videos and posts', ic: 'camera', kind: 'content', once: true, hint: 'The videos and posts she puts on Home.' },
   band: { name: 'Call-to-action band', ic: 'heart', kind: 'content', once: true, hint: 'Her waitlist band. Shows only while the waitlist page is on.' },
@@ -114,6 +118,9 @@ export const SEXES = Object.freeze({ any: 'Any', female: 'Girls', male: 'Boys' }
 export const DOG_STYLE = Object.freeze({ slider: 'Slider', flip: 'Flip cards', light: 'Light cards', beside: 'Photo beside details' });
 // The styles whose cards stack one under another on a phone: they can have a line between cards.
 export const DOG_STACKED = Object.freeze(['flip', 'beside']);
+// How a grouped Dog cards block shows its groups: a heading over each, or one grid of
+// flip cards with a Show filter (the Dogs page's Girls and boys; the first on a page).
+export const GROUP_SHOW = Object.freeze({ headings: 'A heading over each group', filter: 'A Show filter over one grid of flip cards' });
 export const REVIEW_STYLE = Object.freeze({ slider: 'Slider', grid: 'Cards' });
 export const LIMIT_MAX = 24;
 // A facts row of the owner's: up to four [value, label] pairs, Home's facts' look.
@@ -137,6 +144,10 @@ export const LITTER_ITEMS = Object.freeze({ eyebrow: 'Eyebrow (Current litter, C
 export const LITTER_PAIR = Object.freeze({ photos: "The parents' photos", name: "The litter's name", parents: "The pair's names" });
 export const LITTER_ROWS = Object.freeze({ born: 'Born', deposits: 'Deposits from', puppies: 'Puppies', going: 'Going home or Ready now', expected: 'Expected (planned)', price: 'Price', deposit: 'Deposit' });
 export const REVIEW_ITEMS = Object.freeze({ stars: 'Stars', quote: 'The quote', who: 'Who it is from' });
+// A Featured block's items beside its photo, under the name (B5). A dog's are its
+// card's (render/parts.js dogItems); a pup's its own.
+export const FEATURE_DOG_ITEMS = Object.freeze({ reg: 'Registered name', role: 'Breed and role', titles: 'Titles', where: 'Where it lives (co-owned) or its owner (outside dogs)', tests: 'Health tests (or details)', bio: 'Bio', ask: '“Ask about” and price (for sale)' });
+export const FEATURE_PUP_ITEMS = Object.freeze({ line: 'Sex and colour', status: 'Status', litter: 'Its litter and parents', price: 'Price', bio: 'Bio' });
 export const REVIEW_WHO = Object.freeze({ photo: 'Photo', name: 'First name and town', family: '“{pup}’s family, home {month}”' });
 
 export const SHOW_DEFAULT = Object.freeze({
@@ -146,6 +157,8 @@ export const SHOW_DEFAULT = Object.freeze({
     beside: ['photo', 'call', 'reg', 'role', 'titles', 'where', 'tests', 'bio', 'ask', 'profile'] },
   litters: { items: ['eyebrow', 'pair', 'facts', 'summary', 'link'], pair: ['photos', 'name', 'parents'], rows: Object.keys(LITTER_ROWS), names: 2 },
   reviews: { items: ['stars', 'quote', 'who'], who: ['photo', 'name', 'family'] },
+  featured_dog: { items: ['reg', 'role', 'titles', 'bio'] },
+  featured_pup: { items: ['line', 'status', 'litter', 'bio'] },
 });
 
 const linkDefault = () => ({ to: 'page', page: 'waitlist' });
@@ -183,6 +196,7 @@ function legacyWhere(b) {
     const stages = list(b.f?.stage, STAGES) ?? ['current', 'planned'];
     return [{ field: 'stage', op: 'one_of', value: stages.flatMap((x) => LEGACY_STAGE[x]) }];
   }
+  if (b.type === 'featured_dog') return DOGS_WHERE();
   return PUPS_WHERE();
 }
 // Today's defaults, as legacyWhere reads a block with no filters (written out: Home's
@@ -194,9 +208,11 @@ const PUPS_WHERE = () => [{ field: 'status', op: 'one_of', value: ['available', 
 // A new block of a type, as Add a block makes it.
 export function newBlock(type, id) {
   const b = { id, type };
-  if (type === 'dogs') Object.assign(b, { where: DOGS_WHERE(), order: 'own', group: '', gw: {}, style: 'slider', limit: null, show: structuredClone(SHOW_DEFAULT.dogs), w: { eyebrow: 'Our dogs', heading: 'Meet our dogs' } });
+  if (type === 'dogs') Object.assign(b, { where: DOGS_WHERE(), order: 'own', group: '', gw: {}, gshow: 'headings', style: 'slider', limit: null, show: structuredClone(SHOW_DEFAULT.dogs), w: { eyebrow: 'Our dogs', heading: 'Meet our dogs' } });
   if (type === 'litters') Object.assign(b, { where: LITTERS_WHERE(), order: 'own', group: '', gw: {}, limit: null, show: structuredClone(SHOW_DEFAULT.litters), w: { eyebrow: 'Litters', heading: 'Current and upcoming' } });
   if (type === 'pups') Object.assign(b, { where: PUPS_WHERE(), order: 'own', group: '', gw: {}, limit: null, w: { eyebrow: 'Puppies', heading: 'Available puppies' } });
+  if (type === 'featured_dog') Object.assign(b, { where: DOGS_WHERE(), order: 'own', sched: cleanSchedule(null), show: structuredClone(SHOW_DEFAULT.featured_dog), w: { eyebrow: 'Featured', heading: 'Meet one of our dogs' } });
+  if (type === 'featured_pup') Object.assign(b, { where: PUPS_WHERE(), order: 'own', sched: cleanSchedule(null), show: structuredClone(SHOW_DEFAULT.featured_pup), w: { eyebrow: 'Featured', heading: 'Puppy spotlight' } });
   if (type === 'reviews') Object.assign(b, { style: 'slider', limit: null, show: structuredClone(SHOW_DEFAULT.reviews), w: { eyebrow: 'Families', heading: 'What our families say' } });
   if (type === 'banner') Object.assign(b, { w: { ...OWN_WORDS.banner }, link: linkDefault(), s: { bg: 'accent' } });
   if (type === 'button') Object.assign(b, { w: { ...OWN_WORDS.button }, link: linkDefault(), size: 'm', look: 'solid', align: 'center' });
@@ -246,7 +262,6 @@ export const PAGE_PARTS = Object.freeze({
   reviews: { list: { name: 'Every review and the review form', hint: 'With the topic filter when her reviews have more than one topic.' } },
   contact: { main: { name: 'Her contact details and the contact form', inside: true } },
   dogs: {
-    all: { name: 'Girls and boys', hint: 'Her breeding dogs as flip cards, with the Show filter when there are both.' },
     upcoming: { name: 'Up and coming', hint: 'Young dogs she has kept.' },
     for_sale: { name: 'Looking for a home', hint: 'Adults for sale, with their price by the rules.' },
     co_owned: { name: 'Shared with friends', hint: 'Co-owned dogs living with a partner kennel, and the kennels.' },
@@ -297,11 +312,17 @@ const H = { id: 'head', type: 'head' };
 const F = { id: 'faq', type: 'faq' };
 const BG = { id: 'badges', type: 'badges' };
 const part = (id) => ({ id, type: 'builtin' });
+// The Dogs page's Girls and boys (kennelos-contract.md B4): once a built-in part, now a
+// Dog cards block like any other: her breeding dogs at home, in her order, grouped by
+// sex and shown as one grid of flip cards with the Show filter, so the page is as it
+// was. A build or snapshot that holds the old part reads as this block.
+export const DOGS_ALL = Object.freeze({ ...newBlock('dogs', 'all'), group: 'sex', gshow: 'filter', style: 'flip', w: {} });
+const isOldAll = (key, b) => key === 'dogs' && b?.type === 'builtin' && b.id === 'all';
 export const PAGE_DEFAULTS = Object.freeze(Object.fromEntries(Object.entries({
   about: [H, part('story'), BG, { id: 'embeds', type: 'embeds' }],
   reviews: [H, part('list')],
   contact: [H, F, part('main'), BG],
-  dogs: [H, F, part('all'), part('upcoming'), part('for_sale'), part('co_owned')],
+  dogs: [H, F, DOGS_ALL, part('upcoming'), part('for_sale'), part('co_owned')],
   litters: [H, F, part('current'), BG, part('older'), part('soon'), part('upcoming')],
   older: [H, part('list')],
   how_it_works: [H, F, part('steps'), BG],
@@ -395,6 +416,7 @@ export function cleanBlock(b) {
       light: list(b.show?.light, LIGHT_ITEMS) ?? [...D.light], beside: list(b.show?.beside, DOG_ITEMS) ?? [...D.beside] };
     // A 4px accent line between cards where they stack (flip cards on a phone, photo beside details).
     out.lines = b.lines === true;
+    out.gshow = pick(b.gshow, GROUP_SHOW, 'headings');
   } else if (b.type === 'litters') {
     const D = SHOW_DEFAULT.litters;
     Object.assign(out, recordsOf(b));
@@ -404,6 +426,12 @@ export function cleanBlock(b) {
   } else if (b.type === 'pups') {
     Object.assign(out, recordsOf(b));
     out.limit = limitOf(b.limit);
+  } else if (b.type === 'featured_dog' || b.type === 'featured_pup') {
+    // No groups: one record at a time. How many at once is its schedule's.
+    Object.assign(out, recordsOf(b), { group: '', gw: {} });
+    out.sched = cleanSchedule(b.sched);
+    const items = b.type === 'featured_dog' ? FEATURE_DOG_ITEMS : FEATURE_PUP_ITEMS;
+    out.show = { items: list(b.show?.items, items) ?? [...SHOW_DEFAULT[b.type].items] };
   } else if (b.type === 'reviews') {
     const D = SHOW_DEFAULT.reviews;
     out.style = pick(b.style, REVIEW_STYLE, 'slider');
@@ -491,7 +519,7 @@ export function pageBlocks(build, key) {
   if (!Array.isArray(saved)) return defaultsOf(key).map((b) => cleanBlock(b));
   const seen = new Set();
   const once = new Set();
-  const out = saved.map(cleanBlock).filter((b) => {
+  const out = saved.map((b) => cleanBlock(isOldAll(key, b) ? DOGS_ALL : b)).filter((b) => {
     if (!b || seen.has(b.id) || !fits(key, b)) return false;
     seen.add(b.id);
     if (BLOCK_TYPES[b.type].once) { if (once.has(b.type)) return false; once.add(b.type); }
@@ -587,11 +615,15 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
       next.limit = get(k('limit'));
       next.show = { front: order('front', DOG_ITEMS), back: order('back', DOG_ITEMS), light: order('light', LIGHT_ITEMS), beside: order('beside', DOG_ITEMS) };
       next.lines = DOG_STACKED.includes(b.style) ? get(k('lines')) != null : b.lines;
+      next.gshow = get(k('gshow')) ?? b.gshow;
     } else if (b.type === 'litters') {
       next.limit = get(k('limit'));
       next.show = { items: order('items', LITTER_ITEMS), pair: order('pair', LITTER_PAIR), rows: order('rows', LITTER_ROWS), names: get(k('show.names')) };
     } else if (b.type === 'pups') {
       next.limit = get(k('limit'));
+    } else if (b.type === 'featured_dog' || b.type === 'featured_pup') {
+      next.sched = { every: get(k('sched.every')), order: get(k('sched.order')), start: String(get(k('sched.start')) ?? ''), count: get(k('sched.count')) };
+      next.show = { items: order('items', b.type === 'featured_dog' ? FEATURE_DOG_ITEMS : FEATURE_PUP_ITEMS) };
     } else if (b.type === 'reviews') {
       next.style = get(k('style'));
       next.limit = get(k('limit'));
@@ -854,6 +886,13 @@ function cleanItem(it, pages) {
     return { type: 'place', place: it.place, ...(text ? { text } : {}) };
   }
   if (it.type === 'link') return { type: 'link', text: cleanText(it.text, MENU_LIMITS.text), url: String(it.url ?? '').trim().slice(0, 500) };
+  // A group of a grouped data block (kennelos-contract.md B2): Girls and Boys' siblings.
+  // Its block may go later; then it simply doesn't show (render/parts.js menuGroups).
+  if (it.type === 'group') {
+    if (!pages.has(it.page) || !/^[a-z][a-z0-9_-]{0,39}$/.test(String(it.block ?? '')) || typeof it.key !== 'string' || it.key.length > 60) return null;
+    const text = cleanText(it.text, MENU_LIMITS.text);
+    return { type: 'group', page: it.page, block: it.block, key: it.key, ...(text ? { text } : {}) };
+  }
   return null;
 }
 

@@ -19,6 +19,7 @@ import { rulesFor, loadBuild, ruleKey } from './content/rules.js';
 import { NOT_FOR_DEMO } from './lib/demo.js';
 import { layoutFor, customPages } from './content/blocks.js';
 import { changes } from './diff.js';
+import { sitePicks } from './content/picks.js';
 
 export const SNAPSHOT_VERSION = 1;
 export const KEEP = 10;
@@ -274,7 +275,20 @@ export async function buildSnapshot(env, siteId) {
     // Her build's pages as blocks (content/blocks.js), and the pages she added.
     layout: layoutFor(build),
     added,
+    // Her ticks and picks on data blocks (content/picks.js), naming only records shown.
+    picks: shownPicks(await sitePicks(env, siteId), new Set([...dogs, ...litters, ...litters.flatMap((l) => l.puppies)].map((x) => x.id))),
   };
+}
+
+function shownPicks(all, shown) {
+  const only = (ids) => ids.filter((id) => shown.has(id));
+  const out = {};
+  for (const [page, blocks] of Object.entries(all)) {
+    for (const [block, p] of Object.entries(blocks)) {
+      (out[page] ??= {})[block] = { omit: only(p.omit), pick: p.pick && only(p.pick), fixed: p.fixed.filter((f) => shown.has(f.id)) };
+    }
+  }
+  return out;
 }
 
 // Read the snapshot a site points at. Kept in memory per isolate by id, since a

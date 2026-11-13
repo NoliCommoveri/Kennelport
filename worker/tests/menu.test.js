@@ -154,3 +154,51 @@ test('today\'s Puppies link shows only while Available now, Available soon and U
   assert.equal(menuGroups(moved, ctx)[0].links[0].text, 'Puppies');
   assert.throws(() => withMenu({}, [{ id: 'a', label: '', items: [] }]), MenuError);
 });
+
+test('a group of a block in the menu: offered by Add, shown while it has dogs, landing on its heading', async () => {
+  const s = await setup();
+  const { pageBlocks, withPage, newBlock } = await import('../src/content/blocks.js');
+  // The owner's Dogs page gains a Dog cards block of every dog living with her, a heading per life stage.
+  const b0 = await s.build();
+  const stages = { ...newBlock('dogs', 'stages'), where: [{ field: 'residence', op: 'one_of', value: ['home'] }], group: 'life_stage', style: 'flip', w: { heading: 'Every dog' } };
+  await saveBuild(s.env, s.site.id, withPage(b0, 'dogs', [...pageBlocks(b0, 'dogs'), stages]));
+  // Add offers each of its groups (and not Girls and boys', which has its places).
+  const screen = await s.get();
+  assert.match(screen, /<option value="group:dogs\|stages\|retired">Group: Retired \(All our dogs, Every dog\)<\/option>/);
+  assert.doesNotMatch(screen, /group:dogs\|all\|/);
+  await s.post({ 'add.1': 'group:dogs|stages|retired' }, { act: 'add:1' });
+  const item = (await s.build()).menu[1].items.at(-1);
+  assert.deepEqual(item, { type: 'group', page: 'dogs', block: 'stages', key: 'retired' });
+  assert.match(text(await s.get()), /Retired A group on All our dogs · Every dog · shows while it has anything in it/);
+  // No retired dog yet: it hides. One retires: it shows, and lands on its heading.
+  assert.doesNotMatch(nav(await s.render()), /Retired/);
+  s.env.DB.raw.prepare("UPDATE dogs SET status = 'retired' WHERE site_id = ? AND slug = 'peaches'").run(s.site.id);
+  const html = await s.render();
+  assert.match(html, /<a href="\/dogs#g-stages-retired">Retired<\/a>/);
+  assert.match(await s.render('/dogs'), /<div class="head[^"]*" id="g-stages-retired"><h3>Retired<\/h3>/);
+  // Her words for it.
+  const gi = 1, ii = (await s.build()).menu[1].items.length - 1;
+  await s.post({ [`i.${gi}.${ii}.text`]: 'Retired dogs' }, { open: `${gi}.${ii}` });
+  assert.match(await s.render(), /<a href="\/dogs#g-stages-retired">Retired dogs<\/a>/);
+  // The block gone: the link quietly doesn't show; the editor says why.
+  const b1 = await s.build();
+  await saveBuild(s.env, s.site.id, withPage(b1, 'dogs', pageBlocks(b1, 'dogs').filter((b) => b.id !== 'stages')));
+  assert.doesNotMatch(await s.render(), /g-stages-retired/);
+  assert.match(text(await s.get()), /its block is gone or no longer grouped/);
+});
+
+test('a group of a Show filter block: its link chooses it in the filter', async () => {
+  const s = await setup();
+  const { pageBlocks, withPage } = await import('../src/content/blocks.js');
+  const b0 = await s.build();
+  // Girls and boys, grouped by life stage instead: still one grid with the Show filter.
+  await saveBuild(s.env, s.site.id, withPage(b0, 'dogs', pageBlocks(b0, 'dogs').map((b) => (b.id === 'all' ? { ...b, group: 'life_stage', where: [] } : b))));
+  s.env.DB.raw.prepare("UPDATE dogs SET status = 'retired' WHERE site_id = ? AND slug = 'peaches'").run(s.site.id);
+  const dogs = await s.render('/dogs');
+  assert.match(dogs, /<option value="retired" data-hash="g-all-retired">Retired<\/option>/);
+  assert.match(dogs, /<div data-sex="retired">/);
+  await s.post({ 'add.1': 'group:dogs|all|retired' }, { act: 'add:1' });
+  assert.match(await s.render(), /<a href="\/dogs#g-all-retired">Retired<\/a>/);
+  // Not grouped by sex any more, so Girls and Boys hide.
+  assert.doesNotMatch(await s.render(), /dogs#girls/);
+});

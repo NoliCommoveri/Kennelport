@@ -176,6 +176,7 @@ const NOTES = {
   apart: 'Kept apart. KennelOS\'s one is added as new.',
   stopped: 'That device is no longer linked.',
   unlinked: 'Unlinked. Everything from KennelOS is now yours to edit here.',
+  picked: 'Saved. Your website shows your choice after you publish.',
   made_parent: 'Made a dog record for this parent and linked it. It\'s marked Not my dog: change that below if it was yours, and add its own parents.',
 };
 export const NOTE_KEYS = Object.keys(NOTES);
@@ -640,7 +641,30 @@ const SCREEN_LINES = {
   "signin.your_code": ["signin", "Line", "Your code"],
   "signin.no_sites": ["signin", "Line", "No sites"],
   "signin.your_sites": ["signin", "Line", "Your sites"],
-  "notifications.notifications_2": ["notifications", "Line", "Notifications"]
+  "notifications.notifications_2": ["notifications", "Line", "Notifications"],
+  "picks.link": ["pages", "Button on a block of dogs, litters or pups", "Choose which show"],
+  "picks.link_featured": ["pages", "Button on a Featured block", "Choose which are featured"],
+  "picks.left_out": ["pages", "Line on a block's card, after what it shows ({n}: how many she left out)", "{n} left out by you"],
+  "picks.title": ["pages", "Heading of the choosing screen ({block}: the block's heading)", "{block}: which show"],
+  "picks.title_featured": ["pages", "Heading of the choosing screen for a Featured block ({block}: the block's heading)", "{block}: which are featured"],
+  "picks.intro": ["pages", "Line", "These are the ones this block is set to show. Untick any you'd rather leave off it. A new one that matches comes in ticked."],
+  "picks.limit": ["pages", "Line ({n}: how many the block shows)", "Your website shows the first {n} ticked."],
+  "picks.intro_featured": ["pages", "Line", "Tick the ones to feature and put them in your order. Your website shows them one at a time, turning over by itself."],
+  "picks.not_yet": ["pages", "Line, before she has picked", "You haven't picked any yet, so your website shows the ones ticked below, chosen for you. Save to make the choice yours."],
+  "picks.none": ["pages", "Empty", "Nothing matches this block right now, so it hides on your website."],
+  "picks.none_featured": ["pages", "Empty", "There's nothing to feature yet."],
+  "picks.move_up": ["pages", "Button label for a screen reader ({name})", "Move {name} up"],
+  "picks.move_down": ["pages", "Button label for a screen reader ({name})", "Move {name} down"],
+  "picks.save": ["pages", "Button", "Save"],
+  "picks.reset": ["pages", "Button", "Let my website choose again"],
+  "picks.reset_hint": ["pages", "Line", "Forgets your picks: the block shows what it's set to show, as before you picked."],
+  "picks.dates": ["pages", "Heading", "Feature one on set dates"],
+  "picks.dates_hint": ["pages", "Line", "On those days it shows instead of the one whose turn it is. Only the ones ticked above can be chosen."],
+  "picks.dates_which": ["pages", "Field label", "Which one"],
+  "picks.dates_none": ["pages", "Choice", "None"],
+  "picks.dates_from": ["pages", "Field label", "From"],
+  "picks.dates_to": ["pages", "Field label", "To"],
+  "picks.today": ["pages", "Line ({names}: who shows today)", "Showing today: {names}"]
 };
 
 // The errors that tell her what to fix (content/model.js and records.js checks,
