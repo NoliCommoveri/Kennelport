@@ -1337,3 +1337,8 @@ let her give a deleted family back.
 - Checked each style on a pup card at 390px.
 - Tests: `pills.test.js` (new, two); class names updated in `editing`, `rules`, `tags`
   tests. All pass bar `versions.test.js`, which waits on the bump.
+
+## 2026-11-13: ASSET_VERSION 25
+
+- The owner said yes: `ASSET_VERSION` 24 → 25 for the pill styles in `site.css`, with
+  `TEMPLATE_FILES` from `node worker/scripts/fingerprint.mjs`. All 411 tests pass.
