@@ -1111,3 +1111,14 @@ with new sections and a new building order. Docs only; nothing built yet.
 - Tests: `menu.test.js` (Add offers the groups; shown, hidden, reworded, the block gone; a
   Show filter's group). `blocks.test.js` and `fields.test.js` follow the new attributes.
   All 390 pass.
+
+## 2026-11-13: Plan for seeing a family's portal as they see it
+
+- New plan, [`plans/family-view.md`](../plans/family-view.md): a **See their portal**
+  button on her family screen opens that family's portal on her site's address,
+  read-only and drawn live from the records, with a band saying so. Handed over once
+  with a signed link (as the status page's one tap), then a signed view cookie for an
+  hour; every write refused on the server; Messages' read marks, program-click counts
+  and the family's activity date left untouched.
+- No migration and no version bump planned. Four decisions wait for the owner (plan
+  section 5). Nothing built yet.

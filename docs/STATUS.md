@@ -4,7 +4,7 @@ The one place for progress. Keep it short: one line per item, a link to where th
 is. When a step is built, change its line here and add the detail to the build log
 ([`log/BUILD_LOG.md`](log/BUILD_LOG.md)); the plans describe intent, not progress.
 
-Last updated 2026-11-12. Released on `main`: Site Manager (`APP_VERSION`) 17, site
+Last updated 2026-11-13. Released on `main`: Site Manager (`APP_VERSION`) 17, site
 template (`ASSET_VERSION`) 23.
 
 ## Platform
@@ -61,6 +61,8 @@ anyone outside the family.
   wording, guarantee periods, handbook and food details, baseline sign-up rates,
   application-to-buyer mapping, photo and video package details, R2 and HEVC checks.
 - Phases 2 and 3: not started.
+- Seeing a family's portal as they see it (read-only, live): planned 2026-11-13, not built
+  ([`plans/family-view.md`](plans/family-view.md)); four decisions for the owner in its section 5.
 
 ## Finished feature plans
 
