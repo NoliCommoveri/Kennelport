@@ -587,6 +587,29 @@ test('steps, How to pay, extras and her public list come with a bundle; whether 
   assert.equal(b.row("SELECT COUNT(*) AS n FROM extras WHERE kennelos_id = 'x1'").n, 0);
 });
 
+test('steps: KennelOS only starts them; her wording, her own steps and her order stay through every update', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (body) => api(b.env, '/v1/bundle', { body, token });
+  const sent = [{ id: 'apply', heading: 'Apply', body: 'Send us your application.' }, { id: 'turn', heading: 'Your turn', body: 'We offer you a puppy.' }];
+  await send(bundle({ steps: sent }));
+  const order = () => b.rows("SELECT heading FROM steps WHERE site_id = ? AND page = 'how_it_works' ORDER BY sort, rowid", b.site.id).map((x) => x.heading);
+  assert.deepEqual(order().slice(0, 2), ['Apply', 'Your turn'], 'the first time, KennelOS first');
+  // She rewords one, adds her own, and puts hers between KennelOS's two.
+  const apply = b.row("SELECT * FROM steps WHERE kennelos_id = 'apply'");
+  const turn = b.row("SELECT * FROM steps WHERE kennelos_id = 'turn'");
+  b.env.DB.raw.prepare("UPDATE steps SET heading = 'Send your application', body = 'My words.' WHERE id = ?").run(apply.id);
+  b.env.DB.raw.prepare("DELETE FROM steps WHERE site_id = ? AND source IS NOT 'kennelos'").run(b.site.id);
+  b.env.DB.raw.prepare("INSERT INTO steps (id, site_id, page, heading, body, sort, pay_link, source) VALUES ('mine', ?, 'how_it_works', 'Meet us', 'Come visit.', 1, 0, 'kennelport')").run(b.site.id);
+  b.env.DB.raw.prepare('UPDATE steps SET sort = 2 WHERE id = ?').run(turn.id);
+  await send(bundle({ steps: [...sent, { id: 'home', heading: 'Going home', body: 'Pickup day.' }] }));
+  assert.deepEqual(order(), ['Send your application', 'Meet us', 'Your turn', 'Going home'], 'her edits and order stay; a new KennelOS step goes last');
+  assert.equal(b.row("SELECT body FROM steps WHERE kennelos_id = 'apply'").body, 'My words.');
+  // One KennelOS stops sending leaves; hers stay.
+  await send(bundle({ steps: sent }));
+  assert.deepEqual(order(), ['Send your application', 'Meet us', 'Your turn']);
+});
+
 test('staging: the link API answers /v1/ on its own host, since KennelOS sends no cookie', async () => {
   const env = await makeEnv({ ALLOW_HOST_OVERRIDE: '1', KENNELOS_APP_ORIGINS: APP });
   const res = await call(env, 'kennelport-staging.kennelport.workers.dev', '/v1/link', { method: 'GET', headers: { origin: APP } });

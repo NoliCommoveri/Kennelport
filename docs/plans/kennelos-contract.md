@@ -247,7 +247,7 @@ rule that gives today's result by default.
 | C5 | `health_detail` | On a result: `type` (KennelOS's event type), `verify_url` where she has one | Fields for grouping on a dog's page ("OFA", "Genetic"); the default is one list, as today |
 | C6 | `account_type` | On a product: `account_type`, raw | A rule maps each type to where it shows (Recommended products, Getting your pup home, or a group the owner names). `transport` stays until both sides have moved |
 | C7 | `lineage` | On a dog: `breed`, `sire_id`, `dam_id`, and `ancestors`: up to four generations as `[{ id, role path ("sire", "sire.dam"…), call_name, registered_name, titles }]`, including pedigree-only dogs, by name only | A Pedigree block on a dog's page (off by default); `sire` and `dam` link to a dog on the site when it is one |
-| C9 | `waitlist_facts` | Her waitlist's settings as values: `online_form`, `has_fee`, `fee_due_days`, `respond_days`, `max_passes` | The steps' and the fee card's wording become templates in `rules.words` with those values filled in; today's sentences are the defaults. `steps` and `payment` are still taken when the section is absent |
+| C9 | `waitlist_facts` | Her waitlist's settings as values: `online_form`, `has_fee`, `fee_due_days`, `respond_days`, `max_passes` | The steps' and the fee card's wording become templates in `rules.words` with those values filled in; today's sentences are the defaults. `steps` and `payment` are still taken when the section is absent. **Modified (2026-11-13):** a step's wording only starts it: once on her site its heading, body and place are hers, so a template fills only a new step |
 
 Left as they are: a heat's month only; which records are sent (her Show on website
 marks); prices only with Use my KennelOS prices.

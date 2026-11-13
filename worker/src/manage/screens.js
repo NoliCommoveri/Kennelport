@@ -176,7 +176,8 @@ export function createScreens({ env, request, url, site, user, page, say = defau
   // The fields KennelOS owns on this record, while it comes from KennelOS.
   async function lockedFor(kind, rec) {
     if (rec?.source !== 'kennelos') return null;
-    return new Set([...(OWNED[kind] ?? []), ...((await kosPrices()) ? OWNED_PRICES[kind] ?? [] : [])]);
+    const set = new Set([...(OWNED[kind] ?? []), ...((await kosPrices()) ? OWNED_PRICES[kind] ?? [] : [])]);
+    return set.size ? set : null; // nothing of KennelOS's on it (a step): all hers
   }
 
   // Litters about to go (5.3): each with the day it's deleted, Keep, and Remove now

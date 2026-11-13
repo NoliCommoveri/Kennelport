@@ -198,7 +198,8 @@ export const OWNED = {
   health: ['test', 'result', 'normal', 'date', 'verify_url'],
   extras: ['name', 'grp', 'description'],
   products: ['name', 'link_url', 'code', 'code_note', 'website_url', 'transport'],
-  steps: ['heading', 'body'],
+  // Steps: none. KennelOS's wording only starts a step; her edits and order stay.
+  steps: [],
 };
 export const OWNED_PRICES = { litters: LITTER_PRICE_FIELDS, extras: ['price_from', 'price_to'] };
 
@@ -659,18 +660,22 @@ export async function applyBundle(env, device, body) {
   }
 
   // The waitlist steps behind How it works (3.11): only when KennelOS sends some.
+  // KennelOS's wording only starts a step: once it's on her site, its heading, body
+  // and place are hers, so her edits, her own steps and her order stay through every
+  // update. The first time, KennelOS's steps go first and hers follow; a step
+  // KennelOS adds later goes last. One KennelOS stops sending leaves.
   if (clean.steps?.length) {
     const byKos = new Map(st.steps.filter((x) => x.kennelos_id).map((x) => [x.kennelos_id, x]));
-    clean.steps.forEach((x, i) => {
-      const cur = byKos.get(x.id);
-      const values = { heading: x.heading, body: x.body, sort: i };
-      if (cur) { w.update('steps', cur, values); return; }
-      w.insert('steps', { id: crypto.randomUUID(), site_id: site.id, page: 'how_it_works', ...values, pay_link: 0, source: 'kennelos', kennelos_id: x.id });
-    });
+    const first = !st.steps.some((x) => x.source === 'kennelos');
+    let sort = first ? -1 : Math.max(-1, ...st.steps.map((x) => x.sort ?? 0));
+    for (const x of clean.steps) {
+      if (byKos.has(x.id)) continue;
+      w.insert('steps', { id: crypto.randomUUID(), site_id: site.id, page: 'how_it_works', heading: x.heading, body: x.body, sort: ++sort, pay_link: 0, source: 'kennelos', kennelos_id: x.id });
+    }
     const sent = new Set(clean.steps.map((x) => x.id));
     for (const x of st.steps) if (x.source === 'kennelos' && !sent.has(x.kennelos_id)) w.s.push(env.DB.prepare('DELETE FROM steps WHERE id = ?').bind(x.id));
-    // Her own steps follow KennelOS's.
-    st.steps.filter((x) => x.source !== 'kennelos').forEach((x, i) => w.s.push(env.DB.prepare('UPDATE steps SET sort = ? WHERE id = ?').bind(clean.steps.length + i, x.id)));
+    // The first time only: her own steps follow KennelOS's, in her order.
+    if (first) [...st.steps].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0)).forEach((x, i) => w.s.push(env.DB.prepare('UPDATE steps SET sort = ? WHERE id = ?').bind(sort + 1 + i, x.id)));
   }
 
   // How to pay (3.9): filled from her waitlist settings; whether it shows is hers.

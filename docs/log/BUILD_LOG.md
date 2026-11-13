@@ -1200,3 +1200,20 @@ let her give a deleted family back.
   bundles cleanly; all 401 tests pass). This entry is the change for a fresh merge to
   start a new build. If a build of #54 fails again, its log is in the Worker's build
   history, not in its Deployments list.
+
+## 2026-11-13: How it works steps keep her wording and order
+
+- Her edits to a KennelOS step were dropped and every Update website rewrote them: the
+  heading and body were KennelOS's (`OWNED.steps`), shown as "from KennelOS, change it
+  there", though KennelOS has nowhere to change them (it words them from her waitlist
+  settings). Her own steps were also moved after KennelOS's on every update.
+- `kennelos/bundle.js`: KennelOS's steps only start a step. The first time, KennelOS's go
+  first and hers follow, as before; after that each step's heading, body and place are
+  hers. A step KennelOS adds later goes last; one it stops sending leaves. `OWNED.steps`
+  is empty, and `manage/screens.js` `lockedFor` treats a record with nothing of
+  KennelOS's on it as hers (no "comes from KennelOS" notice).
+- Not changed: a KennelOS step she removes comes back, last, on the next update (no
+  record of a removal is kept). Wording edits made before this were never saved.
+- Docs: `plans/kennelport.md` (who owns which field), `plans/kennelos-contract.md` C9.
+- No change to `public/_kp/`: no version bump. No migration.
+- Tests: one new in `kennelos.test.js`. All 402 pass.
