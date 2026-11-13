@@ -247,7 +247,7 @@ test("display rules over KennelOS's raw values: a litter card's line by its Kenn
 
   // Saving the Dogs screen with one heading in two places is refused.
   const { partsFromForm, RuleError } = await import('../src/content/rules.js');
-  const form = { 'dogs.sale_price': 'site', 'dogs.health_kind_1': 'ofa', 'dogs.health_kind_2': 'ofa', 'dogs.health_kind_3': 'genetic', 'dogs.health_kind_4': 'other' };
+  const form = { 'dogs.sale_price': 'site', 'dogs.sale_pill': 'ok', 'dogs.health_kind_1': 'ofa', 'dogs.health_kind_2': 'ofa', 'dogs.health_kind_3': 'genetic', 'dogs.health_kind_4': 'other' };
   for (const [k, v] of Object.entries(DEFAULT_RULES.words)) form[`words.${k}`] ??= v;
   assert.throws(() => partsFromForm('dogs', structuredClone(DEFAULT_RULES), (n) => form[n]), RuleError);
   form['dogs.health_kind_2'] = 'breed';

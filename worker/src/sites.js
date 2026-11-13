@@ -48,7 +48,7 @@ export async function closeSite(env, siteId, confirmSubdomain) {
     env.DB.prepare(`UPDATE sites SET status = 'closed', closed_at = ?, kennel_name = NULL, tagline = NULL, blurb = NULL, breed = NULL,
       monogram = NULL, town = NULL, region = NULL, contact_email = NULL, contact_phone = NULL, facebook_url = NULL, facebook_label = NULL,
       instagram_url = NULL, kennelos_public_id = NULL, published_snapshot_id = NULL, storage_limit = NULL, photo_limit = NULL,
-      album_limit = NULL, draft_changed_at = NULL, template = 'ak', scheme = 'lawn', dark_mode = 'auto', show_other_prices = 0, group_health = 0, use_kennelos_prices = 0 WHERE id = ?`).bind(t, siteId),
+      album_limit = NULL, draft_changed_at = NULL, template = 'ak', scheme = 'lawn', dark_mode = 'auto', show_other_prices = 0, group_health = 0, pill_style = 'dot', use_kennelos_prices = 0 WHERE id = ?`).bind(t, siteId),
   ]);
   forgetSnapshots();
   return { subdomain: site.subdomain };

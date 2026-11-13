@@ -1309,3 +1309,31 @@ let her give a deleted family back.
 - Checked the Tags screen at 390px and 1280px, and her dog form at 390px.
 - Tests: `tags.test.js` (new, two), one in `kennelos.test.js`; the linked sample's dogs
   send titles as rows. All 409 pass.
+
+## 2026-11-13: pill styles, and pill colours from the scheme
+
+- The owner's decisions: every pill on a breeder's site (a pup's status on cards, its
+  page and a Featured block; tags; a dog's "Looking for a home") is drawn in one style
+  for the site, and each pill's colour is one of the site's scheme's colours, by name,
+  in place of Green and Brass outline.
+- Styles (`content/model.js` `PILL_STYLES`): Dot (today's), Ribbon tag, Outlined capsule,
+  Soft chip, Wavy ribbon, Wavy ribbon satin. `sites.pill_style` (added to this branch's
+  migration 0033, `dot` by default): the owner's Formats screen (a new Pills card,
+  saved to the site, not the build), and her Kennel details (Look). The page carries
+  `data-pills` (`render/layout.js`); `site.css` draws each, the wavy ones with a
+  repeating SVG mask and forked ends.
+- Colours (`PILL_KEYS`: accent, brass, ok, held, ink, muted): `render/schemes.js`
+  `PILL_COLOURS` names each scheme's (Lawn: Moss, Brass, Fern, Toffee, Ink, Stone; and
+  so on), leaving out a colour that repeats one before it (Midnight's brass is its
+  accent). Pills draw as `.status.c-<key>`; a stored `avail`/`res` reads as ok/held
+  (`pillKey`, `rules.js` `carried`), so every site looks as it did. Chosen on the
+  owner's Pups screen (each status row), Tags (each tag) and Dogs (the new "Looking for
+  a home" pill colour, `rules.dogs.sale_pill`); the build tools show a colour as an SVG
+  dot, since they take no inline styles. The colour names are mine, for the owner to
+  approve.
+- Breeder-facing wording, mine for now: Kennel details' "Pill style" label and hint
+  (`forms.js` LABELS) and the style names (`PILL_STYLES`).
+- `public/_kp/t/ak/site.css` changed: `ASSET_VERSION` (24, released) needs a bump; asked.
+- Checked each style on a pup card at 390px.
+- Tests: `pills.test.js` (new, two); class names updated in `editing`, `rules`, `tags`
+  tests. All pass bar `versions.test.js`, which waits on the bump.

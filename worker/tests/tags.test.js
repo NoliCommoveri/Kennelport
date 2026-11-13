@@ -61,7 +61,7 @@ test('the owner makes tags by rule and tags she may choose; a tag holds by its c
   await owner('/tags', await formOf(owner, { act: `cond+:${rule.id}`, [`b.${rule.id}.addcond`]: 'title', [`t.${rule.id}.words`]: 'Champion', [`t.${rule.id}.pill`]: 'avail' }));
   await owner('/tags', await formOf(owner, { [`b.${rule.id}.where.0.op`]: 'includes', [`b.${rule.id}.where.0.value`]: 'ch' }));
   let T = await tags();
-  assert.deepEqual(T.rules.map(({ kind, words, pill, where }) => ({ kind, words, pill, where })), [{ kind: 'dog', words: 'Champion', pill: 'avail', where: [{ field: 'title', op: 'includes', value: 'ch' }] }]);
+  assert.deepEqual(T.rules.map(({ kind, words, pill, where }) => ({ kind, words, pill, where })), [{ kind: 'dog', words: 'Champion', pill: 'ok', where: [{ field: 'title', op: 'includes', value: 'ch' }] }]);
   // A rule's conditions can't be on tags (round in circles): the field isn't offered.
   assert.doesNotMatch(await (await owner('/tags')).text(), new RegExp(`name="b\\.${rule.id}\\.where\\.0\\.field"[^>]*>[\\s\\S]*?value="tags"`));
 
@@ -93,7 +93,7 @@ test('the owner makes tags by rule and tags she may choose; a tag holds by its c
   // As a card item: pills, only where the owner adds Tags to a card.
   const draw = (home) => renderPage({ ...snap, layout: { ...snap.layout, home } }, { path: '/', origin: 'https://x', today: TODAY, preview: true }).html;
   const block = cleanBlock({ id: 'dogs', type: 'dogs', f: {}, where: [], show: { front: ['photo', 'call', 'tags'], back: ['tests'], light: ['call'], beside: ['call'] } });
-  assert.match(draw([block]), /<span class="line1 tags"><span class="status avail">Champion<\/span><\/span>/);
+  assert.match(draw([block]), /<span class="line1 tags"><span class="status c-ok">Champion<\/span><\/span>/);
   assert.doesNotMatch(draw([cleanBlock({ id: 'dogs', type: 'dogs', f: {}, where: [] })]), /class="line1 tags"/, "today's cards: no tags");
 
   // Removed by the owner: her tick is kept but nothing shows.

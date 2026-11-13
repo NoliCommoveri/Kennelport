@@ -8,7 +8,7 @@
 // that over the defaults. The published snapshot carries the whole result, so
 // rendering stays pure. An older snapshot without it renders with the defaults.
 
-import { pupStatus, PUPPY_STATUSES } from './model.js';
+import { pupStatus, PUPPY_STATUSES, PILL_KEYS, pillKey } from './model.js';
 
 // The pup statuses the KennelOS package carries, in its words. A site stores
 // `undecided` as 'coming_soon' (kennelos/bundle.js PUPPY_STATUS). There is no
@@ -34,8 +34,8 @@ export const STATUS_NOTES = {
   hidden: 'Health hold in KennelOS',
 };
 
-// The template's two status colours (site.css .status.avail, .status.res).
-export const PILLS = { avail: 'Green', res: 'Brass outline' };
+// A pill's colour is one of its scheme's (content/model.js PILL_KEYS; named per scheme
+// in render/schemes.js). A stored Green or Brass outline (avail, res) reads as ok, held.
 
 const st = (words, pill, ribbon, show, price, ask, fullreg, older, order) => ({ words, pill, ribbon, show, price, ask, fullreg, older, order });
 
@@ -146,12 +146,12 @@ export const ACCOUNT_PLACES = { products: 'Recommended products', pickup: 'Getti
 
 export const DEFAULT_RULES = {
   status: {
-    available: st('Available', 'avail', false, true, true, true, true, true, 1),
-    not_open: st('Available on {date}', 'avail', false, true, true, true, true, true, 1),
-    placed: st('Reserved', 'res', true, true, false, false, true, false, 2),
-    staying: st('Joining our program', 'res', false, true, false, false, false, false, 1),
-    undecided: st('Still deciding', 'res', false, true, false, false, true, false, 1),
-    hidden: st('', 'res', false, false, false, false, true, false, 1),
+    available: st('Available', 'ok', false, true, true, true, true, true, 1),
+    not_open: st('Available on {date}', 'ok', false, true, true, true, true, true, 1),
+    placed: st('Reserved', 'held', true, true, false, false, true, false, 2),
+    staying: st('Joining our program', 'held', false, true, false, false, false, false, 1),
+    undecided: st('Still deciding', 'held', false, true, false, false, true, false, 1),
+    hidden: st('', 'held', false, false, false, false, true, false, 1),
   },
   reg: { unset: 'Limited', limited: 'Limited', full: 'Full', ask: 'Ask about full registration' },
   price: { off: 'Contact us for pricing', style: 'range', price_label: 'Price', deposit_label: 'Deposit' },
@@ -159,7 +159,8 @@ export const DEFAULT_RULES = {
   // and adults"; 'always' or 'never' whatever that says.
   // The order of a dog's health result headings when she groups them by kind
   // (sites.group_health): four places, each one of HEALTH_KINDS, each used once.
-  dogs: { sale_price: 'site', health_kind_1: 'other', health_kind_2: 'genetic', health_kind_3: 'ofa', health_kind_4: 'breed' },
+  // sale_pill: the colour of a dog's "Looking for a home" pill on its page.
+  dogs: { sale_price: 'site', sale_pill: 'ok', health_kind_1: 'other', health_kind_2: 'genetic', health_kind_3: 'ofa', health_kind_4: 'breed' },
   words: Object.fromEntries(WORD_LIST.map(([k, d]) => [k, d])),
   format: { date: 'mdy', day: 'md', sex: 'female_male', counts: 'girls_boys', currency: '$', currency_after: false, cents: false },
   // How KennelOS data lands (kennelos/bundle.js), for each new record.
@@ -192,7 +193,7 @@ export const DEFAULT_TIMING = {
 // What a value may be, for checking the editor's form and stored builds.
 const TEXT = (max, req = false) => ({ t: 'text', max, req });
 const STATUS_FIELDS = {
-  words: TEXT(40), pill: { t: 'enum', values: Object.keys(PILLS) }, ribbon: { t: 'bool' }, show: { t: 'bool' }, price: { t: 'bool' },
+  words: TEXT(40), pill: { t: 'enum', values: PILL_KEYS }, ribbon: { t: 'bool' }, show: { t: 'bool' }, price: { t: 'bool' },
   ask: { t: 'bool' }, fullreg: { t: 'bool' }, older: { t: 'bool' }, order: { t: 'int', min: 1, max: 4 },
 };
 const REG_FIELDS = { unset: TEXT(30), limited: TEXT(30, true), full: TEXT(30, true), ask: TEXT(60, true) };
@@ -207,6 +208,7 @@ export const HEALTH_KINDS = { other: ['health_heading', null], genetic: ['health
 export const HEALTH_KIND_PLACES = ['health_kind_1', 'health_kind_2', 'health_kind_3', 'health_kind_4'];
 const DOG_FIELDS = {
   sale_price: { t: 'enum', values: ['site', 'always', 'never'] },
+  sale_pill: { t: 'enum', values: PILL_KEYS },
   ...Object.fromEntries(HEALTH_KIND_PLACES.map((k) => [k, { t: 'enum', values: Object.keys(HEALTH_KINDS) }])),
 };
 // A litter card's line by KennelOS status may be empty: the usual line then.
@@ -292,8 +294,10 @@ export function rulesFor(build) {
   return { rules: over(DEFAULT_RULES, carried(b.rules)), timing: over(DEFAULT_TIMING, b.timing) };
 }
 
-// A rule that moved: the price rules' `before` became the not_open row's words.
+// A rule that moved: the price rules' `before` became the not_open row's words; and a
+// status row's Green or Brass outline is the scheme's ok or held.
 function carried(r) {
+  if (r?.status) r = { ...r, status: Object.fromEntries(Object.entries(r.status).map(([k, v]) => [k, v?.pill ? { ...v, pill: pillKey(v.pill) } : v])) };
   const before = r?.price?.before;
   if (!before || r.status?.not_open?.words !== undefined) return r;
   return { ...r, status: { ...r.status, not_open: { ...r.status?.not_open, words: before } } };

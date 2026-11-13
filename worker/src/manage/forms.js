@@ -33,6 +33,7 @@ export const LABELS = {
     scheme: ['Colour scheme', 'Colours, fonts and the little ornaments by headings, each with a light and a dark version. Preview, then Publish, to see it on your site.'],
     dark_mode: ['Dark mode', 'Follow each visitor\'s phone or computer setting, or always show the light version.'],
     show_other_prices: ['Show prices of extras and adults', 'Extras, and dogs looking for a home. Off: visitors see "Contact us for pricing". Litter prices have their own switch on each litter.'],
+    pill_style: ['Pill style', 'How small labels are drawn across your site: a puppy\'s status, tags, and a dog looking for a home.'],
     group_health: ['Group health results by kind', 'On each dog\'s page: genetic tests, OFA / PennHIP and other tests each under their own heading, sorted by KennelOS. Off: one list.'],
   },
   dogs: {
@@ -422,7 +423,7 @@ const GROUPS = {
   partners: [['The kennel', ['name', 'url', 'photo_id']]],
   litters: [['The litter', ['name', 'stage', 'summary']], ['Parents', ['dam_id', 'sire_id', 'dam', 'sire', 'dam_name', 'sire_name']], ['Dates', ['born_on', 'ready_on', 'deposits_on']], ['For a planned litter', ['plan_label', 'expected_label', 'ready_label'], (v) => v?.stage === 'planned'], ['Prices', ['price_female', 'price_male', 'full_reg_female', 'full_reg_male', 'deposit_female', 'deposit_male', 'price_note']]],
   puppies: [['The puppy', ['name', 'collar', 'sex', 'color', 'status', 'registration', 'registry', 'price']], ['Photo and story', ['photo_id', 'bio', 'more_photos_url']]],
-  site: [['Your kennel', ['kennel_name', 'breed', 'tagline', 'monogram', 'blurb', 'logo_photo_id']], ['Where families find you', ['town', 'region', 'contact_email', 'contact_phone', 'facebook_url', 'facebook_label', 'instagram_url']], ['Look', ['scheme', 'dark_mode']]],
+  site: [['Your kennel', ['kennel_name', 'breed', 'tagline', 'monogram', 'blurb', 'logo_photo_id']], ['Where families find you', ['town', 'region', 'contact_email', 'contact_phone', 'facebook_url', 'facebook_label', 'instagram_url']], ['Look', ['scheme', 'dark_mode', 'pill_style']]],
   health: [['The result', ['test', 'result', 'date', 'verify_url']]],
   reviews: [['The review', ['quote', 'first_name', 'rating', 'town', 'puppy_name', 'home_month', 'topic', 'photo_id']], ['Shown', ['status']]],
   extras: [['The extra', ['kind', 'name', 'grp', 'description', 'photo_id']], ['Price and length', ['price_from', 'price_to', 'weeks']], ['What\u2019s included', ['lead_in', 'checklist', 'closing']]],

@@ -272,7 +272,7 @@ export async function importContent(env, siteId, doc) {
   const dogId = (slug) => (slug ? db.prepare('SELECT id FROM dogs WHERE site_id = ? AND slug = ?').bind(siteId, slug) : null);
 
   if (clean.site) {
-    for (const k of ['dark_mode', 'show_other_prices', 'group_health']) if (clean.site[k] === null) delete clean.site[k];
+    for (const k of ['dark_mode', 'show_other_prices', 'group_health', 'pill_style']) if (clean.site[k] === null) delete clean.site[k];
     const cols = Object.keys(clean.site);
     if (cols.length) s.push(db.prepare(`UPDATE sites SET ${cols.map((c) => `${c} = ?`).join(', ')} WHERE id = ?`).bind(...cols.map((c) => clean.site[c]), siteId));
   }

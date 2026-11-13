@@ -372,6 +372,13 @@ Each step is its own branch and merge, with at most one migration.
    pups; a litter's parents' too) and a card item (Tags), on no card by default. The
    import tags of C4 come with step 6. The tags kept in the build (`build.tags`), not a
    table. Her field's label and hint are the builder's, for the owner to reword.
+   **Pills (the owner, 2026-11-13):** every pill on her site (a pup's status, tags, a
+   dog looking for a home) is drawn in the site's one **pill style** (Dot, today's;
+   Ribbon tag; Outlined capsule; Soft chip; Wavy ribbon; Wavy ribbon, satin), set by
+   the owner on Formats and hers to change on Kennel details (`sites.pill_style`, in
+   0033). Each pill's colour is one of its scheme's colours, named per scheme
+   (`render/schemes.js` `PILL_COLOURS`), in place of Green and Brass outline, which
+   read as the scheme's ok and held.
 6. **C4, C7.** Origin and lineage: the import tags and the Pedigree block.
    Migration: the columns and an `ancestors` store. C4 and C7 go together: import-descended
    is worked out from the ancestors.

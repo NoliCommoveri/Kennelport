@@ -11,17 +11,18 @@
 // item. A tag rule's own conditions never read tags (that would go round in circles):
 // a condition on tags in one is dropped.
 import { cleanWhere, WHERE_MAX, TICK_OPS } from './fields.js';
+import { pillKey } from './model.js';
 
 export const TAGS_MAX = 20;
 export const TAG_WORDS_MAX = 30;
 export const TAG_KINDS = Object.freeze({ dog: 'Dogs', puppy: 'Pups' });
-// The site's two status pills (render: .status.avail, .status.res).
-export const TAG_PILLS = Object.freeze({ avail: 'Green', res: 'Brass' });
+// A tag's pill colour is one of its scheme's (content/model.js PILL_KEYS), drawn in the
+// site's pill style like every other pill.
 export const TAG_ID = /^t[a-z0-9]{6,20}$/;
 
 export const newTagId = () => `t${crypto.randomUUID().replace(/-/g, '').slice(0, 10)}`;
 const words = (v) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, TAG_WORDS_MAX);
-const pill = (v) => (Object.hasOwn(TAG_PILLS, v) ? v : 'res');
+const pill = (v) => pillKey(v);
 
 // A stored or posted list, cleaned: unknown keys dropped, ids kept (a new one made
 // where missing), at most TAGS_MAX of each.

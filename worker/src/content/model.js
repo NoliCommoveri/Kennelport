@@ -19,6 +19,14 @@ const BOOL = { type: 'bool' };
 const ENUM = (...values) => ({ type: 'enum', values });
 // The colour schemes' ids (render/schemes.js holds the schemes themselves).
 export const SCHEME_IDS = ['lawn', 'harbor', 'heather', 'clay', 'slate', 'midnight', 'tuxedo'];
+// Pills on her site (a pup's status, tags, a dog looking for a home): how they're drawn,
+// one style for the site (sites.pill_style), and the colour each one has: one of its
+// scheme's colours, by palette key (render/schemes.js names them per scheme).
+export const PILL_STYLES = Object.freeze({ dot: 'Dot', ribbon: 'Ribbon tag', capsule: 'Outlined capsule', chip: 'Soft chip', wave: 'Wavy ribbon', satin: 'Wavy ribbon, satin' });
+export const PILL_KEYS = Object.freeze(['accent', 'brass', 'ok', 'held', 'ink', 'muted']);
+// Before colours were the scheme's: Green and Brass outline (they drew as ok and held).
+const PILL_WAS = { avail: 'ok', res: 'held' };
+export const pillKey = (v, fallback = 'held') => (PILL_KEYS.includes(v) ? v : PILL_WAS[v] ?? fallback);
 
 export const SITE_FIELDS = {
   kennel_name: S(80, { required: true }),
@@ -39,6 +47,8 @@ export const SITE_FIELDS = {
   show_other_prices: BOOL,
   // A dog's health results grouped by kind on its page (KennelOS's test type).
   group_health: BOOL,
+  // How her site draws its pills (PILL_STYLES); the owner sets it in the build tools.
+  pill_style: ENUM(...Object.keys(PILL_STYLES)),
 };
 
 export const PARTNERS_PER_DOG = 10;

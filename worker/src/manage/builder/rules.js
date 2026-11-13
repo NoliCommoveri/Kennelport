@@ -3,8 +3,8 @@
 // of KennelOS's, and not_open, worked out here), then registration and price
 // wording. Drawn from the site builder prototype's Display rules screen.
 import { escapeHtml as esc } from '../../lib/html.js';
-import { STATUS_ROWS, NOT_OPEN_FIXED, STATUS_NOTES, PILLS, DEFAULT_RULES } from '../../content/rules.js';
-import { field, select, toggle, seg, back, same, SPILL } from './controls.js';
+import { STATUS_ROWS, NOT_OPEN_FIXED, STATUS_NOTES, DEFAULT_RULES } from '../../content/rules.js';
+import { field, select, toggle, seg, back, same, pillChip, pillSelect } from './controls.js';
 
 export function rulesScreen(site, rules, error) {
   const D = DEFAULT_RULES;
@@ -12,9 +12,9 @@ export function rulesScreen(site, rules, error) {
     const r = rules.status[k];
     const name = (f) => `status.${k}.${f}`;
     const fixed = (f) => k === 'not_open' && NOT_OPEN_FIXED.includes(f);
-    return `<section class="card status-card"><div class="between"><span class="stcode"><span class="code">${k}</span>${r.show && r.words ? `<span class="spill ${SPILL[r.pill]}">${esc(r.words)}</span>` : '<span class="small muted">Not shown</span>'}</span>${same(r, D.status[k]) ? '' : back(`status.${k}`)}</div>
+    return `<section class="card status-card"><div class="between"><span class="stcode"><span class="code">${k}</span>${r.show && r.words ? pillChip(site.scheme, r.pill, r.words) : '<span class="small muted">Not shown</span>'}</span>${same(r, D.status[k]) ? '' : back(`status.${k}`)}</div>
       <p class="small muted">${esc(STATUS_NOTES[k])}</p>
-      <div class="fgrid">${field(name('words'), r.words, { label: 'Shows as', ph: 'Words on the card' })}${select(name('pill'), r.pill, PILLS, 'Pill')}</div>
+      <div class="fgrid">${field(name('words'), r.words, { label: 'Shows as', ph: 'Words on the card' })}${pillSelect(name('pill'), site.scheme, r.pill, 'Its colour')}</div>
       <div class="switches">${fixed('show') ? '' : toggle(name('show'), r.show, 'Show the pup on the site')}${toggle(name('price'), r.price, 'Show its price')}${toggle(name('ask'), r.ask, '“Ask about this puppy”')}
         ${toggle(name('fullreg'), r.fullreg, `“${rules.reg.ask}” (no registration set)`)}${fixed('older') ? '' : toggle(name('older'), r.older, 'Can be an older puppy')}${toggle(name('ribbon'), r.ribbon, 'Ribbon across its photo')}</div>
       ${k === 'not_open' ? '<p class="small muted">Always shown, like an available pup; on the day deposits open it reads as available.</p>' : ''}

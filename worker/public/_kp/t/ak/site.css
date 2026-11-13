@@ -260,8 +260,23 @@ nav.main li.open > .navtop .chev { transform: rotate(225deg) translate(-2px, -1p
 .back .more { margin-top: auto; }
 .status { display: inline-flex; align-items: center; gap: 6px; font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; }
 .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-.status.avail { color: var(--ok); }
-.status.res { color: var(--held); }
+/* A pill's colour: one of the scheme's (c-*); .avail and .res are the two it had before. */
+.status { --pc: var(--held); color: var(--pc); }
+.c-accent { --pc: var(--accent); } .c-brass { --pc: var(--brass); } .c-ok, .status.avail { --pc: var(--ok); }
+.c-held, .status.res { --pc: var(--held); } .c-ink { --pc: var(--ink); } .c-muted { --pc: var(--muted); }
+/* The site's pill style (html data-pills); none is the dot above. */
+[data-pills] .status::before { display: none; }
+[data-pills] .status { font-size: .68rem; letter-spacing: .13em; line-height: 1.2; }
+[data-pills] .line1.tags, [data-pills] .cap .line1:has(.status) { flex-wrap: wrap; gap: 6px; }
+[data-pills="ribbon"] .status { background: var(--pc); color: var(--bg); padding: 4px 10px 4px 14px; clip-path: polygon(8px 0, 100% 0, 100% 100%, 8px 100%, 0 50%); }
+[data-pills="capsule"] .status { padding: 3px 11px; border: 1.5px solid currentColor; border-radius: 999px; }
+[data-pills="chip"] .status { text-transform: none; letter-spacing: .01em; font-size: .8rem; font-weight: 600; padding: 3px 10px; border-radius: var(--r); background: color-mix(in srgb, var(--pc) 13%, transparent); }
+[data-pills="chip"] .status::before { display: block; width: 6px; height: 6px; border-radius: 1px; transform: rotate(45deg); }
+[data-pills="wave"] .status, [data-pills="satin"] .status { padding: 7px 16px; line-height: 1; color: var(--bg); background: var(--pc);
+  -webkit-mask: var(--wave) center / 28px 100% repeat-x; mask: var(--wave) center / 28px 100% repeat-x;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 7px) 50%, 100% 100%, 0 100%, 7px 50%);
+  --wave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 26' preserveAspectRatio='none'%3E%3Cpath d='M0 3.5Q7 0 14 3.5T28 3.5V22.5Q21 26 14 22.5T0 22.5Z'/%3E%3C/svg%3E"); }
+[data-pills="satin"] .status { background: linear-gradient(180deg, color-mix(in srgb, var(--pc) 72%, #fff) 0%, var(--pc) 45%, color-mix(in srgb, var(--pc) 80%, #000) 100%); }
 .ribbon { position: absolute; left: 0; top: 14px; background: var(--ink); color: var(--bg); font-size: .7rem; letter-spacing: .16em; text-transform: uppercase; font-weight: 700; padding: 5px 10px; }
 .flip-hint { font-size: .8rem; color: var(--muted); text-align: center; margin-top: 10px; }
 

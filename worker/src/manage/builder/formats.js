@@ -1,9 +1,11 @@
 // Formats, in the owner's build tools (GET/POST /admin/<sub>/formats, routed by
 // manage/builder.js): how the site writes dates, a dog's or pup's sex, a litter's
-// count and money (content/rules.js rules.format).
+// count and money (content/rules.js rules.format); and how its pills are drawn (the
+// site's own setting, sites.pill_style, which the breeder can change on Kennel details).
 import { DEFAULT_RULES, DATE_STYLES, DAY_STYLES, SEX_STYLES, COUNT_STYLES } from '../../content/rules.js';
 import { escapeHtml as esc } from '../../lib/html.js';
 import { back, seg, field, toggle } from './controls.js';
+import { PILL_STYLES } from '../../content/model.js';
 
 export function formatsScreen(site, rules, error) {
   const f = rules.format;
@@ -18,5 +20,8 @@ export function formatsScreen(site, rules, error) {
       <div class="fld"><span class="fldt">A litter's count</span>${seg('format.counts', f.counts, COUNT_STYLES)}</div></div>
     <div class="fgroup"><h2>Money</h2><div class="fgrid">
       ${field('format.currency', f.currency, { label: 'Currency sign' })}<div class="half fld"><span class="fldt">Reads</span><span class="code big">${esc(sample)}</span></div></div>
-      <div class="switches">${toggle('format.currency_after', f.currency_after, 'The sign goes after the number')}${toggle('format.cents', f.cents, 'Show cents')}</div></div></section></div>`;
+      <div class="switches">${toggle('format.currency_after', f.currency_after, 'The sign goes after the number')}${toggle('format.cents', f.cents, 'Show cents')}</div></div></section>
+    <section class="card"><div class="fgroup"><h2>Pills</h2>
+      <div class="fld"><span class="fldt">How the site draws them</span>${seg('site.pill_style', PILL_STYLES[site.pill_style] ? site.pill_style : 'dot', PILL_STYLES)}
+      <span class="hint">A pup's status, tags, and a dog looking for a home. The breeder can change it on her Kennel details. Each pill's colour is set where the pill is (Pups, Tags, Dogs), from this site's scheme.</span></div></div></section></div>`;
 }

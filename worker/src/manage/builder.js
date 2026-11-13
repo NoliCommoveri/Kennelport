@@ -50,10 +50,10 @@ import {
   STRIP_FRAME, OVER_V, OVER_SHADE, BG_COLOURS, PAD, TEXT_SIZE, FACTS_MAX, FACT_SIZES, COLS_MAX, COL_SIZES, COLS_ACROSS, COLLAGE_LAYOUT,
   COLLAGE_FRAME, COLLAGE_MAX,
 } from '../content/blocks.js';
-import { PAGES, COLLAGE_LAYOUTS, collageLayout, HOME_WORDS } from '../content/model.js';
+import { PAGES, COLLAGE_LAYOUTS, collageLayout, HOME_WORDS, PILL_STYLES } from '../content/model.js';
 import { layoutChoice, boxHint, photoSlot } from './forms.js';
 import { siteLink } from '../ops/sites.js';
-import { field, select, toggle, seg, back, svg, SPILL, mvBtns, fld, LIMITS, resultLine } from './builder/controls.js';
+import { field, select, toggle, seg, back, svg, pillChip, pillSelect, mvBtns, fld, LIMITS, resultLine } from './builder/controls.js';
 import { FEATURE_EVERY, featuredNow } from '../content/featured.js';
 import { blockRecords, WHAT, dataSettings, scheduleSettings, hersLine as hersPicks } from './builder/blocks.js';
 import { rulesScreen } from './builder/rules.js';
@@ -174,7 +174,7 @@ async function preview(env, site) {
     const reg = regText(snap, p, l, ctx.today);
     const price = puppyPriceText(snap, l, p, ctx.today);
     const full = fullRegHref(snap, l, p, ctx);
-    return `<div class="pvc"><span class="ph"></span><div class="t"><b>${esc(p.name)} ${sexMark(p.sex)}</b>${words ? `<span class="spill ${SPILL[r.pill] ?? 'plain'}">${esc(words)}</span>` : ''}${reg ? `<span class="muted">${esc(reg)}</span>` : ''}${price ? `<span class="price">${esc(price)}</span>` : ''}${r.ask ? `<span class="lnk">${esc(word(snap, 'ask_puppy'))} ›</span>` : ''}${full ? `<span class="lnk">${esc(rulesOf(snap).reg.ask)} ›</span>` : ''}</div></div>`;
+    return `<div class="pvc"><span class="ph"></span><div class="t"><b>${esc(p.name)} ${sexMark(p.sex)}</b>${words ? pillChip(snap.site.scheme, r.pill, words) : ''}${reg ? `<span class="muted">${esc(reg)}</span>` : ''}${price ? `<span class="price">${esc(price)}</span>` : ''}${r.ask ? `<span class="lnk">${esc(word(snap, 'ask_puppy'))} ›</span>` : ''}${full ? `<span class="lnk">${esc(rulesOf(snap).reg.ask)} ›</span>` : ''}</div></div>`;
   };
   const block = (eyebrow, heading, cards, cls = '') => `<div class="pvb${cls}"><span class="eyebrow">${esc(eyebrow)}</span><h3>${esc(heading)}</h3>${cards.length ? `<div class="pvg">${cards.join('')}</div>` : '<p class="small muted">No puppies to show.</p>'}</div>`;
   const blocks = [];
@@ -214,6 +214,7 @@ function dogsScreen(site, rules, error) {
   const sale = rules.dogs.sale_price;
   return `<div class="stack">${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
     <section class="card"><div class="fgroup"><div class="between"><h2>An adult looking for a home</h2>${sale === DEFAULT_RULES.dogs.sale_price ? '' : back('dogs.sale_price')}</div>
+      <div class="fgrid">${pillSelect('dogs.sale_pill', site.scheme, rules.dogs.sale_pill, 'Its “Looking for a home” pill')}<div class="half fld"><span class="fldt">Reads</span>${pillChip(site.scheme, rules.dogs.sale_pill, word({ rules }, 'for_sale_status'))}</div></div>
       <div class="fld"><span class="fldt">Its price</span>${seg('dogs.sale_price', sale, { site: 'As the breeder sets', always: 'Always', never: 'Never' })}
       <span class="hint">“As the breeder sets” follows her “Show prices of extras and adults”. Never shows no price line at all.</span></div></div></section>
     <section class="card"><div class="fgroup"><div class="between"><h2>Health result headings' order</h2>${HEALTH_KIND_PLACES.every((k) => rules.dogs[k] === DEFAULT_RULES.dogs[k]) ? '' : back(HEALTH_KIND_PLACES.map((k) => `dogs.${k}`).join(','))}</div>
@@ -784,7 +785,7 @@ export async function handleBuilder({ env, request, url, user, page }) {
   const sv = path.match(/^\/admin\/([a-z0-9-]+)\/site(\/.*)?$/);
   const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z0-9_-]+|menu|rules|dogs|tags|wording|formats|kennelos|timing|instructions|instructions\/[a-z]+)$/);
   if (!m) return null;
-  const site = await env.DB.prepare("SELECT id, subdomain, kennel_name, status, portal_on, demo_step FROM sites WHERE subdomain = ? AND status != 'closed'").bind(m[1]).first();
+  const site = await env.DB.prepare("SELECT id, subdomain, kennel_name, status, portal_on, demo_step, scheme, pill_style FROM sites WHERE subdomain = ? AND status != 'closed'").bind(m[1]).first();
   if (!site) return null;
   if (sv) {
     if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Forms don\'t send from the admin view.', { status: 405, headers: { allow: 'GET, HEAD', 'cache-control': 'no-store' } });
@@ -813,6 +814,11 @@ export async function handleBuilder({ env, request, url, user, page }) {
       return next;
     };
     try {
+      // The site's pill style is its own setting (sites.pill_style), not a rule.
+      const pillStyle = String(get('site.pill_style') ?? '');
+      if (screen === 'formats' && Object.hasOwn(PILL_STYLES, pillStyle) && pillStyle !== site.pill_style) {
+        await env.DB.prepare('UPDATE sites SET pill_style = ?, draft_changed_at = ? WHERE id = ?').bind(pillStyle, new Date().toISOString(), site.id).run();
+      }
       if (screen === 'rules') {
         await saveBuild(env, site.id, withPart(build, 'rules', toDefault(rulesFromForm(get, rules))));
       } else if (screen !== 'timing') {

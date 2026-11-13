@@ -4,7 +4,7 @@ import { SHOW_DEFAULT, isCustom, hersOn, BLOCK_TYPES, defaultMenu, MENU_PLACES, 
 import { BLOCK_KIND, matches, ordered, grouped, GENERATIONS, tagsOf } from '../content/fields.js';
 import { applyPicks } from '../content/picks.js';
 import { escapeHtml as esc } from '../lib/html.js';
-import { PAGES, pupStatus, slugify } from '../content/model.js';
+import { PAGES, pupStatus, slugify, pillKey } from '../content/model.js';
 import { puppyPrice, litterPriceRange, depositRange } from '../content/prices.js';
 import { DEFAULT_RULES, DEFAULT_TIMING, ruleKey, addDays } from '../content/rules.js';
 
@@ -145,13 +145,17 @@ export function addedWords(snap, key, b) {
 // What reading a record's fields needs from the site (content/fields.js `rc`): the day,
 // a litter's stage as the site shows it, a pup's status row, its litter, a dog by id,
 // a partner kennel's name. Without a day, today's (UTC), as the editor's lists use.
+// A pill's classes: .status and its colour, one of the scheme's (site.css .c-*). How
+// it's drawn is the site's pill style (html data-pills, render/layout.js).
+export const pillClass = (key) => `status c-${pillKey(key)}`;
+
 // A record's tags as pills (content/tags.js), in the site's status pill styles; '' with
 // none. `rc`: the record context, else one for the snapshot made once.
 const ctxMemo = new WeakMap();
 export function tagPills(snap, kind, rec, rc = null) {
   const c = rc ?? (ctxMemo.get(snap) ?? ctxMemo.set(snap, recordCtx(snap)).get(snap));
   const tags = tagsOf(kind, rec, c);
-  return tags.length ? `<span class="line1 tags">${tags.map((t) => `<span class="status ${attr(t.pill)}">${esc(t.words)}</span>`).join('')}</span>` : '';
+  return tags.length ? `<span class="line1 tags">${tags.map((t) => `<span class="${pillClass(t.pill)}">${esc(t.words)}</span>`).join('')}</span>` : '';
 }
 
 export function recordCtx(snap, today = null) {
@@ -710,7 +714,7 @@ export function puppyCard(snap, l, p, ctx) {
   return `<div class="flip" tabindex="0" role="button" aria-label="${attr(p.name)}: turn the card over">
     <div class="flip-in">
       <div class="face front">${rule.ribbon && status ? `<span class="ribbon">${esc(status)}</span>` : ''}${photo}<span class="turn" aria-hidden="true">↻</span>
-        <div class="cap"><span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span><span class="line1"><span>${esc([sex, p.color].filter(Boolean).join(' · '))}</span><span class="status ${attr(rule.pill)}">${esc(status)}</span></span></div></div>
+        <div class="cap"><span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span><span class="line1"><span>${esc([sex, p.color].filter(Boolean).join(' · '))}</span><span class="${pillClass(rule.pill)}">${esc(status)}</span></span></div></div>
       <div class="face back">${bg}<span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span>
         <span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li>${regWord ? `<li><span>Registration</span><span>${esc(regWord)}</span></li>` : ''}${p.registry ? `<li><span>Registry</span><span>${esc(p.registry)}</span></li>` : ''}${price ? `<li><span>${esc(priceLabel)}</span><span>${esc(price)}</span></li>` : ''}</ul>
         ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}${action}${profile}</div>

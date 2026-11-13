@@ -108,7 +108,7 @@ export async function backToStepOne(env, siteId) {
     ...SITE_TABLES.filter((t) => t !== 'site_builds').map((table) => env.DB.prepare(`DELETE FROM ${table} WHERE site_id = ?`).bind(siteId)),
     env.DB.prepare(`UPDATE sites SET kennel_name = ?, tagline = NULL, blurb = NULL, breed = NULL, monogram = NULL, town = NULL, region = NULL,
       contact_email = NULL, contact_phone = NULL, facebook_url = NULL, facebook_label = NULL, instagram_url = NULL, logo_photo_id = NULL,
-      kennelos_public_id = NULL, published_snapshot_id = NULL, use_kennelos_prices = 0, show_other_prices = 0, group_health = 0, portal_on = 1,
+      kennelos_public_id = NULL, published_snapshot_id = NULL, use_kennelos_prices = 0, show_other_prices = 0, group_health = 0, pill_style = 'dot', portal_on = 1,
       portal_feed_at = NULL, draft_changed_at = ?, demo_step = 0 WHERE id = ?`).bind(DEMO_NAME, new Date().toISOString(), siteId),
   ]);
   await addLink(env, siteId);

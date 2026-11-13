@@ -81,6 +81,32 @@ export const SCHEMES = [
     dark: pal('#121212 #1C1C1C #EEEEEC #A7A7A3 #343432 #E6E6E3 #121212 #BDBDB8 #171717 #0A0A0A #EEEEEC #8E8E8A #84C49A #E3A962') },
 ];
 export const SCHEME_IDS = SCHEMES.map((s) => s.id); // the same as content/model.js's
+
+// Each scheme's colours a pill may have (content/model.js PILL_KEYS), by name. A key
+// left out has the same colour as one named before it (Midnight's brass is its
+// accent), so it isn't offered twice; one stored anyway still draws in its colour.
+export const PILL_COLOURS = {
+  lawn: { accent: 'Moss', brass: 'Brass', ok: 'Fern', held: 'Toffee', ink: 'Ink', muted: 'Stone' },
+  harbor: { accent: 'Harbor blue', brass: 'Driftwood', ok: 'Sea green', held: 'Amber', ink: 'Navy', muted: 'Slate' },
+  heather: { accent: 'Heather', brass: 'Iris', ok: 'Sage', held: 'Toffee', ink: 'Ink', muted: 'Dusk' },
+  clay: { accent: 'Terracotta', brass: 'Ochre', ok: 'Olive', held: 'Rust', ink: 'Umber', muted: 'Clay' },
+  slate: { accent: 'Slate blue', brass: 'Steel', ok: 'Pine', held: 'Amber', ink: 'Ink', muted: 'Pewter' },
+  midnight: { accent: 'Gold', ok: 'Fern', held: 'Amber', ink: 'Midnight', muted: 'Smoke' },
+  tuxedo: { accent: 'Black', brass: 'Grey', ok: 'Green', held: 'Toffee', muted: 'Charcoal' },
+};
+// A scheme's pill colours for a choice: [[key, name, light colour]…], and the name of
+// one (a key it leaves out: the name of the one it matches).
+export function pillColours(id) {
+  const s = schemeOf(id);
+  return Object.entries(PILL_COLOURS[s.id]).map(([k, name]) => [k, name, s.light[k]]);
+}
+export function pillName(id, key) {
+  const s = schemeOf(id);
+  const names = PILL_COLOURS[s.id];
+  if (names[key]) return names[key];
+  const twin = Object.keys(names).find((k) => s.light[k] === s.light[key]);
+  return twin ? names[twin] : key;
+}
 export const schemeOf = (id) => SCHEMES.find((s) => s.id === id) ?? SCHEMES[0];
 
 // The file a scheme's page reads, and the font it preloads (its headings').

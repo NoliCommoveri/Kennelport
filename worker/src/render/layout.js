@@ -4,6 +4,7 @@ import { esc, attr, menuGroups, photoUrl, label, pageOn, payShown, familyLogin, 
 
 import { ASSET_VERSION } from './version.js';
 import { schemeOf, schemeFile, preloadFont, ORNAMENTS } from './schemes.js';
+import { PILL_STYLES } from '../content/model.js';
 
 export { ASSET_VERSION };
 
@@ -110,7 +111,9 @@ export function layout(snap, ctx, { title, description, image, body, section, no
     ['og:description', desc], ['og:url', canonical],
     ...(shareImage && snap.photos[shareImage] ? [['og:image', `${ctx.origin}${photoUrl(shareImage)}`], ['og:image:alt', snap.photos[shareImage].alt || snap.site.kennel_name]] : []),
   ];
-  const theme = `${snap.site.dark_mode === 'light_only' ? ' data-theme="light"' : ''} data-scheme="${attr(schemeOf(snap.site.scheme).id)}"`;
+  // Its pill style (content/model.js PILL_STYLES); the dot, today's, needs nothing.
+  const pills = PILL_STYLES[snap.site.pill_style] && snap.site.pill_style !== 'dot' ? ` data-pills="${attr(snap.site.pill_style)}"` : '';
+  const theme = `${snap.site.dark_mode === 'light_only' ? ' data-theme="light"' : ''} data-scheme="${attr(schemeOf(snap.site.scheme).id)}"${pills}`;
   const html = `<!doctype html><html lang="en"${theme}><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>${esc(pageTitle)}</title>

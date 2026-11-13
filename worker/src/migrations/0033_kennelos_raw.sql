@@ -9,13 +9,16 @@
 -- organization and date (C3); the dog's titles line stays their abbreviations.
 -- Her tags on a dog (docs/plans/kennelos-contract.md Part D): ids of those the owner
 -- allows the site, as JSON; the tags themselves are in the site's build.
--- Additive only: six new columns and a new table.
+-- And how her site draws its pills (content/model.js PILL_STYLES): set by the owner,
+-- hers to change; the dot, as before, until then.
+-- Additive only: seven new columns and a new table.
 ALTER TABLE puppies ADD COLUMN disposition TEXT;
 ALTER TABLE litters ADD COLUMN kennelos_status TEXT;
 ALTER TABLE health_results ADD COLUMN test_type TEXT;
 ALTER TABLE products ADD COLUMN account_type TEXT;
 ALTER TABLE sites ADD COLUMN group_health INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE dogs ADD COLUMN tags TEXT;
+ALTER TABLE sites ADD COLUMN pill_style TEXT NOT NULL DEFAULT 'dot';
 CREATE TABLE dog_titles (
   id TEXT PRIMARY KEY,
   site_id TEXT NOT NULL,

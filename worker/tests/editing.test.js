@@ -58,7 +58,7 @@ test('mark a puppy placed in one tap, see it in the change list, publish it', as
   assert.match(pub, /Publish 1 change/);
   assert.doesNotMatch(await (await call(b.env, SITE, '/litters/gem-2026/opal')).text(), /<h1>Opal<\/h1>[\s\S]*Reserved/);
   assert.equal((await b.post('/publish')).status, 303);
-  assert.match(await (await call(b.env, SITE, '/litters/gem-2026/opal')).text(), /status res">Reserved/);
+  assert.match(await (await call(b.env, SITE, '/litters/gem-2026/opal')).text(), /status c-held">Reserved/);
   assert.match(await (await b.get('/publish')).text(), /Nothing to publish/);
 });
 

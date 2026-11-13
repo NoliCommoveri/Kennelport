@@ -7,6 +7,7 @@
 import {
   esc, attr, fmtDate, img, pageOn, pairNames, head, faqBlock, safeNotice, puppyStatus, puppyPriceText, regText, statusRule, rulesOf, word, sexWord,
   fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
+  pillClass,
 } from '../parts.js';
 import { profileFor, profileBody, shareRow, badgeRow } from '../pages.js';
 import { litterAlbums } from './albumLists.js';
@@ -35,7 +36,7 @@ export function puppy(snap, ctx, litterSlug, slug) {
     title: `${p.name}, ${l.name}`, section: '/litters', description: p.bio || `${p.name}: ${status}`, image: p.photo_id,
     body: `${profileBody(pr, {
       faq: faqBlock(snap, 'puppy'),
-      status: status ? `<span class="status ${attr(rule.pill)}">${esc(status)}</span>` : '',
+      status: status ? `<span class="${pillClass(rule.pill)}">${esc(status)}</span>` : '',
       name: `<h1>${esc(p.name)}</h1>`,
       facts: `<dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`,
       bio: p.bio ? `<p class="bio">${esc(p.bio)}</p>` : '',
