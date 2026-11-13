@@ -333,6 +333,17 @@ test('Delete now makes it final today; Let KennelOS send them again brings the f
   assert.equal(row("SELECT COUNT(*) AS n FROM portal_health_records WHERE kennelos_id = 'ev-1'").n, 1);
 });
 
+test('a family with two puppies from KennelOS is listed once, both named, with nothing to merge', async () => {
+  const { her, feed } = await setup();
+  const two = REED();
+  two.placements.push({ id: 'sale-2', puppy_id: 'dog-ruby', puppy_name: 'Ruby', contract_signed_on: '2026-11-02' });
+  await feed({ families: [two] });
+  const list = await (await her('/portal')).text();
+  assert.equal(list.match(/The Reed family<\/b>/g).length, 1);
+  assert.match(list, /Opal and Ruby|Ruby and Opal/);
+  assert.doesNotMatch(list, /Twice: merge/);
+});
+
 test('a family deleted before names were kept can be given back too, with its puppy record and shots', async () => {
   const { site, env, her, feed, row } = await setup();
   const at = '2026-11-01T10:00:00.000Z';

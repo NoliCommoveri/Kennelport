@@ -1169,7 +1169,9 @@ let her give a deleted family back.
   history move; ticks and programs keep the later row). `mergeFamily` folds a typed family
   into a KennelOS one (addresses, sessions, messages, logs, clicks, placements, history;
   her name wins), then its placements if there's one of each. One batch each.
-  Her screens: the list shows a family once, tagged **Twice: merge**; the family screen
+  Her screens: the list shows each family once, with all their open pups named ("Opal
+  and Ruby"; it gave a row per open placement), tagged **Twice: merge** only when one
+  was typed in and one is from KennelOS; the family screen
   has **Two puppy records for this family** with **Merge them**, and **The same family
   twice?** with a list of the other kind.
 - **Delete now** (`account.deleteNow`): under Recently deleted, typed confirmation; final
@@ -1188,4 +1190,4 @@ let her give a deleted family back.
   details pieces; checked at 390px and 1280px.
 - No change to `public/_kp/`: no version bump.
 - Not here: KennelOS sending a family again without a change. That's in KennelOS.
-- Tests: five new in `portal-feed.test.js`. All 400 pass.
+- Tests: six new in `portal-feed.test.js`. All 401 pass.

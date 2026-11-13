@@ -143,20 +143,24 @@ const shortDay = (iso, tz) => new Date(iso).toLocaleDateString('en-US', { month:
 function familiesScreen(site, families, s, url, { deleted = [], erased = [], gone = [], waitlistCount = null, kennel, say = defaultSay } = {}, now = new Date()) {
   // site.portalUrl: set by handlePortalAdmin.
   const base = `/s/${esc(site.subdomain)}/portal`;
-  // A family with two open puppy records is listed once, tagged to merge (merge.js).
-  const twice = new Set(families.filter((f, i) => families.findIndex((g) => g.id === f.id) !== i).map((f) => f.id));
+  // One row a family, whatever their open puppy records (listFamilies gives a row
+  // each): their pups named together, and tagged to merge when one was typed in and
+  // one is from KennelOS (merge.js).
+  const of = (id) => families.filter((g) => g.id === id && g.placement_id);
+  const twice = (id) => of(id).some((g) => g.placement_kennelos_id) && of(id).some((g) => !g.placement_kennelos_id);
   const rows = families.filter((f, i) => families.findIndex((g) => g.id === f.id) === i).map((f) => {
     const p = f.placement_id ? f : null;
     const bits = [];
     if (p) {
-      bits.push(`${pupName(p)}${p.litter_name ? ` · ${p.litter_name}` : ''}`);
+      const more = [...new Set(of(f.id).slice(1).map(pupName))].filter((n) => n !== pupName(p));
+      bits.push(`${[pupName(p), ...more].join(' and ')}${p.litter_name ? ` · ${p.litter_name}` : ''}`);
       if (p.picked_up_at) bits.push(`went home ${formatAt(p.picked_up_at, s.time_zone, { weekday: false })}`);
       else if (p.pickup_booked_at) bits.push(`going home ${formatAt(p.pickup_booked_at, s.time_zone, { weekday: false })}`);
       else if (p.go_home_on) bits.push(`going home ${formatDay(p.go_home_on)}`);
     }
     bits.push(f.last_activity_at ? `last active ${shortDay(f.last_activity_at, s.time_zone)}` : 'never signed in');
     if (f.kennelos_id) bits.push('from KennelOS');
-    const tags = `${twice.has(f.id) ? `<span class="tag">${esc(say('familydupes.twice_tag'))}</span>` : ''}${(f.extras ?? '').split('|').filter(Boolean).map((x) => `<span class="tag">${esc(x)}</span>`).join('')}`;
+    const tags = `${twice(f.id) ? `<span class="tag">${esc(say('familydupes.twice_tag'))}</span>` : ''}${(f.extras ?? '').split('|').filter(Boolean).map((x) => `<span class="tag">${esc(x)}</span>`).join('')}`;
     return `<li>${roundPhoto(site.subdomain, p?.photo_id, p ? pupName(p) : f.name)}<span class="grow"><a class="rowlink" href="${base}/f/${esc(f.id)}"><b>${esc(f.name)}</b></a><br><span class="small muted">${esc(bits.join(' · '))}</span>${tags ? `<br>${tags}` : ''}</span>${familyPill(f)}</li>`;
   }).join('');
   return `${note(url)}
