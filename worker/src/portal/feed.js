@@ -259,8 +259,15 @@ async function upsertPlacement(env, siteId, fam, bp, at, counts) {
   const v = await placementValues(env, siteId, bp);
   let p = await env.DB.prepare('SELECT * FROM portal_placements WHERE site_id = ? AND kennelos_id = ?').bind(siteId, bp.id).first();
   if (!p) {
-    // A puppy with an open placement she typed in, for this family: that one becomes linked.
+    // A placement she typed in for this family becomes linked, not doubled: the one
+    // with the same puppy, else the family's only open one she typed in (whatever
+    // puppy, or none, she chose; hers stays and KennelOS's waits beside it).
     if (v.puppy_id) p = await env.DB.prepare("SELECT * FROM portal_placements WHERE site_id = ? AND family_id = ? AND puppy_id = ? AND status = 'open' AND kennelos_id IS NULL").bind(siteId, fam.id, v.puppy_id).first();
+    if (!p && !bp.voided) {
+      const { results: typed } = await env.DB.prepare("SELECT * FROM portal_placements WHERE site_id = ? AND family_id = ? AND status = 'open' AND kennelos_id IS NULL").bind(siteId, fam.id).all();
+      const others = await env.DB.prepare("SELECT COUNT(*) AS n FROM portal_placements WHERE site_id = ? AND family_id = ? AND status = 'open' AND kennelos_id IS NOT NULL").bind(siteId, fam.id).first('n');
+      if (typed.length === 1 && !others) p = typed[0];
+    }
     if (p) {
       // Every field she filled in is hers; KennelOS fills the blanks.
       const mineNow = JSON.stringify([...new Set([...edited(p), ...PLACEMENT_FIELDS.filter((k) => p[k] !== null && p[k] !== undefined)])]);
@@ -501,15 +508,19 @@ export async function takeSuggestion(env, siteId, tbl, rowId, field) {
 }
 
 // Deleted stays deleted: tombstones for a family's KennelOS records, by id and
-// type only, before store.deleteFamily removes them.
+// type, before store.deleteFamily removes them. The family's own tombstone keeps the
+// name she knew them by (no address), so she can give them back (account.giveBack);
+// each keeps the family's KennelOS id, so giving them back lifts them all.
 export async function tombstoneStatements(env, siteId, familyId) {
   const at = now();
-  const fam = await env.DB.prepare('SELECT kennelos_id FROM portal_families WHERE id = ? AND site_id = ?').bind(familyId, siteId).first('kennelos_id');
-  const { results: ps } = await env.DB.prepare('SELECT id, kennelos_id FROM portal_placements WHERE family_id = ? AND site_id = ?').bind(familyId, siteId).all();
+  const fam = await env.DB.prepare('SELECT kennelos_id, name FROM portal_families WHERE id = ? AND site_id = ?').bind(familyId, siteId).first();
+  const { results: ps } = await env.DB.prepare('SELECT id, kennelos_id, COALESCE(call_name, puppy_name) AS pup FROM portal_placements WHERE family_id = ? AND site_id = ? ORDER BY created_at').bind(familyId, siteId).all();
   const { results: hs } = await env.DB.prepare(`SELECT kennelos_id FROM portal_health_records WHERE site_id = ? AND kennelos_id IS NOT NULL AND placement_id IN (SELECT id FROM portal_placements WHERE family_id = ?)`).bind(siteId, familyId).all();
-  const ins = (type, id) => env.DB.prepare('INSERT OR IGNORE INTO portal_tombstones (site_id, type, kennelos_id, deleted_at) VALUES (?, ?, ?, ?)').bind(siteId, type, id, at);
+  const famId = fam?.kennelos_id ?? null;
+  const label = fam ? [fam.name, ...new Set(ps.map((p) => p.pup).filter(Boolean))].join(' · ').slice(0, 200) : null;
+  const ins = (type, id, lbl = null) => env.DB.prepare('INSERT OR IGNORE INTO portal_tombstones (site_id, type, kennelos_id, deleted_at, label, family_kennelos_id) VALUES (?, ?, ?, ?, ?, ?)').bind(siteId, type, id, at, lbl, famId);
   return [
-    ...(fam ? [ins('family', fam)] : []),
+    ...(famId ? [ins('family', famId, label)] : []),
     ...ps.filter((p) => p.kennelos_id).map((p) => ins('placement', p.kennelos_id)),
     ...hs.map((h) => ins('health', h.kennelos_id)),
     env.DB.prepare(`DELETE FROM portal_suggestions WHERE site_id = ? AND ((tbl = 'portal_families' AND row_id = ?) OR (tbl = 'portal_placements' AND row_id IN (SELECT id FROM portal_placements WHERE family_id = ?)))`).bind(siteId, familyId, familyId),

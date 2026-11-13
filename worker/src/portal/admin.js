@@ -33,7 +33,9 @@ import {
 import { suggestionsFor, takeSuggestion, ignoreSuggestion, QUIET_MS } from './feed.js';
 import {
   thread, markRead, breederWrites, markLoss, isLoss, lossDraft, saveLossNote, scheduleDelete, undoDelete, recentlyDeleted, eraseFamily, erasedRecords, MAX_MESSAGE, UNDO_DAYS,
+  deleteNow, deletedForGood, giveBack,
 } from './account.js';
+import { placementDuplicates, familyCandidates, mergePlacement, mergeFamily } from './merge.js';
 import { redirect, note, errorBox, pupName, familyFilters, SUGGEST_LABEL, ZONE_NAMES } from './admin/parts.js';
 import { products, KIND_WORDS, itemFields, whenWords, formOffset, templateScreen } from './admin/templates.js';
 import { settingsScreen } from './admin/settings.js';
@@ -138,21 +140,27 @@ function familyPill(f) {
 }
 const shortDay = (iso, tz) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: tz });
 
-function familiesScreen(site, families, s, url, { deleted = [], erased = [], waitlistCount = null, kennel } = {}, now = new Date()) {
+function familiesScreen(site, families, s, url, { deleted = [], erased = [], gone = [], waitlistCount = null, kennel, say = defaultSay } = {}, now = new Date()) {
   // site.portalUrl: set by handlePortalAdmin.
   const base = `/s/${esc(site.subdomain)}/portal`;
-  const rows = families.map((f) => {
+  // One row a family, whatever their open puppy records (listFamilies gives a row
+  // each): their pups named together, and tagged to merge when one was typed in and
+  // one is from KennelOS (merge.js).
+  const of = (id) => families.filter((g) => g.id === id && g.placement_id);
+  const twice = (id) => of(id).some((g) => g.placement_kennelos_id) && of(id).some((g) => !g.placement_kennelos_id);
+  const rows = families.filter((f, i) => families.findIndex((g) => g.id === f.id) === i).map((f) => {
     const p = f.placement_id ? f : null;
     const bits = [];
     if (p) {
-      bits.push(`${pupName(p)}${p.litter_name ? ` · ${p.litter_name}` : ''}`);
+      const more = [...new Set(of(f.id).slice(1).map(pupName))].filter((n) => n !== pupName(p));
+      bits.push(`${[pupName(p), ...more].join(' and ')}${p.litter_name ? ` · ${p.litter_name}` : ''}`);
       if (p.picked_up_at) bits.push(`went home ${formatAt(p.picked_up_at, s.time_zone, { weekday: false })}`);
       else if (p.pickup_booked_at) bits.push(`going home ${formatAt(p.pickup_booked_at, s.time_zone, { weekday: false })}`);
       else if (p.go_home_on) bits.push(`going home ${formatDay(p.go_home_on)}`);
     }
     bits.push(f.last_activity_at ? `last active ${shortDay(f.last_activity_at, s.time_zone)}` : 'never signed in');
     if (f.kennelos_id) bits.push('from KennelOS');
-    const tags = (f.extras ?? '').split('|').filter(Boolean).map((x) => `<span class="tag">${esc(x)}</span>`).join('');
+    const tags = `${twice(f.id) ? `<span class="tag">${esc(say('familydupes.twice_tag'))}</span>` : ''}${(f.extras ?? '').split('|').filter(Boolean).map((x) => `<span class="tag">${esc(x)}</span>`).join('')}`;
     return `<li>${roundPhoto(site.subdomain, p?.photo_id, p ? pupName(p) : f.name)}<span class="grow"><a class="rowlink" href="${base}/f/${esc(f.id)}"><b>${esc(f.name)}</b></a><br><span class="small muted">${esc(bits.join(' · '))}</span>${tags ? `<br>${tags}` : ''}</span>${familyPill(f)}</li>`;
   }).join('');
   return `${note(url)}
@@ -166,7 +174,12 @@ function familiesScreen(site, families, s, url, { deleted = [], erased = [], wai
 
   ${deleted.length ? `<section class="card" id="deleted"><h2>Recently deleted</h2><p class="hint">Their portal is closed. Each is deleted for good ${UNDO_DAYS} days after, unless you undo it.</p>
     <dl class="kv">${deleted.map((f) => `<dt>${esc(formatDay(new Date(Date.parse(f.deleted_at) + UNDO_DAYS * 86400000).toISOString().slice(0, 10)))}</dt><dd><b>${esc(f.name)}</b>${f.pup ? ` · ${esc(f.pup)}` : ''}${f.delete_reason === 'backed_out' ? ' <span class="hint">backed out (KennelOS)</span>' : ''}
-      <form method="post" action="${base}/undo/${esc(f.id)}" class="inline"><button class="link">Undo</button></form></dd>`).join('')}</dl></section>` : ''}
+      <form method="post" action="${base}/undo/${esc(f.id)}" class="inline"><button class="link">Undo</button></form>
+      <details><summary>${esc(say('familydupes.delete_now'))}</summary><form method="post" action="${base}/gone/${esc(f.id)}"><p class="hint">${esc(say('familydupes.delete_now_line'))}</p>
+        <label>${esc(say('familydupes.confirm_label'))}<input name="confirm" autocomplete="off" required></label><p><button>${esc(say('familydupes.confirm_button'))}</button></p></form></details></dd>`).join('')}</dl></section>` : ''}
+  ${gone.length ? `<details class="card" id="gone"><summary>${esc(say('familydupes.gone_title'))} (${gone.length})</summary><p class="hint">${esc(say('familydupes.gone_line'))}</p>
+    <dl class="kv">${gone.map((t) => `<dt>${esc(shortDay(t.deleted_at, s.time_zone))}</dt><dd><b>${esc(t.label || say('familydupes.gone_no_name'))}</b>
+      <form method="post" action="${base}/giveback" class="inline"><input type="hidden" name="kennelos_id" value="${esc(t.kennelos_id)}"><button class="link">${esc(say('familydupes.give_back'))}</button></form></dd>`).join('')}</dl></details>` : ''}
   ${erased.length ? `<details class="card"><summary>Erased at the family's request (${erased.length})</summary><p class="hint">Their accounts are gone; the sale records stay for your guarantee.</p>
     <dl class="kv">${erased.map((r) => `<dt>${esc(r.name)}</dt><dd><b>${esc(r.call_name || r.puppy_name)}</b>${r.picked_up_at ? ` · went home ${esc(formatAt(r.picked_up_at, s.time_zone, { weekday: false }))}` : ''}${r.proof_file_id ? ` · <a href="${base}/file/${esc(r.proof_file_id)}">vet record</a>${r.proof_accepted_at ? ' (accepted)' : ''}` : ''}${r.contract_file_id ? ` · <a href="${base}/file/${esc(r.contract_file_id)}">contract</a>` : ''} <span class="hint">erased ${esc(formatAt(r.erased_at, s.time_zone, { weekday: false }))}</span></dd>`).join('')}</dl></details>` : ''}`;
 }
@@ -220,6 +233,17 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
       ${waiting.map((g) => `<div class="box"><p><b>KennelOS has a newer value</b> for ${esc(SUGGEST_LABEL[g.field] ?? g.field)}: <strong>${esc(shown(g))}</strong></p>
         <div class="row">${form('suggestion', `<input type="hidden" name="tbl" value="${g.tbl}"><input type="hidden" name="field" value="${esc(g.field)}"><input type="hidden" name="act" value="use"><button class="primary">Use it</button>`)}
         ${form('suggestion', `<input type="hidden" name="tbl" value="${g.tbl}"><input type="hidden" name="field" value="${esc(g.field)}"><input type="hidden" name="act" value="ignore"><button>Ignore</button>`)}</div></div>`).join('')}</section>`);
+  }
+  // Two puppy records, one typed and one from KennelOS (merge.js).
+  const dupes = await placementDuplicates(env, site.id, f.id);
+  if (dupes) {
+    const label = (x) => [pupName(x), x.go_home_on ? formatDay(x.go_home_on) : null].filter(Boolean).join(', ');
+    parts.push(`<section class="card" id="merge"><h2>${esc(say('familydupes.placements_title'))}</h2>
+      ${dupes.typed.map((h) => form('merge-placement', `<p>${esc(say('familydupes.placements_line', { typed: label(h), kennelos: dupes.linked.map(label).join('; ') }))}</p>
+        <input type="hidden" name="from" value="${esc(h.id)}">
+        ${dupes.linked.length === 1 ? `<input type="hidden" name="into" value="${esc(dupes.linked[0].id)}">`
+          : `<label>${esc(say('familydupes.placements_choose'))}<select name="into" required>${dupes.linked.map((k) => `<option value="${esc(k.id)}">${esc(label(k))}</option>`).join('')}</select></label>`}
+        <p><button class="primary">${esc(say('familydupes.placements_button'))}</button></p>`)).join('')}</section>`);
   }
   if (p && p.status === 'closed' && p.closed_reason) parts.push(`<section class="card"><p class="error">${esc(pupName(p))}'s placement is closed: ${esc(CLOSED[p.closed_reason])} (from KennelOS). Every reminder has stopped.</p></section>`);
 
@@ -376,7 +400,7 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
         return `<dt>${esc(formatAt(r.sent_at, s.time_zone, { weekday: false }))}</dt><dd><b>${esc(KINDS[r.kind] ?? r.kind)}</b>: <span${['failed', 'bounced'].includes(r.result) ? ' class="error"' : ''}>${esc(WORDS[r.result] ?? r.result)}</span> to ${esc(addr)}${r.basis && r.kind !== 'invite' ? `<br><span class="hint">Counted from ${esc(r.basis.includes('T') ? `the deadline ${formatAt(r.basis, s.time_zone, { weekday: false })}` : `go-home ${formatDay(r.basis)}`)}</span>` : ''}</dd>`;
       }).join('')}</dl>` : '<p class="muted">Nothing sent yet.</p>'}</section>`);
 
-    const FIELD = { picked_up_at: 'Picked up', pickup_state: 'Pickup', vet_deadline_at: 'Vet deadline', pickup_booked_at: 'Pickup booked', go_home_on: 'Go-home', puppy_id: 'Puppy', puppy_name: 'Puppy', call_name: 'Name', microchip: 'Microchip', registration_no: 'Registration number', vet_booked_for: 'Vet booked for', vet_clinic: 'Clinic', vet_booked_at: 'Vet booking recorded', proof_file_id: 'Vet record', proof_uploaded_at: 'Vet record uploaded', proof_accepted_at: 'Vet record accepted', contract_file_id: 'Contract', life_status: 'Life status', life_status_on: 'Since', health_record: 'Health record', extra: 'Extra', extra_suggested: 'Extra from KennelOS, to confirm', extra_declined: 'KennelOS extra turned down', stay_update: 'Stay update sent', account_erased: 'Account erased', checklist: 'Checklist ticked', task: 'Task done', step_hidden: 'Step hidden for them', step_shown: 'Step shown again', task_day: 'Task moved', program: 'Program', program_code: 'Their program code' };
+    const FIELD = { picked_up_at: 'Picked up', pickup_state: 'Pickup', vet_deadline_at: 'Vet deadline', pickup_booked_at: 'Pickup booked', go_home_on: 'Go-home', puppy_id: 'Puppy', puppy_name: 'Puppy', call_name: 'Name', microchip: 'Microchip', registration_no: 'Registration number', vet_booked_for: 'Vet booked for', vet_clinic: 'Clinic', vet_booked_at: 'Vet booking recorded', proof_file_id: 'Vet record', proof_uploaded_at: 'Vet record uploaded', proof_accepted_at: 'Vet record accepted', contract_file_id: 'Contract', life_status: 'Life status', life_status_on: 'Since', health_record: 'Health record', extra: 'Extra', extra_suggested: 'Extra from KennelOS, to confirm', extra_declined: 'KennelOS extra turned down', stay_update: 'Stay update sent', account_erased: 'Account erased', checklist: 'Checklist ticked', task: 'Task done', step_hidden: 'Step hidden for them', step_shown: 'Step shown again', task_day: 'Task moved', program: 'Program', program_code: 'Their program code', merged: 'Merged with the record you typed in' };
     const UNDONE = { checklist: 'Checklist unticked', task: 'Task undone', program_code: 'Their program code removed' };
     const BY = { breeder: 'you', family: 'the family', kennelos: 'KennelOS', portal: 'the portal' };
     const isTime = (v) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(v ?? '');
@@ -398,8 +422,15 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
     <label>Family name<input name="name" value="${esc(f.name)}" required maxlength="120"></label>
     <label>Email addresses<input name="emails" value="${esc(emails.map((e) => e.email).join(', '))}" required><span class="hint">Removing an address stops it signing in and getting reminders.</span></label>
     <p><button>Save</button></p></div></details>`));
+  const others = await familyCandidates(env, site.id, f);
+  if (others.length) {
+    parts.push(form('merge-family', `<details class="card"><summary>${esc(say('familydupes.family_title'))}</summary>
+      <p class="hint">${esc(say(f.kennelos_id ? 'familydupes.family_line_kennelos' : 'familydupes.family_line_typed', { family: f.name }))}</p>
+      <label>${esc(say('familydupes.family_choose'))}<select name="other" required><option value="">Choose…</option>${others.map((o) => `<option value="${esc(o.id)}">${esc(o.name)}${o.pup ? ` · ${esc(o.pup)}` : ''}</option>`).join('')}</select></label>
+      <p><button>${esc(say('familydupes.family_button'))}</button></p></details>`));
+  }
   parts.push(form('delete', `<details class="card danger"><summary>Delete this family</summary>
-    <p>Closes their portal now, and deletes their account, emails, puppy records here, files and history for good after ${UNDO_DAYS} days. Until then you can undo it under Puppy families. Nothing is deleted from your website or from KennelOS${f.kennelos_id ? ', and KennelOS won\'t send them again' : ''}.</p>
+    <p>Closes their portal now, and deletes their account, emails, puppy records here, files and history for good after ${UNDO_DAYS} days. Until then you can undo it, or delete them for good sooner, under Puppy families. Nothing is deleted from your website or from KennelOS${f.kennelos_id ? '. KennelOS won\'t send them again unless you let it, under Puppy families' : ''}.</p>
     <label>Type <strong>delete</strong> to confirm<input name="confirm" autocomplete="off" required></label><p><button>Delete the family</button></p></details>`));
   parts.push(form('erase', `<details class="card danger"><summary>They asked for their data to go</summary>
     <p>Erases their account now, for good: sign-in, email addresses, messages and their ticks. Your records of the sale (the placement, health records, contract, vet record and reminder log) stay, under the name ${esc(f.name)}, for your guarantee. A family can also do this themselves from their Account page.</p>
@@ -431,7 +462,7 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
     const w = await waitlistCount(env, site);
     if (url.searchParams.get('show') === 'waitlist') return page('Families', await waitlistPart(env, site, kennel, w), tabs('families'));
     const families = await listFamilies(env, site.id);
-    return page('Families', familiesScreen(site, families, s, url, { deleted: await recentlyDeleted(env, site.id), erased: await erasedRecords(env, site.id), waitlistCount: w.n, kennel }), tabs('families'));
+    return page('Families', familiesScreen(site, families, s, url, { deleted: await recentlyDeleted(env, site.id), erased: await erasedRecords(env, site.id), gone: await deletedForGood(env, site.id), waitlistCount: w.n, kennel, say }), tabs('families'));
   }
   // The Portal tab (plan 7.3): what families see, in one place.
   if (rest === '/setup' && !post) return page('Portal', setupScreen(site, s), tabs('portal'));
@@ -439,6 +470,19 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   if (um && post) {
     try { await undoDelete(env, site.id, um[1]); } catch (err) { if (!(err instanceof PortalError)) throw err; }
     return redirect(`${home}/f/${um[1]}?note=undone`);
+  }
+  // Delete now, from Recently deleted; and giving back one deleted for good.
+  const gm = rest.match(/^\/gone\/([0-9a-f-]{36})$/);
+  if (gm && post) {
+    const form = await request.formData();
+    if (String(form.get('confirm') ?? '').trim().toLowerCase() !== 'delete') return redirect(`${home}#deleted`);
+    try { await deleteNow(env, site.id, gm[1]); } catch (err) { if (!(err instanceof PortalError)) throw err; }
+    return redirect(`${home}?note=gonenow`);
+  }
+  if (rest === '/giveback' && post) {
+    const form = await request.formData();
+    try { await giveBack(env, site.id, String(form.get('kennelos_id') ?? '')); } catch (err) { if (!(err instanceof PortalError)) throw err; }
+    return redirect(`${home}?note=givenback`);
   }
 
   if (rest === '/settings/suggestion' && post) {
@@ -590,6 +634,11 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
         if (get('confirm').trim().toLowerCase() !== 'erase') throw new PortalError('Type erase to confirm.');
         await eraseFamily(env, site.id, familyId, 'breeder');
         return redirect(`${home}?note=erased`);
+      case 'merge-placement': await mergePlacement(env, site.id, familyId, get('from'), get('into')); return to('merged');
+      case 'merge-family': {
+        const kept = await mergeFamily(env, site.id, familyId, get('other'));
+        return redirect(`${home}/f/${kept}?note=familymerged`);
+      }
       case 'delete':
         if (get('confirm').trim().toLowerCase() !== 'delete') throw new PortalError('Type delete to confirm.');
         await scheduleDelete(env, site.id, familyId, 'breeder');
