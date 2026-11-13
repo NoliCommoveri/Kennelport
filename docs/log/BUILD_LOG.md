@@ -1191,3 +1191,12 @@ let her give a deleted family back.
 - No change to `public/_kp/`: no version bump.
 - Not here: KennelOS sending a family again without a change. That's in KennelOS.
 - Tests: six new in `portal-feed.test.js`. All 401 pass.
+
+## 2026-11-13: redeploy for PR #54
+
+- PR #54 (the same family twice, Delete now, giving a family back; migration 0032)
+  merged to `main` but Workers Builds made no deployment for it: production stayed on
+  #53. Nothing in the code stopped it (`wrangler deploy --dry-run --env production`
+  bundles cleanly; all 401 tests pass). This entry is the change for a fresh merge to
+  start a new build. If a build of #54 fails again, its log is in the Worker's build
+  history, not in its Deployments list.
