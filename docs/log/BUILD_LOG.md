@@ -1023,3 +1023,15 @@ with new sections and a new building order. Docs only; nothing built yet.
 - No versioned file changed (`public/_kp/` untouched).
 - Tests: `picks.test.js` (new: the rotation, picks, her screens end to end, the
   snapshot); `blocks.test.js` gains the owner's Featured settings. All 387 pass.
+
+## 2026-11-13: her Featured order as a grid
+
+- The owner's request: on a Featured block's choosing screen, ↑ and ↓ didn't line up
+  from row to row (each sat right after the name, and a row with one move was shorter).
+- Each row is now a grid (`app.css` `.picks`, `.pickrow`): the tick and name, then ↑ and
+  ↓ in two fixed 44px columns, with an empty cell where a row has no move.
+  `manage/screens/picks.js` draws it.
+- `public/_kp/m/app.css` changed: it needs an `APP_VERSION` bump (17 is on `main`), which
+  waits for the owner's yes. Until then `versions.test.js` fails, as expected.
+- Checked at 390px and 1280px: every ↑ at one x and every ↓ at the next, no sideways
+  scroll, no script errors.

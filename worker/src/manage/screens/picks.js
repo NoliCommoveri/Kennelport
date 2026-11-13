@@ -10,8 +10,9 @@
 //   owner's conditions hold for are ticked, in the owner's order.
 //
 // No prototype screen: built from her app's own pieces, the switch list her page
-// cards use (.switches) and the list rows with ↑ ↓ her Dogs list uses (.items,
-// .order). It works without script: a move saves the ticks with it.
+// cards use (.switches) and, for a Featured block's order, rows in a grid (app.css
+// .picks): the tick and name, then ↑ and ↓ each in its own column, so they line up
+// row to row. It works without script: a move saves the ticks with it.
 import { escapeHtml as esc } from '../../lib/html.js';
 import { pageBlocks, hersOn } from '../../content/blocks.js';
 import { BLOCK_KIND } from '../../content/fields.js';
@@ -95,11 +96,13 @@ export function picksScreens({ base, env, note, request, say, site, url }) {
     } else {
       // Her order: the ticked ones can move; each row posts its place (order).
       const on = shown.filter((x) => ticked.has(x.id));
-      list = `<ul class="items">${shown.map((x) => {
+      list = `<ul class="picks">${shown.map((x) => {
         const i = on.indexOf(x);
         const nm = nameOf(kind, x);
-        const moves = i < 0 ? '' : `${i ? `<button name="move" value="${esc(x.id)}:up" aria-label="${esc(say('picks.move_up', { name: nm }))}">↑</button>` : ''}${i < on.length - 1 ? `<button name="move" value="${esc(x.id)}:down" aria-label="${esc(say('picks.move_down', { name: nm }))}">↓</button>` : ''}`;
-        return `<li class="item between" id="r-${esc(x.id)}"><input type="hidden" name="order" value="${esc(x.id)}"><label class="check">${tick(x)}<span><b>${esc(nm)}</b>${subOf(snap, kind, x, rc) ? `<span class="hint">${esc(subOf(snap, kind, x, rc))}</span>` : ''}</span></label>${moves ? `<span class="order">${moves}</span>` : ''}</li>`;
+        // Up and down each keep their own column, an empty cell where there's no move.
+        const up = i > 0 ? `<button name="move" value="${esc(x.id)}:up" aria-label="${esc(say('picks.move_up', { name: nm }))}">↑</button>` : '<span></span>';
+        const down = i >= 0 && i < on.length - 1 ? `<button name="move" value="${esc(x.id)}:down" aria-label="${esc(say('picks.move_down', { name: nm }))}">↓</button>` : '<span></span>';
+        return `<li class="pickrow" id="r-${esc(x.id)}"><input type="hidden" name="order" value="${esc(x.id)}"><label class="check">${tick(x)}<span><b>${esc(nm)}</b>${subOf(snap, kind, x, rc) ? `<span class="hint">${esc(subOf(snap, kind, x, rc))}</span>` : ''}</span></label>${up}${down}</li>`;
       }).join('')}</ul>`;
     }
     let dates = '';
