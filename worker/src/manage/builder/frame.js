@@ -19,7 +19,7 @@ export const whereIs = (site, path = '') => (isDemo(site) ? `Demo${path ? ` · $
 
 // A site's screens: [path, title, icon, short name for the phone's tabs].
 export const SCREENS = [
-  ['pages', 'Pages', 'pages', 'Pages'], ['menu', 'Menu', 'list', 'Menu'], ['rules', 'Pups', 'paw', 'Pups'], ['dogs', 'Dogs', 'star', 'Dogs'], ['wording', 'Wording', 'pages', 'Words'],
+  ['pages', 'Pages', 'pages', 'Pages'], ['menu', 'Menu', 'list', 'Menu'], ['rules', 'Pups', 'paw', 'Pups'], ['dogs', 'Dogs', 'star', 'Dogs'], ['tags', 'Tags', 'tag', 'Tags'], ['wording', 'Wording', 'pages', 'Words'],
   ['formats', 'Formats', 'cal', 'Formats'], ['kennelos', 'From KennelOS', 'link', 'KennelOS'], ['timing', 'Timing', 'clock', 'Timing'],
   ['instructions', 'Her instructions', 'book', 'Help'],
 ];

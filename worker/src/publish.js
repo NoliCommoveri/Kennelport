@@ -20,6 +20,7 @@ import { NOT_FOR_DEMO } from './lib/demo.js';
 import { layoutFor, customPages } from './content/blocks.js';
 import { changes } from './diff.js';
 import { sitePicks } from './content/picks.js';
+import { cleanTags } from './content/tags.js';
 
 export const SNAPSHOT_VERSION = 1;
 export const KEEP = 10;
@@ -95,6 +96,8 @@ export async function buildSnapshot(env, siteId) {
     lives_with_kennel_id: d.co_owned && d.lives_away && partnerIds.has(d.lives_with_kennel_id) ? d.lives_with_kennel_id : null,
     co_owned_with_ids: d.co_owned ? (json(d.co_owned_with_ids, []) ?? []).filter((id) => partnerIds.has(id)) : [],
     title_rows: titleRows.filter((t) => t.dog_id === d.id).map((t) => keep(t, ['dog_id'])),
+    // Her tags on it, by id (content/tags.js); which show is the render's.
+    tags: json(d.tags, []) ?? [],
     health: d.health_display === 'none' ? []
       : health.filter((h) => h.dog_id === d.id && (d.health_display === 'all' || h.normal))
         .map((h) => keep(h, ['id', 'site_id', 'dog_id', 'show', 'sort', 'source'])),
@@ -276,6 +279,8 @@ export async function buildSnapshot(env, siteId) {
     },
     pages, home, dogs, litters, reviews, steps, expanders, extras, products, partners, payment, questions, albums, embeds, photos,
     rules, timing,
+    // Tags (content/tags.js): the owner's by rule, and those she may tick on a dog.
+    tags: cleanTags(build?.tags),
     // Her build's pages as blocks (content/blocks.js), and the pages she added.
     layout: layoutFor(build),
     added,

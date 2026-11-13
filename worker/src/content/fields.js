@@ -78,6 +78,24 @@ export const TEST_KIND = { genetic_test: 'Genetic', ofa_pennhip: 'OFA / PennHIP'
 const testKinds = (d) => [...new Set((d.health ?? []).map((h) => TEST_KIND[h.test_type] ?? null).filter(Boolean))];
 
 const f = (label, kind, read, extra = {}) => ({ label, kind, read, ...extra });
+
+// A record's tags (content/tags.js): the breeder's own (a dog's, by id, from those the
+// owner allows) first, then the owner's tags by rule of its kind whose conditions hold,
+// in the owner's order. → [{ id, words, pill }]. A tag with no words is left out. Kept
+// per record for the render (rc.tagCache).
+export function tagsOf(kind, rec, rc) {
+  const T = rc.tags;
+  if (!T) return [];
+  const cache = rc.tagCache ??= new WeakMap();
+  if (cache.has(rec)) return cache.get(rec);
+  cache.set(rec, []); // a rule can't reach this record's tags while they're worked out
+  const own = kind === 'dog' ? (rec.tags ?? []).map((id) => T.own.find((t) => t.id === id)).filter(Boolean) : [];
+  const ruled = T.rules.filter((t) => t.kind === kind && matches(kind, rec, t.where, rc));
+  const out = [...own, ...ruled].filter((t) => t.words).map(({ id, words, pill }) => ({ id, words, pill }));
+  cache.set(rec, out);
+  return out;
+}
+const tagWords = (kind) => (r, rc) => tagsOf(kind, r, rc).map((t) => t.words);
 const parentName = (d, role, rc) => rc.dogById(d[`${role}_id`])?.call_name ?? d[`${role}_name`] ?? null;
 // The dogs on the site a dog descends from, nearest first, GENERATIONS back. A line
 // that loops (a mistake in the records) stops where it would repeat.
@@ -127,6 +145,7 @@ const DOG = {
   age: f('Age in years', 'number', (d, rc) => yearsSince(d.date_of_birth, rc.today)),
   has_health: f('Has health results shown', 'bool', (d) => (d.health ?? []).length > 0, { no: 'No health results shown' }),
   test_kind: f('Kinds of health test shown (from KennelOS)', 'list', testKinds),
+  tags: f('Tags', 'list', tagWords('dog')),
 };
 
 const PUPPY = {
@@ -139,6 +158,7 @@ const PUPPY = {
   registry: f('Registry', 'text', own('registry')),
   price: f('Price', 'number', own('price')),
   disposition: f('Disposition in KennelOS', 'enum', own('disposition'), { values: PUP_DISPOSITION_WORDS }),
+  tags: f('Tags', 'list', tagWords('puppy')),
   // Its litter's.
   'litter.name': f("Litter's name", 'text', (p, rc) => rc.litterOf(p)?.name ?? null),
   'litter.stage': f("Litter's stage", 'enum', (p, rc) => { const l = rc.litterOf(p); return l ? rc.litterStage(l) : null; }, { values: LITTER_STAGE }),

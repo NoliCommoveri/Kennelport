@@ -50,6 +50,9 @@ read that before the rest. Update this map when you add, move or split a file.
   (dog, pup, litter), with the conditions, order and groups themselves
   (`plans/kennelos-contract.md` B1, B2). `render/parts.js` `recordCtx` gives it the day,
   a litter's stage and a pup's status row.
+- `src/content/tags.js`: tags (`plans/kennelos-contract.md` Part D): the owner's tags by
+  rule and those the breeder may tick on a dog, kept in the site's build, and the Tags
+  screen's form. A record's tags are worked out in `fields.js` `tagsOf`.
 - `src/content/picks.js`: the breeder's ticks and picks on a data block (`block_picks`):
   Leave out, and a Featured block's picks and set dates (`plans/kennelos-contract.md`
   B3). `src/content/featured.js`: a Featured block's schedule and which record shows
@@ -79,7 +82,7 @@ read that before the rest. Update this map when you add, move or split a file.
   `sites.js` (Every site), `rules.js` (Pups), `kennelos.js` (From KennelOS), `timing.js`,
   `formats.js`, `instructions.js` (her instructions), `records.js` (a data block's
   conditions, order and groups), `blocks.js` (a data block's settings and a Featured
-  block's schedule), `menugroups.js` (menu links to a group of a block); `frame.js` the nav and redirect,
+  block's schedule), `menugroups.js` (menu links to a group of a block), `tags.js` (Tags); `frame.js` the nav and redirect,
   `controls.js` the form controls. The five big files (`builder.js`, `screens.js`,
   `render/pages.js`, `portal/admin.js`, `portal/family.js`) are split further a screen at a
   time as they're touched (`review/senior-review-2026-11.md`, item 7): don't grow them.

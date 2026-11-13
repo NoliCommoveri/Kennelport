@@ -60,12 +60,12 @@ function valueInput(snap, kind, c, i, k, rc) {
   return `<label class="half">Value<input type="${type}" name="${n}" value="${esc(v)}"${type === 'text' ? ' maxlength="60"' : ''}></label>`;
 }
 
-function condRow(snap, kind, b, c, i, k, rc) {
+function condRow(snap, kind, b, c, i, k, rc, filter = () => true) {
   const spec = FIELDS[kind][c.field];
   const ticks = TICK_OPS.includes(c.op);
   const value = valueInput(snap, kind, c, i, k, rc);
   return `<li class="mvr item cond${condSet(c) ? '' : ' off'}"><span class="ttl"><div class="fgrid">
-      ${fieldSelect(k(`where.${i}.field`), kind, c.field, { label: 'Field' })}
+      ${fieldSelect(k(`where.${i}.field`), kind, c.field, { label: 'Field', filter })}
       <label class="half">Asks<select name="${k(`where.${i}.op`)}">${Object.entries(OPS[spec.kind]).map(([o, l]) => option(o, l, c.op)).join('')}</select></label>
       ${ticks ? '' : value}</div>${ticks ? value : ''}
       ${condSet(c) ? '' : `<span class="hint">${ticks ? 'Tick at least one' : 'Fill in a value'}, then save: until then this condition leaves nothing out.</span>`}
@@ -74,13 +74,22 @@ function condRow(snap, kind, b, c, i, k, rc) {
       <span class="row"><button class="link small danger" name="act" value="cond-:${esc(b.id)}:${i}">${svg('trash')} Remove this condition</button></span></span></li>`;
 }
 
+// A block's conditions and its Add a condition (also a tag rule's, manage/builder/tags.js,
+// as a pretend block). `without`: fields not offered.
+export function conditionRows(snap, b, k, rc, { without = [], intro = null } = {}) {
+  const kind = BLOCK_KIND[b.type];
+  const filter = (f) => !without.includes(f);
+  const conds = b.where.map((c, i) => condRow(snap, kind, b, c, i, k, rc, filter)).join('');
+  const add = b.where.length < WHERE_MAX
+    ? `<div class="fgrid">${fieldSelect(k('addcond'), kind, '', { label: 'Add a condition on', first: ['', 'Choose a field…'], filter })}<div class="half"><button class="button small" name="act" value="cond+:${esc(b.id)}">${svg('plus')} Add a condition</button></div></div>` : '';
+  return `<div class="fld"><span class="fldt">Conditions</span><span class="hint">${intro ?? `Every one must hold. For one thing or another, add a second block. With none, it shows every one of its ${WHAT[kind]}.`}</span>
+      ${conds ? `<ul class="mvl">${conds}</ul>` : ''}${add}</div>`;
+}
+
 // The block's "Which …" part: conditions, Add a condition, order, grouping, headings.
 export function recordsSettings(snap, b, k, today = null) {
   const kind = BLOCK_KIND[b.type];
   const rc = recordCtx(snap, today);
-  const conds = b.where.map((c, i) => condRow(snap, kind, b, c, i, k, rc)).join('');
-  const add = b.where.length < WHERE_MAX
-    ? `<div class="fgrid">${fieldSelect(k('addcond'), kind, '', { label: 'Add a condition on', first: ['', 'Choose a field…'] })}<div class="half"><button class="button small" name="act" value="cond+:${esc(b.id)}">${svg('plus')} Add a condition</button></div></div>` : '';
   const orders = `<label class="half">Order<select name="${k('order')}">${option('own', "The breeder's order", b.order)}${sections(kind).map(([title, fs]) => {
     const opts = fs.filter(([, s]) => !s.either).flatMap(([f, s]) => ORDER_WORDS[s.kind].map((w, d) => [`${f}:${d ? 'down' : 'up'}`, `${s.label}, ${w}`]));
     return opts.length ? `<optgroup label="${esc(title)}">${opts.map(([v, l]) => option(v, l, b.order)).join('')}</optgroup>` : '';
@@ -95,8 +104,7 @@ export function recordsSettings(snap, b, k, today = null) {
     const gs = grouped(kind, allOf(snap, kind), b.group, {}, rc);
     headings = `<div class="fld"><span class="fldt">A heading over each group</span><span class="hint">Left empty, a group's heading is its value, as shown. A group with nothing in it doesn't show.</span><div class="fgrid">${gs.map((g, i) => `<label class="half">${esc(g.heading)}<input type="hidden" name="${k(`gw.${i}.k`)}" value="${esc(g.key)}"><input type="text" name="${k(`gw.${i}.w`)}" value="${esc(b.gw[g.key] ?? '')}" placeholder="${esc(g.heading)}" maxlength="60"></label>`).join('')}</div></div>`;
   }
-  return `<div class="fld"><span class="fldt">Conditions</span><span class="hint">Every one must hold. For one thing or another, add a second block. With none, it shows every one of its ${WHAT[kind]}.</span>
-      ${conds ? `<ul class="mvl">${conds}</ul>` : ''}${add}</div>
+  return `${conditionRows(snap, b, k, rc)}
     <div class="fgrid">${orders}${groupSel}</div>${headings}`;
 }
 

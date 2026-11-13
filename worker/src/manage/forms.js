@@ -36,6 +36,7 @@ export const LABELS = {
     group_health: ['Group health results by kind', 'On each dog\'s page: genetic tests, OFA / PennHIP and other tests each under their own heading, sorted by KennelOS. Off: one list.'],
   },
   dogs: {
+    tags: ['Tags', 'Shown as small labels on this dog\'s cards, where your site shows them.'],
     call_name: ['Call name', null], registered_name: ['Registered name', null], role: ['Role', 'For example Dam, Sire, or Retired.'],
     date_of_birth: ['Born', null], weight: ['Weight', 'For example "45 lb". Shown on the dog\'s card and page. Your website only: KennelOS never changes it.'], titles: ['Titles', 'For example CH, CGC.'],
     life_stage: ['Life stage', 'Breeding dog: with your girls and boys. Up and coming: a young dog you\'ve kept and aren\'t breeding yet. Looking for a home: an adult you\'re placing, with Ask about this dog. Retired and In memory: their pages come later. For a dog that isn\'t yours, only Breeding dog, Retired and In memory apply.'],
@@ -324,6 +325,15 @@ export function field(name, f, value, ctx) {
         const none = ctx.say ? ctx.say('lists.place.none') : 'No page of your site has a place for these yet.';
         return `<fieldset><legend>${esc(label)}${h}</legend>${offer.length ? offer.map(([x, w]) => `<label class="check"><input type="checkbox" name="${name}" value="${esc(x)}"${on.has(x) ? ' checked' : ''}> <span>${esc(w)}</span></label>`).join('') : `<p class="muted small">${esc(none)}</p>`}${kept}</fieldset>`;
       }
+      // Her tags: one tick box for each the owner allows the site (ctx.tags); none
+      // allowed, no field. One ticked that the owner has taken away is kept, unseen.
+      if (f.item === 'tag') {
+        const offer = ctx.tags ?? [];
+        if (!offer.length) return '';
+        const on = new Set(value ?? []);
+        const kept = [...on].filter((x) => !offer.some((t) => t.id === x)).map((x) => `<input type="hidden" name="${name}" value="${esc(x)}">`).join('');
+        return `<fieldset><legend>${esc(label)}${h}</legend>${offer.map((t) => `<label class="check"><input type="checkbox" name="${name}" value="${esc(t.id)}"${on.has(t.id) ? ' checked' : ''}> <span>${esc(t.words)}</span></label>`).join('')}${kept}</fieldset>`;
+      }
       // A list of fixed keys: one tick box each, in the model's order.
       if (f.item === 'enum') {
         const on = new Set(value ?? []);
@@ -408,7 +418,7 @@ export function photoSlot(name, label, hint, chosen, ctx, { multiple = false, ma
 // name still shows, under More, so a new field is never lost. Kinds without groups keep
 // the one plain list.
 const GROUPS = {
-  dogs: [['About', ['call_name', 'sex', 'registered_name', 'date_of_birth', 'color', 'weight', 'role', 'registry', 'titles']], ['Parents', ['sire_id', 'dam_id', 'sire_name', 'dam_name']], ['Photo and story', ['photo_id', 'bio']], ['Where they show', ['life_stage', 'health_display', 'price', 'died_on']], ['Co-owned', ['lives_with_kennel_id', 'co_owned_with_ids'], (v) => Boolean(v?.co_owned)], ['Outside dog', ['owner_name', 'owner_url'], (v) => Boolean(v?.outside)]],
+  dogs: [['About', ['call_name', 'sex', 'registered_name', 'date_of_birth', 'color', 'weight', 'role', 'registry', 'titles']], ['Parents', ['sire_id', 'dam_id', 'sire_name', 'dam_name']], ['Photo and story', ['photo_id', 'bio']], ['Where they show', ['life_stage', 'health_display', 'price', 'died_on', 'tags']], ['Co-owned', ['lives_with_kennel_id', 'co_owned_with_ids'], (v) => Boolean(v?.co_owned)], ['Outside dog', ['owner_name', 'owner_url'], (v) => Boolean(v?.outside)]],
   partners: [['The kennel', ['name', 'url', 'photo_id']]],
   litters: [['The litter', ['name', 'stage', 'summary']], ['Parents', ['dam_id', 'sire_id', 'dam', 'sire', 'dam_name', 'sire_name']], ['Dates', ['born_on', 'ready_on', 'deposits_on']], ['For a planned litter', ['plan_label', 'expected_label', 'ready_label'], (v) => v?.stage === 'planned'], ['Prices', ['price_female', 'price_male', 'full_reg_female', 'full_reg_male', 'deposit_female', 'deposit_male', 'price_note']]],
   puppies: [['The puppy', ['name', 'collar', 'sex', 'color', 'status', 'registration', 'registry', 'price']], ['Photo and story', ['photo_id', 'bio', 'more_photos_url']]],
@@ -461,7 +471,7 @@ export function parseForm(list, form) {
       case 'int': { const s = String(form.get(n) ?? '').trim(); out[n] = s === '' ? null : Number(s); break; }
       case 'list':
         if (f.item === 'focus') { out[n] ??= []; break; }
-        if (f.item === 'enum' || f.item === 'kennel' || f.item === 'place') { out[n] = [...new Set(form.getAll(n).map(String).filter(Boolean))]; break; }
+        if (f.item === 'enum' || f.item === 'kennel' || f.item === 'place' || f.item === 'tag') { out[n] = [...new Set(form.getAll(n).map(String).filter(Boolean))]; break; }
         if (f.item === 'photo' && f.boxes) {
           // The layout's boxes in order; an empty box is skipped, so the photos
           // after it move up (the site then uses a layout for that many).

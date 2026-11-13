@@ -34,6 +34,7 @@ import { pendingMatches, matchChanges, confirmMatch, declineMatch, MatchError } 
 import { leavingLitters, keepLitter, deleteLitter } from '../kennelos/clock.js';
 import { NOT_FOR_DEMO } from '../lib/demo.js';
 import { litterDaysFor, loadBuild } from '../content/rules.js';
+import { cleanTags, shownTags } from '../content/tags.js';
 import { shareScreens } from './screens/share.js';
 import { when, redirect, day } from './screens/parts.js';
 import { inboxScreens } from './screens/inbox.js';
@@ -134,6 +135,8 @@ export function createScreens({ env, request, url, site, user, page, say = defau
   const ctxFor = async (kind, pick) => {
     const ctx = { kind, say, library: library(pick), photos: await photos(), photoUrl, dogs: await dogsList(), litters: await littersList(), partners: kind === 'dogs' ? await partnersList() : [], photosLink: `${base}/photos` };
     if (kind === 'expander' || kind === 'products') ctx.places = await places();
+    // Her tags: those the owner allows this site (content/tags.js), with words.
+    if (kind === 'dogs') ctx.tags = shownTags(cleanTags((await loadBuild(env, site.id)).tags).own);
     return ctx;
   };
   // After a save: the photos chosen in the form, and any added with its Add

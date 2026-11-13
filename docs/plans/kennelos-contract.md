@@ -359,6 +359,19 @@ Each step is its own branch and merge, with at most one migration.
    result headings' order": four places, each heading once; Health testing, Genetic,
    OFA / PennHIP, Breed-specific by default). Within a heading, her own order of results.
 5. **C3, D.** Titles as rows; tags. Migration: `dog_titles`, `tags`.
+   **Built 2026-11-13**, in this branch's one migration (0033: the `dog_titles` table and
+   `dogs.tags`). C3: `titles_detail` in `SECTIONS`; a dog's titles come as
+   `{ abbr, organization, date }`, kept as rows; the titles line stays their
+   abbreviations, written at each update rather than at publish. A bundle where any
+   dog's titles are rows is from such a KennelOS: there a dog's empty list clears its
+   rows and line (an empty list alone can't be told from an older KennelOS's). Field:
+   A title's organization. D: the owner's **Tags** screen (build tools): tags by rule,
+   each words, a pill (the site's two status pills), Dogs or Pups, and conditions (the
+   block screen's rows; never on tags); and tags the breeder may choose, which she
+   ticks on a dog's form (her tags only on dogs). A tag is the field Tags (dogs and
+   pups; a litter's parents' too) and a card item (Tags), on no card by default. The
+   import tags of C4 come with step 6. The tags kept in the build (`build.tags`), not a
+   table. Her field's label and hint are the builder's, for the owner to reword.
 6. **C4, C7.** Origin and lineage: the import tags and the Pedigree block.
    Migration: the columns and an `ancestors` store. C4 and C7 go together: import-descended
    is worked out from the ancestors.

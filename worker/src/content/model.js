@@ -554,6 +554,15 @@ export function cleanValue(f, v, path) {
         });
         return [...PLACE_KEYS.filter((x) => seen.includes(x)), ...[...new Set(seen)].filter((x) => !PLACE_KEYS.includes(x))];
       }
+      // Tag ids (content/tags.js TAG_ID): whether the owner still allows each is the
+      // render's to say, so one taken away comes back if it returns.
+      if (f.item === 'tag') {
+        return [...new Set(v.map((x, i) => {
+          const k = String(x ?? '');
+          if (!/^t[a-z0-9]{6,20}$/.test(k)) throw new ContentError(`${path}[${i}]`, 'not a tag');
+          return k;
+        }))];
+      }
       if (f.item === 'enum') {
         const seen = v.map((x, i) => cleanValue({ type: 'enum', values: f.values, required: true }, x, `${path}[${i}]`));
         return f.values.filter((x) => seen.includes(x));

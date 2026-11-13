@@ -1285,3 +1285,27 @@ let her give a deleted family back.
 - Built from the screen's existing card, select and hint pieces; checked at 390px and
   1280px. No version bump, no new migration.
 - Tests: `fields.test.js` (the order, and a repeated heading refused). All 406 pass.
+
+## 2026-11-13: KennelOS contract step 5, titles as rows and tags
+
+- C3 (`kennelos/bundle.js`): `titles_detail` in `SECTIONS`. A dog's titles may come as
+  `{ abbr, organization, date }` (`cleanTitles`): kept as rows in `dog_titles` (new table,
+  added to this branch's migration 0033; in `SITE_TABLES`, so backups and site deletes
+  carry it; removed with its dog, `records.js`, `io.js`). The titles line stays their
+  abbreviations. In a bundle where any dog's titles are rows, a dog's empty list clears.
+  The snapshot gives each dog `title_rows`; field: A title's organization.
+- D: `content/tags.js` (new): tags by rule (words, pill, Dogs or Pups, conditions) and
+  tags the breeder may choose, kept in the build (`build.tags`). The owner's **Tags**
+  screen (`manage/builder/tags.js`, new; in the build tools' nav), built from the block
+  screen's condition rows (`records.js` `conditionRows`, split out of
+  `recordsSettings`) and the builder's cards and selects; no prototype screen. Her ticks
+  on a dog's form (`dogs.tags`, ids, in migration 0033; `forms.js` item `tag`, shown only
+  when the owner allows some). `fields.js` `tagsOf` and the field Tags (dogs, pups, a
+  litter's parents); a card item Tags on dog cards, light cards and Featured blocks,
+  drawn as the site's `.status` pills: no stylesheet change, no version bump.
+- Breeder-facing wording, mine for now (the owner to reword): her dog form's Tags field,
+  label "Tags", hint "Shown as small labels on this dog's cards, where your site shows
+  them." (`forms.js` LABELS).
+- Checked the Tags screen at 390px and 1280px, and her dog form at 390px.
+- Tests: `tags.test.js` (new, two), one in `kennelos.test.js`; the linked sample's dogs
+  send titles as rows. All 409 pass.

@@ -1,7 +1,7 @@
 // Pieces of the "ak" template shared by its pages: formatting, photos, cards and
 // the menu. Every value from a snapshot passes through esc() (or attr()) here.
 import { SHOW_DEFAULT, isCustom, hersOn, BLOCK_TYPES, defaultMenu, MENU_PLACES, PAGE_DEFAULTS, recordsOf, pageBlocks, DOGS_ALL } from '../content/blocks.js';
-import { BLOCK_KIND, matches, ordered, grouped, GENERATIONS } from '../content/fields.js';
+import { BLOCK_KIND, matches, ordered, grouped, GENERATIONS, tagsOf } from '../content/fields.js';
 import { applyPicks } from '../content/picks.js';
 import { escapeHtml as esc } from '../lib/html.js';
 import { PAGES, pupStatus, slugify } from '../content/model.js';
@@ -145,6 +145,15 @@ export function addedWords(snap, key, b) {
 // What reading a record's fields needs from the site (content/fields.js `rc`): the day,
 // a litter's stage as the site shows it, a pup's status row, its litter, a dog by id,
 // a partner kennel's name. Without a day, today's (UTC), as the editor's lists use.
+// A record's tags as pills (content/tags.js), in the site's status pill styles; '' with
+// none. `rc`: the record context, else one for the snapshot made once.
+const ctxMemo = new WeakMap();
+export function tagPills(snap, kind, rec, rc = null) {
+  const c = rc ?? (ctxMemo.get(snap) ?? ctxMemo.set(snap, recordCtx(snap)).get(snap));
+  const tags = tagsOf(kind, rec, c);
+  return tags.length ? `<span class="line1 tags">${tags.map((t) => `<span class="status ${attr(t.pill)}">${esc(t.words)}</span>`).join('')}</span>` : '';
+}
+
 export function recordCtx(snap, today = null) {
   const day = today ?? new Date().toISOString().slice(0, 10);
   const dogs = new Map(snap.dogs.map((d) => [d.id, d]));
@@ -157,6 +166,8 @@ export function recordCtx(snap, today = null) {
     pupKey: (p) => pupRuleKey(snap, p, litterOfPup.get(p) ?? null, day),
     litterStage: (l) => litterStage(snap, l, day),
     partnerName: (id) => partnerOf(snap, id)?.name ?? null,
+    // Tags (content/tags.js), for content/fields.js tagsOf.
+    tags: snap.tags ?? null,
   };
 }
 
@@ -535,6 +546,7 @@ function dogItems(snap, d, { sale = null, link = true } = {}) {
     ask: () => (sale ? `${sale.price ? `<p class="small">${esc(sale.price)}</p>` : ''}<a class="more" href="${attr(sale.ask)}">${esc(word(snap, 'ask_dog', { name: d.call_name }))}</a>` : ''),
     profile: () => `<a class="more" href="/dogs/${attr(d.slug)}">View profile</a>`,
     where: () => whereLine(snap, d, link),
+    tags: () => tagPills(snap, 'dog', d),
     photo: () => '',
   };
 }

@@ -58,6 +58,8 @@ import { FEATURE_EVERY, featuredNow } from '../content/featured.js';
 import { blockRecords, WHAT, dataSettings, scheduleSettings, hersLine as hersPicks } from './builder/blocks.js';
 import { rulesScreen } from './builder/rules.js';
 import { kennelosScreen, landingPreview } from './builder/kennelos.js';
+import { tagsScreen } from './builder/tags.js';
+import { cleanTags, tagsFromForm } from '../content/tags.js';
 import { defaultSay } from './wording.js';
 import { redirect, ic, isDemo, whereIs, SCREENS, adminNav } from './builder/frame.js';
 import { everySite } from './builder/sites.js';
@@ -780,7 +782,7 @@ export async function handleBuilder({ env, request, url, user, page }) {
   const wm = path.match(/^\/admin\/wording(?:\/([a-z]+))?$/);
   if (wm) return wordingRoute({ env, request, url, page, site: null, screen: wm[1] ?? null });
   const sv = path.match(/^\/admin\/([a-z0-9-]+)\/site(\/.*)?$/);
-  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z0-9_-]+|menu|rules|dogs|wording|formats|kennelos|timing|instructions|instructions\/[a-z]+)$/);
+  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z0-9_-]+|menu|rules|dogs|tags|wording|formats|kennelos|timing|instructions|instructions\/[a-z]+)$/);
   if (!m) return null;
   const site = await env.DB.prepare("SELECT id, subdomain, kennel_name, status, portal_on, demo_step FROM sites WHERE subdomain = ? AND status != 'closed'").bind(m[1]).first();
   if (!site) return null;
@@ -793,6 +795,7 @@ export async function handleBuilder({ env, request, url, user, page }) {
   if (screen === 'instructions' || screen.startsWith('instructions/')) return wordingRoute({ env, request, url, page, site, build, screen: screen.split('/')[1] ?? null });
   if (screen === 'pages' || screen.startsWith('pages/')) return pagesRoute({ env, request, url, site, build, page, screen });
   if (screen === 'menu') return menuRoute({ env, request, url, site, build, page });
+  if (screen === 'tags') return tagsRoute({ env, request, url, site, build, page });
   let { rules, timing } = rulesFor(build);
   let error = null;
   if (request.method === 'POST') {
@@ -848,6 +851,27 @@ export async function handleBuilder({ env, request, url, user, page }) {
     <form method="post" id="build" class="build${side ? '' : ' solo'}"><button class="sr" tabindex="-1" aria-hidden="true">Save</button>${editor}${side}
       <div class="actionbar"><div class="in"><span class="ico">${ic('eye')}</span><p><b>Their website</b>Save, then the preview shows it. Publishing puts it live.</p>${side ? '<a class="button small seeit" href="#preview">See it</a>' : ''}<button class="primary small">Save</button></div></div></form>`;
   return page(`${title} · ${site.kennel_name || site.subdomain}`, body, { admin: { nav: adminNav(site, screen), site } });
+}
+
+// Tags (content/tags.js): the owner's tags by rule, and those the breeder may choose.
+// Any button saves the screen with what it does.
+async function tagsRoute({ env, request, url, site, build, page }) {
+  if (request.method === 'POST') {
+    const form = await request.formData();
+    const tags = tagsFromForm(build.tags, (k) => form.get(k), (k) => form.getAll(k).map(String));
+    const next = { ...build, tags };
+    if (!tags.rules.length && !tags.own.length) delete next.tags;
+    await saveBuild(env, site.id, next);
+    return redirect(`/admin/${site.subdomain}/tags?saved=1`);
+  }
+  const snap = await buildSnapshot(env, site.id);
+  const saved = url.searchParams.get('saved');
+  const body = `<p class="crumb"><a href="/admin">‹ Every site</a></p><span class="eyebrow">${esc(site.kennel_name || site.subdomain)}</span>${isDemo(site) ? ' <span class="spill brass">Demo</span>' : ''}<h1>Tags</h1>
+    <p class="muted">Short labels on dogs and pups, as pills. Nothing shows until a card has the Tags item (a block's card settings).</p>
+    ${saved ? '<p class="notice" role="status">Saved. The site shows it once the breeder (or you) publishes.</p>' : ''}
+    <form method="post" id="build" class="build solo"><button class="sr" tabindex="-1" aria-hidden="true">Save</button>${tagsScreen(snap, cleanTags(build.tags), null)}
+      <div class="actionbar"><div class="in"><span class="ico">${ic('eye')}</span><p><b>Their website</b>Save, then the preview shows it. Publishing puts it live.</p><button class="primary small">Save</button></div></div></form>`;
+  return page(`Tags · ${site.kennel_name || site.subdomain}`, body, { admin: { nav: adminNav(site, 'tags'), site } });
 }
 
 async function pagesRoute({ env, request, url, site, build, page, screen }) {
