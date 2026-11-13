@@ -79,7 +79,7 @@ read that before the rest. Update this map when you add, move or split a file.
   `sites.js` (Every site), `rules.js` (Pups), `kennelos.js` (From KennelOS), `timing.js`,
   `formats.js`, `instructions.js` (her instructions), `records.js` (a data block's
   conditions, order and groups), `blocks.js` (a data block's settings and a Featured
-  block's schedule); `frame.js` the nav and redirect,
+  block's schedule), `menugroups.js` (menu links to a group of a block); `frame.js` the nav and redirect,
   `controls.js` the form controls. The five big files (`builder.js`, `screens.js`,
   `render/pages.js`, `portal/admin.js`, `portal/family.js`) are split further a screen at a
   time as they're touched (`review/senior-review-2026-11.md`, item 7): don't grow them.

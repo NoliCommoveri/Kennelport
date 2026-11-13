@@ -246,7 +246,7 @@ test('the Pages list has every page; a page\'s editor moves, removes, puts back 
   await post({ 'b.dogs-3.gshow': 'filter' }, { page: 'dogs', open: 'dogs-3' });
   h = await render('/dogs');
   assert.ok(order(h, ['Our girls', 'id="all-dogs"']));
-  assert.match(h, /<option value="female">Girls<\/option><option value="male">Boys<\/option>/);
+  assert.match(h, /<option value="female" data-hash="g-dogs-3-female">Girls<\/option><option value="male" data-hash="g-dogs-3-male">Boys<\/option>/);
   assert.match(h, /href="\/dogs#girls"/);
   // Removed, the menu's Girls and Boys go with it (they'd open nothing).
   await post({}, { page: 'dogs', open: 'dogs-3', act: 'remove:dogs-3' });

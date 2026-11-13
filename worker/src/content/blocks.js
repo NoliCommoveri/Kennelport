@@ -886,6 +886,13 @@ function cleanItem(it, pages) {
     return { type: 'place', place: it.place, ...(text ? { text } : {}) };
   }
   if (it.type === 'link') return { type: 'link', text: cleanText(it.text, MENU_LIMITS.text), url: String(it.url ?? '').trim().slice(0, 500) };
+  // A group of a grouped data block (kennelos-contract.md B2): Girls and Boys' siblings.
+  // Its block may go later; then it simply doesn't show (render/parts.js menuGroups).
+  if (it.type === 'group') {
+    if (!pages.has(it.page) || !/^[a-z][a-z0-9_-]{0,39}$/.test(String(it.block ?? '')) || typeof it.key !== 'string' || it.key.length > 60) return null;
+    const text = cleanText(it.text, MENU_LIMITS.text);
+    return { type: 'group', page: it.page, block: it.block, key: it.key, ...(text ? { text } : {}) };
+  }
   return null;
 }
 

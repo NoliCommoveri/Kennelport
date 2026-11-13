@@ -4,7 +4,7 @@ import { SHOW_DEFAULT, isCustom, hersOn, BLOCK_TYPES, defaultMenu, MENU_PLACES, 
 import { BLOCK_KIND, matches, ordered, grouped, GENERATIONS } from '../content/fields.js';
 import { applyPicks } from '../content/picks.js';
 import { escapeHtml as esc } from '../lib/html.js';
-import { PAGES, pupStatus } from '../content/model.js';
+import { PAGES, pupStatus, slugify } from '../content/model.js';
 import { puppyPrice, litterPriceRange, depositRange } from '../content/prices.js';
 import { DEFAULT_RULES, DEFAULT_TIMING, ruleKey, addDays } from '../content/rules.js';
 
@@ -169,6 +169,24 @@ export function litterStage(snap, l, today) {
   return pastReady(snap, l, today) ? 'older' : 'available_now';
 }
 
+// Where a group of a block starts on its page (a menu link's #): g-<block>-<value>.
+export const groupAnchor = (b, key) => `g-${b.id}-${slugify(key) || 'other'}`;
+// A group's name: the owner's heading for it, else, grouped by sex, the site's Girls and
+// Boys words, else its value.
+export const groupLabel = (snap, b, g) => (recordsOf(b).group === 'sex' && !b.gw?.[g.key] && (g.key === 'female' || g.key === 'male') ? word(snap, g.key === 'female' ? 'girls' : 'boys') : g.heading);
+// A block on a page as the site has it (an older snapshot's Girls and boys read as the block).
+export const blockOn = (snap, key, id) => (snap.layout?.[key] ?? pageBlocks(null, key))
+  .map((x) => (key === 'dogs' && x.type === 'builtin' && x.id === 'all' ? DOGS_ALL : x)).find((x) => x.id === id) ?? null;
+// A group of a block, as a menu link shows it: while the block is on and the group has
+// anything in it (after her ticks and the block's limit). Null when it doesn't show.
+export function groupLink(snap, ctx, it) {
+  const b = blockOn(snap, it.page, it.block);
+  if (!b || !BLOCK_KIND[b.type] || !recordsOf(b).group || !addedOn(snap, it.page, b)) return null;
+  const rows = blockRows(snap, b, ctx.today, it.page);
+  const g = blockGroups(snap, b, b.limit ? rows.slice(0, b.limit) : rows, ctx.today).find((x) => x.key === it.key);
+  return g?.rows.length ? { hash: groupAnchor(b, g.key), text: groupLabel(snap, b, g) } : null;
+}
+
 // The first grouped Dog cards block on a page shown as a Show filter (only one per page:
 // the template's script filters one grid). An older snapshot's Dogs page holds Girls
 // and boys as the built-in part 'all': read as the block it now is (blocks.js DOGS_ALL).
@@ -242,12 +260,15 @@ export function menuGroups(snap, ctx) {
     const links = [];
     for (const it of g.items) {
       if (it.type === 'link') { links.push({ key: null, href: it.url, text: it.text, external: true }); continue; }
-      const key = it.type === 'page' ? it.page : MENU_PLACES[it.place].page;
+      const key = it.type === 'page' || it.type === 'group' ? it.page : MENU_PLACES[it.place].page;
       const path = pathOf(key);
       if (!path || !pageOn(snap, key, ctx)) continue;
       if (it.type === 'page') {
         if (it.fallback && links.some((l) => l.key === key)) continue;
         links.push({ key, href: path, text: label(snap, key) });
+      } else if (it.type === 'group') {
+        const g = groupLink(snap, ctx, it);
+        if (g) links.push({ key, href: `${path}#${g.hash}`, text: it.text || g.text });
       } else if (placeShows[it.place]()) {
         links.push({ key, href: `${path}#${it.place.split('#')[1]}`, text: it.text || placeText[it.place]?.() || MENU_PLACES[it.place].name });
       }

@@ -82,11 +82,18 @@
     document.addEventListener('click', (e) => { if (!nav.contains(e.target)) for (const o of $$('li.open', nav)) o.classList.remove('open'); });
   }
 
-  // Dogs: Girls / Boys, from the select or from #girls / #boys in the address.
+  // Dogs: the Show filter's groups (Girls / Boys, or any grouping), from the select or
+  // from the address: #girls / #boys, or a group's own #g-<block>-<value> (a menu link).
+  // Each card's data-sex holds its group's value, whatever the grouping.
   const dogFilter = $('#dog-filter');
   if (dogFilter) {
     const apply = () => { for (const c of $$('#all-dogs > [data-sex]')) c.hidden = dogFilter.value !== 'all' && c.dataset.sex !== dogFilter.value; };
-    const fromHash = () => { if (location.hash === '#girls') dogFilter.value = 'female'; else if (location.hash === '#boys') dogFilter.value = 'male'; apply(); };
+    const fromHash = () => {
+      const h = location.hash.slice(1);
+      const o = h ? [...dogFilter.options].find((x) => x.dataset.hash === h) : null;
+      if (o) dogFilter.value = o.value; else if (h === 'girls') dogFilter.value = 'female'; else if (h === 'boys') dogFilter.value = 'male';
+      apply();
+    };
     dogFilter.addEventListener('change', apply);
     window.addEventListener('hashchange', fromHash);
     fromHash();

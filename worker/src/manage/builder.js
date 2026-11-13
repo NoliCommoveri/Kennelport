@@ -60,6 +60,7 @@ import { kennelosScreen, landingPreview } from './builder/kennelos.js';
 import { defaultSay } from './wording.js';
 import { redirect, ic, isDemo, whereIs, SCREENS, adminNav } from './builder/frame.js';
 import { everySite } from './builder/sites.js';
+import { groupChoices, groupItem, groupItemLine, groupItemName } from './builder/menugroups.js';
 import { timingScreen } from './builder/timing.js';
 import { formatsScreen } from './builder/formats.js';
 import { wordingRoute } from './builder/instructions.js';
@@ -614,8 +615,9 @@ function pageFromForm(build, key, form) {
 // ---------- the menu (step 3.4) ----------
 
 // One item's title and the line under it.
-function itemLine(snap, it) {
+function itemLine(snap, it, build) {
   if (it.type === 'link') return [it.text || 'An outside link', `Outside link · ${it.url}`];
+  if (it.type === 'group') return groupItemLine(snap, build, it, (k) => pageLabel(snap, k));
   if (it.type === 'place') {
     const P = MENU_PLACES[it.place];
     return [it.text || P.name, `A place on ${pageLabel(snap, P.page)} · #${it.place.split('#')[1]} · shows ${P.when}`];
@@ -631,6 +633,8 @@ function addOptions(snap, build) {
     '': 'Choose…',
     ...Object.fromEntries(pages.map((k) => [`page:${k}`, `Page: ${pageLabel(snap, k)}`])),
     ...Object.fromEntries(Object.entries(MENU_PLACES).map(([k, P]) => [`place:${k}`, `Place: ${P.name} (${pageLabel(snap, P.page)})`])),
+    // Each group of a grouped block, on any page (builder/menugroups.js).
+    ...groupChoices(snap, build, (k) => pageLabel(snap, k)),
     link: 'An outside link (words and address below)',
   };
 }
@@ -654,7 +658,7 @@ function menuScreen(snap, build, site, menu, { open = null, error = null } = {})
   const listed = new Set(menu.flatMap((g) => g.items.filter((it) => it.type === 'page').map((it) => it.page)));
   const out = [...Object.keys(PAGES).filter((k) => k !== 'privacy'), ...customPages(build).map((c) => c.id)].filter((k) => !listed.has(k));
   const item = (g, gi, it, ii) => {
-    const [title, line] = itemLine(snap, it);
+    const [title, line] = itemLine(snap, it, build);
     const id = `${gi}.${ii}`;
     const isOpen = open === id;
     const pre = `i.${gi}.${ii}`;
@@ -662,7 +666,8 @@ function menuScreen(snap, build, site, menu, { open = null, error = null } = {})
     const set = !isOpen ? '' : `<div class="set"><input type="hidden" name="${pre}.present" value="1"><div class="fgrid">
         ${select(`${pre}.to`, String(gi), groupOpts, 'In the group')}
         ${it.type === 'link' ? `${field(`${pre}.text`, it.text, { label: 'Its words' })}${field(`${pre}.url`, it.url, { label: 'Its address', ph: 'https://', hint: 'Opens in a new tab.' })}` : ''}
-        ${it.type === 'place' ? field(`${pre}.text`, it.text ?? '', { label: 'Its words', ph: MENU_PLACES[it.place].name, hint: 'Leave empty for the site\'s own.' }) : ''}</div>
+        ${it.type === 'place' ? field(`${pre}.text`, it.text ?? '', { label: 'Its words', ph: MENU_PLACES[it.place].name, hint: 'Leave empty for the site\'s own.' }) : ''}
+        ${it.type === 'group' ? field(`${pre}.text`, it.text ?? '', { label: 'Its words', ph: groupItemName(snap, build, it, (k) => pageLabel(snap, k)), hint: 'Leave empty for the group\'s own name.' }) : ''}</div>
         ${it.type === 'page' ? `<div class="switches boxed">${toggle(`${pre}.fallback`, it.fallback, 'Show only while no other link to this page in the group shows')}</div>${twin ? '' : '<p class="small muted">Only matters with another link to the same page in this group, like today\'s Puppies after Available and Upcoming litters.</p>'}` : ''}
         ${it.type === 'page' ? '<p class="small muted">The breeder names it in her menu.</p>' : ''}</div>`;
     return `<li class="mvr item" id="i-${gi}-${ii}">${mvBtns(`imv:${gi}:${ii}`, ii, g.items.length)}<span class="ttl">${esc(title)}<small>${esc(line)}</small></span>
@@ -698,7 +703,7 @@ function menuFromForm(menu, form, snap) {
     const pre = `i.${gi}.${ii}`;
     if (get(`${pre}.present`) == null) return;
     if (it.type === 'link') { it.text = String(get(`${pre}.text`) ?? ''); it.url = String(get(`${pre}.url`) ?? ''); }
-    if (it.type === 'place') { const t = String(get(`${pre}.text`) ?? '').trim(); if (t) it.text = t; else delete it.text; }
+    if (it.type === 'place' || it.type === 'group') { const t = String(get(`${pre}.text`) ?? '').trim(); if (t) it.text = t; else delete it.text; }
     if (it.type === 'page') { if (get(`${pre}.fallback`) != null) it.fallback = true; else delete it.fallback; }
     const to = Number(get(`${pre}.to`));
     if (Number.isInteger(to) && to !== gi && groups[to]) moves.push([gi, ii, to]);
@@ -725,6 +730,7 @@ function menuFromForm(menu, form, snap) {
     const items = groups[gi].items;
     if (kind === 'page' && ref) items.push({ type: 'page', page: ref });
     else if (kind === 'place' && Object.hasOwn(MENU_PLACES, ref)) items.push({ type: 'place', place: ref });
+    else if (kind === 'group' && groupItem(ref)) items.push(groupItem(ref));
     else if (kind === 'link') items.push({ type: 'link', text: String(get(`addtext.${gi}`) ?? ''), url: String(get(`addurl.${gi}`) ?? '') });
     else throw new MenuError('Choose what to add first.');
     if (items.length > MENU_LIMITS.items) throw new MenuError(`A group holds ${MENU_LIMITS.items} links at most.`);

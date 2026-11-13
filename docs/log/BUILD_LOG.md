@@ -1075,3 +1075,39 @@ with new sections and a new building order. Docs only; nothing built yet.
   bump waits for the owner's yes; `versions.test.js` fails until then.
 - Tests: `blocks.test.js` (the Dogs page editor with the block; old builds and older
   snapshots). 387 pass; the version test fails as expected.
+
+## 2026-11-13: menu links to any group of a block; the bumps
+
+- The owner's request: Girls and Boys' siblings, a menu link for any group of any
+  grouped block.
+- **A new menu item, a group of a block** (`{ type: 'group', page, block, key, text? }`;
+  `blocks.js` `cleanItem`).
+  - The Menu screen's Add offers every group of every grouped data block on every page,
+    for example "Group: Retired (All our dogs, Every dog)" (`manage/builder/menugroups.js`,
+    new; `builder.js` only calls it).
+  - A field with set values (a life stage, a sex) offers every value, so a group that's
+    empty today can be placed; it hides until it has something.
+  - The Dogs page's Girls and boys isn't offered: it has its places.
+  - Its words: the group's name (the owner's heading for it, or the Girls and Boys
+    words), or the owner's own, like a place's.
+- **On the site** (`render/parts.js` `groupLink`), the link shows while its block is on
+  and the group has anything in it (after her ticks and the block's limit). It hides when
+  the page is off, the block is gone or no longer grouped (the editor says so), or the
+  group is empty.
+  - It goes to `<page>#g-<block>-<value>`.
+  - A block with a heading per group: each heading carries that id, so the link lands
+    on it.
+  - A Show filter block: each choice carries it as `data-hash`, and the template's script
+    (`public/_kp/t/ak/site.js`) chooses it from the address, on load and on a hash
+    change.
+  - `#girls` and `#boys` work as before. Checked in a browser: `#girls`, `#boys`,
+    `#g-all-female`, `#g-all-male`, and a hash change on the page, with no script errors.
+- Live HTML gains only attributes: an id on each group heading and a `data-hash` on each
+  Show filter choice. Nothing changes visibly.
+- **Bumps, with the owner's yes:**
+  - `APP_VERSION` 17 → 18, for the Site Manager's arrows (`app.css`);
+  - `ASSET_VERSION` 23 → 24, for the template's filter script;
+  - both fingerprints updated (`scripts/fingerprint.mjs`).
+- Tests: `menu.test.js` (Add offers the groups; shown, hidden, reworded, the block gone; a
+  Show filter's group). `blocks.test.js` and `fields.test.js` follow the new attributes.
+  All 390 pass.

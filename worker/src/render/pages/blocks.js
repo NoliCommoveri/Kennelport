@@ -5,7 +5,7 @@
 // pages.js (docs/review/senior-review-2026-11.md, item 7).
 import {
   esc, pageOn, litterCard, dogCard, coCard, besideCard, puppyCard, slider, reviewCard, head, dogsFor, blockRows, blockGroups, recordCtx,
-  rulesOf, pricesOff, sitePrice, word, addedOn, addedWords, filterBlockOf,
+  rulesOf, pricesOff, sitePrice, word, addedOn, addedWords, filterBlockOf, groupAnchor, groupLabel,
 } from '../parts.js';
 import { hersOn, recordsOf } from '../../content/blocks.js';
 import { HOME_WORDS } from '../../content/model.js';
@@ -47,7 +47,8 @@ export function dataBlock(snap, ctx, b, key) {
 function inGroups(snap, ctx, b, list, draw) {
   const groups = blockGroups(snap, b, list, ctx.today);
   if (groups.length === 1 && !groups[0].heading) return draw(list);
-  return groups.map((g, i) => `<div class="head${i ? ' mt-26' : ''}"><h3>${esc(g.heading)}</h3></div>${draw(g.rows)}`).join(`\n      `);
+  // Each heading is where a menu link to its group lands (render/parts.js groupLink).
+  return groups.map((g, i) => `<div class="head${i ? ' mt-26' : ''}" id="${groupAnchor(b, g.key)}"><h3>${esc(g.heading)}</h3></div>${draw(g.rows)}`).join(`\n      `);
 }
 
 // A grouped block as one grid of flip cards with a Show filter over it, one choice per
@@ -59,10 +60,9 @@ function filterBlock(snap, ctx, b, key, list) {
   const w = blockWords(snap, b, key);
   const groups = blockGroups(snap, b, list, ctx.today);
   const sexes = recordsOf(b).group === 'sex';
-  const name = (g) => (sexes && !b.gw?.[g.key] && (g.key === 'female' || g.key === 'male') ? word(snap, g.key === 'female' ? 'girls' : 'boys') : g.heading);
   const keyOf = new Map();
   for (const g of groups) for (const d of g.rows) if (!keyOf.has(d)) keyOf.set(d, g.key);
-  const filter = groups.length > 1 ? `<div class="filter"><label for="dog-filter">Show</label><select id="dog-filter"><option value="all">${esc(word(snap, 'dogs_all'))}</option>${groups.map((g) => `<option value="${esc(g.key)}">${esc(name(g))}</option>`).join('')}</select></div>` : '';
+  const filter = groups.length > 1 ? `<div class="filter"><label for="dog-filter">Show</label><select id="dog-filter"><option value="all">${esc(word(snap, 'dogs_all'))}</option>${groups.map((g) => `<option value="${esc(g.key)}" data-hash="${groupAnchor(b, g.key)}">${esc(groupLabel(snap, b, g))}</option>`).join('')}</select></div>` : '';
   const top = w.eyebrow || w.heading || w.lede ? head(w.eyebrow, w.heading, w.lede) : '';
   return `<section class="section tight"><div class="wrap">${sexes ? '<span id="girls"></span><span id="boys"></span>' : ''}${top}
       ${filter}
