@@ -21,6 +21,8 @@ import { layoutFor, customPages } from './content/blocks.js';
 import { changes } from './diff.js';
 import { sitePicks } from './content/picks.js';
 import { cleanTags } from './content/tags.js';
+import { settleAddresses } from './content/addresses.js';
+import { pagePath } from './render/parts.js';
 
 export const SNAPSHOT_VERSION = 1;
 export const KEEP = 10;
@@ -43,6 +45,13 @@ export function recordPaths(snap) {
     for (const p of l.puppies) paths[p.id] = `/litters/${l.slug}/${p.slug}`;
   }
   for (const a of snap.albums ?? []) paths[a.id] = `/albums/${a.slug}`;
+  // Every page's, keyed page:<key>: a page she renames (or the owner moves)
+  // redirects from its old address. A page the owner removes isn't here, so its
+  // old address answers "not found".
+  for (const key of Object.keys(snap.pages ?? {})) {
+    const at = pagePath(snap, key);
+    if (at) paths[`page:${key}`] = at;
+  }
   return paths;
 }
 
@@ -66,6 +75,9 @@ export async function buildSnapshot(env, siteId) {
     const row = pageRows[c.id];
     pages[c.id] = { enabled: row ? Boolean(row.enabled) : true, menu_label: row?.menu_label ?? null, ...json(row?.content, {}) };
   }
+  // Her page addresses (content/addresses.js), where each is free.
+  const custom = customPages(build);
+  settleAddresses(pages, custom, Object.fromEntries(Object.values(pageRows).filter((r) => r.path).map((r) => [r.page, r.path])));
   const added = {};
   for (const r of await all('SELECT * FROM block_switches WHERE site_id = ?')) {
     (added[r.page] ??= {})[r.block] = { enabled: Boolean(r.enabled), ...json(r.content, {}) };

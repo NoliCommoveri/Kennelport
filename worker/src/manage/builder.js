@@ -37,6 +37,7 @@ import { buildSnapshot } from '../publish.js';
 import {
   olderPuppies, depositsAhead, soonSection, puppyStatus, puppyPriceText, regText, statusRule, sortPuppies, fullRegHref, rulesOf, useFormats, word, litterRows,
   dogGroups, sitePrice, pricesOff, blockRows, blockGroups, filterBlockOf, label, placedFaqs, addedOn, addedWords, customPage, menuGroups,
+  pagePath as sitePagePath,
 } from '../render/parts.js';
 import { makePreviewToken, servePhoto, SITE_CSP } from '../site.js';
 import { renderPage } from '../render/index.js';
@@ -134,7 +135,7 @@ async function dogsPreview(env, site) {
     block(word(snap, 'for_sale_eyebrow'), word(snap, 'for_sale_heading'), word(snap, 'for_sale_lede'), g.for_sale.map((d) => card(d, true)), ' sand'),
     block(word(snap, 'co_owned_eyebrow'), p.co_owned_heading || word(snap, 'co_owned_heading'), p.co_owned_lede || word(snap, 'co_owned_lede'), g.away.map((d) => card(d))),
   ].filter(Boolean);
-  return `<div class="pvwrap" id="preview">${phone(site, snap, '/dogs', 'Their Dogs page, with these rules', blocks)}${await previewLink(env, site)}</div>`;
+  return `<div class="pvwrap" id="preview">${phone(site, snap, pagePath(snap, 'dogs'), 'Their Dogs page, with these rules', blocks)}${await previewLink(env, site)}</div>`;
 }
 
 // Their litter cards, as the Home and Puppies pages draw them: eyebrows, dates,
@@ -159,7 +160,7 @@ async function littersPreview(env, site, cap) {
     planned.length ? `<div class="pvb sand"><span class="eyebrow">${esc(word(snap, 'upcoming_band_eyebrow'))}</span><h3>${esc(word(snap, 'upcoming_band_heading'))}</h3><p class="small muted">${esc(word(snap, 'upcoming_band_lede'))}</p><div class="stack">${planned.map(card).join('')}</div></div>` : '',
   ].filter(Boolean);
   if (!blocks.length) blocks.push(`<div class="pvb"><p class="small muted">${esc(word(snap, 'no_litters'))}</p></div>`);
-  return `<div class="pvwrap" id="preview">${phone(site, snap, '/litters', cap, blocks)}${await previewLink(env, site)}</div>`;
+  return `<div class="pvwrap" id="preview">${phone(site, snap, pagePath(snap, 'litters'), cap, blocks)}${await previewLink(env, site)}</div>`;
 }
 
 async function preview(env, site) {
@@ -190,7 +191,7 @@ async function preview(env, site) {
   const hidden = await env.DB.prepare("SELECT COUNT(*) AS n FROM puppies WHERE site_id = ? AND hidden_by_kennelos = 0 AND status = 'hidden'").bind(site.id).first('n');
   if (hidden && !rulesOf(snap).status.hidden.show) blocks.push(`<div class="pvb ghost">${hidden} pup${hidden === 1 ? '' : 's'} on a health hold, not shown</div>`);
   return `<div class="pvwrap" id="preview"><span class="cap">Their Puppies page, with these rules</span>
-    <div class="phone"><div class="pv-url">${esc(whereIs(site, '/litters'))}</div><div class="scr">
+    <div class="phone"><div class="pv-url">${esc(whereIs(site, pagePath(snap, 'litters')))}</div><div class="scr">
       <div class="pv-top"><div class="nm">${esc(snap.site.kennel_name)}</div></div>
       ${blocks.join('') || '<div class="pvb ghost">No litters with puppies yet</div>'}
       <div class="pv-foot"><b>${esc(snap.site.kennel_name)}</b><span>Made with KennelPort</span></div></div></div>
@@ -249,7 +250,11 @@ const ownWords = (key, b) => isData(b) && !hersOn(key, b);
 
 // A page's name and address as the breeder's site has them (Home is not in PAGES).
 const pageLabel = (snap, key) => (key === 'home' ? 'Home' : label(snap, key));
-const pagePath = (snap, key) => (key === 'home' ? '/' : PAGES[key]?.path ?? customPage(snap, key)?.path ?? '');
+// Her address for it where she has given one (content/addresses.js), else its starting one.
+const pagePath = (snap, key) => sitePagePath(snap, key) ?? '';
+// Every address the breeder has given her pages but one: a page the owner adds or
+// readdresses can't take one.
+const herAddresses = async (env, siteId, except = '') => new Set((await env.DB.prepare('SELECT path FROM site_pages WHERE site_id = ? AND path IS NOT NULL AND page != ?').bind(siteId, except).all()).results.map((x) => x.path));
 const headOf = (snap, key) => headFor(key, customPage(snap, key));
 // Where she words a page: her Site Manager, Pages and wording.
 const hersAt = (snap, key) => `her Site Manager, under Pages and wording, ${pageLabel(snap, key)}`;
@@ -521,7 +526,7 @@ async function pagesScreen(env, site, build, { adding = false, input = {}, error
   const rows = BUILT_PAGES.map((k) => row(pagePath(snap, k), pageLabel(snap, k), `/admin/${sub}/pages/${k}`, `${count(k)}${pageChanged(build, k) ? ' · <span class="chg">changed</span>' : ' · as today'}${offNote(k)}`));
   const menu = menuOf(build);
   const inGroup = (k) => { const id = groupOf(menu, k); return id ? menu.find((g) => g.id === id).label : null; };
-  const mine = customPages(build).map((c) => row(c.path, pageLabel(snap, c.id), `/admin/${sub}/pages/${c.id}`, `${count(c.id)} · <span class="spill brass">Added</span> · ${inGroup(c.id) ? `in ${esc(inGroup(c.id))}` : 'not in the menu'}${offNote(c.id)}`));
+  const mine = customPages(build).map((c) => row(pagePath(snap, c.id), pageLabel(snap, c.id), `/admin/${sub}/pages/${c.id}`, `${count(c.id)} · <span class="spill brass">Added</span> · ${inGroup(c.id) ? `in ${esc(inGroup(c.id))}` : 'not in the menu'}${offNote(c.id)}`));
   const fixed = row(PAGES.privacy.path, PAGES.privacy.label, null, 'written for her by KennelPort, fixed');
   const profiles = Object.entries(PROFILES).map(([k, n]) => row(PROFILE_PATHS[k], n, `/admin/${sub}/pages/${k}`, `what it shows${profileChanged(build, k) ? ' · <span class="chg">changed</span>' : ' · as today'}`));
   return `<div class="build"><div class="stack">
@@ -529,7 +534,7 @@ async function pagesScreen(env, site, build, { adding = false, input = {}, error
     <section class="card"><div class="between"><h2>${rows.length + mine.length + 1} pages</h2>${adding ? '' : '<a class="button small primary" href="?new=1#new-page">' + svg('plus') + ' New page</a>'}</div><ul class="list pages">${rows.join('')}</ul>
       ${mine.length ? `<h2 class="mt">Pages you added</h2><ul class="list pages">${mine.join('')}</ul>` : ''}<ul class="list pages">${fixed}</ul>
       <h2 class="mt">Every dog, litter and puppy</h2><p class="small muted">Each record's own page. One setting for the whole site.</p><ul class="list pages">${profiles.join('')}</ul></section>
-    <section class="card band"><p class="small">A page you add is the breeder's to switch on or off, name in her menu and word, like any page. Where each page sits in the menu is in <a href="/admin/${sub}/menu">Menu</a>. A FAQ spot or a badge row can go on any page, yours too, from its Add a block: the breeder then sees that page in the tick boxes on her questions and products. Page addresses for the breeder come next.</p></section>
+    <section class="card band"><p class="small">A page you add is the breeder's to switch on or off, name in her menu and word, like any page. Where each page sits in the menu is in <a href="/admin/${sub}/menu">Menu</a>. A FAQ spot or a badge row can go on any page, yours too, from its Add a block: the breeder then sees that page in the tick boxes on her questions and products. The breeder can give any page but the waitlist pages and Privacy her own address, in her Pages; its old address then redirects.</p></section>
   </div><div class="pvwrap" id="preview">${pagePreview(snap, 'home', pageBlocks(build, 'home'), site)}${await previewLink(env, site)}</div></div>`;
 }
 
@@ -541,7 +546,7 @@ function pageCard(snap, key, build) {
   if (c) {
     return `<section class="card"><div class="fgroup"><h2>The page <span class="spill brass">Added</span></h2><input type="hidden" name="page.present" value="1"><div class="fgrid">
       ${field('page.name', c.name, { label: 'Starting name', hint: 'The breeder can rename it in her menu.' })}
-      ${field('page.path', c.path, { label: 'Address', hint: 'Letters, numbers and hyphens. Renaming it for the breeder comes with the menu.' })}
+      ${field('page.path', c.path, { label: 'Address', hint: pagePath(snap, key) !== c.path ? `Letters, numbers and hyphens. The breeder has given it her own: ${pagePath(snap, key)}, which it shows at.` : 'Letters, numbers and hyphens. The breeder can give it her own in her Pages; the old one then redirects.' })}
       ${select('page.group', groupOf(menuOf(build), key) ?? '', groupsOf(build), 'In the menu under')}</div>
       <div class="switches boxed"><label class="check"><input type="checkbox" disabled checked aria-describedby="page-on">The breeder can switch this page off</label></div>
       <p class="small muted" id="page-on">${esc(`She switches it off in ${hersAt(snap, key)}. It hides by itself while nothing on it has anything to show.`)}</p>
@@ -550,7 +555,9 @@ function pageCard(snap, key, build) {
   const canHide = key !== 'home' && PAGES[key].canHide;
   const hideNote = key === 'home' ? 'Home is always on: she can switch its blocks off, not the page.'
     : canHide ? `She switches it off in ${hersAt(snap, key)}.` : `${pageLabel(snap, key)} is always on.`;
-  const pathNote = key === 'home' ? "Fixed: it is the site's own address." : FIXED_PATHS.includes(key) ? 'Fixed: other systems link to it.' : 'Its address today. Renaming comes with the menu.';
+  const pathNote = key === 'home' ? "Fixed: it is the site's own address." : FIXED_PATHS.includes(key) ? 'Fixed: other systems link to it.'
+    : pagePath(snap, key) !== PAGES[key].path ? `The breeder's own address for it (it starts at ${PAGES[key].path}, which redirects here). She changes it in ${hersAt(snap, key)}.`
+      : `Its starting address. The breeder can change it in ${hersAt(snap, key)}; the old one then redirects.`;
   return `<section class="card"><div class="fgroup"><h2>The page</h2><div class="fgrid">
       <label class="half">Starting name<span class="hint">The breeder can rename it in her menu.</span><input type="text" value="${esc(key === 'home' ? 'Home' : PAGES[key].label)}" disabled></label>
       <label class="half">Address<span class="hint">${esc(pathNote)}</span><input type="text" value="${esc(pagePath(snap, key))}" disabled></label></div>
@@ -904,7 +911,7 @@ async function pagesRoute({ env, request, url, site, build, page, screen }) {
     if (request.method === 'POST') {
       // New page: made, then opened.
       const form = await request.formData();
-      input = { name: str(form, 'page.name'), path: str(form, 'page.path'), start: str(form, 'page.start'), group: str(form, 'page.group') };
+      input = { name: str(form, 'page.name'), path: str(form, 'page.path'), start: str(form, 'page.start'), group: str(form, 'page.group'), taken: await herAddresses(env, site.id) };
       try {
         const out = addPage(build, input);
         await saveBuild(env, site.id, out.build);
@@ -938,7 +945,7 @@ async function pagesRoute({ env, request, url, site, build, page, screen }) {
       }
       // Her page's name, address and menu group, saved with whatever was pressed.
       const info = isCustom(key) && form.get('page.present') != null
-        ? withPageInfo(build, key, { name: str(form, 'page.name'), path: str(form, 'page.path'), group: str(form, 'page.group') }) : build;
+        ? withPageInfo(build, key, { name: str(form, 'page.name'), path: str(form, 'page.path'), group: str(form, 'page.group'), taken: await herAddresses(env, site.id, key) }) : build;
       const out = pageFromForm(info, key, form);
       await saveBuild(env, site.id, out.build);
       return redirect(`/admin/${site.subdomain}/pages/${key}?saved=1${out.open ? `&open=${encodeURIComponent(out.open)}#b-${encodeURIComponent(out.open)}` : ''}`);

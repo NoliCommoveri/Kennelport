@@ -6,6 +6,7 @@
 import {
   esc, pageOn, litterCard, dogCard, coCard, besideCard, puppyCard, slider, reviewCard, head, dogsFor, blockRows, blockGroups, recordCtx,
   rulesOf, pricesOff, sitePrice, word, addedOn, addedWords, filterBlockOf, groupAnchor, groupLabel,
+  pagePath, attr,
 } from '../parts.js';
 import { hersOn, recordsOf } from '../../content/blocks.js';
 import { HOME_WORDS } from '../../content/model.js';
@@ -21,7 +22,7 @@ const blockHead = (key, b, w, dflt) => w.heading ?? dflt;
 
 // An adult looking for a home (plan 3.7): its asking price with Show other prices
 // on, and a way to ask.
-const askHref = (snap, ctx) => (pageOn(snap, 'contact', ctx) ? '/contact' : '/');
+const askHref = (snap, ctx) => (pageOn(snap, 'contact', ctx) ? pagePath(snap, 'contact') : '/');
 // An adult for sale: its price by the site's rule (today the breeder's "Show prices
 // of extras and adults"), and where to ask.
 export function saleOf(snap, ctx, d) {
@@ -75,7 +76,7 @@ function dogsBlock(snap, ctx, b, key = 'home') {
   if (!list.length) return '';
   if (b.gshow === 'filter' && recordsOf(b).group && filterBlockOf(snap, key)?.id === b.id) return filterBlock(snap, ctx, b, key, list);
   const w = blockWords(snap, b, key);
-  const ctl = pageOn(snap, 'dogs', ctx) ? `<a class="more" href="/dogs">${esc(w.link_label || 'See all our dogs')}</a>` : '';
+  const ctl = pageOn(snap, 'dogs', ctx) ? `<a class="more" href="${attr(pagePath(snap, 'dogs'))}">${esc(w.link_label || 'See all our dogs')}</a>` : '';
   const card = (d) => dogCard(snap, d, { sale: saleOf(snap, ctx, d), show: b.show });
   // lines: a 4px accent line between cards where they stack (site.css .lines).
   const lines = b.lines ? ' lines' : '';
@@ -100,7 +101,7 @@ function littersBlock(snap, ctx, b, key = 'home') {
   return `<section class="section band"><div class="wrap">
       ${head(w.eyebrow ?? HOME_WORDS.litters.eyebrow, blockHead(key, b, w, HOME_WORDS.litters.heading))}
       ${inGroups(snap, ctx, b, list, (rows) => `<div class="litters">${rows.map((l) => litterCard(snap, l, ctx, { show: b.show })).join('')}</div>`)}
-      <p class="center mt-26"><a class="btn line" href="/litters">${esc(w.link_label || 'View all puppies')}</a></p>
+      <p class="center mt-26"><a class="btn line" href="${attr(pagePath(snap, 'litters'))}">${esc(w.link_label || 'View all puppies')}</a></p>
     </div></section>`;
 }
 
@@ -112,7 +113,7 @@ function pupsBlock(snap, ctx, b, key = 'home') {
   const w = blockWords(snap, b, key);
   const rc = recordCtx(snap, ctx.today);
   const draw = (rows) => `<div class="grid${rows.length === 1 ? ' narrow-grid' : ''}">${rows.map((p) => puppyCard(snap, rc.litterOf(p), p, ctx)).join('')}</div>`;
-  const ctl = pageOn(snap, 'litters', ctx) ? `<p class="center mt-26"><a class="btn line" href="/litters">${esc(w.link_label || 'View all puppies')}</a></p>` : '';
+  const ctl = pageOn(snap, 'litters', ctx) ? `<p class="center mt-26"><a class="btn line" href="${attr(pagePath(snap, 'litters'))}">${esc(w.link_label || 'View all puppies')}</a></p>` : '';
   return `<section class="section"><div class="wrap">
       ${head(w.eyebrow ?? 'Puppies', blockHead(key, b, w, 'Available puppies'), w.lede)}
       ${inGroups(snap, ctx, b, list, draw)}
@@ -124,7 +125,7 @@ function reviewsBlock(snap, ctx, b, key = 'home') {
   const list = limited(snap.reviews, b);
   if (!list.length) return '';
   const w = blockWords(snap, b, key);
-  const ctl = pageOn(snap, 'reviews', ctx) ? `<a class="more" href="/reviews">${esc(w.link_label || 'All reviews')}</a>` : '';
+  const ctl = pageOn(snap, 'reviews', ctx) ? `<a class="more" href="${attr(pagePath(snap, 'reviews'))}">${esc(w.link_label || 'All reviews')}</a>` : '';
   const cards = list.map((r) => reviewCard(snap, r, { show: b.show }));
   return `<section class="section"><div class="wrap">
       ${head(w.eyebrow ?? HOME_WORDS.reviews.eyebrow, blockHead(key, b, w, HOME_WORDS.reviews.heading))}

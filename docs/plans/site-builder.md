@@ -10,8 +10,8 @@ page but Privacy is a list of blocks (`content/blocks.js`; Pages in the admin vi
 data block with its records and what its cards show, and each page drawn exactly as
 before until the owner changes it; the owner adds pages, and the breeder switches and
 words what the owner adds; the menu editor; FAQ and badge spots on any page, with the
-breeder's tick boxes following them; and what each profile page shows. Step 3.5 (page
-addresses) and step 3.8 (the forms' fields) are still to come, as are steps 5 to 7; step 4
+breeder's tick boxes following them; what each profile page shows; and page addresses
+with their redirects (3.5, 2026-11-14). Step 3.8 (the forms' fields) is still to come, as are steps 5 to 7; step 4
 is partly built (below, Building it, in steps).
 
 Today a site's pages, menu, sections, and the rules for how KennelOS data shows are
@@ -652,7 +652,9 @@ Each step is its own branch and can be released on its own.
    4. the menu editor (built: Menu in the admin view; groups, their names, order, button
       and footer switches; pages, places on a page and outside links; the footer follows
       a changed menu);
-   5. page addresses and their redirects;
+   5. page addresses and their redirects (built 2026-11-14: the breeder's Address beside
+      her menu name, `content/addresses.js`, `site_pages.path`, migration 0035; old
+      addresses redirect from Publish);
    6. FAQ and badge spots as block settings, on new pages too (built: a FAQ spot or a badge
       row on any page, a page of the owner's included; the breeder's tick boxes on each
       question and product list only the places the owner has made, and keep, unseen, a

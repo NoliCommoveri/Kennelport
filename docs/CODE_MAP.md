@@ -45,6 +45,10 @@ read that before the rest. Update this map when you add, move or split a file.
 - `src/content/io.js`: content as one JSON document (`/ops` import and export).
 - `src/content/blocks.js`: pages as lists of blocks (`PAGE_DEFAULTS`), each block's records
   and what its cards show.
+- `src/content/addresses.js`: page addresses: which pages the breeder may give her own
+  address, what one may be, and each page's address in a snapshot. `render/parts.js`
+  `pagePath` (a page's address) and `pageAt` (the page at one) are what every link and
+  route uses; `publish.js` writes the redirects.
 - `src/content/rules.js`: display and timing rules, set per site by the owner.
 - `src/content/fields.js`: every field a data block can choose by, order by or group by
   (dog, pup, litter), with the conditions, order and groups themselves

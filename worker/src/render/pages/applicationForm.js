@@ -7,7 +7,7 @@
 // key in the visitor's browser and sends them straight to KennelOS, then takes
 // the emailed code. Without scripts (or WebCrypto) the form stays hidden and the
 // link to KennelOS's own page shows instead.
-import { esc, attr, paras, pageOn } from '../parts.js';
+import { esc, attr, paras, pageOn, pagePath } from '../parts.js';
 
 export const kosReq = (q) => (q.required ? ' <span class="req" aria-label="required">*</span>' : '');
 
@@ -71,7 +71,7 @@ export function kennelosForm(snap, ctx) {
   // Where "policies" in the application goes: her Policies page's waitlist part, or
   // KennelOS's list page when her Policies page is off.
   const policiesHref = !feed.kennel?.policies?.length ? null
-    : pageOn(snap, 'policies', ctx) ? '/policies#waitlist-policies' : `${origin}${feed.links?.list ?? `/list/${encodeURIComponent(publicId)}`}#policies`;
+    : pageOn(snap, 'policies', ctx) ? `${pagePath(snap, 'policies')}#waitlist-policies` : `${origin}${feed.links?.list ?? `/list/${encodeURIComponent(publicId)}`}#policies`;
   const questions = (form.questions ?? []).map((q) => {
     const notice = q === firstMatch && form.matching_notice ? `<div class="kq notice-q"><b>Matching you with a pup</b><p class="small">${esc(form.matching_notice)}</p></div>` : '';
     return notice + kosQuestion(q, form, policiesHref);

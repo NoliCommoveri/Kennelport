@@ -16,7 +16,7 @@ import { hmacHex, timingSafeEqual } from './lib/crypto.js';
 import { readCookie } from './lib/http.js';
 import { htmlPage, escapeHtml as esc } from './lib/html.js';
 import { receiveInquiry, receiveReview, receiveApplication, turnstileOn } from './siteforms.js';
-import { pageOn, fullRegTopic } from './render/parts.js';
+import { pageOn, fullRegTopic, pageAt, pagePath } from './render/parts.js';
 import { readFeed } from './feed.js';
 import { publicRows } from './waitlist.js';
 import { FRAME_ORIGINS } from './embeds.js';
@@ -70,17 +70,18 @@ export async function previewTokenValid(env, siteId, token) {
 // Pages with a form load Cloudflare Turnstile when it's set up (decision 17), and
 // only those pages.
 const TURNSTILE = 'https://challenges.cloudflare.com';
-const FORM_PATHS = ['/contact', '/reviews', '/waitlist'];
+// By page, as the contact and reviews pages can be at the breeder's own address.
+const FORM_PAGES = ['contact', 'reviews', 'waitlist'];
 const withTurnstile = (csp) => csp.replace("script-src 'self'", `script-src 'self' ${TURNSTILE}`).replace("connect-src 'self'", `connect-src 'self' ${TURNSTILE}`).replace('frame-src ', `frame-src ${TURNSTILE} `);
 // The waitlist page with KennelOS's application form (plan 3.8): the visitor's
 // browser sends the sealed application straight to KennelOS, and runs KennelOS's
 // Turnstile check, so that page alone may connect to the KennelOS family host.
-const cspFor = (env, path, feed = null) => {
-  if (path === '/waitlist' && feed?.feed?.form) {
+const cspFor = (env, page, feed = null) => {
+  if (page === 'waitlist' && feed?.feed?.form) {
     const csp = SITE_CSP.replace("connect-src 'self'", `connect-src 'self' ${feed.origin}`);
     return feed.feed.form.turnstile_site_key ? withTurnstile(csp) : csp;
   }
-  return turnstileOn(env) && FORM_PATHS.includes(path) ? withTurnstile(SITE_CSP) : SITE_CSP;
+  return turnstileOn(env) && FORM_PAGES.includes(page) ? withTurnstile(SITE_CSP) : SITE_CSP;
 };
 const html = (body, status = 200, extra = {}, csp = SITE_CSP) => new Response(body, {
   status, headers: { 'content-type': 'text/html; charset=utf-8', ...SITE_HEADERS, 'content-security-policy': csp, ...extra },
@@ -123,8 +124,10 @@ export async function serveSite(request, env, ctxWorker, subdomain, { onDomain =
     if (demo != null) return noSite();
     return servePortal(request, env, ctxWorker, subdomain, { onDomain });
   }
-  const formPost = request.method === 'POST' && FORM_PATHS.includes(url.pathname);
-  if (request.method !== 'GET' && request.method !== 'HEAD' && !formPost) return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD' } });
+  // A visitor's form posts to its page's address, which is known once the snapshot
+  // is read (below); never to the system's own paths.
+  const posting = request.method === 'POST' && !/^\/(?:_|sitemap\.xml$|robots\.txt$)/.test(url.pathname);
+  if (request.method !== 'GET' && request.method !== 'HEAD' && !posting) return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD' } });
   if (!(await schemaReady(env.DB))) {
     return htmlPage('Back soon', '<h1>Back soon</h1><p>This site is being updated. Please try again in a few minutes.</p>', { status: 503, headers: { 'retry-after': '300' } });
   }
@@ -140,7 +143,7 @@ export async function serveSite(request, env, ctxWorker, subdomain, { onDomain =
   // visitors there with the same path, so old links and printed QR codes keep
   // working. Not on staging, whose sites are reached through /__host. An hour's
   // cache, so a domain that's disconnected stops redirecting soon after.
-  if (site.domain && !onDomain && !formPost && env.ALLOW_HOST_OVERRIDE !== '1') {
+  if (site.domain && !onDomain && !posting && env.ALLOW_HOST_OVERRIDE !== '1') {
     return new Response(null, { status: 301, headers: { location: `https://${site.domain}${url.pathname}${url.search}`, 'cache-control': 'public, max-age=3600' } });
   }
 
@@ -172,42 +175,52 @@ export async function serveSite(request, env, ctxWorker, subdomain, { onDomain =
   const origin = url.origin;
   if (url.pathname === '/robots.txt') return text(robots({ origin }, { allow: Boolean(snap) && !preview }), 'text/plain');
 
+  if (!snap && posting) return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD' } });
   if (!snap) {
     // Never published: nothing to show yet.
     return htmlPage(site.kennel_name || site.subdomain, `<h1>${esc(site.kennel_name || site.subdomain)}</h1><p>This website is being built.</p>`);
   }
 
-  const ctx = { path: url.pathname, origin, today: today(), preview, portal: Boolean(site.portal_on), turnstileKey: turnstileOn(env) ? env.TURNSTILE_SITE_KEY : null };
+  // The page at this address (render/parts.js pageAt): the breeder's own address for it,
+  // or its starting one. A form sent from a page still open at an address she has
+  // since renamed goes to the page it redirects to (a 301 would lose what was typed).
+  let pageKey = pageAt(snap, url.pathname);
+  if (posting && !FORM_PAGES.includes(pageKey)) {
+    const r = await env.DB.prepare('SELECT new_path FROM redirects WHERE site_id = ? AND old_path = ?').bind(site.id, url.pathname).first();
+    pageKey = r ? pageAt(snap, r.new_path) : null;
+    if (!FORM_PAGES.includes(pageKey)) return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD' } });
+  }
+  const ctx = { path: posting ? pagePath(snap, pageKey) : url.pathname, origin, today: today(), preview, portal: Boolean(site.portal_on), turnstileKey: turnstileOn(env) ? env.TURNSTILE_SITE_KEY : null };
   // The waitlist page is drawn from the snapshot and the list as it is now: the
   // KennelOS feed's five-minute copy, or the simple waitlist the breeder keeps (no
   // publish needed), so it isn't cached with the snapshot.
   // Policies too, with a KennelOS waitlist linked: its waitlist policies come from the feed.
-  const live = url.pathname === '/waitlist' || (url.pathname === '/policies' && Boolean(site.kennelos_public_id));
+  const live = pageKey === 'waitlist' || (pageKey === 'policies' && Boolean(site.kennelos_public_id));
   if (live && site.kennelos_public_id) ctx.feed = await readFeed(env, site.id, site.kennelos_public_id);
   else if (live) ctx.waitlist = await publicRows(env, site.id);
 
   // A visitor sending the contact form, a review or an application: never cached, answered with the
   // same page and a thank-you (or the problem, with what they typed).
-  if (formPost) {
+  if (posting) {
     const from = request.headers.get('origin');
     if (from && from !== origin) return new Response('Forbidden', { status: 403 });
-    const page = url.pathname.slice(1);
+    const page = pageKey;
     if (!pageOn(snap, page, ctx)) return new Response('Not found', { status: 404 });
     const result = page === 'contact' ? await receiveInquiry(env, request, site.id, ctxWorker)
       : page === 'waitlist' ? await receiveApplication(env, request, site.id, snap, ctxWorker, { kennelos: Boolean(ctx.feed?.feed?.form) })
         : await receiveReview(env, request, site.id, ctxWorker);
     const { status, html: body } = renderPage(snap, { ...ctx, form: { page, ...result } });
-    return html(body, result.ok ? status : 400, { 'cache-control': 'no-store' }, cspFor(env, url.pathname, ctx.feed));
+    return html(body, result.ok ? status : 400, { 'cache-control': 'no-store' }, cspFor(env, page, ctx.feed));
   }
   if (url.pathname === '/sitemap.xml') return text(sitemap(snap, ctx), 'application/xml');
 
   // A full-registration link (a litter's "Ask about full registration"): the
   // contact form with its About line filled in from the snapshot. Not cached, as
   // the cache keys on the path alone.
-  if (url.pathname === '/contact' && url.searchParams.has('full-reg')) {
+  if (pageKey === 'contact' && url.searchParams.has('full-reg')) {
     const topic = fullRegTopic(snap, ctx, url.searchParams);
     const { status, html: body } = renderPage(snap, { ...ctx, prefill: topic ? { topic } : null });
-    return html(body, status, { 'cache-control': preview ? 'private, no-store' : 'public, max-age=60' }, cspFor(env, url.pathname));
+    return html(body, status, { 'cache-control': preview ? 'private, no-store' : 'public, max-age=60' }, cspFor(env, pageKey));
   }
 
   // /about/ → /about, so every page has one address.
@@ -217,11 +230,11 @@ export async function serveSite(request, env, ctxWorker, subdomain, { onDomain =
 
   if (preview) {
     const { status, html: body } = renderPage(snap, ctx);
-    return html(body, status, { 'cache-control': 'private, no-store' }, cspFor(env, url.pathname, ctx.feed));
+    return html(body, status, { 'cache-control': 'private, no-store' }, cspFor(env, pageKey, ctx.feed));
   }
   if (live) {
     const { status, html: body } = renderPage(snap, ctx);
-    return html(body, status, { 'cache-control': 'public, max-age=60' }, cspFor(env, url.pathname, ctx.feed));
+    return html(body, status, { 'cache-control': 'public, max-age=60' }, cspFor(env, pageKey, ctx.feed));
   }
 
   // The cache: one entry per snapshot, path and day, and whether the portal is on
@@ -242,7 +255,7 @@ export async function serveSite(request, env, ctxWorker, subdomain, { onDomain =
     const r = await env.DB.prepare('SELECT new_path FROM redirects WHERE site_id = ? AND old_path = ?').bind(site.id, url.pathname).first();
     if (r) return new Response(null, { status: 301, headers: { location: r.new_path, 'cache-control': 'public, max-age=300' } });
   }
-  const res = html(body, status, { 'cache-control': 'public, max-age=60' }, cspFor(env, url.pathname));
+  const res = html(body, status, { 'cache-control': 'public, max-age=60' }, cspFor(env, pageKey));
   if (cache && status === 200) {
     const stored = res.clone();
     const put = cache.put(cacheKey, new Response(stored.body, { status, headers: { ...Object.fromEntries(stored.headers), 'cache-control': 'public, max-age=86400' } }));

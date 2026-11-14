@@ -130,6 +130,28 @@ export const label = (snap, key) => snap.pages[key]?.menu_label || PAGES[key]?.l
 
 export const customPage = (snap, key) => (snap.layout?.custom ?? []).find((c) => c.id === key) ?? null;
 
+// ---------- page addresses (content/addresses.js) ----------
+
+// A page's address: hers (the snapshot's pages[key].path, from site_pages.path), else
+// its starting one. Snapshots from before page addresses have none of hers.
+export const pagePath = (snap, key) => (key === 'home' ? '/'
+  : snap.pages?.[key]?.path || PAGES[key]?.path || customPage(snap, key)?.path || null);
+// The page at an address, or null: Home, every page of the code's, every page the
+// owner added. Worked out once per snapshot.
+const ADDRESSES = new WeakMap();
+export function pageAt(snap, path) {
+  let map = ADDRESSES.get(snap);
+  if (!map) {
+    map = new Map([['/', 'home']]);
+    for (const key of [...Object.keys(PAGES), ...(snap.layout?.custom ?? []).map((c) => c.id)]) {
+      const at = pagePath(snap, key);
+      if (at && !map.has(at)) map.set(at, key);
+    }
+    ADDRESSES.set(snap, map);
+  }
+  return map.get(path) ?? null;
+}
+
 // A block the owner added (not one of Home's own): the breeder's switch, and her
 // words over the owner's starting ones.
 export const addedRow = (snap, key, b) => ((BLOCK_TYPES[b.type].kind === 'data' && !hersOn(key, b)) || BLOCK_TYPES[b.type].kind === 'own' ? snap.added?.[key]?.[b.id] ?? null : null);
@@ -278,7 +300,7 @@ export function menuGroups(snap, ctx) {
   };
   placeShows['dogs#boys'] = placeShows['dogs#girls'];
   const placeText = { 'dogs#girls': () => word(snap, 'girls'), 'dogs#boys': () => word(snap, 'boys') };
-  const pathOf = (key) => PAGES[key]?.path ?? customPage(snap, key)?.path ?? null;
+  const pathOf = (key) => pagePath(snap, key);
   const groups = [];
   for (const g of menu) {
     const links = [];
@@ -680,7 +702,7 @@ export function regText(snap, p, l = null, today = null) {
 export function fullRegHref(snap, l, p, ctx) {
   if (!l.ask_full_reg || !pageOn(snap, 'contact', ctx)) return null;
   if (p ? !undecided(snap, p, l, ctx?.today) : !l.puppies.some((x) => undecided(snap, x, l, ctx?.today))) return null;
-  return `/contact?full-reg=${encodeURIComponent(l.slug)}${p ? `&puppy=${encodeURIComponent(p.slug)}` : ''}#message`;
+  return `${pagePath(snap, 'contact')}?full-reg=${encodeURIComponent(l.slug)}${p ? `&puppy=${encodeURIComponent(p.slug)}` : ''}#message`;
 }
 // The litter's full-registration surcharge, shown under those links while its Show
 // prices is on: "$500" when the sexes match (or one is blank, meaning the same as
@@ -729,7 +751,7 @@ export function puppyCard(snap, l, p, ctx) {
   const reg = [l.name, p.collar].filter(Boolean).join(' · ');
   const regWord = regText(snap, p, l, ctx.today);
   const action = (rule.ask
-    ? `<a class="more" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">${esc(word(snap, 'ask_puppy'))}</a>`
+    ? `<a class="more" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : pagePath(snap, 'contact')}">${esc(word(snap, 'ask_puppy'))}</a>`
     : '') + fullRegLink(snap, l, p, ctx, 'more') + fullRegSurchargeRow(snap, l, p, ctx);
   // Its own page, whatever its status, the way a dog card links to its profile. Only
   // with the Puppies page on, which the puppy route needs (render/index.js): the

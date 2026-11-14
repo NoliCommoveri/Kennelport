@@ -16,11 +16,11 @@ import { fields, field, parseForm, LABELS, labelFor, placeChoices } from './form
 import { savePhoto, PhotoError } from '../photos.js';
 import { subjects, isSubject, tagPhotos, untagPhoto, tagsByPhoto } from '../photoTags.js';
 import { photoPlaces } from '../photoPlaces.js';
-import { publish, undoPublish, listSnapshots, draftChanges } from '../publish.js';
+import { publish, undoPublish, listSnapshots, draftChanges, loadSnapshot } from '../publish.js';
 import { makePreviewToken } from '../site.js';
 import { siteLink } from '../ops/sites.js';
 import { defaultSay, NOTE_KEYS, sayError, sayMessage } from './wording.js';
-import { STATUS_TEXT, statusText, SAFE_NOTICE_TEXT } from '../render/parts.js';
+import { STATUS_TEXT, statusText, SAFE_NOTICE_TEXT, pagePath } from '../render/parts.js';
 import { listEmbeds, addEmbed, removeEmbed, moveEmbed, EmbedError, EMBEDS_PER_PLACE } from '../embedStore.js';
 import { PROVIDERS } from '../embeds.js';
 import { readBadgeCode, storeBadgeImage, BadgeCodeError } from '../badgeCode.js';
@@ -867,7 +867,9 @@ export function createScreens({ env, request, url, site, user, page, say = defau
 
     const k = await kos();
     const page = await getPage(env, site.id, 'waitlist');
-    const siteUrl = siteLink(env, site.subdomain, '/litters');
+    // The puppies page where her live site has it (content/addresses.js).
+    const liveSnap = await loadSnapshot(env, site.id, (await env.DB.prepare('SELECT published_snapshot_id FROM sites WHERE id = ?').bind(site.id).first('published_snapshot_id')));
+    const siteUrl = siteLink(env, site.subdomain, liveSnap ? pagePath(liveSnap, 'litters') : '/litters');
     const list = await waiting(env, site.id);
     const done = await fulfilled(env, site.id);
     const fmt = (ymd) => (ymd ? new Date(`${ymd}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : '');

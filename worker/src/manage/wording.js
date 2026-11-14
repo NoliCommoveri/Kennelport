@@ -503,6 +503,10 @@ const SCREEN_LINES = {
   "pages.off_it_leaves_the": ["pages", "Line", "Off: it leaves the menu and its address says \"This page isn't available\". Its words are kept."],
   "pages.name_in_the_menu_2": ["pages", "Line", "Name in the menu"],
   "pages.name_in_the_menu": ["pages", "Line", "Name in the menu"],
+  "pages.address": ["pages", "Field label: a page's address on her website", "Address"],
+  "pages.address_hint": ["pages", "Help under a page's address ({start} is where the page starts out)", "Where this page is on your website. Leave empty for {start}. When you change it, the old address keeps working: it takes visitors here."],
+  "pages.address_suggest": ["pages", "After the help under a page's address, when its menu name would make another ({path})", "From its menu name: {path}"],
+  "pages.address_fixed": ["pages", "On the waitlist pages, which have no address to change ({path} is its address)", "This page stays at {path}: other places, like KennelOS, link to it. You can still change its name in the menu."],
   "waitlistpage.your_application_questions_aren": ["waitlistpage", "Help line, up to a link or bold words", "Your application questions aren't used while KennelOS takes your applications online: your website shows your KennelOS form."],
   "waitlistpage.your_simple_waitlist_isn": ["waitlistpage", "Help line, up to a link or bold words", "Your simple waitlist isn't used while KennelOS is linked: your website shows your KennelOS list."],
   "pages.your_dogs_from_kennelos": ["pages", "Line", "Your dogs from KennelOS"],
@@ -766,6 +770,7 @@ const DIFF = {
   'publish.diff.what.photo_added': ['What changed: a photo where there was none', 'photo added'],
   'publish.diff.what.photo_removed': ['What changed: its photo removed', 'photo removed'],
   'publish.diff.what.new_address': ['What changed: its web address', 'new web address'],
+  'publish.diff.what.page_address': ['What changed: a page\'s address ({path} is the new one)', 'now at {path}; the old address takes visitors there'],
   'publish.diff.what.health': ['What changed: a dog\'s health results, and nothing else', 'health results changed'],
   'publish.diff.what.added': ['What changed: added (a page, the family login link)', 'added'],
   'publish.diff.what.changed': ['What changed: changed', 'changed'],
@@ -820,6 +825,9 @@ const ERRORS = [
   ['kennel_listed', /^that kennel is already on your list$/, '{path}: that kennel is already on your list', 'A partner kennel added twice'],
   ['partners_max', /^at most (?<max>\d+) partner kennels$/, '{path}: at most {max} partner kennels', 'Too many partner kennels'],
   ['albums_max', /^this site has reached its limit of (?<max>\d+) albums$/, '{path}: this site has reached its limit of {max} albums', 'Too many albums'],
+  ['address', /^an address is one word or a few joined by hyphens, like \/our-story$/, 'An address is one word or a few joined by hyphens, like /our-story: letters, numbers and hyphens.', 'A page address with other characters, or in more than one part'],
+  ['address_kept', /^(?<address>\/\S*) is kept for a page of the site's own$/, '{address} is kept for a page of your website\'s own. Choose another address.', 'A page address the site keeps for one of its own pages, or for KennelPort'],
+  ['address_used', /^another page has (?<address>\/\S*)$/, 'Another of your pages is at {address}. Choose another address.', 'A page address another page has'],
   ['pay_methods', /^add at least one way to pay, or a payment page link, before showing it$/, '{path}: add at least one way to pay, or a payment page link, before showing it', 'How to pay shown with no way to pay'],
 ];
 export const ERROR_KEYS = ERRORS.map(([k]) => k);

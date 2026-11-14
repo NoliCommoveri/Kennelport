@@ -1514,3 +1514,48 @@ let her give a deleted family back.
   session, limits counted apart). `copies.test.js`.
 - No migration, no version bump, no wording added (the "Too many tries" line was already
   in the list). All 438 tests pass.
+
+## 2026-11-14: loose ends step 3, page addresses (#2; site-builder 3.5)
+
+`docs/loose-ends.md` step 3, first half; `docs/plans/site-builder.md`, "Page addresses".
+
+- **Migration 0035** (`site_pages.path`): her address for a page; null is its starting
+  one. Additive only: one column. It applies itself on the first request after the deploy.
+- **`content/addresses.js`, new**: which pages she may readdress (all but `/waitlist`,
+  `/waitlist/help`, `/privacy`; Home is `/`; every page the owner added), what an address
+  may be (one part, letters, numbers, hyphens; not the system's own first parts, nor any
+  page of the code's starting address, so an old address always stays free to redirect;
+  nothing under `/dogs/`, `/litters/`, `/albums/`), typed text made into one ("Our Story"
+  is `/our-story`), and each page's address in a snapshot (`settleAddresses`: the first
+  page keeps an address two would share). `blocks.js` takes its list of taken addresses
+  from there, unchanged, so no page the owner already added stops being valid.
+- **One lookup for every link and route**: `render/parts.js` `pagePath(snap, key)` and
+  `pageAt(snap, path)`. `render/index.js` routes by it; the menu, footer, every "See all"
+  link, breadcrumbs, the contact and review forms' actions, the full-registration links,
+  the privacy page's contact link, the application form's policies link, the sitemap,
+  the owner's previews, Publish's change list and the waitlist offer email all follow
+  her address. Each address is its own: `/litters` renamed leaves `/litters/older`, and
+  profiles stay at `/dogs/<name>` and `/litters/<litter>`.
+- **Redirects**: `publish.js` `recordPaths` gains `page:<key>` for every page, so the
+  existing redirect code writes a 301 from the old address, chains older ones to the
+  newest, and drops one whose address is live again. A page the owner removes isn't
+  there, so it answers "not found". A page the owner readdresses redirects too, now.
+- **`site.js`**: a form posts to its page wherever it is (`FORM_PAGES` by key, not
+  path); a post to a renamed page's old address (a page left open) goes to the page it
+  redirects to, as a 301 would lose what was typed; any other post is 405, as before.
+  The CSP picks Turnstile and the KennelOS form by page key.
+- **Her Pages screen**: an Address field beside Name in the menu (placeholder its
+  starting address), with a suggestion from her menu name while she has none; the
+  Pages list shows each page's address; the waitlist pages say why theirs is fixed.
+  Errors in her words. **Wording added** (mine, for the owner to reword): `pages.address`,
+  `pages.address_hint`, `pages.address_suggest`, `pages.address_fixed`,
+  `publish.diff.what.page_address`, and errors `error.address`, `error.address_kept`,
+  `error.address_used`.
+- **Owner's admin view**: the Pages list and each page card show her address; New page
+  and a page's address refuse one she has given a page.
+- `content.json` export and import carry `path` per page.
+- Tests: `addresses.test.js` (the rules; rename, links, menu, sitemap, 301s, chains and
+  back; refusals in her words; the contact form at a new address and from an old open
+  page; `/litters` renamed leaves the rest; export, import and an old snapshot). Checked
+  her screen at 390px: the field is the menu name's, as before.
+- No version bump (no file under `public/_kp/` changed). All 444 tests pass.

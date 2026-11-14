@@ -2,7 +2,7 @@
 // (/ops, "Content"), until the manage app's forms exist (phase 2). The document is
 // the content model (model.js) shaped by section; ids never appear in it.
 //
-//   { site: {...}, pages: { about: { enabled, menu_label, ...wording }, 'x-<a page the owner added>': {...} },
+//   { site: {...}, pages: { about: { enabled, menu_label, path (her address), ...wording }, 'x-<a page the owner added>': {...} },
 //     home: { hero: { enabled, ... } }, blocks: { '<page>/<block the owner added>': { enabled, eyebrow, heading, lede } },
 //     dogs: [{ ..., health: [...] }],
 //     (a co-owned dog names its partner kennels: lives_with: '<name>', co_owned_with: ['<name>'])
@@ -24,6 +24,7 @@ import {
   CUSTOM_KEY, CUSTOM_PAGE, ADDED_BLOCK_FIELDS,
 } from './model.js';
 import { PROVIDERS } from '../embeds.js';
+import { canRename, typedAddress, freeAddress } from './addresses.js';
 import { coOwnedRules, outsideRules, stageRules, unlinkPartnerStatements } from './records.js';
 
 const SECTIONS = ['site', 'pages', 'home', 'blocks', 'dogs', 'litters', 'reviews', 'steps', 'expanders', 'extras', 'products', 'partners', 'payment', 'questions', 'albums', 'embeds'];
@@ -73,9 +74,18 @@ export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = ne
       const enabled = 'enabled' in v ? cleanValue({ type: 'bool' }, v.enabled, `${path}.enabled`) : 1;
       if (!enabled && !page.canHide) throw new ContentError(`${path}.enabled`, 'this page is always on');
       const menu_label = cleanValue({ type: 'text', max: 40 }, v.menu_label, `${path}.menu_label`);
-      const content = cleanRecord(page.fields, omit(v, ['enabled', 'menu_label']), path, { partial: true });
+      // Her address (content/addresses.js): its form here; whether another page has
+      // it is settled at Publish, where the first page keeps it.
+      let at = null;
+      if (v.path != null && v.path !== '') {
+        if (!canRename(key, CUSTOM_KEY.test(key))) throw new ContentError(`${path}.path`, 'this page\'s address is fixed');
+        at = typedAddress(v.path);
+        if (!freeAddress(at)) throw new ContentError(`${path}.path`, 'an address is one word or a few joined by hyphens, like /our-story');
+        if (at === page.path) at = null;
+      }
+      const content = cleanRecord(page.fields, omit(v, ['enabled', 'menu_label', 'path']), path, { partial: true });
       if (content.photo_id) photo(content.photo_id, `${path}.photo_id`);
-      out.pages[key] = { enabled, menu_label, content };
+      out.pages[key] = { enabled, menu_label, path: at, content };
     }
   }
 
@@ -277,7 +287,7 @@ export async function importContent(env, siteId, doc) {
     if (cols.length) s.push(db.prepare(`UPDATE sites SET ${cols.map((c) => `${c} = ?`).join(', ')} WHERE id = ?`).bind(...cols.map((c) => clean.site[c]), siteId));
   }
   for (const [page, v] of Object.entries(clean.pages ?? {})) {
-    s.push(upsert(db, 'site_pages', ['site_id', 'page'], { site_id: siteId, page, enabled: v.enabled, menu_label: v.menu_label, content: JSON.stringify(v.content) }));
+    s.push(upsert(db, 'site_pages', ['site_id', 'page'], { site_id: siteId, page, enabled: v.enabled, menu_label: v.menu_label, path: v.path, content: JSON.stringify(v.content) }));
   }
   if (clean.blocks) {
     s.push(db.prepare('DELETE FROM block_switches WHERE site_id = ?').bind(siteId));
@@ -459,7 +469,7 @@ export async function exportContent(env, siteId) {
 
   const doc = { site: pick(strip(site, []), Object.keys(SITE_FIELDS)) };
   doc.pages = Object.fromEntries((await all('SELECT * FROM site_pages WHERE site_id = ? ORDER BY page', siteId))
-    .map((p) => [p.page, { enabled: Boolean(p.enabled), ...(p.menu_label ? { menu_label: p.menu_label } : {}), ...JSON.parse(p.content) }]));
+    .map((p) => [p.page, { enabled: Boolean(p.enabled), ...(p.menu_label ? { menu_label: p.menu_label } : {}), ...(p.path ? { path: p.path } : {}), ...JSON.parse(p.content) }]));
   doc.home = Object.fromEntries((await all('SELECT * FROM home_blocks WHERE site_id = ?', siteId))
     .map((b) => [b.block, { enabled: Boolean(b.enabled), ...JSON.parse(b.content) }]));
   const blocks = await all('SELECT * FROM block_switches WHERE site_id = ? ORDER BY page, block', siteId);

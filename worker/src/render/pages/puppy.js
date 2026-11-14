@@ -8,6 +8,7 @@ import {
   esc, attr, fmtDate, img, pageOn, pairNames, head, faqBlock, safeNotice, puppyStatus, puppyPriceText, regText, statusRule, rulesOf, word, sexWord,
   fullRegLink, fullRegSurchargeRow, galleryHtml, viewerHtml, morePhotosHtml,
   pillClass,
+  pagePath,
 } from '../parts.js';
 import { profileFor, profileBody, shareRow, badgeRow } from '../pages.js';
 import { litterAlbums } from './albumLists.js';
@@ -33,14 +34,14 @@ export function puppy(snap, ctx, litterSlug, slug) {
   const pupGallery = (gallery || morePup) && Object.values(pr.parts).some((x) => x.includes('photos'))
     ? `<div class="mt-26">${head('Photos', `${p.name}'s photos`)}${gallery}${morePup}</div>` : '';
   return {
-    title: `${p.name}, ${l.name}`, section: '/litters', description: p.bio || `${p.name}: ${status}`, image: p.photo_id,
+    title: `${p.name}, ${l.name}`, section: pagePath(snap, 'litters'), description: p.bio || `${p.name}: ${status}`, image: p.photo_id,
     body: `${profileBody(pr, {
       faq: faqBlock(snap, 'puppy'),
       status: status ? `<span class="${pillClass(rule.pill)}">${esc(status)}</span>` : '',
       name: `<h1>${esc(p.name)}</h1>`,
       facts: `<dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`,
       bio: p.bio ? `<p class="bio">${esc(p.bio)}</p>` : '',
-      ask: rule.ask || fullRegLink(snap, l, p, ctx, '') ? `<p>${rule.ask ? `<a class="btn solid" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact'}">${esc(word(snap, 'ask_pup', { name: p.name }))}</a> ` : ''}${fullRegLink(snap, l, p, ctx, 'btn line')}</p>` : '',
+      ask: rule.ask || fullRegLink(snap, l, p, ctx, '') ? `<p>${rule.ask ? `<a class="btn solid" href="${pageOn(snap, 'waitlist', ctx) ? '/waitlist' : pagePath(snap, 'contact')}">${esc(word(snap, 'ask_pup', { name: p.name }))}</a> ` : ''}${fullRegLink(snap, l, p, ctx, 'btn line')}</p>` : '',
       surcharge: fullRegSurchargeRow(snap, l, p, ctx, 'kv'),
       notice: safeNotice(snap, ctx),
       share: shareRow(),

@@ -1,6 +1,6 @@
 // Contact (/contact): the contact form, her FAQ and badges placed on it. Routed by render/index.js;
 // the page frame it shares is in render/pages.js.
-import { esc, attr, label, pagehead } from '../parts.js';
+import { esc, attr, label, pagehead, pagePath } from '../parts.js';
 import { contactForm } from './formParts.js';
 import { PAGE_HEADS } from '../../content/blocks.js';
 import { faqSection, badgeRow, assemble } from '../pages.js';
@@ -16,7 +16,7 @@ export function contact(snap, ctx) {
   const place = [s.town, s.region].filter(Boolean).join(', ');
   if (place || p.location_note) cards.push(['Location', [place && esc(place), p.location_note && esc(p.location_note)].filter(Boolean).join('<br>')]);
   return {
-    title: snap.pages.contact.heading || label(snap, 'contact'), section: '/contact', description: p.lede,
+    title: snap.pages.contact.heading || label(snap, 'contact'), section: pagePath(snap, 'contact'), description: p.lede,
     body: assemble(snap, ctx, 'contact', {
       head: pagehead(p, PAGE_HEADS.contact),
       faq: faqSection(snap, 'contact'),

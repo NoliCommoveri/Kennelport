@@ -1,7 +1,7 @@
 // The forms visitors send (siteforms.js receives them): what each field held when a
 // form comes back with an error, the honeypot, the Turnstile box, the sent or
 // not-sent message, and the review and contact forms themselves.
-import { attr, esc } from '../parts.js';
+import { attr, esc, pagePath } from '../parts.js';
 
 // What she typed, or (before any send) what a link filled in (ctx.prefill).
 export const v = (ctx, name) => attr(ctx.form?.values?.[name] ?? ctx.prefill?.[name] ?? '');
@@ -21,7 +21,7 @@ export function reviewForm(snap, ctx) {
   const stars = [5, 4, 3, 2, 1].map((n) => `<input type="radio" name="rating" id="r-s${n}" value="${n}"${String(ctx.form?.values?.rating ?? '5') === String(n) ? ' checked' : ''}><label for="r-s${n}" title="${n} star${n === 1 ? '' : 's'}">★</label>`).join('');
   return `<details class="review-share" id="share-review"${ctx.form?.page === 'reviews' ? ' open' : ''}>
     <summary class="btn line">Share your review</summary>
-    <form class="apply-form review-form" method="post" action="/reviews#share-review" enctype="multipart/form-data" data-photo-form>
+    <form class="apply-form review-form" method="post" action="${attr(pagePath(snap, 'reviews'))}#share-review" enctype="multipart/form-data" data-photo-form>
       <div><span class="eyebrow">${esc(snap.site.monogram || snap.site.kennel_name)} families</span><h2 class="mt-6">Share your review</h2><p class="muted small mt-6">Reviews appear on our site once we've read and approved them. We show your first name and town only.</p></div>
       ${formResult(ctx, 'reviews', (name) => `Thank you, ${name}! Your review goes to ${snap.site.kennel_name} to read, and it appears here once they approve it.`)}
       ${sent ? '' : `<div class="row"><label for="r-name">First name<input id="r-name" name="first_name" autocomplete="given-name" maxlength="60" required value="${v(ctx, 'first_name')}"></label><label for="r-town">Town<input id="r-town" name="town" maxlength="60" value="${v(ctx, 'town')}"></label></div>
@@ -37,7 +37,7 @@ export function reviewForm(snap, ctx) {
 
 export function contactForm(snap, ctx) {
   const sent = ctx.form?.page === 'contact' && ctx.form.ok;
-  return `<form class="apply-form" method="post" action="/contact#message" id="message">
+  return `<form class="apply-form" method="post" action="${attr(pagePath(snap, 'contact'))}#message" id="message">
     <div><span class="eyebrow">Message us</span><h2 class="mt-6">Send us a message</h2><p class="muted small mt-6">We'll reply to the email address you give.</p></div>
     ${formResult(ctx, 'contact', (name) => `Thanks${name ? `, ${name.split(/\s+/)[0]}` : ''}. Your message is on its way to ${snap.site.kennel_name}.`)}
     ${sent ? '' : `<div class="row"><label for="c-name">Your name<input id="c-name" name="name" autocomplete="name" maxlength="80" required value="${v(ctx, 'name')}"></label><label for="c-email">Email<input id="c-email" type="email" name="email" autocomplete="email" maxlength="254" required value="${v(ctx, 'email')}"></label></div>
