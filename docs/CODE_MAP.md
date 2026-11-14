@@ -14,8 +14,8 @@ read that before the rest. Update this map when you add, move or split a file.
   branch, never edit one on `main`: see CLAUDE.md).
 - `src/lib/`: `http.js`, `html.js` (escaping), `sql.js`, `crypto.js`, `demo.js`,
   `vendor/qrcode.js`. `sql.js`, `crypto.js` and `migrate.js` are copied from KennelOS
-  cloud: a fix in one copy belongs in both. `gate.js` started as a copy and now differs
-  (it applies migrations itself).
+  cloud: a fix in one copy belongs in both, and `tests/copies.test.js` fails when one
+  changes. `gate.js` started as a copy and now differs (it applies migrations itself).
 
 ## A breeder's website
 
@@ -67,8 +67,9 @@ read that before the rest. Update this map when you add, move or split a file.
 
 ## The Site Manager (the breeder's app, and the owner's admin view)
 
-- `src/manage/index.js`: sign-in, her sites, home. `src/auth.js`, `src/mail.js`: email-code
-  sign-in, invites, sessions.
+- `src/manage/index.js`: sign-in, her sites, home. `src/auth.js`: her sign-in, sessions and
+  invites, on `src/signin.js`, the sign-in machinery (codes, limits, sessions) both she
+  and families use. `src/mail.js`: emails.
 - `src/manage/screens.js`: the editing screens under `/s/<subdomain>/`, in `createScreens`.
   Split out into `src/manage/screens/`, each a factory given what `createScreens` holds:
   `share.js`, `inbox.js`, `queue.js` (reviews to approve), `account.js` (storage, download,
@@ -94,7 +95,7 @@ read that before the rest. Update this map when you add, move or split a file.
 
 ## The family portal (`src/portal/`, sites with it switched on)
 
-- `family.js` the family's pages under `/family`; `auth.js` family sign-in. Split out into
+- `family.js` the family's pages under `/family`; `auth.js` family sign-in (on `src/signin.js`). Split out into
   `family/`: `icons.js`, `stay.js` (the extended stay's pieces), `files.js` (photos, files,
   program links), `parts.js`.
 - `admin.js` her side (Puppy families, each family's screen). Split out into `admin/`:

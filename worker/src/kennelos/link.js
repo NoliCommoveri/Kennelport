@@ -15,6 +15,7 @@ import { hmacHex, sha256Hex, randomHex } from '../lib/crypto.js';
 import { SECTIONS } from './bundle.js';
 import { ApiError } from '../lib/http.js';
 import { isDemoSite, NOT_FOR_DEMO } from '../lib/demo.js';
+import { bump } from '../signin.js';
 
 export const CODE_TTL_MS = 15 * 60 * 1000;
 export const CODE_LENGTH = 8;
@@ -23,12 +24,6 @@ export const LIMITS = { codes: 10, redeem_ip: 20 };
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 export class LinkError extends Error {}
-
-const hourWindow = (now) => `${now.toISOString().slice(0, 13)}:00:00Z`;
-async function bump(env, bucket) {
-  return env.DB.prepare(`INSERT INTO rate_limits (bucket, window_start, count) VALUES (?, ?, 1)
-    ON CONFLICT (bucket, window_start) DO UPDATE SET count = count + 1 RETURNING count`).bind(bucket, hourWindow(new Date())).first('count');
-}
 
 function key(env) {
   if (!env.EMAIL_HMAC_KEY) throw new LinkError('Linking isn\'t set up on KennelPort yet.');

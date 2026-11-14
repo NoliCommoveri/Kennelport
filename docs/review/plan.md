@@ -230,7 +230,7 @@ backup file.
 
 **Read**
 - KennelPort: `worker/src/kennelos/link.js` (207), `worker/src/kennelos/api.js` (101),
-  `worker/src/auth.js` (149), `worker/src/gate.js`, `worker/wrangler.toml` (the origin and
+  `worker/src/auth.js` (93) and `worker/src/signin.js` (161), `worker/src/gate.js`, `worker/wrangler.toml` (the origin and
   domain vars), `worker/src/migrations/0015_kennelos_link.sql`
 - KennelOS: `shared/data/kennelportApi.js` (101), `shared/data/kennelportLinkStore.js` (55),
   `shared/data/kennelportLink.js` (289, the link/licence parts),
@@ -272,7 +272,7 @@ backup file.
    Lite/Demo (`kennelportUrl: null`, `editionFlags.websiteLink`) make **zero** requests and
    show **zero** UI. Check the assembled editions (`node build/assemble.mjs`, then grep
    `dist/lite` and `dist/demo`), not just the shared source.
-8. **Manage-app sign-in** (`auth.js`): email hash only, 90-day sliding cookie, code TTL,
+8. **Manage-app sign-in** (`auth.js` on `signin.js`): email hash only, 90-day sliding cookie, code TTL,
    `LIMITS`, `inviteToSite`, role checks for owner-only actions
    (`Link KennelOS`, `Unlink`, device stop). Is every owner-only action actually gated, on
    both the screen and the POST?
@@ -637,7 +637,7 @@ of it. Data about real families, sign-in, reminders that email them, and a feed 
 KennelOS.
 
 **Read** `worker/src/portal/`: `family.js` (752) and `family/` (`files.js`, `stay.js`,
-`icons.js`, `parts.js`); `auth.js` (166, family sign-in); `admin.js` (695) and `admin/`
+`icons.js`, `parts.js`); `auth.js` (133, family sign-in, on `../signin.js`); `admin.js` (695) and `admin/`
 (`today.js`, `settings.js`, `templates.js`, `parts.js`); `store.js` (523); `steps.js` (353);
 `stays.js` (304); `vet.js` (175); `feed.js` (528, KennelOS's family feed); `account.js`
 (257, loss, delete, Delete now, giving a deleted family back); `merge.js` (140, the same
@@ -658,8 +658,9 @@ family twice); `reminders.js` (59, the hourly job); `messages.js` (58); `bounces
   a family deleted for good and sent again, a feed that stops halfway.
 - Reminders and emails: sent once, never to a deleted family, bounces marked, the
   hourly job running late or twice.
-- Breeder and family sign-in are written twice (`auth.js` and `portal/auth.js`;
-  senior review item 10): compare them line by line for a fix in one and not the other.
+- Breeder and family sign-in share `signin.js` since 2026-11-14 (senior review item 10);
+  `auth.js` and `portal/auth.js` keep only their own tables, cookies and who gets a
+  code. Check the two stay apart (`signin.test.js`).
 - Her screens on a phone (portal prototype, `admToday`, `admFamilies`, `admFamily`):
   empty states, a family with no puppy yet, a stay with no dates.
 

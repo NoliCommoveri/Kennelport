@@ -84,7 +84,10 @@ merge. The portal's gate waits for a real litter, so features carry on meanwhile
 ## Loose ends ([`loose-ends.md`](loose-ends.md))
 
 - Step 1, the quick finishes, built 2026-11-14 (#1, #11, #12, #13, #17, #18), with
-  `ASSET_VERSION` 26. **Next:** step 2, one sign-in, not two (#15).
+  `ASSET_VERSION` 26.
+- Step 2, one sign-in, not two (#15), built 2026-11-14: breeder and family sign-in share
+  `signin.js`; the KennelOS copies checked against KennelOS and held by a test. For
+  KennelOS: refuse `<` and `>` in an email address, as KennelPort does. **Next:** step 3, page addresses (#2).
 
 ## Parked
 
