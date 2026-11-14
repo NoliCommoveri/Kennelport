@@ -12,6 +12,8 @@ import { savePhoto, PhotoError } from './photos.js';
 import { notify } from './push.js';
 import { litterChoices, ABOUT_LABEL } from './render/parts.js';
 import { PRIVATE_ANSWER } from './waitlist.js';
+import { formOf } from './content/forms.js';
+import { aboutChoices } from './render/pages/formParts.js';
 
 export const FORM_LIMITS = { perVisitorHour: 5, perSiteDay: 100 };
 export const HONEYPOT = 'website';
@@ -68,7 +70,32 @@ async function screen(env, request, siteId, form) {
   return true;
 }
 
-export async function receiveInquiry(env, request, siteId, ctxWorker) {
+const EMAIL = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+const REVIEW_OWN = new Set(['first_name', 'town', 'puppy_name', 'home_month', 'rating', 'quote', 'photo', 'consent']);
+
+// The fields the owner added to a form (content/forms.js), checked against the
+// form as published: [[its words, the answer], ...] for those answered. skip: the
+// fields the caller keeps in their own columns.
+function extraAnswers(form, snap, which, skip) {
+  const out = [];
+  for (const f of formOf(snap, which)) {
+    if (skip.has(f.key)) continue;
+    const words = f.words.replace(/\s*\((optional|optional, for us only)\)$/i, '');
+    const label = `"${words}"`;
+    const a = text(form, f.name, f.max ?? 200, { label, multiline: f.kind === 'long' });
+    if (f.required && !a) throw new FormError(`Please answer ${label}.`);
+    if (!a) continue;
+    if (f.kind === 'pick') {
+      const allowed = f.key === 'about' ? aboutChoices(snap) : f.type === 'yes_no' ? ['Yes', 'No'] : f.options ?? [];
+      if (!allowed.includes(a)) throw new FormError(`Please choose an answer from the list for ${label}.`);
+    }
+    if (f.kind === 'email' && !EMAIL.test(a)) throw new FormError("That email address doesn't look right.");
+    out.push([words, a]);
+  }
+  return out;
+}
+
+export async function receiveInquiry(env, request, siteId, ctxWorker, snap = null) {
   const form = await request.formData();
   const values = Object.fromEntries([...form.keys()].map((k) => [k, String(form.get(k) ?? '')]));
   try {
@@ -76,12 +103,17 @@ export async function receiveInquiry(env, request, siteId, ctxWorker) {
     const name = text(form, 'name', 80, { required: true, label: 'your name' });
     const email = text(form, 'email', 254, { required: true, label: 'your email' });
     if (!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) throw new FormError("That email address doesn't look right.");
-    const phone = text(form, 'phone', 30, { label: 'the phone number' });
-    const topic = text(form, 'topic', 80, { label: 'the subject' });
+    // The owner's fields (content/forms.js): phone and subject in their own columns,
+    // as before (a full-registration link's subject comes even with no subject field);
+    // the rest with the message, as an application's answers are.
+    const fields = new Map(formOf(snap, 'contact').map((f) => [f.key, f]));
+    const phone = fields.has('phone') ? text(form, 'phone', 30, { required: fields.get('phone').required, label: 'the phone number' }) : null;
+    const topic = text(form, 'topic', 80, { required: Boolean(fields.get('topic')?.required), label: 'the subject' });
     const message = text(form, 'message', 3000, { required: true, label: 'your message', multiline: true });
+    const extra = extraAnswers(form, snap, 'contact', new Set(['name', 'email', 'phone', 'topic', 'message']));
     const id = crypto.randomUUID();
-    await env.DB.prepare('INSERT INTO inquiries (id, site_id, kind, name, email, phone, topic, message, received_at) VALUES (?, ?, \'contact\', ?, ?, ?, ?, ?, ?)')
-      .bind(id, siteId, name, email, phone, topic, message, new Date().toISOString()).run();
+    await env.DB.prepare('INSERT INTO inquiries (id, site_id, kind, name, email, phone, topic, message, answers, received_at) VALUES (?, ?, \'contact\', ?, ?, ?, ?, ?, ?, ?)')
+      .bind(id, siteId, name, email, phone, topic, message, extra.length ? JSON.stringify(extra) : null, new Date().toISOString()).run();
     const job = notify(env, siteId, 'message', name, id);
     if (ctxWorker?.waitUntil) ctxWorker.waitUntil(job); else await job;
     return { ok: true, name };
@@ -91,23 +123,33 @@ export async function receiveInquiry(env, request, siteId, ctxWorker) {
   }
 }
 
-export async function receiveReview(env, request, siteId, ctxWorker) {
+export async function receiveReview(env, request, siteId, ctxWorker, snap = null) {
   const form = await request.formData();
   const values = Object.fromEntries([...form.keys()].filter((k) => k !== 'photo').map((k) => [k, String(form.get(k) ?? '')]));
   try {
     if (!(await screen(env, request, siteId, form))) return { ok: true };
+    // The owner's fields (content/forms.js): those on the review in its own columns
+    // when the form has them; the rest (email, phone, her questions) for her only.
+    const fields = new Map(formOf(snap, 'reviews').map((f) => [f.key, f]));
+    const own = (key, max, label) => (fields.has(key) ? text(form, key, max, { required: fields.get(key).required, label }) : null);
     const first_name = text(form, 'first_name', 60, { required: true, label: 'your first name' });
-    const town = text(form, 'town', 60, { label: 'your town' });
-    const puppy_name = text(form, 'puppy_name', 40, { label: "your puppy's name" });
-    const home_month = text(form, 'home_month', 7, { label: 'the month' });
+    const town = own('town', 60, 'your town');
+    const puppy_name = own('puppy_name', 40, "your puppy's name");
+    const home_month = own('home_month', 7, 'the month');
     if (home_month && !/^\d{4}-(0[1-9]|1[0-2])$/.test(home_month)) throw new FormError('Please give the month as a month and year.');
     const quote = text(form, 'quote', 1500, { required: true, label: 'your review', multiline: true });
-    const rating = Number(form.get('rating') ?? 0);
-    if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new FormError('Please choose a star rating.');
+    let rating = null;
+    if (fields.has('rating')) {
+      const given = String(form.get('rating') ?? '');
+      rating = given || fields.get('rating').required ? Number(given || 0) : null;
+      if (rating !== null && (!Number.isInteger(rating) || rating < 1 || rating > 5)) throw new FormError('Please choose a star rating.');
+    }
     if (!form.get('consent')) throw new FormError('Please tick the box so your review may be shown.');
+    const extra = extraAnswers(form, snap, 'reviews', REVIEW_OWN);
 
     let photoId = null;
-    const photo = form.get('photo');
+    const photo = fields.has('photo') ? form.get('photo') : null;
+    if (fields.get('photo')?.required && !(photo && typeof photo !== 'string' && photo.size)) throw new FormError('Please add a photo of your puppy.');
     if (photo && typeof photo !== 'string' && photo.size) {
       try {
         photoId = (await savePhoto(env, siteId, { full: new Uint8Array(await photo.arrayBuffer()), alt: `${first_name}'s puppy` })).id;
@@ -118,8 +160,8 @@ export async function receiveReview(env, request, siteId, ctxWorker) {
     }
     const t = new Date().toISOString();
     const id = crypto.randomUUID();
-    await env.DB.prepare(`INSERT INTO stories (id, site_id, kind, quote, rating, first_name, town, puppy_name, home_month, photo_id, submitted_by, status, permission_confirmed_at, sort, submitted_at)
-      VALUES (?, ?, 'review', ?, ?, ?, ?, ?, ?, ?, 'family', 'pending', ?, 9999, ?)`).bind(id, siteId, quote, rating, first_name, town, puppy_name, home_month, photoId, t, t).run();
+    await env.DB.prepare(`INSERT INTO stories (id, site_id, kind, quote, rating, first_name, town, puppy_name, home_month, photo_id, submitted_by, status, permission_confirmed_at, sort, submitted_at, answers)
+      VALUES (?, ?, 'review', ?, ?, ?, ?, ?, ?, ?, 'family', 'pending', ?, 9999, ?, ?)`).bind(id, siteId, quote, rating, first_name, town, puppy_name, home_month, photoId, t, t, extra.length ? JSON.stringify(extra) : null).run();
     const job = notify(env, siteId, 'review', first_name, id);
     if (ctxWorker?.waitUntil) ctxWorker.waitUntil(job); else await job;
     return { ok: true, name: first_name };

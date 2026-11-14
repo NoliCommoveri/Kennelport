@@ -49,6 +49,9 @@ read that before the rest. Update this map when you add, move or split a file.
   address, what one may be, and each page's address in a snapshot. `render/parts.js`
   `pagePath` (a page's address) and `pageAt` (the page at one) are what every link and
   route uses; `publish.js` writes the redirects.
+- `src/content/forms.js`: the contact and review forms' fields, set per site by the owner
+  (build.forms): the list of fields, today's forms as the default, `formOf` (a form as a
+  snapshot shows it). `render/pages/formParts.js` draws them; `siteforms.js` checks them.
 - `src/content/rules.js`: display and timing rules, set per site by the owner.
 - `src/content/fields.js`: every field a data block can choose by, order by or group by
   (dog, pup, litter), with the conditions, order and groups themselves
@@ -89,7 +92,7 @@ read that before the rest. Update this map when you add, move or split a file.
   `sites.js` (Every site), `rules.js` (Pups), `kennelos.js` (From KennelOS), `timing.js`,
   `formats.js`, `instructions.js` (her instructions), `records.js` (a data block's
   conditions, order and groups), `blocks.js` (a data block's settings and a Featured
-  block's schedule), `menugroups.js` (menu links to a group of a block), `tags.js` (Tags); `frame.js` the nav and redirect,
+  block's schedule), `menugroups.js` (menu links to a group of a block), `tags.js` (Tags), `forms.js` (Forms); `frame.js` the nav and redirect,
   `controls.js` the form controls. The five big files (`builder.js`, `screens.js`,
   `render/pages.js`, `portal/admin.js`, `portal/family.js`) are split further a screen at a
   time as they're touched (`review/senior-review-2026-11.md`, item 7): don't grow them.

@@ -11,7 +11,7 @@ data block with its records and what its cards show, and each page drawn exactly
 before until the owner changes it; the owner adds pages, and the breeder switches and
 words what the owner adds; the menu editor; FAQ and badge spots on any page, with the
 breeder's tick boxes following them; what each profile page shows; and page addresses
-with their redirects (3.5, 2026-11-14). Step 3.8 (the forms' fields) is still to come, as are steps 5 to 7; step 4
+with their redirects (3.5) and the contact and review forms' fields (3.8), both 2026-11-14. Steps 5 to 7 are still to come; step 4
 is partly built (below, Building it, in steps).
 
 Today a site's pages, menu, sections, and the rules for how KennelOS data shows are
@@ -663,7 +663,9 @@ Each step is its own branch and can be released on its own.
       setting per site in Pages: each item's switch, its part of the page and its order, a
       dog's and a puppy's facts; a profile's FAQ spot and badge row are items, and the
       breeder's tick boxes follow them);
-   8. the contact and review forms' fields.
+   8. the contact and review forms' fields (built 2026-11-14: Forms in the admin view,
+      `content/forms.js`, `stories.answers` in migration 0035; a message's extra answers in
+      `inquiries.answers`, which applications already had, so no new column there).
 4. **The owner's own blocks and styling** (decisions 16 to 18): buttons, banners and
    their links; dividers, spacers, collages, photos, videos, text over a photo; every
    block's background, padding, text size and fonts; template colours; the font library.

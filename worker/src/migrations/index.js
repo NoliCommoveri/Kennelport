@@ -42,7 +42,7 @@ import blockPicks from './0031_block_picks.sql';
 import tombstoneLabels from './0032_tombstone_labels.sql';
 import kennelosRaw from './0033_kennelos_raw.sql';
 import originLineage from './0034_origin_lineage.sql';
-import pageAddresses from './0035_page_addresses.sql';
+import addressesForms from './0035_addresses_forms.sql';
 
 export const MIGRATIONS = [
   { id: '0001', name: 'schema', sql: schema },
@@ -79,5 +79,5 @@ export const MIGRATIONS = [
   { id: '0032', name: 'tombstone_labels', sql: tombstoneLabels },
   { id: '0033', name: 'kennelos_raw', sql: kennelosRaw },
   { id: '0034', name: 'origin_lineage', sql: originLineage },
-  { id: '0035', name: 'page_addresses', sql: pageAddresses },
+  { id: '0035', name: 'addresses_forms', sql: addressesForms },
 ];

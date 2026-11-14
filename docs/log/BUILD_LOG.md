@@ -1559,3 +1559,49 @@ let her give a deleted family back.
   page; `/litters` renamed leaves the rest; export, import and an old snapshot). Checked
   her screen at 390px: the field is the menu name's, as before.
 - No version bump (no file under `public/_kp/` changed). All 444 tests pass.
+
+## 2026-11-14: loose ends step 3, the forms' fields (#3; site-builder 3.8)
+
+On the same branch as page addresses, at the owner's ask, with one migration for both
+(0035, renamed `0035_addresses_forms.sql`, `addresses_forms`; not yet on `main`).
+
+- **Migration 0035** adds `stories.answers` (a review's answers for the breeder only) to
+  `site_pages.path`. A contact message's extra answers use `inquiries.answers`, which
+  applications have had since 0007, so the plan's "one column on inquiries" wasn't
+  needed. Additive only: two columns in all.
+- **`content/forms.js`, new**: each form's fields from a list (contact: name, email,
+  phone, town, the pup or litter it's about, subject, message; review: first name,
+  town, pup's name, month home, rating, review, photo, email, phone, consent), and her
+  own questions (short answer, paragraph, a choice, yes or no; eight at most). Each on
+  or off, required or not, in order, in her words. Fixed, always on and required: the
+  contact form's name, email and message; the review form's first name, review and
+  consent (consent always last). With nothing set, each form is today's, field for
+  field: the site's forms draw the same HTML as before (checked by diffing the
+  rendered forms). A required field drops a trailing "(optional)" from its words.
+  Rating and photo are offered on the review form only: a message has nowhere to keep a
+  photo (decision 16, function).
+- **Kept in the build** (`build.forms`), only for a form the owner changed; the snapshot
+  carries `forms` only then, so existing sites' Publish lists nothing new.
+- **The site** (`render/pages/formParts.js`): fields drawn from the form, short ones two
+  to a row as today. The pup-or-litter list is her current and planned litters, each
+  with its pups, then "Any litter". With the subject off, a full-registration link's
+  subject still goes, as a hidden field.
+- **Sending** (`siteforms.js`): checked against the form as published. Contact: phone
+  and subject in their columns as before, the rest in `answers`. Review: town, pup's
+  name, month, rating and photo in the review's own columns only when the form has
+  them; email, phone and her questions in `stories.answers`, never in the snapshot or on
+  the review card. A review with the rating off has none (the card already drew none).
+- **The owner's Forms screen** (`manage/builder/forms.js`, admin nav "Forms"): a card per
+  form with movable rows (on the form, required, its words, a question's kind and
+  choices), Add a question, Remove, and Back to today's form. No prototype screen: built
+  from the builder's cards, movable rows, switches and fields, as Tags is. Checked at
+  390px and on a computer.
+- **The breeder**: her Inbox shows a message's extra answers under it; Reviews to approve
+  shows a review's answers for her with a line saying they never show on her site.
+  **Wording added** (mine, for the owner to reword): `queue.answers_for_you`,
+  `publish.diff.part.forms` (Publish lists "The contact and review forms: changed").
+  The visitors' words on the forms are the owner's, in the Forms screen.
+- Tests: `forms.test.js` (today's forms by default; the fixed fields; the owner's screen
+  end to end on the contact form, with refusals, the answers kept and her Inbox; the
+  subject off with a full-registration link; the review form's for-her-only answers kept
+  out of the snapshot and the site). No version bump. All 448 tests pass.

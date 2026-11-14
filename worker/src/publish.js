@@ -22,6 +22,7 @@ import { changes } from './diff.js';
 import { sitePicks } from './content/picks.js';
 import { cleanTags } from './content/tags.js';
 import { settleAddresses } from './content/addresses.js';
+import { cleanForms } from './content/forms.js';
 import { pagePath } from './render/parts.js';
 
 export const SNAPSHOT_VERSION = 1;
@@ -186,7 +187,7 @@ export async function buildSnapshot(env, siteId) {
   });
 
   const reviews = (await all("SELECT * FROM stories WHERE site_id = ? AND kind = 'review' AND status = 'approved' ORDER BY sort, submitted_at"))
-    .map((r) => keep(r, ['site_id', 'kind', 'status', 'submitted_by', 'permission_confirmed_at', 'submitted_at', 'sort']));
+    .map((r) => keep(r, ['site_id', 'kind', 'status', 'submitted_by', 'permission_confirmed_at', 'submitted_at', 'sort', 'answers']));
   const steps = (await all("SELECT * FROM steps WHERE site_id = ? AND page = 'how_it_works' ORDER BY sort"))
     .map((s) => ({ ...keep(s, ['site_id', 'page', 'sort', 'source']), pay_link: Boolean(s.pay_link) }));
   const expRows = await all('SELECT * FROM expanders WHERE site_id = ? ORDER BY sort');
@@ -311,6 +312,9 @@ export async function buildSnapshot(env, siteId) {
     rules, timing,
     // Tags (content/tags.js): the owner's by rule, and those she may tick on a dog.
     tags: cleanTags(build?.tags),
+    // The contact and review forms' fields (content/forms.js), only where the owner
+    // has changed one: a snapshot without them draws today's forms.
+    forms: cleanForms(build?.forms),
     // Her build's pages as blocks (content/blocks.js), and the pages she added.
     layout: layoutFor(build),
     added,

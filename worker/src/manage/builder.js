@@ -60,6 +60,7 @@ import { blockRecords, WHAT, dataSettings, scheduleSettings, hersLine as hersPic
 import { rulesScreen } from './builder/rules.js';
 import { kennelosScreen, landingPreview } from './builder/kennelos.js';
 import { tagsScreen } from './builder/tags.js';
+import { formsScreen, formsFromForm } from './builder/forms.js';
 import { cleanTags, tagsFromForm } from '../content/tags.js';
 import { defaultSay } from './wording.js';
 import { redirect, ic, isDemo, whereIs, SCREENS, adminNav } from './builder/frame.js';
@@ -803,7 +804,7 @@ export async function handleBuilder({ env, request, url, user, page }) {
   const wm = path.match(/^\/admin\/wording(?:\/([a-z]+))?$/);
   if (wm) return wordingRoute({ env, request, url, page, site: null, screen: wm[1] ?? null });
   const sv = path.match(/^\/admin\/([a-z0-9-]+)\/site(\/.*)?$/);
-  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z0-9_-]+|menu|rules|dogs|tags|wording|formats|kennelos|timing|instructions|instructions\/[a-z]+)$/);
+  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z0-9_-]+|menu|rules|dogs|tags|forms|wording|formats|kennelos|timing|instructions|instructions\/[a-z]+)$/);
   if (!m) return null;
   const site = await env.DB.prepare("SELECT id, subdomain, kennel_name, status, portal_on, demo_step, scheme, pill_style FROM sites WHERE subdomain = ? AND status != 'closed'").bind(m[1]).first();
   if (!site) return null;
@@ -817,6 +818,7 @@ export async function handleBuilder({ env, request, url, user, page }) {
   if (screen === 'pages' || screen.startsWith('pages/')) return pagesRoute({ env, request, url, site, build, page, screen });
   if (screen === 'menu') return menuRoute({ env, request, url, site, build, page });
   if (screen === 'tags') return tagsRoute({ env, request, url, site, build, page });
+  if (screen === 'forms') return formsRoute({ env, request, url, site, build, page });
   let { rules, timing } = rulesFor(build);
   let error = null;
   if (request.method === 'POST') {
@@ -877,6 +879,28 @@ export async function handleBuilder({ env, request, url, user, page }) {
     <form method="post" id="build" class="build${side ? '' : ' solo'}"><button class="sr" tabindex="-1" aria-hidden="true">Save</button>${editor}${side}
       <div class="actionbar"><div class="in"><span class="ico">${ic('eye')}</span><p><b>Their website</b>Save, then the preview shows it. Publishing puts it live.</p>${side ? '<a class="button small seeit" href="#preview">See it</a>' : ''}<button class="primary small">Save</button></div></div></form>`;
   return page(`${title} · ${site.kennel_name || site.subdomain}`, body, { admin: { nav: adminNav(site, screen), site } });
+}
+
+// Forms (content/forms.js): the contact and review forms' fields. Any button saves
+// the screen with what it does.
+async function formsRoute({ env, request, url, site, build, page }) {
+  if (request.method === 'POST') {
+    const form = await request.formData();
+    const forms = formsFromForm(build.forms, (k) => form.get(k));
+    const next = { ...build, forms };
+    if (!forms) delete next.forms;
+    await saveBuild(env, site.id, next);
+    const act = String(form.get('act') ?? '');
+    const which = act.split(':')[1];
+    return redirect(`/admin/${site.subdomain}/forms?saved=1${which ? `#form-${which}` : ''}`);
+  }
+  const saved = url.searchParams.get('saved');
+  const body = `<p class="crumb"><a href="/admin">‹ Every site</a></p><span class="eyebrow">${esc(site.kennel_name || site.subdomain)}</span>${isDemo(site) ? ' <span class="spill brass">Demo</span>' : ''}<h1>Forms</h1>
+    <p class="muted">The fields of the contact and review forms on her site: which there are, which are required, their order and their words.</p>
+    ${saved ? '<p class="notice" role="status">Saved. The site shows it once the breeder (or you) publishes.</p>' : ''}
+    <form method="post" id="build" class="build solo"><button class="sr" tabindex="-1" aria-hidden="true">Save</button>${formsScreen(build.forms)}
+      <div class="actionbar"><div class="in"><span class="ico">${ic('eye')}</span><p><b>Their website</b>Save, then the preview shows it. Publishing puts it live.</p><button class="primary small">Save</button></div></div></form>`;
+  return page(`Forms · ${site.kennel_name || site.subdomain}`, body, { admin: { nav: adminNav(site, 'forms'), site } });
 }
 
 // Tags (content/tags.js): the owner's tags by rule, and those the breeder may choose.

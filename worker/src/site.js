@@ -206,9 +206,9 @@ export async function serveSite(request, env, ctxWorker, subdomain, { onDomain =
     if (from && from !== origin) return new Response('Forbidden', { status: 403 });
     const page = pageKey;
     if (!pageOn(snap, page, ctx)) return new Response('Not found', { status: 404 });
-    const result = page === 'contact' ? await receiveInquiry(env, request, site.id, ctxWorker)
+    const result = page === 'contact' ? await receiveInquiry(env, request, site.id, ctxWorker, snap)
       : page === 'waitlist' ? await receiveApplication(env, request, site.id, snap, ctxWorker, { kennelos: Boolean(ctx.feed?.feed?.form) })
-        : await receiveReview(env, request, site.id, ctxWorker);
+        : await receiveReview(env, request, site.id, ctxWorker, snap);
     const { status, html: body } = renderPage(snap, { ...ctx, form: { page, ...result } });
     return html(body, result.ok ? status : 400, { 'cache-control': 'no-store' }, cspFor(env, page, ctx.feed));
   }

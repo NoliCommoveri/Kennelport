@@ -165,11 +165,13 @@ export function changes(live, draft, say = defaultSay) {
   if (!same(la.menu, lb.menu)) lines.push({ text: line(part('menu'), w('changed')), path: '/' });
   if (!same(la.profiles, lb.profiles)) lines.push({ text: line(part('profiles'), w('layout')), path: null });
   if (!same(live.rules, draft.rules)) lines.push({ text: line(part('rules'), w('changed')), path: at('litters') });
+  // The contact and review forms' fields (content/forms.js).
+  if (!same(live.forms, draft.forms)) lines.push({ text: line(part('forms'), w('changed')), path: at('contact') });
   if (!same(live.timing, draft.timing)) lines.push({ text: line(part('timing'), w('changed')), path: at('litters') });
 
   // Anything else the site draws from: never "Nothing to publish" while the live
   // site and the draft differ, even for a part this list doesn't name yet.
-  const SAID = new Set(['v', 'built_at', 'id', 'site', 'pages', 'home', 'dogs', 'litters', 'reviews', 'steps', 'extras', 'products', 'partners', 'questions', 'albums', 'expanders', 'embeds', 'payment', 'layout', 'added', 'rules', 'timing']);
+  const SAID = new Set(['v', 'built_at', 'id', 'site', 'pages', 'home', 'dogs', 'litters', 'reviews', 'steps', 'extras', 'products', 'partners', 'questions', 'albums', 'expanders', 'embeds', 'payment', 'layout', 'added', 'rules', 'timing', 'forms']);
   const SITE_SAID = new Set([...SITE_NAMES, 'family_login', 'template', 'scheme']);
   const otherKeys = new Set([...Object.keys(live), ...Object.keys(draft)].filter((k) => !SAID.has(k)));
   const siteKeys = new Set([...Object.keys(live.site ?? {}), ...Object.keys(draft.site ?? {})].filter((k) => !SITE_SAID.has(k)));
