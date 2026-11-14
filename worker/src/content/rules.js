@@ -175,7 +175,10 @@ export const DEFAULT_RULES = {
   // champion_generations, champion_titles: likewise for a champion ancestor, and which
   // titles make one (any of them, as KennelOS sends titles; case and dots evened out).
   dogs: { sale_price: 'site', sale_pill: 'ok', health_kind_1: 'other', health_kind_2: 'genetic', health_kind_3: 'ofa', health_kind_4: 'breed', import_generations: 3,
-    champion_generations: 3, champion_titles: 'CH GCH GCHB GCHS GCHG GCHP' },
+    champion_generations: 3, champion_titles: 'CH GCH GCHB GCHS GCHG GCHP',
+    // The breeder's own country, for Import-descended and Foreign bloodlines; and how
+    // far back a foreign ancestor counts.
+    home_country: '', foreign_generations: 3 },
   words: Object.fromEntries(WORD_LIST.map(([k, d]) => [k, d])),
   format: { date: 'mdy', day: 'md', sex: 'female_male', counts: 'girls_boys', currency: '$', currency_after: false, cents: false },
   // How KennelOS data lands (kennelos/bundle.js), for each new record.
@@ -228,6 +231,7 @@ const DOG_FIELDS = {
   import_generations: { t: 'int', min: 1, max: 4 },
   champion_generations: { t: 'int', min: 1, max: 4 },
   champion_titles: { t: 'text', max: 120, req: true },
+  home_country: TEXT(60), foreign_generations: { t: 'int', min: 1, max: 4 },
 };
 // A litter card's line by KennelOS status may be empty: the usual line then.
 const WORD_FIELDS = Object.fromEntries(WORD_LIST.map(([k, d]) => [k, { t: 'text', max: k === 'safe_notice' ? 400 : 120, req: !k.startsWith('litter_kos_'),

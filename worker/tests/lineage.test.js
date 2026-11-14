@@ -85,9 +85,9 @@ test('origin and lineage land on a dog: its origin, breed, parents and ancestors
 
   // Her dog form: what KennelOS sent is locked; Wren's parents and origin are hers.
   const form = await get(`/dogs/${atlas.id}`);
-  assert.match(form, /<b>Country of origin<\/b><br>Hungary <span class="muted small">· from KennelOS/);
+  assert.match(form, /<b>Imported from<\/b><br>Hungary <span class="muted small">· from KennelOS/);
   assert.match(form, /<b>Sire, if not one of your dogs<\/b><br>Duna <span class="muted small">· from KennelOS/);
-  assert.doesNotMatch(await get(`/dogs/${wren.id}`), /<b>Country of origin<\/b><br>/);
+  assert.doesNotMatch(await get(`/dogs/${wren.id}`), /<b>Imported from<\/b><br>/);
   await post(`/dogs/${wren.id}`, { call_name: 'Wren', sex: 'female', slug: wren.slug, show_on_site: '1', life_stage: 'breeding', sire_name: 'Moose', imported: '1', import_country: 'Romania' });
   assert.deepEqual([dog('k-wren').sire_name, dog('k-wren').imported, dog('k-wren').import_country], ['Moose', 1, 'Romania']);
 
@@ -111,8 +111,9 @@ test('import and import-descended: fields, the owner\'s generations, her switch,
   let snap = await buildSnapshot(env, site.id);
   const names = (where, s = snap) => blockRows(s, cleanBlock({ id: 'd', type: 'dogs', where }), TODAY).map((d) => d.call_name).filter((x) => ['Atlas', 'Clover', 'Pippa'].includes(x)).sort();
   assert.deepEqual(names([{ field: 'import', op: 'yes' }]), ['Atlas']);
-  // Atlas has an imported sire; Pippa an imported sire and grandsire.
-  assert.deepEqual(names([{ field: 'import_descended', op: 'yes' }]), ['Atlas', 'Pippa']);
+  // Pippa has an imported sire and grandsire. Atlas has an imported sire too, but is an
+  // import himself (the owner's definition: born in the breeder's country).
+  assert.deepEqual(names([{ field: 'import_descended', op: 'yes' }]), ['Pippa']);
   assert.deepEqual(names([{ field: 'breed', op: 'is', value: 'boston terrier' }]), ['Atlas']);
 
   // Origin: the dog's own country, or every different one of its imported ancestors, nearest first.
@@ -133,7 +134,7 @@ test('import and import-descended: fields, the owner\'s generations, her switch,
   // Her switch leaves one dog out.
   env.DB.raw.prepare('UPDATE dogs SET import_descended_off = 1 WHERE id = ?').run(dog('k-pippa').id);
   snap = await buildSnapshot(env, site.id);
-  assert.deepEqual(names([{ field: 'import_descended', op: 'yes' }]), ['Atlas']);
+  assert.deepEqual(names([{ field: 'import_descended', op: 'yes' }]), []);
   // A litter's parents: from an import.
   const rc = recordCtx(snap, TODAY);
   assert.ok(matches('litter', { dam_id: by(snap, 'Pippa').id, sire_id: by(snap, 'Atlas').id, puppies: [] }, [{ field: 'a_parent.import', op: 'yes' }], rc));
@@ -244,4 +245,35 @@ test('champion-descended from her own records, with no KennelOS', async () => {
   const names = blockRows(snap, cleanBlock({ id: 'd', type: 'dogs', where: [{ field: 'champion_descended', op: 'yes' }] }), TODAY).map((d) => d.slug);
   assert.ok(names.includes('ziva'));
   assert.ok(!names.includes('boone'));
+});
+
+test('country of origin (origin_country) and the owner\'s two conditions: Import-descended and Foreign bloodlines', async () => {
+  const { send, env, site, dog, get } = await linkedSite();
+  // Clover: from the United States. Her sire Bojan, pedigree only, from Serbia and never
+  // imported; Pippa (Atlas × Clover) from the United States.
+  const clover = { ...CLOVER, country_of_origin: 'United States', ancestors: [{ id: 'k-bojan', path: 'sire', call_name: 'Bojan', imported: false, country_of_origin: 'Serbia' }] };
+  const pippa = { ...PIPPA, country_of_origin: 'United States', ancestors: [...PIPPA.ancestors, { id: 'k-bojan', path: 'dam.sire', call_name: 'Bojan', imported: false, country_of_origin: 'Serbia' }] };
+  await send([pippa, { ...ATLAS, country_of_origin: 'Hungary', ancestors: ATLAS.ancestors.map((x) => ({ ...x, country_of_origin: 'Hungary' })) }, clover]);
+  assert.deepEqual([dog('k-clover').country_of_origin, dog('k-clover').kennelos_origin], ['United States', 3]);
+  assert.equal(JSON.parse(dog('k-clover').ancestors)[0].country_of_origin, 'Serbia');
+  assert.match(await get(`/dogs/${dog('k-clover').id}`), /<b>Country of origin<\/b><br>United States <span class="muted small">· from KennelOS/);
+
+  const names = async (where) => blockRows(await buildSnapshot(env, site.id), cleanBlock({ id: 'd', type: 'dogs', where }), TODAY).map((d) => d.call_name).filter((x) => ['Atlas', 'Clover', 'Pippa'].includes(x)).sort();
+  // Without her country: no Foreign bloodlines.
+  assert.deepEqual(await names([{ field: 'foreign_bloodlines', op: 'yes' }]), []);
+  const build = await loadBuild(env, site.id);
+  await saveBuild(env, site.id, { ...build, rules: { dogs: { home_country: 'united states' } } });
+  // Clover: a Serbian sire (not an import). Pippa: Serbian grandsire, Hungarian sire.
+  // Atlas: a Hungarian sire.
+  assert.deepEqual(await names([{ field: 'foreign_bloodlines', op: 'yes' }]), ['Atlas', 'Clover', 'Pippa']);
+  assert.deepEqual(await names([{ field: 'ancestor_country', op: 'includes', value: 'serbia' }]), ['Clover', 'Pippa']);
+  // Import-descended: born here with an imported ancestor. Clover's Serbian sire wasn't
+  // imported; Atlas is from Hungary.
+  assert.deepEqual(await names([{ field: 'import_descended', op: 'yes' }]), ['Pippa']);
+  // Parents only: Clover still (her sire), Pippa still (her sire Atlas, from Hungary).
+  await saveBuild(env, site.id, { ...build, rules: { dogs: { home_country: 'United States', foreign_generations: 1 } } });
+  assert.deepEqual(await names([{ field: 'foreign_bloodlines', op: 'yes' }]), ['Atlas', 'Clover', 'Pippa']);
+  // A KennelOS without origin_country: what's stored stays.
+  await send([PIPPA, ATLAS, CLOVER]);
+  assert.deepEqual([dog('k-clover').country_of_origin, dog('k-clover').kennelos_origin], ['United States', 1]);
 });

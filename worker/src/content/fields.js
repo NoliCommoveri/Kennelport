@@ -123,7 +123,7 @@ export const IMPORT_GENERATIONS = 3;
 const depthOf = (a) => a.path.length;
 const titleList = (t) => (Array.isArray(t) ? t : String(t ?? '').split(/[\s,;/]+/)).map((x) => String(x).trim()).filter(Boolean);
 // One ancestor as the pedigree shows it: from a dog on the site, else by name.
-const fromDog = (path, p) => ({ path, dog: p, call_name: p.call_name, registered_name: p.registered_name ?? null, titles: titlesOf(p), imported: Boolean(p.imported), import_country: p.import_country ?? null });
+const fromDog = (path, p) => ({ path, dog: p, call_name: p.call_name, registered_name: p.registered_name ?? null, titles: titlesOf(p), imported: Boolean(p.imported), import_country: p.import_country ?? null, country_of_origin: p.country_of_origin ?? null });
 
 // A dog's pedigree, nearest first, `gens` generations back: [{ path: ['sire', 'dam'],
 // dog (a dog on the site, or null), call_name, registered_name, titles, imported,
@@ -146,6 +146,7 @@ export function pedigreeOf(d, rc, gens = GENERATIONS) {
             path, dog: p, call_name: p?.call_name ?? a.call_name ?? a.registered_name, registered_name: a.registered_name ?? p?.registered_name ?? null,
             titles: titleList(a.titles?.length ? a.titles : p ? p.titles : []),
             imported: a.imported ?? (p ? Boolean(p.imported) : false), import_country: a.import_country ?? p?.import_country ?? null,
+            country_of_origin: a.country_of_origin ?? p?.country_of_origin ?? null,
           });
         }
         continue;
@@ -155,21 +156,36 @@ export function pedigreeOf(d, rc, gens = GENERATIONS) {
       if (p && !seen.has(p.id)) {
         out.push(fromDog(path, p));
         if (left > 1) walk(p, path, left - 1, new Set([...seen, p.id]));
-      } else if (!p && x[`${role}_name`]) out.push({ path, dog: null, call_name: x[`${role}_name`], registered_name: null, titles: [], imported: false, import_country: null });
+      } else if (!p && x[`${role}_name`]) out.push({ path, dog: null, call_name: x[`${role}_name`], registered_name: null, titles: [], imported: false, import_country: null, country_of_origin: null });
     }
   };
   walk(d, [], gens, new Set([d.id]));
   return out.sort((a, b) => depthOf(a) - depthOf(b));
 }
 
-// Its imported ancestors within the owner's generations, nearest first; none for a dog
-// she leaves out of Import-descended.
+// Its imported ancestors within the owner's generations, nearest first. None for a dog
+// she leaves out of Import-descended, nor for one not born in the breeder's country
+// (the owner's definition, 2026-11-14): an import itself, or, where both are known, a
+// country of origin other than hers (rules.dogs.home_country).
+const sameCountry = (a, b) => norm(a) === norm(b);
 export function importedAncestors(d, rc) {
-  if (d.import_descended_off) return [];
+  if (d.import_descended_off || d.imported) return [];
+  if (rc.homeCountry && d.country_of_origin && !sameCountry(d.country_of_origin, rc.homeCountry)) return [];
   const gens = Math.min(GENERATIONS, Math.max(1, Number(rc.importGens) || IMPORT_GENERATIONS));
   return pedigreeOf(d, rc, gens).filter((a) => a.imported);
 }
 export const importDescended = (d, rc) => importedAncestors(d, rc).length > 0;
+
+// Foreign bloodlines (the owner's definition, 2026-11-14): an ancestor within the
+// owner's generations whose country of origin isn't the breeder's own. Nothing without
+// her country (rules.dogs.home_country) set.
+export const FOREIGN_GENERATIONS = 3;
+export function foreignAncestors(d, rc) {
+  if (!rc.homeCountry) return [];
+  const gens = Math.min(GENERATIONS, Math.max(1, Number(rc.foreignGens) || FOREIGN_GENERATIONS));
+  return pedigreeOf(d, rc, gens).filter((a) => a.country_of_origin && !sameCountry(a.country_of_origin, rc.homeCountry));
+}
+export const foreignBloodlines = (d, rc) => foreignAncestors(d, rc).length > 0;
 
 // Champion-descended: an ancestor within the owner's generations holding any of the
 // owner's champion titles (rules.dogs.champion_titles, CH and the GCH levels by
@@ -230,6 +246,9 @@ const DOG = {
   import: f('Import', 'bool', (d) => Boolean(d.imported), { no: 'Not an import' }),
   import_country: f('Country of origin (an import)', 'text', (d) => (d.imported ? d.import_country ?? null : null)),
   import_descended: f('Import-descended', 'bool', importDescended, { no: 'Not import-descended' }),
+  country_of_origin: f('Country of origin', 'text', own('country_of_origin')),
+  foreign_bloodlines: f('Foreign bloodlines', 'bool', foreignBloodlines, { no: 'No foreign bloodlines' }),
+  ancestor_country: f("An ancestor's country of origin", 'list', (d, rc) => [...new Set(pedigreeOf(d, rc, Math.min(GENERATIONS, Number(rc.foreignGens) || FOREIGN_GENERATIONS)).map((a) => a.country_of_origin).filter(Boolean))]),
   breed: f('Breed (from KennelOS)', 'text', own('breed')),
   ancestor_title: f("An ancestor's title (as far back as Champion-descended counts)", 'list', ancestorTitles),
   champion_descended: f('Champion-descended', 'bool', championDescended, { no: 'Not champion-descended' }),

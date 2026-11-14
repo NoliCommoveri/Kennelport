@@ -63,7 +63,8 @@
    "breed": "Boston Terrier",
    "sire_id": null,
    "dam_id": null,
-   "ancestors": []
+   "ancestors": [],
+   "country_of_origin": "United States"
   },
   {
    "id": "dog-maple",
@@ -169,7 +170,8 @@
       "HCH"
      ],
      "imported": true,
-     "import_country": "Hungary"
+     "import_country": "Hungary",
+     "country_of_origin": "Hungary"
     },
     {
      "id": "dog-lili",
@@ -178,9 +180,11 @@
      "registered_name": null,
      "titles": [],
      "imported": false,
-     "import_country": null
+     "import_country": null,
+     "country_of_origin": null
     }
-   ]
+   ],
+   "country_of_origin": "Hungary"
   },
   {
    "id": "dog-bishop",
@@ -226,7 +230,8 @@
       "CH"
      ],
      "imported": true,
-     "import_country": "Hungary"
+     "import_country": "Hungary",
+     "country_of_origin": "Hungary"
     },
     {
      "id": "dog-clover",
@@ -235,7 +240,8 @@
      "registered_name": null,
      "titles": [],
      "imported": false,
-     "import_country": null
+     "import_country": null,
+     "country_of_origin": "United States"
     },
     {
      "id": "dog-duna",
@@ -246,7 +252,8 @@
       "HCH"
      ],
      "imported": true,
-     "import_country": "Hungary"
+     "import_country": "Hungary",
+     "country_of_origin": "Hungary"
     },
     {
      "id": "dog-lili",
@@ -255,9 +262,11 @@
      "registered_name": null,
      "titles": [],
      "imported": false,
-     "import_country": null
+     "import_country": null,
+     "country_of_origin": null
     }
-   ]
+   ],
+   "country_of_origin": "United States"
   },
   {
    "id": "dog-rocco",

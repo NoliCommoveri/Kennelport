@@ -13,9 +13,9 @@
 //              died_on, titles: [..] (abbreviations, or with titles_detail
 //              [{ abbr, organization, date }]), health: [{ id, test, result, normal, date, verify_url, type? }],
 //              co_owned?, lives_away?, lives_with_kennel_id?, co_owner_kennel_ids?: [..],
-//              imported?, import_country? (origin), breed?, sire_id?, dam_id?,
+//              imported?, import_country? (origin), country_of_origin? (origin_country), breed?, sire_id?, dam_id?,
 //              ancestors?: [{ id, path ("sire", "sire.dam"…), call_name, registered_name, titles,
-//                             imported?, import_country? }] (lineage) }],
+//                             imported?, import_country?, country_of_origin? }] (lineage) }],
 //     litters: [{ id, pairing_id, heat_id, name, dam_id, sire_id, dam_name, sire_name,
 //                 expected_on, born_on, ready_on, deposits_on, status?, prices: { price_female, … },
 //                 puppies: [{ id, name, collar, sex, color, registration, registry,
@@ -87,7 +87,9 @@ export const MAX = { ancestors: 30, dogs: 200, litters: 100, puppies: 30, pairin
 // 'lineage': on a dog, its breed, sire_id and dam_id (KennelOS ids) and its ancestors,
 // up to four generations by role path, pedigree-only dogs included, by name only.
 // Import-descended is worked out here from them (content/fields.js).
-export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail', 'origin', 'lineage'];
+// 'origin_country': on a dog and on each ancestor, country_of_origin (a country name,
+// or null), apart from Imported: for Foreign bloodlines (content/fields.js).
+export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail', 'origin', 'lineage', 'origin_country'];
 
 // ---------- checking ----------
 
@@ -111,12 +113,14 @@ const SHAPES = {
     co_owned: { type: 'bool' }, lives_away: { type: 'bool' }, lives_with_kennel_id: REF, co_owner_kennel_ids: { type: 'list', max: MAX.co_owner_kennels, itemMax: 80 },
     // origin
     imported: { type: 'bool' }, import_country: S(60),
+    // origin_country
+    country_of_origin: S(60),
     // lineage
     breed: S(60), sire_id: REF, dam_id: REF, ancestors: { ancestors: true, max: MAX.ancestors } },
   // An ancestor in a dog's pedigree (lineage): by name only, whether or not it is a dog
   // KennelOS sends. Its path is its place: "sire", "dam", "sire.dam"…, four deep at most.
   ancestor: { id: REF, path: S(40, true), call_name: S(40), registered_name: S(120), titles: { titles: true, max: MAX.titles },
-    imported: { type: 'bool' }, import_country: S(60) },
+    imported: { type: 'bool' }, import_country: S(60), country_of_origin: S(60) },
   // A title with its organization and date (titles_detail).
   title: { abbr: S(30, true), organization: S(60), date: DATE },
   // A partner kennel: its public name and website, never a person.
@@ -202,6 +206,8 @@ function cleanAncestors(v, path, max) {
       path: a.path, id: a.id, call_name: a.call_name, registered_name: a.registered_name, titles: a.titles,
       // Its origin, from a KennelOS that sends it (origin); null: not said.
       imported: origin ? Boolean(a.imported) : null, import_country: origin && a.imported ? a.import_country : null,
+      // Where it's from, imported or not (origin_country).
+      country_of_origin: a.country_of_origin ?? null,
     };
   });
   const depth = (a) => a.path.split('.').length;
@@ -294,7 +300,8 @@ export const OWNED_PRICES = { litters: LITTER_PRICE_FIELDS, extras: ['price_from
 // doesn't know stays hers.
 export function ownedLineage(rec) {
   const out = [];
-  if (rec?.kennelos_origin) out.push('imported', 'import_country');
+  if (rec?.kennelos_origin & 1) out.push('imported', 'import_country');
+  if (rec?.kennelos_origin & 2) out.push('country_of_origin');
   let anc = null;
   try { anc = rec?.ancestors ? JSON.parse(rec.ancestors) : null; } catch { anc = null; }
   if (Array.isArray(anc)) {
@@ -400,9 +407,12 @@ export class Writer {
     // titles as rows (titles_detail), where an empty list clears.
     if (bd.titles.length || bd.title_rows) v.titles = bd.titles.length ? bd.titles.join(' ').slice(0, 120) : null;
     // Its origin, from a KennelOS that sends it (origin): KennelOS's from then on.
-    if (bd.sent?.has('imported') || bd.sent?.has('import_country')) {
-      Object.assign(v, { imported: bd.imported ? 1 : 0, import_country: bd.imported ? bd.import_country : null, kennelos_origin: 1 });
-    }
+    // kennelos_origin: 1 origin, 2 origin_country (ownedLineage).
+    const origin = bd.sent?.has('imported') || bd.sent?.has('import_country');
+    const country = bd.sent?.has('country_of_origin');
+    if (origin) Object.assign(v, { imported: bd.imported ? 1 : 0, import_country: bd.imported ? bd.import_country : null });
+    if (country) v.country_of_origin = bd.country_of_origin;
+    if (origin || country) v.kennelos_origin = (origin ? 1 : 0) | (country ? 2 : 0);
     if (bd.sent?.has('breed')) v.breed = bd.breed;
     // Co-owned, only from a bundle with partner_kennels (this.partnerByKos).
     if (this.partnerByKos) {
@@ -487,7 +497,7 @@ export class Writer {
         if (dog === id) dog = null;
         if (!a && dog) {
           const name = this.kosDogs?.get(kos)?.call_name ?? this.st.dogs.find((d) => d.id === dog)?.call_name;
-          if (name) anc.unshift(a = { path: role, id: kos, call_name: name, registered_name: null, titles: [], imported: null, import_country: null });
+          if (name) anc.unshift(a = { path: role, id: kos, call_name: name, registered_name: null, titles: [], imported: null, import_country: null, country_of_origin: null });
         }
         if (!a) continue;
         v[`${role}_id`] = dog;

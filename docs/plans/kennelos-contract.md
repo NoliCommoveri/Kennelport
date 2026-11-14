@@ -410,6 +410,17 @@ Each step is its own branch and merge, with at most one migration.
    Champion-descended, An ancestor's title. KennelOS sends no titles for pedigree-only
    ancestors yet (they are only in the dog's notes after a chart import): the hand-over
    for KennelOS is [`kennelos-ancestor-titles.md`](kennelos-ancestor-titles.md).
+   **Added (KennelOS's answer and the owner's definitions, 2026-11-14):** KennelOS sends
+   every dog's titles, pedigree-only ancestors included, with no contract change. A new
+   optional section, **`origin_country`**: `country_of_origin` (a country name or null) on
+   each dog and ancestor, apart from Imported (`dogs.country_of_origin`, in 0034;
+   `kennelos_origin` is now bits, 1 origin, 2 origin_country). **Import-descended** now
+   also needs the dog to be born in the breeder's country: not imported itself and,
+   where both are known, from her country. **Foreign bloodlines**: an ancestor within the
+   owner's generations from another country. Her country is the owner's setting on
+   Dogs (`rules.dogs.home_country`, empty by default: Foreign bloodlines then holds for
+   no dog). Fields: Country of origin, Foreign bloodlines, An ancestor's country of
+   origin. The reply to KennelOS: [`kennelos-origin-country-reply.md`](kennelos-origin-country-reply.md).
 7. **C9.** Waitlist facts and the wording templates.
 
 Steps 1 to 3 need nothing from KennelOS. Steps 4 to 7 can be released on either side

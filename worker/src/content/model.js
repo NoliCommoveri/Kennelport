@@ -101,6 +101,8 @@ export const DOG_FIELDS = {
   // the origin section, else hers. The country only while Imported is ticked.
   imported: BOOL,
   import_country: S(60),
+  // Where it's from, imported or not (the origin_country section, else hers).
+  country_of_origin: S(60),
   // Its breed, KennelOS's with the lineage section (C7).
   breed: S(60),
   // Hers: leave this dog out of Import-descended, for a pedigree known only in part.

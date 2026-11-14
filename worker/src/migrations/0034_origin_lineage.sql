@@ -10,7 +10,10 @@
 -- ancestor's KennelOS id (kennelos_ancestor_id), so the pedigree links to it.
 -- Her switch to leave one dog out of Champion-descended (champion_descended_off), as
 -- for Import-descended.
--- Additive only: eight new columns.
+-- A dog's country of origin, apart from Imported (origin_country section, or hers):
+-- a Serbian dog still in Serbia isn't an import, but it is from Serbia.
+-- kennelos_origin is a set of bits: 1 origin, 2 origin_country.
+-- Additive only: nine new columns.
 ALTER TABLE dogs ADD COLUMN imported INTEGER;
 ALTER TABLE dogs ADD COLUMN import_country TEXT;
 ALTER TABLE dogs ADD COLUMN breed TEXT;
@@ -19,3 +22,4 @@ ALTER TABLE dogs ADD COLUMN ancestors TEXT;
 ALTER TABLE dogs ADD COLUMN kennelos_origin INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE dogs ADD COLUMN kennelos_ancestor_id TEXT;
 ALTER TABLE dogs ADD COLUMN champion_descended_off INTEGER;
+ALTER TABLE dogs ADD COLUMN country_of_origin TEXT;

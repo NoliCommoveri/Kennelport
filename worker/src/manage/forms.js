@@ -54,7 +54,8 @@ export const LABELS = {
     sire_name: ['Sire, if not one of your dogs', null],
     dam_name: ['Dam, if not one of your dogs', null],
     imported: ['Imported', 'Brought in from another country. Your site can tag imports and the dogs descended from them.'],
-    import_country: ['Country of origin', 'For an imported dog only.'],
+    import_country: ['Imported from', 'For an imported dog only: the country it was brought in from.'],
+    country_of_origin: ['Country of origin', 'Where it was born and registered, whether or not it\'s an import.'],
     breed: ['Breed', 'Leave empty for your kennel\'s breed.'],
     import_descended_off: ['Leave out of Import-descended', 'On: this dog isn\'t counted as import-descended, even with an imported ancestor. For a pedigree that isn\'t complete.'],
     champion_descended_off: ['Leave out of Champion-descended', 'On: this dog isn\'t counted as champion-descended, even with a champion ancestor.'],
@@ -424,7 +425,7 @@ export function photoSlot(name, label, hint, chosen, ctx, { multiple = false, ma
 // name still shows, under More, so a new field is never lost. Kinds without groups keep
 // the one plain list.
 const GROUPS = {
-  dogs: [['About', ['call_name', 'sex', 'registered_name', 'date_of_birth', 'color', 'weight', 'role', 'registry', 'titles']], ['Parents', ['sire_id', 'dam_id', 'sire_name', 'dam_name']], ['Origin', ['import_country', 'breed']], ['Photo and story', ['photo_id', 'bio']], ['Where they show', ['life_stage', 'health_display', 'price', 'died_on', 'tags']], ['Co-owned', ['lives_with_kennel_id', 'co_owned_with_ids'], (v) => Boolean(v?.co_owned)], ['Outside dog', ['owner_name', 'owner_url'], (v) => Boolean(v?.outside)]],
+  dogs: [['About', ['call_name', 'sex', 'registered_name', 'date_of_birth', 'color', 'weight', 'role', 'registry', 'titles']], ['Parents', ['sire_id', 'dam_id', 'sire_name', 'dam_name']], ['Origin', ['country_of_origin', 'import_country', 'breed']], ['Photo and story', ['photo_id', 'bio']], ['Where they show', ['life_stage', 'health_display', 'price', 'died_on', 'tags']], ['Co-owned', ['lives_with_kennel_id', 'co_owned_with_ids'], (v) => Boolean(v?.co_owned)], ['Outside dog', ['owner_name', 'owner_url'], (v) => Boolean(v?.outside)]],
   partners: [['The kennel', ['name', 'url', 'photo_id']]],
   litters: [['The litter', ['name', 'stage', 'summary']], ['Parents', ['dam_id', 'sire_id', 'dam', 'sire', 'dam_name', 'sire_name']], ['Dates', ['born_on', 'ready_on', 'deposits_on']], ['For a planned litter', ['plan_label', 'expected_label', 'ready_label'], (v) => v?.stage === 'planned'], ['Prices', ['price_female', 'price_male', 'full_reg_female', 'full_reg_male', 'deposit_female', 'deposit_male', 'price_note']]],
   puppies: [['The puppy', ['name', 'collar', 'sex', 'color', 'status', 'registration', 'registry', 'price']], ['Photo and story', ['photo_id', 'bio', 'more_photos_url']]],

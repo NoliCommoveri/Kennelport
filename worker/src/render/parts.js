@@ -178,6 +178,9 @@ export function recordCtx(snap, today = null) {
     // And a champion ancestor: how far back, and which titles (content/fields.js championAncestors).
     championGens: rulesOf(snap).dogs?.champion_generations ?? DEFAULT_RULES.dogs.champion_generations,
     championTitles: rulesOf(snap).dogs?.champion_titles ?? DEFAULT_RULES.dogs.champion_titles,
+    // The breeder's country, and how far back a foreign ancestor counts.
+    homeCountry: rulesOf(snap).dogs?.home_country ?? '',
+    foreignGens: rulesOf(snap).dogs?.foreign_generations ?? DEFAULT_RULES.dogs.foreign_generations,
   };
 }
 

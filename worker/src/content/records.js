@@ -297,7 +297,7 @@ export async function makeAncestorRecord(env, siteId, ownerId, path) {
   const made = await saveRecord(env, siteId, 'dogs', null, {
     call_name: String(a.call_name ?? a.registered_name).slice(0, 40), registered_name: a.registered_name ?? null,
     titles: (a.titles ?? []).join(' ').slice(0, 120) || null, sex: path.endsWith('dam') ? 'female' : 'male', outside: 1,
-    imported: a.imported ? 1 : 0, import_country: a.imported ? a.import_country ?? null : null,
+    imported: a.imported ? 1 : 0, import_country: a.imported ? a.import_country ?? null : null, country_of_origin: a.country_of_origin ?? null,
     sire_name: name(parentOf('sire')), dam_name: name(parentOf('dam')),
   });
   const s = [env.DB.prepare('UPDATE dogs SET kennelos_ancestor_id = ? WHERE id = ? AND site_id = ?').bind(a.id, made.id, siteId), touch(env, siteId)];
