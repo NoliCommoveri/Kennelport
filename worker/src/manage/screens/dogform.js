@@ -3,10 +3,11 @@
 //   2026-11-12): KennelOS's five, in the site's words (content/rules.js DOG_PLACES).
 //   Read from the record for the form; written back to the three columns on save.
 //   On a dog KennelOS sends, it is KennelOS's, shown and not editable, as status was.
-// - Its pedigree (docs/plans/kennelos-contract.md B6): its sire and dam, theirs and
-//   on, four generations, from her dog records. A parent typed by name has Make a dog
-//   record: a Not my dog record with that name, linked in its place, so its own
-//   parents can be added and it can have a page.
+// - Its pedigree (docs/plans/kennelos-contract.md B6, C7): its sire and dam, theirs
+//   and on, four generations: KennelOS's ancestors where it sends them (lineage), else
+//   from her dog records. A parent typed by name, or a KennelOS ancestor known by name,
+//   has Make a dog record: a Not my dog record with that name, linked in its place, so
+//   its own parents can be added and it can have a page.
 // Her wording is in manage/wording.js (dogform.*) and forms.js LABELS (life_stage).
 import { escapeHtml as esc } from '../../lib/html.js';
 import { DOG_PLACES } from '../../content/rules.js';
@@ -38,26 +39,42 @@ export function fromLifeStage(values) {
 // KennelOS owns the life stage while it owns the status.
 export const lockLifeStage = (lock) => (lock?.has('status') ? new Set([...lock, 'life_stage']) : lock);
 
-// Its pedigree, nearest first: [{ path: ['sire', 'dam'], dog | name, child, role }].
-// A record's parents go on; a typed name ends its line.
+// Its pedigree, nearest first: [{ path: ['sire', 'dam'], dog | name, child, role,
+// owner, ancestor }]. Each side is KennelOS's ancestors where it sent that side
+// (lineage), else her records: a record's parents go on; a typed name ends its line.
+// A KennelOS ancestor is the dog record that is that KennelOS dog, or that she made
+// from it; else its name, with `owner` (the dog whose ancestors hold it) and
+// `ancestor`, for Make a dog record.
+const parsed = (t) => { try { const v = JSON.parse(t ?? 'null'); return Array.isArray(v) ? v : null; } catch { return null; } };
 export function pedigreeOf(dog, dogs) {
   const byId = new Map(dogs.map((d) => [d.id, d]));
+  const byKos = new Map();
+  for (const d of dogs) for (const k of [d.kennelos_ancestor_id, d.kennelos_id]) if (k) byKos.set(k, d);
   const out = [];
-  let gen = [{ dog, path: [] }];
-  const seen = new Set([dog.id]);
-  for (let g = 0; g < GENERATIONS && gen.length; g++) {
-    const next = [];
-    for (const { dog: x, path } of gen) {
-      for (const role of ['sire', 'dam']) {
-        const p = byId.get(x[`${role}_id`]);
-        const at = [...path, role];
-        if (p && !seen.has(p.id)) { seen.add(p.id); out.push({ path: at, dog: p }); next.push({ dog: p, path: at }); }
-        else if (!p && x[`${role}_name`]) out.push({ path: at, name: x[`${role}_name`], child: x, role });
+  const walk = (x, prefix, left, seen) => {
+    const sent = parsed(x.ancestors) ?? [];
+    for (const role of ['sire', 'dam']) {
+      const theirs = sent.filter((a) => a.path === role || a.path.startsWith(`${role}.`));
+      if (theirs.length) {
+        for (const a of theirs) {
+          const path = [...prefix, ...a.path.split('.')];
+          if (path.length - prefix.length > left) continue;
+          const p = a.id ? byKos.get(a.id) : null;
+          if (p && p.id !== dog.id) out.push({ path, dog: p, kennelos: true });
+          else out.push({ path, name: a.call_name ?? a.registered_name, owner: x, ancestor: a, kennelos: true });
+        }
+        continue;
       }
+      const p = byId.get(x[`${role}_id`]);
+      const at = [...prefix, role];
+      if (p && !seen.has(p.id)) {
+        out.push({ path: at, dog: p });
+        if (left > 1) walk(p, at, left - 1, new Set([...seen, p.id]));
+      } else if (!p && x[`${role}_name`]) out.push({ path: at, name: x[`${role}_name`], child: x, role });
     }
-    gen = next;
-  }
-  return out;
+  };
+  walk(dog, [], GENERATIONS, new Set([dog.id]));
+  return out.sort((a, b) => a.path.length - b.path.length);
 }
 
 // "Sire", "Sire's dam", "Dam's sire's sire".
@@ -71,6 +88,9 @@ export function pedigreeCard(dog, dogs, base, say) {
   const body = rows.length
     ? `<ul class="items">${rows.map((r) => (r.dog
       ? `<li class="item"><a href="${base}/dogs/${esc(r.dog.id)}"><b>${esc(r.dog.call_name)}</b><span>${esc(pathWords(r.path, say))}</span></a></li>`
+      // KennelOS's, known by name only: Make a dog record, beside it.
+      : r.ancestor ? `<li class="item going"><a href="${base}/dogs/${esc(r.owner.id)}#pedigree"><b>${esc(r.name)}</b><span>${esc(pathWords(r.path, say))} · ${esc(say('dogform.from_kennelos'))}</span></a>
+        ${r.ancestor.id ? `<form method="post" action="${base}/dogs/${esc(r.owner.id)}/make-ancestor"><input type="hidden" name="path" value="${esc(r.ancestor.path)}"><button class="button small">${esc(say('dogform.make_record'))}</button></form>` : ''}</li>`
       // Known by name only: the name links to where it's typed (its child's Parents), as
       // "Not on your site" rows link to the dog, with the button beside it.
       : `<li class="item going"><a href="${base}/dogs/${esc(r.child.id)}#f-${r.role}_name"><b>${esc(r.name)}</b><span>${esc(pathWords(r.path, say))} · ${esc(say('dogform.name_only'))}</span></a>

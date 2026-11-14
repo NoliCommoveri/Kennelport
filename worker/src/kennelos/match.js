@@ -77,6 +77,7 @@ export async function confirmMatch(env, siteId, kind, kennelosId, keep = []) {
     w.s.push(env.DB.prepare("UPDATE litters SET source = 'kennelos' WHERE id = ? AND site_id = ?").bind(target.id, siteId));
     w.updateLitter({ ...target, source: 'kennelos' }, data, data.kind, kept);
   }
+  w.lineage();
   finish(env, siteId, w, row);
   await env.DB.batch(w.s);
 }
@@ -88,6 +89,7 @@ export async function declineMatch(env, siteId, kind, kennelosId) {
   w.s.push(env.DB.prepare('INSERT OR IGNORE INTO link_declines (site_id, kind, kennelos_id, kennelport_id) VALUES (?, ?, ?, ?)').bind(siteId, kind, kennelosId, row.kennelport_id));
   if (kind === 'dogs') w.createDog(data);
   else w.createLitter(data, data.kind);
+  w.lineage();
   finish(env, siteId, w, row);
   await env.DB.batch(w.s);
 }

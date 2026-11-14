@@ -220,6 +220,19 @@ function dogsScreen(site, rules, error) {
     <section class="card"><div class="fgroup"><div class="between"><h2>Health result headings' order</h2>${HEALTH_KIND_PLACES.every((k) => rules.dogs[k] === DEFAULT_RULES.dogs[k]) ? '' : back(HEALTH_KIND_PLACES.map((k) => `dogs.${k}`).join(','))}</div>
       <div class="fgrid">${HEALTH_KIND_PLACES.map((k, i) => select(`dogs.${k}`, rules.dogs[k], Object.fromEntries(Object.entries(HEALTH_KINDS).map(([kind, [w]]) => [kind, rules.words[w]])), ['First', 'Second', 'Third', 'Fourth'][i])).join('')}</div>
       <span class="hint">When the breeder groups a dog's health results by kind (her Kennel details). Each heading once; one with no results on a dog doesn't show. The words are under Health results below.</span></div></section>
+    <section class="card"><div class="fgroup"><div class="between"><h2>The breeder's country</h2>${rules.dogs.home_country ? back('dogs.home_country') : ''}</div>
+      <div class="fgrid">${field('dogs.home_country', rules.dogs.home_country, { label: 'Her country', cls: '', ph: 'United States' })}</div>
+      <span class="hint">As KennelOS writes countries, in English. A dog from elsewhere isn't import-descended; an ancestor from elsewhere makes Foreign bloodlines. Empty: Foreign bloodlines holds for no dog.</span></div></section>
+    <section class="card"><div class="fgroup"><div class="between"><h2>Foreign bloodlines</h2>${rules.dogs.foreign_generations === DEFAULT_RULES.dogs.foreign_generations ? '' : back('dogs.foreign_generations')}</div>
+      <div class="fgrid">${select('dogs.foreign_generations', String(rules.dogs.foreign_generations), { 1: 'Parents', 2: 'Grandparents', 3: 'Great-grandparents', 4: 'Great-great-grandparents' }, 'A foreign ancestor counts as far back as', '')}</div>
+      <span class="hint">A dog with an ancestor whose country of origin isn't hers, this close: a field for blocks and tags (make a Foreign bloodlines tag on Tags).</span></div></section>
+    <section class="card"><div class="fgroup"><div class="between"><h2>Import-descended</h2>${rules.dogs.import_generations === DEFAULT_RULES.dogs.import_generations ? '' : back('dogs.import_generations')}</div>
+      <div class="fgrid">${select('dogs.import_generations', String(rules.dogs.import_generations), { 1: 'Parents', 2: 'Grandparents', 3: 'Great-grandparents', 4: 'Great-great-grandparents' }, 'An imported ancestor counts as far back as', '')}</div>
+      <span class="hint">A dog with an imported ancestor this close is import-descended: a field for blocks and tags, and Import Ancestry in its Origin. The breeder can leave one dog out on its form.</span></div></section>
+    <section class="card"><div class="fgroup"><div class="between"><h2>Champion-descended</h2>${['champion_generations', 'champion_titles'].every((k) => rules.dogs[k] === DEFAULT_RULES.dogs[k]) ? '' : back('dogs.champion_generations,dogs.champion_titles')}</div>
+      <div class="fgrid">${select('dogs.champion_generations', String(rules.dogs.champion_generations), { 1: 'Parents', 2: 'Grandparents', 3: 'Great-grandparents', 4: 'Great-great-grandparents' }, 'A champion ancestor counts as far back as', '')}
+      ${field('dogs.champion_titles', rules.dogs.champion_titles, { label: 'Titles that make a champion', cls: '' })}</div>
+      <span class="hint">Any one of these titles, separated by spaces. A dog with an ancestor holding one, this close, is champion-descended: a field for blocks and tags (make a Champion-descended tag on Tags). Titles come from KennelOS's pedigree, or from the dog records here. The breeder can leave one dog out on its form.</span></div></section>
     ${wordCards('dogs', rules)}
     <section class="card band"><p class="small">Which health results a new dog shows, and where each KennelOS status puts a dog, are under From KennelOS.</p></section></div>`;
 }

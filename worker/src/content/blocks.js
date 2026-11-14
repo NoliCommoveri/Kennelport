@@ -136,17 +136,17 @@ export const COLS_ACROSS = Object.freeze({ 2: 'Two', 3: 'Three' });
 export const DOG_ITEMS = Object.freeze({
   photo: 'Photo', call: 'Call name', reg: 'Registered name', role: 'Breed and role', titles: 'Titles',
   tests: 'Health tests (or details)', bio: 'Bio', ask: '“Ask about” and price (for sale)', profile: 'View profile',
-  where: 'Where it lives (co-owned) or its owner (outside dogs)', tags: 'Tags',
+  where: 'Where it lives (co-owned) or its owner (outside dogs)', tags: 'Tags', origin: 'Origin (Import, or Import Ancestry)',
 });
 // A light card's items: its sex and role on one line, as the Co-owned section has it.
-export const LIGHT_ITEMS = Object.freeze({ photo: 'Photo', call: 'Call name', reg: 'Registered name', line: 'Sex and role', titles: 'Titles', where: 'Where it lives (co-owned) or its owner (outside dogs)', tags: 'Tags' });
+export const LIGHT_ITEMS = Object.freeze({ photo: 'Photo', call: 'Call name', reg: 'Registered name', line: 'Sex and role', titles: 'Titles', where: 'Where it lives (co-owned) or its owner (outside dogs)', tags: 'Tags', origin: 'Origin (Import, or Import Ancestry)' });
 export const LITTER_ITEMS = Object.freeze({ eyebrow: 'Eyebrow (Current litter, Coming up…)', pair: 'The pair', facts: 'Facts', summary: 'Summary (planned litters)', link: 'Meet the puppies or See the waitlist' });
 export const LITTER_PAIR = Object.freeze({ photos: "The parents' photos", name: "The litter's name", parents: "The pair's names" });
 export const LITTER_ROWS = Object.freeze({ born: 'Born', deposits: 'Deposits from', puppies: 'Puppies', going: 'Going home or Ready now', expected: 'Expected (planned)', price: 'Price', deposit: 'Deposit' });
 export const REVIEW_ITEMS = Object.freeze({ stars: 'Stars', quote: 'The quote', who: 'Who it is from' });
 // A Featured block's items beside its photo, under the name (B5). A dog's are its
 // card's (render/parts.js dogItems); a pup's its own.
-export const FEATURE_DOG_ITEMS = Object.freeze({ reg: 'Registered name', role: 'Breed and role', titles: 'Titles', where: 'Where it lives (co-owned) or its owner (outside dogs)', tests: 'Health tests (or details)', bio: 'Bio', ask: '“Ask about” and price (for sale)', tags: 'Tags' });
+export const FEATURE_DOG_ITEMS = Object.freeze({ reg: 'Registered name', role: 'Breed and role', titles: 'Titles', where: 'Where it lives (co-owned) or its owner (outside dogs)', tests: 'Health tests (or details)', bio: 'Bio', ask: '“Ask about” and price (for sale)', tags: 'Tags', origin: 'Origin (Import, or Import Ancestry)' });
 export const FEATURE_PUP_ITEMS = Object.freeze({ line: 'Sex and colour', status: 'Status', litter: 'Its litter and parents', price: 'Price', bio: 'Bio', tags: 'Tags' });
 export const REVIEW_WHO = Object.freeze({ photo: 'Photo', name: 'First name and town', family: '“{pup}’s family, home {month}”' });
 
@@ -1009,6 +1009,7 @@ export const PROFILE_ITEMS = Object.freeze({
     bio: 'Bio', sale: 'Looking for a home: price and “Ask about”', tests: 'Health testing (with verify links)', share: 'Share button',
     badges: 'Badge row: the badges she ticks for every dog', embeds: 'Videos and posts', litters: "The dog's litters",
     albums: 'Albums with a photo tagged as the dog', offspring: 'Offspring on the site, then grand offspring and on (four generations)',
+    pedigree: 'Pedigree: parents, grandparents and on (four generations)',
   },
   puppy: {
     faq: 'FAQ spot: the questions she ticks for every puppy', status: 'Status', name: 'Name', facts: 'Facts', bio: 'Bio',

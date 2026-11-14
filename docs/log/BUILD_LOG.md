@@ -1342,3 +1342,90 @@ let her give a deleted family back.
 
 - The owner said yes: `ASSET_VERSION` 24 → 25 for the pill styles in `site.css`, with
   `TEMPLATE_FILES` from `node worker/scripts/fingerprint.mjs`. All 411 tests pass.
+
+## 2026-11-14: KennelOS contract step 6, origin and lineage
+
+- `kennelos/bundle.js`: `origin` and `lineage` in `SECTIONS`. A dog takes `imported`,
+  `import_country` (origin), `breed`, `sire_id`, `dam_id` and `ancestors` (lineage: up to
+  four generations by place, `sire`, `sire.dam`…, each named, with titles and, with
+  origin, its own `imported` and `import_country`). Checked: each place once, four deep
+  at most, a call name or registered name. Migration **0034** `origin_lineage`: seven
+  new `dogs` columns (additive); the ancestors are kept as JSON on the dog.
+- Origin is KennelOS's once sent (`kennelos_origin`); until then it's hers on the dog
+  form. Lineage lands after every dog of the bundle (`Writer.lineage`, also after a
+  confirmed or declined match), so a parent sent after its child still links. A parent
+  KennelOS names fills the dog's sire or dam (a dog on the site, else the name) and is
+  locked; one it doesn't name stays hers (`ownedLineage`). An older KennelOS's bundle
+  leaves all of it as stored.
+- `content/fields.js`: `pedigreeOf` (KennelOS's ancestors per side where sent, else her
+  records, carrying a site dog's own KennelOS ancestors up its line), `importedAncestors`,
+  `originOf`. Fields: Import, Country of origin, Import-descended, Breed (and each for a
+  litter's parents). The import tags are tag rules on these fields (Part D).
+- The owner's Dogs screen: Import-descended, how far back an imported ancestor counts
+  (`rules.dogs.import_generations`, 3 by default); and a words group "Origin and
+  pedigree" (Origin, Import, Import Ancestry, Pedigree, Parents…Great-great-grandparents).
+- The Origin card item (dog, light and Featured cards; on none by default): "Import •
+  Hungary", or "Import Ancestry • Hungary, Romania" (the countries nearest first), as a
+  details row. The **Pedigree** part of a dog's page (dog profile, off by default): a
+  generation at a time in the site's grid, each by place with its titles, linked when a
+  dog on the site. No prototype screen: built from the page's eyebrows and `tests` rows.
+  Checked at 390px and 1280px.
+- Her dog form: an Origin group (Country of origin, Breed) and the switches Imported and
+  Leave out of Import-descended. Her Pedigree card shows KennelOS's ancestors and **Make
+  a dog record** for one known by name (`records.js` `makeAncestorRecord`: a Not my dog
+  record with its name, titles, origin and its own parents' names, keeping the
+  ancestor's KennelOS id in `kennelos_ancestor_id` so every pedigree links to it).
+  Checked at 390px.
+- Breeder-facing wording, mine for now (the owner to reword): `forms.js` LABELS
+  `imported`, `import_country`, `breed`, `import_descended_off`; `manage/wording.js`
+  `dogform.from_kennelos` and the note `made_ancestor`; and `dogform.pedigree_hint`
+  reworded to say KennelOS's ancestors show there too.
+- Not done: the Make a dog record button on the public Pedigree part (the plan's C7
+  mentions it; it is the breeder's action, so it is in her Site Manager only). Breed is
+  stored and a field but not shown on a dog's page.
+- Linked sample: bundle 1 sends origin and lineage for Atlas*, Clover* and Pippa*; the
+  coverage test walks ancestors.
+- Server-rendered only: no change to `public/_kp/`, no version bump. **This branch adds
+  migration 0034**: it applies by itself on the first request after the merge deploys.
+- Tests: `lineage.test.js` (new, seven). All 418 pass.
+
+## 2026-11-14: Champion-descended
+
+- The owner's request: like Import-descended, from the ancestors. `content/fields.js`
+  `championAncestors`, `ancestorTitles`; fields **Champion-descended** and **An
+  ancestor's title** (and each for a litter's parents). The import and champion tags
+  are both tag rules on these fields.
+- The owner's Dogs screen, a Champion-descended card: how far back (3 by default,
+  `rules.dogs.champion_generations`) and the titles that make a champion (`CH GCH GCHB
+  GCHS GCHG GCHP`, `rules.dogs.champion_titles`; case and dots evened out). Both
+  generation choices are now full width (the half-width one cut off at 390px).
+  Checked at 390px.
+- Her switch, **Leave out of Champion-descended** (`dogs.champion_descended_off`, added
+  to this branch's migration 0034). Its label and hint are mine, for the owner to reword.
+- Found in KennelOS: pedigree-only ancestors are sent with no titles (a chart import
+  keeps them only in the dog's notes), and a chart import never ticks Imported. The
+  hand-over for a KennelOS session: `plans/kennelos-ancestor-titles.md`. Until then,
+  champion-descended counts only ancestors whose titles KennelOS holds as title events,
+  or dog records on the site with titles.
+- No version bump. Tests: two new in `lineage.test.js`. All 420 pass.
+
+## 2026-11-14: country of origin (origin_country), Import-descended and Foreign bloodlines
+
+- KennelOS's hand-over: it sends every dog's titles, pedigree-only ancestors included
+  (no contract change); and asks for a new optional section, `origin_country`.
+- `kennelos/bundle.js`: `origin_country` in `SECTIONS`; `country_of_origin` on a dog and
+  on each ancestor. `dogs.country_of_origin` (added to this branch's migration 0034).
+  `kennelos_origin` is now bits (1 origin, 2 origin_country), so each section locks only
+  its own fields; a stored 1 reads as before.
+- The owner's definitions (`content/fields.js`): **Import-descended** needs the dog born
+  in the breeder's country (not imported itself; from her country where both are
+  known). **Foreign bloodlines**: an ancestor within the owner's generations from
+  another country. Fields: Country of origin, Foreign bloodlines, An ancestor's
+  country of origin.
+- The owner's Dogs screen: The breeder's country (`rules.dogs.home_country`, empty by
+  default) and Foreign bloodlines' generations (3). Checked at 390px.
+- Her dog form: Country of origin (new), and the import's country relabelled "Imported
+  from" (my wording, unreleased, for the owner to reword).
+- The reply to KennelOS: `plans/kennelos-origin-country-reply.md`.
+- Linked sample: bundle 1 sends countries. Tests: one new in `lineage.test.js`, two
+  updated for the new meaning of Import-descended. All 421 pass. No version bump.

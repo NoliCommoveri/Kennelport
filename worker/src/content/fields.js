@@ -115,6 +115,102 @@ export function ancestorsOf(d, rc) {
 }
 const own = (k) => (r) => r[k] ?? null;
 
+// ---------- origin and lineage (docs/plans/kennelos-contract.md C4, C7) ----------
+
+// How many generations back an imported ancestor makes a dog import-descended, by
+// default (the owner's rule: rules.dogs.import_generations, 1 to GENERATIONS).
+export const IMPORT_GENERATIONS = 3;
+const depthOf = (a) => a.path.length;
+const titleList = (t) => (Array.isArray(t) ? t : String(t ?? '').split(/[\s,;/]+/)).map((x) => String(x).trim()).filter(Boolean);
+// One ancestor as the pedigree shows it: from a dog on the site, else by name.
+const fromDog = (path, p) => ({ path, dog: p, call_name: p.call_name, registered_name: p.registered_name ?? null, titles: titlesOf(p), imported: Boolean(p.imported), import_country: p.import_country ?? null, country_of_origin: p.country_of_origin ?? null });
+
+// A dog's pedigree, nearest first, `gens` generations back: [{ path: ['sire', 'dam'],
+// dog (a dog on the site, or null), call_name, registered_name, titles, imported,
+// import_country }]. Each side comes from KennelOS's ancestors where it sent that side
+// (lineage), else from her records: its sire and dam on the site, theirs and on, a
+// typed name ending its line. A dog on the site with KennelOS's ancestors carries
+// them on up its line (a featured offspring she sold, from her KennelOS dog).
+export function pedigreeOf(d, rc, gens = GENERATIONS) {
+  const out = [];
+  const walk = (x, prefix, left, seen) => {
+    const sent = Array.isArray(x.ancestors) ? x.ancestors : [];
+    for (const role of ['sire', 'dam']) {
+      const theirs = sent.filter((a) => a.path === role || a.path.startsWith(`${role}.`));
+      if (theirs.length) {
+        for (const a of theirs) {
+          const path = [...prefix, ...a.path.split('.')];
+          if (path.length - prefix.length > left) continue;
+          const p = a.dog_id ? rc.dogById(a.dog_id) : null;
+          out.push({
+            path, dog: p, call_name: p?.call_name ?? a.call_name ?? a.registered_name, registered_name: a.registered_name ?? p?.registered_name ?? null,
+            titles: titleList(a.titles?.length ? a.titles : p ? p.titles : []),
+            imported: a.imported ?? (p ? Boolean(p.imported) : false), import_country: a.import_country ?? p?.import_country ?? null,
+            country_of_origin: a.country_of_origin ?? p?.country_of_origin ?? null,
+          });
+        }
+        continue;
+      }
+      const path = [...prefix, role];
+      const p = rc.dogById(x[`${role}_id`]);
+      if (p && !seen.has(p.id)) {
+        out.push(fromDog(path, p));
+        if (left > 1) walk(p, path, left - 1, new Set([...seen, p.id]));
+      } else if (!p && x[`${role}_name`]) out.push({ path, dog: null, call_name: x[`${role}_name`], registered_name: null, titles: [], imported: false, import_country: null, country_of_origin: null });
+    }
+  };
+  walk(d, [], gens, new Set([d.id]));
+  return out.sort((a, b) => depthOf(a) - depthOf(b));
+}
+
+// Its imported ancestors within the owner's generations, nearest first. None for a dog
+// she leaves out of Import-descended, nor for one not born in the breeder's country
+// (the owner's definition, 2026-11-14): an import itself, or, where both are known, a
+// country of origin other than hers (rules.dogs.home_country).
+const sameCountry = (a, b) => norm(a) === norm(b);
+export function importedAncestors(d, rc) {
+  if (d.import_descended_off || d.imported) return [];
+  if (rc.homeCountry && d.country_of_origin && !sameCountry(d.country_of_origin, rc.homeCountry)) return [];
+  const gens = Math.min(GENERATIONS, Math.max(1, Number(rc.importGens) || IMPORT_GENERATIONS));
+  return pedigreeOf(d, rc, gens).filter((a) => a.imported);
+}
+export const importDescended = (d, rc) => importedAncestors(d, rc).length > 0;
+
+// Foreign bloodlines (the owner's definition, 2026-11-14): an ancestor within the
+// owner's generations whose country of origin isn't the breeder's own. Nothing without
+// her country (rules.dogs.home_country) set.
+export const FOREIGN_GENERATIONS = 3;
+export function foreignAncestors(d, rc) {
+  if (!rc.homeCountry) return [];
+  const gens = Math.min(GENERATIONS, Math.max(1, Number(rc.foreignGens) || FOREIGN_GENERATIONS));
+  return pedigreeOf(d, rc, gens).filter((a) => a.country_of_origin && !sameCountry(a.country_of_origin, rc.homeCountry));
+}
+export const foreignBloodlines = (d, rc) => foreignAncestors(d, rc).length > 0;
+
+// Champion-descended: an ancestor within the owner's generations holding any of the
+// owner's champion titles (rules.dogs.champion_titles, CH and the GCH levels by
+// default). Its titles are KennelOS's on each ancestor (lineage), else a dog record's.
+export const CHAMPION_GENERATIONS = 3;
+const titleKey = (t) => String(t).toUpperCase().replace(/\./g, '').trim();
+export const championTitleSet = (text) => new Set(String(text ?? '').split(/[\s,;/]+/).map(titleKey).filter(Boolean));
+const championGens = (rc) => Math.min(GENERATIONS, Math.max(1, Number(rc.championGens) || CHAMPION_GENERATIONS));
+// Every title its ancestors hold, as far back as the Champion-descended setting.
+export const ancestorTitles = (d, rc) => [...new Set(pedigreeOf(d, rc, championGens(rc)).flatMap((a) => a.titles.map(titleKey)))];
+export function championAncestors(d, rc) {
+  if (d.champion_descended_off) return [];
+  const set = championTitleSet(rc.championTitles ?? 'CH GCH GCHB GCHS GCHG GCHP');
+  return pedigreeOf(d, rc, championGens(rc)).filter((a) => a.titles.some((t) => set.has(titleKey(t))));
+}
+export const championDescended = (d, rc) => championAncestors(d, rc).length > 0;
+// The countries behind its Origin line: its own, imported; else every different
+// country among the imported ancestors it counts, nearest first.
+export function originOf(d, rc) {
+  if (d.imported) return { kind: 'import', countries: d.import_country ? [d.import_country] : [] };
+  const anc = importedAncestors(d, rc);
+  if (!anc.length) return null;
+  return { kind: 'ancestry', countries: [...new Set(anc.map((a) => a.import_country).filter(Boolean))] };
+}
+
 const DOG = {
   call_name: f('Call name', 'text', own('call_name')),
   registered_name: f('Registered name', 'text', own('registered_name')),
@@ -146,6 +242,16 @@ const DOG = {
   has_health: f('Has health results shown', 'bool', (d) => (d.health ?? []).length > 0, { no: 'No health results shown' }),
   test_kind: f('Kinds of health test shown (from KennelOS)', 'list', testKinds),
   tags: f('Tags', 'list', tagWords('dog')),
+  // Origin and lineage (C4, C7).
+  import: f('Import', 'bool', (d) => Boolean(d.imported), { no: 'Not an import' }),
+  import_country: f('Country of origin (an import)', 'text', (d) => (d.imported ? d.import_country ?? null : null)),
+  import_descended: f('Import-descended', 'bool', importDescended, { no: 'Not import-descended' }),
+  country_of_origin: f('Country of origin', 'text', own('country_of_origin')),
+  foreign_bloodlines: f('Foreign bloodlines', 'bool', foreignBloodlines, { no: 'No foreign bloodlines' }),
+  ancestor_country: f("An ancestor's country of origin", 'list', (d, rc) => [...new Set(pedigreeOf(d, rc, Math.min(GENERATIONS, Number(rc.foreignGens) || FOREIGN_GENERATIONS)).map((a) => a.country_of_origin).filter(Boolean))]),
+  breed: f('Breed (from KennelOS)', 'text', own('breed')),
+  ancestor_title: f("An ancestor's title (as far back as Champion-descended counts)", 'list', ancestorTitles),
+  champion_descended: f('Champion-descended', 'bool', championDescended, { no: 'Not champion-descended' }),
 };
 
 const PUPPY = {
@@ -201,7 +307,9 @@ export const NOT_FOR_BLOCKS = Object.freeze({
   // status, upcoming and for_sale are read as life_stage; lives_away and outside as
   // residence; a dog's sire and dam through sire.call_name, dam.call_name and parent.
   dog: ['slug', 'bio', 'photo_id', 'died_on', 'health_display', 'show_on_site', 'owner_url', 'status', 'upcoming', 'for_sale', 'lives_away', 'outside',
-    'sire', 'dam', 'sire_name', 'dam_name'],
+    'sire', 'dam', 'sire_name', 'dam_name',
+    // imported is read as import; her Leave out of Import-descended through import_descended.
+    'imported', 'import_descended_off', 'champion_descended_off'],
   puppy: ['slug', 'bio', 'photo_id', 'more_photos_url'],
   litter: ['slug', 'dam', 'sire', 'dam_name', 'sire_name', 'expected_label', 'ready_label', 'summary', 'price_female', 'price_male',
     'full_reg_female', 'full_reg_male', 'deposit_female', 'deposit_male', 'price_note', 'show_placed', 'ask_full_reg', 'show_puppy_photos', 'show_on_site'],
