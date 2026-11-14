@@ -28,14 +28,21 @@ export function queueScreens({ base, env, note, photoUrl, request, say, site, ur
     }
     if (rest || post) return null;
     const { results } = await env.DB.prepare("SELECT * FROM stories WHERE site_id = ? AND status = 'pending' ORDER BY submitted_at").bind(site.id).all();
+    // What the review form asked for her only (content/forms.js): its email, phone
+    // and the owner's questions. Never on the review.
+    const answersFor = (r) => {
+      const list = JSON.parse(r.answers || '[]');
+      return list.length ? `<dl class="answers">${list.map(([q, a]) => `<dt>${esc(q)}</dt><dd>${esc(a).replace(/\n/g, '<br>')}</dd>`).join('')}</dl><p class="muted small">${esc(say('queue.answers_for_you'))}</p>` : '';
+    };
     return {
       title: say('queue.reviews_to_approve'), back: base,
       body: `${note(url)}${results.map((r) => `<section class="card review-q">
           <p><b>${esc(r.first_name)}</b>${r.town ? `, ${esc(r.town)}` : ''} <span class="muted small">· ${esc(when(r.submitted_at))}</span></p>
-          <p class="stars" aria-label="${r.rating} stars">${'★'.repeat(r.rating ?? 0)}</p>
+          ${r.rating ? `<p class="stars" aria-label="${r.rating} stars">${'★'.repeat(r.rating)}</p>` : ''}
           <p class="message">${esc(r.quote).replace(/\n/g, '<br>')}</p>
           ${r.puppy_name || r.home_month ? `<p class="muted small">${esc([r.puppy_name, r.home_month].filter(Boolean).join(' · '))}</p>` : ''}
           ${r.photo_id ? `<img class="q-photo" src="${esc(photoUrl(r.photo_id))}" alt="Photo sent with the review">` : ''}
+          ${answersFor(r)}
           <p class="muted small">${esc(say('queue.they_agreed_to_it'))}</p>
           <div class="row"><form method="post" action="${base}/reviews-queue/${r.id}/approve"><button class="primary">${esc(say('queue.approve'))}</button></form>
           <form method="post" action="${base}/reviews-queue/${r.id}/decline"><button>${esc(say('queue.decline_and_delete'))}</button></form></div></section>`).join('') || `<section class="card"><p class="muted">${esc(say('queue.no_reviews_waiting_families'))}</p></section>`}

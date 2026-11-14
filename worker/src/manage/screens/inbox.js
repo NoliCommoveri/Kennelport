@@ -33,11 +33,13 @@ export function inboxScreens({ base, env, kos, note, request, say, site, url }) 
       const application = msg.kind === 'application';
       const subject = application ? `Re: your puppy application to ${site.kennel_name || site.subdomain}` : `Re: ${msg.topic || `your message to ${site.kennel_name || site.subdomain}`}`;
       const mailto = `mailto:${encodeURIComponent(msg.email)}?subject=${encodeURIComponent(subject)}`;
-      const answers = application ? JSON.parse(msg.answers || '[]') : [];
+      // An application's answers; a message's, the contact form's fields the owner
+      // added (content/forms.js), under the message.
+      const answers = JSON.parse(msg.answers || '[]');
       // An application's answers, each question with what they wrote under it.
       const text = application
         ? (answers.length ? `<dl class="answers">${answers.map(([q, a]) => `<dt>${esc(q)}</dt><dd>${esc(a).replace(/\n/g, '<br>')}</dd>`).join('')}</dl>` : `<p class="muted">${esc(say('inbox.no_questions_answered'))}</p>`)
-        : `<p class="message">${esc(msg.message).replace(/\n/g, '<br>')}</p>`;
+        : `<p class="message">${esc(msg.message).replace(/\n/g, '<br>')}</p>${answers.length ? `<dl class="answers">${answers.map(([q, a]) => `<dt>${esc(q)}</dt><dd>${esc(a).replace(/\n/g, '<br>')}</dd>`).join('')}</dl>` : ''}`;
       return {
         title: msg.name, back: `${base}/inbox`,
         body: `<section class="card"><p class="muted small">${esc(when(msg.received_at))}${msg.topic ? ` · ${esc(msg.topic)}` : ''}</p>

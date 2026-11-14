@@ -15,6 +15,7 @@ import { blockRows, pageOn as pageShows, label as pageMenuName } from '../../ren
 import { readFeed, parseFeedAddress, setFeed, FeedError, kennelosOrigin } from '../../feed.js';
 import { loadBuild } from '../../content/rules.js';
 import { redirect } from './parts.js';
+import { canRename, typedAddress, freeAddress, FIXED_ADDRESS } from '../../content/addresses.js';
 import { picksLink } from './picks.js';
 
 export function pagesScreens({ base, ctxFor, embedErr, embedsCard, env, errorBox, kos, library, listTitle, note, photoUrl, photos, request, say, site, tagFromForm, url }) {
@@ -61,19 +62,22 @@ export function pagesScreens({ base, ctxFor, embedErr, embedsCard, env, errorBox
       for (const [k, p] of Object.entries(PAGES)) {
         if (k === 'privacy') continue;
         const v = await getPage(env, site.id, k);
-        rows.push(`<li class="item"><a href="${base}/pages/${k}"><b>${esc(v.menu_label || p.label)}</b><span>${esc(p.path)}${p.canHide && !v.enabled ? esc(say('pages.off_2')) : ''}</span></a></li>`);
+        rows.push(`<li class="item"><a href="${base}/pages/${k}"><b>${esc(v.menu_label || p.label)}</b><span>${esc(v.path || p.path)}${p.canHide && !v.enabled ? esc(say('pages.off_2')) : ''}</span></a></li>`);
       }
       // The pages KennelPort added to her site: hers to switch on or off and word.
       for (const c of customPages(await loadBuild(env, site.id))) {
         const v = await getPage(env, site.id, c.id);
-        rows.push(`<li class="item"><a href="${base}/pages/${c.id}"><b>${esc(v.menu_label || c.name)}</b><span>${esc(c.path)}${!v.enabled ? esc(say('pages.off')) : ''}</span></a></li>`);
+        rows.push(`<li class="item"><a href="${base}/pages/${c.id}"><b>${esc(v.menu_label || c.name)}</b><span>${esc(v.path || c.path)}${!v.enabled ? esc(say('pages.off')) : ''}</span></a></li>`);
       }
       return { title: say('pages.pages'), back: base, body: `${note(url)}<ul class="items"><li class="item"><a href="${base}/home"><b>${esc(say('pages.home'))}</b><span>${esc(say('pages.block_by_block'))}</span></a></li>${rows.join('')}</ul>` };
     }
     const custom = isCustom(key) ? customPages(await loadBuild(env, site.id)).find((c) => c.id === key) : null;
     const p = custom ? { ...CUSTOM_PAGE, label: custom.name, path: custom.path } : PAGES[key];
     if (!p || key === 'privacy') return null;
-    const all = { ...(p.canHide ? { enabled: { type: 'bool' } } : {}), menu_label: { type: 'text', max: 40 }, ...p.fields };
+    // Her address for it beside its menu name (content/addresses.js), on every page
+    // but the fixed ones.
+    const renames = canRename(key, Boolean(custom));
+    const all = { ...(p.canHide ? { enabled: { type: 'bool' } } : {}), menu_label: { type: 'text', max: 40 }, ...(renames ? { path: { type: 'text', max: 61 } } : {}), ...p.fields };
     const current = await getPage(env, site.id, key);
     const subject = key === 'about' ? 'page:about' : null;
     // Its heading's own words, shown where she has set none (render/parts.js pagehead).
@@ -87,11 +91,19 @@ export function pagesScreens({ base, ctxFor, embedErr, embedsCard, env, errorBox
     const render = async (err, values) => {
       const ctx = await ctxFor(key === 'extras' ? 'extras_page' : key === 'products' ? 'products_page' : key, pick);
       const labels = p.canHide ? { enabled: [say('pages.this_page_is_on'), say('pages.off_it_leaves_the')], menu_label: [say('pages.name_in_the_menu_2'), `Leave empty for "${p.label}".`] } : { menu_label: [say('pages.name_in_the_menu'), `Leave empty for "${p.label}".`] };
+      if (renames) {
+        // A new address suggested from her menu name, while the page has none of hers
+        // and the name would make another.
+        const { menu_label: name, path: hers } = values ?? current;
+        const from = name && !hers ? typedAddress(name) : null;
+        const suggest = from && from !== p.path && freeAddress(from) ? ` ${say('pages.address_suggest', { path: from })}` : '';
+        labels.path = [say('pages.address'), `${say('pages.address_hint', { start: p.path })}${suggest}`, p.path];
+      }
       const blocks = pageBlocks(await loadBuild(env, site.id), key);
       const added = new Set(addedBlocks(key, blocks).map((b) => b.id));
       const snap = added.size ? await buildSnapshot(env, site.id) : null;
       const names = Object.keys(all);
-      const top = names.filter((n) => n === 'enabled' || n === 'menu_label');
+      const top = names.filter((n) => n === 'enabled' || n === 'menu_label' || n === 'path');
       const head = names.filter((n) => ['eyebrow', 'heading', 'lede'].includes(n));
       const rest = names.filter((n) => !top.includes(n) && !head.includes(n));
       const segs = [];
@@ -121,7 +133,8 @@ export function pagesScreens({ base, ctxFor, embedErr, embedsCard, env, errorBox
         ${fieldsWithLabel(list, shownWith(values ?? current, defs), ctx, labels)}
         <button class="primary">${esc(say('pages.save_2'))}</button></form>${x.links ? links : ''}`);
       }
-      return { title: p.label, back: `${base}/pages`, body: `${note(url)}${key === 'waitlist' ? kennelos ?? await kennelosCard() : ''}${errorBox(err)}${cards.join('\n')}` };
+      const fixed = FIXED_ADDRESS.has(key) ? `<p class="muted small">${esc(say('pages.address_fixed', { path: p.path }))}</p>` : '';
+      return { title: p.label, back: `${base}/pages`, body: `${note(url)}${key === 'waitlist' ? kennelos ?? await kennelosCard() : ''}${errorBox(err)}${fixed}${cards.join('\n')}` };
     };
     if (request.method !== 'POST' || show) return render();
     const fd = await request.formData();
@@ -161,9 +174,9 @@ export function pagesScreens({ base, ctxFor, embedErr, embedsCard, env, errorBox
     // Page-level fields have their own words; everything else comes from forms.js.
     return Object.entries(list).map(([n, f]) => {
       if (!labels[n]) return fields({ [n]: f }, values, ctx);
-      const [label, hint] = labels[n];
+      const [label, hint, ph] = labels[n];
       if (f.type === 'bool') return `<label class="check"><input type="checkbox" name="${n}" value="1"${values?.[n] ? ' checked' : ''}> <span>${esc(label)}<span class="hint">${esc(hint)}</span></span></label>`;
-      return `<label>${esc(label)}<span class="hint">${esc(hint)}</span><input name="${n}" value="${esc(values?.[n] ?? '')}" maxlength="${f.max}"></label>`;
+      return `<label>${esc(label)}<span class="hint">${esc(hint)}</span><input name="${n}" value="${esc(values?.[n] ?? '')}" maxlength="${f.max}"${ph ? ` placeholder="${esc(ph)}" autocapitalize="none" spellcheck="false"` : ''}></label>`;
     }).join('\n');
   }
 

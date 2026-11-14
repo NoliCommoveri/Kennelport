@@ -10,6 +10,9 @@ import {
 import { untagStatements } from '../photoTags.js';
 import { chunks, placeholders } from '../lib/sql.js';
 import { litterClockStatements } from '../kennelos/clock.js';
+import { loadBuild } from './rules.js';
+import { customPages } from './blocks.js';
+import { canRename, checkAddress } from './addresses.js';
 
 const omit = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) => !keys.includes(k)));
 
@@ -372,7 +375,21 @@ export async function saveSite(env, siteId, input) {
 
 export async function getPage(env, siteId, key) {
   const row = await env.DB.prepare('SELECT * FROM site_pages WHERE site_id = ? AND page = ?').bind(siteId, key).first();
-  return { enabled: row ? Boolean(row.enabled) : true, menu_label: row?.menu_label ?? null, ...(row ? JSON.parse(row.content) : {}) };
+  return { enabled: row ? Boolean(row.enabled) : true, menu_label: row?.menu_label ?? null, path: row?.path ?? null, ...(row ? JSON.parse(row.content) : {}) };
+}
+
+// A page's address as she types it (content/addresses.js): null for its starting
+// one. Checked against every other page's address now: its starting one, the
+// owner's for a page she added, and the breeder's own.
+async function pageAddress(env, siteId, key, typed) {
+  const custom = customPages(await loadBuild(env, siteId));
+  const mine = custom.find((c) => c.id === key);
+  if (!canRename(key, Boolean(mine))) return null;
+  const start = PAGES[key]?.path ?? mine.path;
+  const { results } = await env.DB.prepare('SELECT page, path FROM site_pages WHERE site_id = ? AND path IS NOT NULL AND page != ?').bind(siteId, key).all();
+  const others = new Set([...Object.values(PAGES).map((p) => p.path), ...custom.filter((c) => c.id !== key).map((c) => c.path), ...results.map((r) => r.path)]);
+  others.delete(start);
+  return checkAddress(typed, { start, others });
 }
 
 export async function savePage(env, siteId, key, input) {
@@ -381,12 +398,13 @@ export async function savePage(env, siteId, key, input) {
   if (!page) throw new ContentError(key, 'not a page');
   const enabled = page.canHide ? (input.enabled ? 1 : 0) : 1;
   const menu_label = cleanValue({ type: 'text', max: 40 }, input.menu_label, 'menu_label');
-  const content = cleanRecord(page.fields, omit(input, ['enabled', 'menu_label']), key);
+  const path = await pageAddress(env, siteId, key, input.path);
+  const content = cleanRecord(page.fields, omit(input, ['enabled', 'menu_label', 'path']), key);
   await checkRefs(env, siteId, { fields: page.fields }, content);
   await env.DB.batch([
-    env.DB.prepare(`INSERT INTO site_pages (site_id, page, enabled, menu_label, content) VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT (site_id, page) DO UPDATE SET enabled = excluded.enabled, menu_label = excluded.menu_label, content = excluded.content`)
-      .bind(siteId, key, enabled, menu_label, JSON.stringify(stripNulls(content))),
+    env.DB.prepare(`INSERT INTO site_pages (site_id, page, enabled, menu_label, path, content) VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT (site_id, page) DO UPDATE SET enabled = excluded.enabled, menu_label = excluded.menu_label, path = excluded.path, content = excluded.content`)
+      .bind(siteId, key, enabled, menu_label, path, JSON.stringify(stripNulls(content))),
     touch(env, siteId),
   ]);
 }

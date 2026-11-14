@@ -1,6 +1,6 @@
 // Privacy (/privacy): the site's privacy notice, generated (plan 3.9). Routed by render/index.js;
 // the page frame it shares is in render/pages.js.
-import { esc, attr, pagehead } from '../parts.js';
+import { esc, attr, pagehead, pagePath } from '../parts.js';
 
 export function privacy(snap, ctx) {
   const s = snap.site;
@@ -15,7 +15,7 @@ export function privacy(snap, ctx) {
         <h2>Outside services</h2>
         <p>Fonts and pictures are served by this site itself, not by outside companies. This site runs on Cloudflare's network, which delivers each page to you.</p>
         <h2>Questions</h2>
-        <p>${contactLine ? `To ask about your information, ${contactLine}.` : `To ask about your information, use the contact details on the <a href="/contact">contact page</a>.`}</p>
+        <p>${contactLine ? `To ask about your information, ${contactLine}.` : `To ask about your information, use the contact details on the <a href="${attr(pagePath(snap, 'contact'))}">contact page</a>.`}</p>
       </div></section>`,
   };
 }

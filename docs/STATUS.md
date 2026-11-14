@@ -45,7 +45,7 @@ anyone outside the family.
 |---|---|
 | 1. Display and timing rules | Built (pup, registration, price, date and timing rules); the dog rules, fixed wording, formats and how KennelOS data lands still to come |
 | 2. The breeder's instructions (`manage/wording.js`) | 2.1–2.3 built; **2.4 to do:** the portal's screens for her (`portal/admin.js`) and Today |
-| 3. Pages, blocks, menu | 3.1–3.4, 3.6, 3.7 built; **to do:** 3.5 page addresses and redirects, 3.8 the forms' fields |
+| 3. Pages, blocks, menu | Built: 3.1–3.8 (3.5 page addresses and 3.8 the forms' fields, 2026-11-14, migration 0035) |
 | 4. The owner's own blocks and styling | Banners, buttons, dividers, spacers, photos, collages, photo beside words, text over a photo, text, gallery strip, block backgrounds and spacing built. **Next, the photo system:** albums from photos she has, then the duplicate check. Still to come: videos as blocks, links to a dog/litter/puppy, fonts and the font library, text size on built-in blocks |
 | 5. Templates (save, apply, reset) | Not started |
 | 6. The family portal's build | Not started |
@@ -87,11 +87,18 @@ merge. The portal's gate waits for a real litter, so features carry on meanwhile
   `ASSET_VERSION` 26.
 - Step 2, one sign-in, not two (#15), built 2026-11-14: breeder and family sign-in share
   `signin.js`; the KennelOS copies checked against KennelOS and held by a test. For
-  KennelOS: refuse `<` and `>` in an email address, as KennelPort does. **Next:** step 3, page addresses (#2).
+  KennelOS: refuse `<` and `>` in an email address, as KennelPort does.
+- Step 3, page addresses (#2) and the forms' fields (#3), built 2026-11-14 on one branch:
+  the breeder's Address beside her menu name, old addresses redirect from Publish; Forms
+  in the admin view (fields on or off, required, order, words, her own questions).
+  Migration 0035 (`site_pages.path`, `stories.answers`). No version bump. **Next:** step 4,
+  the parked code review (#14).
 
 ## Parked
 
 - The version-1 code review ([`review/plan.md`](review/plan.md)): written 2026-11-03, no
-  session has run. File lists refreshed 2026-11-14, with two new sessions (the family
-  portal, the owner's admin view); ready to run.
+  session has run. Brought up to date 2026-11-14 (file lists, then questions for every
+  feature built since 3 November, sessions 11 and 12, prompts and index); targets `main`
+  at the merge of page addresses and the forms. **Next:** loose ends step 4, run it.
+  KennelOS paths in it are still unchecked.
 - After version 1: [`plans/backlog.md`](plans/backlog.md).

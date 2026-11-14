@@ -1514,3 +1514,125 @@ let her give a deleted family back.
   session, limits counted apart). `copies.test.js`.
 - No migration, no version bump, no wording added (the "Too many tries" line was already
   in the list). All 438 tests pass.
+
+## 2026-11-14: loose ends step 3, page addresses (#2; site-builder 3.5)
+
+`docs/loose-ends.md` step 3, first half; `docs/plans/site-builder.md`, "Page addresses".
+
+- **Migration 0035** (`site_pages.path`): her address for a page; null is its starting
+  one. Additive only: one column. It applies itself on the first request after the deploy.
+- **`content/addresses.js`, new**: which pages she may readdress (all but `/waitlist`,
+  `/waitlist/help`, `/privacy`; Home is `/`; every page the owner added), what an address
+  may be (one part, letters, numbers, hyphens; not the system's own first parts, nor any
+  page of the code's starting address, so an old address always stays free to redirect;
+  nothing under `/dogs/`, `/litters/`, `/albums/`), typed text made into one ("Our Story"
+  is `/our-story`), and each page's address in a snapshot (`settleAddresses`: the first
+  page keeps an address two would share). `blocks.js` takes its list of taken addresses
+  from there, unchanged, so no page the owner already added stops being valid.
+- **One lookup for every link and route**: `render/parts.js` `pagePath(snap, key)` and
+  `pageAt(snap, path)`. `render/index.js` routes by it; the menu, footer, every "See all"
+  link, breadcrumbs, the contact and review forms' actions, the full-registration links,
+  the privacy page's contact link, the application form's policies link, the sitemap,
+  the owner's previews, Publish's change list and the waitlist offer email all follow
+  her address. Each address is its own: `/litters` renamed leaves `/litters/older`, and
+  profiles stay at `/dogs/<name>` and `/litters/<litter>`.
+- **Redirects**: `publish.js` `recordPaths` gains `page:<key>` for every page, so the
+  existing redirect code writes a 301 from the old address, chains older ones to the
+  newest, and drops one whose address is live again. A page the owner removes isn't
+  there, so it answers "not found". A page the owner readdresses redirects too, now.
+- **`site.js`**: a form posts to its page wherever it is (`FORM_PAGES` by key, not
+  path); a post to a renamed page's old address (a page left open) goes to the page it
+  redirects to, as a 301 would lose what was typed; any other post is 405, as before.
+  The CSP picks Turnstile and the KennelOS form by page key.
+- **Her Pages screen**: an Address field beside Name in the menu (placeholder its
+  starting address), with a suggestion from her menu name while she has none; the
+  Pages list shows each page's address; the waitlist pages say why theirs is fixed.
+  Errors in her words. **Wording added** (mine, for the owner to reword): `pages.address`,
+  `pages.address_hint`, `pages.address_suggest`, `pages.address_fixed`,
+  `publish.diff.what.page_address`, and errors `error.address`, `error.address_kept`,
+  `error.address_used`.
+- **Owner's admin view**: the Pages list and each page card show her address; New page
+  and a page's address refuse one she has given a page.
+- `content.json` export and import carry `path` per page.
+- Tests: `addresses.test.js` (the rules; rename, links, menu, sitemap, 301s, chains and
+  back; refusals in her words; the contact form at a new address and from an old open
+  page; `/litters` renamed leaves the rest; export, import and an old snapshot). Checked
+  her screen at 390px: the field is the menu name's, as before.
+- No version bump (no file under `public/_kp/` changed). All 444 tests pass.
+
+## 2026-11-14: loose ends step 3, the forms' fields (#3; site-builder 3.8)
+
+On the same branch as page addresses, at the owner's ask, with one migration for both
+(0035, renamed `0035_addresses_forms.sql`, `addresses_forms`; not yet on `main`).
+
+- **Migration 0035** adds `stories.answers` (a review's answers for the breeder only) to
+  `site_pages.path`. A contact message's extra answers use `inquiries.answers`, which
+  applications have had since 0007, so the plan's "one column on inquiries" wasn't
+  needed. Additive only: two columns in all.
+- **`content/forms.js`, new**: each form's fields from a list (contact: name, email,
+  phone, town, the pup or litter it's about, subject, message; review: first name,
+  town, pup's name, month home, rating, review, photo, email, phone, consent), and her
+  own questions (short answer, paragraph, a choice, yes or no; eight at most). Each on
+  or off, required or not, in order, in her words. Fixed, always on and required: the
+  contact form's name, email and message; the review form's first name, review and
+  consent (consent always last). With nothing set, each form is today's, field for
+  field: the site's forms draw the same HTML as before (checked by diffing the
+  rendered forms). A required field drops a trailing "(optional)" from its words.
+  Rating and photo are offered on the review form only: a message has nowhere to keep a
+  photo (decision 16, function).
+- **Kept in the build** (`build.forms`), only for a form the owner changed; the snapshot
+  carries `forms` only then, so existing sites' Publish lists nothing new.
+- **The site** (`render/pages/formParts.js`): fields drawn from the form, short ones two
+  to a row as today. The pup-or-litter list is her current and planned litters, each
+  with its pups, then "Any litter". With the subject off, a full-registration link's
+  subject still goes, as a hidden field.
+- **Sending** (`siteforms.js`): checked against the form as published. Contact: phone
+  and subject in their columns as before, the rest in `answers`. Review: town, pup's
+  name, month, rating and photo in the review's own columns only when the form has
+  them; email, phone and her questions in `stories.answers`, never in the snapshot or on
+  the review card. A review with the rating off has none (the card already drew none).
+- **The owner's Forms screen** (`manage/builder/forms.js`, admin nav "Forms"): a card per
+  form with movable rows (on the form, required, its words, a question's kind and
+  choices), Add a question, Remove, and Back to today's form. No prototype screen: built
+  from the builder's cards, movable rows, switches and fields, as Tags is. Checked at
+  390px and on a computer.
+- **The breeder**: her Inbox shows a message's extra answers under it; Reviews to approve
+  shows a review's answers for her with a line saying they never show on her site.
+  **Wording added** (mine, for the owner to reword): `queue.answers_for_you`,
+  `publish.diff.part.forms` (Publish lists "The contact and review forms: changed").
+  The visitors' words on the forms are the owner's, in the Forms screen.
+- Tests: `forms.test.js` (today's forms by default; the fixed fields; the owner's screen
+  end to end on the contact form, with refusals, the answers kept and her Inbox; the
+  subject off with a full-registration link; the review form's for-her-only answers kept
+  out of the snapshot and the site). No version bump. All 448 tests pass.
+
+## 2026-11-14: the code review's instructions brought up to date (loose ends step 4, before it runs)
+
+`docs/review/plan.md`, `session-prompts.md`, `index.md`. Docs only.
+
+- **A target**: `main` at the merge of this branch (page addresses and the forms' fields).
+  Each session records the commit it reviewed and, if later, reads `git diff --stat` from
+  the target for its files first. The index gains a "Commit reviewed" column.
+- **Section 0**: baseline 448 KennelPort tests (KennelOS still the 3 November counts, to be
+  recorded by the first session that reads it); "Not findings" now lists the loose ends
+  deliberately not built, and says the `/pickup` page with her words is built and in scope
+  (only backlog 4's structured places are deferred); status is `docs/STATUS.md`, not the
+  README. The contract table gives section names, not line numbers (they had moved by up to
+  60 lines), and adds the site-builder, KennelOS-contract, family-portal and senior-review
+  docs.
+- **File sizes dropped** from every list (they drift); sessions `wc -l` what they read.
+- **Questions for what was built after 3 November**, not only its files: session 2 the
+  shared sign-in; 4 page redirects, the Publish list, what the snapshot must not carry; 5
+  the owner's forms as a family meets them, posting by page; 6 her wording as the owner's
+  list, the Address field, the answers in her Inbox and queue, the portal sites' app; 7 the
+  owner's blocks on the public site, `pagePath` everywhere, the forms drawn; 8 migrations to
+  0035, import of addresses, backup and restore of new columns; 12 the Forms screen and page
+  addresses on the owner's side. Session 10 marks findings already in the senior review or
+  the loose ends.
+- **Prompts** for sessions 11 and 12, and a line on the new work in 4 to 8; rows 11 and 12
+  in the index.
+- Not done: KennelOS paths and test counts (attaching the KennelOS repo was refused in this
+  session). Sessions 1, 2, 4, 5 and 9 check them first; 6, 7, 8, 11 and 12 need only
+  KennelPort.
+- No version bump needed for this branch: nothing under `worker/public/` changed
+  (`versions.test.js` passes).

@@ -17,6 +17,7 @@ import { PAGES, MENU_GROUPS, CUSTOM_KEY, slugify, COLLAGE_LAYOUTS, FRAMES, FOCUS
 import { BLOCK_KIND, cleanWhere, cleanOrder, cleanGroup, cleanGroupWords, WHERE_MAX, TICK_OPS, FIELDS, LIFE_STAGE, RESIDENCE } from './fields.js';
 import { DOG_PLACES } from './rules.js';
 import { cleanSchedule } from './featured.js';
+import { TAKEN, PATH, pathFor } from './addresses.js';
 
 export class BlockError extends Error {}
 
@@ -738,12 +739,8 @@ export const withHome = (build, blocks) => withPage(build, 'home', blocks);
 
 export const isCustom = (key) => CUSTOM_KEY.test(String(key ?? ''));
 
-// Addresses no page of hers can take (plan, Page addresses): every page of the
-// code's, the portal's and the system's own, as a first part of the address.
-const TAKEN = new Set(['family', 'family-login', 'privacy', 'ops', 'health', 'v1', 'admin', 'api', 'apply', 'list', 's', 'f',
-  ...Object.values(PAGES).map((p) => p.path.split('/')[1])]);
-const PATH = /^\/[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$/;
-export const pathFor = (name) => `/${slugify(name) || 'page'}`;
+// Addresses no page of hers can take (plan, Page addresses): content/addresses.js.
+export { pathFor };
 
 // Her pages, as the build keeps them (build.custom), every field present.
 export function customPages(build) {
@@ -764,7 +761,9 @@ export const isBuilt = (key, build = null) => BUILT_PAGES.includes(key) || Boole
 // page of the owner's, its name.
 export const headFor = (key, custom) => PAGE_HEADS[key] ?? { eyebrow: null, heading: custom?.name ?? '' };
 
-function checkPage(build, id, { name, path, group }) {
+// taken: the addresses the breeder has given her pages (site_pages.path), which a
+// page of the owner's can't take either.
+function checkPage(build, id, { name, path, group, taken = null }) {
   const clean = String(name ?? '').trim().replace(/\s+/g, ' ');
   if (!clean) throw new BlockError('Give the page a name.');
   if (clean.length > 40) throw new BlockError('A page name is 40 characters at most.');
@@ -773,6 +772,7 @@ function checkPage(build, id, { name, path, group }) {
   if (!PATH.test(at)) throw new BlockError('An address is one word or a few joined by hyphens, like /our-dams: letters, numbers and hyphens.');
   if (TAKEN.has(at.slice(1))) throw new BlockError(`${at} is taken by a page of the site's own. Choose another address.`);
   if (customPages(build).some((c) => c.path === at && c.id !== id)) throw new BlockError(`Another page already has ${at}.`);
+  if (taken?.has(at)) throw new BlockError(`The breeder has given ${at} to one of her pages. Choose another address.`);
   const g = group && menuOf(build).some((x) => x.id === group && !x.button) ? group : null;
   return { name: clean, path: at, group: g };
 }

@@ -11,6 +11,7 @@ import {
   partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, expanders, pagehead, head, ICONS, paySection,
   payShown, litterChoices, ANY_LITTER, ABOUT_LABEL, dogGroups, descendantsOf, depositsAhead, soonSection, pricesOff, sitePrice, word, sexWord, fullRegLink,
   fullRegSurchargeRow, galleryHtml, faqBlock, addedOn, addedWords, addedRow, customPage, rulesOf, pillClass, snapCtx,
+  pagePath,
 } from './parts.js';
 import { pedigreeOf } from '../content/fields.js';
 import { DEFAULT_RULES, HEALTH_KINDS, HEALTH_KIND_PLACES } from '../content/rules.js';
@@ -135,7 +136,7 @@ export function products(snap, ctx) {
       ${x.link_url ? outLink(x.link_url, esc(x.link_label || 'Shop now'), 'btn line') : ''}</article>`;
   };
   return {
-    title: p.heading || label(snap, 'products'), section: '/recommended', description: p.lede,
+    title: p.heading || label(snap, 'products'), section: pagePath(snap, 'products'), description: p.lede,
     body: assemble(snap, ctx, 'products', {
       head: pagehead(p, PAGE_HEADS.products),
       list: `<section class="section tight"><div class="wrap">
@@ -169,7 +170,7 @@ export function pickup(snap, ctx) {
   const placed = blocks.some(([k]) => k === 'transport');
   if (!placed && transport.length) sections.push(`<section class="section band" id="transport"><div class="wrap">${transportBadges(snap, p, transport, { own: true })}</div></section>`);
   return {
-    title: p.heading || label(snap, 'pickup'), section: '/pickup', description: p.lede,
+    title: p.heading || label(snap, 'pickup'), section: pagePath(snap, 'pickup'), description: p.lede,
     body: assemble(snap, ctx, 'pickup', {
       head: pagehead(p, PAGE_HEADS.pickup),
       faq: faqSection(snap, 'pickup'),
@@ -224,7 +225,7 @@ export function custom(snap, ctx, key) {
   if (!c) return null;
   const p = snap.pages[key] ?? {};
   return {
-    title: p.heading || label(snap, key), section: c.path, description: p.lede,
+    title: p.heading || label(snap, key), section: pagePath(snap, key), description: p.lede,
     body: assemble(snap, ctx, key, { head: pagehead(p, headFor(key, c)) }),
   };
 }
@@ -248,7 +249,7 @@ export function linkFor(snap, ctx, link, her = {}) {
   const s = snap.site;
   if (link.to === 'page') {
     if (link.page === 'home') return { href: '/' };
-    const path = PAGES[link.page]?.path ?? customPage(snap, link.page)?.path;
+    const path = pagePath(snap, link.page);
     return path && pageOn(snap, link.page, ctx) ? { href: path } : null;
   }
   if (link.to === 'url') { const u = her.url || link.value; return /^https?:\/\//i.test(u ?? '') ? { href: u, external: true } : null; }
@@ -400,7 +401,7 @@ function heroBlock(snap, ctx, { facts, badges, waitlistOn }) {
     ? `<div class="banner f-${h.hero.banner_focus ?? 'middle'}">${img(snap, h.hero.banner_photo_id, { lazy: false })}</div>` : '';
   const buttons = [
     waitlistOn ? `<a class="btn solid" href="/waitlist">${esc(h.hero.primary_label || 'Join the waitlist')}</a>` : '',
-    pageOn(snap, 'litters', ctx) ? `<a class="btn line" href="/litters">${esc(h.hero.secondary_label || 'See our puppies')}</a>` : '',
+    pageOn(snap, 'litters', ctx) ? `<a class="btn line" href="${attr(pagePath(snap, 'litters'))}">${esc(h.hero.secondary_label || 'See our puppies')}</a>` : '',
   ].join('');
   return `${banner}${badges ? homeBadges(snap) : ''}<section class="wrap hero${layout ? '' : ' no-photos'}"><div class="hero-copy">
       ${h.hero.eyebrow ? `<span class="eyebrow">${esc(h.hero.eyebrow)}</span>` : ''}
@@ -421,7 +422,7 @@ function storyBlock(snap, ctx) {
       ${s.heading || s.script ? `<h2>${scriptLine(s.heading, s.script)}</h2>` : ''}
       ${s.text ? `<p>${esc(s.text)}</p>` : ''}
       ${features ? `<div class="features">${features}</div>` : ''}
-      ${pageOn(snap, 'about', ctx) ? `<div><a class="more" href="/about">${esc(s.link_label || 'Read our full story')}</a></div>` : ''}
+      ${pageOn(snap, 'about', ctx) ? `<div><a class="more" href="${attr(pagePath(snap, 'about'))}">${esc(s.link_label || 'Read our full story')}</a></div>` : ''}
     </div></div></section>`;
 }
 
@@ -438,7 +439,7 @@ export function dogs(snap, ctx) {
       <div class="grid${dogsIn.length === 1 ? ' narrow-grid' : ''}">${dogsIn.map((d) => dogCard(snap, d, { sale: saleOf(snap, ctx, d) })).join('')}</div>
     </div></section>` : '');
   return {
-    title: snap.pages.dogs.heading || label(snap, 'dogs'), section: '/dogs', description: p.lede,
+    title: snap.pages.dogs.heading || label(snap, 'dogs'), section: pagePath(snap, 'dogs'), description: p.lede,
     body: assemble(snap, ctx, 'dogs', {
       head: pagehead(p, PAGE_HEADS.dogs),
       faq: faqSection(snap, 'dogs'),
@@ -518,7 +519,7 @@ export function dog(snap, ctx, slug) {
   const offspring = descendantsOf(snap, d).map((gen, i) => `<div class="mt-26">${head(word(snap, `offspring_${i + 1}`), null)}${slider(gen.map((x) => coCard(snap, x)), { cls: 'light' })}</div>`).join('');
   const sale = saleOf(snap, ctx, d);
   return {
-    title: d.call_name, section: '/dogs', description: d.bio || `${d.call_name}, ${[snap.site.breed, d.role].filter(Boolean).join(' ')}`, image: d.photo_id,
+    title: d.call_name, section: pagePath(snap, 'dogs'), description: d.bio || `${d.call_name}, ${[snap.site.breed, d.role].filter(Boolean).join(' ')}`, image: d.photo_id,
     body: profileBody(pr, {
       faq: faqBlock(snap, 'dog'),
       role: `<span class="eyebrow">${esc([snap.site.breed, d.role].filter(Boolean).join(' · '))}</span>`,
@@ -535,7 +536,7 @@ export function dog(snap, ctx, slug) {
       offspring,
       pedigree: pedigreePart(snap, d),
       albums: dogAlbums(snap, ctx, d),
-    }, { crumb: `<p class="breadcrumb"><a href="/dogs">${esc(label(snap, 'dogs'))}</a></p>`, photo, spaced: new Set(['badges', 'embeds', 'litters', 'offspring', 'albums']) }),
+    }, { crumb: `<p class="breadcrumb"><a href="${attr(pagePath(snap, 'dogs'))}">${esc(label(snap, 'dogs'))}</a></p>`, photo, spaced: new Set(['badges', 'embeds', 'litters', 'offspring', 'albums']) }),
   };
 }
 
@@ -572,7 +573,7 @@ export function litters(snap, ctx) {
     olderHtml = (`<section class="section band" id="older"><div class="wrap">
       ${head(word(snap, 'older_eyebrow'), label(snap, 'older'), null)}
       <div class="grid${olderList.length === 1 ? ' narrow-grid' : ''}">${olderList.map(({ litter, puppy }) => puppyCard(snap, litter, puppy, ctx)).join('')}</div>
-      <p class="center mt-20"><a class="more" href="/litters/older">All older puppies</a></p>
+      <p class="center mt-20"><a class="more" href="${attr(pagePath(snap, 'older'))}">All older puppies</a></p>
     </div></section>`);
   }
   if (planned.length && has(snap, 'litters', 'upcoming')) {
@@ -584,7 +585,7 @@ export function litters(snap, ctx) {
   // With nothing else on the page, the litters' place says so.
   const empty = !sections.length && !row && !olderHtml && !soonHtml && !upcomingHtml;
   return {
-    title: snap.pages.litters.heading || label(snap, 'litters'), section: '/litters', description: p.lede,
+    title: snap.pages.litters.heading || label(snap, 'litters'), section: pagePath(snap, 'litters'), description: p.lede,
     body: assemble(snap, ctx, 'litters', {
       head: pagehead(p, PAGE_HEADS.litters),
       faq: faqSection(snap, 'litters'),
@@ -601,7 +602,7 @@ export function older(snap, ctx) {
   const p = snap.pages.older;
   const list = olderPuppies(snap, ctx.today);
   return {
-    title: snap.pages.older.heading || label(snap, 'older'), section: '/litters', description: p.lede,
+    title: snap.pages.older.heading || label(snap, 'older'), section: pagePath(snap, 'litters'), description: p.lede,
     body: assemble(snap, ctx, 'older', {
       head: pagehead(p, PAGE_HEADS.older),
       list: `<section class="section tight"><div class="wrap"><div class="grid${list.length === 1 ? ' narrow-grid' : ''}">${list.map(({ litter, puppy }) => puppyCard(snap, litter, puppy, ctx)).join('')}</div></div></section>`,
@@ -638,10 +639,10 @@ export function litter(snap, ctx, slug) {
   const body = pr.parts.body.map((x) => [x, pieces[x] ?? '']).filter(([, h]) => h)
     .map(([x, h], i) => (i && !spaced.has(x) ? `<div class="mt-26">${h}</div>` : h)).join('\n        ');
   return {
-    title: l.name, section: '/litters', description: lede || l.name, image: pups.find((x) => x.photo_id)?.photo_id,
+    title: l.name, section: pagePath(snap, 'litters'), description: lede || l.name, image: pups.find((x) => x.photo_id)?.photo_id,
     body: `${pagehead({}, { eyebrow: l.stage === 'planned' ? (l.plan_label || word(snap, 'litter_planned')) : l.born_on ? `Born ${fmtDate(l.born_on)}` : 'Litter', heading: l.name, lede: shown })}
       <section class="section tight"><div class="wrap">
-        <p class="breadcrumb center"><a href="/litters">${esc(label(snap, 'litters'))}</a></p>
+        <p class="breadcrumb center"><a href="${attr(pagePath(snap, 'litters'))}">${esc(label(snap, 'litters'))}</a></p>
         ${body}
       </div></section>`,
   };
@@ -654,7 +655,7 @@ export function howItWorks(snap, ctx) {
   const pay = payShown(snap, ctx);
   const items = snap.steps.map((s, i) => `<article class="step"><span class="n">${i + 1}</span>${s.heading ? `<h3>${esc(s.heading)}</h3>` : ''}${s.body ? `<p>${esc(s.body)}</p>` : ''}${s.detail ? `<details class="x"><summary>${esc(word(snap, 'more_detail'))}</summary><div class="body">${paras(s.detail)}</div></details>` : ''}${s.pay_link && pay ? '<a class="more" href="/waitlist#how-to-pay">How to pay</a>' : ''}</article>`);
   return {
-    title: snap.pages.how_it_works.heading || label(snap, 'how_it_works'), section: '/how-it-works', description: p.lede,
+    title: snap.pages.how_it_works.heading || label(snap, 'how_it_works'), section: pagePath(snap, 'how_it_works'), description: p.lede,
     body: assemble(snap, ctx, 'how_it_works', {
       head: pagehead(p, PAGE_HEADS.how_it_works),
       faq: faqSection(snap, 'how_it_works'),
@@ -668,7 +669,7 @@ export function howItWorks(snap, ctx) {
 export function extras(snap, ctx) {
   const p = snap.pages.extras;
   const prices = snap.site.show_other_prices;
-  const ask = pageOn(snap, 'waitlist', ctx) ? '/waitlist' : '/contact';
+  const ask = pageOn(snap, 'waitlist', ctx) ? '/waitlist' : pagePath(snap, 'contact');
   const pkgs = snap.extras.filter((x) => x.kind === 'homegoing').sort((a, b) => (a.weeks ?? 0) - (b.weeks ?? 0));
   const items = snap.extras.filter((x) => x.kind === 'item');
   const price = (x) => (prices && x.price_from != null ? `<div class="price">${esc(sitePrice(snap, x.price_from, x.price_to))}</div>` : `<div class="price">${esc(pricesOff(snap))}</div>`);
@@ -679,7 +680,7 @@ export function extras(snap, ctx) {
       <a class="more" href="${ask}">${esc(word(snap, 'ask_package'))}</a></article>`).join('');
   const itemHtml = items.map((x) => `<article class="pkg"><h3>${esc(x.name)}</h3>${x.grp ? `<span class="eyebrow">${esc(x.grp)}</span>` : ''}${price(x)}${x.description ? `<p>${esc(x.description)}</p>` : ''}<a class="more" href="${ask}">${esc(word(snap, 'ask_item'))}</a></article>`).join('');
   return {
-    title: snap.pages.extras.heading || label(snap, 'extras'), section: '/extras', description: p.lede,
+    title: snap.pages.extras.heading || label(snap, 'extras'), section: pagePath(snap, 'extras'), description: p.lede,
     body: assemble(snap, ctx, 'extras', {
       head: pagehead(p, PAGE_HEADS.extras),
       faq: faqSection(snap, 'extras'),
@@ -900,7 +901,7 @@ export function waitlist(snap, ctx) {
   // while its feed can't say; the site's own form otherwise.
   let main;
   if (p.closed) {
-    main = `<div class="notice"><h2>Our waitlist is closed for now</h2><p class="muted">${esc(p.closed_message || "We aren't taking new applications at the moment. Please check back, or get in touch with any questions.")}</p><a class="btn line" href="/contact">Contact us</a></div>`;
+    main = `<div class="notice"><h2>Our waitlist is closed for now</h2><p class="muted">${esc(p.closed_message || "We aren't taking new applications at the moment. Please check back, or get in touch with any questions.")}</p><a class="btn line" href="${attr(pagePath(snap, 'contact'))}">Contact us</a></div>`;
   } else if (f?.feed?.form) {
     main = kennelosForm(snap, ctx);
   } else if (f && f.state !== 'ok') {

@@ -27,11 +27,12 @@ sessions.
    KennelOS's. Make breeder and family sign-in share one piece
    of code, and check the four files copied from KennelOS against their originals, so a
    fix can't land in one copy and miss the other.
-3. **Page addresses, then the forms' fields** (#2, #3; med–high each). Both are things
+3. **Done 2026-11-14: page addresses and the forms' fields** (#2, #3), on one branch with one migration (0035), at the owner's ask. Both are things
    the breeder sees, and each probably carries a migration, so each goes on its own
    branch. A migration applies itself on live sites, so it must only add.
 4. **The parked code review** (#14; high). Run it with the file lists refreshed in step
-   1, before more large features land.
+   1, before more large features land. Its instructions were brought up to date on
+   2026-11-14 (evening) for `main` after step 3 merges: ready to start.
 5. **The photo system and the owner's blocks** (#4, #6; med each part). Leave #5, #7
    and #10 until KennelOS is ready for them.
 
@@ -40,8 +41,8 @@ sessions.
 | # | Item | Where it's written down | Tokens | Step | Notes |
 |---|---|---|---|---|---|
 | 1 | Featured block's share button | kennelos-contract step 3, "Not yet" | low | 1 | **Done 2026-11-14 (`ASSET_VERSION` 26).** The rest of Featured is live; only sharing the featured dog or pup is missing. Needs an `ASSET_VERSION` bump, so the owner's yes first. |
-| 2 | Page addresses and redirects | site-builder 3.5 | med–high | 3 | The breeder renames a page's address and the old link still works. Probably needs a migration for the redirects. It must not break existing links. |
-| 3 | Contact and review form fields | site-builder 3.8 | med–high | 3 | Families use these forms directly. Probably needs a migration. |
+| 2 | Page addresses and redirects | site-builder 3.5 | med–high | 3 | **Done 2026-11-14** (migration 0035, `content/addresses.js`). The breeder renames a page's address and the old link still works. Probably needs a migration for the redirects. It must not break existing links. |
+| 3 | Contact and review form fields | site-builder 3.8 | med–high | 3 | **Done 2026-11-14** (Forms in the admin view, `content/forms.js`, migration 0035). Families use these forms directly. Probably needs a migration. |
 | 4 | Photo system, the rest | site-builder step 4, "Next" | med / med–high | 5 | Albums from photos she already has, then the duplicate check. Marked as the next thing to build. |
 | 5 | Waitlist facts and wording templates | kennelos-contract step 7 | high | | The last contract step. Needs agreement with KennelOS on what it sends. |
 | 6 | Owner's blocks, the rest | site-builder step 4 | med each | 5 | Videos as blocks; links to a dog, litter or puppy; text size on the built-in blocks. The links are the cheapest and most visible. |

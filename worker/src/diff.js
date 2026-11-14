@@ -4,7 +4,7 @@
 // Every word of it is the owner's (manage/wording.js, the Publish screen's
 // publish.diff.* lines), read with the site's say().
 import { PAGES, HOME_BLOCK_ORDER } from './content/model.js';
-import { statusText } from './render/parts.js';
+import { statusText, pagePath as addressOf } from './render/parts.js';
 import { defaultSay } from './manage/wording.js';
 
 // Two values the same to a visitor. A blank (null, '', false, an empty list or
@@ -52,9 +52,11 @@ export function changes(live, draft, say = defaultSay) {
   const part = (k, vars) => say(`publish.diff.part.${k}`, vars);
   const w = (k, vars) => say(`publish.diff.what.${k}`, vars);
   const onOrOff = (on) => w(on ? 'switched_on' : 'switched_off');
+  // A page's address on the draft: hers (content/addresses.js), else its starting one.
+  const at = (key) => addressOf(draft, key);
 
   const siteChanged = SITE_NAMES.filter((k) => !same(live.site[k], draft.site[k]));
-  if (siteChanged.length) lines.push({ text: line(part('site'), w('fields_edited', { fields: [...new Set(siteChanged.map((k) => say(`publish.diff.site.${k}`)))].join(', ') })), path: '/contact' });
+  if (siteChanged.length) lines.push({ text: line(part('site'), w('fields_edited', { fields: [...new Set(siteChanged.map((k) => say(`publish.diff.site.${k}`)))].join(', ') })), path: at('contact') });
 
   if ((live.site.family_login ?? null) !== (draft.site.family_login ?? null)) {
     lines.push({ text: line(part('family_login'), w(!live.site.family_login ? 'added' : !draft.site.family_login ? 'removed' : 'changed')), path: draft.site.family_login ? '/waitlist/help' : null });
@@ -70,8 +72,11 @@ export function changes(live, draft, say = defaultSay) {
     const a = live.pages[key]; const b = draft.pages[key];
     if (same(a, b)) continue;
     const label = b?.menu_label || page.label;
+    const moved = addressOf(live, key) !== at(key);
+    if (moved) lines.push({ text: line(part('page', { page: label }), w('page_address', { path: at(key) })), path: b?.enabled ? at(key) : null });
+    if (moved && same(strip(a, ['path']), strip(b, ['path']))) continue;
     const onOff = a?.enabled !== b?.enabled ? onOrOff(b?.enabled) : w('wording_edited');
-    lines.push({ text: line(part('page', { page: label }), onOff), path: b?.enabled ? page.path : null });
+    lines.push({ text: line(part('page', { page: label }), onOff), path: b?.enabled ? at(key) : null });
   }
 
   records(lines, line, w, live.dogs.map((d) => strip(d, [])), draft.dogs, {
@@ -90,13 +95,13 @@ export function changes(live, draft, say = defaultSay) {
   // Added, edited and removed, by name: "Opal, Pearl added; Onyx removed".
   const named = (added, edited, removed) => [added.length && w('names_added', { names: added.join(', ') }), edited.length && w('names_edited', { names: edited.join(', ') }), removed.length && w('names_removed', { names: removed.join(', ') })].filter(Boolean).join('; ');
   for (const [key, path, nameOf] of [
-    ['reviews', '/reviews', (r) => r.first_name],
-    ['steps', '/how-it-works', (s) => s.heading],
-    ['extras', '/extras', (x) => x.name],
-    ['products', '/recommended', (x) => x.name],
-    ['partners', '/dogs#co-owned', (x) => x.name],
+    ['reviews', at('reviews'), (r) => r.first_name],
+    ['steps', at('how_it_works'), (s) => s.heading],
+    ['extras', at('extras'), (x) => x.name],
+    ['products', at('products'), (x) => x.name],
+    ['partners', `${at('dogs')}#co-owned`, (x) => x.name],
     ['questions', '/waitlist', (q) => q.label],
-    ['albums', '/albums', (a) => a.title],
+    ['albums', at('albums'), (a) => a.title],
   ]) {
     const a = live[key] ?? []; const b = draft[key] ?? [];
     if (same(a, b)) continue;
@@ -106,7 +111,7 @@ export function changes(live, draft, say = defaultSay) {
     const edited = b.filter((x) => ia[x.id] && !same(ia[x.id], x)).map(nameOf);
     lines.push({ text: line(part(key), named(added, edited, removed) || w('order_changed')), path });
   }
-  for (const [key, path] of [['policies', '/policies'], ['faq', '/faq'], ['waitlist_help', '/waitlist/help']]) {
+  for (const [key, path] of [['policies', at('policies')], ['faq', at('faq')], ['waitlist_help', '/waitlist/help']]) {
     if (!same(live.expanders[key] ?? [], draft.expanders[key] ?? [])) lines.push({ text: line(part(key), w('edited')), path });
   }
   // Videos and posts (phase 5): added or removed, by title or provider.
@@ -140,9 +145,13 @@ export function changes(live, draft, say = defaultSay) {
   const ada = live.added ?? {}; const adb = draft.added ?? {};
   const customs = [...(lb.custom ?? []), ...(la.custom ?? [])];
   const pageName = (key) => (key === 'home' ? part('home') : draft.pages[key]?.menu_label || PAGES[key]?.label || customs.find((c) => c.id === key)?.name || part('a_page'));
-  const pagePath = (key) => (key === 'home' ? '/' : PAGES[key]?.path ?? (lb.custom ?? []).find((c) => c.id === key)?.path ?? null);
+  const pagePath = at;
   const ia = byId(la.custom); const ib = byId(lb.custom);
-  for (const c of lb.custom ?? []) if (!ia[c.id]) lines.push({ text: line(part('page', { page: c.name }), w('added')), path: c.path });
+  for (const c of lb.custom ?? []) if (!ia[c.id]) lines.push({ text: line(part('page', { page: c.name }), w('added')), path: at(c.id) });
+  // A page the owner added, at a new address (hers, or the owner's).
+  for (const c of lb.custom ?? []) {
+    if (ia[c.id] && addressOf(live, c.id) !== at(c.id)) lines.push({ text: line(part('page', { page: draft.pages[c.id]?.menu_label || c.name }), w('page_address', { path: at(c.id) })), path: at(c.id) });
+  }
   for (const c of la.custom ?? []) if (!ib[c.id]) lines.push({ text: line(part('page', { page: c.name }), w('removed')), path: null });
   const pageKeys = new Set([...Object.keys(la), ...Object.keys(lb), ...Object.keys(ada), ...Object.keys(adb)]);
   for (const key of ['custom', 'menu', 'profiles']) pageKeys.delete(key);
@@ -155,12 +164,14 @@ export function changes(live, draft, say = defaultSay) {
   }
   if (!same(la.menu, lb.menu)) lines.push({ text: line(part('menu'), w('changed')), path: '/' });
   if (!same(la.profiles, lb.profiles)) lines.push({ text: line(part('profiles'), w('layout')), path: null });
-  if (!same(live.rules, draft.rules)) lines.push({ text: line(part('rules'), w('changed')), path: '/litters' });
-  if (!same(live.timing, draft.timing)) lines.push({ text: line(part('timing'), w('changed')), path: '/litters' });
+  if (!same(live.rules, draft.rules)) lines.push({ text: line(part('rules'), w('changed')), path: at('litters') });
+  // The contact and review forms' fields (content/forms.js).
+  if (!same(live.forms, draft.forms)) lines.push({ text: line(part('forms'), w('changed')), path: at('contact') });
+  if (!same(live.timing, draft.timing)) lines.push({ text: line(part('timing'), w('changed')), path: at('litters') });
 
   // Anything else the site draws from: never "Nothing to publish" while the live
   // site and the draft differ, even for a part this list doesn't name yet.
-  const SAID = new Set(['v', 'built_at', 'id', 'site', 'pages', 'home', 'dogs', 'litters', 'reviews', 'steps', 'extras', 'products', 'partners', 'questions', 'albums', 'expanders', 'embeds', 'payment', 'layout', 'added', 'rules', 'timing']);
+  const SAID = new Set(['v', 'built_at', 'id', 'site', 'pages', 'home', 'dogs', 'litters', 'reviews', 'steps', 'extras', 'products', 'partners', 'questions', 'albums', 'expanders', 'embeds', 'payment', 'layout', 'added', 'rules', 'timing', 'forms']);
   const SITE_SAID = new Set([...SITE_NAMES, 'family_login', 'template', 'scheme']);
   const otherKeys = new Set([...Object.keys(live), ...Object.keys(draft)].filter((k) => !SAID.has(k)));
   const siteKeys = new Set([...Object.keys(live.site ?? {}), ...Object.keys(draft.site ?? {})].filter((k) => !SITE_SAID.has(k)));

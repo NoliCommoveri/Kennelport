@@ -21,6 +21,9 @@ import { layoutFor, customPages } from './content/blocks.js';
 import { changes } from './diff.js';
 import { sitePicks } from './content/picks.js';
 import { cleanTags } from './content/tags.js';
+import { settleAddresses } from './content/addresses.js';
+import { cleanForms } from './content/forms.js';
+import { pagePath } from './render/parts.js';
 
 export const SNAPSHOT_VERSION = 1;
 export const KEEP = 10;
@@ -43,6 +46,13 @@ export function recordPaths(snap) {
     for (const p of l.puppies) paths[p.id] = `/litters/${l.slug}/${p.slug}`;
   }
   for (const a of snap.albums ?? []) paths[a.id] = `/albums/${a.slug}`;
+  // Every page's, keyed page:<key>: a page she renames (or the owner moves)
+  // redirects from its old address. A page the owner removes isn't here, so its
+  // old address answers "not found".
+  for (const key of Object.keys(snap.pages ?? {})) {
+    const at = pagePath(snap, key);
+    if (at) paths[`page:${key}`] = at;
+  }
   return paths;
 }
 
@@ -66,6 +76,9 @@ export async function buildSnapshot(env, siteId) {
     const row = pageRows[c.id];
     pages[c.id] = { enabled: row ? Boolean(row.enabled) : true, menu_label: row?.menu_label ?? null, ...json(row?.content, {}) };
   }
+  // Her page addresses (content/addresses.js), where each is free.
+  const custom = customPages(build);
+  settleAddresses(pages, custom, Object.fromEntries(Object.values(pageRows).filter((r) => r.path).map((r) => [r.page, r.path])));
   const added = {};
   for (const r of await all('SELECT * FROM block_switches WHERE site_id = ?')) {
     (added[r.page] ??= {})[r.block] = { enabled: Boolean(r.enabled), ...json(r.content, {}) };
@@ -174,7 +187,7 @@ export async function buildSnapshot(env, siteId) {
   });
 
   const reviews = (await all("SELECT * FROM stories WHERE site_id = ? AND kind = 'review' AND status = 'approved' ORDER BY sort, submitted_at"))
-    .map((r) => keep(r, ['site_id', 'kind', 'status', 'submitted_by', 'permission_confirmed_at', 'submitted_at', 'sort']));
+    .map((r) => keep(r, ['site_id', 'kind', 'status', 'submitted_by', 'permission_confirmed_at', 'submitted_at', 'sort', 'answers']));
   const steps = (await all("SELECT * FROM steps WHERE site_id = ? AND page = 'how_it_works' ORDER BY sort"))
     .map((s) => ({ ...keep(s, ['site_id', 'page', 'sort', 'source']), pay_link: Boolean(s.pay_link) }));
   const expRows = await all('SELECT * FROM expanders WHERE site_id = ? ORDER BY sort');
@@ -299,6 +312,9 @@ export async function buildSnapshot(env, siteId) {
     rules, timing,
     // Tags (content/tags.js): the owner's by rule, and those she may tick on a dog.
     tags: cleanTags(build?.tags),
+    // The contact and review forms' fields (content/forms.js), only where the owner
+    // has changed one: a snapshot without them draws today's forms.
+    forms: cleanForms(build?.forms),
     // Her build's pages as blocks (content/blocks.js), and the pages she added.
     layout: layoutFor(build),
     added,
