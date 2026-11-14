@@ -700,7 +700,7 @@ test('Recommended products from KennelOS: name, link, code and note are KennelOS
   const token = await linked(b);
   const send = async (body) => (await api(b.env, '/v1/bundle', { body, token })).json();
   // Answers say which optional sections this Worker takes.
-  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail']);
+  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail', 'origin', 'lineage']);
   // One she made by hand, with a picture and a Home badge.
   const site = b.site.id;
   const MINE = '00000000-0000-4000-8000-0000000000aa';

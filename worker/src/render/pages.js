@@ -10,8 +10,9 @@ import {
   esc, attr, fmtDate, paras, img, pageOn, label, olderPuppies, sortPuppies, pairNames, litterCard, parentCards, litterFacts, dogCard, coCard,
   partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, expanders, pagehead, head, ICONS, paySection,
   payShown, litterChoices, ANY_LITTER, ABOUT_LABEL, dogGroups, descendantsOf, depositsAhead, soonSection, pricesOff, sitePrice, word, sexWord, fullRegLink,
-  fullRegSurchargeRow, galleryHtml, faqBlock, addedOn, addedWords, addedRow, customPage, rulesOf, pillClass,
+  fullRegSurchargeRow, galleryHtml, faqBlock, addedOn, addedWords, addedRow, customPage, rulesOf, pillClass, snapCtx,
 } from './parts.js';
+import { pedigreeOf } from '../content/fields.js';
 import { DEFAULT_RULES, HEALTH_KINDS, HEALTH_KIND_PLACES } from '../content/rules.js';
 import { embedView } from '../embeds.js';
 import { litterAlbums, dogAlbums } from './pages/albumLists.js';
@@ -531,6 +532,7 @@ export function dog(snap, ctx, slug) {
       embeds: embedsBlock(snap, `dog:${d.id}`, { inWrap: true }),
       litters: litters.length ? `<div class="mt-26">${head('Litters', null)}<div class="litters">${litters.map((l) => litterCard(snap, l, ctx)).join('')}</div></div>` : '',
       offspring,
+      pedigree: pedigreePart(snap, d),
       albums: dogAlbums(snap, ctx, d),
     }, { crumb: `<p class="breadcrumb"><a href="/dogs">${esc(label(snap, 'dogs'))}</a></p>`, photo, spaced: new Set(['badges', 'embeds', 'litters', 'offspring', 'albums']) }),
   };
@@ -936,6 +938,27 @@ export function unavailable(snap, ctx, { gone = false } = {}) {
 // Group health results by kind (sites.group_health), a list per kind by KennelOS's test
 // type (contract C5), in this order, each under the owner's words for it (Dogs, Health
 // results); a result with no type under the first line.
+// A dog's pedigree (docs/plans/kennelos-contract.md C7; content/fields.js pedigreeOf):
+// a generation at a time, each ancestor by its place ("Sire's dam") with its titles,
+// linked when it is a dog on the site. Off by default (the dog profile's Pedigree).
+// No prototype screen: built from the page's own pieces, its eyebrows and tests rows
+// in the site's grid, so a generation sits beside the next on a computer and under it
+// on a phone.
+function pedigreePart(snap, d) {
+  const rows = pedigreeOf(d, snapCtx(snap));
+  if (!rows.length) return '';
+  const role = (r, i) => { const w = word(snap, `${r}_fact`); return i ? w.toLowerCase() : w; };
+  const place = (path) => path.map(role).join("'s ");
+  const name = (r) => {
+    const t = r.titles.length ? `${esc(r.titles.join(' '))} ` : '';
+    return `${t}${r.dog ? `<a href="/dogs/${attr(r.dog.slug)}">${esc(r.call_name)}</a>` : esc(r.call_name)}`;
+  };
+  const gens = [1, 2, 3, 4].map((g) => rows.filter((r) => r.path.length === g)).map((list, i) => (list.length
+    ? `<div><span class="eyebrow">${esc(word(snap, `pedigree_${i + 1}`))}</span><ul class="tests">${list.map((r) => `<li><span>${esc(place(r.path))}</span><span>${name(r)}</span></li>`).join('')}</ul></div>`
+    : '')).join('');
+  return `${head(word(snap, 'pedigree_heading'), null)}<div class="grid">${gens}</div>`;
+}
+
 function healthLists(snap, health) {
   if (!health.length) return '';
   const list = (key, rows) => `<span class="eyebrow">${esc(word(snap, key))}</span><ul class="tests">${rows.map((h) => `<li><span>${esc(h.test)}</span><span>${h.verify_url ? `<a href="${attr(h.verify_url)}" rel="noopener">${esc(h.result)}</a>` : esc(h.result)}</span></li>`).join('')}</ul>`;

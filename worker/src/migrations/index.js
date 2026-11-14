@@ -41,6 +41,7 @@ import dogParents from './0030_dog_parents.sql';
 import blockPicks from './0031_block_picks.sql';
 import tombstoneLabels from './0032_tombstone_labels.sql';
 import kennelosRaw from './0033_kennelos_raw.sql';
+import originLineage from './0034_origin_lineage.sql';
 
 export const MIGRATIONS = [
   { id: '0001', name: 'schema', sql: schema },
@@ -76,4 +77,5 @@ export const MIGRATIONS = [
   { id: '0031', name: 'block_picks', sql: blockPicks },
   { id: '0032', name: 'tombstone_labels', sql: tombstoneLabels },
   { id: '0033', name: 'kennelos_raw', sql: kennelosRaw },
+  { id: '0034', name: 'origin_lineage', sql: originLineage },
 ];

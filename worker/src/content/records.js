@@ -279,6 +279,33 @@ export async function makeParentRecord(env, siteId, childId, role) {
   return made;
 }
 
+// A KennelOS ancestor known only by name (docs/plans/kennelos-contract.md C7), made a
+// dog record: Not my dog, with its name, registered name and titles, and its own
+// sire and dam named from the same pedigree. It keeps the ancestor's KennelOS id, so
+// every pedigree that holds that ancestor links to it, and a parent of `ownerId`
+// becomes it at once.
+export async function makeAncestorRecord(env, siteId, ownerId, path) {
+  const owner = await getRecord(env, siteId, 'dogs', ownerId);
+  let list = null;
+  try { list = JSON.parse(owner?.ancestors ?? 'null'); } catch { list = null; }
+  const a = Array.isArray(list) ? list.find((x) => x.path === path) : null;
+  if (!a?.id) return null;
+  const known = await env.DB.prepare('SELECT id FROM dogs WHERE site_id = ? AND (kennelos_ancestor_id = ? OR kennelos_id = ?)').bind(siteId, a.id, a.id).first();
+  if (known) return known;
+  const parentOf = (role) => list.find((x) => x.path === `${path}.${role}`);
+  const name = (x) => (x ? String(x.call_name ?? x.registered_name ?? '').slice(0, 60) || null : null);
+  const made = await saveRecord(env, siteId, 'dogs', null, {
+    call_name: String(a.call_name ?? a.registered_name).slice(0, 40), registered_name: a.registered_name ?? null,
+    titles: (a.titles ?? []).join(' ').slice(0, 120) || null, sex: path.endsWith('dam') ? 'female' : 'male', outside: 1,
+    imported: a.imported ? 1 : 0, import_country: a.imported ? a.import_country ?? null : null,
+    sire_name: name(parentOf('sire')), dam_name: name(parentOf('dam')),
+  });
+  const s = [env.DB.prepare('UPDATE dogs SET kennelos_ancestor_id = ? WHERE id = ? AND site_id = ?').bind(a.id, made.id, siteId), touch(env, siteId)];
+  if (!path.includes('.')) s.push(env.DB.prepare(`UPDATE dogs SET ${path}_id = ?, ${path}_name = NULL, updated_at = ? WHERE id = ? AND site_id = ?`).bind(made.id, now(), ownerId, siteId));
+  await env.DB.batch(s);
+  return made;
+}
+
 export async function removeRecord(env, siteId, kind, id) {
   const k = kindOf(kind);
   const s = untagStatements(env, siteId, kind, id);

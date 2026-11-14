@@ -220,6 +220,9 @@ function dogsScreen(site, rules, error) {
     <section class="card"><div class="fgroup"><div class="between"><h2>Health result headings' order</h2>${HEALTH_KIND_PLACES.every((k) => rules.dogs[k] === DEFAULT_RULES.dogs[k]) ? '' : back(HEALTH_KIND_PLACES.map((k) => `dogs.${k}`).join(','))}</div>
       <div class="fgrid">${HEALTH_KIND_PLACES.map((k, i) => select(`dogs.${k}`, rules.dogs[k], Object.fromEntries(Object.entries(HEALTH_KINDS).map(([kind, [w]]) => [kind, rules.words[w]])), ['First', 'Second', 'Third', 'Fourth'][i])).join('')}</div>
       <span class="hint">When the breeder groups a dog's health results by kind (her Kennel details). Each heading once; one with no results on a dog doesn't show. The words are under Health results below.</span></div></section>
+    <section class="card"><div class="fgroup"><div class="between"><h2>Import-descended</h2>${rules.dogs.import_generations === DEFAULT_RULES.dogs.import_generations ? '' : back('dogs.import_generations')}</div>
+      <div class="fgrid">${select('dogs.import_generations', String(rules.dogs.import_generations), { 1: 'Parents', 2: 'Grandparents', 3: 'Great-grandparents', 4: 'Great-great-grandparents' }, 'An imported ancestor counts as far back as')}</div>
+      <span class="hint">A dog with an imported ancestor this close is import-descended: a field for blocks and tags, and Import Ancestry in its Origin. The breeder can leave one dog out on its form.</span></div></section>
     ${wordCards('dogs', rules)}
     <section class="card band"><p class="small">Which health results a new dog shows, and where each KennelOS status puts a dog, are under From KennelOS.</p></section></div>`;
 }

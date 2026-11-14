@@ -97,6 +97,14 @@ export const DOG_FIELDS = {
   dam: { type: 'dogref' },
   sire_name: S(60),
   dam_name: S(60),
+  // Its origin (migration 0034, docs/plans/kennelos-contract.md C4): KennelOS's with
+  // the origin section, else hers. The country only while Imported is ticked.
+  imported: BOOL,
+  import_country: S(60),
+  // Its breed, KennelOS's with the lineage section (C7).
+  breed: S(60),
+  // Hers: leave this dog out of Import-descended, for a pedigree known only in part.
+  import_descended_off: BOOL,
 };
 
 // A partner kennel (docs/plans/done/co-owned-dogs.md): one her co-owned dogs are shared

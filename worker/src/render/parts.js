@@ -1,7 +1,7 @@
 // Pieces of the "ak" template shared by its pages: formatting, photos, cards and
 // the menu. Every value from a snapshot passes through esc() (or attr()) here.
 import { SHOW_DEFAULT, isCustom, hersOn, BLOCK_TYPES, defaultMenu, MENU_PLACES, PAGE_DEFAULTS, recordsOf, pageBlocks, DOGS_ALL } from '../content/blocks.js';
-import { BLOCK_KIND, matches, ordered, grouped, GENERATIONS, tagsOf } from '../content/fields.js';
+import { BLOCK_KIND, matches, ordered, grouped, GENERATIONS, tagsOf, originOf } from '../content/fields.js';
 import { applyPicks } from '../content/picks.js';
 import { escapeHtml as esc } from '../lib/html.js';
 import { PAGES, pupStatus, slugify, pillKey } from '../content/model.js';
@@ -152,8 +152,9 @@ export const pillClass = (key) => `status c-${pillKey(key)}`;
 // A record's tags as pills (content/tags.js), in the site's status pill styles; '' with
 // none. `rc`: the record context, else one for the snapshot made once.
 const ctxMemo = new WeakMap();
+export const snapCtx = (snap) => ctxMemo.get(snap) ?? ctxMemo.set(snap, recordCtx(snap)).get(snap);
 export function tagPills(snap, kind, rec, rc = null) {
-  const c = rc ?? (ctxMemo.get(snap) ?? ctxMemo.set(snap, recordCtx(snap)).get(snap));
+  const c = rc ?? snapCtx(snap);
   const tags = tagsOf(kind, rec, c);
   return tags.length ? `<span class="line1 tags">${tags.map((t) => `<span class="${pillClass(t.pill)}">${esc(t.words)}</span>`).join('')}</span>` : '';
 }
@@ -172,6 +173,8 @@ export function recordCtx(snap, today = null) {
     partnerName: (id) => partnerOf(snap, id)?.name ?? null,
     // Tags (content/tags.js), for content/fields.js tagsOf.
     tags: snap.tags ?? null,
+    // How far back an imported ancestor counts (content/fields.js importedAncestors).
+    importGens: rulesOf(snap).dogs?.import_generations ?? DEFAULT_RULES.dogs.import_generations,
   };
 }
 
@@ -551,8 +554,24 @@ function dogItems(snap, d, { sale = null, link = true } = {}) {
     profile: () => `<a class="more" href="/dogs/${attr(d.slug)}">View profile</a>`,
     where: () => whereLine(snap, d, link),
     tags: () => tagPills(snap, 'dog', d),
+    origin: () => originRow(snap, d),
     photo: () => '',
   };
+}
+
+// A dog's Origin (docs/plans/kennelos-contract.md C4, the owner's words of 2026-11-13):
+// "Import • Romania" for an imported dog, "Import Ancestry • Romania, Hungary" for an
+// import-descended one, the word alone with no country; '' for neither. In the card's
+// details rows, as its registry and weight are.
+export function originText(snap, d, rc = null) {
+  const o = originOf(d, rc ?? snapCtx(snap));
+  if (!o) return '';
+  const w = word(snap, o.kind === 'import' ? 'origin_import' : 'origin_ancestry');
+  return o.countries.length ? `${w} • ${o.countries.join(', ')}` : w;
+}
+function originRow(snap, d) {
+  const t = originText(snap, d);
+  return t ? `<ul class="tests"><li><span>${esc(word(snap, 'origin_label'))}</span><span>${esc(t)}</span></li></ul>` : '';
 }
 
 // Where a dog lives or whose it is, only where that says something: a co-owned dog

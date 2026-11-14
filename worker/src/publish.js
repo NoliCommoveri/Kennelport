@@ -87,9 +87,26 @@ export async function buildSnapshot(env, siteId) {
   const health = await all('SELECT * FROM health_results WHERE site_id = ? AND show = 1 ORDER BY sort');
   // KennelOS's titles as rows (titles_detail): each with its organization and date.
   const titleRows = await all('SELECT dog_id, abbr, organization, earned_on FROM dog_titles WHERE site_id = ? ORDER BY sort');
+  // KennelOS's lineage (docs/plans/kennelos-contract.md C7): an ancestor links to a dog
+  // on the site that is that KennelOS dog, or that she made from it. KennelOS's ids
+  // stay here.
+  const byKos = new Map();
+  for (const d of dogsRaw) for (const k of [d.kennelos_ancestor_id, d.kennelos_id]) if (k) byKos.set(k, d.id);
+  const ancestorsOf = (d) => {
+    const list = json(d.ancestors, null);
+    if (!Array.isArray(list)) return null;
+    return list.map(({ id, ...a }) => {
+      const dogId = byKos.get(id);
+      return { ...a, ...(dogId && dogId !== d.id ? { dog_id: dogId } : {}) };
+    });
+  };
   const dogs = dogsRaw.map((d) => ({
     // An asking price only for a dog looking for a home, with Show other prices on.
-    ...keep(d, [...SYSTEM, 'health_display', 'died_on', ...(d.for_sale && site.show_other_prices ? [] : ['price'])]),
+    ...keep(d, [...SYSTEM, 'health_display', 'died_on', 'ancestors', 'kennelos_origin', 'kennelos_ancestor_id', 'import_country', ...(d.for_sale && site.show_other_prices ? [] : ['price'])]),
+    // Its origin (C4): the country only while Imported is ticked.
+    imported: Boolean(d.imported), import_descended_off: Boolean(d.import_descended_off),
+    ...(d.imported && d.import_country ? { import_country: d.import_country } : {}),
+    ...(d.ancestors ? { ancestors: ancestorsOf(d) } : {}),
     upcoming: Boolean(d.upcoming), for_sale: Boolean(d.for_sale), outside: Boolean(d.outside),
     // A co-owned dog living with a co-owner, and the kennels it may name.
     co_owned: Boolean(d.co_owned), lives_away: Boolean(d.co_owned && d.lives_away),

@@ -10,7 +10,7 @@ import { escapeHtml as esc } from '../lib/html.js';
 import { json } from '../lib/http.js';
 import { ALBUM_PHOTOS_MAX, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, pupStatus } from '../content/model.js';
 import {
-  KINDS, listRecords, getRecord, saveRecord, setField, removeRecord, moveRecord, makeParentRecord,
+  KINDS, listRecords, getRecord, saveRecord, setField, removeRecord, moveRecord, makeParentRecord, makeAncestorRecord,
   saveSite, getPage, getPayment, savePayment, } from '../content/records.js';
 import { fields, field, parseForm, LABELS, labelFor, placeChoices } from './forms.js';
 import { savePhoto, PhotoError } from '../photos.js';
@@ -29,7 +29,7 @@ import {
   waiting, fulfilled, getEntry, addEntry, updateEntry, setFulfilled, removeEntry, moveEntry, offerMailto, suggestWants, listNameFor, maskedNameFor, wantsPrivate, WaitlistError,
 } from '../waitlist.js';
 import { makeLinkCode, showCode, devices, stopDevice, unlinkSite, setKennelosPrices, LinkError, CODE_TTL_MS } from '../kennelos/link.js';
-import { OWNED, OWNED_PRICES } from '../kennelos/bundle.js';
+import { OWNED, OWNED_PRICES, ownedLineage } from '../kennelos/bundle.js';
 import { pendingMatches, matchChanges, confirmMatch, declineMatch, MatchError } from '../kennelos/match.js';
 import { leavingLitters, keepLitter, deleteLitter } from '../kennelos/clock.js';
 import { NOT_FOR_DEMO } from '../lib/demo.js';
@@ -179,7 +179,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
   // The fields KennelOS owns on this record, while it comes from KennelOS.
   async function lockedFor(kind, rec) {
     if (rec?.source !== 'kennelos') return null;
-    const set = new Set([...(OWNED[kind] ?? []), ...((await kosPrices()) ? OWNED_PRICES[kind] ?? [] : [])]);
+    const set = new Set([...(OWNED[kind] ?? []), ...((await kosPrices()) ? OWNED_PRICES[kind] ?? [] : []), ...(kind === 'dogs' ? ownedLineage(rec) : [])]);
     return set.size ? set : null; // nothing of KennelOS's on it (a step): all hers
   }
 
@@ -413,6 +413,13 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       if (!post) return null;
       const made = await makeParentRecord(env, site.id, mk[1], mk[2]);
       return redirect(made ? `${path}/${made.id}?note=made_parent` : `${path}/${mk[1]}`);
+    }
+    // A KennelOS ancestor known only by name, made a dog record (its pedigree card).
+    const ma = dogs && rest.match(/^([0-9a-f-]{36})\/make-ancestor$/);
+    if (ma) {
+      if (!post) return null;
+      const made = await makeAncestorRecord(env, site.id, ma[1], String((await request.formData()).get('path') ?? ''));
+      return redirect(made ? `${path}/${made.id}?note=made_ancestor` : `${path}/${ma[1]}`);
     }
     const m = rest.match(/^([0-9a-f-]{36})(?:\/(remove|up|down))?$/);
     if (!m) return null;

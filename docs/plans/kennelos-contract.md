@@ -382,6 +382,27 @@ Each step is its own branch and merge, with at most one migration.
 6. **C4, C7.** Origin and lineage: the import tags and the Pedigree block.
    Migration: the columns and an `ancestors` store. C4 and C7 go together: import-descended
    is worked out from the ancestors.
+   **Built 2026-11-14** (migration 0034 `origin_lineage`: seven new `dogs` columns, the
+   ancestors kept as JSON on the dog). `origin` and `lineage` in `SECTIONS`. A dog's
+   origin is KennelOS's once it sends `origin` (`kennelos_origin`), else hers on the dog
+   form (Imported, Country of origin). Lineage fills the dog's sire and dam (a dog on the
+   site, else the ancestor's name) once every dog of the bundle is in, so a parent sent
+   after its child still links. **Changed:** a parent KennelOS doesn't name (no id, no
+   ancestor at that place) stays as she has it and stays hers; only a parent it names is
+   locked. Fields: Import, Country of origin, Import-descended, Breed (and a litter's
+   `dam.`, `sire.`, `a_parent.` of each), so the import tags are the owner's tag rows
+   (Part D), not a build. The owner's generations: Dogs, Import-descended (3 by default,
+   `rules.dogs.import_generations`). The Origin card item (dog, light and Featured cards;
+   on none by default), its words on the owner's Dogs screen. The **Pedigree** part of a
+   dog's page (`pedigree` in the dog profile, off by default): four generations, each
+   ancestor by place with its titles, linked where it is a dog on the site; from
+   KennelOS's ancestors where sent, else from her records, so a hand-kept site has it
+   too. No prototype screen: built from the page's eyebrows, `tests` rows and grid. Her
+   Pedigree card shows KennelOS's ancestors, and **Make a dog record** for one known by
+   name (a Not my dog record keeping its KennelOS id, `kennelos_ancestor_id`, so every
+   pedigree holding that ancestor links to it). That button is in her Site Manager only,
+   not on the public Pedigree part. Breed is stored and a field, not shown on the page
+   (the eyebrow stays the site's breed).
 7. **C9.** Waitlist facts and the wording templates.
 
 Steps 1 to 3 need nothing from KennelOS. Steps 4 to 7 can be released on either side

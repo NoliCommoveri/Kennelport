@@ -48,7 +48,9 @@ read that before the rest. Update this map when you add, move or split a file.
 - `src/content/rules.js`: display and timing rules, set per site by the owner.
 - `src/content/fields.js`: every field a data block can choose by, order by or group by
   (dog, pup, litter), with the conditions, order and groups themselves
-  (`plans/kennelos-contract.md` B1, B2). `render/parts.js` `recordCtx` gives it the day,
+  (`plans/kennelos-contract.md` B1, B2); and a dog's pedigree, import-descended and
+  Origin (`pedigreeOf`, `originOf`; C4, C7), which the site's Pedigree part and the
+  Origin card item draw. `render/parts.js` `recordCtx` gives it the day,
   a litter's stage and a pup's status row.
 - `src/content/tags.js`: tags (`plans/kennelos-contract.md` Part D): the owner's tags by
   rule and those the breeder may tick on a dog, kept in the site's build, and the Tags

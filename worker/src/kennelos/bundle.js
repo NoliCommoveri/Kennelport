@@ -12,7 +12,10 @@
 //              disposition? (a puppy's: keeping | available | placed | health_hold | undecided),
 //              died_on, titles: [..] (abbreviations, or with titles_detail
 //              [{ abbr, organization, date }]), health: [{ id, test, result, normal, date, verify_url, type? }],
-//              co_owned?, lives_away?, lives_with_kennel_id?, co_owner_kennel_ids?: [..] }],
+//              co_owned?, lives_away?, lives_with_kennel_id?, co_owner_kennel_ids?: [..],
+//              imported?, import_country? (origin), breed?, sire_id?, dam_id?,
+//              ancestors?: [{ id, path ("sire", "sire.dam"…), call_name, registered_name, titles,
+//                             imported?, import_country? }] (lineage) }],
 //     litters: [{ id, pairing_id, heat_id, name, dam_id, sire_id, dam_name, sire_name,
 //                 expected_on, born_on, ready_on, deposits_on, status?, prices: { price_female, … },
 //                 puppies: [{ id, name, collar, sex, color, registration, registry,
@@ -57,7 +60,7 @@ export const LITTER_KOS_STATUSES = ['expected', 'whelped', 'weaning', 'ready'];
 
 export const BUNDLE_FORMAT = 1;
 export const MAX_BUNDLE_BYTES = 1024 * 1024;
-export const MAX = { dogs: 200, litters: 100, puppies: 30, pairings: 50, heats: 50, health: 60, extras: 100, products: 50, steps: 20, titles: 20, partner_kennels: 50, co_owner_kennels: 10 };
+export const MAX = { ancestors: 30, dogs: 200, litters: 100, puppies: 30, pairings: 50, heats: 50, health: 60, extras: 100, products: 50, steps: 20, titles: 20, partner_kennels: 50, co_owner_kennels: 10 };
 
 // The optional sections this Worker takes. Each answer lists them (siteFacts), so
 // KennelOS sends a new section only to a Worker that knows it, instead of having
@@ -78,7 +81,13 @@ export const MAX = { dogs: 200, litters: 100, puppies: 30, pairings: 50, heats: 
 // rule for it (rules.landing acct_*), and a new one starts in that type's group.
 // 'titles_detail': a dog's titles as { abbr, organization, date }, kept as rows
 // (dog_titles); its titles line is their abbreviations, as before.
-export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail'];
+// Origin and lineage (step 6, C4 and C7):
+// 'origin': on a dog and on each of its ancestors, imported and import_country, as
+// she set them (the country only while Imported is ticked). Nothing worked out.
+// 'lineage': on a dog, its breed, sire_id and dam_id (KennelOS ids) and its ancestors,
+// up to four generations by role path, pedigree-only dogs included, by name only.
+// Import-descended is worked out here from them (content/fields.js).
+export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail', 'origin', 'lineage'];
 
 // ---------- checking ----------
 
@@ -99,7 +108,15 @@ const SHAPES = {
     // later reads as undecided rather than refusing the bundle.
     disposition: S(30),
     titles: { titles: true, list: 'title', max: MAX.titles }, health: { list: 'health', max: MAX.health },
-    co_owned: { type: 'bool' }, lives_away: { type: 'bool' }, lives_with_kennel_id: REF, co_owner_kennel_ids: { type: 'list', max: MAX.co_owner_kennels, itemMax: 80 } },
+    co_owned: { type: 'bool' }, lives_away: { type: 'bool' }, lives_with_kennel_id: REF, co_owner_kennel_ids: { type: 'list', max: MAX.co_owner_kennels, itemMax: 80 },
+    // origin
+    imported: { type: 'bool' }, import_country: S(60),
+    // lineage
+    breed: S(60), sire_id: REF, dam_id: REF, ancestors: { ancestors: true, max: MAX.ancestors } },
+  // An ancestor in a dog's pedigree (lineage): by name only, whether or not it is a dog
+  // KennelOS sends. Its path is its place: "sire", "dam", "sire.dam"…, four deep at most.
+  ancestor: { id: REF, path: S(40, true), call_name: S(40), registered_name: S(120), titles: { titles: true, max: MAX.titles },
+    imported: { type: 'bool' }, import_country: S(60) },
   // A title with its organization and date (titles_detail).
   title: { abbr: S(30, true), organization: S(60), date: DATE },
   // A partner kennel: its public name and website, never a person.
@@ -140,6 +157,7 @@ function cleanShape(shape, obj, path) {
   Object.defineProperty(out, 'sent', { value: new Set(Object.keys(obj)), enumerable: false });
   for (const [k, f] of Object.entries(fields)) {
     if (f.titles) Object.assign(out, cleanTitles(obj[k] ?? [], `${path}.${k}`, f.max));
+    else if (f.ancestors) out[k] = k in obj && obj[k] != null ? cleanAncestors(obj[k], `${path}.${k}`, f.max) : null;
     else if (f.list) out[k] = cleanList(f.list, obj[k] ?? [], `${path}.${k}`, f.max);
     else if (f.object) out[k] = obj[k] == null ? null : cleanShape(f.object, obj[k], `${path}.${k}`);
     else {
@@ -163,6 +181,31 @@ function cleanTitles(v, path, max) {
   }
   const rows = v.map((x, i) => cleanShape('title', x, `${path}[${i}]`));
   return { titles: rows.map((r) => r.abbr), title_rows: rows };
+}
+
+// A dog's ancestors (lineage): each once at its place, at most four generations back,
+// named. → [{ path, id, call_name, registered_name, titles: [abbr…], imported,
+// import_country }], nearest first; null when the key isn't sent (an older KennelOS).
+export const ANCESTOR_PATH = /^(sire|dam)(\.(sire|dam)){0,3}$/;
+function cleanAncestors(v, path, max) {
+  if (!Array.isArray(v)) throw bad(path, 'must be a list');
+  if (v.length > max) throw bad(path, `at most ${max}`);
+  const seen = new Set();
+  const rows = v.map((x, i) => {
+    const a = cleanShape('ancestor', x, `${path}[${i}]`);
+    if (!ANCESTOR_PATH.test(a.path)) throw bad(`${path}[${i}].path`, 'a place like sire, dam or sire.dam, four generations at most');
+    if (seen.has(a.path)) throw bad(`${path}[${i}].path`, `"${a.path}" is sent twice`);
+    if (!a.call_name && !a.registered_name) throw bad(`${path}[${i}]`, 'needs a call name or a registered name');
+    seen.add(a.path);
+    const origin = a.sent.has('imported') || a.sent.has('import_country');
+    return {
+      path: a.path, id: a.id, call_name: a.call_name, registered_name: a.registered_name, titles: a.titles,
+      // Its origin, from a KennelOS that sends it (origin); null: not said.
+      imported: origin ? Boolean(a.imported) : null, import_country: origin && a.imported ? a.import_country : null,
+    };
+  });
+  const depth = (a) => a.path.split('.').length;
+  return rows.sort((a, b) => depth(a) - depth(b));
 }
 
 function cleanList(shape, v, path, max) {
@@ -245,6 +288,21 @@ export const OWNED = {
   steps: [],
 };
 export const OWNED_PRICES = { litters: LITTER_PRICE_FIELDS, extras: ['price_from', 'price_to'] };
+// A dog's origin and lineage are KennelOS's only once it sends them (step 6): its
+// origin with the origin section (kennelos_origin); its breed with lineage; a parent
+// with lineage that names it (an ancestor at "sire" or "dam"). A parent KennelOS
+// doesn't know stays hers.
+export function ownedLineage(rec) {
+  const out = [];
+  if (rec?.kennelos_origin) out.push('imported', 'import_country');
+  let anc = null;
+  try { anc = rec?.ancestors ? JSON.parse(rec.ancestors) : null; } catch { anc = null; }
+  if (Array.isArray(anc)) {
+    out.push('breed');
+    for (const role of ['sire', 'dam']) if (anc.some((a) => a.path === role)) out.push(`${role}_id`, `${role}_name`);
+  }
+  return out;
+}
 
 // How the site's rules land KennelOS data (content/rules.js, rules.landing; today's
 // by default): where each dog status sits, a new record's switches, the names and
@@ -292,6 +350,11 @@ export class Writer {
     }
     // KennelOS dog id → website dog id, for parents.
     this.dogByKos = new Map(state.dogs.filter((d) => d.kennelos_id).map((d) => [d.kennelos_id, d.id]));
+    // A record she made from a KennelOS ancestor known by name (its pedigree card).
+    this.dogByAncestor = new Map(state.dogs.filter((d) => d.kennelos_ancestor_id).map((d) => [d.kennelos_ancestor_id, d.id]));
+    // Dogs whose lineage lands once every dog of the bundle has its website id.
+    this.lineageLater = [];
+    this.counted = new Set();
     this.sort = { dogs: Math.max(-1, ...state.dogs.map((d) => d.sort)), litters: Math.max(-1, ...state.litters.map((l) => l.sort)) };
     this.first = { dogs: Math.min(0, ...state.dogs.map((d) => d.sort)), litters: Math.min(0, ...state.litters.map((l) => l.sort)) };
   }
@@ -336,6 +399,11 @@ export class Writer {
     // A derived line: it overwrites only with something, unless KennelOS sends its
     // titles as rows (titles_detail), where an empty list clears.
     if (bd.titles.length || bd.title_rows) v.titles = bd.titles.length ? bd.titles.join(' ').slice(0, 120) : null;
+    // Its origin, from a KennelOS that sends it (origin): KennelOS's from then on.
+    if (bd.sent?.has('imported') || bd.sent?.has('import_country')) {
+      Object.assign(v, { imported: bd.imported ? 1 : 0, import_country: bd.imported ? bd.import_country : null, kennelos_origin: 1 });
+    }
+    if (bd.sent?.has('breed')) v.breed = bd.breed;
     // Co-owned, only from a bundle with partner_kennels (this.partnerByKos).
     if (this.partnerByKos) {
       const kennel = (kos) => (kos ? this.partnerByKos.get(kos) ?? null : null);
@@ -395,7 +463,43 @@ export class Writer {
     this.dogByKos.set(bd.id, id);
     this.health(id, display, bd.health);
     this.titleRows(id, bd.title_rows);
+    if (Array.isArray(bd.ancestors)) this.lineageLater.push({ id, cur: null, bd });
     return id;
+  }
+
+  // A website dog for a KennelOS id: one KennelOS sends, or one she made from an
+  // ancestor of that id.
+  dogFor(kos) { return kos ? this.dogByKos.get(kos) ?? this.dogByAncestor.get(kos) ?? null : null; }
+
+  // Lineage (C7), once every dog of the bundle has its website id. Its ancestors are
+  // kept as KennelOS sent them; its sire and dam fill the dog's own parents: a dog on
+  // the site, else the ancestor's name. A parent KennelOS knows nothing of (no id, no
+  // ancestor) is left as she has it, and stays hers. A parent on the site that isn't
+  // among the ancestors is added to them by its name, so the pedigree has it.
+  lineage() {
+    for (const { id, cur, bd } of this.lineageLater) {
+      const anc = bd.ancestors.map((a) => ({ ...a }));
+      const v = {};
+      for (const role of ['sire', 'dam']) {
+        const kos = bd[`${role}_id`];
+        let a = anc.find((x) => x.path === role);
+        let dog = this.dogFor(kos) ?? this.dogFor(a?.id);
+        if (dog === id) dog = null;
+        if (!a && dog) {
+          const name = this.kosDogs?.get(kos)?.call_name ?? this.st.dogs.find((d) => d.id === dog)?.call_name;
+          if (name) anc.unshift(a = { path: role, id: kos, call_name: name, registered_name: null, titles: [], imported: null, import_country: null });
+        }
+        if (!a) continue;
+        v[`${role}_id`] = dog;
+        v[`${role}_name`] = dog ? null : (a.call_name ?? a.registered_name ?? null);
+      }
+      const depth = (a) => a.path.split('.').length;
+      v.ancestors = JSON.stringify(anc.sort((x, y) => depth(x) - depth(y)));
+      if (cur) { if (this.update('dogs', cur, v)) this.counts.updated += this.counted.has(id) ? 0 : 1; continue; }
+      const cols = Object.keys(v);
+      this.s.push(this.db.prepare(`UPDATE dogs SET ${cols.map((c) => `${c} = ?`).join(', ')} WHERE id = ? AND site_id = ?`).bind(...cols.map((c) => v[c]), id, this.siteId));
+    }
+    this.lineageLater = [];
   }
 
   // A dog's titles as rows (titles_detail): replaced with what KennelOS sent; none
@@ -441,9 +545,10 @@ export class Writer {
     for (const k of keep) delete values[k];
     values.hidden_by_kennelos = 0;
     if (cur.hidden_by_kennelos) this.counts.back++;
-    if (this.update('dogs', cur, values)) this.counts.updated++;
+    if (this.update('dogs', cur, values)) { this.counts.updated++; this.counted.add(cur.id); }
     this.health(cur.id, cur.health_display, bd.health, this.st.health);
     this.titleRows(cur.id, bd.title_rows);
+    if (Array.isArray(bd.ancestors)) this.lineageLater.push({ id: cur.id, cur, bd });
   }
 
   // ----- litters -----
@@ -622,6 +727,7 @@ export async function applyBundle(env, device, body) {
   // Dogs. A puppy whose disposition the owner leaves out of Up and coming (rules.landing
   // pup_*) is as if not sent: off the site, kept in her draft under Not on your site.
   const dogsIn = clean.dogs.filter((d) => pupShown(w.L, d));
+  w.kosDogs = new Map(dogsIn.map((d) => [d.id, d]));
   const sentDogs = new Set(dogsIn.map((d) => d.id));
   for (const bd of dogsIn) {
     const cur = st.dogs.find((d) => d.kennelos_id === bd.id);
@@ -642,6 +748,7 @@ export async function applyBundle(env, device, body) {
     w.counts.created++;
     w.counts.needs_photos++;
   }
+  w.lineage();
   for (const d of st.dogs) {
     if (d.source === 'kennelos' && d.kennelos_id && !sentDogs.has(d.kennelos_id) && !d.hidden_by_kennelos) {
       w.s.push(env.DB.prepare('UPDATE dogs SET hidden_by_kennelos = 1, updated_at = ? WHERE id = ?').bind(w.t, d.id));

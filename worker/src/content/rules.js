@@ -83,6 +83,16 @@ export const WORDS = [
     ['health_ofa', 'OFA / PennHIP', 'Grouped by kind: over its OFA and PennHIP results'],
     ['health_breed', 'Breed-specific testing', 'Grouped by kind: over its other tests (eyes, hearing, heart…)'],
   ]],
+  // A dog's origin and pedigree (contract C4, C7): its Origin item on cards, and the
+  // Pedigree part of its page, a generation at a time.
+  ['dogs', 'Origin and pedigree', [
+    ['origin_label', 'Origin', 'On a card with the Origin item: its label'],
+    ['origin_import', 'Import', 'Its words for an imported dog (then • and the country)'],
+    ['origin_ancestry', 'Import Ancestry', 'For a dog with an imported ancestor (then • and their countries)'],
+    ['pedigree_heading', 'Pedigree', 'On a dog\'s page, over its pedigree'],
+    ['pedigree_1', 'Parents', 'Its first generation'], ['pedigree_2', 'Grandparents', 'The second'],
+    ['pedigree_3', 'Great-grandparents', 'The third'], ['pedigree_4', 'Great-great-grandparents', 'The fourth'],
+  ]],
   ['dogs', 'Featured', [
     ['featured_meet', 'Meet {name}', 'A Featured block\'s button to the dog\'s or pup\'s own page ({name} is its name)'],
   ]],
@@ -160,7 +170,9 @@ export const DEFAULT_RULES = {
   // The order of a dog's health result headings when she groups them by kind
   // (sites.group_health): four places, each one of HEALTH_KINDS, each used once.
   // sale_pill: the colour of a dog's "Looking for a home" pill on its page.
-  dogs: { sale_price: 'site', sale_pill: 'ok', health_kind_1: 'other', health_kind_2: 'genetic', health_kind_3: 'ofa', health_kind_4: 'breed' },
+  // import_generations: how many generations back an imported ancestor makes a dog
+  // import-descended (contract C4; at most the four KennelOS sends).
+  dogs: { sale_price: 'site', sale_pill: 'ok', health_kind_1: 'other', health_kind_2: 'genetic', health_kind_3: 'ofa', health_kind_4: 'breed', import_generations: 3 },
   words: Object.fromEntries(WORD_LIST.map(([k, d]) => [k, d])),
   format: { date: 'mdy', day: 'md', sex: 'female_male', counts: 'girls_boys', currency: '$', currency_after: false, cents: false },
   // How KennelOS data lands (kennelos/bundle.js), for each new record.
@@ -210,6 +222,7 @@ const DOG_FIELDS = {
   sale_price: { t: 'enum', values: ['site', 'always', 'never'] },
   sale_pill: { t: 'enum', values: PILL_KEYS },
   ...Object.fromEntries(HEALTH_KIND_PLACES.map((k) => [k, { t: 'enum', values: Object.keys(HEALTH_KINDS) }])),
+  import_generations: { t: 'int', min: 1, max: 4 },
 };
 // A litter card's line by KennelOS status may be empty: the usual line then.
 const WORD_FIELDS = Object.fromEntries(WORD_LIST.map(([k, d]) => [k, { t: 'text', max: k === 'safe_notice' ? 400 : 120, req: !k.startsWith('litter_kos_'),

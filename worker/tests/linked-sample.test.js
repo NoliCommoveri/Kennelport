@@ -23,6 +23,7 @@ function collect(shapes, top, pkg) {
     seen[name].push(obj);
     for (const [k, f] of Object.entries(shapes[name])) {
       if (f.list && f.list in shapes) for (const x of obj[k] ?? []) walk(f.list, x);
+      if (f.ancestors) for (const x of obj[k] ?? []) walk('ancestor', x);
       if (f.object) walk(f.object, obj[k]);
     }
   };

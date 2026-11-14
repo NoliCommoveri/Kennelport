@@ -57,7 +57,13 @@
      "date": "2021-07-19",
      "type": "genetic_test"
     }
-   ]
+   ],
+   "imported": false,
+   "import_country": null,
+   "breed": "Boston Terrier",
+   "sire_id": null,
+   "dam_id": null,
+   "ancestors": []
   },
   {
    "id": "dog-maple",
@@ -147,6 +153,33 @@
      "date": "2022-03-08",
      "type": "ofa_pennhip"
     }
+   ],
+   "imported": true,
+   "import_country": "Hungary",
+   "breed": "Boston Terrier",
+   "sire_id": "dog-duna",
+   "dam_id": null,
+   "ancestors": [
+    {
+     "id": "dog-duna",
+     "path": "sire",
+     "call_name": "Duna*",
+     "registered_name": "Dunai Gyongy Duna*",
+     "titles": [
+      "HCH"
+     ],
+     "imported": true,
+     "import_country": "Hungary"
+    },
+    {
+     "id": "dog-lili",
+     "path": "dam",
+     "call_name": "Lili*",
+     "registered_name": null,
+     "titles": [],
+     "imported": false,
+     "import_country": null
+    }
    ]
   },
   {
@@ -178,7 +211,53 @@
    "status": "puppy",
    "disposition": "keeping",
    "titles": [],
-   "health": []
+   "health": [],
+   "imported": false,
+   "breed": "Boston Terrier",
+   "sire_id": "dog-atlas",
+   "dam_id": "dog-clover",
+   "ancestors": [
+    {
+     "id": "dog-atlas",
+     "path": "sire",
+     "call_name": "Atlas*",
+     "registered_name": null,
+     "titles": [
+      "CH"
+     ],
+     "imported": true,
+     "import_country": "Hungary"
+    },
+    {
+     "id": "dog-clover",
+     "path": "dam",
+     "call_name": "Clover*",
+     "registered_name": null,
+     "titles": [],
+     "imported": false,
+     "import_country": null
+    },
+    {
+     "id": "dog-duna",
+     "path": "sire.sire",
+     "call_name": "Duna*",
+     "registered_name": "Dunai Gyongy Duna*",
+     "titles": [
+      "HCH"
+     ],
+     "imported": true,
+     "import_country": "Hungary"
+    },
+    {
+     "id": "dog-lili",
+     "path": "sire.dam",
+     "call_name": "Lili*",
+     "registered_name": null,
+     "titles": [],
+     "imported": false,
+     "import_country": null
+    }
+   ]
   },
   {
    "id": "dog-rocco",
