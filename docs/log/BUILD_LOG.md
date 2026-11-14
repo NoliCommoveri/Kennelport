@@ -1605,3 +1605,34 @@ On the same branch as page addresses, at the owner's ask, with one migration for
   end to end on the contact form, with refusals, the answers kept and her Inbox; the
   subject off with a full-registration link; the review form's for-her-only answers kept
   out of the snapshot and the site). No version bump. All 448 tests pass.
+
+## 2026-11-14: the code review's instructions brought up to date (loose ends step 4, before it runs)
+
+`docs/review/plan.md`, `session-prompts.md`, `index.md`. Docs only.
+
+- **A target**: `main` at the merge of this branch (page addresses and the forms' fields).
+  Each session records the commit it reviewed and, if later, reads `git diff --stat` from
+  the target for its files first. The index gains a "Commit reviewed" column.
+- **Section 0**: baseline 448 KennelPort tests (KennelOS still the 3 November counts, to be
+  recorded by the first session that reads it); "Not findings" now lists the loose ends
+  deliberately not built, and says the `/pickup` page with her words is built and in scope
+  (only backlog 4's structured places are deferred); status is `docs/STATUS.md`, not the
+  README. The contract table gives section names, not line numbers (they had moved by up to
+  60 lines), and adds the site-builder, KennelOS-contract, family-portal and senior-review
+  docs.
+- **File sizes dropped** from every list (they drift); sessions `wc -l` what they read.
+- **Questions for what was built after 3 November**, not only its files: session 2 the
+  shared sign-in; 4 page redirects, the Publish list, what the snapshot must not carry; 5
+  the owner's forms as a family meets them, posting by page; 6 her wording as the owner's
+  list, the Address field, the answers in her Inbox and queue, the portal sites' app; 7 the
+  owner's blocks on the public site, `pagePath` everywhere, the forms drawn; 8 migrations to
+  0035, import of addresses, backup and restore of new columns; 12 the Forms screen and page
+  addresses on the owner's side. Session 10 marks findings already in the senior review or
+  the loose ends.
+- **Prompts** for sessions 11 and 12, and a line on the new work in 4 to 8; rows 11 and 12
+  in the index.
+- Not done: KennelOS paths and test counts (attaching the KennelOS repo was refused in this
+  session). Sessions 1, 2, 4, 5 and 9 check them first; 6, 7, 8, 11 and 12 need only
+  KennelPort.
+- No version bump needed for this branch: nothing under `worker/public/` changed
+  (`versions.test.js` passes).

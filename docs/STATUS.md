@@ -97,6 +97,8 @@ merge. The portal's gate waits for a real litter, so features carry on meanwhile
 ## Parked
 
 - The version-1 code review ([`review/plan.md`](review/plan.md)): written 2026-11-03, no
-  session has run. File lists refreshed 2026-11-14, with two new sessions (the family
-  portal, the owner's admin view); ready to run.
+  session has run. Brought up to date 2026-11-14 (file lists, then questions for every
+  feature built since 3 November, sessions 11 and 12, prompts and index); targets `main`
+  at the merge of page addresses and the forms. **Next:** loose ends step 4, run it.
+  KennelOS paths in it are still unchecked.
 - After version 1: [`plans/backlog.md`](plans/backlog.md).

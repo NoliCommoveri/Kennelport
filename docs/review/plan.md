@@ -1,13 +1,16 @@
 # KennelPort × KennelOS: version-1 code review plan
 
-> **Parked (2026-11-09).** Written against the code of 2026-11-03; no session has run.
-> **File lists refreshed 2026-11-14** (`docs/loose-ends.md` #18) against `docs/CODE_MAP.md`:
-> every KennelPort file named exists, line counts are today's, each session lists the
-> files added since (marked "Added 2026-11-14"), and two sessions are new: 11, the family
-> portal, and 12, the owner's admin view. KennelOS paths were not checked (that repo was
-> not in the refreshing session): check them against KennelOS's own map first. The plan
-> docs it names now live in `docs/plans/` (`kennelport.md` is "plan"), and the build log
-> in `docs/log/`. "Guide §n" is KennelOS's guide.
+> **Ready to run (updated 2026-11-14, evening).** Written against the code of 2026-11-03,
+> parked, then brought up to date twice on 2026-11-14: file lists against
+> `docs/CODE_MAP.md` (loose ends #18), then for everything built since (the shared sign-in,
+> page addresses, the forms' fields, migration 0035) with questions for each feature built
+> after 3 November, not only its files. **The target is `main` at the merge of branch
+> `ccr-a71eca85-omlwep`** (page addresses and the forms' fields): each session records the
+> commit it reviewed (section 0, "Before you start"). KennelOS paths and test counts are
+> still unchecked: no session that updated this plan could attach the KennelOS repo. Sessions
+> that read KennelOS (1, 2, 4, 5, 9) check its paths against KennelOS's own map first. The
+> plan docs named here live in `docs/plans/` (`kennelport.md` is "plan"), the build log in
+> `docs/log/`. "Guide §n" is KennelOS's guide.
 
 A read-only review of the built code against the plans, run over several sessions.
 **KennelPort is the higher priority**; KennelOS is reviewed where it touches KennelPort
@@ -41,9 +44,16 @@ and a review has no reason to touch them. The only files a review session writes
 own findings file and the index (below). If you want to prove a defect, write a scratch
 script in your scratchpad directory, not in the repo.
 
-**Green baseline (2026-11-03).** `node --test` in `/home/user/Kennelport` → 192 pass.
-`node --test` in `/home/user/KennelOS` → 1490 pass. `cd /home/user/KennelOS/cloud && npm test`
-→ 279 pass. If your session starts red, that is finding number one; say so and stop guessing.
+**Before you start.** Record the KennelPort commit you review (`git log --oneline -1`) at the
+top of your findings file. If it is later than the target (the header above), run
+`git diff --stat <target>..HEAD -- worker/src` and read what changed in your files first: the
+plan doesn't know about it. File sizes aren't listed here (they drift); `wc -l` the files you
+are given.
+
+**Green baseline.** `node --test` in `/home/user/Kennelport` → 448 pass at the target
+(2026-11-14). KennelOS on 2026-11-03: `node --test` → 1490 pass, `cloud` `npm test` → 279 pass;
+not rechecked since, so record what you see. If your session starts red, that is finding
+number one; say so and stop guessing.
 
 **Evidence standard.** Every finding carries:
 1. `file:line` (both sides, for a cross-app finding);
@@ -65,11 +75,20 @@ real user hitting it belongs in a short "notes, not findings" section at the end
 - **S4 — latent.** Fine today; the next ordinary change or scale-up breaks it.
 
 **Not findings** (deferred on purpose — check before reporting):
-`docs/plans/backlog.md` (requests, guided custom domains, pickup/delivery page, the
-rest of 3.9, survey pages, past litters) and the **Open** entries in plan section 9
-(content rules and suspension, decision 9). KennelPort README's Status names what is built
-and what is only built-but-untried; "built, not yet tried against staging" is not a defect,
-but *code that cannot work when it is tried* is.
+- `docs/plans/backlog.md`: requests, guided custom domains, the pickup page's structured
+  places and KennelOS transport settings (backlog 4; the `/pickup` page with her own words
+  is built and **is** in scope), the rest of 3.9, survey pages, past litters.
+- The **Open** entries in plan section 9 (content rules and suspension, decision 9).
+- `docs/loose-ends.md` items not yet built: #5 waitlist facts, #6 the owner's other blocks,
+  #7 fonts, #8 the other display rules, #9 the portal's wording in her list, #10 KennelOS
+  shares with album links, #16 content rules, #19 automated fingerprints, #20 splitting the
+  big files, #21 the staging deploy. Report a defect in what *is* built around them, not
+  their absence.
+- Site builder steps 5 to 7 and family-portal phases 2 and 3 (`docs/STATUS.md`).
+
+`docs/STATUS.md` names what is built and what is only built-but-untried; "built, not yet
+tried with a real litter" (the portal's gate) is not a defect, but *code that cannot work
+when it is tried* is.
 
 **Output.** One file per session:
 `docs/review/findings/NN-<slug>.md` in the **KennelPort** repo (findings about KennelOS go
@@ -80,6 +99,7 @@ Use this shape:
 ```markdown
 # NN — <session title>
 
+Commit reviewed: <hash>  ·  Changed since the target: <none, or the files>
 Reviewed: <files, with line counts>  ·  Contract read: <doc sections>
 Verified by: <tests run, scripts written, pages opened>
 
@@ -104,27 +124,35 @@ Worker has no local dev server set up in these sessions — drive it through
 
 **Where the contract lives.**
 
+Find a section with `grep -n '^#' <file>` and read that range; line numbers aren't given
+because they move.
+
 | Contract | Read |
 |---|---|
-| The KennelOS link, end to end | `Kennelport/docs/plans/kennelport.md` §5 (lines 1001–1332): 5.1 principle, 5.2 linking, 5.3 what a bundle does, 5.4 photos/addresses, 5.5 the KennelOS side |
-| The waitlist on the site + the sealed application form | same file §3.8 (lines 471–620) |
-| What's public, puppy statuses, prices, embeds | §3.2 (243), §3.3 (281), §3.6 (370), §3.7 (421) |
-| Sign-in, draft/preview/publish, photos, limits | §4 (lines 834–1000) |
-| Decisions (and what's still open) | §9 (lines 1459–1553); risks §10 |
-| KennelOS's own account of the same link | `KennelOS/docs/End_State_Design_and_Maintenance_Guide.md` §35 (line 3477 →) |
-| KennelOS waitlist, editions, invariants, SW | same guide §29 (1638), §0 (16), §16 (976), §12 (827) |
+| The KennelOS link, end to end | `Kennelport/docs/plans/kennelport.md` §5: 5.1 principle, 5.2 linking, 5.3 what a bundle does, 5.4 photos/addresses, 5.5 the KennelOS side |
+| The waitlist on the site + the sealed application form | same file §3.8 |
+| What's public, puppy statuses, prices, embeds | §3.2, §3.3, §3.6, §3.7 |
+| Sign-in, draft/preview/publish, photos, limits | §4 |
+| Decisions (and what's still open) | §9; risks §10 |
+| The site builder: pages, blocks, menu, rules, page addresses, forms, the owner's tools | `docs/plans/site-builder.md` (its "Decisions" and "Building it, in steps") |
+| What KennelOS sends beyond the first contract | `docs/plans/kennelos-contract.md` |
+| The family portal | `docs/plans/family-portal.md`, `docs/plans/done/family-view.md` |
+| The senior review's own verdicts (don't re-report them) | `docs/review/senior-review-2026-11.md` |
+| KennelOS's own account of the same link | `KennelOS/docs/End_State_Design_and_Maintenance_Guide.md` §35 |
+| KennelOS waitlist, editions, invariants, SW | same guide §29, §0, §16, §12 |
 | KennelOS cloud sync/backup | `docs/KennelOS_Cloud_Phase1_Plan.md`, `_Phase2_Sync_Plan.md`, `cloud/README.md` |
 
-Do not read `log/BUILD_LOG.md` by default in either repo. Do skim
-`git log --oneline -40` in both: the newest work is the least reviewed, and several recent
-commits reversed each other (KennelOS `84c40e3` then `2c00f28` on the full-registration
-surcharge) — flip-flops are where the two sides most easily end up disagreeing.
+Do not read `log/BUILD_LOG.md` by default in either repo (grep it for a feature's entry
+when you need why something is as it is). Do skim `git log --oneline --since=2026-11-03` in
+both, filtered to your files (`-- <paths>`): the newest work is the least reviewed, and
+commits that reversed each other (KennelOS `84c40e3` then `2c00f28` on the
+full-registration surcharge is one) are where the two sides most easily disagree.
 
 ---
 
 ## 1. The sessions
 
-Twelve sessions (11 and 12 added 2026-11-14). **1, 2, 3, 5 are the priority four** — they are the cross-app seam, where a
+Twelve sessions (11 and 12 added 2026-11-14; the evening update added page addresses and the forms' fields to 4, 5, 6, 7, 8 and 12, and the shared sign-in to 2). **1, 2, 3, 5 are the priority four** — they are the cross-app seam, where a
 defect costs a breeder her data or a family a wrong answer. 4 and 9 close the loop on that
 seam. 6, 7, 8, 11 (the family portal) and 12 (the owner's admin view) are KennelPort's own surface. 10 consolidates.
 
@@ -142,21 +170,21 @@ this one call. A mismatch here is wrong data on a public website, or a breeder's
 field destroyed.
 
 **Read**
-- KennelPort: `worker/src/kennelos/bundle.js` (935), `worker/src/kennelos/api.js` (101),
-  `worker/src/content/model.js` (629, the shapes the bundle writes into),
+- KennelPort: `worker/src/kennelos/bundle.js`, `worker/src/kennelos/api.js`,
+  `worker/src/content/model.js` (the shapes the bundle writes into),
   `worker/src/migrations/0015_kennelos_link.sql`, `0016_products.sql`, `0017_registration.sql`
 - Added 2026-11-14: the contract's later sections and their fields: migrations
   `0025_co_owned`, `0029_outside_dogs`, `0030_dog_parents`, `0033_kennelos_raw`,
-  `0034_origin_lineage`; `worker/src/content/fields.js` (521: `pedigreeOf`, `originOf`, the
-  raw fields as block fields); `worker/src/content/rules.js` (407: a pup's status and a
-  product's place from KennelOS's raw values); `worker/src/kennelos/demo.js` (116) and
+  `0034_origin_lineage`; `worker/src/content/fields.js` (`pedigreeOf`, `originOf`, the
+  raw fields as block fields); `worker/src/content/rules.js` (a pup's status and a
+  product's place from KennelOS's raw values); `worker/src/kennelos/demo.js` and
   `sampleDates.js`; the made-up kennel in `worker/tests/fixtures/linked-sample/`. Tests:
   `linked-sample.test.js`, `lineage.test.js`, `coowned.test.js`, `outside.test.js`,
   `dog-parents.test.js`, `no-reserved.test.js`, `demo.test.js`. Contract:
   `docs/plans/kennelos-contract.md` Part C, and `docs/plans/done/` for co-owned dogs, the
   linked sample and the two KennelOS hand-overs.
-- KennelOS: `shared/data/siteExport.js` (524)
-- Tests already there: `worker/tests/kennelos.test.js` (1043), `KennelOS/tests/siteExport.test.js` (465)
+- KennelOS: `shared/data/siteExport.js`
+- Tests already there: `worker/tests/kennelos.test.js`, `KennelOS/tests/siteExport.test.js`
 - Contract: plan §5.1, §5.3 (the ownership table, "what a blank means"), §3.6, §3.7, §3.2;
   guide §35
 
@@ -229,11 +257,11 @@ must never travel. A mistake is either a breeder locked out of her own site or a
 backup file.
 
 **Read**
-- KennelPort: `worker/src/kennelos/link.js` (207), `worker/src/kennelos/api.js` (101),
-  `worker/src/auth.js` (93) and `worker/src/signin.js` (161), `worker/src/gate.js`, `worker/wrangler.toml` (the origin and
+- KennelPort: `worker/src/kennelos/link.js`, `worker/src/kennelos/api.js`,
+  `worker/src/auth.js` and `worker/src/signin.js`, `worker/src/gate.js`, `worker/wrangler.toml` (the origin and
   domain vars), `worker/src/migrations/0015_kennelos_link.sql`
-- KennelOS: `shared/data/kennelportApi.js` (101), `shared/data/kennelportLinkStore.js` (55),
-  `shared/data/kennelportLink.js` (289, the link/licence parts),
+- KennelOS: `shared/data/kennelportApi.js`, `shared/data/kennelportLinkStore.js`,
+  `shared/data/kennelportLink.js` (the link/licence parts),
   `shared/data/editionConfig.js`, `shared/data/proPages.js`, `shared/data/syncRegistry.js`,
   `shared/data/importExport.js` (what a backup carries), `shared/data/license.js`
 - Contract: plan §5.2, §5.5, §4, decisions 4, 5, 11, 27; guide §35, §0
@@ -276,6 +304,14 @@ backup file.
    `LIMITS`, `inviteToSite`, role checks for owner-only actions
    (`Link KennelOS`, `Unlink`, device stop). Is every owner-only action actually gated, on
    both the screen and the POST?
+9. **One sign-in for two kinds of user** (since 2026-11-14, senior review item 10):
+   `signin.js` serves the breeder (`auth.js`) and families (`portal/auth.js`). Each keeps its
+   own code table, cookie (`kp_session` on `/`, `kp_family` on `/family`) and limit buckets.
+   Prove a breeder's code never signs a family in and the reverse, a family's code works
+   only on its own site, and one side's limit never locks the other out. Session 11 reads
+   the family side; this session owns `signin.js` itself. `tests/copies.test.js` holds
+   KennelPort's copies of KennelOS files (`lib/sql.js`, `lib/crypto.js`, `migrate.js`):
+   check them against KennelOS's originals if that repo is attached.
 
 ---
 
@@ -286,13 +322,13 @@ clock", "a bundle never deletes a photo" — and where a mistake destroys the on
 breeder's pictures.
 
 **Read**
-- `worker/src/kennelos/match.js` (101), `worker/src/kennelos/clock.js` (139),
-  `worker/src/cleanup.js` (76), `worker/src/photos.js` (90), `worker/src/photoTags.js` (75),
-  `worker/src/ops/usage.js` (79), the hand-over block in `kennelos/bundle.js` (~line 745),
+- `worker/src/kennelos/match.js`, `worker/src/kennelos/clock.js`,
+  `worker/src/cleanup.js`, `worker/src/photos.js`, `worker/src/photoTags.js`,
+  `worker/src/ops/usage.js`, the hand-over block in `kennelos/bundle.js` (grep "The hand-over"),
   migrations `0018_puppy_photos.sql`, `0019_album_order.sql`, `0020_puppy_more_photos.sql`
-- Added 2026-11-14: `worker/src/photoPlaces.js` (90, where each photo shows: the photo
-  library), and what keeps a site whole when records go: `worker/src/backup.js` (238),
-  `worker/src/ops/backup.js` (86), `worker/public/_kp/o/backup.js` (190), the format in
+- Added 2026-11-14: `worker/src/photoPlaces.js` (where each photo shows: the photo
+  library), and what keeps a site whole when records go: `worker/src/backup.js`,
+  `worker/src/ops/backup.js`, `worker/public/_kp/o/backup.js`, the format in
   `docs/plans/backup-format.md`. Migration `0029_outside_dogs` (a dog leaving KennelOS
   kept as an outside dog). Tests: `backup.test.js`, `outside.test.js`.
 - Tests: `worker/tests/leaving.test.js`, `phototags.test.js`, `photoshapes.test.js`,
@@ -340,17 +376,23 @@ breeder's pictures.
 the plan says it must only ever hand over an address that answers.
 
 **Read**
-- KennelPort: `publishedAddresses` + `recordPaths` in `worker/src/publish.js` (434),
+- KennelPort: `publishedAddresses` + `recordPaths` in `worker/src/publish.js`,
   `worker/src/kennelos/link.js` (`siteFacts`, `siteBase`, `siteAddress`),
-  `worker/src/domains.js` (59), `worker/src/diff.js` (170; its words are now the owner's,
+  `worker/src/domains.js`, `worker/src/diff.js` (its words are now the owner's,
   `manage/wording.js` `publish.diff.*`). Added 2026-11-14: what the snapshot now carries
-  beyond records: the breeder's picks (`worker/src/content/picks.js`, 96; migration
+  beyond records: the breeder's picks (`worker/src/content/picks.js`; migration
   `0031_block_picks`), the site's build (`content/blocks.js` layout, `content/rules.js`;
   migration `0027_site_builds`), and the Featured block turning over with no publish
-  (`content/featured.js`, 78; `site.js` `cacheKey`)
+  (`content/featured.js`; `site.js` `cacheKey`)
+- Added 2026-11-14 (evening): **page addresses** (`docs/plans/site-builder.md`, "Page
+  addresses"): `worker/src/content/addresses.js` (the rules, `settleAddresses`),
+  `render/parts.js` `pagePath`/`pageAt`, `render/index.js` routing by them, `publish.js`
+  `recordPaths` (now keyed `page:<key>` too, so the existing redirect code covers pages),
+  `site.js` (the redirect lookup on a 404, and a form posted to an old address), migration
+  `0035_addresses_forms` (`site_pages.path`). Test: `addresses.test.js`.
 - KennelOS: `shared/data/kennelportLink.js` (`addressChanges`, `kennelChanges`,
   `websiteOffer`, `useSiteAsKennelWebsite`, `keepKennelWebsite`),
-  `shared/data/websiteAddress.js` (18)
+  `shared/data/websiteAddress.js`
 - Tests: `worker/tests/publish.test.js`, `editing.test.js`, `domains.test.js`,
   `KennelOS/tests/siteExport.test.js`
 - Contract: plan §5.4, §4.1, decision 15; guide §35 (`addressChanges` / `kennelChanges`)
@@ -382,6 +424,24 @@ the plan says it must only ever hand over an address that answers.
    possible, it is S1.
 7. **Draft/published leakage.** Does any public path ever read draft content
    (`/__preview`, `__host`, the feed-backed waitlist page, `servePhoto` in preview mode)?
+8. **Page addresses and their redirects.** A 301 is cached by browsers for a long time,
+   so a wrong one is hard to take back. Walk: rename, publish, rename again (the chain), rename
+   back (the redirect dropped), undo a publish (`undoPublish` writes no redirects: does the
+   page then 404 at the address visitors were just sent to?), the owner removing a page she
+   renamed (nothing should redirect), and the owner adding a page at an address she has used
+   or that is an old address. `settleAddresses` gives a contested address to the first
+   page: can an import or a race leave her looking at an address in her Pages that the site
+   doesn't use? Do old addresses she has handed out (a QR code, KennelOS's `dog.url`) ever
+   point at a page address, and survive?
+9. **What reaches the Publish list.** Every change a family would see should be listed:
+   the build (blocks, menu, rules, tags, the forms' fields), her picks, an address
+   change, a page the owner added. Something that changes the site but says "Nothing to
+   publish", or a line on every Publish for a change nobody made (an old snapshot without a
+   new field), is S3.
+10. **What the snapshot must not carry.** `buildSnapshot` keeps reviews' `answers` out
+   (the review form's for-the-breeder-only answers, migration 0035). Check every table read
+   there for a column added since 2026-11-03 that a `SELECT *` now carries into R2 and the
+   page.
 
 ---
 
@@ -392,19 +452,26 @@ browser, with crypto and a third-party captcha. Also the busiest set of fallback
 repo, and the deciding rule for where an application lands.
 
 **Read**
-- KennelPort: `worker/src/feed.js` (113), `worker/src/site.js` (253, `cspFor`,
-  `withTurnstile`, the `/waitlist` live path), `worker/src/siteforms.js` (186),
-  `worker/src/waitlist.js` (126), `worker/public/_kp/t/ak/site.js` (398, `sealToKennelos`),
-  `worker/src/render/pages.js` (`waitlist`, `waitlistHelp`), `worker/src/embeds.js` (143).
+- KennelPort: `worker/src/feed.js`, `worker/src/site.js` (`cspFor`,
+  `withTurnstile`, the `/waitlist` live path), `worker/src/siteforms.js`,
+  `worker/src/waitlist.js`, `worker/public/_kp/t/ak/site.js` (`sealToKennelos`),
+  `worker/src/render/pages.js` (`waitlist`, `waitlistHelp`), `worker/src/embeds.js`.
   Added 2026-11-14: the form and its pieces split out, `worker/src/render/pages/
-  applicationForm.js` (102, KennelOS's form) and `formParts.js` (49); her inbox,
-  `worker/src/manage/screens/inbox.js` (63); the 90-day cleanup of messages and fulfilled
+  applicationForm.js` (102, KennelOS's form) and `formParts.js`; her inbox,
+  `worker/src/manage/screens/inbox.js`; the 90-day cleanup of messages and fulfilled
   entries, `worker/src/cleanup.js`
-- KennelOS: `cloud/src/familyPages.js` (960, `siteView` / `formView` / apply / verify /
+- Added 2026-11-14 (evening): the contact and review forms are now the owner's
+  (`worker/src/content/forms.js`, `docs/plans/site-builder.md` "Forms"):
+  `render/pages/formParts.js` draws them from `formOf`; `siteforms.js` `receiveInquiry` and
+  `receiveReview` check them against the published snapshot and keep extra answers
+  (`inquiries.answers`, and `stories.answers` from migration 0035); `site.js` takes a form's
+  post by page (`FORM_PAGES`, `pageAt`), so the contact and review pages can be renamed.
+  Test: `forms.test.js`.
+- KennelOS: `cloud/src/familyPages.js` (`siteView` / `formView` / apply / verify /
   code), `cloud/src/lib/cors.js`, `cloud/src/index.js` (the `/f/` routing),
-  `shared/data/waitlistProjection.js` (677), `cloud/public/family/common.js` (376),
+  `shared/data/waitlistProjection.js`, `cloud/public/family/common.js`,
   and KennelOS's own `seal.js`
-- Tests: `worker/tests/kennelosform.test.js` (417), `waitlist.test.js`, `messages.test.js`;
+- Tests: `worker/tests/kennelosform.test.js`, `waitlist.test.js`, `messages.test.js`;
   `KennelOS/cloud/tests/familyPages.test.js`, `application.test.js`;
   `KennelOS/tests/waitlistEmbed.test.js`, `waitlistProjection.test.js`
 - Contract: plan §3.8 (all of it), §3.10, decisions 21, 26; guide §29, §35
@@ -450,20 +517,32 @@ repo, and the deciding rule for where an application lands.
 9. **`waitlistProjection.js`** on the KennelOS side: what it publishes vs what the website
    draws, and whether "the site's Litters section and Available Puppies agree" actually
    holds (two code paths, one truth — `isPupAvailable`, decision 10).
+10. **The owner's forms, as a family meets them.** A field the owner made required that a
+   family can't fill (a choice with no options left, the pup-or-litter list on a site with
+   no litters); the answers checked against the *published* form while the page in the
+   family's browser is older (a field added, removed or made required in between: what do
+   they see?); a full-registration link with the subject switched off (carried as a hidden
+   field); a review with the rating off; the photo required. The for-the-breeder-only
+   answers (email, phone, the owner's questions on a review) must never reach the snapshot,
+   the review card or `content.json`'s reviews: prove it.
+11. **Posting by page.** A form posted to a renamed page's old address is taken as that
+   page; anything else that isn't a form page is 405. Check a POST can't reach a page that
+   isn't a form, a page that's off, or the waitlist on a site whose applications go to
+   KennelOS, by way of an old address in `redirects`.
 
 ---
 
 ### Session 6 — The manage app: a breeder on a phone (KP)
 
-**Read** `worker/src/manage/index.js` (415), `screens.js` (960), `forms.js` (538),
-`worker/public/_kp/m/app.js` (125), `photos.js` (328), `sw.js` (66), `zip.js` (71),
-`app.css` (612), `worker/src/push.js` (187), `worker/src/badgeCode.js`, `worker/src/mail.js`,
+**Read** `worker/src/manage/index.js`, `screens.js`, `forms.js`,
+`worker/public/_kp/m/app.js`, `photos.js`, `sw.js`, `zip.js`,
+`app.css`, `worker/src/push.js`, `worker/src/badgeCode.js`, `worker/src/mail.js`,
 `worker/src/manage/version.js`. Added 2026-11-14: `screens.js` split into
-`worker/src/manage/screens/` (`pages.js` 347, `picks.js` 138, `dogform.js` 100,
-`account.js` 85, `inbox.js` 63, `share.js` 50, `queue.js` 47, `parts.js`); her wording,
-`worker/src/manage/wording.js` (1,073; every line she reads, `say()`); the portal sites'
-app, `worker/src/manage/hub.js` (125: Today, Families, Dogs, Website, Portal);
-`worker/src/sites.js` (64). Tests: `manage.test.js`, `messages.test.js`, `share.test.js`,
+`worker/src/manage/screens/` (`pages.js`, `picks.js`, `dogform.js`,
+`account.js`, `inbox.js`, `share.js`, `queue.js`, `parts.js`); her wording,
+`worker/src/manage/wording.js` (every line she reads, `say()`); the portal sites'
+app, `worker/src/manage/hub.js` (Today, Families, Dogs, Website, Portal);
+`worker/src/sites.js`. Tests: `manage.test.js`, `messages.test.js`, `share.test.js`,
 `logo.test.js`, `versions.test.js`; added `wording.test.js`, `picks.test.js`,
 `portal-hub.test.js`, `profiles.test.js`. Contract: plan §4 (all), §3.12, §3.8's manage paragraphs,
 §5.2 step 4, decisions 12, 13, 17, 24.
@@ -492,21 +571,36 @@ app, `worker/src/manage/hub.js` (125: Today, Families, Dogs, Website, Portal);
 - Wording: read every sentence a breeder sees in these three files as a breeder. Flag jargon
   ("bundle", "snapshot", "source"), dead ends with no next step, and anything that says a
   record "left the site" without saying what to do about it.
+- **Her wording is the owner's now** (`wording.js`, `say()`, decision 19): a key a screen
+  asks for that isn't in the list, a `{name}` the line uses that the screen doesn't give,
+  the owner's every-site line against a site's own, an error matched by its words
+  (`sayError`, `sayMessage`) that no longer matches after a check's words changed (she then
+  reads the raw text). Lines still in code are listed in the build log as "not moved yet":
+  not a finding.
+- **Added 2026-11-14 (evening):** her Pages screen's **Address** field
+  (`screens/pages.js`, `content/addresses.js` `checkAddress`, `records.js` `savePage`): a
+  card that saves only some fields (`_part`) must keep her address; the errors in her words;
+  the suggestion from her menu name. Her Inbox shows a message's extra answers, and Reviews
+  to approve a review's answers for her only (`screens/inbox.js`, `screens/queue.js`): an
+  old message with no answers, a long answer, escaping.
+- The portal sites' app (`hub.js`: Today, Families, Dogs, Website, Portal) and her picks
+  screen (`screens/picks.js`): the same empty, error and offline states as every other
+  screen.
 
 ---
 
 ### Session 7 — The public site: what a family sees (KP)
 
-**Read** `worker/src/render/pages.js` (978), `parts.js` (912), `layout.js` (139),
-`schemes.js` (162), `index.js` (96), `worker/src/site.js` (253),
-`worker/public/_kp/t/ak/site.css` (790), `site.js` (398), the seven `scheme-*.css`,
+**Read** `worker/src/render/pages.js`, `parts.js`, `layout.js`,
+`schemes.js`, `index.js`, `worker/src/site.js`,
+`worker/public/_kp/t/ak/site.css`, `site.js`, the seven `scheme-*.css`,
 `worker/src/content/akSample.js`, `worker/src/qr.js`, `worker/src/render/version.js`.
-Added 2026-11-14: the pages split out into `worker/src/render/pages/` (`blocks.js` 133 the
-data blocks, `featured.js` 61, `applicationForm.js` 102, `puppy.js` 52, `formParts.js`,
+Added 2026-11-14: the pages split out into `worker/src/render/pages/` (`blocks.js`, the
+data blocks, `featured.js`, `applicationForm.js`, `puppy.js`, `formParts.js`,
 `albums.js`, `albumLists.js`, `contact.js`, `about.js`, `reviews.js`, `privacy.js`); what
-the pages are built from: `worker/src/content/blocks.js` (1,114: pages as blocks),
-`rules.js` (407), `fields.js` (521: conditions, order, groups), `tags.js` (88),
-`featured.js` (78); kennelport.com's own pages, `worker/src/front.js` (367). Tests added:
+the pages are built from: `worker/src/content/blocks.js` (pages as blocks),
+`rules.js`, `fields.js` (conditions, order, groups), `tags.js`,
+`featured.js`; kennelport.com's own pages, `worker/src/front.js`. Tests added:
 `blocks.test.js`, `ownblocks.test.js`, `menu.test.js`, `headings.test.js`,
 `faqplaces.test.js`, `spots.test.js`, `pickup.test.js`, `pills.test.js`, `tags.test.js`,
 `fields.test.js`, `rules.test.js`, `picks.test.js`. Contract added:
@@ -537,23 +631,37 @@ Tests: `schemes.test.js`, `collage.test.js`, `photoshapes.test.js`, `sites.test.
 - **Caching and freshness:** `max-age=60` on pages, the asset version/fingerprint pair, the
   one-day browser hold on `_kp/t/`, `robots.txt`, `sitemap.xml`, OG and QR links, and what a
   visitor sees for a page that has left the site (`unavailable`, `gone`).
+- **What the owner built** (the site builder; `content/blocks.js`, `fields.js`, `tags.js`,
+  `featured.js`, `picks.js`): a block whose conditions match nothing (does it hide, or leave
+  a heading?), a group with one record, a Featured block on a day nothing is scheduled, a
+  tag rule on a field KennelOS stopped sending, the menu linking to a place that hides, her
+  ticks after the owner changed a block. An old site's build read by new code must draw as
+  before (decision 14).
+- **Added 2026-11-14 (evening): page addresses and the forms.** Every link to a page goes
+  through `pagePath` (`render/parts.js`): grep the template for a page's starting address
+  still written by hand (`'/contact'`, `"/dogs"`…). A renamed page: the menu marks the
+  right group as current (`section`), the sitemap lists the new address only, profiles stay
+  at `/dogs/<name>` and `/litters/<litter>`. The forms drawn from the owner's settings
+  (`formParts.js`): her words escaped in labels and options, a required field's
+  "(optional)" dropped, two short fields to a row, the consent box last, at 320px.
 - Do **not** bump `ASSET_VERSION` or run the fingerprint script as part of the review.
 
 ---
 
 ### Session 8 — Content layer, migrations and the platform (KP)
 
-**Read** `worker/src/content/io.js` (549), `model.js` (629), `records.js` (459),
-`prices.js` (48), `worker/src/migrations/*.sql` + `index.js`, `worker/src/migrate.js`,
-`worker/src/index.js` (139), `hosts.js` (61), `domains.js` (59), `ops.js` (197),
-`ops/sites.js` (357), `ops/usage.js` (79), `cleanup.js` (76), `embedStore.js` (75),
+**Read** `worker/src/content/io.js`, `model.js`, `records.js`,
+`prices.js`, `worker/src/migrations/*.sql` + `index.js`, `worker/src/migrate.js`,
+`worker/src/index.js`, `hosts.js`, `domains.js`, `ops.js`,
+`ops/sites.js`, `ops/usage.js`, `cleanup.js`, `embedStore.js`,
 `lib/{sql,http,html,crypto}.js`, `worker/wrangler.toml`, `worker/scripts/*.mjs`.
 Added 2026-11-14: migrations now run by themselves on the first request after a deploy
 (`worker/src/gate.js`; it began as KennelOS's copy and now differs), so each of `0021` to
-`0034` ran unattended on live data: check each only adds. The backup
+`0035` ran unattended on live data: check each only adds. `0035_addresses_forms` (page
+addresses and the forms' fields) adds `site_pages.path` and `stories.answers`. The backup
 (`worker/src/backup.js`, `ops/backup.js`; a new table with `site_id` must be in
 `ops/sites.js` `SITE_TABLES`), the `/ops` sign-in limit (`ops.js`), `lib/demo.js`,
-`worker/src/sites.js` (64). Tests added: `backup.test.js`, `worker.test.js`'s gate cases.
+`worker/src/sites.js`. Tests added: `backup.test.js`, `worker.test.js`'s gate cases.
 Tests: `content.test.js`, `sites.test.js`, `ops.test.js`, `hosts.test.js`, `domains.test.js`,
 `usage.test.js`, `jpegmeta.test.js`. Contract: plan §2, §4.1, §4.3, §4.4, §6, §7, decisions
 1, 8, 15.
@@ -566,7 +674,12 @@ Tests: `content.test.js`, `sites.test.js`, `ops.test.js`, `hosts.test.js`, `doma
   pending-migration hazard and whether anything warns the operator.
 - **Import/export** (`cleanDocument`, `importContent`, `exportContent`): caps (`MAX_ITEMS`,
   `SECTIONS`), slug uniqueness, `SYSTEM` fields kept out, a round trip that loses nothing,
-  and an import that half-applies.
+  and an import that half-applies. Since 2026-11-14 a page carries her address (`path`):
+  an import of two pages at one address, or one a page of the owner's then takes.
+- **Backup and restore** (`backup.js`, the format in `docs/plans/backup-format.md`): every
+  column added since the format was written (0031 to 0035) comes back on a restore; a
+  backup made before a migration restored after it; `SITE_TABLES` complete (a test holds
+  it: check it can't pass with a table missing).
 - **Hosts and previews:** `classifyHost`, `RESERVED`, `effectiveHost`, the `kp_host` cookie
   and `/__host` (staging-only — confirm production ignores it), a subdomain that collides
   with a reserved label, a custom domain (`domains.js`) and the `www`/apex rule (decision 15).
@@ -586,7 +699,7 @@ Tests: `content.test.js`, `sites.test.js`, `ops.test.js`, `hosts.test.js`, `doma
 
 ### Session 9 — The KennelOS side a breeder actually touches (KOS)
 
-**Read** `shared/assets/websiteCard.js` (143), `shared/assets/websiteUpdateUI.js` (335),
+**Read** `shared/assets/websiteCard.js`, `shared/assets/websiteUpdateUI.js`,
 the website paths in `shared/pages/kels.js`, `shared/assets/guidedDogsUI.js`,
 `guidedLitterUI.js`, `kelsSetupUI.js`, `waitlistSetupUI.js`, `waitlistOnlineUI.js`,
 `shared/pages/settings.js` + `settings.html`, the mark fields on
@@ -636,14 +749,14 @@ to: their puppy's checklist, timeline, stays, vet visit, photos and messages, an
 of it. Data about real families, sign-in, reminders that email them, and a feed from
 KennelOS.
 
-**Read** `worker/src/portal/`: `family.js` (752) and `family/` (`files.js`, `stay.js`,
-`icons.js`, `parts.js`); `auth.js` (133, family sign-in, on `../signin.js`); `admin.js` (695) and `admin/`
-(`today.js`, `settings.js`, `templates.js`, `parts.js`); `store.js` (523); `steps.js` (353);
-`stays.js` (304); `vet.js` (175); `feed.js` (528, KennelOS's family feed); `account.js`
-(257, loss, delete, Delete now, giving a deleted family back); `merge.js` (140, the same
-family twice); `reminders.js` (59, the hourly job); `messages.js` (58); `bounces.js` (51);
-`view.js` (75, her read-only view of a family's portal); `version.js`. And
-`worker/public/_kp/f/portal.css` (286), `portal.js` (32); migrations `0023_portal`,
+**Read** `worker/src/portal/`: `family.js` and `family/` (`files.js`, `stay.js`,
+`icons.js`, `parts.js`); `auth.js` (family sign-in, on `../signin.js`); `admin.js` and `admin/`
+(`today.js`, `settings.js`, `templates.js`, `parts.js`); `store.js`; `steps.js`;
+`stays.js`; `vet.js`; `feed.js` (KennelOS's family feed); `account.js`
+(257, loss, delete, Delete now, giving a deleted family back); `merge.js` (the same
+family twice); `reminders.js` (the hourly job); `messages.js`; `bounces.js`;
+`view.js` (her read-only view of a family's portal); `version.js`. And
+`worker/public/_kp/f/portal.css`, `portal.js`; migrations `0023_portal`,
 `0024_portal_steps`, `0032_tombstone_labels`. Tests: `portal.test.js`,
 `portal-feed.test.js`, `portal-steps.test.js`, `portal-stays.test.js`,
 `portal-vet.test.js`, `portal-account.test.js`, `portal-hub.test.js`,
@@ -671,14 +784,13 @@ family twice); `reminders.js` (59, the hourly job); `messages.js` (58); `bounces
 **Why.** The owner shapes every site here (pages, blocks, menu, rules, wording), and a
 save here changes what every family reads on the next publish. Large files, built fast.
 
-**Read** `worker/src/manage/builder.js` (1,047) and `worker/src/manage/builder/`
-(`records.js` 117, `blocks.js` 103, `instructions.js` 77, `kennelos.js` 71,
-`menugroups.js` 56, `tags.js` 53, `rules.js` 39, `controls.js`, `frame.js`, `formats.js`,
-`sites.js`, `timing.js`); `worker/src/admin.js` (43); the wording editor's half of
+**Read** `worker/src/manage/builder.js` and `worker/src/manage/builder/`
+(`records.js`, `blocks.js`, `instructions.js`, `kennelos.js`, `menugroups.js`, `tags.js`,
+`forms.js`, `rules.js`, `controls.js`, `frame.js`, `formats.js`, `sites.js`, `timing.js`); `worker/src/admin.js`; the wording editor's half of
 `worker/src/manage/wording.js` (`cleanWording`, `withWording`, `saveEveryWording`);
 `worker/src/content/blocks.js`, `rules.js`, `fields.js`, `tags.js` as the builder saves
 them. Tests: `blocks.test.js`, `ownblocks.test.js`, `menu.test.js`, `rules.test.js`,
-`tags.test.js`, `fields.test.js`, `wording.test.js`. Contract:
+`tags.test.js`, `fields.test.js`, `wording.test.js`, `forms.test.js`, `addresses.test.js`. Contract:
 `docs/plans/site-builder.md`, `docs/plans/kennelos-contract.md`; the look,
 `docs/reference/site-builder-prototype.html`.
 
@@ -690,6 +802,15 @@ them. Tests: `blocks.test.js`, `ownblocks.test.js`, `menu.test.js`, `rules.test.
 - A breeder's content against the owner's build: her picks after the owner changes a
   block's conditions; a page removed that her menu or a redirect still points at.
 - What a publish then shows: build changes reach the Publish list (session 4).
+- **Added 2026-11-14 (evening): Forms** (`worker/src/manage/builder/forms.js`, the admin
+  nav's Forms; `content/forms.js` `cleanForm`, `formsFromForm`): the fixed fields can't be
+  switched off or made optional by any post; a move, add or remove pressed with unsaved
+  changes elsewhere on the screen keeps them; eight questions at most; a choice saved with
+  fewer than two options (what the family then sees); Back to today's form leaving no
+  `forms` in the build. And **page addresses** on her side of the owner's screens: the
+  Pages list and a page's card show her address; New page and a page's address refuse one
+  she has given a page (`herAddresses`). No prototype screen exists for Forms: judge it
+  against the builder's other screens.
 
 ---
 
@@ -705,6 +826,10 @@ Read every findings file (sessions 1 to 9, 11 and 12). Produce `docs/review/SUMM
 - the **test gaps** collected from every session, as a short list of suites to write
   (KennelOS `kennelportLink`, KennelPort `embedStore`/`siteforms`, and whatever else came up);
 - what no session got to, so the next round starts there.
+
+Mark each finding already known: in `docs/review/senior-review-2026-11.md` (with its
+verdict) or `docs/loose-ends.md` (with its number). Known isn't dropped, but it ranks as
+"confirmed", not new.
 
 Do not re-review. If a finding looks wrong, check it and say so in one line.
 
@@ -724,6 +849,6 @@ Sessions within a wave are independent. If only a few sessions ever run, run 1, 
 
 ## 3. Index of findings
 
-`docs/review/index.md` — one row per session: number, title, branch, date, counts by
+`docs/review/index.md` — one row per session: number, title, branch, the commit reviewed, date, counts by
 severity, and a link to the findings file. Each session adds its own row; nobody edits
 another session's row.
