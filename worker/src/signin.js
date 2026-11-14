@@ -121,6 +121,8 @@ export async function redeemCode(env, store, key, code) {
   if (row.attempts >= MAX_ATTEMPTS) throw new AuthError('too_many_attempts', TOO_MANY_TRIES);
   if (!timingSafeEqual(row.code_hash, await hashCode(env, store, key, code))) {
     await env.DB.prepare(`UPDATE ${store.table} SET attempts = attempts + 1 WHERE ${where(store)}`).bind(...values(store, key)).run();
+    // The try that kills the code says so, as KennelOS does, rather than one more "isn't right".
+    if (row.attempts + 1 >= MAX_ATTEMPTS) throw new AuthError('too_many_attempts', TOO_MANY_TRIES);
     throw new AuthError('invalid_code', WRONG_CODE);
   }
   const burned = await env.DB.prepare(`DELETE FROM ${store.table} WHERE ${where(store)} AND code_hash = ?`).bind(...values(store, key), row.code_hash).run();

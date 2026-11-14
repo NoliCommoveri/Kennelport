@@ -1496,12 +1496,21 @@ let her give a deleted family back.
 - **The copies from KennelOS**: `tests/copies.test.js` holds a fingerprint of each copy
   (`lib/sql.js`, `lib/crypto.js`, `migrate.js`) and fails when one changes, saying to
   carry the change to KennelOS first. `gate.js` differs on purpose and isn't held.
-  **Not done: comparing them with KennelOS's originals.** Adding the KennelOS repository
-  to the session was refused again; the fingerprints are of KennelPort's copies as they
-  are today.
+  Compared with KennelOS's originals (`c8615c4`, read only, the owner's yes): `crypto.js`
+  the same; `migrate.js` the same but for its top comment; `sql.js` the same plus
+  KennelPort's `IN_CHUNK`, `chunks` and `placeholders`, which KennelOS doesn't use. No
+  fix in KennelOS was missing here.
+- **KennelOS's sign-in, compared too** (`cloud/src/auth.js`, `ratelimit.js`): same
+  limits, code life, tries, hashing and sliding sessions. One fix carried over: the
+  wrong try that kills a code now says "Too many tries. Ask for a new code." at once,
+  as KennelOS does, not one more "That code isn't right" (`signin.js` `redeemCode`). One
+  for KennelOS to take: KennelPort's `normalizeEmail` refuses `<` and `>` in an address,
+  KennelOS's doesn't. This session can't push to KennelOS, so it's left for its next
+  session.
 - Tests: `signin.test.js`, both sides through the same rules side by side (a code works
   once, unknown address answered the same with no email, 5 tries, expiry and
   replacement, the hourly limit, sliding sessions), and kept apart (a breeder's code
   isn't a family's, a family's works only on its site, neither cookie is the other's
   session, limits counted apart). `copies.test.js`.
-- No migration, no version bump, no wording added. All 438 tests pass.
+- No migration, no version bump, no wording added (the "Too many tries" line was already
+  in the list). All 438 tests pass.

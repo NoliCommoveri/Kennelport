@@ -86,8 +86,8 @@ merge. The portal's gate waits for a real litter, so features carry on meanwhile
 - Step 1, the quick finishes, built 2026-11-14 (#1, #11, #12, #13, #17, #18), with
   `ASSET_VERSION` 26.
 - Step 2, one sign-in, not two (#15), built 2026-11-14: breeder and family sign-in share
-  `signin.js`; a test holds the KennelOS copies. Comparing the copies with KennelOS's
-  originals waits on access to that repository. **Next:** step 3, page addresses (#2).
+  `signin.js`; the KennelOS copies checked against KennelOS and held by a test. For
+  KennelOS: refuse `<` and `>` in an email address, as KennelPort does. **Next:** step 3, page addresses (#2).
 
 ## Parked
 

@@ -70,9 +70,11 @@ for (const [name, side] of Object.entries(SIDES)) {
     await side.start(env, site, 'both@example.com');
     const code = lastCode(env);
     const wrong = code === '000000' ? '111111' : '000000';
-    for (let i = 0; i < MAX_ATTEMPTS; i++) {
+    for (let i = 1; i < MAX_ATTEMPTS; i++) {
       await assert.rejects(side.verify(env, site, 'both@example.com', wrong), { code: 'invalid_code', message: /isn't right/ });
     }
+    // The last wrong try says the code is dead, not one more "isn't right".
+    await assert.rejects(side.verify(env, site, 'both@example.com', wrong), { code: 'too_many_attempts', message: 'Too many tries. Ask for a new code.' });
     await assert.rejects(side.verify(env, site, 'both@example.com', code), { code: 'too_many_attempts' });
     await assert.rejects(side.verify(env, site, 'both@example.com', '12 34'), { code: 'invalid_code' });
   });

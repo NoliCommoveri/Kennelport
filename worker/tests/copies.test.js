@@ -3,6 +3,10 @@
 // copies changes, so the change is carried to KennelOS too (or KennelOS's fix here),
 // and only then is its fingerprint below updated.
 //
+// Compared with KennelOS (c8615c4, 2026-11-14): crypto.js the same; migrate.js the same
+// apart from its top comment; sql.js the same, plus KennelPort's IN_CHUNK, chunks and
+// placeholders at the end, which KennelOS doesn't have (nothing there needs them yet).
+//
 // gate.js started as a copy but now differs on purpose (it applies migrations by
 // itself), so it isn't held here. Sign-in follows KennelOS's approach but is
 // KennelPort's own code (signin.js), so it isn't either.
