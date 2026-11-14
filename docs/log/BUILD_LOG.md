@@ -1443,8 +1443,8 @@ let her give a deleted family back.
   when there; `site.css` `.feature-acts` puts Meet and Share side by side (they wrap on a
   narrow phone). No prototype screen: the site's existing button and share row. Checked
   at 390px and 1280px against a local copy. **Template files
-  changed (`site.js`, `site.css`): waits on the owner's yes for an `ASSET_VERSION` bump**;
-  `versions.test.js` fails until then. Tests: `picks.test.js` (dog and pup rows; a dog's
+  changed (`site.js`, `site.css`): `ASSET_VERSION` 25 → 26** (the owner's yes), with
+  `TEMPLATE_FILES` from `scripts/fingerprint.mjs`. Tests: `picks.test.js` (dog and pup rows; a dog's
   own page still shares itself).
 - **#11, the Publish list in the owner's wording**: every word of `diff.js` is now in
   `manage/wording.js` (`DIFF`, on the Publish screen: `publish.diff.*`, 82 lines): the
@@ -1469,4 +1469,4 @@ let her give a deleted family back.
 - **#18**: `review/plan.md`'s file lists refreshed: today's line counts, the files added
   since 3 November in each session, and two new sessions (11 the family portal, 12 the
   owner's admin view). KennelOS paths not checked.
-- No migration. All tests pass but `versions.test.js` (the template bump, above).
+- No migration. Template 26. All 422 tests pass.

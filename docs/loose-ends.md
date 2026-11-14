@@ -15,7 +15,7 @@ sessions.
 ## Suggested order: five branches
 
 1. **Done 2026-11-14: the quick finishes and tidy-up** (#1, #11, #12, #13, #17, #18; low
-   overall). #1 waits on the owner's yes for its `ASSET_VERSION` bump.
+   overall). #1 bumped `ASSET_VERSION` to 26.
    - The Featured block's share button (#1). It needs an `ASSET_VERSION` bump, so ask
      the owner first.
    - Move the Publish screen's change list into the owner's wording list (#11).
@@ -38,7 +38,7 @@ sessions.
 
 | # | Item | Where it's written down | Tokens | Step | Notes |
 |---|---|---|---|---|---|
-| 1 | Featured block's share button | kennelos-contract step 3, "Not yet" | low | 1 | **Done 2026-11-14; the `ASSET_VERSION` bump waits on the owner.** The rest of Featured is live; only sharing the featured dog or pup is missing. Needs an `ASSET_VERSION` bump, so the owner's yes first. |
+| 1 | Featured block's share button | kennelos-contract step 3, "Not yet" | low | 1 | **Done 2026-11-14 (`ASSET_VERSION` 26).** The rest of Featured is live; only sharing the featured dog or pup is missing. Needs an `ASSET_VERSION` bump, so the owner's yes first. |
 | 2 | Page addresses and redirects | site-builder 3.5 | med–high | 3 | The breeder renames a page's address and the old link still works. Probably needs a migration for the redirects. It must not break existing links. |
 | 3 | Contact and review form fields | site-builder 3.8 | med–high | 3 | Families use these forms directly. Probably needs a migration. |
 | 4 | Photo system, the rest | site-builder step 4, "Next" | med / med–high | 5 | Albums from photos she already has, then the duplicate check. Marked as the next thing to build. |
