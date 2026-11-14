@@ -1470,3 +1470,38 @@ let her give a deleted family back.
   since 3 November in each session, and two new sessions (11 the family portal, 12 the
   owner's admin view). KennelOS paths not checked.
 - No migration. Template 26. All 422 tests pass.
+
+## 2026-11-14: loose ends step 2, one sign-in, not two (#15)
+
+`docs/loose-ends.md` step 2; senior review item 10.
+
+- **`src/signin.js`, new**: the sign-in both sides use. Email checks and its hash, the
+  hourly limits (`askForCode`, `bump`), codes (`codeStore`, `issueCode`, `readCodeForm`,
+  `redeemCode`: 10 minutes, once, 5 tries), the code's email (`mailCode`), and sessions
+  (`newSession`, `sessionCookie`, `sessionTokenHash`, `sessionLive`, `slideSession`,
+  `revokeSession`). The error texts are as before, word for word, so `wording.js`
+  MESSAGES (`signin`) still finds them.
+- **`auth.js`** (the breeder) and **`portal/auth.js`** (a family) keep only what is their
+  own: who may be sent a code, their tables, cookie and session length, invites. Each
+  side's code table is a `codeStore`, and each code's hash is made over the same text as
+  before (`code:…`, `family-code:<site>:…`), so codes and sessions in flight at the
+  deploy still work. The two stay apart: own tables, own cookies (`kp_session` on `/`,
+  `kp_family` on `/family`), own limit buckets (`email`/`ip`, `pemail`/`pip`).
+- Two small changes in how it behaves, both to the family side, now the same as the
+  breeder's: asking for a code counts the network address even when the email address is
+  already over its limit; signing out leaves an already-revoked session's date alone.
+- `kennelos/link.js` drops its own copy of the hourly counter for `signin.js` `bump`.
+  `ops.js` and `siteforms.js` count differently (a check before a wrong token; a
+  day's window) and keep theirs.
+- **The copies from KennelOS**: `tests/copies.test.js` holds a fingerprint of each copy
+  (`lib/sql.js`, `lib/crypto.js`, `migrate.js`) and fails when one changes, saying to
+  carry the change to KennelOS first. `gate.js` differs on purpose and isn't held.
+  **Not done: comparing them with KennelOS's originals.** Adding the KennelOS repository
+  to the session was refused again; the fingerprints are of KennelPort's copies as they
+  are today.
+- Tests: `signin.test.js`, both sides through the same rules side by side (a code works
+  once, unknown address answered the same with no email, 5 tries, expiry and
+  replacement, the hourly limit, sliding sessions), and kept apart (a breeder's code
+  isn't a family's, a family's works only on its site, neither cookie is the other's
+  session, limits counted apart). `copies.test.js`.
+- No migration, no version bump, no wording added. All 438 tests pass.

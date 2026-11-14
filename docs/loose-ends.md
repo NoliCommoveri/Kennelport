@@ -23,7 +23,8 @@ sessions.
    - Tell breeders that contact messages are deleted after 90 days (#13).
    - Move the two finished KennelOS hand-overs to `plans/done/` (#17).
    - Refresh the code review's file lists, ready for step 4 (#18).
-2. **One sign-in, not two** (#15; med). Make breeder and family sign-in share one piece
+2. **Done 2026-11-14: one sign-in, not two** (#15; med). The comparison with KennelOS's
+   originals is still to do: that repository couldn't be added to the session. Make breeder and family sign-in share one piece
    of code, and check the four files copied from KennelOS against their originals, so a
    fix can't land in one copy and miss the other.
 3. **Page addresses, then the forms' fields** (#2, #3; med–high each). Both are things
@@ -60,7 +61,7 @@ sign-in limit. Required checks before a merge were descoped by the owner.
 | # | Item | Where it's written down | Tokens | Step | Notes |
 |---|---|---|---|---|---|
 | 14 | Run the parked version-1 code review | `review/plan.md` | high | 4 | Planned on 3 November and never run. The main check on code "built faster than it was checked" (review item 6). |
-| 15 | Breeder and family sign-in written twice | senior review item 10 | med | 2 | Plus four files copied from KennelOS. Copies drift, so a fix can land in one and not the other. Doing it on purpose closes the risk now instead of waiting for the next change. |
+| 15 | Breeder and family sign-in written twice | senior review item 10 | med | 2 | **Done 2026-11-14** (`signin.js`; `copies.test.js` holds the copies), apart from comparing the copies with KennelOS's. Plus four files copied from KennelOS. Copies drift, so a fix can land in one and not the other. Doing it on purpose closes the risk now instead of waiting for the next change. |
 | 16 | Content rules and suspension | open decision 9 | med–high | | Not needed yet: waits until KennelPort is offered outside the family. |
 
 ## 3. Maintenance and docs
