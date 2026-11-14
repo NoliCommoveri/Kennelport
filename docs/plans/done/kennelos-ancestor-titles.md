@@ -1,5 +1,9 @@
 # For KennelOS: send pedigree-only ancestors' titles (and their import)
 
+**Done (moved here 2026-11-14).** KennelOS's hand-over of the same day says it now sends every
+dog's titles, pedigree-only ancestors included, with no contract change (build log,
+2026-11-14, country of origin). Kept as the record of what was asked.
+
 A hand-over from KennelPort, 2026-11-14. Take this to a session on the KennelOS repo.
 It asks for a KennelOS change only: the website contract (format 1, `lineage` and
 `origin` sections) stays as it is.

@@ -1,5 +1,9 @@
 # For KennelOS: reply on titles and `origin_country`
 
+**Done (moved here 2026-11-14).** KennelPort's side is merged (PR #57), so this reply is
+KennelOS's to act on: one spelling per country, names not codes. Kept as the record of
+what KennelPort expects.
+
 KennelPort's answer, 2026-11-14, to KennelOS's hand-over of the same day ("titles need
 nothing from you; country of origin needs one contract addition"). KennelPort's side
 is built on its branch `claude/kennelos-kennelport-fields-eu9n15`, not yet merged.

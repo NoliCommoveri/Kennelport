@@ -199,11 +199,13 @@
   });
 
   // Share: the phone's own share sheet where there is one, otherwise the link copied.
+  // A row with data-share-url shares that page instead (a Featured block's record).
   for (const row of $$('[data-share-row]')) {
     row.hidden = false;
     const say = $('[role=status]', row);
     $('[data-share]', row).addEventListener('click', async () => {
-      const data = { title: document.title, url: location.href.split('#')[0] };
+      const { shareUrl, shareTitle } = row.dataset;
+      const data = { title: shareTitle || document.title, url: shareUrl ? new URL(shareUrl, location.href).href : location.href.split('#')[0] };
       if (navigator.share) { try { await navigator.share(data); } catch { /* closed */ } return; }
       try { await navigator.clipboard.writeText(data.url); say.textContent = 'Link copied.'; } catch { say.textContent = data.url; }
     });

@@ -618,6 +618,9 @@ dialog.viewer img { width: auto; height: auto; max-width: 96vw; max-height: 88dv
 .share-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
 .share-row.center { justify-content: center; }
 .share-row[hidden] { display: none; }
+/* A Featured block's Meet and Share, side by side (they wrap on a narrow phone). */
+.feature-acts { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.feature-acts > .share-row { margin-top: 0; }
 
 /* Home badges: one or two logos right under the banner, side by side on any screen.
    Brands' logos are drawn for a light background, so in dark mode each sits on a

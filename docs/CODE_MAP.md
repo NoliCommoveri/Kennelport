@@ -21,7 +21,7 @@ read that before the rest. Update this map when you add, move or split a file.
 
 - `src/site.js`: serves a site: its published snapshot, or the draft behind a preview link.
 - `src/publish.js`: draft → snapshot in R2 → live; undo; redirects. `src/diff.js`: Publish's
-  list of changes.
+  list of changes, in the owner's wording (`manage/wording.js` `publish.diff.*`).
 - `src/render/`: the "ak" template. `index.js` path → page; `pages.js` the page frame and the pages
   not yet split out; `pages/` one file per page split out (`about.js`, `reviews.js`,
   `contact.js`, `albums.js`, `privacy.js`, `puppy.js`) and pieces `pages.js` uses

@@ -2,7 +2,8 @@
 // one per line, and each opened. A screen of the Site Manager (manage/screens.js
 // routes to it), made with what that file's createScreens holds for the request.
 import { escapeHtml as esc } from '../../lib/html.js';
-import { when, redirect } from './parts.js';
+import { when, redirect, day } from './parts.js';
+import { INQUIRY_DAYS } from '../../cleanup.js';
 
 export function inboxScreens({ base, env, kos, note, request, say, site, url }) {
   // ---------- inbox (plan 3.10, decision 12) ----------
@@ -13,6 +14,10 @@ export function inboxScreens({ base, env, kos, note, request, say, site, url }) 
     if ((await kos()).linked) return '';
     return `<p><a class="button" href="${base}/waitlist/new?from=${esc(msg.id)}">${esc(say('inbox.add_to_waitlist'))}</a></p>`;
   }
+
+  // The day the daily cleanup deletes a message (cleanup.js, decision 12): a backup
+  // or download holds only what is still here, so she's told on each one.
+  const deletedOn = (iso) => day(new Date(Date.parse(iso) + INQUIRY_DAYS * 864e5).toISOString().slice(0, 10));
 
   async function inbox() {
     const rest = url.pathname.slice(`${base}/inbox`.length);
@@ -39,7 +44,8 @@ export function inboxScreens({ base, env, kos, note, request, say, site, url }) 
           ${text}
           <dl class="kv"><dt>${esc(say('inbox.email'))}</dt><dd>${esc(msg.email)}</dd>${msg.phone ? `<dt>${esc(say('inbox.phone'))}</dt><dd><a href="tel:${esc(msg.phone.replace(/[^\d+]/g, ''))}">${esc(msg.phone)}</a></dd>` : ''}</dl>
           <p class="row"><a class="button primary" href="${esc(mailto)}">${esc(say('inbox.reply'))}</a><button type="button" data-copy="${esc(msg.email)}">${esc(say('inbox.copy_email'))}</button></p>
-          ${application ? await listedLine(msg) : ''}</section>
+          ${application ? await listedLine(msg) : ''}
+          <p class="muted small">${esc(say('inbox.deleted_on', { date: deletedOn(msg.received_at) }))}</p></section>
           <form method="post" action="${base}/inbox/${msg.id}/unread"><button class="link">${esc(say('inbox.mark_as_unread'))}</button></form>
           <form method="post" action="${base}/inbox/${msg.id}/delete" class="card danger"><button>${esc(say('inbox.delete_this_message'))}</button></form>`,
       };

@@ -1,6 +1,7 @@
 # KennelPort: loose ends, and the order to tie them
 
-As of 14 November 2026, `main` at PR #57.
+As of 14 November 2026, `main` at PR #57. Step 1 built the same day (see the build log):
+marked **Done** below.
 
 Unfinished planned work, from `docs/STATUS.md`, the plans' "Building it, in steps"
 sections, the senior review and the build log. User experience ranks first, then
@@ -13,7 +14,8 @@ sessions.
 
 ## Suggested order: five branches
 
-1. **The quick finishes and tidy-up** (#1, #11, #12, #13, #17, #18; low overall)
+1. **Done 2026-11-14: the quick finishes and tidy-up** (#1, #11, #12, #13, #17, #18; low
+   overall). #1 bumped `ASSET_VERSION` to 26.
    - The Featured block's share button (#1). It needs an `ASSET_VERSION` bump, so ask
      the owner first.
    - Move the Publish screen's change list into the owner's wording list (#11).
@@ -36,7 +38,7 @@ sessions.
 
 | # | Item | Where it's written down | Tokens | Step | Notes |
 |---|---|---|---|---|---|
-| 1 | Featured block's share button | kennelos-contract step 3, "Not yet" | low | 1 | The rest of Featured is live; only sharing the featured dog or pup is missing. Needs an `ASSET_VERSION` bump, so the owner's yes first. |
+| 1 | Featured block's share button | kennelos-contract step 3, "Not yet" | low | 1 | **Done 2026-11-14 (`ASSET_VERSION` 26).** The rest of Featured is live; only sharing the featured dog or pup is missing. Needs an `ASSET_VERSION` bump, so the owner's yes first. |
 | 2 | Page addresses and redirects | site-builder 3.5 | med–high | 3 | The breeder renames a page's address and the old link still works. Probably needs a migration for the redirects. It must not break existing links. |
 | 3 | Contact and review form fields | site-builder 3.8 | med–high | 3 | Families use these forms directly. Probably needs a migration. |
 | 4 | Photo system, the rest | site-builder step 4, "Next" | med / med–high | 5 | Albums from photos she already has, then the duplicate check. Marked as the next thing to build. |
@@ -46,9 +48,9 @@ sessions.
 | 8 | Display rules, the rest | site-builder step 1 | med–high | | Dog rules, fixed wording, formats, how KennelOS data lands. Later work may already cover parts (pill style is on Formats), so check the code before planning. |
 | 9 | Portal screens' wording into the owner's list, and Today | site-builder 2.4 | med | | `portal/admin.js` (65 KB) has only 15 lines in the list. This gives the owner control over the portal wording the breeder reads. |
 | 10 | KennelOS shares carrying album links | kennelport.md phase 5 | med | | The only unfinished part of phase 5. Needs a change on KennelOS too. |
-| 11 | Publish screen's change list into the wording list | build log, 2026-11-08 | low | 1 | The lines still live in `diff.js`, not in `wording.js`. |
-| 12 | 390px check of the rules and From KennelOS screens | build log, 2026-11-10 | low | 1 | These are her screens, not the breeder's. |
-| 13 | Tell breeders contact messages are deleted after 90 days | senior review item 11 | low | 1 | A message or a help line, not code. A backup holds only what is still there. |
+| 11 | Publish screen's change list into the wording list | build log, 2026-11-08 | low | 1 | **Done 2026-11-14** (`publish.diff.*`). The lines still live in `diff.js`, not in `wording.js`. |
+| 12 | 390px check of the rules and From KennelOS screens | build log, 2026-11-10 | low | 1 | **Done 2026-11-14:** both match the prototype; no change. These are her screens, not the breeder's. |
+| 13 | Tell breeders contact messages are deleted after 90 days | senior review item 11 | low | 1 | **Done 2026-11-14:** each message says the day it goes. A message or a help line, not code. A backup holds only what is still there. |
 
 ## 2. Security
 
@@ -65,8 +67,8 @@ sign-in limit. Required checks before a merge were descoped by the owner.
 
 | # | Item | Where it's written down | Tokens | Step | Notes |
 |---|---|---|---|---|---|
-| 17 | Move finished plans to `plans/done/` | `kennelos-ancestor-titles.md`, `kennelos-origin-country-reply.md` | low | 1 | STATUS says KennelOS now sends every dog's titles. Confirm on the KennelOS side first. |
-| 18 | Refresh the code review's file lists | `review/plan.md` | low | 1 | Gets #14 ready to run. |
+| 17 | Move finished plans to `plans/done/` | `kennelos-ancestor-titles.md`, `kennelos-origin-country-reply.md` | low | 1 | **Done 2026-11-14**, confirmed from KennelOS's hand-over in the build log. STATUS says KennelOS now sends every dog's titles. Confirm on the KennelOS side first. |
+| 18 | Refresh the code review's file lists | `review/plan.md` | low | 1 | **Done 2026-11-14**, with sessions 11 and 12 added. Gets #14 ready to run. |
 | 19 | Automate the version fingerprints | senior review item 9 | low–med | | Optional; the review called it a later tidy-up. |
 | 20 | Split the big files | senior review item 7 | high in total | | `manage/builder.js` 96 KB, `screens.js` 78 KB, `render/pages.js` 67 KB, `portal/admin.js` 65 KB. Split a screen when it's next touched (med each); not worth a dedicated pass. |
 | 21 | Keep or retire the staging deploy | STATUS, Platform | low | | It still deploys from `main` but isn't used. Mostly a decision. |

@@ -1429,3 +1429,44 @@ let her give a deleted family back.
 - The reply to KennelOS: `plans/kennelos-origin-country-reply.md`.
 - Linked sample: bundle 1 sends countries. Tests: one new in `lineage.test.js`, two
   updated for the new meaning of Import-descended. All 421 pass. No version bump.
+
+## 2026-11-14: the quick finishes and tidy-up (loose ends, step 1)
+
+`docs/loose-ends.md` step 1: #1, #11, #12, #13, #17, #18.
+
+- **#1, the Featured block's share row** (`plans/kennelos-contract.md` B5): each record
+  in a Featured dog or pup block has a Share button beside "Meet {name}" that shares the
+  record's own page (`/dogs/<slug>`, or the pup's under its litter) with its name and the
+  kennel's as the title, not the page the block is on. Only where the record has a page
+  (a pup needs the Litters page on). `render/pages.js` `shareRow(center, { url, title })`
+  writes `data-share-url` and `data-share-title`; the template's `site.js` shares those
+  when there; `site.css` `.feature-acts` puts Meet and Share side by side (they wrap on a
+  narrow phone). No prototype screen: the site's existing button and share row. Checked
+  at 390px and 1280px against a local copy. **Template files
+  changed (`site.js`, `site.css`): `ASSET_VERSION` 25 → 26** (the owner's yes), with
+  `TEMPLATE_FILES` from `scripts/fingerprint.mjs`. Tests: `picks.test.js` (dog and pup rows; a dog's
+  own page still shares itself).
+- **#11, the Publish list in the owner's wording**: every word of `diff.js` is now in
+  `manage/wording.js` (`DIFF`, on the Publish screen: `publish.diff.*`, 82 lines): the
+  line's shape (`{part}: {what}`), each part, each kennel detail, Home block and fee by
+  name, each "what changed", and the Publish button (`publish.button.one`/`.many`, was
+  in `screens.js`). `changes(live, draft, say)`; `draftChanges(env, id, say)`. Today's
+  wording is the default, so the list reads as before. Test: `publish.test.js`.
+- **#12, the rules and From KennelOS screens at 390px**: checked side by side with the
+  prototype's `aRules` at 390px and 1280px against a local copy with the linked sample.
+  Both match it (cards, switch lists, pills, two-up fields, the pinned bar); no sideways
+  scroll at 390px. Only a long choice ("Placed (shows as Reserved)") is cut off in its
+  select on a computer, as a select does. No change.
+- **#13, messages deleted after 90 days**: the inbox list already said so. Each message
+  now says the day it goes ("Deleted from your inbox on {date}, 90 days after it came in.
+  To keep it, reply from your own email, or download a copy of your site under Your
+  site."), `inbox.deleted_on` in the wording list (my wording, for the owner to reword),
+  the date from `cleanup.js` `INQUIRY_DAYS`. Test: `messages.test.js`.
+- **#17**: `kennelos-ancestor-titles.md` and `kennelos-origin-country-reply.md` moved to
+  `plans/done/`, each with a line saying why. Confirmed from KennelOS's own hand-over
+  (this log, country of origin, 2026-11-14), not from KennelOS's code: adding that repo
+  to the session was refused.
+- **#18**: `review/plan.md`'s file lists refreshed: today's line counts, the files added
+  since 3 November in each session, and two new sessions (11 the family portal, 12 the
+  owner's admin view). KennelOS paths not checked.
+- No migration. Template 26. All 422 tests pass.
