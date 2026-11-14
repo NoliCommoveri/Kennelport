@@ -105,6 +105,8 @@ export const DOG_FIELDS = {
   breed: S(60),
   // Hers: leave this dog out of Import-descended, for a pedigree known only in part.
   import_descended_off: BOOL,
+  // Hers: leave this dog out of Champion-descended, likewise.
+  champion_descended_off: BOOL,
 };
 
 // A partner kennel (docs/plans/done/co-owned-dogs.md): one her co-owned dogs are shared

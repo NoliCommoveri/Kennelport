@@ -205,3 +205,43 @@ test('a bundle\'s lineage is checked: places, depth, names', async () => {
   const ok = cleanBundle(b([{ path: 'dam.sire', call_name: 'B', imported: false, import_country: 'Peru' }, { path: 'sire', call_name: 'A' }]));
   assert.deepEqual(ok.dogs[0].ancestors.map((a) => [a.path, a.imported, a.import_country]), [['sire', null, null], ['dam.sire', false, null]]);
 });
+
+test('champion-descended: an ancestor with a champion title, the owner\'s titles and generations, her switch', async () => {
+  const { send, env, site, dog } = await linkedSite();
+  // Pippa: sire Atlas (CH), grandsire Duna (HCH, not in the default list).
+  await send([PIPPA, ATLAS, CLOVER]);
+  const rows = async () => {
+    const snap = await buildSnapshot(env, site.id);
+    return (where) => blockRows(snap, cleanBlock({ id: 'd', type: 'dogs', where }), TODAY).map((d) => d.call_name).filter((x) => ['Atlas', 'Clover', 'Pippa'].includes(x)).sort();
+  };
+  let names = await rows();
+  assert.deepEqual(names([{ field: 'champion_descended', op: 'yes' }]), ['Pippa']);
+  assert.deepEqual(names([{ field: 'ancestor_title', op: 'includes', value: 'hch' }]), ['Atlas', 'Pippa']);
+  // The owner adds HCH: Atlas's sire holds it.
+  const build = await loadBuild(env, site.id);
+  await saveBuild(env, site.id, { ...build, rules: { dogs: { champion_titles: 'CH H.CH HCH' } } });
+  names = await rows();
+  assert.deepEqual(names([{ field: 'champion_descended', op: 'yes' }]), ['Atlas', 'Pippa']);
+  // Parents only, and only CH: Pippa still (Atlas is her sire); Atlas no longer.
+  await saveBuild(env, site.id, { ...build, rules: { dogs: { champion_titles: 'CH', champion_generations: 1 } } });
+  names = await rows();
+  assert.deepEqual(names([{ field: 'champion_descended', op: 'yes' }]), ['Pippa']);
+  // Her switch.
+  env.DB.raw.prepare('UPDATE dogs SET champion_descended_off = 1 WHERE id = ?').run(dog('k-pippa').id);
+  names = await rows();
+  assert.deepEqual(names([{ field: 'champion_descended', op: 'yes' }]), []);
+});
+
+test('champion-descended from her own records, with no KennelOS', async () => {
+  forgetSnapshots();
+  const env = await makeEnv();
+  const s = await addSite(env, 'akchamp');
+  const doc = structuredClone(AK_SAMPLE);
+  Object.assign(doc.dogs.find((d) => d.slug === 'boone'), { titles: 'GCHB CH' });
+  Object.assign(doc.dogs.find((d) => d.slug === 'ziva'), { sire: 'boone', dam: 'willow' });
+  await importContent(env, s.id, doc);
+  const snap = await buildSnapshot(env, s.id);
+  const names = blockRows(snap, cleanBlock({ id: 'd', type: 'dogs', where: [{ field: 'champion_descended', op: 'yes' }] }), TODAY).map((d) => d.slug);
+  assert.ok(names.includes('ziva'));
+  assert.ok(!names.includes('boone'));
+});

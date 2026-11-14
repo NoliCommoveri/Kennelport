@@ -104,7 +104,7 @@ export async function buildSnapshot(env, siteId) {
     // An asking price only for a dog looking for a home, with Show other prices on.
     ...keep(d, [...SYSTEM, 'health_display', 'died_on', 'ancestors', 'kennelos_origin', 'kennelos_ancestor_id', 'import_country', ...(d.for_sale && site.show_other_prices ? [] : ['price'])]),
     // Its origin (C4): the country only while Imported is ticked.
-    imported: Boolean(d.imported), import_descended_off: Boolean(d.import_descended_off),
+    imported: Boolean(d.imported), import_descended_off: Boolean(d.import_descended_off), champion_descended_off: Boolean(d.champion_descended_off),
     ...(d.imported && d.import_country ? { import_country: d.import_country } : {}),
     ...(d.ancestors ? { ancestors: ancestorsOf(d) } : {}),
     upcoming: Boolean(d.upcoming), for_sale: Boolean(d.for_sale), outside: Boolean(d.outside),

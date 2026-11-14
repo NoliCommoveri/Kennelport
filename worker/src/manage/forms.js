@@ -57,6 +57,7 @@ export const LABELS = {
     import_country: ['Country of origin', 'For an imported dog only.'],
     breed: ['Breed', 'Leave empty for your kennel\'s breed.'],
     import_descended_off: ['Leave out of Import-descended', 'On: this dog isn\'t counted as import-descended, even with an imported ancestor. For a pedigree that isn\'t complete.'],
+    champion_descended_off: ['Leave out of Champion-descended', 'On: this dog isn\'t counted as champion-descended, even with a champion ancestor.'],
     owner_name: ['Owned by', 'The kennel that owns it, for example "Oakridge Bostons".'],
     owner_url: ['Owner\'s website', 'Their name links here on its page.'],
     co_owned_heading: ['Co-owned section heading', 'Leave empty for "Shared with friends". The section lists co-owned dogs living with a co-owner.'],

@@ -479,7 +479,7 @@ export async function exportContent(env, siteId) {
     return out;
   };
   doc.dogs = dogs.map((d) => ({
-    ...bools(pick(strip(d, SYSTEM), Object.keys(DOG_FIELDS)), ['show_on_site', 'upcoming', 'for_sale', 'co_owned', 'lives_away', 'outside', 'imported', 'import_descended_off']),
+    ...bools(pick(strip(d, SYSTEM), Object.keys(DOG_FIELDS)), ['show_on_site', 'upcoming', 'for_sale', 'co_owned', 'lives_away', 'outside', 'imported', 'import_descended_off', 'champion_descended_off']),
     ...kennelNames(d),
     ...(d.sire_id && slugOf[d.sire_id] ? { sire: slugOf[d.sire_id] } : {}),
     ...(d.dam_id && slugOf[d.dam_id] ? { dam: slugOf[d.dam_id] } : {}),

@@ -1388,3 +1388,23 @@ let her give a deleted family back.
 - Server-rendered only: no change to `public/_kp/`, no version bump. **This branch adds
   migration 0034**: it applies by itself on the first request after the merge deploys.
 - Tests: `lineage.test.js` (new, seven). All 418 pass.
+
+## 2026-11-14: Champion-descended
+
+- The owner's request: like Import-descended, from the ancestors. `content/fields.js`
+  `championAncestors`, `ancestorTitles`; fields **Champion-descended** and **An
+  ancestor's title** (and each for a litter's parents). The import and champion tags
+  are both tag rules on these fields.
+- The owner's Dogs screen, a Champion-descended card: how far back (3 by default,
+  `rules.dogs.champion_generations`) and the titles that make a champion (`CH GCH GCHB
+  GCHS GCHG GCHP`, `rules.dogs.champion_titles`; case and dots evened out). Both
+  generation choices are now full width (the half-width one cut off at 390px).
+  Checked at 390px.
+- Her switch, **Leave out of Champion-descended** (`dogs.champion_descended_off`, added
+  to this branch's migration 0034). Its label and hint are mine, for the owner to reword.
+- Found in KennelOS: pedigree-only ancestors are sent with no titles (a chart import
+  keeps them only in the dog's notes), and a chart import never ticks Imported. The
+  hand-over for a KennelOS session: `plans/kennelos-ancestor-titles.md`. Until then,
+  champion-descended counts only ancestors whose titles KennelOS holds as title events,
+  or dog records on the site with titles.
+- No version bump. Tests: two new in `lineage.test.js`. All 420 pass.

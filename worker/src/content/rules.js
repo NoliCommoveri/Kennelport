@@ -172,7 +172,10 @@ export const DEFAULT_RULES = {
   // sale_pill: the colour of a dog's "Looking for a home" pill on its page.
   // import_generations: how many generations back an imported ancestor makes a dog
   // import-descended (contract C4; at most the four KennelOS sends).
-  dogs: { sale_price: 'site', sale_pill: 'ok', health_kind_1: 'other', health_kind_2: 'genetic', health_kind_3: 'ofa', health_kind_4: 'breed', import_generations: 3 },
+  // champion_generations, champion_titles: likewise for a champion ancestor, and which
+  // titles make one (any of them, as KennelOS sends titles; case and dots evened out).
+  dogs: { sale_price: 'site', sale_pill: 'ok', health_kind_1: 'other', health_kind_2: 'genetic', health_kind_3: 'ofa', health_kind_4: 'breed', import_generations: 3,
+    champion_generations: 3, champion_titles: 'CH GCH GCHB GCHS GCHG GCHP' },
   words: Object.fromEntries(WORD_LIST.map(([k, d]) => [k, d])),
   format: { date: 'mdy', day: 'md', sex: 'female_male', counts: 'girls_boys', currency: '$', currency_after: false, cents: false },
   // How KennelOS data lands (kennelos/bundle.js), for each new record.
@@ -223,6 +226,8 @@ const DOG_FIELDS = {
   sale_pill: { t: 'enum', values: PILL_KEYS },
   ...Object.fromEntries(HEALTH_KIND_PLACES.map((k) => [k, { t: 'enum', values: Object.keys(HEALTH_KINDS) }])),
   import_generations: { t: 'int', min: 1, max: 4 },
+  champion_generations: { t: 'int', min: 1, max: 4 },
+  champion_titles: { t: 'text', max: 120, req: true },
 };
 // A litter card's line by KennelOS status may be empty: the usual line then.
 const WORD_FIELDS = Object.fromEntries(WORD_LIST.map(([k, d]) => [k, { t: 'text', max: k === 'safe_notice' ? 400 : 120, req: !k.startsWith('litter_kos_'),

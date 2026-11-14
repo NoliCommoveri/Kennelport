@@ -170,6 +170,22 @@ export function importedAncestors(d, rc) {
   return pedigreeOf(d, rc, gens).filter((a) => a.imported);
 }
 export const importDescended = (d, rc) => importedAncestors(d, rc).length > 0;
+
+// Champion-descended: an ancestor within the owner's generations holding any of the
+// owner's champion titles (rules.dogs.champion_titles, CH and the GCH levels by
+// default). Its titles are KennelOS's on each ancestor (lineage), else a dog record's.
+export const CHAMPION_GENERATIONS = 3;
+const titleKey = (t) => String(t).toUpperCase().replace(/\./g, '').trim();
+export const championTitleSet = (text) => new Set(String(text ?? '').split(/[\s,;/]+/).map(titleKey).filter(Boolean));
+const championGens = (rc) => Math.min(GENERATIONS, Math.max(1, Number(rc.championGens) || CHAMPION_GENERATIONS));
+// Every title its ancestors hold, as far back as the Champion-descended setting.
+export const ancestorTitles = (d, rc) => [...new Set(pedigreeOf(d, rc, championGens(rc)).flatMap((a) => a.titles.map(titleKey)))];
+export function championAncestors(d, rc) {
+  if (d.champion_descended_off) return [];
+  const set = championTitleSet(rc.championTitles ?? 'CH GCH GCHB GCHS GCHG GCHP');
+  return pedigreeOf(d, rc, championGens(rc)).filter((a) => a.titles.some((t) => set.has(titleKey(t))));
+}
+export const championDescended = (d, rc) => championAncestors(d, rc).length > 0;
 // The countries behind its Origin line: its own, imported; else every different
 // country among the imported ancestors it counts, nearest first.
 export function originOf(d, rc) {
@@ -215,6 +231,8 @@ const DOG = {
   import_country: f('Country of origin (an import)', 'text', (d) => (d.imported ? d.import_country ?? null : null)),
   import_descended: f('Import-descended', 'bool', importDescended, { no: 'Not import-descended' }),
   breed: f('Breed (from KennelOS)', 'text', own('breed')),
+  ancestor_title: f("An ancestor's title (as far back as Champion-descended counts)", 'list', ancestorTitles),
+  champion_descended: f('Champion-descended', 'bool', championDescended, { no: 'Not champion-descended' }),
 };
 
 const PUPPY = {
@@ -272,7 +290,7 @@ export const NOT_FOR_BLOCKS = Object.freeze({
   dog: ['slug', 'bio', 'photo_id', 'died_on', 'health_display', 'show_on_site', 'owner_url', 'status', 'upcoming', 'for_sale', 'lives_away', 'outside',
     'sire', 'dam', 'sire_name', 'dam_name',
     // imported is read as import; her Leave out of Import-descended through import_descended.
-    'imported', 'import_descended_off'],
+    'imported', 'import_descended_off', 'champion_descended_off'],
   puppy: ['slug', 'bio', 'photo_id', 'more_photos_url'],
   litter: ['slug', 'dam', 'sire', 'dam_name', 'sire_name', 'expected_label', 'ready_label', 'summary', 'price_female', 'price_male',
     'full_reg_female', 'full_reg_male', 'deposit_female', 'deposit_male', 'price_note', 'show_placed', 'ask_full_reg', 'show_puppy_photos', 'show_on_site'],

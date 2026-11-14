@@ -403,6 +403,13 @@ Each step is its own branch and merge, with at most one migration.
    pedigree holding that ancestor links to it). That button is in her Site Manager only,
    not on the public Pedigree part. Breed is stored and a field, not shown on the page
    (the eyebrow stays the site's breed).
+   **Added (the owner, 2026-11-14): Champion-descended**, worked out here like
+   Import-descended: an ancestor within the owner's generations (3) holding one of the
+   owner's champion titles (CH and the GCH levels by default), both on the Dogs screen;
+   her switch to leave one dog out (`champion_descended_off`, in 0034). Fields:
+   Champion-descended, An ancestor's title. KennelOS sends no titles for pedigree-only
+   ancestors yet (they are only in the dog's notes after a chart import): the hand-over
+   for KennelOS is [`kennelos-ancestor-titles.md`](kennelos-ancestor-titles.md).
 7. **C9.** Waitlist facts and the wording templates.
 
 Steps 1 to 3 need nothing from KennelOS. Steps 4 to 7 can be released on either side

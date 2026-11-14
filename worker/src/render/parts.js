@@ -175,6 +175,9 @@ export function recordCtx(snap, today = null) {
     tags: snap.tags ?? null,
     // How far back an imported ancestor counts (content/fields.js importedAncestors).
     importGens: rulesOf(snap).dogs?.import_generations ?? DEFAULT_RULES.dogs.import_generations,
+    // And a champion ancestor: how far back, and which titles (content/fields.js championAncestors).
+    championGens: rulesOf(snap).dogs?.champion_generations ?? DEFAULT_RULES.dogs.champion_generations,
+    championTitles: rulesOf(snap).dogs?.champion_titles ?? DEFAULT_RULES.dogs.champion_titles,
   };
 }
 
