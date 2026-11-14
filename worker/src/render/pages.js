@@ -33,8 +33,9 @@ export const faqSection = (snap, place) => {
 };
 
 // A Share button (plan 5.4): the phone's own share sheet, or the link copied.
-// Shown only with the template's script.
-export const shareRow = (center = false) => `<p class="share-row${center ? ' center' : ''}" data-share-row hidden><button type="button" class="btn line" data-share>Share</button><span class="small muted" role="status"></span></p>`;
+// Shown only with the template's script. It shares this page, or `url` and `title`
+// when given (a Featured block shares the featured record's own page, B5).
+export const shareRow = (center = false, { url, title } = {}) => `<p class="share-row${center ? ' center' : ''}" data-share-row${url ? ` data-share-url="${attr(url)}"` : ''}${title ? ` data-share-title="${attr(title)}"` : ''} hidden><button type="button" class="btn line" data-share>Share</button><span class="small muted" role="status"></span></p>`;
 
 // ---------- Videos and posts (plan 3.3) ----------
 // A preview (stored on the site) with a play button, linking to the original. The

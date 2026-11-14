@@ -1,7 +1,7 @@
 // A Featured block (docs/plans/kennelos-contract.md B5): one dog or pup at a time
 // (or the owner's number), large: its photo beside its name, the items the owner
 // chose and a link to its own page, turning over by its schedule (content/featured.js)
-// with no publish needed. Its records are the breeder's picks, else the owner's
+// with no publish needed, and a share row sharing that record's page. Its records are the breeder's picks, else the owner's
 // conditions (render/parts.js blockRows).
 //
 // No prototype screen exists for it: it is the prototype's photo-beside-words (the
@@ -11,7 +11,7 @@ import {
   esc, attr, img, head, pageOn, dogFace, sexWord, puppyStatus, puppyPriceText, statusRule, pairNames, recordCtx, rulesOf, blockRows, addedWords, word, tagPills, pillClass,
 } from '../parts.js';
 import { featuredNow } from '../../content/featured.js';
-import { framed } from '../pages.js';
+import { framed, shareRow } from '../pages.js';
 import { saleOf } from './blocks.js';
 
 const profileOf = (snap, ctx, b, x, rc) => {
@@ -48,7 +48,10 @@ export function featuredBlock(snap, ctx, b, key) {
     const pic = framed(img(snap, x.photo_id, { alt: name }) ?? '', 'mat');
     const href = profileOf(snap, ctx, b, x, rc);
     const lines = dog ? dogFace(snap, x, b.show.items, { sale: saleOf(snap, ctx, x) }) : pupLines(snap, ctx, b, x, rc);
-    const more = href && (dog || pageOn(snap, 'litters', ctx)) ? `<div><a class="btn solid" href="${href}">${esc(word(snap, 'featured_meet', { name }))}</a></div>` : '';
+    const page = href && (dog || pageOn(snap, 'litters', ctx));
+    // Its share row shares the record's own page, not this one: next week this
+    // block shows another (B5).
+    const more = page ? `<div class="feature-acts"><a class="btn solid" href="${href}">${esc(word(snap, 'featured_meet', { name }))}</a>${shareRow(false, { url: href, title: `${name} · ${snap.site.kennel_name}` })}</div>` : '';
     return `<div class="wrap story${pic ? (i % 2 ? ' pic-right' : '') : ' no-photo'}${i ? ' mt-26' : ''}">${pic}<div class="story-copy">
         <h2>${esc(name)}</h2>${lines}${more}</div></div>`;
   };

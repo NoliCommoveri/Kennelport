@@ -62,6 +62,9 @@ test('the Inbox: unread count, open marks read, reply and copy, delete', async (
   assert.match(one, /Is Opal still available\?<br>We live in Tulsa\./);
   assert.match(one, /href="mailto:megan%40example\.com\?subject=Re%3A%20Opal"/);
   assert.match(one, /data-copy="megan@example\.com"/);
+  // The day it's deleted, 90 days on (cleanup.js), and how to keep it.
+  const gone = new Date(Date.parse(t.env.DB.raw.prepare('SELECT received_at FROM inquiries').get().received_at) + 90 * 864e5).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
+  assert.match(one, new RegExp(`Deleted from your inbox on ${gone}, 90 days after it came in\\. To keep it`));
   assert.ok(t.env.DB.raw.prepare('SELECT read_at FROM inquiries').get().read_at);
   const after = await (await t.get('/s/akbostons')).text();
   assert.doesNotMatch(after, /<span class="count">/);

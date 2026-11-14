@@ -170,6 +170,12 @@ test('a Featured dog block: shown by the owner\'s conditions until she picks; he
   const featured = h.slice(h.indexOf('own-featured'), h.indexOf('</section>', h.indexOf('own-featured')));
   assert.equal(featured.match(/class="wrap story no-photo/g).length, 2);
   assert.match(text(h), /Meet Willow.*Meet Ziva/);
+  // Each one's share row shares its own page, not the page it's on (B5).
+  assert.match(featured, /data-share-row data-share-url="\/dogs\/willow" data-share-title="Willow · [^"]+" hidden>/);
+  assert.match(featured, /data-share-url="\/dogs\/ziva"/);
+  // A dog's own page's share row still shares itself.
+  const own = renderPage(await buildSnapshot(env, s.id), { path: '/dogs/willow', origin: 'https://x', today: TODAY, preview: true }).html;
+  assert.match(own, /<p class="share-row" data-share-row hidden>/);
 });
 
 test('a Featured pup block: available pups until she picks; snapshot names only shown records', async (t) => {
@@ -180,6 +186,8 @@ test('a Featured pup block: available pups until she picks; snapshot names only 
   assert.match(h, /Puppy spotlight/);
   for (const n of ['Opal', 'Diamond', 'Contessa']) assert.match(h, new RegExp(`Meet ${n}`));
   assert.doesNotMatch(h, /Meet Onyx/);
+  // Each pup's share row shares the pup's own page under its litter.
+  assert.equal((await home()).match(/data-share-url="\/litters\/[^"/]+\/(opal|diamond|contessa)"/g).length, 3);
   // A pick of a record that isn't shown (hidden) isn't carried in the snapshot.
   const hidden = env.DB.raw.prepare("SELECT id FROM puppies WHERE site_id = ? AND slug = 'onyx'").get(s.id).id;
   const opal = env.DB.raw.prepare("SELECT id FROM puppies WHERE site_id = ? AND slug = 'opal'").get(s.id).id;

@@ -412,16 +412,17 @@ export async function undoPublish(env, siteId) {
   return { id: target.id };
 }
 
-// What the draft changes on the live site (diff.js), as the Publish screen lists it.
+// What the draft changes on the live site (diff.js), as the Publish screen lists it,
+// in her wording (`say`, else today's).
 // When nothing differs, the "changed since" mark is cleared, so the "changes not
 // published yet" notices agree with the Publish screen. Things like a KennelOS
 // update mark the draft changed whether or not anything on the site moved; without
 // this, she'd be told to publish with nothing to publish, and no button to clear it.
 // Cleared only if nothing marked the draft again while this looked.
-export async function draftChanges(env, siteId) {
+export async function draftChanges(env, siteId, say) {
   const row = await env.DB.prepare('SELECT draft_changed_at, published_snapshot_id FROM sites WHERE id = ?').bind(siteId).first();
   const live = await loadSnapshot(env, siteId, row?.published_snapshot_id);
-  const list = changes(live, await buildSnapshot(env, siteId));
+  const list = changes(live, await buildSnapshot(env, siteId), say);
   if (!list.length && live && row.draft_changed_at) {
     await env.DB.prepare('UPDATE sites SET draft_changed_at = NULL WHERE id = ? AND draft_changed_at = ?').bind(siteId, row.draft_changed_at).run();
   }

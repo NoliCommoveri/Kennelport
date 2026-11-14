@@ -217,6 +217,29 @@ test('the Publish list sees blocks, added buttons, colours and the menu, never "
   assert.deepEqual(texts((s) => { s.something_new = { a: 1 }; }), ['Other changes to the site']);
 });
 
+test('the Publish list is in her wording (manage/wording.js publish.diff.*), today\'s by default', async () => {
+  const { changes } = await import('../src/diff.js');
+  const { sayer, CATALOG } = await import('../src/manage/wording.js');
+  const { env, site } = await akSite();
+  const draft = await buildSnapshot(env, site.id);
+  const next = structuredClone(draft);
+  next.site.tagline = 'New line';
+  next.site.town = 'Elsewhere';
+  next.dogs[0].slug = 'moved';
+  next.reviews = next.reviews.slice(1);
+  const say = sayer({ every: { 'publish.diff.line': '{part} — {what}', 'publish.diff.site.town': 'home town', 'publish.diff.what.new_address': 'moved' } });
+  const said = changes(draft, next, say).map((x) => x.text);
+  assert.ok(said.includes('Kennel details — line under the name, home town edited'), said.join(' | '));
+  assert.ok(said.includes(`${draft.dogs[0].call_name} — moved`), said.join(' | '));
+  assert.ok(said.includes(`Reviews — ${draft.reviews[0].first_name} removed`), said.join(' | '));
+  // Today's wording, with no say given.
+  assert.ok(changes(draft, next).map((x) => x.text).includes('Kennel details: line under the name, town edited'));
+  assert.equal(changes(null, draft, say)[0].text, 'The whole site: first publish');
+  // Every line the list reads is in the owner's list.
+  for (const k of ['first', 'other', 'line', 'embed']) assert.ok(CATALOG.has(`publish.diff.${k}`), k);
+  assert.equal(CATALOG.get('publish.button.many').text, 'Publish {n} changes');
+});
+
 test("a dog's weight shows on its card, beside its health results, and on its page", async () => {
   const { env, site } = await akSite();
   env.DB.raw.prepare("UPDATE dogs SET weight = '18 lb' WHERE site_id = ? AND slug = 'willow'").run(site.id);

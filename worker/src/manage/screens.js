@@ -777,7 +777,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       return null;
     }
     if (rest) return null;
-    const list = await draftChanges(env, site.id);
+    const list = await draftChanges(env, site.id, say);
     const token = await makePreviewToken(env, site.id, 1);
     const prev = (path) => siteLink(env, site.subdomain, `/__preview?t=${encodeURIComponent(token)}&next=${encodeURIComponent(path)}`);
     const snaps = await listSnapshots(env, site.id);
@@ -787,7 +787,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       body: `${note(url)}${matches ? matchesWaiting(site.subdomain, matches, say) : ''}<section class="card"><h2>${list.length ? esc(say('publish.changes_since_your_last')) : esc(say('publish.nothing_to_publish'))}</h2>
         ${list.length ? `<ul class="changes">${list.map((c) => `<li><span>${esc(c.text)}</span>${c.path ? `<a href="${esc(prev(c.path))}">${esc(say('publish.preview'))}</a>` : ''}</li>`).join('')}</ul>` : `<p class="muted">${esc(say('publish.your_website_already_shows'))}</p>`}
         <p class="row"><a class="button" href="${esc(prev('/'))}">${esc(say('publish.preview_the_whole_site'))}</a></p>
-        ${list.length ? `<form method="post" action="${base}/publish"><button class="primary">Publish ${list.length} change${list.length === 1 ? '' : 's'}</button></form>` : ''}</section>
+        ${list.length ? `<form method="post" action="${base}/publish"><button class="primary">${esc(say.n('publish.button', list.length))}</button></form>` : ''}</section>
         ${snaps.length > 1 ? `<form method="post" action="${base}/publish/undo" class="card"><p class="muted small">${esc(say('publish.undo_goes_back_to'))}</p><button>${esc(say('publish.undo_last_publish'))}</button></form>` : ''}`,
     };
   }
