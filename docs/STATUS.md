@@ -91,14 +91,16 @@ merge. The portal's gate waits for a real litter, so features carry on meanwhile
 - Step 3, page addresses (#2) and the forms' fields (#3), built 2026-11-14 on one branch:
   the breeder's Address beside her menu name, old addresses redirect from Publish; Forms
   in the admin view (fields on or off, required, order, words, her own questions).
-  Migration 0035 (`site_pages.path`, `stories.answers`). No version bump. **Next:** step 4,
-  the parked code review (#14).
+  Migration 0035 (`site_pages.path`, `stories.answers`). No version bump.
+- Step 4, the parked code review (#14), started 2026-11-15: session 1 (the bundle contract)
+  done, [`review/findings/01-bundle-contract.md`](review/findings/01-bundle-contract.md):
+  2 S1, 1 S2, 4 S3. **Next:** the other sessions (`review/session-prompts.md`), then 10.
 
 ## Parked
 
-- The version-1 code review ([`review/plan.md`](review/plan.md)): written 2026-11-03, no
-  session has run. Brought up to date 2026-11-14 (file lists, then questions for every
+- The version-1 code review ([`review/plan.md`](review/plan.md)): written 2026-11-03; session 1
+  ran 2026-11-15 (KennelOS paths for session 1 checked). Brought up to date 2026-11-14 (file lists, then questions for every
   feature built since 3 November, sessions 11 and 12, prompts and index); targets `main`
-  at the merge of page addresses and the forms. **Next:** loose ends step 4, run it.
-  KennelOS paths in it are still unchecked.
+  at the merge of page addresses and the forms. **Next:** sessions 2 to 12.
+  KennelOS paths for sessions 2, 4, 5 and 9 are still unchecked.
 - After version 1: [`plans/backlog.md`](plans/backlog.md).
