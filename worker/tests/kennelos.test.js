@@ -581,10 +581,10 @@ test('steps, How to pay, extras and her public list come with a bundle; whether 
   assert.match(await (await b.get('/payment')).text(), /Filled from your waitlist settings in KennelOS/);
   assert.equal(b.row("SELECT grp FROM extras WHERE kennelos_id = 'x1'").grp, 'Gear');
   assert.equal(b.row('SELECT kennelos_public_id FROM sites WHERE id = ?', b.site.id).kennelos_public_id, 'kos1_12345678-1234-1234-1234-123456789abc');
-  // A bundle with no steps leaves them be; an extra no longer sent goes.
+  // A bundle with no steps leaves them be; an extra no longer sent is hidden, not deleted.
   await send(bundle({ extras: [] }));
   assert.equal(b.row("SELECT COUNT(*) AS n FROM steps WHERE source = 'kennelos'").n, 2);
-  assert.equal(b.row("SELECT COUNT(*) AS n FROM extras WHERE kennelos_id = 'x1'").n, 0);
+  assert.equal(b.row("SELECT hidden_by_kennelos FROM extras WHERE kennelos_id = 'x1'").hidden_by_kennelos, 1);
 });
 
 test('steps: KennelOS only starts them; her wording, her own steps and her order stay through every update', async () => {
@@ -720,9 +720,9 @@ test('Recommended products from KennelOS: name, link, code and note are KennelOS
   // Read-only in the manage app while it comes from KennelOS.
   const form = await (await b.get(`/lists/products/${MINE}`)).text();
   assert.match(form, /from KennelOS/);
-  // Unticked in KennelOS: it leaves; Unlink makes the rest hers.
+  // Unticked in KennelOS: it leaves the site, hidden, not deleted; Unlink makes the rest hers.
   await send(bundle({ products: [{ id: 'acct-1', name: 'TLC Pet Food', link_url: 'https://tlcpetpro.com/r/ak' }] }));
-  assert.equal(b.row("SELECT COUNT(*) AS n FROM products WHERE kennelos_id = 'acct-2'").n, 0);
+  assert.equal(b.row("SELECT hidden_by_kennelos FROM products WHERE kennelos_id = 'acct-2'").hidden_by_kennelos, 1);
   // A bundle with no products section leaves them alone (an older KennelOS).
   await send(bundle());
   assert.equal(b.row("SELECT COUNT(*) AS n FROM products WHERE kennelos_id = 'acct-1'").n, 1);
@@ -732,6 +732,75 @@ test('Recommended products from KennelOS: name, link, code and note are KennelOS
   const t2 = await linked(b);
   const bad = await api(b.env, '/v1/bundle', { body: bundle({ products: [{ id: 'x', name: 'X', password: 'hunter2' }] }), token: t2 });
   assert.equal(bad.status, 400);
+});
+
+test('a product or extra KennelOS stops sending is hidden, not deleted: her words, the portal and families\' codes stay, and it comes back whole', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = async (body) => (await api(b.env, '/v1/bundle', { body, token })).json();
+  const site = b.site.id;
+  // Her own product, taken over by name, with her words, the portal's settings and a
+  // family's certificate code.
+  const MINE = '00000000-0000-4000-8000-0000000000bb';
+  b.env.DB.raw.prepare("INSERT INTO products (id, site_id, name, description, grp, sort, source, portal_show, portal_type, portal_per_family) VALUES (?, ?, 'Trupanion', 'Her words about insurance', 'Insurance', 0, 'kennelport', 1, 'insurance', 1)").run(MINE, site);
+  b.env.DB.raw.exec('PRAGMA foreign_keys = OFF');
+  b.env.DB.raw.prepare("INSERT INTO portal_placements_programs (site_id, placement_id, product_id, status, code, updated_at, updated_by) VALUES (?, 'pl-1', ?, 'done', 'CERT-123', 'x', 'breeder')").run(site, MINE);
+  b.env.DB.raw.exec('PRAGMA foreign_keys = ON');
+  const tru = { id: 'acct-9', name: 'trupanion', link_url: 'https://trupanion.com/r/ak', code: 'AK10' };
+  const crate = { id: 'x9', name: 'Crate', group: 'Gear', description: 'A wire crate.' };
+  await send(bundle({ products: [tru], extras: [crate] }));
+  assert.equal(b.row('SELECT kennelos_id FROM products WHERE id = ?', MINE).kennelos_id, 'acct-9');
+  b.env.DB.raw.prepare("UPDATE extras SET featured = 1, lead_in = 'Her lead-in' WHERE kennelos_id = 'x9'").run();
+  const crateId = b.row("SELECT id FROM extras WHERE kennelos_id = 'x9'").id;
+
+  // Unticked (or its code cleared) in KennelOS: off the site, kept whole.
+  const off = await send(bundle({ products: [], extras: [] }));
+  assert.equal(off.summary.off, 2);
+  const p = b.row('SELECT * FROM products WHERE id = ?', MINE);
+  assert.deepEqual([p.hidden_by_kennelos, p.description, p.grp, p.portal_show], [1, 'Her words about insurance', 'Insurance', 1]);
+  assert.equal(b.row('SELECT code FROM portal_placements_programs WHERE product_id = ?', MINE).code, 'CERT-123');
+  const x = b.row('SELECT * FROM extras WHERE id = ?', crateId);
+  assert.deepEqual([x.hidden_by_kennelos, x.featured, x.lead_in], [1, 1, 'Her lead-in']);
+  // Off the public site; still a program in the family portal.
+  const snap = await (await import('../src/publish.js')).buildSnapshot(b.env, site);
+  assert.ok(!snap.products.some((r) => r.id === MINE), 'not on the site');
+  assert.ok(!snap.extras.some((r) => r.id === crateId), 'not on the site');
+  assert.ok((await (await import('../src/portal/admin/templates.js')).products(b.env, site)).some((r) => r.id === MINE), 'still in the portal');
+  // Her lists say why.
+  assert.match(await (await b.get('/lists/products')).text(), /Not sent by KennelOS · off your website, still in the portal/);
+  assert.match(await (await b.get('/lists/extras')).text(), /Not sent by KennelOS · off your website, still in the portal/);
+  // A bundle that still doesn't send them counts nothing new.
+  assert.equal((await send(bundle({ products: [], extras: [] }))).summary.off, 0);
+
+  // Ticked again: the same rows come back, so every family's code is still attached.
+  const back = await send(bundle({ products: [tru], extras: [crate] }));
+  assert.equal(back.summary.back, 2);
+  assert.equal(b.row('SELECT hidden_by_kennelos FROM products WHERE id = ?', MINE).hidden_by_kennelos, 0);
+  assert.equal(b.row('SELECT hidden_by_kennelos FROM extras WHERE id = ?', crateId).hidden_by_kennelos, 0);
+  assert.equal(b.row('SELECT COUNT(*) AS n FROM products WHERE kennelos_id = ?', 'acct-9').n, 1);
+});
+
+test('health: a dog sent with no results has none of KennelOS\'s left; hers stay, and a dog sent without the key keeps them', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (body) => api(b.env, '/v1/bundle', { body, token });
+  const hips = { id: 'test:ofa hips', test: 'OFA Hips', result: 'Dysplastic', normal: false };
+  const eyes = { id: 'test:eyes', test: 'Eyes', result: 'Clear', normal: true };
+  await send(bundle({ dogs: [DOG('d1', 'Luna', { health: [hips, eyes] })] }));
+  const dogId = b.row("SELECT id FROM dogs WHERE kennelos_id = 'd1'").id;
+  // One she typed on the website herself.
+  b.env.DB.raw.prepare("INSERT INTO health_results (id, site_id, dog_id, test, result, normal, show, sort, source) VALUES ('hers-1', ?, ?, 'Heart', 'Normal', 1, 1, 0, 'kennelport')").run(b.site.id, dogId);
+  const kos = () => b.rows("SELECT test FROM health_results WHERE source = 'kennelos' ORDER BY test").map((h) => h.test);
+  await send(bundle({ dogs: [DOG('d1', 'Luna', { health: [eyes] })] }));
+  assert.deepEqual(kos(), ['Eyes']);
+  // The last one archived in KennelOS: it comes off the site too.
+  await send(bundle({ dogs: [DOG('d1', 'Luna', { health: [] })] }));
+  assert.deepEqual(kos(), []);
+  assert.equal(b.row("SELECT COUNT(*) AS n FROM health_results WHERE id = 'hers-1'").n, 1, 'hers stay');
+  // A dog sent without health at all (no key) leaves its results as they are.
+  await send(bundle({ dogs: [DOG('d1', 'Luna', { health: [eyes] })] }));
+  await send(bundle({ dogs: [DOG('d1', 'Luna')] }));
+  assert.deepEqual(kos(), ['Eyes']);
 });
 
 test('health: an unmarked KennelOS result counts as normal; one kept off as not normal shows once it is', async () => {

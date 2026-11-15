@@ -94,7 +94,10 @@ merge. The portal's gate waits for a real litter, so features carry on meanwhile
   Migration 0035 (`site_pages.path`, `stories.answers`). No version bump.
 - Step 4, the parked code review (#14), started 2026-11-15: session 1 (the bundle contract)
   done, [`review/findings/01-bundle-contract.md`](review/findings/01-bundle-contract.md):
-  2 S1, 1 S2, 4 S3. **Next:** the other sessions (`review/session-prompts.md`), then 10.
+  2 S1, 1 S2, 4 S3. Both S1s fixed 2026-11-15 (migration 0036, `products` and `extras`
+  `hidden_by_kennelos`): a product or extra KennelOS stops sending is hidden, not deleted, and
+  stays in the portal; a dog's last KennelOS health result can be removed. No version bump.
+  **Next:** the other sessions (`review/session-prompts.md`), then 10.
 
 ## Parked
 

@@ -19,8 +19,8 @@ limits page (read 2026-11-15).
 
 | # | Sev | Where | What | Verified? |
 |---|-----|-------|------|-----------|
-| 1 | S1 | worker/src/kennelos/bundle.js:846 | A product KennelOS stops sending is deleted, taking her wording, portal settings and every family's program status and code with it | verified |
-| 2 | S1 | worker/src/kennelos/bundle.js:532 | A dog's last KennelOS health result can never be removed from the site | verified |
+| 1 | S1 | worker/src/kennelos/bundle.js:846 | A product KennelOS stops sending is deleted, taking her wording, portal settings and every family's program status and code with it | verified · **fixed 2026-11-15** (migration 0036) |
+| 2 | S1 | worker/src/kennelos/bundle.js:532 | A dog's last KennelOS health result can never be removed from the site | verified · **fixed 2026-11-15** |
 | 3 | S2 | worker/src/kennelos/bundle.js:62 · KennelOS siteExport.js:65 | About 95 dogs with pedigrees fill the 1 MB bundle cap; past it every update is refused with a line she can't act on | verified |
 | 4 | S3 | worker/src/kennelos/bundle.js:539 | A result she left unmarked counts as normal, so "Affected" shows under the default Normal results only | verified |
 | 5 | S3 | worker/src/kennelos/bundle.js:258, 408 | When no shown dog has a title left, the last title can't be cleared | verified |
@@ -28,6 +28,11 @@ limits page (read 2026-11-15).
 | 7 | S3 | worker/src/kennelos/bundle.js:721–725, 895 | Two Update presses at once double health results and extras for good, or fail one with "Something went wrong" | verified (latency simulated) |
 
 ## 1. A product KennelOS stops sending is deleted, with everything hers on it  (S1, verified)
+
+> **Fixed 2026-11-15** on `ccr-b7748679-2prmsg`, migration 0036. A product or extra KennelOS
+> stops sending is hidden (`hidden_by_kennelos`) instead of deleted. It's off the public site
+> but stays in the family portal (owner's decision), and it waits in her lists as "Not sent by
+> KennelOS · off your website, still in the portal". Sent again, the same row comes back.
 
 **Where.** `bundle.js:845–846` deletes every `source = 'kennelos'` product not in the bundle.
 `bundle.js:833–839` takes over a product she made by hand when an account has the same name,
@@ -64,6 +69,9 @@ safe there.
 partner kennels already do), and bring the same row back by `kennelos_id`.
 
 ## 2. A dog's last KennelOS health result can never be removed  (S1, verified)
+
+> **Fixed 2026-11-15** on `ccr-b7748679-2prmsg`. A dog sent with `health: []` loses its
+> KennelOS results. Her own results stay, and a dog sent without the key keeps everything.
 
 **Where.** `bundle.js:532`: `health()` returns at once when the list is empty. The deletion of
 results KennelOS no longer sends (`:549–550`) only runs when at least one result is sent.
