@@ -8,7 +8,7 @@ Findings live in `docs/review/findings/NN-<slug>.md`.
 |---|---------|--------|-----------------|------|----|----|----|----|----------|
 | 1 | The bundle contract, field by field | `ccr-b7748679-2prmsg` | `8aaf58a` (KOS `999b868`) | 2026-11-15 | 2 | 1 | 4 | 0 | [01](findings/01-bundle-contract.md) |
 | 2 | Link lifecycle, tokens, editions, licence | — | — | — | — | — | — | — | — |
-| 3 | Records' lifecycle: matching, hand-over, clock, photos | — | — | — | — | — | — | — | — |
+| 3 | Records' lifecycle: matching, hand-over, clock, photos | `ccr-20c22c7c-2aq6yp` | `9bd2d14` | 2026-11-15 | 3 | 2 | 5 | 3 | [03](findings/03-record-lifecycle.md) |
 | 4 | Addresses back to KennelOS; publish/snapshot | — | — | — | — | — | — | — | — |
 | 5 | Waitlist page, feed, sealed application form | — | — | — | — | — | — | — | — |
 | 6 | The manage app: a breeder on a phone | — | — | — | — | — | — | — | — |
@@ -24,3 +24,4 @@ fields, 2026-11-14). Baseline there: KennelPort `node --test` 448 pass. KennelOS
 counted on 2026-11-03 (`node --test` 1490 pass, `cloud` `npm test` 279 pass); the first
 session to read KennelOS records its counts here.
 Session 1 (2026-11-15, KennelOS `999b868`): `node --test` 2007 pass; `cloud` not run (no `node_modules`).
+Session 3 (2026-11-15, `9bd2d14`): KennelPort `node --test` 455 pass.
