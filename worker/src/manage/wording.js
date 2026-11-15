@@ -206,6 +206,7 @@ const LISTS = {
   'lists.sub.stage.past': 'Past',
   'lists.sub.package': '{weeks}-week package',
   'lists.sub.not_sent': 'Not sent by KennelOS · not shown',
+  'lists.sub.not_sent_portal': 'Not sent by KennelOS · off your website, still in the portal',
   'lists.sub.code': 'code {code}',
   'lists.sub.transport': 'transport service',
   'lists.sub.home_badge': 'home page badge',

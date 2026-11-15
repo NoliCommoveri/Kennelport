@@ -32,7 +32,8 @@ sessions.
    branch. A migration applies itself on live sites, so it must only add.
 4. **The parked code review** (#14; high). Run it with the file lists refreshed in step
    1, before more large features land. Its instructions were brought up to date on
-   2026-11-14 (evening) for `main` after step 3 merges: ready to start.
+   2026-11-14 (evening) for `main` after step 3 merges. **Session 1 run 2026-11-15**
+   (`review/findings/01-bundle-contract.md`); sessions 2 to 12 to go.
 5. **The photo system and the owner's blocks** (#4, #6; med each part). Leave #5, #7
    and #10 until KennelOS is ready for them.
 

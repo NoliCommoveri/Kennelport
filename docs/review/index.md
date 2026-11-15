@@ -6,7 +6,7 @@ Findings live in `docs/review/findings/NN-<slug>.md`.
 
 | # | Session | Branch | Commit reviewed | Date | S1 | S2 | S3 | S4 | Findings |
 |---|---------|--------|-----------------|------|----|----|----|----|----------|
-| 1 | The bundle contract, field by field | — | — | — | — | — | — | — | — |
+| 1 | The bundle contract, field by field | `ccr-b7748679-2prmsg` | `8aaf58a` (KOS `999b868`) | 2026-11-15 | 2 | 1 | 4 | 0 | [01](findings/01-bundle-contract.md) |
 | 2 | Link lifecycle, tokens, editions, licence | — | — | — | — | — | — | — | — |
 | 3 | Records' lifecycle: matching, hand-over, clock, photos | — | — | — | — | — | — | — | — |
 | 4 | Addresses back to KennelOS; publish/snapshot | — | — | — | — | — | — | — | — |
@@ -23,3 +23,4 @@ Target: `main` at the merge of `ccr-a71eca85-omlwep` (page addresses and the for
 fields, 2026-11-14). Baseline there: KennelPort `node --test` 448 pass. KennelOS was last
 counted on 2026-11-03 (`node --test` 1490 pass, `cloud` `npm test` 279 pass); the first
 session to read KennelOS records its counts here.
+Session 1 (2026-11-15, KennelOS `999b868`): `node --test` 2007 pass; `cloud` not run (no `node_modules`).

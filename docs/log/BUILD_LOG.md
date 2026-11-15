@@ -1636,3 +1636,45 @@ On the same branch as page addresses, at the owner's ask, with one migration for
   KennelPort.
 - No version bump needed for this branch: nothing under `worker/public/` changed
   (`versions.test.js` passes).
+
+## 2026-11-15: code review session 1, the bundle contract (loose ends step 4)
+
+`docs/review/findings/01-bundle-contract.md`, the index row. Docs only; no product code, no
+version bump. Reviewed `main` at `8aaf58a` (the target) against KennelOS `999b868`.
+Baselines: KennelPort 448 pass, KennelOS 2007 pass (`cloud` not run).
+
+- **S1**: a product KennelOS stops sending is deleted (`bundle.js:846`), taking her wording,
+  its portal settings and each family's program status and code; extras the same, smaller.
+  A dog's last KennelOS health result can never be removed (`health()` returns on `[]`).
+- **S2**: about 95 dogs with pedigrees fill the 1 MB bundle cap (lineage is ~9 KB a dog);
+  past it every update is refused with "That is more than KennelPort takes at once."
+- **S3**: an unmarked result counts as normal, so "Affected" shows under Normal results only;
+  the last title in a kennel can't be cleared; dropping the application fee leaves the old pay
+  link; two presses at once double health results and extras.
+- D1's batch counts as one query, so statement counts aren't the limit (1,086 statements for a
+  90-dog first bundle, 87 ms in Node).
+- Proved with throwaway scripts in the session scratchpad, not committed.
+
+## 2026-11-15: the two S1s from review session 1 fixed (migration 0036)
+
+`kennelos/bundle.js`, `publish.js`, `manage/screens.js`, `manage/wording.js`, migration
+`0036_kennelos_hidden.sql`, `tests/kennelos.test.js`. No version bump: nothing under
+`worker/public/` changed.
+
+- **Products and extras are hidden, not deleted** (finding 01-1). Migration 0036 adds
+  `hidden_by_kennelos` to `products` and `extras`. It's additive only and applies itself on the
+  first request after the merge. One KennelOS stops sending is hidden and counted "off the
+  site". Publish leaves it out of Recommended products, Getting your pup home and Extras. The
+  family portal still has it (the owner's choice: the portal is private, and families may be
+  partway through a program). Sent again, it matches its old row by `kennelos_id`, is
+  un-hidden and counted "back", so families' program statuses and codes stay attached. Unlink
+  already kept these rows; now the "not sent" path does too.
+- **A dog's last KennelOS health result can be removed** (finding 01-2). `health()` now
+  clears KennelOS's results for a dog sent with `health: []`. A dog sent without the key is
+  left alone, as before, and her own typed results are never touched.
+- **New wording in the owner's list:** `lists.sub.not_sent_portal`, "Not sent by KennelOS ·
+  off your website, still in the portal", under a hidden product or extra in her lists. The
+  existing "not shown" line would be wrong for them, since the portal still shows them.
+- `hidden_by_kennelos` is kept out of the published snapshot, so Publish doesn't list every
+  product as changed after the migration.
+- Tests: 450 pass (two new ones; the products and extras tests now expect hiding).

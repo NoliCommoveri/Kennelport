@@ -527,9 +527,10 @@ export class Writer {
   // result KennelOS leaves unmarked (normal: null) counts as normal.
   // Their order (rules.landing health_order): 'hers' keeps where each result is in
   // her order and puts a new one after her last; 'kennelos' takes KennelOS's order
-  // at every update.
-  health(dogId, display, list, existing = []) {
-    if (!list.length) return;
+  // at every update. A dog sent with no results (its health key came, as []) has
+  // none now (`keyed`): KennelOS's results come off it (review finding 01-2), hers stay.
+  health(dogId, display, list, existing = [], keyed = false) {
+    if (!list.length && !keyed) return;
     const mine = existing.filter((h) => h.dog_id === dogId && h.source === 'kennelos');
     const byKos = new Map(mine.map((h) => [h.kennelos_id, h]));
     const hers = this.L.health_order === 'hers';
@@ -556,7 +557,7 @@ export class Writer {
     values.hidden_by_kennelos = 0;
     if (cur.hidden_by_kennelos) this.counts.back++;
     if (this.update('dogs', cur, values)) { this.counts.updated++; this.counted.add(cur.id); }
-    this.health(cur.id, cur.health_display, bd.health, this.st.health);
+    this.health(cur.id, cur.health_display, bd.health, this.st.health, bd.sent?.has('health'));
     this.titleRows(cur.id, bd.title_rows);
     if (Array.isArray(bd.ancestors)) this.lineageLater.push({ id: cur.id, cur, bd });
   }
@@ -803,20 +804,33 @@ export async function applyBundle(env, device, body) {
     for (const x of clean.extras) {
       const values = { name: x.name, grp: x.group, description: x.description, ...(w.prices ? { price_from: x.price_from, price_to: x.price_to } : {}) };
       const cur = byKos.get(x.id);
-      if (cur) { if (w.update('extras', cur, values)) w.counts.updated++; continue; }
+      if (cur) {
+        if (cur.hidden_by_kennelos) w.counts.back++;
+        if (w.update('extras', cur, { ...values, hidden_by_kennelos: 0 })) w.counts.updated++;
+        continue;
+      }
       w.insert('extras', { id: crypto.randomUUID(), site_id: site.id, kind: 'item', ...values, featured: 0, sort: ++sort, source: 'kennelos', kennelos_id: x.id });
       w.counts.created++;
     }
     const sent = new Set(clean.extras.map((x) => x.id));
-    for (const x of st.extras) if (x.source === 'kennelos' && !sent.has(x.kennelos_id)) w.s.push(env.DB.prepare('DELETE FROM extras WHERE id = ?').bind(x.id));
+    // One KennelOS stops sending is hidden, not deleted: its photo, wording and portal
+    // stay settings are hers, and it comes back whole if sent again (finding 01-1).
+    for (const x of st.extras) {
+      if (x.source === 'kennelos' && x.kennelos_id && !sent.has(x.kennelos_id) && !x.hidden_by_kennelos) {
+        w.s.push(env.DB.prepare('UPDATE extras SET hidden_by_kennelos = 1 WHERE id = ?').bind(x.id));
+        w.counts.off++;
+      }
+    }
   }
 
   // Recommended products from her Accounts: name, link, code and its note, and
   // (transport section) its website and whether it's a transport service. The
   // picture, its badges, button wording, group, description and order stay hers. A
   // product she made by hand with the same name is taken over (extras and products
-  // match by name, 5.2), keeping its picture. One KennelOS stops sending leaves;
-  // its picture stays in her photos.
+  // match by name, 5.2), keeping its picture. One KennelOS stops sending is hidden,
+  // not deleted (finding 01-1): off the public site, still a program in the family
+  // portal (families' statuses and codes point at its id), and the same row comes
+  // back if KennelOS sends it again.
   if (clean.products) {
     const products = (await env.DB.prepare('SELECT * FROM products WHERE site_id = ?').bind(site.id).all()).results;
     const byKos = new Map(products.filter((x) => x.kennelos_id).map((x) => [x.kennelos_id, x]));
@@ -836,14 +850,20 @@ export async function applyBundle(env, device, body) {
         if (j >= 0) [cur] = free.splice(j, 1);
       }
       if (cur) {
-        if (w.update('products', cur, { ...values, source: 'kennelos', kennelos_id: x.id })) w.counts.updated++;
+        if (cur.hidden_by_kennelos) w.counts.back++;
+        if (w.update('products', cur, { ...values, source: 'kennelos', kennelos_id: x.id, hidden_by_kennelos: 0 })) w.counts.updated++;
         continue;
       }
       w.insert('products', { id: crypto.randomUUID(), site_id: site.id, ...values, grp: (type && w.L[`acct_group_${type}`]) || null, home_badge: 0, sort: ++sort, source: 'kennelos', kennelos_id: x.id });
       w.counts.created++;
     }
     const sent = new Set(clean.products.map((x) => x.id));
-    for (const x of products) if (x.source === 'kennelos' && !sent.has(x.kennelos_id)) w.s.push(env.DB.prepare('DELETE FROM products WHERE id = ?').bind(x.id));
+    for (const x of products) {
+      if (x.source === 'kennelos' && x.kennelos_id && !sent.has(x.kennelos_id) && !x.hidden_by_kennelos) {
+        w.s.push(env.DB.prepare('UPDATE products SET hidden_by_kennelos = 1 WHERE id = ?').bind(x.id));
+        w.counts.off++;
+      }
+    }
   }
 
   // The waitlist steps behind How it works (3.11): only when KennelOS sends some.
