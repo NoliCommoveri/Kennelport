@@ -8,7 +8,7 @@ import { sha256Hex, randomHex } from '../lib/crypto.js';
 import { sendMail, MailError } from '../mail.js';
 import {
   AuthError, emailHash, CODE_TTL_MS, WRONG_CODE, askForCode, codeStore, issueCode, mailCode, readCodeForm, redeemCode,
-  newSession, sessionCookie, sessionTokenHash, sessionLive, slideSession, revokeSession,
+  newSession, sessionCookie, sessionTokenHash, sessionLive, slideSession, slidCookie, revokeSession,
 } from '../signin.js';
 import { codeMessage, inviteMessage } from './messages.js';
 import { familyEmails, placementFor, getFamily } from './store.js';
@@ -113,19 +113,20 @@ export async function sendInvites(env, site, familyId) {
   return { sent, failed };
 }
 
-// The signed-in family on this site, or null. Sliding expiry, and the activity
-// date (plan 10.2) moves at most once an hour.
+// The signed-in family on this site, or null. Sliding expiry (with `cookie` to
+// send again when it slides, as for her), and the activity date (plan 10.2) moves
+// at most once an hour.
 export async function currentFamily(env, request, site) {
   const tokenHash = await sessionTokenHash(request, FAMILY_COOKIE);
   if (!tokenHash) return null;
   const row = await env.DB.prepare(`SELECT s.family_id, s.last_seen_at, s.expires_at, s.revoked_at, f.name, f.last_activity_at, f.status_url
     FROM portal_sessions s JOIN portal_families f ON f.id = s.family_id WHERE s.token_hash = ? AND s.site_id = ? AND f.status = 'active' AND f.deleted_at IS NULL`).bind(tokenHash, site.id).first();
   if (!sessionLive(row)) return null;
-  await slideSession(env, 'portal_sessions', tokenHash, row, FAMILY_SESSION_MS);
+  const cookie = slidCookie(await slideSession(env, 'portal_sessions', tokenHash, row, FAMILY_SESSION_MS), request, FAMILY_COOKIE, familyCookie);
   if (!row.last_activity_at || Date.now() - Date.parse(row.last_activity_at) > 3600000) {
     await env.DB.prepare('UPDATE portal_families SET last_activity_at = ? WHERE id = ?').bind(new Date().toISOString(), row.family_id).run();
   }
-  return { tokenHash, familyId: row.family_id, name: row.name, statusUrl: row.status_url };
+  return { tokenHash, familyId: row.family_id, name: row.name, statusUrl: row.status_url, cookie };
 }
 
 export async function signOutFamily(env, fam) {

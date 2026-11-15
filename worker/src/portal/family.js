@@ -24,6 +24,7 @@ import { stage, vetDeadline, formatAt, formatDay, timeLeft, localParts, addDays,
 import { stepsFor, openTasks, programsFor, setDone, setProgramStatus } from './steps.js';
 import { PORTAL_VERSION } from './version.js';
 import { CODE_TTL_MS } from '../auth.js';
+import { withCookie } from '../signin.js';
 import { redeemHandoff } from './feed.js';
 import { stayFor, mediaFor, mediaResponse } from './stays.js';
 import { messagesOpen, thread, unreadFrom, markRead, familyWrites, isLoss, eraseFamily, MAX_MESSAGE } from './account.js';
@@ -600,7 +601,13 @@ function sameOrigin(request, url) {
   return s === 'same-origin' || s === 'none';
 }
 
-export async function servePortal(request, env, ctx, subdomain, { onDomain = false } = {}) {
+// A family whose session slid gets its cookie again with the answer (review finding 02-5).
+export async function servePortal(request, env, ctx, subdomain, opts) {
+  const slid = {};
+  return withCookie(await portalRoutes(request, env, ctx, subdomain, opts, slid), slid.cookie);
+}
+
+async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } = {}, slid = {}) {
   const url = new URL(request.url);
   if (!(await schemaReady(env.DB))) return htmlPage('Back soon', '<h1>Back soon</h1><p>Please try again in a few minutes.</p>', { status: 503, headers: { 'retry-after': '300' } });
   const site = await env.DB.prepare(`SELECT s.id, s.subdomain, s.kennel_name, s.status, s.portal_on, s.contact_phone, s.contact_email, s.logo_photo_id, s.monogram, s.breed, d.hostname AS domain
@@ -665,6 +672,7 @@ export async function servePortal(request, env, ctx, subdomain, { onDomain = fal
     return redirect('/family', { 'set-cookie': familyCookie('', 0) });
   }
   if (!fam) return path === '/family' ? signInPage(site) : redirect('/family');
+  if (!view) slid.cookie = fam.cookie;
   const current = await placementFor(env, site.id, fam.familyId);
   fam.loss = isLoss(current);
   fam.stay = Boolean(!fam.loss && current && active(current) && !current.picked_up_at && await stayFor(env, site.id, current.id));

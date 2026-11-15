@@ -44,6 +44,7 @@ import kennelosRaw from './0033_kennelos_raw.sql';
 import originLineage from './0034_origin_lineage.sql';
 import addressesForms from './0035_addresses_forms.sql';
 import kennelosHidden from './0036_kennelos_hidden.sql';
+import productsExtrasShow from './0037_products_extras_show.sql';
 
 export const MIGRATIONS = [
   { id: '0001', name: 'schema', sql: schema },
@@ -82,4 +83,5 @@ export const MIGRATIONS = [
   { id: '0034', name: 'origin_lineage', sql: originLineage },
   { id: '0035', name: 'addresses_forms', sql: addressesForms },
   { id: '0036', name: 'kennelos_hidden', sql: kennelosHidden },
+  { id: '0037', name: 'products_extras_show', sql: productsExtrasShow },
 ];

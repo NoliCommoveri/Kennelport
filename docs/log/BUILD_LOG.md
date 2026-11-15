@@ -1678,3 +1678,57 @@ Baselines: KennelPort 448 pass, KennelOS 2007 pass (`cloud` not run).
 - `hidden_by_kennelos` is kept out of the published snapshot, so Publish doesn't list every
   product as changed after the migration.
 - Tests: 450 pass (two new ones; the products and extras tests now expect hiding).
+
+## 2026-11-15: the data-loss findings from review session 2 fixed (migration 0037)
+
+Findings in `docs/review/findings/02-link-lifecycle.md` (on branch `ccr-a5707191-duiaog`,
+not yet merged). Fixed here: 1 (S1), 2 (S2), 4 (S3, the Site Manager half) and 5 (S3).
+Still open: 3 (parallel code guesses, security, not data loss), 6, 7 and 8 (8 is KennelOS's
+side). `kennelos/link.js`, `kennelos/bundle.js`, `manage/screens.js`, `manage/wording.js`,
+`manage/forms.js`, `manage/index.js`, `content/model.js`, `content/records.js`,
+`content/io.js`, `publish.js`, `signin.js`, `auth.js`, `portal/auth.js`, `portal/family.js`,
+migration `0037_products_extras_show.sql`. No version bump: nothing under `worker/public/`
+changed.
+
+- **Migration 0037** adds `show_on_site INTEGER NOT NULL DEFAULT 1` to `products` and
+  `extras`. Additive only, every existing row stays shown; it applies itself on the first
+  request after the merge.
+- **Finding 1, a product or extra stranded hidden after Unlink.** Products and extras get
+  her own Show on my website switch (a field in the model, so it's on both forms under On
+  your website, and goes out in and comes back from the content document; left out, it's
+  on). Unlink turns `hidden_by_kennelos` into `show_on_site = 0`, as it already did for dogs
+  and litters. Publish leaves out either kind of hidden; the portal still lists both. Her
+  lists say "Off your website, still in the portal".
+- **Finding 2, the last device stopping was an Unlink, and a relink doubled things.**
+  `stopDevice` only stops that device. With none left, her records stay keyed to KennelOS
+  and the next device carries on (`waitingForDevice` tells the screen, which says so and
+  keeps Show a link code, Prices and Unlink). KennelOS's own Disconnect this device ends in
+  the same place, so its dialog's wording is now true. If a device from *another* kennel
+  then links, `redeemCode` runs Unlink first, so the old kennel's records become hers rather
+  than waiting as "not sent". For a relink after a real Unlink (or KennelOS re-keying its
+  records), `applyBundle` now takes over her own extras by name (as products already were),
+  her steps by heading (her wording kept; on a first link a matched step takes KennelOS's
+  place in its order; after an earlier link her order stays), and a dog's health result
+  with the same test, result and date instead of adding a second one.
+  While no device is linked, the portal's waitlist count and KennelOS's portal hand-off act
+  as unlinked (they look for a live device); a new device restores both.
+- **Finding 4, Unlink in one tap.** Unlink now shows a confirm card first (Yes, unlink /
+  Keep it linked). Stop this device stays one tap: it no longer unlinks, and when it was the
+  last device the note says the site is still linked.
+- **Finding 5, the session didn't slide.** `slideSession` says when it moved, and
+  `currentUser` / `currentFamily` return the cookie to send again. `handleManage` and
+  `servePortal` add it to the answer (`withCookie`), unless the answer sets that cookie
+  itself (signing out). It's sent at most once a day, when the row moves.
+- **New wording in the owner's list** (first drafts, for the owner to rewrite):
+  `lists.sub.off_site_portal`, the note `stopped_last`, and `kennelos.unlink_sure`,
+  `kennelos.unlink_sure_text`, `kennelos.yes_unlink`, `kennelos.keep_it_linked`,
+  `kennelos.no_device_linked`, `kennelos.no_device_text`. In `forms.js` LABELS: the hint
+  for Show on my website on extras and on products.
+- Tests: 455 pass. New: Unlink asks first, then a hidden product and extra can be shown
+  again; stopping the last device, then a new device, leaves counts unchanged; a relink after
+  Unlink doesn't double extras, steps or health; another kennel linking unlinks first; a slid
+  session re-sends its cookie (both sides, and signing out still clears it). Tests that post
+  product forms now send the switch, as the real form does.
+- Checked side by side at 390px and 1200px: the confirm card and the "no device yet" screen
+  use the existing card, danger card and button styles; the switch sits with the product's
+  other switches.

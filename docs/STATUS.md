@@ -4,7 +4,7 @@ The one place for progress. Keep it short: one line per item, a link to where th
 is. When a step is built, change its line here and add the detail to the build log
 ([`log/BUILD_LOG.md`](log/BUILD_LOG.md)); the plans describe intent, not progress.
 
-Last updated 2026-11-14. Released on `main`: Site Manager (`APP_VERSION`) 18, site
+Last updated 2026-11-15. Released on `main`: Site Manager (`APP_VERSION`) 18, site
 template (`ASSET_VERSION`) 25.
 
 ## Platform
@@ -97,6 +97,12 @@ merge. The portal's gate waits for a real litter, so features carry on meanwhile
   2 S1, 1 S2, 4 S3. Both S1s fixed 2026-11-15 (migration 0036, `products` and `extras`
   `hidden_by_kennelos`): a product or extra KennelOS stops sending is hidden, not deleted, and
   stays in the portal; a dog's last KennelOS health result can be removed. No version bump.
+  Session 2 (link lifecycle, findings `02-link-lifecycle.md` on branch `ccr-a5707191-duiaog`):
+  its data-loss findings 1, 2, 4 and 5 fixed 2026-11-15 (migration 0037, `products` and
+  `extras` `show_on_site`): Unlink makes a hidden product or extra hers, off by her own switch;
+  stopping the last device no longer unlinks; extras, steps and health results match on a
+  relink instead of doubling; Unlink asks first; a slid session re-sends its cookie. Findings
+  3, 6, 7 and 8 still open. No version bump.
   **Next:** the other sessions (`review/session-prompts.md`), then 10.
 
 ## Parked

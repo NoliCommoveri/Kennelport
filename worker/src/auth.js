@@ -11,7 +11,7 @@ import { sendMail, codeMessage, inviteMessage, MailError } from './mail.js';
 import { isDemoSite, NOT_FOR_DEMO } from './lib/demo.js';
 import {
   AuthError, normalizeEmail, emailHash, CODE_TTL_MS, askForCode, codeStore, issueCode, mailCode, readCodeForm,
-  redeemCode, newSession, sessionCookie as cookieFor, sessionTokenHash, sessionLive, slideSession, revokeSession,
+  redeemCode, newSession, sessionCookie as cookieFor, sessionTokenHash, sessionLive, slideSession, slidCookie, revokeSession,
 } from './signin.js';
 
 export { AuthError, normalizeEmail, emailHash, CODE_TTL_MS, MAX_ATTEMPTS, LIMITS } from './signin.js';
@@ -51,16 +51,17 @@ export const sessionCookie = (token, maxAge = SESSION_MS / 1000) => cookieFor(SE
 export const clearSessionCookie = () => sessionCookie('', 0);
 
 // The signed-in person, or null. Sliding expiry: a visit more than a day after
-// the last pushes the expiry 90 days out again.
+// the last pushes the expiry 90 days out again, and `cookie` is then the session
+// cookie to send again (handleManage does), so the browser keeps it as long.
 export async function currentUser(env, request) {
   const tokenHash = await sessionTokenHash(request, SESSION_COOKIE);
   if (!tokenHash) return null;
   const row = await env.DB.prepare('SELECT email_hash, created_at, last_seen_at, expires_at, revoked_at FROM sessions WHERE token_hash = ?').bind(tokenHash).first();
   if (!sessionLive(row)) return null;
-  await slideSession(env, 'sessions', tokenHash, row, SESSION_MS);
+  const cookie = slidCookie(await slideSession(env, 'sessions', tokenHash, row, SESSION_MS), request, SESSION_COOKIE, sessionCookie);
   const { results: sites } = await env.DB.prepare(`SELECT s.id, s.subdomain, s.kennel_name, s.status, su.role FROM site_users su
     JOIN sites s ON s.id = su.site_id WHERE su.email_hash = ? AND s.status != 'closed' ORDER BY s.kennel_name`).bind(row.email_hash).all();
-  return { tokenHash, emailHash: row.email_hash, signedInAt: row.created_at, sites };
+  return { tokenHash, emailHash: row.email_hash, signedInAt: row.created_at, sites, cookie };
 }
 
 export async function signOut(env, user) {

@@ -152,10 +152,33 @@ export const sessionLive = (row) => Boolean(row && !row.revoked_at && Date.parse
 
 // Sliding expiry: a visit more than a day after the last moves last_seen_at to now and
 // the expiry `lifeMs` out again.
+// → whether it moved. When it does, the caller sends the cookie again with a fresh
+// Max-Age (withCookie): the browser keeps the cookie only as long as the Max-Age it
+// was last sent with, so a session that slid only here still ended on day 90
+// (review finding 02-5).
 export async function slideSession(env, table, tokenHash, row, lifeMs) {
-  if (Date.now() - Date.parse(row.last_seen_at) <= SLIDE_AFTER_MS) return;
+  if (Date.now() - Date.parse(row.last_seen_at) <= SLIDE_AFTER_MS) return false;
   await env.DB.prepare(`UPDATE ${table} SET last_seen_at = ?, expires_at = ? WHERE token_hash = ?`)
     .bind(new Date().toISOString(), new Date(Date.now() + lifeMs).toISOString(), tokenHash).run();
+  return true;
+}
+
+// The session cookie, sent again with a fresh Max-Age once the session slid; null
+// when it didn't.
+export const slidCookie = (slid, request, name, make) => {
+  const token = slid ? readCookie(request, name) : null;
+  return token ? make(token) : null;
+};
+
+// An answer carrying a slid session's cookie as well, unless it sets that cookie
+// itself (signing out, signing in).
+export function withCookie(res, cookie) {
+  if (!cookie || !res) return res;
+  const name = cookie.slice(0, cookie.indexOf('=') + 1);
+  if ((res.headers.getSetCookie?.() ?? []).some((c) => c.startsWith(name))) return res;
+  const out = new Response(res.body, res);
+  out.headers.append('set-cookie', cookie);
+  return out;
 }
 
 export async function revokeSession(env, table, tokenHash) {

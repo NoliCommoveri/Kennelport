@@ -109,6 +109,7 @@ export const LABELS = {
     kind: ['Kind', null], grp: ['Group', null], price_from: ['Price (or lowest price), in dollars', null], price_to: ['Highest price, for a range', null],
     weeks: ['Weeks (homegoing packages)', null], lead_in: ['Line above the checklist', 'For example "Your puppy will continue receiving:".'],
     checklist: ['What\'s included', 'One item per line.'], closing: ['Closing paragraph', null], featured: ['Mark as "most complete"', null],
+    show_on_site: ['Show on my website', 'Off: it leaves your website and stays in the family portal.'],
   },
   products: {
     name: ['Name', 'For example "TLC Puppy Food".'], grp: ['Group', 'Optional, a small label above the name, like "Food" or "Toys".'],
@@ -120,6 +121,7 @@ export const LABELS = {
     website_url: ['Its website', 'Shown under its badge as a short address, like "skynanny.com". Leave empty to show your referral link\'s.'],
     badge_places: ['Also show its badge on', 'Its picture, name and web address, in a "We recommend" row on each page you tick. Up to 2 per page.'],
     transport: ['This is a transport service', 'A flight nanny or ground transporter: it shows as a badge on your Getting your pup home page, and not on Recommended products.'],
+    show_on_site: ['Show on my website', 'Off: it leaves your website and stays in the family portal, with its codes.'],
   },
   pickup: {
     pickup_heading: ['Pickup: heading', 'Leave empty for "Picking up your puppy".'], pickup_text: ['How pickup works', 'Where and when families collect their puppy, what to bring, how long to allow. Leave a blank line between paragraphs.'],

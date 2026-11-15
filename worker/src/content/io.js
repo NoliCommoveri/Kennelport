@@ -439,13 +439,13 @@ export async function importContent(env, siteId, doc) {
   if (clean.extras) {
     s.push(db.prepare('DELETE FROM extras WHERE site_id = ?').bind(siteId));
     clean.extras.forEach((x, i) => s.push(insert(db, 'extras', {
-      id: uuid(), site_id: siteId, ...x, checklist: x.checklist ? JSON.stringify(x.checklist) : null, featured: x.featured ?? 0, sort: i,
+      id: uuid(), site_id: siteId, ...x, checklist: x.checklist ? JSON.stringify(x.checklist) : null, featured: x.featured ?? 0, show_on_site: x.show_on_site ?? 1, sort: i,
     })));
   }
   if (clean.products) {
     s.push(db.prepare('DELETE FROM products WHERE site_id = ?').bind(siteId));
     clean.products.forEach((x, i) => s.push(insert(db, 'products', {
-      id: uuid(), site_id: siteId, ...x, home_badge: x.home_badge ?? 0, transport: x.transport ?? 0,
+      id: uuid(), site_id: siteId, ...x, home_badge: x.home_badge ?? 0, transport: x.transport ?? 0, show_on_site: x.show_on_site ?? 1,
       badge_places: x.badge_places?.length ? JSON.stringify(x.badge_places) : null, sort: i,
     })));
   }
@@ -518,13 +518,13 @@ export async function exportContent(env, siteId) {
       return out;
     })]));
   doc.extras = (await all('SELECT * FROM extras WHERE site_id = ? ORDER BY sort', siteId)).map((x) => {
-    const out = bools(pick(strip(x, SYSTEM), Object.keys(EXTRA_FIELDS)), ['featured']);
+    const out = bools(pick(strip(x, SYSTEM), Object.keys(EXTRA_FIELDS)), ['featured', 'show_on_site']);
     if (out.checklist) out.checklist = JSON.parse(out.checklist);
     return out;
   });
   doc.products = (await all('SELECT * FROM products WHERE site_id = ? ORDER BY sort', siteId))
     .map((x) => {
-      const out = bools(pick(strip(x, SYSTEM), Object.keys(PRODUCT_FIELDS)), ['home_badge', 'transport']);
+      const out = bools(pick(strip(x, SYSTEM), Object.keys(PRODUCT_FIELDS)), ['home_badge', 'transport', 'show_on_site']);
       if (out.badge_places) out.badge_places = JSON.parse(out.badge_places);
       return out;
     });

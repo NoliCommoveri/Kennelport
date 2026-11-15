@@ -47,10 +47,10 @@ const api = (env, path, { method = 'POST', body, token, origin = APP } = {}) => 
   headers: { 'content-type': 'application/json', ...(origin ? { origin } : {}), ...(token ? { authorization: `Bearer ${token}` } : {}) },
 });
 
-async function linked(b) {
+async function linked(b, kennel = KENNEL) {
   const html = await (await b.post('/kennelos/code')).text();
   const code = html.match(/class="code">([A-Z0-9-]+)</)[1];
-  const res = await api(b.env, '/v1/link', { body: { code, kennel_id: KENNEL, device_label: 'Her phone' } });
+  const res = await api(b.env, '/v1/link', { body: { code, kennel_id: kennel, device_label: 'Her phone' } });
   assert.equal(res.status, 200);
   return (await res.json()).token;
 }
@@ -539,7 +539,7 @@ test('Unlink: every device stops and everything from KennelOS is hers to edit', 
   await api(b.env, '/v1/bundle', { body: bundle({ dogs: [DOG('d1', 'Nova'), DOG('d2', 'Gone')] }), token });
   await api(b.env, '/v1/bundle', { body: bundle({ dogs: [DOG('d1', 'Nova')] }), token });
   assert.equal(b.row("SELECT hidden_by_kennelos FROM dogs WHERE kennelos_id = 'd2'").hidden_by_kennelos, 1);
-  assert.equal((await b.post('/kennelos/unlink')).status, 303);
+  assert.equal((await b.post('/kennelos/unlink', { confirm: 'yes' })).status, 303);
   assert.equal(b.row("SELECT COUNT(*) AS n FROM dogs WHERE source = 'kennelos' OR kennelos_id IS NOT NULL").n, 0);
   const gone = b.row("SELECT * FROM dogs WHERE call_name = 'Gone'");
   assert.equal(gone.hidden_by_kennelos, 0);
@@ -574,7 +574,10 @@ test('steps, How to pay, extras and her public list come with a bundle; whether 
   }));
   const steps = b.rows('SELECT heading, source, sort FROM steps WHERE site_id = ? ORDER BY sort', b.site.id);
   assert.deepEqual(steps.slice(0, 2).map((x) => [x.heading, x.source]), [['Apply', 'kennelos'], ['Choose', 'kennelos']]);
-  assert.equal(steps.length, ownSteps + 2); // hers follow KennelOS's
+  // Hers follow KennelOS's. The sample already has an Apply step: KennelOS's Apply
+  // takes it over (review finding 02-2), so only Choose is new.
+  assert.equal(steps.length, ownSteps + 1);
+  assert.equal(b.rows("SELECT * FROM steps WHERE site_id = ? AND heading = 'Apply'", b.site.id).length, 1);
   const pay = b.row("SELECT * FROM payment_info WHERE kind = 'deposit'");
   assert.equal(pay.source, 'kennelos');
   assert.equal(JSON.parse(pay.content).methods[0][1], '@ak');
@@ -726,7 +729,7 @@ test('Recommended products from KennelOS: name, link, code and note are KennelOS
   // A bundle with no products section leaves them alone (an older KennelOS).
   await send(bundle());
   assert.equal(b.row("SELECT COUNT(*) AS n FROM products WHERE kennelos_id = 'acct-1'").n, 1);
-  await b.post('/kennelos/unlink');
+  await b.post('/kennelos/unlink', { confirm: 'yes' });
   assert.equal(b.row("SELECT source FROM products WHERE id = ?", MINE).source, 'kennelport');
   // Unknown keys are refused like every other section.
   const t2 = await linked(b);
@@ -1109,4 +1112,131 @@ test("a litter's page: its parents' cards in one row, not its card again, and no
   const sire = gems.split('<span class="eyebrow">Sire</span>')[1].split('</article>')[0];
   assert.match(sire, /Outside Stud/);
   assert.doesNotMatch(sire, /href=/);
+});
+
+// ---------- review session 2 (docs/review/findings/02-link-lifecycle.md) ----------
+
+test('Unlink asks first; then a product or extra KennelOS had stopped sending is hers, off her site by her own switch, and she can put it back (02-1)', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (body) => api(b.env, '/v1/bundle', { body, token });
+  await send(bundle({ products: [{ id: 'acct-1', name: 'TLC Pet Food', link_url: 'https://tlcpetpro.com/r/ak' }], extras: [{ id: 'x1', name: 'Puppy pack', group: 'Gear', description: 'All they need.' }] }));
+  await send(bundle({ products: [], extras: [] }));
+  assert.equal(b.row("SELECT hidden_by_kennelos FROM products WHERE kennelos_id = 'acct-1'").hidden_by_kennelos, 1);
+
+  // One tap only asks.
+  const ask = await b.post('/kennelos/unlink');
+  assert.equal(ask.status, 200);
+  const html = await ask.text();
+  assert.match(html, /Unlink KennelOS\?/);
+  assert.match(html, /name="confirm" value="yes"/);
+  assert.match(html, /Keep it linked/);
+  assert.equal(b.row('SELECT COUNT(*) AS n FROM links WHERE revoked_at IS NULL').n, 1, 'nothing changed yet');
+  assert.equal((await b.post('/kennelos/unlink', { confirm: 'yes' })).status, 303);
+
+  const p = b.row("SELECT * FROM products WHERE name = 'TLC Pet Food'");
+  const x = b.row("SELECT * FROM extras WHERE name = 'Puppy pack'");
+  assert.deepEqual([p.source, p.kennelos_id, p.hidden_by_kennelos, p.show_on_site], ['kennelport', null, 0, 0]);
+  assert.deepEqual([x.source, x.kennelos_id, x.hidden_by_kennelos, x.show_on_site], ['kennelport', null, 0, 0]);
+  const { buildSnapshot } = await import('../src/publish.js');
+  let snap = await buildSnapshot(b.env, b.site.id);
+  assert.ok(!snap.products.some((r) => r.id === p.id) && !snap.extras.some((r) => r.id === x.id), 'still off her site');
+  // Her lists say so, and her form has the switch.
+  assert.match(await (await b.get('/lists/products')).text(), /Off your website, still in the portal/);
+  assert.match(await (await b.get('/lists/extras')).text(), /Off your website, still in the portal/);
+  const form = await (await b.get(`/lists/products/${p.id}`)).text();
+  assert.match(form, /name="show_on_site"/);
+  assert.match(form, /Show on my website/);
+  // She ticks it: back on her site, the same row.
+  assert.equal((await b.post(`/lists/products/${p.id}`, { name: 'TLC Pet Food', link_url: 'https://tlcpetpro.com/r/ak', show_on_site: '1' })).status, 303);
+  assert.equal((await b.post(`/lists/extras/${x.id}`, { kind: 'item', name: 'Puppy pack', show_on_site: '1' })).status, 303);
+  snap = await buildSnapshot(b.env, b.site.id);
+  assert.ok(snap.products.some((r) => r.id === p.id) && snap.extras.some((r) => r.id === x.id), 'back on her site');
+  assert.ok(!('show_on_site' in snap.products[0]), 'not published as a field');
+});
+
+test('stopping the last device keeps the site linked; the next device carries on with nothing made twice (02-2)', async () => {
+  const b = await breeder();
+  const t1 = await linked(b);
+  const baer = { id: 'h-baer', test: 'BAER', result: 'Normal', normal: true, date: '2025-01-02' };
+  const full = () => bundle({
+    dogs: [DOG('d-zelda', 'Zelda', { health: [baer] })],
+    extras: [{ id: 'x1', name: 'Puppy pack', group: 'Gear', description: 'All they need.' }],
+    steps: [{ id: 's1', heading: 'Reserve', body: 'Send a deposit.' }, { id: 's2', heading: 'Bring them home', body: 'At eight weeks.' }],
+    products: [{ id: 'acct-1', name: 'Chewy', link_url: 'https://chewy.com/r/ak' }],
+  });
+  const counts = () => ['health_results', 'extras', 'steps', 'products', 'dogs'].map((t) => b.row(`SELECT COUNT(*) AS n FROM ${t} WHERE site_id = ?`, b.site.id).n);
+  assert.equal((await api(b.env, '/v1/bundle', { body: full(), token: t1 })).status, 200);
+  const before = counts();
+
+  // Her lost phone, stopped in the Site Manager: not an Unlink.
+  const id = b.row('SELECT id FROM links WHERE revoked_at IS NULL').id;
+  const stop = await b.post(`/kennelos/devices/${id}/stop`);
+  assert.match(stop.headers.get('location'), /note=stopped_last/);
+  assert.equal(b.row("SELECT COUNT(*) AS n FROM dogs WHERE kennelos_id = 'd-zelda' AND source = 'kennelos'").n, 1, 'still from KennelOS');
+  assert.equal(b.row("SELECT COUNT(*) AS n FROM extras WHERE kennelos_id = 'x1'").n, 1);
+  // The screen says it waits for a device, with Show a link code and Unlink.
+  const screen = await (await b.get('/kennelos?note=stopped_last')).text();
+  assert.match(screen, /Linked to KennelOS, no device yet/);
+  assert.match(screen, /Your site is still linked to KennelOS/);
+  assert.match(screen, /Show a link code/);
+  assert.match(screen, /action="[^"]*\/kennelos\/unlink"/);
+  assert.doesNotMatch(screen, /Stop this device/);
+
+  // Her new phone links and sends the same: updated in place, nothing doubled.
+  const t2 = await linked(b);
+  const out = await (await api(b.env, '/v1/bundle', { body: full(), token: t2 })).json();
+  assert.equal(out.summary.created, 0);
+  assert.equal(b.row('SELECT COUNT(*) AS n FROM link_pending WHERE site_id = ?', b.site.id).n, 0, 'nothing to match again');
+  assert.deepEqual(counts(), before);
+
+  // KennelOS's own Disconnect this device on the only device: the same.
+  assert.equal((await api(b.env, '/v1/link', { method: 'DELETE', token: t2 })).status, 200);
+  assert.equal(b.row("SELECT source FROM steps WHERE kennelos_id = 's1'").source, 'kennelos');
+});
+
+test('after an Unlink, linking again matches extras, steps and health results instead of making them twice (02-2)', async () => {
+  const b = await breeder();
+  const t1 = await linked(b);
+  const baer = { id: 'h-baer', test: 'BAER', result: 'Normal', normal: true, date: '2025-01-02' };
+  const full = () => bundle({
+    dogs: [DOG('d-zelda', 'Zelda', { health: [baer] })],
+    extras: [{ id: 'x1', name: 'Puppy pack', group: 'Gear', description: 'All they need.' }],
+    steps: [{ id: 's1', heading: 'Reserve', body: 'Send a deposit.' }, { id: 's2', heading: 'Bring them home', body: 'At eight weeks.' }],
+  });
+  const counts = () => ['health_results', 'extras', 'steps'].map((t) => b.row(`SELECT COUNT(*) AS n FROM ${t} WHERE site_id = ?`, b.site.id).n);
+  await api(b.env, '/v1/bundle', { body: full(), token: t1 });
+  const before = counts();
+  const order = () => b.rows("SELECT heading FROM steps WHERE site_id = ? AND page = 'how_it_works' ORDER BY sort, rowid", b.site.id).map((x) => x.heading);
+  // She rewords KennelOS's first step and moves it last.
+  b.env.DB.raw.prepare("UPDATE steps SET body = 'Her own words', sort = 99 WHERE kennelos_id = 's1'").run();
+  const herOrder = order();
+
+  await b.post('/kennelos/unlink', { confirm: 'yes' });
+  const t2 = await linked(b);
+  await api(b.env, '/v1/bundle', { body: full(), token: t2 });
+  assert.deepEqual(counts(), before, 'extras and steps taken over by name');
+  assert.equal(b.row("SELECT source FROM extras WHERE kennelos_id = 'x1'").source, 'kennelos');
+  assert.equal(b.row("SELECT body FROM steps WHERE kennelos_id = 's1'").body, 'Her own words', 'her wording stays');
+  assert.deepEqual(order(), herOrder, 'and her order');
+  // Zelda waits to be matched; matched, her BAER result isn't shown twice.
+  assert.equal((await b.post('/kennelos/match', { kind: 'dogs', kennelos_id: 'd-zelda', answer: 'yes' })).status, 303);
+  assert.deepEqual(counts(), before);
+  assert.equal(b.row("SELECT source FROM health_results WHERE kennelos_id = 'h-baer'").source, 'kennelos');
+  // And later updates keep it that way.
+  await api(b.env, '/v1/bundle', { body: full(), token: t2 });
+  assert.deepEqual(counts(), before);
+});
+
+test('with no device left, another kennel linking unlinks the old one first (02-2)', async () => {
+  const b = await breeder();
+  const t1 = await linked(b);
+  await api(b.env, '/v1/bundle', { body: bundle({ dogs: [DOG('d-zelda', 'Zelda')], extras: [{ id: 'x1', name: 'Puppy pack' }] }), token: t1 });
+  await api(b.env, '/v1/link', { method: 'DELETE', token: t1 });
+  assert.equal(b.row("SELECT source FROM dogs WHERE call_name = 'Zelda'").source, 'kennelos');
+  await linked(b, 'kennel-2');
+  const z = b.row("SELECT source, kennelos_id FROM dogs WHERE call_name = 'Zelda'");
+  assert.deepEqual([z.source, z.kennelos_id], ['kennelport', null]);
+  assert.equal(b.row("SELECT source FROM extras WHERE name = 'Puppy pack'").source, 'kennelport');
+  assert.equal(b.row('SELECT COUNT(*) AS n FROM links WHERE revoked_at IS NULL').n, 1, 'the new device is linked');
 });

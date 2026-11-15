@@ -207,7 +207,7 @@ test('KennelOS: partner kennels come by name and website, dogs follow where they
   assert.equal((await send(bundle({ dogs: [DOG('d1', 'Nova', { co_owner_contact_ids: ['c1'] })] }))).status, 400);
 
   // Unlink: hers to edit.
-  await b.post('/kennelos/unlink');
+  await b.post('/kennelos/unlink', { confirm: 'yes' });
   assert.equal(b.row('SELECT source FROM partner_kennels WHERE id = ?', mine).source, 'kennelport');
 });
 

@@ -103,10 +103,16 @@ for (const [name, side] of Object.entries(SIDES)) {
     const cookie = cookiePair(await side.verify(env, site, 'both@example.com', lastCode(env)));
     const old = new Date(Date.now() - SLIDE_AFTER_MS - 60000).toISOString();
     const soon = new Date(Date.now() + DAY).toISOString();
+    // Not yet a day: nothing moves, and no cookie to send again.
+    assert.equal((await side.current(env, site, cookie)).cookie, null);
     env.DB.raw.prepare(`UPDATE ${side.sessions} SET last_seen_at = ?, expires_at = ?`).run(old, soon);
-    assert.ok(await side.current(env, site, cookie));
+    const who = await side.current(env, site, cookie);
+    assert.ok(who);
     const row = env.DB.raw.prepare(`SELECT last_seen_at, expires_at FROM ${side.sessions}`).get();
     assert.ok(row.last_seen_at > old && row.expires_at > new Date(Date.now() + 30 * DAY).toISOString());
+    // The browser gets the same cookie again with a fresh Max-Age (review finding 02-5).
+    assert.ok(who.cookie.startsWith(`${cookie};`), who.cookie);
+    assert.match(who.cookie, new RegExp(`Max-Age=${name === 'breeder' ? 90 * 86400 : 365 * 86400}`));
     env.DB.raw.prepare(`UPDATE ${side.sessions} SET expires_at = ?`).run(new Date(Date.now() - 1000).toISOString());
     assert.equal(await side.current(env, site, cookie), null);
   });
@@ -135,4 +141,35 @@ test('the two are kept apart: codes, limits and sessions of one never work for t
   // Their limits are counted apart.
   const buckets = env.DB.raw.prepare('SELECT bucket FROM rate_limits').all().map((r) => r.bucket.split(':')[0]).sort();
   assert.deepEqual([...new Set(buckets)], ['email', 'ip', 'pemail', 'pip']);
+});
+
+// Review finding 02-5: a slid session's cookie goes out with the answer, so a
+// breeder (or a family) who keeps using it isn't signed out on day 90 (or 365).
+test('a slid session sends its cookie again with the answer, in the Site Manager and the family portal', async () => {
+  const { call } = await import('./helpers/env.js');
+  const { env, site } = await setup();
+  env.DB.raw.prepare('UPDATE sites SET portal_on = 1 WHERE id = ?').run(site.id);
+  await SIDES.breeder.start(env, site, 'both@example.com');
+  const her = cookiePair(await SIDES.breeder.verify(env, site, 'both@example.com', lastCode(env)));
+  await SIDES.family.start(env, site, 'both@example.com');
+  const fam = cookiePair(await SIDES.family.verify(env, site, 'both@example.com', lastCode(env)));
+  const old = new Date(Date.now() - SLIDE_AFTER_MS - 60000).toISOString();
+  const cookies = (res) => res.headers.getSetCookie();
+
+  // Fresh sessions: no cookie sent again.
+  assert.deepEqual(cookies(await call(env, 'manage.kennelport.com', '/', { headers: { cookie: her } })), []);
+  env.DB.raw.prepare('UPDATE sessions SET last_seen_at = ?').run(old);
+  const m = cookies(await call(env, 'manage.kennelport.com', '/', { headers: { cookie: her } }));
+  assert.equal(m.length, 1);
+  assert.ok(m[0].startsWith(`${her};`) && /Max-Age=7776000/.test(m[0]), m[0]);
+  // Signing out still clears it, and isn't undone by the slide.
+  env.DB.raw.prepare('UPDATE sessions SET last_seen_at = ?').run(old);
+  const out = cookies(await call(env, 'manage.kennelport.com', '/signout', { method: 'POST', headers: { cookie: her, origin: 'https://manage.kennelport.com' } }));
+  assert.deepEqual(out.filter((c) => c.startsWith('kp_session=')).map((c) => /Max-Age=0/.test(c)), [true]);
+
+  assert.deepEqual(cookies(await call(env, 'akbostons.kennelport.com', '/family', { headers: { cookie: fam } })), []);
+  env.DB.raw.prepare('UPDATE portal_sessions SET last_seen_at = ?').run(old);
+  const f = cookies(await call(env, 'akbostons.kennelport.com', '/family', { headers: { cookie: fam } }));
+  assert.equal(f.length, 1);
+  assert.ok(f[0].startsWith(`${fam};`) && /Path=\/family/.test(f[0]), f[0]);
 });

@@ -28,7 +28,7 @@ import { readFeed, kennelosState } from '../feed.js';
 import {
   waiting, fulfilled, getEntry, addEntry, updateEntry, setFulfilled, removeEntry, moveEntry, offerMailto, suggestWants, listNameFor, maskedNameFor, wantsPrivate, WaitlistError,
 } from '../waitlist.js';
-import { makeLinkCode, showCode, devices, stopDevice, unlinkSite, setKennelosPrices, LinkError, CODE_TTL_MS } from '../kennelos/link.js';
+import { makeLinkCode, showCode, devices, stopDevice, unlinkSite, waitingForDevice, setKennelosPrices, LinkError, CODE_TTL_MS } from '../kennelos/link.js';
 import { OWNED, OWNED_PRICES, ownedLineage } from '../kennelos/bundle.js';
 import { pendingMatches, matchChanges, confirmMatch, declineMatch, MatchError } from '../kennelos/match.js';
 import { leavingLitters, keepLitter, deleteLitter } from '../kennelos/clock.js';
@@ -62,9 +62,9 @@ const LISTS = {
   health: { name: (r) => r.test, sub: (r, say) => `${r.result}${r.show ? '' : ` · ${say('lists.sub.not_shown')}`}` },
   reviews: { name: (r) => r.first_name, sub: (r, say) => (r.status === 'hidden' ? say('lists.sub.hidden') : r.quote.slice(0, 60)) },
   steps: { name: (r) => r.heading || r.body || '—', sub: () => '' },
-  extras: { name: (r) => r.name, sub: (r, say) => (r.hidden_by_kennelos ? say('lists.sub.not_sent_portal') : r.kind === 'homegoing' ? say('lists.sub.package', { weeks: r.weeks ?? '' }) : r.grp ?? '') },
+  extras: { name: (r) => r.name, sub: (r, say) => (r.hidden_by_kennelos ? say('lists.sub.not_sent_portal') : !r.show_on_site ? say('lists.sub.off_site_portal') : r.kind === 'homegoing' ? say('lists.sub.package', { weeks: r.weeks ?? '' }) : r.grp ?? '') },
   partners: { name: (r) => r.name, sub: (r, say) => (r.hidden_by_kennelos ? say('lists.sub.not_sent') : r.url ? r.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : '') },
-  products: { name: (r) => r.name, sub: (r, say) => [r.hidden_by_kennelos ? say('lists.sub.not_sent_portal') : null, r.grp, r.code ? say('lists.sub.code', { code: r.code }) : null, r.transport ? say('lists.sub.transport') : null, r.home_badge ? say('lists.sub.home_badge') : null].filter(Boolean).join(' · ') },
+  products: { name: (r) => r.name, sub: (r, say) => [r.hidden_by_kennelos ? say('lists.sub.not_sent_portal') : !r.show_on_site ? say('lists.sub.off_site_portal') : null, r.grp, r.code ? say('lists.sub.code', { code: r.code }) : null, r.transport ? say('lists.sub.transport') : null, r.home_badge ? say('lists.sub.home_badge') : null].filter(Boolean).join(' · ') },
   policies: { name: (r) => r.heading, sub: () => '' },
   // A question also placed elsewhere says so here, so she can see at a glance
   // which ones her pages are carrying: the places the owner has made (placeChoices).
@@ -230,16 +230,19 @@ export function createScreens({ env, request, url, site, user, page, say = defau
         await setKennelosPrices(env, site.id, fd.has('on'));
         return here('saved', '#prices');
       }
+      // Unlink asks first (review finding 02-4): it can't be undone, and linking
+      // again means matching her dogs and litters again.
       if (rest === '/unlink') {
         if (!owner) return null;
+        if (fd.get('confirm') !== 'yes') return unlinkConfirm();
         await unlinkSite(env, site.id);
         return here('unlinked');
       }
       let m = rest.match(/^\/devices\/([0-9a-f-]{36})\/stop$/);
       if (m) {
         if (!owner) return null;
-        await stopDevice(env, site.id, m[1]);
-        return here('stopped');
+        const { last } = await stopDevice(env, site.id, m[1]);
+        return here(last ? 'stopped_last' : 'stopped');
       }
       if (rest === '/match') {
         const kind = String(fd.get('kind') ?? '');
@@ -259,21 +262,35 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     if (rest) return null;
     return render({});
 
+    function unlinkConfirm() {
+      return { title: 'KennelOS', back: `${base}/kennelos`, body: `<form method="post" action="${base}/kennelos/unlink" class="card danger"><h2>${esc(say('kennelos.unlink_sure'))}</h2>
+        <p>${esc(say('kennelos.unlink_sure_text'))}</p>
+        <input type="hidden" name="confirm" value="yes">
+        <p><button>${esc(say('kennelos.yes_unlink'))}</button> <a class="button" href="${base}/kennelos">${esc(say('kennelos.keep_it_linked'))}</a></p></form>` };
+    }
+
     async function render({ code = null, expiresAt = null, error = null }) {
       const list = await devices(env, site.id);
-      const linked = list.length > 0;
+      // No device, but her records still come from KennelOS (the last device was
+      // stopped, review finding 02-2): still linked, waiting for the next device.
+      const waiting = !list.length && await waitingForDevice(env, site.id);
+      const linked = list.length > 0 || waiting;
       const prices = await kosPrices();
       const parts = [note(url), error ? `<p class="error" role="alert">${esc(error)}</p>` : ''];
-      parts.push(`<section class="card"><h2>${linked ? esc(say('kennelos.linked_to_kennelos')) : esc(say('kennelos.link_kennelos'))}</h2>
-        <p class="muted">${linked
+      parts.push(`<section class="card"><h2>${waiting ? esc(say('kennelos.no_device_linked')) : linked ? esc(say('kennelos.linked_to_kennelos')) : esc(say('kennelos.link_kennelos'))}</h2>
+        <p class="muted">${waiting
+          ? esc(say('kennelos.no_device_text'))
+          : linked
           ? esc(say('kennelos.when_you_press_update'))
           : esc(say('kennelos.keep_your_dogs_and'))}</p>
         ${code ? `<p class="notice" role="status">${esc(say('kennelos.your_code'))} <strong class="code">${esc(showCode(code))}</strong><br>In KennelOS, open Settings, then Connect website, and type it in. It works once, for ${CODE_TTL_MS / 60000} minutes${expiresAt ? ` (until ${esc(when(expiresAt))})` : ''}.</p>` : ''}
-        ${site.demo_step != null ? `<p class="muted small">${esc(say('kennelos.this_demo_is_linked'))}</p>` : `<form method="post" action="${base}/kennelos/code"><button class="${linked ? '' : 'primary'}">${linked ? esc(say('kennelos.link_another_device')) : esc(say('kennelos.show_a_link_code'))}</button></form>
+        ${site.demo_step != null ? `<p class="muted small">${esc(say('kennelos.this_demo_is_linked'))}</p>` : `<form method="post" action="${base}/kennelos/code"><button class="${list.length ? '' : 'primary'}">${list.length ? esc(say('kennelos.link_another_device')) : esc(say('kennelos.show_a_link_code'))}</button></form>
         <p class="muted small">${esc(say('kennelos.each_phone_or_computer'))}</p>`}</section>`);
-      if (linked) {
+      if (list.length) {
         parts.push(`<section class="card"><h2>${esc(say('kennelos.devices'))}</h2><ul class="items">${list.map((d) => `<li class="item"><span><b>${esc(d.device_label || say('kennelos.a_kennelos_device'))}</b><span class="muted small"> · ${d.last_bundle_at ? `last update ${esc(when(d.last_bundle_at))}` : `linked ${esc(when(d.linked_at))}, no update yet`}</span>${d.summary?.text ? `<br><span class="muted small">${esc(d.summary.text)}</span>` : ''}</span>
           ${owner ? `<form method="post" action="${base}/kennelos/devices/${d.id}/stop"><button class="link">${esc(say('kennelos.stop_this_device'))}</button></form>` : ''}</li>`).join('')}</ul></section>`);
+      }
+      if (linked) {
         const pending = await pendingMatches(env, site.id);
         if (pending.length) parts.push(await matchesCard(pending));
         parts.push(`<form method="post" action="${base}/kennelos/prices" class="card" id="prices"><h2>${esc(say('kennelos.prices'))}</h2>

@@ -50,8 +50,8 @@ const productId = (b, name) => b.env.DB.raw.prepare('SELECT id FROM products WHE
 test('the page shows once she has words; transport services are badges there, not on Recommended products', async () => {
   const b = await breeder();
   assert.equal((await b.page('/pickup')).status, 404, 'no words yet: no page');
-  await b.post('/lists/products/new', { name: 'Sky Nanny', link_url: 'https://skynanny.example/r/ak', website_url: 'https://www.skynanny.example/', code: 'AK5', transport: '1', image_url: LOGO });
-  await b.post('/lists/products/new', { name: 'Pup Van', website_url: 'https://pupvan.example/', transport: '1' });
+  await b.post('/lists/products/new', { show_on_site: '1', name: 'Sky Nanny', link_url: 'https://skynanny.example/r/ak', website_url: 'https://www.skynanny.example/', code: 'AK5', transport: '1', image_url: LOGO });
+  await b.post('/lists/products/new', { show_on_site: '1', name: 'Pup Van', website_url: 'https://pupvan.example/', transport: '1' });
   await b.post('/publish');
   assert.equal((await b.page('/pickup')).status, 404, 'transport services alone don\'t make the page');
   const r = await b.post('/pages/pickup', { enabled: '1', pickup_text: 'Pickup is at our home on a Saturday.\n\nAllow an hour.', transport_text: 'We work with a flight nanny.', badges_heading: 'Who we fly with' });
@@ -73,12 +73,12 @@ test('the page shows once she has words; transport services are badges there, no
 
 test('badges on other pages: the pages she ticks, a picture needed, two per page', async () => {
   const b = await breeder();
-  const r1 = await b.post('/lists/products/new', [['name', 'Kong'], ['link_url', 'https://kong.example/r'], ['image_url', LOGO], ['badge_places', 'litters'], ['badge_places', 'extras']]);
+  const r1 = await b.post('/lists/products/new', [['show_on_site', '1'], ['name', 'Kong'], ['link_url', 'https://kong.example/r'], ['image_url', LOGO], ['badge_places', 'litters'], ['badge_places', 'extras']]);
   assert.equal(r1.status, 303);
-  const noPic = await (await b.post('/lists/products/new', [['name', 'Bare'], ['badge_places', 'litters']])).text();
+  const noPic = await (await b.post('/lists/products/new', [['show_on_site', '1'], ['name', 'Bare'], ['badge_places', 'litters']])).text();
   assert.match(noPic, /a badge needs a picture/);
-  await b.post('/lists/products/new', [['name', 'Two'], ['image_url', LOGO], ['badge_places', 'litters']]);
-  const three = await (await b.post('/lists/products/new', [['name', 'Three'], ['image_url', LOGO], ['badge_places', 'litters']])).text();
+  await b.post('/lists/products/new', [['show_on_site', '1'], ['name', 'Two'], ['image_url', LOGO], ['badge_places', 'litters']]);
+  const three = await (await b.post('/lists/products/new', [['show_on_site', '1'], ['name', 'Three'], ['image_url', LOGO], ['badge_places', 'litters']])).text();
   assert.match(three, /Puppies page shows at most 2 badges/);
   await b.post('/publish');
   const extras = await (await b.page('/extras')).text();
