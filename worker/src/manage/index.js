@@ -11,6 +11,7 @@ import { escapeHtml as esc } from '../lib/html.js';
 import {
   startSignIn, verifySignIn, currentUser, signOut, clearSessionCookie, AuthError, CODE_TTL_MS,
 } from '../auth.js';
+import { withCookie } from '../signin.js';
 import { makePreviewToken } from '../site.js';
 import { listSnapshots, draftChanges } from '../publish.js';
 import { siteLink } from '../ops/sites.js';
@@ -314,7 +315,14 @@ async function serviceWorker(env, request) {
 
 // ---------- routes ----------
 
+// Every answer to a signed-in breeder whose session slid carries its cookie again
+// (review finding 02-5).
 export async function handleManage(request, env, url) {
+  const slid = {};
+  return withCookie(await manageRoutes(request, env, url, slid), slid.cookie);
+}
+
+async function manageRoutes(request, env, url, slid) {
   const { pathname } = url;
   if (pathname === '/manifest.webmanifest') return manifest();
   if (pathname === '/sw.js' && env.ASSETS) return serviceWorker(env, request);
@@ -369,6 +377,7 @@ export async function handleManage(request, env, url) {
     return new Response(null, { status: 303, headers });
   }
   if (!user) return pathname === '/' ? signInPage({}, await every()) : redirect('/');
+  slid.cookie = breeder?.cookie;
 
   if (pathname.startsWith('/push/') && post) {
     let body = {};

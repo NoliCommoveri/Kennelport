@@ -82,7 +82,7 @@ async function breeder() {
 test('pasting the embed code fills in the product; it shows on its page and as a Home badge', async () => {
   const b = await breeder();
   assert.match(await (await b.get('/lists/products/new')).text(), /Or paste the embed code they gave you/);
-  const res = await b.post('/lists/products/new', { name: '', grp: 'Food', code: 'AKBOSTON', code_note: 'for 10% off', home_badge: '1', _badge_code: TLC });
+  const res = await b.post('/lists/products/new', { show_on_site: '1', name: '', grp: 'Food', code: 'AKBOSTON', code_note: 'for 10% off', home_badge: '1', _badge_code: TLC });
   assert.equal(res.status, 303, await res.clone().text());
   const p = b.env.DB.raw.prepare('SELECT * FROM products').get();
   assert.equal(p.name, 'TLC Pet Food Heritage Green Logo', 'named from the alt text when left empty');
@@ -110,11 +110,11 @@ test('pasting the embed code fills in the product; it shows on its page and as a
 
 test('a picture from anywhere else is copied onto the site; a typed brand picture must be from an approved address', async () => {
   const b = await breeder();
-  await b.post('/lists/products/new', { name: 'Other', _badge_code: '<a href="https://other.example/r"><img src="https://other.example/logo.jpg" alt="Other"></a>' });
+  await b.post('/lists/products/new', { show_on_site: '1', name: 'Other', _badge_code: '<a href="https://other.example/r"><img src="https://other.example/logo.jpg" alt="Other"></a>' });
   const p = b.env.DB.raw.prepare('SELECT * FROM products').get();
   assert.equal(p.image_url, null);
   assert.equal(b.env.DB.raw.prepare('SELECT type FROM photos WHERE id = ?').get(p.photo_id).type, 'image/jpeg');
-  const bad = await (await b.post('/lists/products/new', { name: 'Sneaky', image_url: 'https://tracker.example/pixel.png' })).text();
+  const bad = await (await b.post('/lists/products/new', { show_on_site: '1', name: 'Sneaky', image_url: 'https://tracker.example/pixel.png' })).text();
   assert.match(bad, /isn(&#39;|')t one your site can show from/);
   await assert.rejects(importContent(b.env, b.site.id, { products: [{ name: 'X', image_url: 'https://tracker.example/a.png' }] }), /approved brand address/);
 });
@@ -122,16 +122,16 @@ test('a picture from anywhere else is copied onto the site; a typed brand pictur
 test('at most two badges, each needing a picture; a picture that can\'t be fetched says so', async () => {
   const b = await breeder();
   const pic = '<a href="https://other.example/r"><img src="https://other.example/logo.jpg" alt="Other"></a>';
-  assert.equal((await b.post('/lists/products/new', { name: 'One', home_badge: '1', _badge_code: pic })).status, 303);
-  assert.equal((await b.post('/lists/products/new', { name: 'Two', home_badge: '1', _badge_code: TLC })).status, 303);
-  const third = await (await b.post('/lists/products/new', { name: 'Three', home_badge: '1', _badge_code: pic })).text();
+  assert.equal((await b.post('/lists/products/new', { show_on_site: '1', name: 'One', home_badge: '1', _badge_code: pic })).status, 303);
+  assert.equal((await b.post('/lists/products/new', { show_on_site: '1', name: 'Two', home_badge: '1', _badge_code: TLC })).status, 303);
+  const third = await (await b.post('/lists/products/new', { show_on_site: '1', name: 'Three', home_badge: '1', _badge_code: pic })).text();
   assert.match(third, /at most 2 badges/);
-  const noPic = await (await b.post('/lists/products/new', { name: 'Four', home_badge: '1' })).text();
+  const noPic = await (await b.post('/lists/products/new', { show_on_site: '1', name: 'Four', home_badge: '1' })).text();
   assert.match(noPic, /needs a picture/);
-  const broken = await (await b.post('/lists/products/new', { name: 'Five', _badge_code: '<a href="https://x.example/"><img src="https://missing.example/a.png"></a>' })).text();
+  const broken = await (await b.post('/lists/products/new', { show_on_site: '1', name: 'Five', _badge_code: '<a href="https://x.example/"><img src="https://missing.example/a.png"></a>' })).text();
   assert.match(broken, /couldn(&#39;|')t be fetched/);
   // A PNG logo can't be copied: the link stays filled in, for her to add the picture herself.
-  const asPng = await (await b.post('/lists/products/new', { name: '', _badge_code: '<a href="https://six.example/r"><img src="https://png.example/logo.png" alt="Six"></a>' })).text();
+  const asPng = await (await b.post('/lists/products/new', { show_on_site: '1', name: '', _badge_code: '<a href="https://six.example/r"><img src="https://png.example/logo.png" alt="Six"></a>' })).text();
   assert.match(asPng, /Your link is filled in, but the picture in that code can(&#39;|')t be copied \(Only WebP or JPEG photos can be uploaded\)/);
   assert.match(asPng, /value="https:\/\/six\.example\/r"/);
   assert.match(asPng, /value="Six"/);
@@ -143,10 +143,11 @@ test('at most two badges, each needing a picture; a picture that can\'t be fetch
 
 test('products go out in the content document and come back in', async () => {
   const b = await breeder();
-  await b.post('/lists/products/new', { name: 'Kong', link_url: 'https://kong.example/', code: 'AK5' });
+  await b.post('/lists/products/new', { show_on_site: '1', name: 'Kong', link_url: 'https://kong.example/', code: 'AK5' });
   const doc = await exportContent(b.env, b.site.id);
-  assert.deepEqual(doc.products, [{ name: 'Kong', link_url: 'https://kong.example/', code: 'AK5', home_badge: false, transport: false }]);
-  await importContent(b.env, b.site.id, { products: [...doc.products, { name: 'Bed' }] });
-  assert.deepEqual(b.env.DB.raw.prepare('SELECT name FROM products ORDER BY sort').all().map((x) => x.name), ['Kong', 'Bed']);
+  assert.deepEqual(doc.products, [{ name: 'Kong', link_url: 'https://kong.example/', code: 'AK5', home_badge: false, transport: false, show_on_site: true }]);
+  // Her Show on my website switch (0037) goes out and comes back; left out, it's on.
+  await importContent(b.env, b.site.id, { products: [...doc.products, { name: 'Bed' }, { name: 'Off', show_on_site: false }] });
+  assert.deepEqual(b.env.DB.raw.prepare('SELECT name, show_on_site FROM products ORDER BY sort').all().map((x) => [x.name, x.show_on_site]), [['Kong', 1], ['Bed', 1], ['Off', 0]]);
   await assert.rejects(importContent(b.env, b.site.id, { products: [{ name: 'X', home_badge: true }] }), /needs a photo_id or image_url/);
 });

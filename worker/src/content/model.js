@@ -250,6 +250,8 @@ export const EXTRA_FIELDS = {
   checklist: { type: 'list', max: 30, itemMax: 120 },
   closing: ML(400),
   featured: BOOL,
+  // Hers (migration 0037): off, it leaves the public site and stays in the portal.
+  show_on_site: BOOL,
 };
 
 // Recommended products (the /recommended page): food, gear and the like she
@@ -298,6 +300,8 @@ export const PRODUCT_FIELDS = {
   home_badge: { ...BOOL, spot: 'home' },
   badge_places: { type: 'list', item: 'place', spot: 'badges', max: PLACES_MAX },
   transport: BOOL,
+  // Hers (migration 0037): off, it leaves the public site and stays in the portal.
+  show_on_site: BOOL,
 };
 // A product's address under its badge: its website, else its link, as a bare
 // host ("skynanny.com"). null when neither reads as a web address.

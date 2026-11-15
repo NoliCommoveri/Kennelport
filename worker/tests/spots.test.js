@@ -81,7 +81,7 @@ test('a spot on her page: the breeder ticks it, and the page shows her question 
   assert.equal((await b.post(`/lists/faq/${b.faqId}`, body)).status, 303);
   assert.deepEqual(JSON.parse(b.row('SELECT places FROM expanders WHERE id = ?', b.faqId).places), ['litter', id]);
   assert.match(await b.get('/lists/faq'), /also on every litter&#39;s page, our dams page/);
-  const p = new URLSearchParams({ name: 'Sky Nanny', image_url: 'https://tlcpetpro.com/b.png', website_url: 'https://skynanny.com' });
+  const p = new URLSearchParams({ show_on_site: '1', name: 'Sky Nanny', image_url: 'https://tlcpetpro.com/b.png', website_url: 'https://skynanny.com' });
   p.append('badge_places', id);
   assert.equal((await b.post(`/lists/products/${b.product('Sky Nanny')}`, p)).status, 303);
 

@@ -198,11 +198,11 @@ export async function buildSnapshot(env, siteId) {
     heading: e.heading, body: e.body, start_open: Boolean(e.start_open),
     ...(e.page === 'faq' ? { places: e.places ? JSON.parse(e.places) : [] } : {}),
   });
-  const extras = (await all('SELECT * FROM extras WHERE site_id = ? AND hidden_by_kennelos = 0 ORDER BY sort')).map((x) => ({
-    ...keep(x, ['site_id', 'sort', 'source', 'hidden_by_kennelos']), featured: Boolean(x.featured), checklist: json(x.checklist, []),
+  const extras = (await all('SELECT * FROM extras WHERE site_id = ? AND hidden_by_kennelos = 0 AND show_on_site = 1 ORDER BY sort')).map((x) => ({
+    ...keep(x, ['site_id', 'sort', 'source', 'hidden_by_kennelos', 'show_on_site']), featured: Boolean(x.featured), checklist: json(x.checklist, []),
   }));
-  const products = (await all('SELECT * FROM products WHERE site_id = ? AND hidden_by_kennelos = 0 ORDER BY sort')).map((x) => ({
-    ...keep(x, ['site_id', 'sort', 'source', 'hidden_by_kennelos']), home_badge: Boolean(x.home_badge),
+  const products = (await all('SELECT * FROM products WHERE site_id = ? AND hidden_by_kennelos = 0 AND show_on_site = 1 ORDER BY sort')).map((x) => ({
+    ...keep(x, ['site_id', 'sort', 'source', 'hidden_by_kennelos', 'show_on_site']), home_badge: Boolean(x.home_badge),
     transport: Boolean(x.transport), badge_places: json(x.badge_places, []),
   }));
 

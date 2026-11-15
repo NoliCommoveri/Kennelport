@@ -10,7 +10,10 @@
 // - One kennel to one site: every device on a site must be the same KennelOS
 //   kennel; a code redeemed from another is refused.
 // - Unlink stops every device and turns everything that came from KennelOS into
-//   ordinary KennelPort content, exactly as it stands in the draft.
+//   ordinary KennelPort content, exactly as it stands in the draft. It is only ever
+//   her own choice: the last device stopping leaves the site linked, its records
+//   keyed to KennelOS, waiting for the next device (review finding 02-2). A device
+//   from another kennel linking then unlinks first.
 import { hmacHex, sha256Hex, randomHex } from '../lib/crypto.js';
 import { SECTIONS } from './bundle.js';
 import { ApiError } from '../lib/http.js';
@@ -96,6 +99,11 @@ export async function redeemCode(env, request, body) {
   if (other) throw new ApiError(409, 'other_kennel', { message: 'This website is already linked to another of your kennels. Each kennel links to its own website.' });
   const burned = await env.DB.prepare('UPDATE link_codes SET used_at = ? WHERE code_hash = ? AND used_at IS NULL').bind(new Date().toISOString(), hash).run();
   if (burned.meta.changes !== 1) throw new ApiError(400, 'invalid_code', { message: 'That code has already been used.' });
+  // No device left, and this is another kennel than the last one linked: what the
+  // old kennel sent becomes hers (an Unlink) before the new one starts sending, so
+  // nothing of hers waits keyed to a kennel that will never send it again.
+  const last = await env.DB.prepare('SELECT kennelos_kennel_id FROM links WHERE site_id = ? ORDER BY linked_at DESC, rowid DESC LIMIT 1').bind(site.id).first('kennelos_kennel_id');
+  if (last && last !== kennel) await unlinkSite(env, site.id);
 
   const token = `kpl_${randomHex(32)}`;
   const t = new Date().toISOString();
@@ -165,10 +173,22 @@ export async function isLinked(env, siteId) {
   return Boolean(await env.DB.prepare('SELECT 1 FROM links WHERE site_id = ? AND revoked_at IS NULL LIMIT 1').bind(siteId).first());
 }
 
-// Stop one device. The last one stopping is an Unlink.
+// Still linked with no device: records that came from KennelOS (or matches waiting
+// for her) are still keyed to it, and wait for the next device she links.
+export async function waitingForDevice(env, siteId) {
+  const tables = ['dogs', 'litters', 'puppies', 'health_results', 'extras', 'products', 'partner_kennels', 'steps', 'payment_info'];
+  const sql = [...tables.map((t) => `SELECT 1 FROM ${t} WHERE site_id = ? AND source = 'kennelos'`), 'SELECT 1 FROM link_pending WHERE site_id = ?'].join(' UNION ALL ');
+  if (await isLinked(env, siteId)) return false;
+  return Boolean(await env.DB.prepare(`SELECT EXISTS (${sql}) AS x`).bind(...Array(tables.length + 1).fill(siteId)).first('x'));
+}
+
+// Stop one device. The last one stopping is not an Unlink (review finding 02-2):
+// changing phones is ordinary, and an Unlink followed by a new link made her
+// extras, steps and health results twice. Her records stay keyed to KennelOS and
+// the next device she links carries on. → whether it was the last one.
 export async function stopDevice(env, siteId, linkId) {
   await env.DB.prepare('UPDATE links SET revoked_at = ? WHERE id = ? AND site_id = ? AND revoked_at IS NULL').bind(new Date().toISOString(), linkId, siteId).run();
-  if (!(await isLinked(env, siteId))) await unlinkSite(env, siteId);
+  return { last: !(await isLinked(env, siteId)) };
 }
 
 // Unlink (plan 5.2 step 6): every device stops, and every record that came from
@@ -190,8 +210,10 @@ export async function unlinkSite(env, siteId) {
     db.prepare("UPDATE litters SET show_on_site = CASE WHEN hidden_by_kennelos = 1 THEN 0 ELSE show_on_site END, hidden_by_kennelos = 0, source = 'kennelport', kennelos_id = NULL, kennelos_kind = NULL, kennelos_name = NULL WHERE site_id = ?").bind(siteId),
     db.prepare("UPDATE puppies SET status = CASE WHEN hidden_by_kennelos = 1 THEN 'hidden' ELSE status END, hidden_by_kennelos = 0, source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
     db.prepare("UPDATE health_results SET source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
-    db.prepare("UPDATE extras SET source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
-    db.prepare("UPDATE products SET source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
+    // Products and extras too, by their own Show on my website switch (migration
+    // 0037, review finding 02-1): nothing could send them back once unlinked.
+    db.prepare("UPDATE extras SET show_on_site = CASE WHEN hidden_by_kennelos = 1 THEN 0 ELSE show_on_site END, hidden_by_kennelos = 0, source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
+    db.prepare("UPDATE products SET show_on_site = CASE WHEN hidden_by_kennelos = 1 THEN 0 ELSE show_on_site END, hidden_by_kennelos = 0, source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
     // A partner kennel KennelOS stopped sending stays hidden (she may have unticked
     // naming it): it waits under Not on your site, with Remove.
     db.prepare("UPDATE partner_kennels SET source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),

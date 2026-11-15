@@ -529,15 +529,24 @@ export class Writer {
   // her order and puts a new one after her last; 'kennelos' takes KennelOS's order
   // at every update. A dog sent with no results (its health key came, as []) has
   // none now (`keyed`): KennelOS's results come off it (review finding 01-2), hers stay.
+  // One of hers that says just what KennelOS sends (the same test, result and date)
+  // is taken over rather than shown twice: what an Unlink left of KennelOS's own,
+  // once the dog is matched again (review finding 02-2), or the same result typed by hand.
   health(dogId, display, list, existing = [], keyed = false) {
     if (!list.length && !keyed) return;
     const mine = existing.filter((h) => h.dog_id === dogId && h.source === 'kennelos');
     const byKos = new Map(mine.map((h) => [h.kennelos_id, h]));
+    const free = existing.filter((h) => h.dog_id === dogId && !h.kennelos_id);
+    const twin = (h) => {
+      const j = free.findIndex((f) => lower(f.test) === lower(h.test) && lower(f.result) === lower(h.result) && (f.date ?? null) === (h.date ?? null));
+      return j >= 0 ? free.splice(j, 1)[0] : null;
+    };
     const hers = this.L.health_order === 'hers';
     let next = Math.max(99, ...existing.filter((h) => h.dog_id === dogId).map((h) => Number(h.sort) || 0)) + 1;
     list.forEach((h, i) => {
-      const cur = byKos.get(h.id);
+      let cur = byKos.get(h.id);
       const values = { test: h.test, result: h.result, normal: h.normal ?? 1, date: h.date, verify_url: h.verify_url, sort: 100 + i };
+      if (!cur && (cur = twin(h))) Object.assign(values, { source: 'kennelos', kennelos_id: h.id });
       if (h.sent?.has('type')) values.test_type = h.type;
       if (hers) { if (cur) delete values.sort; else values.sort = next++; }
       // A result Normal results only kept off for not being normal shows once it
@@ -798,15 +807,23 @@ export async function applyBundle(env, device, body) {
   }
 
   // Extras (3.4): names, groups and descriptions; prices with Use my KennelOS prices.
+  // One of hers with the same name is taken over, as products are (5.2), keeping
+  // its photo, checklist and portal settings: so a link after an Unlink (or KennelOS
+  // re-keying its records) doesn't make each extra twice (review finding 02-2).
   if (clean.extras) {
     const byKos = new Map(st.extras.filter((x) => x.kennelos_id).map((x) => [x.kennelos_id, x]));
+    const free = st.extras.filter((x) => !x.kennelos_id);
     let sort = Math.max(-1, ...st.extras.map((x) => x.sort));
     for (const x of clean.extras) {
       const values = { name: x.name, grp: x.group, description: x.description, ...(w.prices ? { price_from: x.price_from, price_to: x.price_to } : {}) };
-      const cur = byKos.get(x.id);
+      let cur = byKos.get(x.id);
+      if (!cur) {
+        const j = free.findIndex((e) => lower(e.name) === lower(x.name));
+        if (j >= 0) [cur] = free.splice(j, 1);
+      }
       if (cur) {
         if (cur.hidden_by_kennelos) w.counts.back++;
-        if (w.update('extras', cur, { ...values, hidden_by_kennelos: 0 })) w.counts.updated++;
+        if (w.update('extras', cur, { ...values, source: 'kennelos', kennelos_id: x.id, hidden_by_kennelos: 0 })) w.counts.updated++;
         continue;
       }
       w.insert('extras', { id: crypto.randomUUID(), site_id: site.id, kind: 'item', ...values, featured: 0, sort: ++sort, source: 'kennelos', kennelos_id: x.id });
@@ -870,19 +887,39 @@ export async function applyBundle(env, device, body) {
   // KennelOS's wording only starts a step: once it's on her site, its heading, body
   // and place are hers, so her edits, her own steps and her order stay through every
   // update. The first time, KennelOS's steps go first and hers follow; a step
-  // KennelOS adds later goes last. One KennelOS stops sending leaves.
+  // KennelOS adds later goes last. One KennelOS stops sending leaves. A step of hers
+  // with the same heading is taken over with her wording, not made again, so a link
+  // after an Unlink doesn't repeat her steps (review finding 02-2): the first time it
+  // takes KennelOS's place in that order, later it keeps its own. Linking again
+  // after an Unlink (a device was stopped on this site before) isn't a first time:
+  // her steps, KennelOS's old ones among them, keep her order.
   if (clean.steps?.length) {
     const byKos = new Map(st.steps.filter((x) => x.kennelos_id).map((x) => [x.kennelos_id, x]));
-    const first = !st.steps.some((x) => x.source === 'kennelos');
+    const free = st.steps.filter((x) => !x.kennelos_id && lower(x.heading));
+    const taken = new Map();
+    for (const x of clean.steps) {
+      if (byKos.has(x.id)) continue;
+      const j = free.findIndex((f) => lower(f.heading) === lower(x.heading));
+      if (j >= 0) taken.set(x.id, free.splice(j, 1)[0]);
+    }
+    const before = await env.DB.prepare('SELECT 1 FROM links WHERE site_id = ? AND revoked_at IS NOT NULL LIMIT 1').bind(site.id).first();
+    const first = !st.steps.some((x) => x.source === 'kennelos') && !before;
     let sort = first ? -1 : Math.max(-1, ...st.steps.map((x) => x.sort ?? 0));
     for (const x of clean.steps) {
       if (byKos.has(x.id)) continue;
+      if (taken.has(x.id)) {
+        w.s.push(first
+          ? env.DB.prepare("UPDATE steps SET source = 'kennelos', kennelos_id = ?, sort = ? WHERE id = ?").bind(x.id, ++sort, taken.get(x.id).id)
+          : env.DB.prepare("UPDATE steps SET source = 'kennelos', kennelos_id = ? WHERE id = ?").bind(x.id, taken.get(x.id).id));
+        continue;
+      }
       w.insert('steps', { id: crypto.randomUUID(), site_id: site.id, page: 'how_it_works', heading: x.heading, body: x.body, sort: ++sort, pay_link: 0, source: 'kennelos', kennelos_id: x.id });
     }
     const sent = new Set(clean.steps.map((x) => x.id));
     for (const x of st.steps) if (x.source === 'kennelos' && !sent.has(x.kennelos_id)) w.s.push(env.DB.prepare('DELETE FROM steps WHERE id = ?').bind(x.id));
     // The first time only: her own steps follow KennelOS's, in her order.
-    if (first) [...st.steps].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0)).forEach((x, i) => w.s.push(env.DB.prepare('UPDATE steps SET sort = ? WHERE id = ?').bind(sort + 1 + i, x.id)));
+    const takenIds = new Set([...taken.values()].map((x) => x.id));
+    if (first) st.steps.filter((x) => !takenIds.has(x.id)).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0)).forEach((x, i) => w.s.push(env.DB.prepare('UPDATE steps SET sort = ? WHERE id = ?').bind(sort + 1 + i, x.id)));
   }
 
   // How to pay (3.9): filled from her waitlist settings; whether it shows is hers.
