@@ -12,7 +12,7 @@ Findings live in `docs/review/findings/NN-<slug>.md`.
 | 4 | Addresses back to KennelOS; publish/snapshot | `ccr-e40bb9e8-ypczsq` | `d54afed` (KOS `850e02f`) | 2026-11-16 | 2 | 1 | 4 | 1 | [04](findings/04-addresses-publish.md) |
 | 5 | Waitlist page, feed, sealed application form | `ccr-e40bb9e8-ypczsq` | `bd59ce3` (KOS `850e02f`) | 2026-11-16 | 1 | 2 | 5 | 1 | [05](findings/05-waitlist-application.md) |
 | 6 | The manage app: a breeder on a phone | `claude/breeder-app-manage-review-3bw686` | `10cb8b9` | 2026-11-16 | 1 | 4 | 8 | 2 | [06](findings/06-manage-app.md) |
-| 7 | The public site: what a family sees | — | — | — | — | — | — | — | — |
+| 7 | The public site: what a family sees | `ccr-03466519-2aavy2` | `557235e` | 2026-11-17 | 1 | 2 | 7 | 0 | [07](findings/07-public-site.md) |
 | 8 | Content layer, migrations, platform | — | — | — | — | — | — | — | — |
 | 9 | The KennelOS side a breeder touches | — | — | — | — | — | — | — | — |
 | 11 | The family portal | — | — | — | — | — | — | — | — |
@@ -28,3 +28,4 @@ Session 3 (2026-11-15, `9bd2d14`): KennelPort `node --test` 455 pass.
 Session 4 (2026-11-16, `d54afed`): KennelPort `node --test` 455 pass; KennelOS `850e02f` `node --test` 2080 pass.
 Session 5 (2026-11-16, `bd59ce3`): KennelPort 455 pass; KennelOS `850e02f` `node --test` 2080 pass, `cloud` `npm test` 365 pass.
 Session 6 (2026-11-16, `10cb8b9`): KennelPort `node --test` 455 pass.
+Session 7 (2026-11-17, `557235e`): KennelPort `node --test` 455 pass.
