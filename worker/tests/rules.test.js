@@ -75,9 +75,11 @@ test('display rules change how the sample\'s pups read', async (t) => {
   let gem = text((await page('/litters/the-gem-litter')).html);
   assert.doesNotMatch(gem, /Garnet\*/, 'hidden: a health hold, not shown');
   assert.match(gem, /Onyx\* .*Reserved/);
+  // A Reserved or Still deciding pup isn't on offer: by default no full-registration ask or surcharge (review 07, finding 1).
+  assert.doesNotMatch(text((await page('/litters/the-gem-litter/ruby')).html), /Ask about full registration|Full Registration Surcharge|Registration Limited/);
   const r = await post('/admin/tuxedolane/rules', await rulesForm(env, admin, {
     'status.hidden.show': 'on', 'status.hidden.words': 'Health hold',
-    'status.placed.words': 'Spoken for',
+    'status.placed.words': 'Spoken for', 'status.placed.fullreg': 'on',
     'status.undecided.show': null,
     'reg.unset': 'To be decided',
     'price.off': 'Ask us', 'status.not_open.words': 'Deposits open {date}',

@@ -683,8 +683,9 @@ export function besideCard(snap, d, { sale = null, show = SHOW_DEFAULT.dogs } = 
 // A litter with "Families can ask about full registration" on (its own setting):
 // each of its undecided puppies (no registration set: she'd sell it either way)
 // links to the contact form with it filled in, and so does the litter while it has
-// one. Only for statuses whose rule allows it (today all but staying: a puppy
-// staying here is for no one), and only while the contact page is on.
+// one. Only for statuses whose rule allows it (by default Available, before deposits
+// open too: a Reserved or Still deciding pup isn't on offer, plan 3.2 and decision 32;
+// the owner can turn it on for any status), and only while the contact page is on.
 const undecided = (snap, p, l = null, today = null) => !p.registration && statusRule(snap, p, l, today).fullreg;
 
 // What a puppy's Registration line says, in the site's words. A puppy she hasn't

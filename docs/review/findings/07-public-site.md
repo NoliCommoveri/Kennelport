@@ -79,6 +79,9 @@ records "pups with no registration set, other than staying" as today's behaviour
 copied the gap rather than the decision.
 **What I'd do** Default `fullreg` to `available` (and `not_open`) only, as price and ask are; ask the
 owner first, since the table says otherwise.
+**Done, 2026-11-17 (the owner's call):** the setting stays hers on the Rules screen for every
+status; its default is now off for Reserved and Still deciding (`rules.js:161,163`), on for
+Available as before. See the build log.
 
 ## 2. Puppies page off: Home's litter links go nowhere  (S2, verified)
 **Where** `render/parts.js:543–545` `litterCard`'s "Meet the puppies" links to `/litters/<slug>`

@@ -1732,3 +1732,22 @@ changed.
 - Checked side by side at 390px and 1200px: the confirm card and the "no device yet" screen
   use the existing card, danger card and button styles; the switch sits with the product's
   other switches.
+
+## 2026-11-17: review 07 finding 1, full registration not offered on Reserved or Still deciding pups
+
+- **The owner's call:** keep the setting configurable, default it to not shown. In
+  `content/rules.js` `DEFAULT_RULES.status`, `fullreg` is now off for `placed` (reads
+  Reserved) and `undecided` (Still deciding); Available and the before-deposits row keep it on,
+  Joining our program stays off. The Rules screen still has the switch on every row.
+- **Who it reaches:** rules are stored as differences from the defaults (`withPart`), so every
+  site that never set this switch changes at its next publish (or preview); a site where the
+  owner had set it keeps her setting. Nothing in `public/_kp/`: no version bump.
+- **What a family sees now:** a Reserved or Still deciding pup with no registration set shows no
+  "Ask about full registration", no "Full Registration Surcharge" and no Registration line (that
+  line follows the same switch, `render/parts.js` `regText`); the litter's own ask and surcharge
+  show only while it has a pup that qualifies. Plan 3.2 ("reserved or placed never show a
+  price") and decision 32 now hold by default. `site-builder.md`'s defaults table updated.
+- Tests: 455 pass. `rules.test.js` checks a Reserved pup shows neither by default, and turns the
+  switch on for Reserved to check it still works.
+- Still open from review 07: finding 4 (a litter with nothing on offer still shows Price and
+  Deposit) is separate and not changed here.
