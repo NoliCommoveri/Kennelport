@@ -1769,5 +1769,5 @@ changed.
   Midnight and Tuxedo, light and dark; a front with the bio keeps its 320px photo. The
   prototype's flip card (`ak-sample.html`, Flip cards) is the same card; only its height rule
   changed.
-- Tests: 454 pass; `versions.test.js` fails until `ASSET_VERSION` is bumped (26 is on `main`):
-  asked the owner, not bumped.
+- Tests: 455 pass. The owner said yes to the bump: `ASSET_VERSION` 27 (was 26 on `main`),
+  `TEMPLATE_FILES` 3dfad8a5636f65f3.

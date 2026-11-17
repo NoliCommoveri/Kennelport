@@ -4,7 +4,7 @@ The one place for progress. Keep it short: one line per item, a link to where th
 is. When a step is built, change its line here and add the detail to the build log
 ([`log/BUILD_LOG.md`](log/BUILD_LOG.md)); the plans describe intent, not progress.
 
-Last updated 2026-11-15. Released on `main`: Site Manager (`APP_VERSION`) 18, site
+Last updated 2026-11-17. Released on `main`: Site Manager (`APP_VERSION`) 18, site
 template (`ASSET_VERSION`) 25.
 
 ## Platform
