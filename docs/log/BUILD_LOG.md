@@ -1751,3 +1751,23 @@ changed.
   switch on for Reserved to check it still works.
 - Still open from review 07: finding 4 (a litter with nothing on offer still shows Price and
   Deposit) is separate and not changed here.
+
+## 2026-11-17: flip cards grow to fit (review 07 finding 2/3, the owner's call)
+
+- **The owner's call:** make the cards bigger rather than cap what they show; let them stretch
+  down, keep the photo, and let the coloured part under it on the front take the extra, so a
+  bio on the front works too.
+- **`site.css`, Flip cards:** both faces sit in one grid cell (no longer absolutely placed in a
+  430px box), so a card is as tall as its taller side needs, never under 430px. The front's
+  photo (or "Photos coming soon") is 320px tall on every card (it was 290–370px, whatever the
+  caption left; with a bio on the front it shrank to nothing); the caption fills the rest
+  (`flex: 1`). The back's bio is no longer squeezed and hidden; "View profile" sits at the
+  bottom as before. A front bio (`.cap .bio`) reads like the back's. Cards in a row or the
+  slider stay the same height as each other (grid stretch). No markup changed.
+- **Checked** in Chromium at 320, 390 and 1280px: no card cuts anything off on either side (a
+  dog with 8, 10 and 30 health results, every pup card); no sideways scroll at 320px in Lawn,
+  Midnight and Tuxedo, light and dark; a front with the bio keeps its 320px photo. The
+  prototype's flip card (`ak-sample.html`, Flip cards) is the same card; only its height rule
+  changed.
+- Tests: 454 pass; `versions.test.js` fails until `ASSET_VERSION` is bumped (26 is on `main`):
+  asked the owner, not bumped.

@@ -105,6 +105,8 @@ alike (24px over at 8 results, 87px at 10). The card is the only way to the dog'
 list. Five results fit; seven with a registry and weight row are at the edge.
 **What I'd do** Cap the back's results as `parentCards` does ("and 4 more health results"), or keep
 the link pinned outside the clipped area.
+**Done, 2026-11-17 (the owner's call):** cards now grow to fit their taller side instead
+(`site.css`, Flip cards), with a bio allowed on the front; see the build log.
 
 ## 4. A litter with nothing for sale still reads as priced  (S3, verified)
 **Where** `parts.js:369` `litterPriceRows` and `content/prices.js:34` `litterPriceRange` read every
