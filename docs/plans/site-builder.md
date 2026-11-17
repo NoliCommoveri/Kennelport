@@ -279,7 +279,7 @@ owner changes a rule.
 | Shown at all | all but `hidden` |
 | Price shown | `available` only |
 | "Ask about this puppy" | `available` only |
-| "Ask about full registration" | pups with no registration set, other than `staying` (and the litter switch on) |
+| "Ask about full registration" | `available` only, pups with no registration set (and the litter switch on); was all but `staying` until 2026-11-17 (review 07, finding 1) |
 | Counts as an older puppy | `available` only |
 | Order on the litter page | `reserved` and `placed` last |
 

@@ -1732,3 +1732,42 @@ changed.
 - Checked side by side at 390px and 1200px: the confirm card and the "no device yet" screen
   use the existing card, danger card and button styles; the switch sits with the product's
   other switches.
+
+## 2026-11-17: review 07 finding 1, full registration not offered on Reserved or Still deciding pups
+
+- **The owner's call:** keep the setting configurable, default it to not shown. In
+  `content/rules.js` `DEFAULT_RULES.status`, `fullreg` is now off for `placed` (reads
+  Reserved) and `undecided` (Still deciding); Available and the before-deposits row keep it on,
+  Joining our program stays off. The Rules screen still has the switch on every row.
+- **Who it reaches:** rules are stored as differences from the defaults (`withPart`), so every
+  site that never set this switch changes at its next publish (or preview); a site where the
+  owner had set it keeps her setting. Nothing in `public/_kp/`: no version bump.
+- **What a family sees now:** a Reserved or Still deciding pup with no registration set shows no
+  "Ask about full registration", no "Full Registration Surcharge" and no Registration line (that
+  line follows the same switch, `render/parts.js` `regText`); the litter's own ask and surcharge
+  show only while it has a pup that qualifies. Plan 3.2 ("reserved or placed never show a
+  price") and decision 32 now hold by default. `site-builder.md`'s defaults table updated.
+- Tests: 455 pass. `rules.test.js` checks a Reserved pup shows neither by default, and turns the
+  switch on for Reserved to check it still works.
+- Still open from review 07: finding 4 (a litter with nothing on offer still shows Price and
+  Deposit) is separate and not changed here.
+
+## 2026-11-17: flip cards grow to fit (review 07 finding 2/3, the owner's call)
+
+- **The owner's call:** make the cards bigger rather than cap what they show; let them stretch
+  down, keep the photo, and let the coloured part under it on the front take the extra, so a
+  bio on the front works too.
+- **`site.css`, Flip cards:** both faces sit in one grid cell (no longer absolutely placed in a
+  430px box), so a card is as tall as its taller side needs, never under 430px. The front's
+  photo (or "Photos coming soon") is 320px tall on every card (it was 290–370px, whatever the
+  caption left; with a bio on the front it shrank to nothing); the caption fills the rest
+  (`flex: 1`). The back's bio is no longer squeezed and hidden; "View profile" sits at the
+  bottom as before. A front bio (`.cap .bio`) reads like the back's. Cards in a row or the
+  slider stay the same height as each other (grid stretch). No markup changed.
+- **Checked** in Chromium at 320, 390 and 1280px: no card cuts anything off on either side (a
+  dog with 8, 10 and 30 health results, every pup card); no sideways scroll at 320px in Lawn,
+  Midnight and Tuxedo, light and dark; a front with the bio keeps its 320px photo. The
+  prototype's flip card (`ak-sample.html`, Flip cards) is the same card; only its height rule
+  changed.
+- Tests: 455 pass. The owner said yes to the bump: `ASSET_VERSION` 27 (was 26 on `main`),
+  `TEMPLATE_FILES` 3dfad8a5636f65f3.

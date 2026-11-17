@@ -158,9 +158,9 @@ export const DEFAULT_RULES = {
   status: {
     available: st('Available', 'ok', false, true, true, true, true, true, 1),
     not_open: st('Available on {date}', 'ok', false, true, true, true, true, true, 1),
-    placed: st('Reserved', 'held', true, true, false, false, true, false, 2),
+    placed: st('Reserved', 'held', true, true, false, false, false, false, 2),
     staying: st('Joining our program', 'held', false, true, false, false, false, false, 1),
-    undecided: st('Still deciding', 'held', false, true, false, false, true, false, 1),
+    undecided: st('Still deciding', 'held', false, true, false, false, false, false, 1),
     hidden: st('', 'held', false, false, false, false, true, false, 1),
   },
   reg: { unset: 'Limited', limited: 'Limited', full: 'Full', ask: 'Ask about full registration' },
