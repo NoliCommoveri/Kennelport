@@ -5,7 +5,7 @@ is. When a step is built, change its line here and add the detail to the build l
 ([`log/BUILD_LOG.md`](log/BUILD_LOG.md)); the plans describe intent, not progress.
 
 Last updated 2026-11-17. Released on `main`: Site Manager (`APP_VERSION`) 18, site
-template (`ASSET_VERSION`) 25.
+template (`ASSET_VERSION`) 27 (flip cards that grow to fit, 2026-11-17).
 
 ## Platform
 
