@@ -30,7 +30,9 @@ export const SNAPSHOT_VERSION = 1;
 export const KEEP = 10;
 const MAX_SNAPSHOT_BYTES = 8 * 1024 * 1024;
 
-const json = (text, fallback) => { try { return JSON.parse(text); } catch { return fallback; } };
+// A JSON column, or `fallback` when it's empty: NULL parses to null without throwing, so
+// it's caught here (an extra with no checklist, an album with no photos).
+const json = (text, fallback) => { try { return JSON.parse(text) ?? fallback; } catch { return fallback; } };
 const keep = (row, drop) => Object.fromEntries(Object.entries(row).filter(([k, v]) => !drop.includes(k) && v !== null));
 const SYSTEM = ['site_id', 'sort', 'source', 'kennelos_id', 'kennelos_kind', 'kennelos_name', 'hidden_by_kennelos', 'created_at', 'updated_at', 'show_on_site', 'left_site_at', 'kept_at'];
 // A litter's figures go into the snapshot only with its Show prices on (plan 3.2).

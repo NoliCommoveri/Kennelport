@@ -1837,3 +1837,21 @@ changed.
 - **`ASSET_VERSION` 28** (was 27 on `main`), the owner's yes: the template's CSS changed
   (`.step.top`, `.own-card*`). `TEMPLATE_FILES` 4a7222de7618c03e.
 - Tests: 467 pass. `cards-documents.test.js`.
+
+## 2026-11-18: fix, the Extras page broke on a package with no checklist
+
+- **What she saw:** "Something went wrong" (the Worker's last-resort 500, `index.js`) on her
+  site after she deleted her hand-typed extras and edited the ones KennelOS sends instead.
+- **Why:** an extra with no checklist has NULL in `extras.checklist` (KennelOS never sends
+  one, and `content/records.js` saves an empty list as NULL). `publish.js`'s `json()` only
+  fell back on a parse error, but `JSON.parse(null)` is `null`, so the snapshot carried
+  `checklist: null`. The Extras page reads `checklist.length` for packages only, so items
+  were fine; once she made a KennelOS extra a package (`kind = 'homegoing'`), every visit to
+  the Extras page threw `TypeError`. The Extras block already guarded it (`?.length`).
+- **Fix:** `json()` returns its fallback for NULL too. That also covers an album saved with no
+  photos (`.filter` on null would have stopped publishing) and a safe notice with no content.
+  The Extras page guards `checklist?.length`, so the snapshot already published draws again
+  as soon as this deploys, with no republish needed.
+- No migration, no version bump (server-side code only; `worker/public/` unchanged).
+- Tests: 468 pass. `extras-block.test.js`: a KennelOS extra made a package with no
+  checklist, and a snapshot that still carries null.
