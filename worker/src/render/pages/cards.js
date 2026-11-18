@@ -5,13 +5,15 @@
 // (`.step .n`) and the site's pills (`.status`, in the site's pill style). Side by side
 // in a grid, or in the template's slider. A button to a document opens the PDF in a new
 // tab and says its size. render/pages.js ownBlock calls this.
-import { esc, attr, img, paras, slider, pillClass } from '../parts.js';
+import { esc, attr, img, paras, slider, pillClass, zoomed } from '../parts.js';
 import { docSize } from '../../documents.js';
 
 // `linkFor` and `aTo` are pages.js's (where a button goes; the link itself).
 export function cardsBlock(snap, ctx, b, w, { linkFor, aTo }) {
   const card = (c) => {
-    const photo = c.photo ? img(snap, c.photo, { alt: c.heading || '' }) : null;
+    // Opening full size, the photo is something to read (a flyer): its own description first.
+    const pic = c.photo ? img(snap, c.photo, { alt: (b.zoom && snap.photos[c.photo]?.alt) || c.heading || '' }) : null;
+    const photo = pic && b.zoom ? zoomed(c.photo, pic, `b-${b.id}`) : pic;
     const link = c.link && c.button ? linkFor(snap, ctx, c.link) : null;
     const labels = c.labels.length ? `<span class="line1 tags">${c.labels.map((l) => `<span class="${pillClass(b.pill)}">${esc(l)}</span>`).join('')}</span>` : '';
     const body = [

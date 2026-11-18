@@ -120,3 +120,19 @@ test('one extra can stand out: the owner\'s pick or those marked "most complete"
   html = section(draw(block({ hl: 'none', style: 'list', w: { flag: 'Premier' } })));
   assert.doesNotMatch(html, /Premier| open>/);
 });
+
+test('a package with no checklist (one from KennelOS she made a package) draws on the Extras page and in the block', async (t) => {
+  const { env, s } = await site(t);
+  const row = env.DB.raw.prepare("SELECT * FROM extras WHERE site_id = ? AND name = 'Two photo sessions'").get(s.id);
+  // KennelOS never sends a checklist: the column stays NULL. Saving with none keeps it NULL too.
+  env.DB.raw.prepare('UPDATE extras SET checklist = NULL WHERE id = ?').run(row.id);
+  const input = Object.fromEntries(Object.keys(EXTRA_FIELDS).map((k) => [k, row[k]]));
+  await saveRecord(env, s.id, 'extras', row.id, { ...input, kind: 'homegoing', weeks: 10, checklist: [] });
+  const snap = await buildSnapshot(env, s.id);
+  assert.deepEqual(snap.extras.find((e) => e.name === 'Two photo sessions').checklist, []);
+  const page = renderPage(snap, { path: '/extras', origin: 'https://x', today: '2027-03-10', preview: true }).html;
+  assert.match(page, /<h3>Two photo sessions<\/h3>/);
+  // A snapshot published before the fix still carries null: the page draws all the same.
+  const old = { ...snap, extras: snap.extras.map((e) => ({ ...e, checklist: null })) };
+  assert.match(renderPage(old, { path: '/extras', origin: 'https://x', today: '2027-03-10', preview: true }).html, /<h3>Two photo sessions<\/h3>/);
+});

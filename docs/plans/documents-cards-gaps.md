@@ -1,7 +1,7 @@
 # Documents, Cards and flyers: the gaps
 
 What the first build of the Extras block, the Cards block and documents (2026-11-18, build log)
-left undone, and how to finish it. Not built. Each step is small and can ship on its own;
+left undone, and how to finish it. **Step 6 built 2026-11-18** (build log); the rest not built. Each step is small and can ship on its own;
 the order puts the ones that need no version bump first.
 
 ## The gaps
@@ -76,8 +76,8 @@ a. **A cover she chooses.** Each document gets an optional cover photo, picked i
    - in the Documents lists, so documents are easy to tell apart;
    - as the picture when the document is shared, if the menu item or card links straight to it
      (not possible for a PDF itself; noted so no one expects it).
-   Stored as `documents.cover_photo_id`: **one column, added to migration 0038** (this branch's,
-   not yet on `main`). The snapshot carries it; `publish.js` `use()`s it like any photo.
+   Stored as `documents.cover_photo_id`: one column. Migration 0038 has since merged and been
+   applied, so this needs **a new migration** on the branch that builds it. The snapshot carries it; `publish.js` `use()`s it like any photo.
 b. **The first page, made automatically.** The browser that uploads the PDF draws its first
    page with pdf.js and uploads it as the cover. That puts a large library (about 1 MB) in the
    Site Manager's files, so it needs an `APP_VERSION` bump, and a PDF pdf.js can't read gets no
@@ -119,11 +119,18 @@ shape) but can't be read on a phone, and the upload has already thrown detail aw
 | 6 | Tap to open full size; full-detail upload; the description line | none | `ASSET_VERSION` and `APP_VERSION` (ask first) |
 | 5b | First page as cover (only if wanted) | none | `APP_VERSION` (ask first) |
 
-Steps 1 to 5a can go on this branch before it merges: then 0038 carries the cover column and
-nothing else needs a migration. Step 6 waits for the owner's word on the version bumps,
-together with the one this branch already needs for the Extras and Cards CSS.
+0038 and `ASSET_VERSION` 28 are on `main` now: 5a needs its own migration, and step 6 needs
+both version bumps (asked for once it was built).
 
-## Questions for the owner
+## The owner's answers (2026-11-18)
+
+1. **Step 4: yes, for chosen breeders only**, with a file size cap: off until the owner switches it
+   on for a site, and a size limit on what she uploads (the owner's, per site).
+2. **Cards: yes, the breeder can change a card's words.**
+3. Covers (5a or 5b): not answered yet.
+4. **Full detail: a choice at upload.** Built (step 6).
+
+## Questions for the owner (as first asked)
 
 1. The breeder and documents (step 4): may she upload at all, and should it be off until you
    switch it on per site?

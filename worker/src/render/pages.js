@@ -11,7 +11,7 @@ import {
   partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, expanders, pagehead, head, ICONS, paySection,
   payShown, litterChoices, ANY_LITTER, ABOUT_LABEL, dogGroups, descendantsOf, depositsAhead, soonSection, pricesOff, sitePrice, word, sexWord, fullRegLink,
   fullRegSurchargeRow, galleryHtml, faqBlock, addedOn, addedWords, addedRow, customPage, rulesOf, pillClass, snapCtx,
-  pagePath,
+  pagePath, zoomed,
 } from './parts.js';
 import { pedigreeOf } from '../content/fields.js';
 import { DEFAULT_RULES, HEALTH_KINDS, HEALTH_KIND_PLACES } from '../content/rules.js';
@@ -303,7 +303,7 @@ function ownBlock(snap, ctx, b, key) {
   }
   if (b.type === 'spacer') return `<div class="own-spacer h-${b.height}" aria-hidden="true"></div>`;
   if (b.type === 'photo') {
-    const pic = img(snap, photoId);
+    const pic = img(snap, photoId) && (b.zoom ? zoomed(photoId, img(snap, photoId), `b-${b.id}`) : img(snap, photoId));
     if (!pic) return '';
     const cap = b.mayChange && her.caption ? her.caption : w.caption;
     // A frame (the collage's) round the photo; a full-width photo goes edge to edge, unframed.
@@ -681,7 +681,7 @@ export function extras(snap, ctx) {
   const pkgHtml = pkgs.map((x) => `<article class="pkg${x.featured ? ' top' : ''}">
       ${x.weeks ? `<div class="weeks"><b>${x.weeks}</b><span>weeks${x.featured ? ` · ${esc(word(snap, 'most_complete'))}` : ''}</span></div>` : ''}<h3>${esc(x.name)}</h3>${price(x)}
       ${descriptionOf(x) ? `<p>${esc(descriptionOf(x))}</p>` : ''}
-      ${x.checklist.length ? `<details><summary>${esc(word(snap, 'whats_included'))}</summary>${x.lead_in ? `<p class="small muted lead">${esc(x.lead_in)}</p>` : ''}<ul class="checks">${x.checklist.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>${x.closing ? `<p class="small muted closing">${esc(x.closing)}</p>` : ''}</details>` : ''}
+      ${x.checklist?.length ? `<details><summary>${esc(word(snap, 'whats_included'))}</summary>${x.lead_in ? `<p class="small muted lead">${esc(x.lead_in)}</p>` : ''}<ul class="checks">${x.checklist.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>${x.closing ? `<p class="small muted closing">${esc(x.closing)}</p>` : ''}</details>` : ''}
       <a class="more" href="${ask}">${esc(word(snap, 'ask_package'))}</a></article>`).join('');
   const itemHtml = items.map((x) => `<article class="pkg"><h3>${esc(x.name)}</h3>${x.grp ? `<span class="eyebrow">${esc(x.grp)}</span>` : ''}${price(x)}${descriptionOf(x) ? `<p>${esc(descriptionOf(x))}</p>` : ''}<a class="more" href="${ask}">${esc(word(snap, 'ask_item'))}</a></article>`).join('');
   return {

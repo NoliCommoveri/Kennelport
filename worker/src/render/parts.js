@@ -297,6 +297,10 @@ export function menuGroups(snap, ctx) {
     'litters#available': () => snap.litters.some((l) => l.stage === 'current' && !depositsAhead(snap, l, ctx.today)),
     'litters#upcoming': () => snap.litters.some((l) => l.stage === 'planned' || (!soonSection(snap) && depositsAhead(snap, l, ctx.today))),
     'litters#soon': () => soonSection(snap) && snap.litters.some((l) => depositsAhead(snap, l, ctx.today)),
+    // Getting your pup home's sections: while each is on the page (render/pages.js pickup).
+    'pickup#pickup': () => Boolean(snap.pages.pickup?.pickup_text),
+    'pickup#transport': () => Boolean(snap.pages.pickup?.transport_text) || (snap.products ?? []).some((x) => x.transport),
+    'pickup#travel': () => Boolean(snap.pages.pickup?.travel_text),
   };
   placeShows['dogs#boys'] = placeShows['dogs#girls'];
   const placeText = { 'dogs#girls': () => word(snap, 'girls'), 'dogs#boys': () => word(snap, 'boys') };
@@ -789,6 +793,13 @@ export function morePhotosHtml(a) {
   return a?.more_photos_url
     ? `<p class="center mt-20"><a class="more" href="${attr(a.more_photos_url)}" target="_blank" rel="noopener noreferrer">See more photos</a></p>` : '';
 }
+
+// A photo that opens full size on a tap (the Photo and Cards blocks' "Opens full size on
+// a tap", for a flyer's small print): the viewer below, with previous and next among
+// the photos of the same set (`set`, one per block), never into an album's.
+// A small magnifier in its corner says it opens.
+const ZOOM_IC = '<span class="zoom-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21M10.5 7.5v6M7.5 10.5h6"/></svg></span>';
+export const zoomed = (id, inner, set) => `<a class="zoom" href="${attr(photoUrl(id))}" data-gallery="${attr(set)}">${inner}${ZOOM_IC}</a>`;
 
 // The viewer the gallery opens into: one per page, whatever galleries it holds.
 export const viewerHtml = () => '<dialog class="viewer" id="viewer" aria-label="Photo viewer"><img alt=""><button type="button" class="v-prev" aria-label="Previous photo">\u2039</button><button type="button" class="v-next" aria-label="Next photo">\u203a</button><button type="button" class="v-close" aria-label="Close">\u00d7</button><span class="v-count small"></span></dialog>';

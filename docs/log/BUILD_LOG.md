@@ -1837,3 +1837,81 @@ changed.
 - **`ASSET_VERSION` 28** (was 27 on `main`), the owner's yes: the template's CSS changed
   (`.step.top`, `.own-card*`). `TEMPLATE_FILES` 4a7222de7618c03e.
 - Tests: 467 pass. `cards-documents.test.js`.
+
+## 2026-11-18: fix, the Extras page broke on a package with no checklist; a note when she saves one
+
+- **What she saw:** "Something went wrong" (the Worker's last-resort 500, `index.js`) on her
+  site after she deleted her hand-typed extras and edited the ones KennelOS sends instead.
+- **Why:** an extra with no checklist has NULL in `extras.checklist` (KennelOS never sends
+  one, and `content/records.js` saves an empty list as NULL). `publish.js`'s `json()` only
+  fell back on a parse error, but `JSON.parse(null)` is `null`, so the snapshot carried
+  `checklist: null`. The Extras page reads `checklist.length` for packages only, so items
+  were fine; once she made a KennelOS extra a package (`kind = 'homegoing'`), every visit to
+  the Extras page threw `TypeError`. The Extras block already guarded it (`?.length`).
+- **Fix:** `json()` returns its fallback for NULL too. That also covers an album saved with no
+  photos (`.filter` on null would have stopped publishing) and a safe notice with no content.
+  The Extras page guards `checklist?.length`, so the snapshot already published draws again
+  as soon as this deploys, with no republish needed.
+- **Confirmed** by the breeder: one package's checklist had been typed but not saved.
+- **A note when it happens again:** saving (or adding) a homegoing package with nothing
+  under What's included still saves, but the note after it says the list is empty and to
+  add it before publishing (`note.saved_no_checklist`, `note.added_no_checklist` in
+  `manage/wording.js`, for the owner to reword). A new one opens on its own page so the
+  note sits beside the form. Items need no list.
+- No migration, no version bump (server-side code only; `worker/public/` unchanged).
+- Tests: 469 pass. `editing.test.js`: the package note.
+- Tests (the fix alone): 468 pass. `extras-block.test.js`: a KennelOS extra made a package with no
+  checklist, and a snapshot that still carries null.
+
+## 2026-11-18: flyers, step 6 of the documents and cards gaps
+
+[`plans/documents-cards-gaps.md`](../plans/documents-cards-gaps.md) step 6, the owner's ask
+("build the flyer"), with the owner's answers to the plan's questions recorded there (step 4
+for chosen breeders with a size cap; the breeder can change a card's words; full detail as a
+choice at upload).
+
+- **The Photo block takes "The whole photo, uncropped"** (`PHOTO_SHAPE.whole`): its own shape,
+  no wider than 620px on a computer, frames as the others (`.own-photo.whole`).
+- **"Opens full size on a tap"** (`zoom`, off by default, so every existing block draws as
+  before), on the Photo block and the Cards block (all its photos). The photo becomes a link
+  to the full photo (`render/parts.js` `zoomed`) with a small magnifier in its corner
+  (`.zoom-ic`, an inline SVG: the site's CSP has no `data:` images), and opens in the album
+  viewer the site already has. **The viewer now keeps to one set:** previous and next stay
+  among photos with the same `data-gallery` value (an album's share none, each Photo or Cards
+  block's are `b-<id>`), and a set of one shows no arrows or count (`.viewer.one`). A card
+  that opens full size is read by its photo's description first, then its heading.
+- **The description line** on the owner's Photo and Cards settings, when the photo is whole or
+  opens full size: the photo's description, or "This photo has no description…" with a link
+  to the breeder's Photos screen. A warning, not a block (decision 16). Owner's screen: not in
+  `wording.js`.
+- **Full detail on upload:** a tickbox beside the upload buttons in the photo library window
+  and on the Photos screen (`library.full_detail` in `wording.js`). Ticked, the photo is kept
+  at 2400px on its long side instead of 1600px; one that comes out over 2.9 MB is squeezed a
+  little more, then made 2000px, under the server's 3 MB. Upload elsewhere (/ops, older
+  pickers) stays at 1600px.
+- **Checked** in Chromium at 390 and 1280px: a tall flyer whole, framed, in a Photo block and
+  in two Cards; the viewer opens the Photo block's alone (no arrows), the cards' as 1 of 2,
+  and an album strip's as its own 1 of 2; no sideways scroll. Pinch to zoom in the viewer is
+  the browser's own (the page allows zooming).
+- No migration. **Both versions need a bump** (asked): the template (`site.css`, `site.js`) and
+  the Site Manager (`photos.js`). Until then `versions.test.js` fails, as expected.
+- Tests: 470 pass, 2 fail (the version checks). `ownblocks.test.js`: the flyer Photo block and
+  Cards; `editing.test.js`: the Full detail tickbox.
+
+## 2026-11-18: Getting your pup home's sections as menu places
+
+- The owner's ask: Pickup, Transport and Travel day as links under Getting your pup home, like
+  Girls and Boys under Dogs, all on the one page. Three new `MENU_PLACES` (`pickup#pickup`,
+  `pickup#transport`, `pickup#travel`): in the Menu screen's Add, not in today's menu, so no
+  site's menu changes until the owner adds them. Each jumps to its section (the ids the page
+  already had; the header's `scroll-padding-top` keeps the heading in view) and shows while
+  its section is on the page: her words, or for Transport her words or a transport service.
+- Jump, not a Show filter: the owner hadn't decided; the sections stay one readable page.
+- No migration, no version bump. Tests: `menu.test.js`.
+
+## 2026-11-18: version bumps for flyers (the owner's yes)
+
+- **`ASSET_VERSION` 29** (was 28 on `main`): `site.css` (the whole photo, the magnifier, the
+  viewer's set of one) and `site.js` (the viewer keeps to one set). `TEMPLATE_FILES` bdc3c6133f4e9df2.
+- **`APP_VERSION` 19** (was 18 on `main`): `photos.js` (Full detail on upload). `APP_FILES` b2d03e0ca03367ed.
+- Tests: 473 pass.

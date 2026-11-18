@@ -72,7 +72,7 @@ export const ALIGN = Object.freeze({ left: 'Left', center: 'Centre', right: 'Rig
 export const DIVIDER_STYLE = Object.freeze({ line: 'Thin line', brass: 'Brass rule', ornament: "The scheme's ornament" });
 export const DIVIDER_WIDTH = Object.freeze({ narrow: 'Narrow', wide: 'Wide', full: 'Full width' });
 export const SPACER_HEIGHT = Object.freeze({ xs: 'Very small', s: 'Small', m: 'Medium', l: 'Large' });
-export const PHOTO_SHAPE = Object.freeze({ wide: 'Wide', tall: 'Tall', square: 'Square', full: 'Full width' });
+export const PHOTO_SHAPE = Object.freeze({ wide: 'Wide', tall: 'Tall', square: 'Square', full: 'Full width', whole: 'The whole photo, uncropped' });
 // A photo's frame: the Home banner collage's frames (model.js FRAMES), none to start.
 export const PHOTO_FRAME = Object.freeze({ none: 'No frame', mat: 'A soft mat', double: 'A mat with a fine inner line', sprig: 'A leafy vine' });
 export const PHOTO_FOCUS = Object.freeze({ top: 'The top', middle: 'The middle', bottom: 'The bottom' });
@@ -244,11 +244,11 @@ export function newBlock(type, id) {
   if (type === 'button') Object.assign(b, { w: { ...OWN_WORDS.button }, link: linkDefault(), size: 'm', look: 'solid', align: 'center' });
   if (type === 'divider') Object.assign(b, { style: 'line', width: 'wide' });
   if (type === 'spacer') Object.assign(b, { height: 'm' });
-  if (type === 'photo') Object.assign(b, { photo: null, shape: 'wide', frame: 'none', focus: 'middle', w: { caption: '' }, mayChange: true });
+  if (type === 'photo') Object.assign(b, { photo: null, shape: 'wide', frame: 'none', focus: 'middle', zoom: false, w: { caption: '' }, mayChange: true });
   if (type === 'collage') Object.assign(b, { layout: 'tall_two_wide', frame: 'mat', photos: [], focus: [], mayChange: true });
   if (type === 'factrow') Object.assign(b, { items: [] });
   if (type === 'words') Object.assign(b, { w: { heading: 'A few words from us', line: '', body: '' }, align: 'center' });
-  if (type === 'cards') Object.assign(b, { w: { heading: '', line: '' }, cards: [], style: 'grid', across: '3', shape: 'wide', pill: 'accent', align: 'left' });
+  if (type === 'cards') Object.assign(b, { w: { heading: '', line: '' }, cards: [], style: 'grid', across: '3', shape: 'wide', pill: 'accent', align: 'left', zoom: false });
   if (type === 'columns') Object.assign(b, { w: { heading: 'Our approach', line: '' }, cols: [], across: '2', align: 'center' });
   if (type === 'gallery') Object.assign(b, { source: 'album', album: null, photos: [], count: '6', frame: 'none', more: true, w: { heading: 'From our photo albums', line: '', label: 'See the whole album' }, mayChange: true });
   if (type === 'beside') Object.assign(b, { photo: null, focus: 'middle', frame: 'none', side: 'left', align: 'left', w: { heading: 'A little about us', body: '', label: '' }, link: null, mayChange: true });
@@ -510,6 +510,8 @@ export function cleanBlock(b) {
     out.shape = pick(b.shape, CARD_SHAPE, 'wide');
     out.pill = pick(b.pill, CARD_PILL, 'accent');
     out.align = pick(b.align, ALIGN, 'left');
+    // A tap on a card's photo opens it full size (a flyer's small print, 2026-11-18).
+    out.zoom = b.zoom === true;
   }
   if (b.type === 'columns') { out.w = words(b.w, ['heading', 'line']); out.cols = cleanCols(b.cols); out.across = pick(String(b.across ?? ''), COLS_ACROSS, '2'); out.align = pick(b.align, ALIGN, 'center'); }
   if (b.type === 'divider') { out.style = pick(b.style, DIVIDER_STYLE, 'line'); out.width = pick(b.width, DIVIDER_WIDTH, 'wide'); }
@@ -529,7 +531,7 @@ export function cleanBlock(b) {
     out.focus = keep.map(([, f]) => (FOCUS.includes(f) ? f : 'middle'));
     out.mayChange = b.mayChange !== false;
   }
-  if (b.type === 'photo') { out.shape = pick(b.shape, PHOTO_SHAPE, 'wide'); out.frame = pick(b.frame, PHOTO_FRAME, 'none'); out.w = words(b.w, ['caption']); }
+  if (b.type === 'photo') { out.shape = pick(b.shape, PHOTO_SHAPE, 'wide'); out.frame = pick(b.frame, PHOTO_FRAME, 'none'); out.zoom = b.zoom === true; out.w = words(b.w, ['caption']); }
   if (b.type === 'gallery') {
     out.source = pick(b.source, GALLERY_SOURCE, 'album');
     out.album = PHOTO_ID.test(String(b.album ?? '')) ? b.album : null;
@@ -728,6 +730,7 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
       }
       if ('cols' in b) next.cols = Array.from({ length: COLS_MAX }, (_, i) => [str(`cols.${i}.0`), str(`cols.${i}.1`)]);
       if ('photo' in b) { next.photo = str('photo') || null; next.mayChange = get(k('mayChange')) != null; }
+      if (b.type === 'photo' || b.type === 'cards') next.zoom = get(k('zoom')) != null;
       if (b.type === 'gallery') Object.assign(next, { photos: getAll(k('photos')).map(String).filter(Boolean), more: get(k('more')) != null, mayChange: get(k('mayChange')) != null });
       if (b.type === 'collage') Object.assign(next, collageFromForm((n) => get(k(n)), str('layout')), { mayChange: get(k('mayChange')) != null });
     }
@@ -927,6 +930,10 @@ export const MENU_PLACES = Object.freeze({
   'litters#available': { page: 'litters', name: 'Available now', when: 'while a litter has puppies to choose from' },
   'litters#upcoming': { page: 'litters', name: 'Upcoming litters', when: 'while a litter is planned, or its deposits haven\'t opened (unless the Puppies page has Available soon)' },
   'litters#soon': { page: 'litters', name: 'Available soon', when: 'while a born litter\'s deposits haven\'t opened, and the Puppies page has Available soon' },
+  // Getting your pup home's three sections (2026-11-18): links that jump to each on its one page.
+  'pickup#pickup': { page: 'pickup', name: 'Pickup', when: 'while her Pickup section has words' },
+  'pickup#transport': { page: 'pickup', name: 'Transport', when: 'while her Transport section has words, or she has transport services' },
+  'pickup#travel': { page: 'pickup', name: 'Travel day', when: 'while her Travel day section has words' },
 });
 // Pages that can't be in the menu: Privacy sits in the footer's fine print.
 const MENU_PAGES = Object.keys(PAGES).filter((k) => k !== 'privacy');

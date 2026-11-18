@@ -149,6 +149,9 @@ const NOTES = {
   saved: 'Saved to your draft. Publish when you\'re ready.',
   not_saved: 'Not saved: one of the lines is too long.',
   added: 'Added to your draft.',
+  // After saving a homegoing package with nothing under What's included (2026-11-18).
+  saved_no_checklist: 'Saved to your draft, but this package has nothing under What\'s included yet. Add the list and save again before you publish, or your Extras page shows it without one.',
+  added_no_checklist: 'Added to your draft, but this package has nothing under What\'s included yet. Add the list and save again before you publish, or your Extras page shows it without one.',
   removed: 'Removed from your draft.',
   moved: 'Moved.',
   status: 'Status changed in your draft.',
@@ -369,6 +372,7 @@ const SCREEN_LINES = {
   "slot.count": ["photos", "How many photos a spot has", "{n} photos"],
   "library.title": ["photos", "Heading of the photo library window", "Your photos"],
   "library.upload": ["photos", "Button: upload in the photo library window", "Upload new photos"],
+  "library.full_detail": ["photos", "Tickbox beside the upload buttons (the library window and the Photos screen): keep more detail", "Full detail, for a flyer or anything with small print"],
   "library.page_photos": ["photos", "Photo library: the tab of photos on her pages", "Page photos"],
   "library.profile_photos": ["photos", "Photo library: the tab of photos on dog, litter and puppy profiles", "Profile photos"],
   "library.pick_one": ["photos", "Photo library: help line, choosing one", "Tap a photo, then Replace."],

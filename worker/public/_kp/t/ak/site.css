@@ -607,6 +607,13 @@ dialog.viewer img { width: auto; height: auto; max-width: 96vw; max-height: 88dv
 .v-next { right: 12px; top: 50%; transform: translateY(-50%); }
 .v-close { right: 12px; top: 12px; }
 .v-count { position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; color: rgba(255, 255, 255, .8); }
+/* A set of one (a flyer): nothing to step through. */
+.viewer.one .v-prev, .viewer.one .v-next, .viewer.one .v-count { display: none; }
+/* A Photo or Cards block's photo that opens full size: a magnifier in its corner. */
+a.zoom { position: relative; display: block; line-height: 0; cursor: zoom-in; border-radius: inherit; }
+.zoom-ic { position: absolute; right: 10px; bottom: 10px; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: rgba(0, 0, 0, .55); color: #fff; pointer-events: none; transition: background .2s; }
+.zoom-ic svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+a.zoom:hover .zoom-ic { background: rgba(0, 0, 0, .75); }
 
 /* Videos and posts (plan 3.3): a preview until tapped, then the provider's player */
 .ems { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; align-items: start; }
@@ -748,6 +755,8 @@ dialog.viewer img { width: auto; height: auto; max-width: 96vw; max-height: 88dv
 .own-photo.wide img { aspect-ratio: 3 / 2; } .own-photo.tall { max-width: 520px; } .own-photo.tall img { aspect-ratio: 4 / 5; }
 .own-photo.square { max-width: 620px; } .own-photo.square img { aspect-ratio: 1; }
 .own-photo.full { padding-block: 0; } .own-photo.full img { aspect-ratio: 5 / 2; max-height: 520px; border-radius: 0; }
+/* The whole photo, uncropped (a flyer): its own shape, no wider than a tall photo's column on a computer. */
+.own-photo.whole { max-width: 620px; } .own-photo.whole img { object-fit: contain; }
 /* A framed photo (hers or the owner's): the collage's box and frames (.frame-*, .vine above). */
 .own-photo .box, .story-pic .box { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: calc(var(--r) + 3px); padding: 5px; box-shadow: var(--shadow); }
 .own-photo.frame-double .box, .story-pic.frame-double .box { padding: 10px; }
