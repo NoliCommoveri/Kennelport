@@ -188,3 +188,13 @@ test('the owner, signed in through /ops and not one of the site\'s people, can s
   assert.equal(tried.status, 303);
   assert.match(tried.headers.get('location'), /viewing=nochange/);
 });
+
+test('viewing: Open your status page goes to their plain link, never signed in as them', async () => {
+  const { env, at, addFamily, view } = await setup();
+  const id = await addFamily({ name: 'The Reed family', emails: 'sam@example.com', puppy_id: 'pup1', call_name: 'Opal Mae' });
+  env.DB.raw.prepare("UPDATE portal_families SET status_url = 'https://apply.kennelos.app/s/abc', kennelos_id = 'fam-reed' WHERE id = ?").run(id);
+  const { cookie } = await view(id);
+  const res = await at(cookie)('/family/status-page');
+  assert.equal(res.status, 303);
+  assert.equal(res.headers.get('location'), 'https://apply.kennelos.app/s/abc');
+});

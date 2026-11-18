@@ -423,6 +423,29 @@ export async function makeHandoffToken(key, familyKennelosId, at = Date.now()) {
   return `${body}.${await hmacHex(key, body)}`;
 }
 
+// The other way (plan 3.4): "Open your status page" signs the family in on their
+// KennelOS status page, with no code, for the same 90 days a code gives there
+// (KennelOS's cloud/src/familyActions.js handleFromPortal checks it). The same
+// shape and key as above, signed over "to-status:" and the body, so a link made for
+// one direction never works for the other. It rides in the address's #, which
+// browsers never send to a server or in a referrer.
+export async function makeStatusToken(key, familyKennelosId, at = Date.now()) {
+  const body = b64url(JSON.stringify({ f: familyKennelosId, x: at + HANDOFF_MS, n: randomHex(16) }));
+  return `${body}.${await hmacHex(key, `to-status:${body}`)}`;
+}
+
+// The family's status page address, signed in when it can be: a family from
+// KennelOS on a site still linked to it. Otherwise their plain link; null if none.
+export async function statusPageLink(env, site, familyId) {
+  const f = await env.DB.prepare("SELECT status_url, kennelos_id FROM portal_families WHERE id = ? AND site_id = ? AND status = 'active' AND deleted_at IS NULL")
+    .bind(familyId, site.id).first();
+  const url = /^https:\/\//i.test(f?.status_url ?? '') ? f.status_url.replace(/#.*$/, '') : null;
+  if (!url || !f.kennelos_id) return url;
+  const link = await env.DB.prepare('SELECT kennelos_kennel_id FROM links WHERE site_id = ? AND revoked_at IS NULL LIMIT 1').bind(site.id).first();
+  if (!link || !env.EMAIL_HMAC_KEY) return url;
+  return `${url}#from=${await makeStatusToken(await handoffKey(env, site.id, link.kennelos_kennel_id), f.kennelos_id)}`;
+}
+
 // The family the token is for, or null: signed by the site's key, unexpired, not
 // used before, for a family here that came from KennelOS.
 export async function redeemHandoff(env, site, token) {

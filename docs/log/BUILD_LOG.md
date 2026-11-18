@@ -1935,3 +1935,21 @@ choice at upload).
   signed in as admin and not on the site's people list, and the portal accepts that without
   the people check (the link and the hour's cookie are signed, and only made for an admin).
 - No migration, no version bump. Tests: `portal-view.test.js` (475 pass).
+
+## 2026-11-18: Open your status page, signed in, and the band in the owner's wording
+
+- Home's band before pickup is now **Until {pup} comes home · Payments, additional services,
+  and pickups**, rows Payments, Additional services, Pickup, Message (the owner's wording,
+  2026-11-18), with **Open your status page** and "Opens signed in. No code needed."
+  (`portal/family.js` `statusBand`; family-facing, so kept there, not in `wording.js`).
+- Fix: the Pickup row read "Pickup {go-home day} · Change the time or place there" with no
+  pickup booked. It now says "Not booked yet · Request your day and time" until one is
+  booked, then the booked day and time.
+- Every link to the status page goes through `/family/status-page`, which redirects to it
+  with a one-time 10-minute link in the address's # (`feed.js` `makeStatusToken`,
+  `statusPageLink`; signed with the KennelOS link's key over `to-status:`). KennelOS's
+  status page turns it into its own 90-day sign-in (KennelOS cloud migration 0029, same
+  branch name there). Her view ("See their portal") gets their plain link, never signed
+  in as them; a family not from KennelOS, or a site unlinked, gets the plain link too.
+- No KennelPort migration, no version bump (no file under `public/_kp/f/` changed).
+  Tests: `portal-feed.test.js`, `portal-view.test.js` (478 pass).
