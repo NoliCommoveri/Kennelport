@@ -1915,3 +1915,13 @@ choice at upload).
   viewer's set of one) and `site.js` (the viewer keeps to one set). `TEMPLATE_FILES` bdc3c6133f4e9df2.
 - **`APP_VERSION` 19** (was 18 on `main`): `photos.js` (Full detail on upload). `APP_FILES` b2d03e0ca03367ed.
 - Tests: 473 pass.
+
+## 2026-11-18: fix, her page screen crashed with an Extras block on it
+
+- The breeder's screen for any page holding an Extras block answered "Something went wrong"
+  (500): `manage/screens/pages.js` `addedCard` lists a data block's records by name, and
+  had no entry for `extras` (`nameOf[b.type]` was undefined). Added extras (by name, under
+  "Your extras": new wording key `pages.your_extras`), and a fallback so a data block added
+  later without an entry shows its type's name instead of crashing.
+- The card's "none right now, so it hides" is still in the code, not yet in `wording.js`.
+- No migration, no version bump. Tests: `extras-block.test.js` (474 pass).

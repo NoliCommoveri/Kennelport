@@ -528,6 +528,7 @@ const SCREEN_LINES = {
   "pages.your_litters_from_kennelos": ["pages", "Line", "Your litters from KennelOS"],
   "pages.your_pups_from_kennelos": ["pages", "Line", "Your pups from KennelOS"],
   "pages.your_reviews": ["pages", "Line", "Your reviews"],
+  "pages.your_extras": ["pages", "Line", "Your extras"],
   "pages.a_family": ["pages", "Line", "A family"],
   "pages.eyebrow": ["pages", "Line", "Eyebrow"],
   "pages.heading": ["pages", "Line", "Heading"],

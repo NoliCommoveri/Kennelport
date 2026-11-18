@@ -136,3 +136,22 @@ test('a package with no checklist (one from KennelOS she made a package) draws o
   const old = { ...snap, extras: snap.extras.map((e) => ({ ...e, checklist: null })) };
   assert.match(renderPage(old, { path: '/extras', origin: 'https://x', today: '2027-03-10', preview: true }).html, /<h3>Two photo sessions<\/h3>/);
 });
+
+test('her Site Manager draws and saves a page with an Extras block on it (it crashed, 2026-11-18)', async () => {
+  const { env, s } = await site();
+  const { call } = await import('./helpers/env.js');
+  const { loadBuild, saveBuild } = await import('../src/content/rules.js');
+  const { addPage } = await import('../src/content/blocks.js');
+  const M = 'manage.kennelport.com';
+  const { build, id } = addPage(await loadBuild(env, s.id), { name: 'Photo packages', path: 'photo-packages', start: 'blank' });
+  build.pages[id].blocks.push(cleanBlock({ ...newBlock('extras', 'extras-2'), where: [{ field: 'grp', op: 'is', value: 'Memory packages' }] }));
+  await saveBuild(env, s.id, build);
+  const login = await call(env, M, '/ops/login', { method: 'POST', body: new URLSearchParams({ token: 'ops-token' }) });
+  const admin = login.headers.getSetCookie().map((c) => c.split(';')[0]).find((c) => c.startsWith('kp_admin='));
+  const r = await call(env, M, `/s/${s.subdomain}/pages/${id}`, { headers: { cookie: admin } });
+  const html = await r.text();
+  assert.equal(r.status, 200);
+  assert.match(html, /Your extras: Extra photos, Two photo sessions, The Works\./);
+  const saved = await call(env, M, `/s/${s.subdomain}/blocks/${id}/extras-2`, { method: 'POST', headers: { cookie: admin, origin: `https://${M}` }, body: new URLSearchParams({ enabled: '1', heading: 'Photo packages' }) });
+  assert.ok(saved.status < 400, String(saved.status));
+});

@@ -184,16 +184,16 @@ export function pagesScreens({ base, ctxFor, embedErr, embedsCard, env, errorBox
   // and reword, drawn like the rest of her page, where it sits. Its own small form.
   async function addedCard(key, b, snap) {
     if (BLOCK_TYPES[b.type].kind === 'own') return ownCard(key, b, snap);
-    const what = { dogs: say('pages.your_dogs_from_kennelos'), litters: say('pages.your_litters_from_kennelos'), pups: say('pages.your_pups_from_kennelos'), reviews: say('pages.your_reviews'), featured_dog: say('pages.your_dogs_from_kennelos'), featured_pup: say('pages.your_pups_from_kennelos') };
-    const nameOf = { dogs: (d) => d.call_name, litters: (l) => l.name, pups: (p) => p.name, reviews: (r) => r.first_name || say('pages.a_family'), featured_dog: (d) => d.call_name, featured_pup: (p) => p.name };
+    const what = { dogs: say('pages.your_dogs_from_kennelos'), litters: say('pages.your_litters_from_kennelos'), pups: say('pages.your_pups_from_kennelos'), reviews: say('pages.your_reviews'), featured_dog: say('pages.your_dogs_from_kennelos'), featured_pup: say('pages.your_pups_from_kennelos'), extras: say('pages.your_extras') };
+    const nameOf = { dogs: (d) => d.call_name, litters: (l) => l.name, pups: (p) => p.name, reviews: (r) => r.first_name || say('pages.a_family'), featured_dog: (d) => d.call_name, featured_pup: (p) => p.name, extras: (x) => x.name };
     const cur = await getAddedBlock(env, site.id, key, b.id);
     const rows = blockRows(snap, b, null, key);
-    const names = (b.limit ? rows.slice(0, b.limit) : rows).map(nameOf[b.type]);
+    const names = (b.limit ? rows.slice(0, b.limit) : rows).map(nameOf[b.type] ?? ((r) => r.name ?? r.call_name ?? '')).filter(Boolean);
     const input = (n, label, max, half) => `<div class="f${half ? ' half' : ''}"><label>${esc(label)}<input name="${n}" value="${esc(cur[n] ?? b.w[n] ?? '')}" maxlength="${max}"><span class="hint">${esc(say('pages.own.empty_none'))}</span></label></div>`;
     return `<form method="post" action="${base}/blocks/${esc(key)}/${esc(b.id)}" data-save class="card added${cur.enabled ? '' : ' off'}" id="b-${esc(b.id)}">
         <div class="between"><h2 class="added-h">${esc(cur.heading || b.w.heading || BLOCK_TYPES[b.type].name)}</h2>
           <div class="switches"><label class="check">${esc(say('pages.show_it'))}<input type="checkbox" name="enabled" value="1"${cur.enabled ? ' checked' : ''}></label></div></div>
-        <p class="muted small">${esc(what[b.type])}: ${names.length ? esc(names.join(', ')) : 'none right now, so it hides'}.</p>${picksLink(base, say, key, b, snap)}
+        <p class="muted small">${esc(what[b.type] ?? BLOCK_TYPES[b.type].name)}: ${names.length ? esc(names.join(', ')) : 'none right now, so it hides'}.</p>${picksLink(base, say, key, b, snap)}
         <div class="fgrid">${input('eyebrow', say('pages.eyebrow'), ADDED_BLOCK_FIELDS.eyebrow.max, true)}${input('heading', say('pages.heading'), ADDED_BLOCK_FIELDS.heading.max, true)}${input('lede', say('pages.line_under_it'), ADDED_BLOCK_FIELDS.lede.max, false)}</div>
         <button class="primary">${esc(say('pages.save'))}</button></form>`;
   }
