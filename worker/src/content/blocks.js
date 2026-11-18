@@ -930,6 +930,10 @@ export const MENU_PLACES = Object.freeze({
   'litters#available': { page: 'litters', name: 'Available now', when: 'while a litter has puppies to choose from' },
   'litters#upcoming': { page: 'litters', name: 'Upcoming litters', when: 'while a litter is planned, or its deposits haven\'t opened (unless the Puppies page has Available soon)' },
   'litters#soon': { page: 'litters', name: 'Available soon', when: 'while a born litter\'s deposits haven\'t opened, and the Puppies page has Available soon' },
+  // Getting your pup home's three sections (2026-11-18): links that jump to each on its one page.
+  'pickup#pickup': { page: 'pickup', name: 'Pickup', when: 'while her Pickup section has words' },
+  'pickup#transport': { page: 'pickup', name: 'Transport', when: 'while her Transport section has words, or she has transport services' },
+  'pickup#travel': { page: 'pickup', name: 'Travel day', when: 'while her Travel day section has words' },
 });
 // Pages that can't be in the menu: Privacy sits in the footer's fine print.
 const MENU_PAGES = Object.keys(PAGES).filter((k) => k !== 'privacy');

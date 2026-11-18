@@ -297,6 +297,10 @@ export function menuGroups(snap, ctx) {
     'litters#available': () => snap.litters.some((l) => l.stage === 'current' && !depositsAhead(snap, l, ctx.today)),
     'litters#upcoming': () => snap.litters.some((l) => l.stage === 'planned' || (!soonSection(snap) && depositsAhead(snap, l, ctx.today))),
     'litters#soon': () => soonSection(snap) && snap.litters.some((l) => depositsAhead(snap, l, ctx.today)),
+    // Getting your pup home's sections: while each is on the page (render/pages.js pickup).
+    'pickup#pickup': () => Boolean(snap.pages.pickup?.pickup_text),
+    'pickup#transport': () => Boolean(snap.pages.pickup?.transport_text) || (snap.products ?? []).some((x) => x.transport),
+    'pickup#travel': () => Boolean(snap.pages.pickup?.travel_text),
   };
   placeShows['dogs#boys'] = placeShows['dogs#girls'];
   const placeText = { 'dogs#girls': () => word(snap, 'girls'), 'dogs#boys': () => word(snap, 'boys') };

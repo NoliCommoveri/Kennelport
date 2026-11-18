@@ -202,3 +202,27 @@ test('a group of a Show filter block: its link chooses it in the filter', async 
   // Not grouped by sex any more, so Girls and Boys hide.
   assert.doesNotMatch(await s.render(), /dogs#girls/);
 });
+
+test('Getting your pup home\'s sections as places under it: each jumps to its section, and shows while it has words', async () => {
+  const s = await setup();
+  const { savePage } = await import('../src/content/records.js');
+  await savePage(s.env, s.site.id, 'pickup', { enabled: true, pickup_text: 'Pickup is by appointment.', travel_text: 'Bring a crate and a towel.' });
+  // Offered by Add, not in today's menu.
+  assert.match(await s.get(), /Place: Pickup \(Getting your pup home\)[\s\S]*?Place: Transport \(Getting your pup home\)[\s\S]*?Place: Travel day \(Getting your pup home\)/);
+  assert.doesNotMatch(nav(await s.render()), /Travel day/);
+  const g = (await s.get()).match(/name="g\.(\d+)\.label" value="How it works"/)[1];
+  for (const p of ['pickup', 'transport', 'travel']) await s.post({ [`add.${g}`]: `place:pickup#${p}` }, { act: `add:${g}` });
+  let html = await s.render();
+  assert.match(html, /href="\/pickup#pickup">Pickup<\/a>/);
+  assert.match(html, /href="\/pickup#travel">Travel day<\/a>/);
+  // No transport words and no transport services: its link hides.
+  assert.doesNotMatch(html, /href="\/pickup#transport"/);
+  // The sections they land on.
+  const page = await s.render('/pickup');
+  assert.match(page, /id="pickup"/);
+  assert.match(page, /id="travel"/);
+  await savePage(s.env, s.site.id, 'pickup', { enabled: true, pickup_text: 'Pickup is by appointment.', travel_text: 'Bring a crate and a towel.', transport_text: 'We fly with a nanny.' });
+  html = await s.render();
+  assert.match(html, /href="\/pickup#transport">Transport<\/a>/);
+  assert.match(await s.render('/pickup'), /id="transport"/);
+});

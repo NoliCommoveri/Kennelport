@@ -1897,3 +1897,14 @@ choice at upload).
   the Site Manager (`photos.js`). Until then `versions.test.js` fails, as expected.
 - Tests: 470 pass, 2 fail (the version checks). `ownblocks.test.js`: the flyer Photo block and
   Cards; `editing.test.js`: the Full detail tickbox.
+
+## 2026-11-18: Getting your pup home's sections as menu places
+
+- The owner's ask: Pickup, Transport and Travel day as links under Getting your pup home, like
+  Girls and Boys under Dogs, all on the one page. Three new `MENU_PLACES` (`pickup#pickup`,
+  `pickup#transport`, `pickup#travel`): in the Menu screen's Add, not in today's menu, so no
+  site's menu changes until the owner adds them. Each jumps to its section (the ids the page
+  already had; the header's `scroll-padding-top` keeps the heading in view) and shows while
+  its section is on the page: her words, or for Transport her words or a transport service.
+- Jump, not a Show filter: the owner hadn't decided; the sections stay one readable page.
+- No migration, no version bump. Tests: `menu.test.js`.
