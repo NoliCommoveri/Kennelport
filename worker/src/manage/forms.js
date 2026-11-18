@@ -106,7 +106,10 @@ export const LABELS = {
     places: ['Also show this question at the top of', 'It stays on your FAQ page as well. Use it for a question families need where they meet it \u2014 "limited or full registration?" at the top of every litter\'s page, say.'],
   },
   extras: {
-    kind: ['Kind', null], grp: ['Group', null], price_from: ['Price (or lowest price), in dollars', null], price_to: ['Highest price, for a range', null],
+    kind: ['Kind', null], grp: ['Group', null],
+    site_description: ['Description on my website', 'Shown on your website instead of the description above. Leave it empty to show that one.'],
+    details: ['More details', 'Shown when a family taps "More details" under it, where your website has one.'],
+    price_from: ['Price (or lowest price), in dollars', null], price_to: ['Highest price, for a range', null],
     weeks: ['Weeks (homegoing packages)', null], lead_in: ['Line above the checklist', 'For example "Your puppy will continue receiving:".'],
     checklist: ['What\'s included', 'One item per line.'], closing: ['Closing paragraph', null], featured: ['Mark as "most complete"', null],
     show_on_site: ['Show on my website', 'Off: it leaves your website and stays in the family portal.'],
@@ -434,7 +437,7 @@ const GROUPS = {
   site: [['Your kennel', ['kennel_name', 'breed', 'tagline', 'monogram', 'blurb', 'logo_photo_id']], ['Where families find you', ['town', 'region', 'contact_email', 'contact_phone', 'facebook_url', 'facebook_label', 'instagram_url']], ['Look', ['scheme', 'dark_mode', 'pill_style']]],
   health: [['The result', ['test', 'result', 'date', 'verify_url']]],
   reviews: [['The review', ['quote', 'first_name', 'rating', 'town', 'puppy_name', 'home_month', 'topic', 'photo_id']], ['Shown', ['status']]],
-  extras: [['The extra', ['kind', 'name', 'grp', 'description', 'photo_id']], ['Price and length', ['price_from', 'price_to', 'weeks']], ['What\u2019s included', ['lead_in', 'checklist', 'closing']]],
+  extras: [['The extra', ['kind', 'name', 'grp', 'description', 'site_description', 'details', 'photo_id']], ['Price and length', ['price_from', 'price_to', 'weeks']], ['What\u2019s included', ['lead_in', 'checklist', 'closing']]],
   products: [['The product', ['name', 'grp', 'description', 'photo_id', 'image_url', 'website_url']], ['Link and code', ['link_url', 'link_label', 'code', 'code_note']], ['Badges on other pages', ['badge_places']]],
   albums: [['The album', ['title', 'litter_id', 'litter', 'description', 'cover_photo_id']], ['Photos', ['photos', 'more_photos_url']]],
 };

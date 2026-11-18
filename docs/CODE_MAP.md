@@ -25,7 +25,7 @@ read that before the rest. Update this map when you add, move or split a file.
 - `src/render/`: the "ak" template. `index.js` path → page; `pages.js` the page frame and the pages
   not yet split out; `pages/` one file per page split out (`about.js`, `reviews.js`,
   `contact.js`, `albums.js`, `privacy.js`, `puppy.js`) and pieces `pages.js` uses
-  (`blocks.js` the data blocks, `featured.js` the Featured block,
+  (`blocks.js` the data blocks, `featured.js` the Featured block, `extras.js` the Extras block,
   `albumLists.js`, `formParts.js` the visitor forms, `applicationForm.js` KennelOS's form);
   `parts.js` shared cards, photos, menu; `layout.js` head, header, footer; `schemes.js` the
   colour schemes (source for `scripts/schemes.mjs`); `version.js` `ASSET_VERSION`.

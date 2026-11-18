@@ -39,6 +39,7 @@ export const BLOCK_TYPES = Object.freeze({
   featured_dog: { name: 'Featured dog', ic: 'star', kind: 'data', hint: 'One dog at a time, large, turning over by itself: a day, a week or a month each. She picks the dogs and their order in her Site Manager.' },
   featured_pup: { name: 'Featured pup', ic: 'star', kind: 'data', hint: 'One pup at a time, large, turning over by itself. She picks the pups in her Site Manager; until she does, it shows what your conditions hold for.' },
   reviews: { name: 'Reviews', ic: 'star', kind: 'data' },
+  extras: { name: 'Extras', ic: 'gift', kind: 'data', hint: 'Her extras and homegoing packages, from KennelOS or her own: by default as step cards with the price as the big figure and a More details fold.' },
   embeds: { name: 'Videos and posts', ic: 'camera', kind: 'content', once: true, hint: 'The videos and posts she puts on Home.' },
   band: { name: 'Call-to-action band', ic: 'heart', kind: 'content', once: true, hint: 'Her waitlist band. Shows only while the waitlist page is on.' },
   // The owner's own blocks (decision 17): on any page, as many as she likes.
@@ -123,6 +124,11 @@ export const DOG_STACKED = Object.freeze(['flip', 'beside']);
 // flip cards with a Show filter (the Dogs page's Girls and boys; the first on a page).
 export const GROUP_SHOW = Object.freeze({ headings: 'A heading over each group', filter: 'A Show filter over one grid of flip cards' });
 export const REVIEW_STYLE = Object.freeze({ slider: 'Slider', grid: 'Cards' });
+// An Extras block (2026-11-18): the How it works page's step cards by default (the
+// owner's ask), in a slider or a grid; or the Extras page's package cards; or one
+// expander per extra. The big figure is what sits where a step has its number.
+export const EXTRA_STYLE = Object.freeze({ steps: 'Step cards, in a slider', stepgrid: 'Step cards, in a grid', pkgs: "Package cards (the Extras page's)", list: 'Expanders, one under another' });
+export const EXTRA_BIG = Object.freeze({ price: 'Its price', number: 'A number: 1, 2, 3…', weeks: 'Its weeks (packages)', none: 'Nothing' });
 export const LIMIT_MAX = 24;
 // A facts row of the owner's: up to four [value, label] pairs, Home's facts' look.
 export const FACTS_MAX = 4;
@@ -149,6 +155,9 @@ export const REVIEW_ITEMS = Object.freeze({ stars: 'Stars', quote: 'The quote', 
 // card's (render/parts.js dogItems); a pup's its own.
 export const FEATURE_DOG_ITEMS = Object.freeze({ reg: 'Registered name', role: 'Breed and role', titles: 'Titles', where: 'Where it lives (co-owned) or its owner (outside dogs)', tests: 'Health tests (or details)', bio: 'Bio', ask: '“Ask about” and price (for sale)', tags: 'Tags', origin: 'Origin (Import, or Import Ancestry)' });
 export const FEATURE_PUP_ITEMS = Object.freeze({ line: 'Sex and colour', status: 'Status', litter: 'Its litter and parents', price: 'Price', bio: 'Bio', tags: 'Tags' });
+// Under the big figure. More details folds her details and a package's checklist; in
+// expanders they show open in the fold itself.
+export const EXTRA_ITEMS = Object.freeze({ group: 'Group (small, over the name)', name: 'Name', weeks: 'Weeks and "most complete" (packages)', price: 'Price', description: 'Description (hers on the website, or KennelOS\'s)', details: '“More details” fold: her details, then what\'s included', ask: '“Ask about this”' });
 export const REVIEW_WHO = Object.freeze({ photo: 'Photo', name: 'First name and town', family: '“{pup}’s family, home {month}”' });
 
 export const SHOW_DEFAULT = Object.freeze({
@@ -158,6 +167,7 @@ export const SHOW_DEFAULT = Object.freeze({
     beside: ['photo', 'call', 'reg', 'role', 'titles', 'where', 'tests', 'bio', 'ask', 'profile'] },
   litters: { items: ['eyebrow', 'pair', 'facts', 'summary', 'link'], pair: ['photos', 'name', 'parents'], rows: Object.keys(LITTER_ROWS), names: 2 },
   reviews: { items: ['stars', 'quote', 'who'], who: ['photo', 'name', 'family'] },
+  extras: { items: ['name', 'description', 'details', 'ask'], big: 'price' },
   featured_dog: { items: ['reg', 'role', 'titles', 'bio'] },
   featured_pup: { items: ['line', 'status', 'litter', 'bio'] },
 });
@@ -198,6 +208,7 @@ function legacyWhere(b) {
     return [{ field: 'stage', op: 'one_of', value: stages.flatMap((x) => LEGACY_STAGE[x]) }];
   }
   if (b.type === 'featured_dog') return DOGS_WHERE();
+  if (b.type === 'extras') return [];
   return PUPS_WHERE();
 }
 // Today's defaults, as legacyWhere reads a block with no filters (written out: Home's
@@ -214,6 +225,7 @@ export function newBlock(type, id) {
   if (type === 'pups') Object.assign(b, { where: PUPS_WHERE(), order: 'own', group: '', gw: {}, limit: null, w: { eyebrow: 'Puppies', heading: 'Available puppies' } });
   if (type === 'featured_dog') Object.assign(b, { where: DOGS_WHERE(), order: 'own', sched: cleanSchedule(null), show: structuredClone(SHOW_DEFAULT.featured_dog), w: { eyebrow: 'Featured', heading: 'Meet one of our dogs' } });
   if (type === 'featured_pup') Object.assign(b, { where: PUPS_WHERE(), order: 'own', sched: cleanSchedule(null), show: structuredClone(SHOW_DEFAULT.featured_pup), w: { eyebrow: 'Featured', heading: 'Puppy spotlight' } });
+  if (type === 'extras') Object.assign(b, { where: [], order: 'own', group: '', gw: {}, style: 'steps', limit: null, show: structuredClone(SHOW_DEFAULT.extras), w: { eyebrow: 'Extras', heading: 'Something extra' } });
   if (type === 'reviews') Object.assign(b, { style: 'slider', limit: null, show: structuredClone(SHOW_DEFAULT.reviews), w: { eyebrow: 'Families', heading: 'What our families say' } });
   if (type === 'banner') Object.assign(b, { w: { ...OWN_WORDS.banner }, link: linkDefault(), s: { bg: 'accent' } });
   if (type === 'button') Object.assign(b, { w: { ...OWN_WORDS.button }, link: linkDefault(), size: 'm', look: 'solid', align: 'center' });
@@ -433,6 +445,11 @@ export function cleanBlock(b) {
     out.sched = cleanSchedule(b.sched);
     const items = b.type === 'featured_dog' ? FEATURE_DOG_ITEMS : FEATURE_PUP_ITEMS;
     out.show = { items: list(b.show?.items, items) ?? [...SHOW_DEFAULT[b.type].items] };
+  } else if (b.type === 'extras') {
+    Object.assign(out, recordsOf(b));
+    out.style = pick(b.style, EXTRA_STYLE, 'steps');
+    out.limit = limitOf(b.limit);
+    out.show = { items: list(b.show?.items, EXTRA_ITEMS) ?? [...SHOW_DEFAULT.extras.items], big: pick(b.show?.big, EXTRA_BIG, SHOW_DEFAULT.extras.big) };
   } else if (b.type === 'reviews') {
     const D = SHOW_DEFAULT.reviews;
     out.style = pick(b.style, REVIEW_STYLE, 'slider');
@@ -625,6 +642,10 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
     } else if (b.type === 'featured_dog' || b.type === 'featured_pup') {
       next.sched = { every: get(k('sched.every')), order: get(k('sched.order')), start: String(get(k('sched.start')) ?? ''), count: get(k('sched.count')) };
       next.show = { items: order('items', b.type === 'featured_dog' ? FEATURE_DOG_ITEMS : FEATURE_PUP_ITEMS) };
+    } else if (b.type === 'extras') {
+      next.style = get(k('style'));
+      next.limit = get(k('limit'));
+      next.show = { items: order('items', EXTRA_ITEMS), big: get(k('show.big')) ?? b.show.big };
     } else if (b.type === 'reviews') {
       next.style = get(k('style'));
       next.limit = get(k('limit'));

@@ -43,7 +43,7 @@ import { makePreviewToken, servePhoto, SITE_CSP } from '../site.js';
 import { renderPage } from '../render/index.js';
 import { DEMO_STEPS } from '../kennelos/demo.js';
 import {
-  BLOCK_TYPES, DOG_STYLE, REVIEW_STYLE, withCondition, withoutCondition, BlockError, blocksFromForm, moved, newBlock, pageBlocks, pageChanged, withPage, addable, fits,
+  BLOCK_TYPES, DOG_STYLE, REVIEW_STYLE, EXTRA_STYLE, withCondition, withoutCondition, BlockError, blocksFromForm, moved, newBlock, pageBlocks, pageChanged, withPage, addable, fits,
   hersOn, blockName, blockHint, isBuilt, BUILT_PAGES, PAGE_PARTS, headFor, isCustom, customPages, addPage, withPageInfo, withoutPage, STARTS, menuOf,
   menuChanged, withMenu, groupOf, MenuError, MENU_PLACES, MENU_LIMITS, PROFILES, PROFILE_PATHS, PROFILE_PARTS, PROFILE_ITEMS, PROFILE_FIXED,
   PROFILE_ONLY, PROFILE_FACTS, profileOf, profileChanged, withProfile, profileFromForm, homePart, LINK_TO, BUTTON_SIZE, BUTTON_LOOK, ALIGN,
@@ -267,6 +267,7 @@ function blockSummary(snap, key, b) {
   if (b.type === 'dogs') return `${recordsSummary(b)} · ${b.group && b.gshow === 'filter' ? 'as a Show filter' : DOG_STYLE[b.style].toLowerCase()}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b, key).length} now`;
   if (b.type === 'litters' || b.type === 'pups') return `${recordsSummary(b)}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b, key).length} now`;
   if (b.type === 'featured_dog' || b.type === 'featured_pup') return `${recordsSummary(b)} · ${FEATURE_EVERY[b.sched.every].toLowerCase()} each · ${blockRecords(snap, b, key).length} in turn`;
+  if (b.type === 'extras') return `${recordsSummary(b)} · ${EXTRA_STYLE[b.style].toLowerCase()}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b, key).length} now`;
   if (b.type === 'reviews') return `${REVIEW_STYLE[b.style]}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b, key).length} now`;
   if (b.type === 'builtin') return blockHint(key, b) ?? '';
   if (isOwn(b)) return ownSummary(snap, b);
@@ -498,6 +499,7 @@ function pagePreview(snap, key, blocks, site) {
     else if (b.type === 'gallery') { const x = addedWords(snap, key, b); const album = b.source === 'album' ? snap.albums?.find((a) => a.id === b.album) : null; const n = Math.min(Number(b.count), album ? album.photos.length : b.photos.length, 4); out.push(n ? `<div class="pvb">${x.heading ? `<h3>${esc(x.heading)}</h3>` : ''}<div class="pvg">${'<div class="pvc"><span class="ph"></span></div>'.repeat(n)}</div></div>` : ghost(b, 'no photos yet, so it hides')); }
     else if (b.type === 'beside') { const x = addedWords(snap, key, b); const pic = b.photo ? '<span class="ph"></span>' : ''; out.push(pic || x.heading || x.body ? `<div class="pvb"><div class="pvg">${b.side === 'right' ? '' : `<div class="pvc">${pic}</div>`}<div>${x.heading ? `<h3>${esc(x.heading)}</h3>` : ''}${x.body ? '<div class="lines"><i></i><i></i><i></i></div>' : ''}</div>${b.side === 'right' ? `<div class="pvc">${pic}</div>` : ''}</div></div>` : ghost(b, 'no photo or words yet, so it hides')); }
     else if (b.type === 'photo' || b.type === 'overlay') out.push(b.photo ? `<div class="pv-hero"><span class="ph"></span>${b.type === 'overlay' && b.w.heading ? `<div><h3>${esc(addedWords(snap, key, b).heading)}</h3></div>` : ''}</div>` : ghost(b, 'no photo chosen yet, so it hides'));
+    else if (b.type === 'extras') { const x = blockRows(snap, b, null, key).slice(0, 2); out.push(x.length ? `<div class="pvb">${headOf(wordsOf(b), 'Extras', 'Something extra')}${x.map((e) => `<div class="pv-row"><b>${esc(e.name)}</b></div>`).join('')}</div>` : ghost(b, 'no extras match, so it hides')); }
     else if (b.type === 'reviews') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Families', 'What our families say')}${snap.reviews.slice(0, 1).map((r) => `<div class="pv-row" style="display:block"><span class="stars">★★★★★</span><br>“${esc(r.quote.slice(0, 90))}${r.quote.length > 90 ? '…' : ''}”</div>`).join('')}</div>`);
   }
   return phone(site, snap, pagePath(snap, key), `Their ${key === 'home' ? 'Home' : pageLabel(snap, key)} page, as you build it`, out);

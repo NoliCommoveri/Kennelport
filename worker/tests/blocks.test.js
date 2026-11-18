@@ -203,7 +203,7 @@ test('every page but Privacy has its blocks; with no build each is today\'s, and
   assert.deepEqual(pageBlocks(saved, 'home').map((b) => b.id), ['hero']);
   // Add a block: data blocks anywhere; a removed built-in or spot, back.
   const less = pageBlocks(null, 'contact').filter((b) => !['main', 'faq'].includes(b.id));
-  assert.deepEqual(addable('contact', less).map((x) => `${x.type}${x.id ? `:${x.id}` : ''}`), ['builtin:main', 'faq', 'dogs', 'litters', 'pups', 'featured_dog', 'featured_pup', 'reviews', 'banner', 'button', 'divider', 'spacer', 'photo', 'collage', 'gallery', 'beside', 'overlay', 'factrow', 'words', 'columns']);
+  assert.deepEqual(addable('contact', less).map((x) => `${x.type}${x.id ? `:${x.id}` : ''}`), ['builtin:main', 'faq', 'dogs', 'litters', 'pups', 'featured_dog', 'featured_pup', 'reviews', 'extras', 'banner', 'button', 'divider', 'spacer', 'photo', 'collage', 'gallery', 'beside', 'overlay', 'factrow', 'words', 'columns']);
 });
 
 test('the Pages list has every page; a page\'s editor moves, removes, puts back and adds', async (t) => {
@@ -431,4 +431,22 @@ test('Girls and boys: a build from before B4 holds it as a built-in part, and re
   const old = renderPage(snap, { path: '/dogs', origin: 'https://x', today: '2027-03-10', preview: true, portal: true }).html;
   assert.equal(grid(old), grid(before));
   assert.match(renderPage(snap, { path: '/', origin: 'https://x', today: '2027-03-10', preview: true, portal: true }).html, /href="\/dogs#girls"/);
+});
+
+test('the owner adds an Extras block, sets its style and items, and it shows as step cards on the page', async (t) => {
+  const { post, get, home, build, at } = await demo(t);
+  await post({}, { act: 'add:extras' });
+  const b = (await build()).pages.home.blocks.at(-1);
+  assert.equal(b.type, 'extras');
+  const screen = await get(`${at('home')}?open=${b.id}`);
+  assert.match(screen, /Step cards, in a slider/);
+  assert.match(screen, /The big figure/);
+  assert.match(screen, /More details/);
+  let h = await home();
+  assert.match(h, /Something extra/);
+  assert.match(h.slice(h.indexOf('Something extra')), /<div class="track three"><article class="step">/);
+  await post({ [`b.${b.id}.style`]: 'list', [`b.${b.id}.show.big`]: 'none' }, { open: b.id });
+  h = await home();
+  assert.doesNotMatch(h.slice(h.indexOf('Something extra')), /<article class="step">/);
+  assert.match(h.slice(h.indexOf('Something extra')), /<div class="acc"><details class="x"><summary>/);
 });

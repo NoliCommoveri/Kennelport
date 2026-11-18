@@ -14,12 +14,13 @@ import {
 import { recordCtx } from '../../render/parts.js';
 import { svg } from './controls.js';
 
-const WHAT = { dog: 'dogs', puppy: 'pups', litter: 'litters' };
+const WHAT = { dog: 'dogs', puppy: 'pups', litter: 'litters', extra: 'extras' };
 
 // A field list's sections, for the select's groups.
 function sections(kind) {
   const all = Object.entries(FIELDS[kind]);
   if (kind === 'dog') return [['The dog', all]];
+  if (kind === 'extra') return [['The extra', all]];
   if (kind === 'puppy') return [['The pup', all.filter(([k]) => !k.startsWith('litter.'))], ['Its litter', all.filter(([k]) => k.startsWith('litter.'))]];
   const by = (p) => all.filter(([k]) => k.startsWith(p));
   return [['The litter', all.filter(([k]) => !k.includes('.'))], ['Its pups', by('pups.')], ['Either parent', by('a_parent.')], ['Dam', by('dam.')], ['Sire', by('sire.')]];
@@ -33,7 +34,7 @@ const fieldSelect = (name, kind, cur, { label, filter = () => true, first = null
 const ORDER_WORDS = { text: ['A to Z', 'Z to A'], list: ['A to Z', 'Z to A'], date: ['earliest first', 'latest first'], number: ['lowest first', 'highest first'], enum: ['in its list order', 'in reverse'], bool: ['no first', 'yes first'] };
 
 // The rows a field's values are offered from: every record of its kind on the site.
-const allOf = (snap, kind) => (kind === 'dog' ? snap.dogs : kind === 'litter' ? snap.litters : snap.litters.flatMap((l) => l.puppies ?? []));
+const allOf = (snap, kind) => (kind === 'dog' ? snap.dogs : kind === 'litter' ? snap.litters : kind === 'extra' ? snap.extras ?? [] : snap.litters.flatMap((l) => l.puppies ?? []));
 
 // The values a condition's ticks offer: the field's own list, the colours the site
 // holds, or what its records have; and any stored value no record has now.

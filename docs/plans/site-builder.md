@@ -203,6 +203,7 @@ A data block shows records, with the owner's settings:
 | Pups | status (by display rule, below); sex | the rule's order | pup cards; cards across |
 | Reviews | topic; rating | newest, or the breeder's order | quotes, slider |
 | Products and extras | group; transport | the breeder's order | cards, badge row |
+| Extras (built 2026-11-18) | any extra field (kind, group, price, weeks, from KennelOS…) | hers, or any field | step cards in a slider or grid (default), package cards, expanders; a big figure (price, number, weeks); More details |
 | FAQ | which questions | the breeder's order | expanders |
 | Albums | litter or not | newest | gallery tiles |
 
