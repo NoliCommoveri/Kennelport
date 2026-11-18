@@ -6,5 +6,5 @@
 // there changes, tests/versions.test.js fails until both are updated: bump
 // ASSET_VERSION, then run `node worker/scripts/fingerprint.mjs` and paste its
 // TEMPLATE_FILES value here. Ask the owner before bumping (CLAUDE.md).
-export const ASSET_VERSION = '27';
-export const TEMPLATE_FILES = '3dfad8a5636f65f3';
+export const ASSET_VERSION = '28';
+export const TEMPLATE_FILES = '4a7222de7618c03e';

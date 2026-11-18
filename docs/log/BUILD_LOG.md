@@ -1834,6 +1834,6 @@ changed.
   can't be reordered except by retyping.
 - **Checked** in Chromium at 390 and 1280px: cards with and without photos, the flyer as the
   whole photo and cropped wide, the document button and its size.
-- **`ASSET_VERSION`: the template's CSS changed** (`.step.top`, `.own-card*`), so
-  `versions.test.js` fails until the owner says yes to the bump. Asked.
-- Tests: 466 pass, 1 expected failure (the version). `cards-documents.test.js`.
+- **`ASSET_VERSION` 28** (was 27 on `main`), the owner's yes: the template's CSS changed
+  (`.step.top`, `.own-card*`). `TEMPLATE_FILES` 4a7222de7618c03e.
+- Tests: 467 pass. `cards-documents.test.js`.
