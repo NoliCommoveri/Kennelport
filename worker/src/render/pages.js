@@ -20,6 +20,9 @@ import { litterAlbums, dogAlbums } from './pages/albumLists.js';
 import { v, honeypot, turnstileBox, formResult } from './pages/formParts.js';
 import { kennelosForm } from './pages/applicationForm.js';
 import { dataBlock, saleOf } from './pages/blocks.js';
+import { descriptionOf } from './pages/extras.js';
+import { docUrl } from '../documents.js';
+import { cardsBlock } from './pages/cards.js';
 import { homeBlocks, pageBlocks, BREEDER_SWITCH, PAGE_PARTS, PAGE_HEADS, headFor, BLOCK_TYPES, cleanProfile, DOGS_ALL } from '../content/blocks.js';
 import { HOME_WORDS, COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk, badgeAddress, PAGES } from '../content/model.js';
 
@@ -252,6 +255,7 @@ export function linkFor(snap, ctx, link, her = {}) {
     const path = pagePath(snap, link.page);
     return path && pageOn(snap, link.page, ctx) ? { href: path } : null;
   }
+  if (link.to === 'doc') return link.value && snap.documents?.[link.value] ? { href: docUrl(link.value), external: true, doc: snap.documents[link.value] } : null;
   if (link.to === 'url') { const u = her.url || link.value; return /^https?:\/\//i.test(u ?? '') ? { href: u, external: true } : null; }
   if (link.to === 'email') { const e = her.email || link.value || s.contact_email; return e ? { href: `mailto:${e}` } : null; }
   const n = String(her.phone || link.value || s.contact_phone || '').replace(/[^\d+]/g, '');
@@ -284,6 +288,7 @@ function ownBlock(snap, ctx, b, key) {
     const top = w.heading || w.line ? `<div class="head">${w.heading ? `<h2>${esc(w.heading)}</h2>` : ''}${w.line ? `<p class="lede">${esc(w.line)}</p>` : ''}</div>` : '';
     return `<section class="own-words a-${b.align}"><div class="wrap">${top}${w.body ? `<div class="prose">${paras(w.body)}</div>` : ''}</div></section>`;
   }
+  if (b.type === 'cards') return cardsBlock(snap, ctx, b, w, { linkFor, aTo });
   if (b.type === 'columns') {
     // Hers over the owner's; the prototype's features (a subheading over its words),
     // two or three across on a computer, one under another on a phone.
@@ -675,10 +680,10 @@ export function extras(snap, ctx) {
   const price = (x) => (prices && x.price_from != null ? `<div class="price">${esc(sitePrice(snap, x.price_from, x.price_to))}</div>` : `<div class="price">${esc(pricesOff(snap))}</div>`);
   const pkgHtml = pkgs.map((x) => `<article class="pkg${x.featured ? ' top' : ''}">
       ${x.weeks ? `<div class="weeks"><b>${x.weeks}</b><span>weeks${x.featured ? ` · ${esc(word(snap, 'most_complete'))}` : ''}</span></div>` : ''}<h3>${esc(x.name)}</h3>${price(x)}
-      ${x.description ? `<p>${esc(x.description)}</p>` : ''}
+      ${descriptionOf(x) ? `<p>${esc(descriptionOf(x))}</p>` : ''}
       ${x.checklist.length ? `<details><summary>${esc(word(snap, 'whats_included'))}</summary>${x.lead_in ? `<p class="small muted lead">${esc(x.lead_in)}</p>` : ''}<ul class="checks">${x.checklist.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>${x.closing ? `<p class="small muted closing">${esc(x.closing)}</p>` : ''}</details>` : ''}
       <a class="more" href="${ask}">${esc(word(snap, 'ask_package'))}</a></article>`).join('');
-  const itemHtml = items.map((x) => `<article class="pkg"><h3>${esc(x.name)}</h3>${x.grp ? `<span class="eyebrow">${esc(x.grp)}</span>` : ''}${price(x)}${x.description ? `<p>${esc(x.description)}</p>` : ''}<a class="more" href="${ask}">${esc(word(snap, 'ask_item'))}</a></article>`).join('');
+  const itemHtml = items.map((x) => `<article class="pkg"><h3>${esc(x.name)}</h3>${x.grp ? `<span class="eyebrow">${esc(x.grp)}</span>` : ''}${price(x)}${descriptionOf(x) ? `<p>${esc(descriptionOf(x))}</p>` : ''}<a class="more" href="${ask}">${esc(word(snap, 'ask_item'))}</a></article>`).join('');
   return {
     title: snap.pages.extras.heading || label(snap, 'extras'), section: pagePath(snap, 'extras'), description: p.lede,
     body: assemble(snap, ctx, 'extras', {

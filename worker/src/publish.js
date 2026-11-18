@@ -24,6 +24,7 @@ import { cleanTags } from './content/tags.js';
 import { settleAddresses } from './content/addresses.js';
 import { cleanForms } from './content/forms.js';
 import { pagePath } from './render/parts.js';
+import { snapshotDocuments } from './documents.js';
 
 export const SNAPSHOT_VERSION = 1;
 export const KEEP = 10;
@@ -275,6 +276,7 @@ export async function buildSnapshot(env, siteId) {
         if (b.mayChange) (added[key]?.[b.id]?.photos ?? []).slice(0, Number(b.count)).forEach(use);
         continue;
       }
+      if (b.type === 'cards') { b.cards.forEach((c) => use(c.photo)); continue; }
       if (b.type === 'collage') {
         b.photos.forEach(use);
         if (b.mayChange) (added[key]?.[b.id]?.photos ?? []).forEach(use);
@@ -291,6 +293,7 @@ export async function buildSnapshot(env, siteId) {
   for (const part of chunks([...used])) {
     photoRows.push(...(await db.prepare(`SELECT * FROM photos WHERE site_id = ? AND removed_at IS NULL AND id IN (${placeholders(part)})`).bind(siteId, ...part).all()).results);
   }
+  const documents = await snapshotDocuments(db, siteId);
   const photos = Object.fromEntries(photoRows.map((p) => [p.id, { key: p.r2_key, thumb: p.thumb_key, type: p.type, width: p.width, height: p.height, alt: p.alt ?? '' }]));
 
   return {
@@ -308,7 +311,7 @@ export async function buildSnapshot(env, siteId) {
       // the menu's and the status-page help's Family login link.
       family_login: kennelosOrigin(env) && site.kennelos_public_id ? `${kennelosOrigin(env)}/list/${encodeURIComponent(site.kennelos_public_id)}#signin` : null,
     },
-    pages, home, dogs, litters, reviews, steps, expanders, extras, products, partners, payment, questions, albums, embeds, photos,
+    pages, home, dogs, litters, reviews, steps, expanders, extras, products, partners, payment, questions, albums, embeds, photos, documents,
     rules, timing,
     // Tags (content/tags.js): the owner's by rule, and those she may tick on a dog.
     tags: cleanTags(build?.tags),

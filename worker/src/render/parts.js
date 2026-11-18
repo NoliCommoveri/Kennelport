@@ -255,7 +255,7 @@ export function blockRows(snap, b, today = null, key = null) {
 }
 // Every record of a kind on the site; and those a block's conditions hold for, in its
 // order, before her picks (her picking screen lists these).
-export const recordsOfKind = (snap, kind) => (kind === 'dog' ? snap.dogs : kind === 'litter' ? snap.litters : snap.litters.flatMap((l) => l.puppies ?? []));
+export const recordsOfKind = (snap, kind) => (kind === 'dog' ? snap.dogs : kind === 'litter' ? snap.litters : kind === 'extra' ? snap.extras ?? [] : snap.litters.flatMap((l) => l.puppies ?? []));
 export function matchingRows(snap, b, today = null) {
   const kind = BLOCK_KIND[b.type];
   if (!kind) return [];

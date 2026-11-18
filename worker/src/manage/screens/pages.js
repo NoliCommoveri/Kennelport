@@ -231,6 +231,7 @@ export function pagesScreens({ base, ctxFor, embedErr, embedsCard, env, errorBox
       const ph = (i, j) => (!mine.length && b.cols[i]?.[j] ? ` placeholder="${esc(b.cols[i][j])}"` : '');
       parts.push(`<div class="f"><fieldset><legend>${esc(say('pages.own.cols'))}<span class="hint">${esc(say('pages.own.cols_hint'))}</span></legend>${rows.map(([h, t], i) => `<label>${esc(say('pages.own.col_heading', { n: i + 1 }))}<input name="cols.${i}.0" value="${esc(h)}" maxlength="${F.cols.keyMax}"${ph(i, 0)}></label><label>${esc(say('pages.own.col_words', { n: i + 1 }))}<textarea name="cols.${i}.1" rows="4" maxlength="${F.cols.valueMax}"${ph(i, 1)}>${esc(t)}</textarea></label>`).join('')}</fieldset></div>`);
     }
+    if (b.type === 'cards') parts.push(input('heading', say('pages.heading'), F.heading.max, true, none, b.w.heading), input('line', say('pages.line_under_it'), F.line.max, true, none, b.w.line));
     if (b.type === 'gallery') parts.push(input('heading', say('pages.heading'), F.heading.max, true, none, b.w.heading), input('line', say('pages.line_under_it'), F.line.max, true, none, b.w.line),
       ...(b.source === 'album' && b.more ? [input('label', say('pages.own.album_link'), F.label.max, true, none, b.w.label)] : []));
     if (b.type === 'beside') parts.push(input('heading', say('pages.heading'), F.heading.max, true, none, b.w.heading), input('label', say('pages.own.button_words'), F.label.max, true, none, b.w.label),

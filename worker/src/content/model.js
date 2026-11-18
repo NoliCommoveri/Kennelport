@@ -242,6 +242,10 @@ export const EXTRA_FIELDS = {
   grp: S(40),
   name: S(80, { required: true }),
   description: ML(600),
+  // Hers (migration 0038): her description on the website, over KennelOS's; and
+  // the words behind "More details" on an Extras block.
+  site_description: ML(600),
+  details: ML(2000),
   photo_id: { type: 'photo' },
   price_from: INT(0, 100000),
   price_to: INT(0, 100000),

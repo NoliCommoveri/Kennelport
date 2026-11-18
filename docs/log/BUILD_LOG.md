@@ -1771,3 +1771,69 @@ changed.
   changed.
 - Tests: 455 pass. The owner said yes to the bump: `ASSET_VERSION` 27 (was 26 on `main`),
   `TEMPLATE_FILES` 3dfad8a5636f65f3.
+
+## 2026-11-18: the Extras block (data block, migration 0038)
+
+- **The owner's ask:** a place for the breeder's full-page flyers (her "Liam's puppy memory
+  packages" ad), with the KennelOS extras the flyer stands for under it; the extras as
+  customizable as Dog cards, looking like the How it works steps, with a "More details" fold,
+  and her own description. This branch builds the extras half; the Flyer block (a whole,
+  uncropped picture that opens full size) is still to come.
+- **Extras block** (`content/blocks.js` `extras`, any page): a data block over a new kind of
+  record, `extra` (`content/fields.js`: kind, group, name, price, weeks, "most complete", from
+  KennelOS, has More details, what's included), so it has conditions, order, groups, a limit
+  and the breeder's ticks (Leave out) like the others. Styles: **step cards in a slider** (the
+  default: the How it works page's `.step`), step cards in a grid, the Extras page's package
+  cards, or expanders (the FAQ's `.acc`). **The big figure** sits where a step has its number:
+  its price (default; only while prices of extras show), a number, its weeks, or nothing. Under
+  it, in the owner's order, each on or off: group, name, weeks, price, description, More
+  details, Ask about this. Drawn in `render/pages/extras.js` from the template's existing
+  classes only: **no CSS changed, no version bump**.
+- **Her words on an extra** (migration 0038, `extras.site_description` and `extras.details`):
+  "Description on my website" shows on the site instead of KennelOS's (which stays KennelOS's
+  and read-only while linked); "More details" is folded under it, followed by a package's
+  checklist. The Extras page uses her description too. Labels in `manage/forms.js` LABELS.
+- **Site words** (the owner's fixed wording, `content/rules.js`): `more_details` ("More
+  details") and `weeks`.
+- **Migration 0038** adds two empty columns to `extras` (additive; every extra shows as today).
+  It applies itself on the first request after the merge.
+- **Checked** in Chromium at 390 and 1280px with the sample's memory packages: step cards in the
+  slider (three across on a computer, one and a peek on a phone), More details open, and the
+  expanders. The owner's admin settings use the existing controls (segments, ordered switch
+  list); not screenshotted.
+- Tests: 461 pass (`extras-block.test.js`, and an admin round trip in `blocks.test.js`).
+
+## 2026-11-18: Extras highlight, the Cards block, and documents (migration 0038, continued)
+
+- **Extras block, highlight** (the owner's ask: "highlight one as premier"): `hl`, the owner's
+  pick of one extra, or those the breeder marks "most complete" (the default), or none. Its card
+  gets the Extras page's accent border (`.step.top`, new; `.pkg.top`, as before), an expander
+  opens by itself, and the owner's label (`w.flag`, optional, any words) sits over it as a pill.
+- **Cards block** (`cards`, one of the owner's own blocks, any page; the owner asked for it with
+  no use in mind, so no wording points it at one): up to 12 cards, each any of a photo, a big
+  figure (a step's brass number), labels (up to 4 pills in one colour), a heading, words and a
+  button. The block: heading and line, side by side (2, 3 or 4 across on a computer; one on a
+  phone) or in the slider, the photo's shape (wide, square, tall, or the whole photo uncropped:
+  a flyer fits whole), the labels' colour and alignment. Drawn from the portal prototype's
+  photo-top card (`.pcard`) in the site's surface (`render/pages/cards.js`, CSS `.own-card*`).
+  The breeder switches it off and rewords its heading and line; the cards are the owner's.
+  The owner's settings: `manage/builder/cards.js`.
+- **Documents** (`src/documents.js`, `manage/builder/documents.js`, the `documents` table in
+  migration 0038): a site's PDFs, not tied to any block (the owner's call). The admin view has a
+  **Documents** screen (upload, retitle, open, remove). Checked by their first bytes (`%PDF-`),
+  10 MB at most; nothing is compressed on the server (a Worker can't redo a PDF's images), so the
+  screen says to save a reduced-size PDF. Kept in R2 under the site's files
+  (`sites/<id>/docs/`), so backup and closing a site carry them; `documents` is in `SITE_TABLES`.
+  **"A document" is now a place every button can go** (`LINK_TO.doc`): Button, Banner, Photo
+  beside words, Text over a photo, and each card. It opens the PDF in a new tab (served at
+  `/_kp/d/<id>`, inline, under its file name); a card says "PDF · size" beside it. A button
+  whose document is gone hides. The snapshot carries the site's documents.
+- **Not done:** documents don't count toward a site's storage limit yet (`photos.js` counts
+  photos only); a document has no preview of its own (a card's photo is its preview); the
+  breeder can't upload documents (admin only); the menu can't link to a document yet; cards
+  can't be reordered except by retyping.
+- **Checked** in Chromium at 390 and 1280px: cards with and without photos, the flyer as the
+  whole photo and cropped wide, the document button and its size.
+- **`ASSET_VERSION` 28** (was 27 on `main`), the owner's yes: the template's CSS changed
+  (`.step.top`, `.own-card*`). `TEMPLATE_FILES` 4a7222de7618c03e.
+- Tests: 467 pass. `cards-documents.test.js`.

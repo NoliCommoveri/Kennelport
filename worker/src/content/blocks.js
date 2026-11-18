@@ -39,6 +39,7 @@ export const BLOCK_TYPES = Object.freeze({
   featured_dog: { name: 'Featured dog', ic: 'star', kind: 'data', hint: 'One dog at a time, large, turning over by itself: a day, a week or a month each. She picks the dogs and their order in her Site Manager.' },
   featured_pup: { name: 'Featured pup', ic: 'star', kind: 'data', hint: 'One pup at a time, large, turning over by itself. She picks the pups in her Site Manager; until she does, it shows what your conditions hold for.' },
   reviews: { name: 'Reviews', ic: 'star', kind: 'data' },
+  extras: { name: 'Extras', ic: 'gift', kind: 'data', hint: 'Her extras and homegoing packages, from KennelOS or her own: by default as step cards with the price as the big figure and a More details fold.' },
   embeds: { name: 'Videos and posts', ic: 'camera', kind: 'content', once: true, hint: 'The videos and posts she puts on Home.' },
   band: { name: 'Call-to-action band', ic: 'heart', kind: 'content', once: true, hint: 'Her waitlist band. Shows only while the waitlist page is on.' },
   // The owner's own blocks (decision 17): on any page, as many as she likes.
@@ -53,6 +54,7 @@ export const BLOCK_TYPES = Object.freeze({
   overlay: { name: 'Text over a photo', ic: 'camera', kind: 'own', hint: 'A photo with a heading, a line and a button over it.' },
   factrow: { name: 'Facts row (any page)', ic: 'star', kind: 'own', hint: 'Up to four facts side by side, each a big value over a small label (as on Home).' },
   words: { name: 'Text block', ic: 'draft', kind: 'own', hint: 'A heading, a line under it, and words: as many paragraphs as you like.' },
+  cards: { name: 'Cards', ic: 'layers', kind: 'own', hint: 'Up to twelve cards, each with any of a photo, a big figure, small labels, a heading, words and a button.' },
   columns: { name: 'Text in columns', ic: 'draft', kind: 'own', hint: 'A heading, then up to six short sections side by side, each a subheading over its words: two or three across on a computer, one under another on a phone.' },
 });
 
@@ -62,7 +64,8 @@ export const BLOCK_TYPES = Object.freeze({
 // (a call or a text) or email: those follow Kennel details unless a number or
 // address is typed in for the button. The breeder can change an outside link, a
 // phone number or an email address; a page link is the owner's (decision 18).
-export const LINK_TO = Object.freeze({ page: 'A page', url: 'An outside site', tel: 'A phone call', sms: 'A text message', email: 'An email' });
+// doc: one of the site's documents (documents.js), by its id.
+export const LINK_TO = Object.freeze({ page: 'A page', url: 'An outside site', tel: 'A phone call', sms: 'A text message', email: 'An email', doc: 'A document' });
 export const BUTTON_SIZE = Object.freeze({ s: 'Small', m: 'Medium', l: 'Large' });
 export const BUTTON_LOOK = Object.freeze({ solid: 'Filled', line: 'Outline' });
 export const ALIGN = Object.freeze({ left: 'Left', center: 'Centre', right: 'Right' });
@@ -123,11 +126,27 @@ export const DOG_STACKED = Object.freeze(['flip', 'beside']);
 // flip cards with a Show filter (the Dogs page's Girls and boys; the first on a page).
 export const GROUP_SHOW = Object.freeze({ headings: 'A heading over each group', filter: 'A Show filter over one grid of flip cards' });
 export const REVIEW_STYLE = Object.freeze({ slider: 'Slider', grid: 'Cards' });
+// An Extras block (2026-11-18): the How it works page's step cards by default (the
+// owner's ask), in a slider or a grid; or the Extras page's package cards; or one
+// expander per extra. The big figure is what sits where a step has its number.
+export const EXTRA_STYLE = Object.freeze({ steps: 'Step cards, in a slider', stepgrid: 'Step cards, in a grid', pkgs: "Package cards (the Extras page's)", list: 'Expanders, one under another' });
+export const EXTRA_BIG = Object.freeze({ price: 'Its price', number: 'A number: 1, 2, 3…', weeks: 'Its weeks (packages)', none: 'Nothing' });
 export const LIMIT_MAX = 24;
 // A facts row of the owner's: up to four [value, label] pairs, Home's facts' look.
 export const FACTS_MAX = 4;
 export const FACT_SIZES = Object.freeze([40, 240]);
 // Text in columns: up to six [subheading, words] sections, two or three across.
+// Cards (2026-11-18): free cards, no wording of their own. Each card any of a photo, a
+// big figure (as a step's number), labels (pills in one colour), a heading, words and a
+// button to a page, an outside site, a call, a text, an email or a document.
+export const CARDS_MAX = 12;
+export const CARD_LABELS_MAX = 4;
+export const CARD_SIZES = Object.freeze({ big: 24, label: 30, heading: 120, text: 2000, button: 40 });
+export const CARD_STYLE = Object.freeze({ grid: 'Side by side', slider: 'In a slider' });
+export const CARD_ACROSS = Object.freeze({ 2: 'Two', 3: 'Three', 4: 'Four' });
+export const CARD_SHAPE = Object.freeze({ wide: 'Wide (4:3)', square: 'Square', tall: 'Tall (4:5)', whole: 'The whole photo, uncropped' });
+export const CARD_PILL = Object.freeze({ accent: 'Accent', brass: 'Brass', ok: 'Green', held: 'Muted gold', ink: 'Ink', muted: 'Grey' });
+export const CARD_LINK_TO = Object.freeze({ '': 'No button', ...LINK_TO });
 export const COLS_MAX = 6;
 export const COL_SIZES = Object.freeze([80, 1500]);
 export const COLS_ACROSS = Object.freeze({ 2: 'Two', 3: 'Three' });
@@ -149,6 +168,9 @@ export const REVIEW_ITEMS = Object.freeze({ stars: 'Stars', quote: 'The quote', 
 // card's (render/parts.js dogItems); a pup's its own.
 export const FEATURE_DOG_ITEMS = Object.freeze({ reg: 'Registered name', role: 'Breed and role', titles: 'Titles', where: 'Where it lives (co-owned) or its owner (outside dogs)', tests: 'Health tests (or details)', bio: 'Bio', ask: '“Ask about” and price (for sale)', tags: 'Tags', origin: 'Origin (Import, or Import Ancestry)' });
 export const FEATURE_PUP_ITEMS = Object.freeze({ line: 'Sex and colour', status: 'Status', litter: 'Its litter and parents', price: 'Price', bio: 'Bio', tags: 'Tags' });
+// Under the big figure. More details folds her details and a package's checklist; in
+// expanders they show open in the fold itself.
+export const EXTRA_ITEMS = Object.freeze({ group: 'Group (small, over the name)', name: 'Name', weeks: 'Weeks and "most complete" (packages)', price: 'Price', description: 'Description (hers on the website, or KennelOS\'s)', details: '“More details” fold: her details, then what\'s included', ask: '“Ask about this”' });
 export const REVIEW_WHO = Object.freeze({ photo: 'Photo', name: 'First name and town', family: '“{pup}’s family, home {month}”' });
 
 export const SHOW_DEFAULT = Object.freeze({
@@ -158,6 +180,7 @@ export const SHOW_DEFAULT = Object.freeze({
     beside: ['photo', 'call', 'reg', 'role', 'titles', 'where', 'tests', 'bio', 'ask', 'profile'] },
   litters: { items: ['eyebrow', 'pair', 'facts', 'summary', 'link'], pair: ['photos', 'name', 'parents'], rows: Object.keys(LITTER_ROWS), names: 2 },
   reviews: { items: ['stars', 'quote', 'who'], who: ['photo', 'name', 'family'] },
+  extras: { items: ['name', 'description', 'details', 'ask'], big: 'price' },
   featured_dog: { items: ['reg', 'role', 'titles', 'bio'] },
   featured_pup: { items: ['line', 'status', 'litter', 'bio'] },
 });
@@ -198,6 +221,7 @@ function legacyWhere(b) {
     return [{ field: 'stage', op: 'one_of', value: stages.flatMap((x) => LEGACY_STAGE[x]) }];
   }
   if (b.type === 'featured_dog') return DOGS_WHERE();
+  if (b.type === 'extras') return [];
   return PUPS_WHERE();
 }
 // Today's defaults, as legacyWhere reads a block with no filters (written out: Home's
@@ -214,6 +238,7 @@ export function newBlock(type, id) {
   if (type === 'pups') Object.assign(b, { where: PUPS_WHERE(), order: 'own', group: '', gw: {}, limit: null, w: { eyebrow: 'Puppies', heading: 'Available puppies' } });
   if (type === 'featured_dog') Object.assign(b, { where: DOGS_WHERE(), order: 'own', sched: cleanSchedule(null), show: structuredClone(SHOW_DEFAULT.featured_dog), w: { eyebrow: 'Featured', heading: 'Meet one of our dogs' } });
   if (type === 'featured_pup') Object.assign(b, { where: PUPS_WHERE(), order: 'own', sched: cleanSchedule(null), show: structuredClone(SHOW_DEFAULT.featured_pup), w: { eyebrow: 'Featured', heading: 'Puppy spotlight' } });
+  if (type === 'extras') Object.assign(b, { where: [], order: 'own', group: '', gw: {}, hl: 'marked', style: 'steps', limit: null, show: structuredClone(SHOW_DEFAULT.extras), w: { eyebrow: 'Extras', heading: 'Something extra' } });
   if (type === 'reviews') Object.assign(b, { style: 'slider', limit: null, show: structuredClone(SHOW_DEFAULT.reviews), w: { eyebrow: 'Families', heading: 'What our families say' } });
   if (type === 'banner') Object.assign(b, { w: { ...OWN_WORDS.banner }, link: linkDefault(), s: { bg: 'accent' } });
   if (type === 'button') Object.assign(b, { w: { ...OWN_WORDS.button }, link: linkDefault(), size: 'm', look: 'solid', align: 'center' });
@@ -223,6 +248,7 @@ export function newBlock(type, id) {
   if (type === 'collage') Object.assign(b, { layout: 'tall_two_wide', frame: 'mat', photos: [], focus: [], mayChange: true });
   if (type === 'factrow') Object.assign(b, { items: [] });
   if (type === 'words') Object.assign(b, { w: { heading: 'A few words from us', line: '', body: '' }, align: 'center' });
+  if (type === 'cards') Object.assign(b, { w: { heading: '', line: '' }, cards: [], style: 'grid', across: '3', shape: 'wide', pill: 'accent', align: 'left' });
   if (type === 'columns') Object.assign(b, { w: { heading: 'Our approach', line: '' }, cols: [], across: '2', align: 'center' });
   if (type === 'gallery') Object.assign(b, { source: 'album', album: null, photos: [], count: '6', frame: 'none', more: true, w: { heading: 'From our photo albums', line: '', label: 'See the whole album' }, mayChange: true });
   if (type === 'beside') Object.assign(b, { photo: null, focus: 'middle', frame: 'none', side: 'left', align: 'left', w: { heading: 'A little about us', body: '', label: '' }, link: null, mayChange: true });
@@ -355,10 +381,12 @@ const WORD_MAX = { label: 40, body: 4000 };
 const words = (w, keys = ['eyebrow', 'heading', 'lede']) => Object.fromEntries(Object.entries(w && typeof w === 'object' ? w : {}).filter(([k, v]) => keys.includes(k) && typeof v === 'string').map(([k, v]) => [k, (k === 'body' ? v.replace(/\r\n?/g, '\n') : v).trim().slice(0, WORD_MAX[k] ?? 200)]));
 const PHOTO_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
+const DOC_ID = /^[A-Za-z0-9_-]{1,64}$/;
 // A button's link, as the build keeps it, or null (no button).
 export function cleanLink(l) {
   if (!l || typeof l !== 'object' || !Object.hasOwn(LINK_TO, l.to)) return null;
   if (l.to === 'page') return /^[a-z][a-z0-9_-]{0,44}$/.test(String(l.page ?? '')) ? { to: 'page', page: l.page } : null;
+  if (l.to === 'doc') return DOC_ID.test(String(l.value ?? '')) ? { to: 'doc', value: l.value } : { to: 'doc' };
   const value = String(l.value ?? '').trim().slice(0, 300);
   if (l.to === 'url') return { to: 'url', value };
   return value ? { to: l.to, value } : { to: l.to };
@@ -387,6 +415,22 @@ export const cleanCols = (v) => (Array.isArray(v) ? v : [])
   .filter((p) => Array.isArray(p) && p.length === 2)
   .map(([a, t]) => [String(a ?? '').replace(/\s+/g, ' ').trim().slice(0, COL_SIZES[0]), String(t ?? '').replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, COL_SIZES[1])])
   .filter(([a, t]) => a || t).slice(0, COLS_MAX);
+
+// Cards: every part trimmed to size, labels split on commas, empty cards dropped.
+const line1 = (v, max) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+export const cleanCards = (v) => (Array.isArray(v) ? v : []).filter((c) => c && typeof c === 'object').map((c) => {
+  const labels = (Array.isArray(c.labels) ? c.labels : String(c.labels ?? '').split(','))
+    .map((x) => line1(x, CARD_SIZES.label)).filter(Boolean).slice(0, CARD_LABELS_MAX);
+  return {
+    photo: PHOTO_ID.test(String(c.photo ?? '')) ? c.photo : null,
+    big: line1(c.big, CARD_SIZES.big),
+    labels,
+    heading: line1(c.heading, CARD_SIZES.heading),
+    text: String(c.text ?? '').replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, CARD_SIZES.text),
+    button: line1(c.button, CARD_SIZES.button),
+    link: cleanLink(c.link),
+  };
+}).filter((c) => c.photo || c.big || c.labels.length || c.heading || c.text || (c.button && c.link)).slice(0, CARDS_MAX);
 
 // A data block's records: its conditions, order, grouping and the headings per group.
 // The renderer reads a published block through this too, so an older snapshot's
@@ -433,13 +477,21 @@ export function cleanBlock(b) {
     out.sched = cleanSchedule(b.sched);
     const items = b.type === 'featured_dog' ? FEATURE_DOG_ITEMS : FEATURE_PUP_ITEMS;
     out.show = { items: list(b.show?.items, items) ?? [...SHOW_DEFAULT[b.type].items] };
+  } else if (b.type === 'extras') {
+    Object.assign(out, recordsOf(b));
+    out.style = pick(b.style, EXTRA_STYLE, 'steps');
+    out.limit = limitOf(b.limit);
+    out.show = { items: list(b.show?.items, EXTRA_ITEMS) ?? [...SHOW_DEFAULT.extras.items], big: pick(b.show?.big, EXTRA_BIG, SHOW_DEFAULT.extras.big) };
+    // Which one stands out (the Extras page's accent border): those marked "most
+    // complete", none, or one extra by its id.
+    out.hl = b.hl === 'none' || b.hl === 'marked' || PHOTO_ID.test(String(b.hl ?? '')) ? b.hl : 'marked';
   } else if (b.type === 'reviews') {
     const D = SHOW_DEFAULT.reviews;
     out.style = pick(b.style, REVIEW_STYLE, 'slider');
     out.limit = limitOf(b.limit);
     out.show = { items: list(b.show?.items, REVIEW_ITEMS) ?? [...D.items], who: list(b.show?.who, REVIEW_WHO) ?? [...D.who] };
   }
-  if (BLOCK_TYPES[b.type].kind === 'data') out.w = words(b.w);
+  if (BLOCK_TYPES[b.type].kind === 'data') out.w = words(b.w, b.type === 'extras' ? ['eyebrow', 'heading', 'lede', 'flag'] : undefined);
   if (b.type === 'banner') { out.w = words(b.w, ['heading', 'line', 'label']); out.link = cleanLink(b.link); }
   if (b.type === 'button') {
     out.w = words(b.w, ['label']);
@@ -450,6 +502,15 @@ export function cleanBlock(b) {
   }
   if (b.type === 'factrow') out.items = cleanFacts(b.items);
   if (b.type === 'words') { out.w = words(b.w, ['heading', 'line', 'body']); out.align = pick(b.align, ALIGN, 'center'); }
+  if (b.type === 'cards') {
+    out.w = words(b.w, ['heading', 'line']);
+    out.cards = cleanCards(b.cards);
+    out.style = pick(b.style, CARD_STYLE, 'grid');
+    out.across = pick(String(b.across ?? ''), CARD_ACROSS, '3');
+    out.shape = pick(b.shape, CARD_SHAPE, 'wide');
+    out.pill = pick(b.pill, CARD_PILL, 'accent');
+    out.align = pick(b.align, ALIGN, 'left');
+  }
   if (b.type === 'columns') { out.w = words(b.w, ['heading', 'line']); out.cols = cleanCols(b.cols); out.across = pick(String(b.across ?? ''), COLS_ACROSS, '2'); out.align = pick(b.align, ALIGN, 'center'); }
   if (b.type === 'divider') { out.style = pick(b.style, DIVIDER_STYLE, 'line'); out.width = pick(b.width, DIVIDER_WIDTH, 'wide'); }
   if (b.type === 'spacer') out.height = pick(b.height, SPACER_HEIGHT, 'm');
@@ -625,20 +686,25 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
     } else if (b.type === 'featured_dog' || b.type === 'featured_pup') {
       next.sched = { every: get(k('sched.every')), order: get(k('sched.order')), start: String(get(k('sched.start')) ?? ''), count: get(k('sched.count')) };
       next.show = { items: order('items', b.type === 'featured_dog' ? FEATURE_DOG_ITEMS : FEATURE_PUP_ITEMS) };
+    } else if (b.type === 'extras') {
+      next.style = get(k('style'));
+      next.limit = get(k('limit'));
+      next.show = { items: order('items', EXTRA_ITEMS), big: get(k('show.big')) ?? b.show.big };
+      next.hl = get(k('hl')) ?? b.hl;
     } else if (b.type === 'reviews') {
       next.style = get(k('style'));
       next.limit = get(k('limit'));
       next.show = { items: order('items', REVIEW_ITEMS), who: order('who', REVIEW_WHO) };
     }
     if (BLOCK_TYPES[b.type].kind === 'data' && !hersOn(key, b)) {
-      next.w = { eyebrow: String(get(k('w.eyebrow')) ?? ''), heading: String(get(k('w.heading')) ?? ''), lede: String(get(k('w.lede')) ?? '') };
+      next.w = { eyebrow: String(get(k('w.eyebrow')) ?? ''), heading: String(get(k('w.heading')) ?? ''), lede: String(get(k('w.lede')) ?? ''), ...(b.type === 'extras' ? { flag: String(get(k('w.flag')) ?? b.w?.flag ?? '') } : {}) };
     }
     if (BLOCK_TYPES[b.type].kind === 'own') {
       const str = (f) => String(get(k(f)) ?? '');
       if (b.w) next.w = Object.fromEntries(Object.keys(b.w).map((x) => [x, str(`w.${x}`)]));
       if ('link' in b) {
         const to = str('link.to');
-        next.link = !to ? null : to === 'page' ? { to, page: str('link.page') } : { to, value: str('link.value') };
+        next.link = !to ? null : to === 'page' ? { to, page: str('link.page') } : { to, value: str(to === 'doc' ? 'link.doc' : 'link.value') };
         if (next.link && next.link.to === 'url' && next.link.value && !/^https?:\/\//i.test(next.link.value)) throw new BlockError('A button\'s outside link needs an address starting https://');
         if (next.link && ['tel', 'sms'].includes(to) && next.link.value && !looksLikePhone(next.link.value)) throw new BlockError('That phone number doesn\'t look like one.');
         if (next.link && to === 'email' && next.link.value && !looksLikeEmail(next.link.value)) throw new BlockError('That email address doesn\'t look like one.');
@@ -646,6 +712,20 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
       }
       for (const f of ['size', 'look', 'align', 'style', 'width', 'height', 'shape', 'frame', 'focus', 'side', 'v', 'h', 'shade', 'across', 'source', 'count', 'album']) if (f in b) next[f] = str(f);
       if ('items' in b) next.items = Array.from({ length: FACTS_MAX }, (_, i) => [str(`items.${i}.0`), str(`items.${i}.1`)]);
+      if (b.type === 'cards') {
+        next.pill = str('pill');
+        // The cards shown (each filled one and two empty), in their order; ↑ ↓ handled by the caller.
+        const n = Number(get(k('cards.n')) ?? 0);
+        next.cards = Array.from({ length: Math.min(n, CARDS_MAX) }, (_, i) => {
+          const c = (f) => str(`cards.${i}.${f}`);
+          return { photo: c('photo') || null, big: c('big'), labels: c('labels'), heading: c('heading'), text: c('text'), button: c('button'), link: c('link.to') ? { to: c('link.to'), page: c('link.page'), value: c('link.to') === 'doc' ? c('link.doc') : c('link.value') } : null };
+        });
+        for (const c of next.cards) {
+          if (c.link?.to === 'url' && c.link.value && !/^https?:\/\//i.test(c.link.value)) throw new BlockError('A card\'s outside link needs an address starting https://');
+          if (c.link && ['tel', 'sms'].includes(c.link.to) && c.link.value && !looksLikePhone(c.link.value)) throw new BlockError('A card\'s phone number doesn\'t look like one.');
+          if (c.link?.to === 'email' && c.link.value && !looksLikeEmail(c.link.value)) throw new BlockError('A card\'s email address doesn\'t look like one.');
+        }
+      }
       if ('cols' in b) next.cols = Array.from({ length: COLS_MAX }, (_, i) => [str(`cols.${i}.0`), str(`cols.${i}.1`)]);
       if ('photo' in b) { next.photo = str('photo') || null; next.mayChange = get(k('mayChange')) != null; }
       if (b.type === 'gallery') Object.assign(next, { photos: getAll(k('photos')).map(String).filter(Boolean), more: get(k('more')) != null, mayChange: get(k('mayChange')) != null });

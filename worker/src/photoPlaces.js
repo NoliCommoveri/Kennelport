@@ -14,7 +14,7 @@ import { loadBuild } from './content/rules.js';
 
 const json = (s, d) => { try { return s ? JSON.parse(s) : d; } catch { return d; } };
 // The owner's blocks that hold photos, and what each row calls them.
-const PHOTO_BLOCKS = ['photo', 'overlay', 'beside', 'collage', 'gallery'];
+const PHOTO_BLOCKS = ['photo', 'overlay', 'beside', 'collage', 'gallery', 'cards'];
 
 export async function photoPlaces(env, siteId, say) {
   const all = (sql) => env.DB.prepare(sql).bind(siteId).all().then((r) => r.results);
@@ -63,7 +63,7 @@ export async function photoPlaces(env, siteId, say) {
       if (!PHOTO_BLOCKS.includes(b.type)) continue;
       const her = hers.get(`${key}/${b.id}`) ?? {};
       // A gallery strip from an album is that album's row; picked photos are its own.
-      const ids = b.type === 'collage' || b.type === 'gallery' ? [...(b.type === 'gallery' && b.source === 'album' ? [] : b.photos), ...(b.mayChange ? her.photos ?? [] : [])] : [b.photo, b.mayChange ? her.photo_id : null];
+      const ids = b.type === 'cards' ? b.cards.map((c) => c.photo) : b.type === 'collage' || b.type === 'gallery' ? [...(b.type === 'gallery' && b.source === 'album' ? [] : b.photos), ...(b.mayChange ? her.photos ?? [] : [])] : [b.photo, b.mayChange ? her.photo_id : null];
       put('page', say('library.on_page', { page: pageName(key), block: say(`library.block.${b.type}`) }), ids);
     }
   }

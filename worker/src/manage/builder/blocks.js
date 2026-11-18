@@ -1,6 +1,6 @@
 // A data block's own settings in the owner's block screen (builder.js blockSettings):
 // which records (builder/records.js: conditions, order, groups), its style, and what
-// its cards show, for Dog cards, Litter cards, Pup cards, Featured and Reviews; a
+// its cards show, for Dog cards, Litter cards, Pup cards, Featured, Reviews and Extras; a
 // Featured block's schedule; and the records it shows now, from the draft, with what
 // the breeder ticked and picked. Split out of builder.js (docs/review/
 // senior-review-2026-11.md, item 7).
@@ -8,7 +8,7 @@ import { escapeHtml as esc } from '../../lib/html.js';
 import { blockRows } from '../../render/parts.js';
 import {
   DOG_STYLE, REVIEW_STYLE, DOG_ITEMS, LIGHT_ITEMS, DOG_STACKED, LITTER_ITEMS, LITTER_PAIR, LITTER_ROWS, REVIEW_ITEMS, REVIEW_WHO,
-  FEATURE_DOG_ITEMS, FEATURE_PUP_ITEMS, GROUP_SHOW,
+  FEATURE_DOG_ITEMS, FEATURE_PUP_ITEMS, GROUP_SHOW, EXTRA_STYLE, EXTRA_BIG, EXTRA_ITEMS,
 } from '../../content/blocks.js';
 import { featuredNow, FEATURE_EVERY, FEATURE_ORDER, FEATURE_COUNT } from '../../content/featured.js';
 import { seg, select, fld, mvBtns } from './controls.js';
@@ -19,11 +19,12 @@ import { recordsSettings } from './records.js';
 export function blockRecords(snap, b, key = null) {
   const lim = (rows) => (b.limit ? rows.slice(0, b.limit) : rows);
   if (b.type === 'dogs' || b.type === 'featured_dog') return lim(blockRows(snap, b, null, key)).map((d) => d.call_name);
+  if (b.type === 'extras') return lim(blockRows(snap, b, null, key)).map((x) => x.name);
   if (b.type === 'litters' || b.type === 'pups' || b.type === 'featured_pup') return lim(blockRows(snap, b, null, key)).map((x) => x.name);
   if (b.type === 'reviews') return lim(snap.reviews).map((r) => [r.first_name, r.town].filter(Boolean).join(', ') || 'A family');
   return [];
 }
-export const WHAT = { dogs: 'dog', litters: 'litter', pups: 'pup', reviews: 'review', featured_dog: 'dog', featured_pup: 'pup' };
+export const WHAT = { dogs: 'dog', litters: 'litter', pups: 'pup', reviews: 'review', featured_dog: 'dog', featured_pup: 'pup', extras: 'extra' };
 
 // One ordered list of a card's items: on ones in their order, then the rest; each
 // with its switch, and up and down within the list.
@@ -67,6 +68,11 @@ export function dataSettings(snap, b, k) {
   } else if (b.type === 'featured_dog' || b.type === 'featured_pup') {
     data = `<p class="small muted">${b.type === 'featured_dog' ? 'Until she picks her dogs, it shows the dogs these conditions hold for, in this order.' : 'Until she picks her pups, it shows the pups these conditions hold for, in this order: as they\'re placed, they drop out by themselves.'}</p>${recordsSettings(snap, b, k)}`;
     show = showList(b, 'items', b.type === 'featured_dog' ? FEATURE_DOG_ITEMS : FEATURE_PUP_ITEMS, 'Under its name, top to bottom', 'Its photo sits beside them, and a button to its own page goes under them.');
+  } else if (b.type === 'extras') {
+    data = `${recordsSettings(snap, b, k)}${fld('Style', seg(k('style'), b.style, EXTRA_STYLE), 'Step cards are the How it works page\'s. Expanders show each extra\'s name to tap, with the rest, More details included, inside.')}`;
+    show = `${fld('The big figure', seg(k('show.big'), b.show.big, EXTRA_BIG), 'Where a step has its number (on a package card, where its weeks go). Its price shows only while she shows prices of extras; an extra with none shows no figure.')}
+      <div class="fgrid">${select(k('hl'), b.hl, { marked: 'Those she marks "most complete"', none: 'None', ...Object.fromEntries(blockRows(snap, b).map((x) => [x.id, x.name])) }, 'Highlight')}</div><p class="small muted">Its card gets the accent border (an expander opens by itself), with the label under Starting wording over it.</p>
+      ${showList(b, 'items', EXTRA_ITEMS, 'Under it, top to bottom', 'Her description on the website shows over KennelOS\'s. More details shows only for an extra with her details or a checklist.')}`;
   } else if (b.type === 'reviews') {
     data = fld('Style', seg(k('style'), b.style, REVIEW_STYLE));
     show = `${showList(b, 'items', REVIEW_ITEMS, 'Top to bottom')}${showSwitches(b, 'who', REVIEW_WHO, 'Who it is from')}`;

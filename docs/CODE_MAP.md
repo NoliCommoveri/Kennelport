@@ -25,7 +25,7 @@ read that before the rest. Update this map when you add, move or split a file.
 - `src/render/`: the "ak" template. `index.js` path → page; `pages.js` the page frame and the pages
   not yet split out; `pages/` one file per page split out (`about.js`, `reviews.js`,
   `contact.js`, `albums.js`, `privacy.js`, `puppy.js`) and pieces `pages.js` uses
-  (`blocks.js` the data blocks, `featured.js` the Featured block,
+  (`blocks.js` the data blocks, `featured.js` the Featured block, `extras.js` the Extras block, `cards.js` the Cards block,
   `albumLists.js`, `formParts.js` the visitor forms, `applicationForm.js` KennelOS's form);
   `parts.js` shared cards, photos, menu; `layout.js` head, header, footer; `schemes.js` the
   colour schemes (source for `scripts/schemes.mjs`); `version.js` `ASSET_VERSION`.
@@ -34,6 +34,7 @@ read that before the rest. Update this map when you add, move or split a file.
 - `src/siteforms.js`: forms visitors send (contact, waitlist application, review).
 - `src/feed.js`: KennelOS's public waitlist and application form, read for the waitlist page.
 - `src/waitlist.js`: the simple waitlist kept by hand.
+- `src/documents.js`: a site's PDFs (upload checks, R2, serving at `/_kp/d/`); any button can open one.
 - `src/embeds.js` (reading a pasted link) and `src/embedStore.js` (where each video or post
   sits). `src/qr.js`: QR codes.
 - `src/front.js`: kennelport.com's own front page, terms and privacy.
@@ -92,7 +93,7 @@ read that before the rest. Update this map when you add, move or split a file.
   `sites.js` (Every site), `rules.js` (Pups), `kennelos.js` (From KennelOS), `timing.js`,
   `formats.js`, `instructions.js` (her instructions), `records.js` (a data block's
   conditions, order and groups), `blocks.js` (a data block's settings and a Featured
-  block's schedule), `menugroups.js` (menu links to a group of a block), `tags.js` (Tags), `forms.js` (Forms); `frame.js` the nav and redirect,
+  block's schedule), `menugroups.js` (menu links to a group of a block), `tags.js` (Tags), `forms.js` (Forms), `cards.js` (a Cards block's settings), `documents.js` (Documents); `frame.js` the nav and redirect,
   `controls.js` the form controls. The five big files (`builder.js`, `screens.js`,
   `render/pages.js`, `portal/admin.js`, `portal/family.js`) are split further a screen at a
   time as they're touched (`review/senior-review-2026-11.md`, item 7): don't grow them.

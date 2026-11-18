@@ -22,6 +22,7 @@ import { publicRows } from './waitlist.js';
 import { FRAME_ORIGINS } from './embeds.js';
 import { BRAND_IMAGE_ORIGINS } from './content/model.js';
 import { isPortalPath, servePortal } from './portal/family.js';
+import { serveDocument } from './documents.js';
 
 export const PREVIEW_COOKIE = 'kp_preview';
 export const PREVIEW_DAYS = 7;
@@ -171,6 +172,7 @@ export async function serveSite(request, env, ctxWorker, subdomain, { onDomain =
   const snap = preview ? await buildSnapshot(env, site.id) : await loadSnapshot(env, site.id, site.published_snapshot_id);
 
   if (url.pathname.startsWith('/_kp/p/')) return servePhoto(env, site, snap, url, { preview });
+  if (url.pathname.startsWith('/_kp/d/')) return serveDocument(env, site, snap, url, { preview });
 
   const origin = url.origin;
   if (url.pathname === '/robots.txt') return text(robots({ origin }, { allow: Boolean(snap) && !preview }), 'text/plain');

@@ -11,7 +11,7 @@
 // Reading needs a few things only the renderer knows (a litter's stage on the day, a
 // pup's status row, a partner kennel's name): `rc`, the record context, made by
 // render/parts.js recordCtx. This file stays free of the renderer.
-import { DOG_FIELDS, PUPPY_FIELDS, LITTER_FIELDS } from './model.js';
+import { DOG_FIELDS, PUPPY_FIELDS, LITTER_FIELDS, EXTRA_FIELDS } from './model.js';
 import { DOG_PLACE_WORDS, PUP_DISPOSITION_WORDS } from './rules.js';
 
 // What a condition can ask of each kind of field, in the owner's words.
@@ -299,7 +299,22 @@ for (const [k, d] of Object.entries(DOG).filter(([k]) => !['sire.call_name', 'da
 LITTER['dam.call_name'].read = (l, rc) => rc.dogById(l.dam_id)?.call_name ?? l.dam_name ?? null;
 LITTER['sire.call_name'].read = (l, rc) => rc.dogById(l.sire_id)?.call_name ?? l.sire_name ?? null;
 
-export const FIELDS = Object.freeze({ dog: Object.freeze(DOG), puppy: Object.freeze(PUPPY), litter: Object.freeze(LITTER) });
+// An extra or homegoing package (the Extras block, 2026-11-18): KennelOS sends its
+// name, group, description and prices; the rest is hers.
+export const EXTRA_KIND = { item: 'Extra', homegoing: 'Homegoing package' };
+const EXTRA = {
+  kind: f('Kind', 'enum', own('kind'), { values: EXTRA_KIND, groups: { item: 'Extras', homegoing: 'Homegoing packages' } }),
+  grp: f('Group', 'text', own('grp')),
+  name: f('Name', 'text', own('name')),
+  price: f('Price (or lowest price)', 'number', own('price_from')),
+  weeks: f('Weeks (packages)', 'number', own('weeks')),
+  featured: f('Marked "most complete"', 'bool', (x) => flag(x.featured), { no: 'Not marked "most complete"' }),
+  from_kennelos: f('From KennelOS', 'bool', (x) => Boolean(x.kennelos_id), { no: 'Made by hand' }),
+  has_details: f('Has "More details"', 'bool', (x) => Boolean(x.details) || (x.checklist ?? []).length > 0, { no: 'No "More details"' }),
+  checklist: f("What's included", 'list', (x) => x.checklist ?? []),
+};
+
+export const FIELDS = Object.freeze({ dog: Object.freeze(DOG), puppy: Object.freeze(PUPPY), litter: Object.freeze(LITTER), extra: Object.freeze(EXTRA) });
 
 // The model's fields no block reads: photos, addresses, words, system settings, and
 // what the list above reads another way (a litter's dam and sire through dam.x).
@@ -313,11 +328,13 @@ export const NOT_FOR_BLOCKS = Object.freeze({
   puppy: ['slug', 'bio', 'photo_id', 'more_photos_url'],
   litter: ['slug', 'dam', 'sire', 'dam_name', 'sire_name', 'expected_label', 'ready_label', 'summary', 'price_female', 'price_male',
     'full_reg_female', 'full_reg_male', 'deposit_female', 'deposit_male', 'price_note', 'show_placed', 'ask_full_reg', 'show_puppy_photos', 'show_on_site'],
+  // price_from is read as price.
+  extra: ['description', 'site_description', 'details', 'photo_id', 'price_from', 'price_to', 'lead_in', 'closing', 'show_on_site'],
 });
-export const MODEL_FIELDS = Object.freeze({ dog: DOG_FIELDS, puppy: PUPPY_FIELDS, litter: LITTER_FIELDS });
+export const MODEL_FIELDS = Object.freeze({ dog: DOG_FIELDS, puppy: PUPPY_FIELDS, litter: LITTER_FIELDS, extra: EXTRA_FIELDS });
 
 // Which kind of record each data block shows.
-export const BLOCK_KIND = Object.freeze({ dogs: 'dog', pups: 'puppy', litters: 'litter', featured_dog: 'dog', featured_pup: 'puppy' });
+export const BLOCK_KIND = Object.freeze({ dogs: 'dog', pups: 'puppy', litters: 'litter', featured_dog: 'dog', featured_pup: 'puppy', extras: 'extra' });
 
 // ---------- a condition, cleaned ----------
 

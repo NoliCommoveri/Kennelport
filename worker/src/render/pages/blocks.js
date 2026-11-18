@@ -1,5 +1,5 @@
 // The site's data blocks (content/blocks.js: Dog cards, Litter cards, Pup cards,
-// Reviews), each with its heading and words (hers, or the owner's starting wording),
+// Reviews; Extras in extras.js), each with its heading and words (hers, or the owner's starting wording),
 // its records by its conditions, groups and limit (render/parts.js blockRows), in its
 // style. pages.js draws a page's blocks and calls dataBlock for these. Split out of
 // pages.js (docs/review/senior-review-2026-11.md, item 7).
@@ -11,6 +11,7 @@ import {
 import { hersOn, recordsOf } from '../../content/blocks.js';
 import { HOME_WORDS } from '../../content/model.js';
 import { featuredBlock } from './featured.js';
+import { extrasBlock } from './extras.js';
 
 // A data block's words: hers (home_blocks) for Home's own blocks; for a block the
 // owner added, hers (block_switches) over the owner's starting wording.
@@ -39,6 +40,7 @@ export function dataBlock(snap, ctx, b, key) {
   if (b.type === 'litters') return littersBlock(snap, ctx, b, key);
   if (b.type === 'pups') return pupsBlock(snap, ctx, b, key);
   if (b.type === 'reviews') return reviewsBlock(snap, ctx, b, key);
+  if (b.type === 'extras') return extrasBlock(snap, ctx, b, key, { list: limited(blockRows(snap, b, ctx.today, key), b), w: blockWords(snap, b, key), inGroups, head });
   if (b.type === 'featured_dog' || b.type === 'featured_pup') return featuredBlock(snap, ctx, b, key);
   return '';
 }

@@ -40,10 +40,11 @@ import {
   pagePath as sitePagePath,
 } from '../render/parts.js';
 import { makePreviewToken, servePhoto, SITE_CSP } from '../site.js';
+import { serveDocument, listDocuments, docSize } from '../documents.js';
 import { renderPage } from '../render/index.js';
 import { DEMO_STEPS } from '../kennelos/demo.js';
 import {
-  BLOCK_TYPES, DOG_STYLE, REVIEW_STYLE, withCondition, withoutCondition, BlockError, blocksFromForm, moved, newBlock, pageBlocks, pageChanged, withPage, addable, fits,
+  BLOCK_TYPES, DOG_STYLE, REVIEW_STYLE, EXTRA_STYLE, CARD_STYLE, withCondition, withoutCondition, BlockError, blocksFromForm, moved, newBlock, pageBlocks, pageChanged, withPage, addable, fits,
   hersOn, blockName, blockHint, isBuilt, BUILT_PAGES, PAGE_PARTS, headFor, isCustom, customPages, addPage, withPageInfo, withoutPage, STARTS, menuOf,
   menuChanged, withMenu, groupOf, MenuError, MENU_PLACES, MENU_LIMITS, PROFILES, PROFILE_PATHS, PROFILE_PARTS, PROFILE_ITEMS, PROFILE_FIXED,
   PROFILE_ONLY, PROFILE_FACTS, profileOf, profileChanged, withProfile, profileFromForm, homePart, LINK_TO, BUTTON_SIZE, BUTTON_LOOK, ALIGN,
@@ -60,6 +61,8 @@ import { blockRecords, WHAT, dataSettings, scheduleSettings, hersLine as hersPic
 import { rulesScreen } from './builder/rules.js';
 import { kennelosScreen, landingPreview } from './builder/kennelos.js';
 import { tagsScreen } from './builder/tags.js';
+import { cardsSettings } from './builder/cards.js';
+import { documentsRoute } from './builder/documents.js';
 import { formsScreen, formsFromForm } from './builder/forms.js';
 import { cleanTags, tagsFromForm } from '../content/tags.js';
 import { defaultSay } from './wording.js';
@@ -96,6 +99,7 @@ async function siteView(env, site, rest, url) {
   const snap = await buildSnapshot(env, site.id);
   const path = rest || '/';
   if (path.startsWith('/_kp/p/')) return servePhoto(env, site, snap, new URL(`${path}${url.search}`, url.origin), { preview: true });
+  if (path.startsWith('/_kp/d/')) return serveDocument(env, site, snap, new URL(path, url.origin), { preview: true });
   const ctx = {
     path, origin: `${url.origin}${prefix}`, today: new Date().toISOString().slice(0, 10), preview: true, portal: Boolean(site.portal_on),
     adminBar: {
@@ -106,7 +110,7 @@ async function siteView(env, site, rest, url) {
   };
   const { status, html } = renderPage(snap, ctx);
   const moved = html
-    .replace(/\b(href|action|src)="\/(?!\/)(?!admin\/)(?!_kp\/(?!p\/))/g, `$1="${prefix}/`)
+    .replace(/\b(href|action|src)="\/(?!\/)(?!admin\/)(?!_kp\/(?!p\/|d\/))/g, `$1="${prefix}/`)
     .replace(/\bsrcset="([^"]*)"/g, (m, v) => `srcset="${v.replace(/(^|,\s*)\/_kp\/p\//g, `$1${prefix}/_kp/p/`)}"`);
   return new Response(moved, {
     status,
@@ -267,6 +271,7 @@ function blockSummary(snap, key, b) {
   if (b.type === 'dogs') return `${recordsSummary(b)} · ${b.group && b.gshow === 'filter' ? 'as a Show filter' : DOG_STYLE[b.style].toLowerCase()}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b, key).length} now`;
   if (b.type === 'litters' || b.type === 'pups') return `${recordsSummary(b)}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b, key).length} now`;
   if (b.type === 'featured_dog' || b.type === 'featured_pup') return `${recordsSummary(b)} · ${FEATURE_EVERY[b.sched.every].toLowerCase()} each · ${blockRecords(snap, b, key).length} in turn`;
+  if (b.type === 'extras') return `${recordsSummary(b)} · ${EXTRA_STYLE[b.style].toLowerCase()}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b, key).length} now`;
   if (b.type === 'reviews') return `${REVIEW_STYLE[b.style]}${b.limit ? ` · ${b.limit} at most` : ''} · ${blockRecords(snap, b, key).length} now`;
   if (b.type === 'builtin') return blockHint(key, b) ?? '';
   if (isOwn(b)) return ownSummary(snap, b);
@@ -309,7 +314,7 @@ function blockSettings(snap, key, b, pics) {
   const featured = b.type === 'featured_dog' || b.type === 'featured_pup';
   const words = ownWords(key, b)
     ? `<div class="fgroup"><h2>Starting wording</h2><p class="small muted">The breeder can reword it, and switch the block off, in ${esc(hersAt(snap, key))}.</p><div class="fgrid">
-      ${field(k('w.eyebrow'), b.w.eyebrow ?? '', { label: 'Eyebrow' })}${field(k('w.heading'), b.w.heading ?? '', { label: 'Heading' })}${field(k('w.lede'), b.w.lede ?? '', { label: 'Line under it', cls: '' })}</div></div>`
+      ${field(k('w.eyebrow'), b.w.eyebrow ?? '', { label: 'Eyebrow' })}${field(k('w.heading'), b.w.heading ?? '', { label: 'Heading' })}${field(k('w.lede'), b.w.lede ?? '', { label: 'Line under it', cls: '' })}${b.type === 'extras' ? field(k('w.flag'), b.w.flag ?? '', { label: 'Label on the highlighted one', hint: 'Optional, a pill over its card. Empty: the border alone.' }) : ''}</div></div>`
     : '<p class="small muted">Its words are hers: she words this block in her Site Manager, under Pages and wording, Home.</p>';
   return `<div class="set"><input type="hidden" name="${k('present')}" value="1">
     <div class="fgroup"><h2>Which ${WHAT[b.type]}s <span class="kos-tag">${svg('link')}${b.type === 'reviews' ? 'Her records' : 'KennelOS'}</span></h2>${data}
@@ -336,13 +341,19 @@ function pageChoices(snap, build) {
   return { home: 'Home', ...Object.fromEntries(Object.keys(PAGES).filter((x) => x !== 'privacy').map((x) => [x, pageLabel(snap, x)])), ...Object.fromEntries(customPages(build ?? {}).map((c) => [c.id, c.name])) };
 }
 
+// A document to open (documents.js): one of the site's, from Documents.
+export function docChoice(name, value, pics) {
+  const docs = pics.docs ?? [];
+  return select(name, value ?? '', { '': docs.length ? 'Choose a document' : 'No documents yet: add them under Documents', ...Object.fromEntries(docs.map((d) => [d.id, `${d.title || d.name} (${docSize(d.bytes)})`])) }, 'The document (for a document)');
+}
+
 function linkSettings(snap, b, pics, optional) {
   const k = (f) => `b.${b.id}.${f}`;
   const l = b.link ?? { to: '' };
   const to = optional ? { '': 'No button', ...LINK_TO } : LINK_TO;
-  return `<div class="fgrid">${select(k('link.to'), l.to ?? '', to, 'The button goes to')}${select(k('link.page'), l.page ?? 'waitlist', pageChoices(snap, pics.build), 'The page (for a page)')}
+  return `<div class="fgrid">${select(k('link.to'), l.to ?? '', to, 'The button goes to')}${select(k('link.page'), l.page ?? 'waitlist', pageChoices(snap, pics.build), 'The page (for a page)')}${docChoice(k('link.doc'), l.to === 'doc' ? l.value : '', pics)}
     ${field(k('link.value'), l.value ?? '', { label: 'Address, number or email', cls: '', hint: 'An outside site needs its address. For a call, a text or an email, leave it empty to use the phone and email in Kennel details, and follow them when they change.' })}</div>
-    <p class="small muted">The breeder can reword the button, switch it off, and change an outside link, phone number or email address. A link to a page is yours. A button whose page is off hides by itself.</p>`;
+    <p class="small muted">The breeder can reword the button, switch it off, and change an outside link, phone number or email address. A link to a page or a document is yours. A button whose page is off, or whose document is gone, hides by itself.</p>`;
 }
 
 // A photo spot: the photo that's there, with Replace, which opens her photo library
@@ -378,6 +389,7 @@ function ownSettings(snap, key, b, pics) {
   if (b.type === 'words') return `<div class="fgroup"><h2>Starting wording</h2><p class="small muted">${esc(her)}</p><div class="fgrid">${w('heading', 'Heading')}${w('line', 'Line under the heading', 'half', 'Optional.')}
       <label>Words<textarea name="${k('w.body')}" rows="6">${esc(b.w?.body ?? '')}</textarea><span class="hint">Optional. A blank line starts a new paragraph.</span></label></div>
       ${fld('Where it sits', seg(k('align'), b.align, ALIGN))}</div>`;
+  if (b.type === 'cards') return cardsSettings(snap, b, pics, { photoChoice, pageChoices, docChoice, her: `The breeder can switch it off and reword its heading in ${hersAt(snap, key)}. The cards are yours.` });
   if (b.type === 'columns') {
     const rows = Array.from({ length: COLS_MAX }, (_, i) => b.cols?.[i] ?? ['', '']);
     return `<div class="fgroup"><h2>Starting wording</h2><p class="small muted">${esc(her)}</p><div class="fgrid">${w('heading', 'Heading')}${w('line', 'Line under the heading', 'half', 'Optional.')}</div>
@@ -417,13 +429,14 @@ function ownSettings(snap, key, b, pics) {
 
 // One line under her own block's name.
 function ownSummary(snap, b) {
-  const to = (l) => (!l ? 'no button' : l.to === 'page' ? `to ${l.page === 'home' ? 'Home' : pageLabel(snap, l.page)}` : l.to === 'url' ? `to ${l.value || '(no address yet)'}` : `${LINK_TO[l.to].toLowerCase()}${l.value ? ` to ${l.value}` : ', from Kennel details'}`);
+  const to = (l) => (!l ? 'no button' : l.to === 'page' ? `to ${l.page === 'home' ? 'Home' : pageLabel(snap, l.page)}` : l.to === 'doc' ? `to ${snap.documents?.[l.value] ? `the document ${snap.documents[l.value].title || snap.documents[l.value].name}` : 'a document (none chosen, so it hides)'}` : l.to === 'url' ? `to ${l.value || '(no address yet)'}` : `${LINK_TO[l.to].toLowerCase()}${l.value ? ` to ${l.value}` : ', from Kennel details'}`);
   if (b.type === 'banner') return [b.w.heading, b.w.label && `“${b.w.label}” ${to(b.link)}`].filter(Boolean).join(' · ') || 'No words yet';
   if (b.type === 'button') return `“${b.w.label || '(no words)'}” ${to(b.link)} · ${BUTTON_SIZE[b.size].toLowerCase()}`;
   if (b.type === 'divider') return `${DIVIDER_STYLE[b.style]} · ${DIVIDER_WIDTH[b.width].toLowerCase()}`;
   if (b.type === 'spacer') return SPACER_HEIGHT[b.height];
   if (b.type === 'factrow') return b.items.length ? b.items.map(([v, l]) => [v, l].filter(Boolean).join(' ')).join(' · ') : 'No facts yet, so it hides';
   if (b.type === 'words') return [b.w.heading, b.w.line, b.w.body && `${b.w.body.split(/\n{2,}/).filter((x) => x.trim()).length} paragraph(s)`].filter(Boolean).join(' · ') || 'No words yet, so it hides';
+  if (b.type === 'cards') return [b.w.heading, b.cards.length ? `${b.cards.length} card${b.cards.length === 1 ? '' : 's'}, ${CARD_STYLE[b.style].toLowerCase()}` : 'No cards yet, so it hides'].filter(Boolean).join(' · ');
   if (b.type === 'columns') return [b.w.heading, b.cols.length ? `${b.cols.length} section(s), ${COLS_ACROSS[b.across].toLowerCase()} across` : 'No sections yet, so it hides'].filter(Boolean).join(' · ');
   if (b.type === 'collage') {
     if (!b.photos.length) return b.mayChange ? 'No photos chosen yet, so it hides until the breeder picks some' : 'No photos chosen yet, so it hides';
@@ -498,6 +511,8 @@ function pagePreview(snap, key, blocks, site) {
     else if (b.type === 'gallery') { const x = addedWords(snap, key, b); const album = b.source === 'album' ? snap.albums?.find((a) => a.id === b.album) : null; const n = Math.min(Number(b.count), album ? album.photos.length : b.photos.length, 4); out.push(n ? `<div class="pvb">${x.heading ? `<h3>${esc(x.heading)}</h3>` : ''}<div class="pvg">${'<div class="pvc"><span class="ph"></span></div>'.repeat(n)}</div></div>` : ghost(b, 'no photos yet, so it hides')); }
     else if (b.type === 'beside') { const x = addedWords(snap, key, b); const pic = b.photo ? '<span class="ph"></span>' : ''; out.push(pic || x.heading || x.body ? `<div class="pvb"><div class="pvg">${b.side === 'right' ? '' : `<div class="pvc">${pic}</div>`}<div>${x.heading ? `<h3>${esc(x.heading)}</h3>` : ''}${x.body ? '<div class="lines"><i></i><i></i><i></i></div>' : ''}</div>${b.side === 'right' ? `<div class="pvc">${pic}</div>` : ''}</div></div>` : ghost(b, 'no photo or words yet, so it hides')); }
     else if (b.type === 'photo' || b.type === 'overlay') out.push(b.photo ? `<div class="pv-hero"><span class="ph"></span>${b.type === 'overlay' && b.w.heading ? `<div><h3>${esc(addedWords(snap, key, b).heading)}</h3></div>` : ''}</div>` : ghost(b, 'no photo chosen yet, so it hides'));
+    else if (b.type === 'cards') { const x = addedWords(snap, key, b); out.push(b.cards.length ? `<div class="pvb">${x.heading ? `<h3>${esc(x.heading)}</h3>` : ''}<div class="pvg">${b.cards.slice(0, 3).map((c) => `<div class="pvc">${c.photo ? '<span class="ph"></span>' : ''}${c.heading ? `<b class="small">${esc(c.heading)}</b>` : ''}</div>`).join('')}</div></div>` : ghost(b, 'no cards yet, so it hides')); }
+    else if (b.type === 'extras') { const x = blockRows(snap, b, null, key).slice(0, 2); out.push(x.length ? `<div class="pvb">${headOf(wordsOf(b), 'Extras', 'Something extra')}${x.map((e) => `<div class="pv-row"><b>${esc(e.name)}</b></div>`).join('')}</div>` : ghost(b, 'no extras match, so it hides')); }
     else if (b.type === 'reviews') out.push(`<div class="pvb">${headOf(wordsOf(b), 'Families', 'What our families say')}${snap.reviews.slice(0, 1).map((r) => `<div class="pv-row" style="display:block"><span class="stars">★★★★★</span><br>“${esc(r.quote.slice(0, 90))}${r.quote.length > 90 ? '…' : ''}”</div>`).join('')}</div>`);
   }
   return phone(site, snap, pagePath(snap, key), `Their ${key === 'home' ? 'Home' : pageLabel(snap, key)} page, as you build it`, out);
@@ -573,7 +588,7 @@ async function pageScreen(env, site, build, key, { open = null, error = null } =
   const adds = addable(key, blocks);
   // A photo block's spot: its photo (served through the admin view of her site), and
   // her photo library window, from her Site Manager.
-  const pics = { build, photos: open && blocks.some((b) => b.id === open && ['photo', 'overlay', 'collage', 'beside', 'gallery'].includes(b.type))
+  const pics = { build, docs: await listDocuments(env, site.id), photos: open && blocks.some((b) => b.id === open && ['photo', 'overlay', 'collage', 'beside', 'gallery', 'cards'].includes(b.type))
     ? (await env.DB.prepare('SELECT id FROM photos WHERE site_id = ? AND removed_at IS NULL').bind(site.id).all()).results : null,
   albums: open && blocks.some((b) => b.id === open && b.type === 'gallery')
     ? (await env.DB.prepare('SELECT id, title, show_on_site FROM albums WHERE site_id = ? ORDER BY sort, title').bind(site.id).all()).results : [],
@@ -804,7 +819,7 @@ export async function handleBuilder({ env, request, url, user, page }) {
   const wm = path.match(/^\/admin\/wording(?:\/([a-z]+))?$/);
   if (wm) return wordingRoute({ env, request, url, page, site: null, screen: wm[1] ?? null });
   const sv = path.match(/^\/admin\/([a-z0-9-]+)\/site(\/.*)?$/);
-  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z0-9_-]+|menu|rules|dogs|tags|forms|wording|formats|kennelos|timing|instructions|instructions\/[a-z]+)$/);
+  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z0-9_-]+|menu|rules|dogs|tags|forms|documents|wording|formats|kennelos|timing|instructions|instructions\/[a-z]+)$/);
   if (!m) return null;
   const site = await env.DB.prepare("SELECT id, subdomain, kennel_name, status, portal_on, demo_step, scheme, pill_style FROM sites WHERE subdomain = ? AND status != 'closed'").bind(m[1]).first();
   if (!site) return null;
@@ -819,6 +834,7 @@ export async function handleBuilder({ env, request, url, user, page }) {
   if (screen === 'menu') return menuRoute({ env, request, url, site, build, page });
   if (screen === 'tags') return tagsRoute({ env, request, url, site, build, page });
   if (screen === 'forms') return formsRoute({ env, request, url, site, build, page });
+  if (screen === 'documents') return documentsRoute({ env, request, url, site, page });
   let { rules, timing } = rulesFor(build);
   let error = null;
   if (request.method === 'POST') {

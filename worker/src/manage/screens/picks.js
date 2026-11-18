@@ -32,6 +32,7 @@ function nameOf(kind, x) { return kind === 'dog' ? x.call_name : x.name; }
 function subOf(snap, kind, x, rc) {
   if (kind === 'dog') return x.registered_name ?? '';
   if (kind === 'litter') return pairNames(snap, x);
+  if (kind === 'extra') return x.kind === 'homegoing' ? `${x.weeks ?? ''} weeks` : x.grp ?? '';
   const l = rc.litterOf(x);
   return [l?.name, x.color].filter(Boolean).join(' · ');
 }
