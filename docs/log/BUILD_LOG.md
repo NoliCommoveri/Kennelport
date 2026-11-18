@@ -1908,3 +1908,10 @@ choice at upload).
   its section is on the page: her words, or for Transport her words or a transport service.
 - Jump, not a Show filter: the owner hadn't decided; the sections stay one readable page.
 - No migration, no version bump. Tests: `menu.test.js`.
+
+## 2026-11-18: version bumps for flyers (the owner's yes)
+
+- **`ASSET_VERSION` 29** (was 28 on `main`): `site.css` (the whole photo, the magnifier, the
+  viewer's set of one) and `site.js` (the viewer keeps to one set). `TEMPLATE_FILES` bdc3c6133f4e9df2.
+- **`APP_VERSION` 19** (was 18 on `main`): `photos.js` (Full detail on upload). `APP_FILES` b2d03e0ca03367ed.
+- Tests: 473 pass.
