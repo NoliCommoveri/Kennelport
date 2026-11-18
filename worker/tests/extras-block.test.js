@@ -106,3 +106,17 @@ test('her description on the website is hers: kept with KennelOS\'s, and shown o
   const page = renderPage(snap, { path: '/extras', origin: 'https://x', today: '2027-03-10', preview: true }).html;
   assert.match(page, /<h3>Two photo sessions<\/h3><span class="eyebrow">Memory packages<\/span><div class="price">\$8<\/div><p>Two sessions, a few weeks apart.<\/p>/);
 });
+
+test('one extra can stand out: the owner\'s pick or those marked "most complete", with her label', async (t) => {
+  const { snap, block, draw } = await site(t);
+  assert.equal(block().hl, 'marked');
+  const works = snap.extras.find((x) => x.name === 'The Works');
+  let html = section(draw(block({ hl: works.id, w: { heading: 'Memories', flag: 'Premier' } })));
+  assert.match(html, /<article class="step top"><span class="status c-accent">Premier<\/span><span class="n">\$50<\/span><h3>The Works<\/h3>/);
+  assert.equal((html.match(/class="step top"/g) ?? []).length, 1);
+  // Marked: none of these is, so none stands out; the sample's 16-week package is.
+  html = section(draw(block({ where: [{ field: 'kind', op: 'is', value: 'homegoing' }], style: 'pkgs' })));
+  assert.match(html, /<article class="pkg top"><div class="weeks"><b>\$4,200/);
+  html = section(draw(block({ hl: 'none', style: 'list', w: { flag: 'Premier' } })));
+  assert.doesNotMatch(html, /Premier| open>/);
+});

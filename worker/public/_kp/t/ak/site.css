@@ -331,6 +331,9 @@ details.x .body { padding: 0 20px 18px; color: var(--muted); display: grid; gap:
 .step { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 22px; display: grid; gap: 10px; align-content: start; height: 100%; }
 .step .n { font: var(--display-w) 2.2rem/1 var(--f-display); color: var(--brass); }
 .step p { color: var(--muted); font-size: .92rem; }
+/* An Extras block's highlighted one, as the Extras page's .pkg.top; its label a pill. */
+.step.top { border-color: var(--accent); box-shadow: inset 0 3px 0 var(--accent); }
+.step > .status:first-child, .pkg > .status:first-child { justify-self: start; }
 
 /* Extended homegoing packages */
 .pkgs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: start; }

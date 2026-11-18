@@ -60,23 +60,29 @@ function itemsOf(snap, ctx, b, x, { fold = true, skip = [] } = {}) {
   return out.join('');
 }
 
-const stepCard = (snap, ctx, b, x, i) => {
+// The one that stands out (b.hl): the owner's pick, or those marked "most complete";
+// with her label (w.flag) as a pill over it.
+const isTop = (b, x) => (b.hl === 'marked' ? Boolean(x.featured) : b.hl !== 'none' && x.id === b.hl);
+const flagOf = (b, x, w) => (isTop(b, x) && w.flag ? `<span class="status c-accent">${esc(w.flag)}</span>` : '');
+
+const stepCard = (snap, ctx, b, x, i, w) => {
   const big = bigOf(snap, b, x, i);
-  return `<article class="step">${big ? `<span class="n">${esc(big)}</span>` : ''}${itemsOf(snap, ctx, b, x)}</article>`;
+  return `<article class="step${isTop(b, x) ? ' top' : ''}">${flagOf(b, x, w)}${big ? `<span class="n">${esc(big)}</span>` : ''}${itemsOf(snap, ctx, b, x)}</article>`;
 };
 
 // The Extras page's package card: the big figure in its weeks spot, "most complete" beside it.
-const pkgCard = (snap, ctx, b, x, i) => {
+const pkgCard = (snap, ctx, b, x, i, w) => {
   const big = bigOf(snap, b, x, i);
   const tag = b.show.big === 'weeks' ? `${esc(word(snap, 'weeks'))}${x.featured ? ` · ${esc(word(snap, 'most_complete'))}` : ''}` : x.featured ? esc(word(snap, 'most_complete')) : '';
-  return `<article class="pkg${x.featured ? ' top' : ''}">${big ? `<div class="weeks"><b>${esc(big)}</b><span>${tag}</span></div>` : ''}${itemsOf(snap, ctx, b, x)}</article>`;
+  return `<article class="pkg${isTop(b, x) ? ' top' : ''}">${flagOf(b, x, w)}${big ? `<div class="weeks"><b>${esc(big)}</b><span>${tag}</span></div>` : ''}${itemsOf(snap, ctx, b, x)}</article>`;
 };
 
 // An expander: its name (and the big figure) to tap, the rest inside, More details open.
-const expander = (snap, ctx, b, x, i) => {
+const expander = (snap, ctx, b, x, i, w) => {
   const big = bigOf(snap, b, x, i);
   const title = [b.show.big === 'number' ? `${big}.` : '', x.name, b.show.big === 'price' || b.show.big === 'weeks' ? big && `· ${big}${b.show.big === 'weeks' ? ` ${word(snap, 'weeks')}` : ''}` : ''].filter(Boolean).join(' ');
-  return `<details class="x"><summary>${esc(title)}</summary><div class="body">${itemsOf(snap, ctx, b, x, { fold: false, skip: ['name'] })}</div></details>`;
+  const flag = isTop(b, x) && w.flag ? ` · ${w.flag}` : '';
+  return `<details class="x"${isTop(b, x) ? ' open' : ''}><summary>${esc(title + flag)}</summary><div class="body">${itemsOf(snap, ctx, b, x, { fold: false, skip: ['name'] })}</div></details>`;
 };
 
 // The block: its heading and its extras, grouped when the owner groups them.
@@ -87,9 +93,9 @@ export function extrasBlock(snap, ctx, b, key, { list, w, inGroups, head }) {
   const draw = (rows) => {
     const at = n;
     n += rows.length;
-    if (b.style === 'list') return `<div class="acc">${rows.map((x, i) => expander(snap, ctx, b, x, at + i)).join('')}</div>`;
-    if (b.style === 'pkgs') return `<div class="pkgs">${rows.map((x, i) => pkgCard(snap, ctx, b, x, at + i)).join('')}</div>`;
-    const cards = rows.map((x, i) => stepCard(snap, ctx, b, x, at + i));
+    if (b.style === 'list') return `<div class="acc">${rows.map((x, i) => expander(snap, ctx, b, x, at + i, w)).join('')}</div>`;
+    if (b.style === 'pkgs') return `<div class="pkgs">${rows.map((x, i) => pkgCard(snap, ctx, b, x, at + i, w)).join('')}</div>`;
+    const cards = rows.map((x, i) => stepCard(snap, ctx, b, x, at + i, w));
     if (b.style === 'stepgrid') return `<div class="grid">${cards.join('')}</div>`;
     return slider(cards, { cls: 'three', ctl: `<span class="muted small">${esc(word(snap, 'swipe'))}</span>` });
   };

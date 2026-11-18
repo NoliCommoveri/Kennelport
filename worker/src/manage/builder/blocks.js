@@ -71,6 +71,7 @@ export function dataSettings(snap, b, k) {
   } else if (b.type === 'extras') {
     data = `${recordsSettings(snap, b, k)}${fld('Style', seg(k('style'), b.style, EXTRA_STYLE), 'Step cards are the How it works page\'s. Expanders show each extra\'s name to tap, with the rest, More details included, inside.')}`;
     show = `${fld('The big figure', seg(k('show.big'), b.show.big, EXTRA_BIG), 'Where a step has its number (on a package card, where its weeks go). Its price shows only while she shows prices of extras; an extra with none shows no figure.')}
+      <div class="fgrid">${select(k('hl'), b.hl, { marked: 'Those she marks "most complete"', none: 'None', ...Object.fromEntries(blockRows(snap, b).map((x) => [x.id, x.name])) }, 'Highlight')}</div><p class="small muted">Its card gets the accent border (an expander opens by itself), with the label under Starting wording over it.</p>
       ${showList(b, 'items', EXTRA_ITEMS, 'Under it, top to bottom', 'Her description on the website shows over KennelOS\'s. More details shows only for an extra with her details or a checklist.')}`;
   } else if (b.type === 'reviews') {
     data = fld('Style', seg(k('style'), b.style, REVIEW_STYLE));

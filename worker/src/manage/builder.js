@@ -310,7 +310,7 @@ function blockSettings(snap, key, b, pics) {
   const featured = b.type === 'featured_dog' || b.type === 'featured_pup';
   const words = ownWords(key, b)
     ? `<div class="fgroup"><h2>Starting wording</h2><p class="small muted">The breeder can reword it, and switch the block off, in ${esc(hersAt(snap, key))}.</p><div class="fgrid">
-      ${field(k('w.eyebrow'), b.w.eyebrow ?? '', { label: 'Eyebrow' })}${field(k('w.heading'), b.w.heading ?? '', { label: 'Heading' })}${field(k('w.lede'), b.w.lede ?? '', { label: 'Line under it', cls: '' })}</div></div>`
+      ${field(k('w.eyebrow'), b.w.eyebrow ?? '', { label: 'Eyebrow' })}${field(k('w.heading'), b.w.heading ?? '', { label: 'Heading' })}${field(k('w.lede'), b.w.lede ?? '', { label: 'Line under it', cls: '' })}${b.type === 'extras' ? field(k('w.flag'), b.w.flag ?? '', { label: 'Label on the highlighted one', hint: 'Optional, a pill over its card. Empty: the border alone.' }) : ''}</div></div>`
     : '<p class="small muted">Its words are hers: she words this block in her Site Manager, under Pages and wording, Home.</p>';
   return `<div class="set"><input type="hidden" name="${k('present')}" value="1">
     <div class="fgroup"><h2>Which ${WHAT[b.type]}s <span class="kos-tag">${svg('link')}${b.type === 'reviews' ? 'Her records' : 'KennelOS'}</span></h2>${data}

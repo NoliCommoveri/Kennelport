@@ -225,7 +225,7 @@ export function newBlock(type, id) {
   if (type === 'pups') Object.assign(b, { where: PUPS_WHERE(), order: 'own', group: '', gw: {}, limit: null, w: { eyebrow: 'Puppies', heading: 'Available puppies' } });
   if (type === 'featured_dog') Object.assign(b, { where: DOGS_WHERE(), order: 'own', sched: cleanSchedule(null), show: structuredClone(SHOW_DEFAULT.featured_dog), w: { eyebrow: 'Featured', heading: 'Meet one of our dogs' } });
   if (type === 'featured_pup') Object.assign(b, { where: PUPS_WHERE(), order: 'own', sched: cleanSchedule(null), show: structuredClone(SHOW_DEFAULT.featured_pup), w: { eyebrow: 'Featured', heading: 'Puppy spotlight' } });
-  if (type === 'extras') Object.assign(b, { where: [], order: 'own', group: '', gw: {}, style: 'steps', limit: null, show: structuredClone(SHOW_DEFAULT.extras), w: { eyebrow: 'Extras', heading: 'Something extra' } });
+  if (type === 'extras') Object.assign(b, { where: [], order: 'own', group: '', gw: {}, hl: 'marked', style: 'steps', limit: null, show: structuredClone(SHOW_DEFAULT.extras), w: { eyebrow: 'Extras', heading: 'Something extra' } });
   if (type === 'reviews') Object.assign(b, { style: 'slider', limit: null, show: structuredClone(SHOW_DEFAULT.reviews), w: { eyebrow: 'Families', heading: 'What our families say' } });
   if (type === 'banner') Object.assign(b, { w: { ...OWN_WORDS.banner }, link: linkDefault(), s: { bg: 'accent' } });
   if (type === 'button') Object.assign(b, { w: { ...OWN_WORDS.button }, link: linkDefault(), size: 'm', look: 'solid', align: 'center' });
@@ -450,13 +450,16 @@ export function cleanBlock(b) {
     out.style = pick(b.style, EXTRA_STYLE, 'steps');
     out.limit = limitOf(b.limit);
     out.show = { items: list(b.show?.items, EXTRA_ITEMS) ?? [...SHOW_DEFAULT.extras.items], big: pick(b.show?.big, EXTRA_BIG, SHOW_DEFAULT.extras.big) };
+    // Which one stands out (the Extras page's accent border): those marked "most
+    // complete", none, or one extra by its id.
+    out.hl = b.hl === 'none' || b.hl === 'marked' || PHOTO_ID.test(String(b.hl ?? '')) ? b.hl : 'marked';
   } else if (b.type === 'reviews') {
     const D = SHOW_DEFAULT.reviews;
     out.style = pick(b.style, REVIEW_STYLE, 'slider');
     out.limit = limitOf(b.limit);
     out.show = { items: list(b.show?.items, REVIEW_ITEMS) ?? [...D.items], who: list(b.show?.who, REVIEW_WHO) ?? [...D.who] };
   }
-  if (BLOCK_TYPES[b.type].kind === 'data') out.w = words(b.w);
+  if (BLOCK_TYPES[b.type].kind === 'data') out.w = words(b.w, b.type === 'extras' ? ['eyebrow', 'heading', 'lede', 'flag'] : undefined);
   if (b.type === 'banner') { out.w = words(b.w, ['heading', 'line', 'label']); out.link = cleanLink(b.link); }
   if (b.type === 'button') {
     out.w = words(b.w, ['label']);
@@ -646,13 +649,14 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
       next.style = get(k('style'));
       next.limit = get(k('limit'));
       next.show = { items: order('items', EXTRA_ITEMS), big: get(k('show.big')) ?? b.show.big };
+      next.hl = get(k('hl')) ?? b.hl;
     } else if (b.type === 'reviews') {
       next.style = get(k('style'));
       next.limit = get(k('limit'));
       next.show = { items: order('items', REVIEW_ITEMS), who: order('who', REVIEW_WHO) };
     }
     if (BLOCK_TYPES[b.type].kind === 'data' && !hersOn(key, b)) {
-      next.w = { eyebrow: String(get(k('w.eyebrow')) ?? ''), heading: String(get(k('w.heading')) ?? ''), lede: String(get(k('w.lede')) ?? '') };
+      next.w = { eyebrow: String(get(k('w.eyebrow')) ?? ''), heading: String(get(k('w.heading')) ?? ''), lede: String(get(k('w.lede')) ?? ''), ...(b.type === 'extras' ? { flag: String(get(k('w.flag')) ?? b.w?.flag ?? '') } : {}) };
     }
     if (BLOCK_TYPES[b.type].kind === 'own') {
       const str = (f) => String(get(k(f)) ?? '');
