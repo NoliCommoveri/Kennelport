@@ -1,6 +1,6 @@
 // The KennelOS family feed (docs/plans/family-portal.md sections 3.1, 3.2 and
 // 3.4; build chunk 3). For her kennel, KennelOS sends each family from their signed
-// contract on, on its own whenever one of their records changes, to
+// contract on (or earlier, when she starts a family's portal early in KennelOS), on its own whenever one of their records changes, to
 //
 //   POST api.kennelport.com/v1/portal   (Bearer: the device's link token)
 //
@@ -11,7 +11,9 @@
 //
 //   { format: 1, feed_id, kennel_id, sent_at?,
 //     families?: [{ id, name, emails: [..], status_url?,
-//       placements: [{ id (the sale), puppy_id (its Dog), puppy_name, contract_signed_on,
+//       placements: [{ id (the sale), puppy_id (its Dog), puppy_name, contract_signed_on?
+//         (blank while she started their portal before the contract was signed; it fills
+//         in with the next feed once it is),
 //         go_home_on?, pickup_at? (ISO: the placement event, hers or the family's approved booking),
 //         microchip?, registration_no?,
 //         voided?: { reason: died | failed_health | backed_out | other, on },
@@ -67,7 +69,7 @@ const F = {
 const SHAPES = {
   family: { id: F.id, name: F.text(120, true), emails: { list: 'email', max: MAX.emails }, status_url: F.url, placements: { list: 'placement', max: MAX.placements } },
   placement: {
-    id: F.id, puppy_id: F.ref, puppy_name: F.text(60, true), contract_signed_on: F.date(true), go_home_on: F.date(), pickup_at: F.at,
+    id: F.id, puppy_id: F.ref, puppy_name: F.text(60, true), contract_signed_on: F.date(), go_home_on: F.date(), pickup_at: F.at,
     microchip: F.text(40), registration_no: F.text(40), voided: { object: 'voided' }, health: { list: 'health', max: MAX.health },
     extras: { list: 'extra', max: 10 },
   },
@@ -421,6 +423,29 @@ const unb64url = (s) => atob(s.replace(/-/g, '+').replace(/_/g, '/'));
 export async function makeHandoffToken(key, familyKennelosId, at = Date.now()) {
   const body = b64url(JSON.stringify({ f: familyKennelosId, x: at + HANDOFF_MS, n: randomHex(16) }));
   return `${body}.${await hmacHex(key, body)}`;
+}
+
+// The other way (plan 3.4): "Open your status page" signs the family in on their
+// KennelOS status page, with no code, for the same 90 days a code gives there
+// (KennelOS's cloud/src/familyActions.js handleFromPortal checks it). The same
+// shape and key as above, signed over "to-status:" and the body, so a link made for
+// one direction never works for the other. It rides in the address's #, which
+// browsers never send to a server or in a referrer.
+export async function makeStatusToken(key, familyKennelosId, at = Date.now()) {
+  const body = b64url(JSON.stringify({ f: familyKennelosId, x: at + HANDOFF_MS, n: randomHex(16) }));
+  return `${body}.${await hmacHex(key, `to-status:${body}`)}`;
+}
+
+// The family's status page address, signed in when it can be: a family from
+// KennelOS on a site still linked to it. Otherwise their plain link; null if none.
+export async function statusPageLink(env, site, familyId) {
+  const f = await env.DB.prepare("SELECT status_url, kennelos_id FROM portal_families WHERE id = ? AND site_id = ? AND status = 'active' AND deleted_at IS NULL")
+    .bind(familyId, site.id).first();
+  const url = /^https:\/\//i.test(f?.status_url ?? '') ? f.status_url.replace(/#.*$/, '') : null;
+  if (!url || !f.kennelos_id) return url;
+  const link = await env.DB.prepare('SELECT kennelos_kennel_id FROM links WHERE site_id = ? AND revoked_at IS NULL LIMIT 1').bind(site.id).first();
+  if (!link || !env.EMAIL_HMAC_KEY) return url;
+  return `${url}#from=${await makeStatusToken(await handoffKey(env, site.id, link.kennelos_kennel_id), f.kennelos_id)}`;
 }
 
 // The family the token is for, or null: signed by the site's key, unexpired, not

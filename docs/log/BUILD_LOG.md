@@ -1925,3 +1925,44 @@ choice at upload).
   later without an entry shows its type's name instead of crashing.
 - The card's "none right now, so it hides" is still in the code, not yet in `wording.js`.
 - No migration, no version bump. Tests: `extras-block.test.js` (474 pass).
+
+## 2026-11-18: fix, See their portal said "used or has expired" for the owner
+
+- The owner, in the Site Manager through her `/ops` sign-in (`src/admin.js` `asAdmin`), isn't
+  one of the site's people, so her view link carried "admin" (or her own address) and the
+  portal's check (`portal/view.js` `allowed`, a `site_users` row) refused it at once, with
+  "That link has been used or has expired". Her link now says `VIEW_AS_ADMIN` when she's
+  signed in as admin and not on the site's people list, and the portal accepts that without
+  the people check (the link and the hour's cookie are signed, and only made for an admin).
+- No migration, no version bump. Tests: `portal-view.test.js` (475 pass).
+
+## 2026-11-18: Open your status page, signed in, and the band in the owner's wording
+
+- Home's band before pickup is now **Until {pup} comes home · Payments, additional services,
+  and pickups**, rows Payments, Additional services, Pickup, Message (the owner's wording,
+  2026-11-18), with **Open your status page** and "Opens signed in. No code needed."
+  (`portal/family.js` `statusBand`; family-facing, so kept there, not in `wording.js`).
+- Fix: the Pickup row read "Pickup {go-home day} · Change the time or place there" with no
+  pickup booked. It now says "Not booked yet · Request your day and time" until one is
+  booked, then the booked day and time.
+- Every link to the status page goes through `/family/status-page`, which redirects to it
+  with a one-time 10-minute link in the address's # (`feed.js` `makeStatusToken`,
+  `statusPageLink`; signed with the KennelOS link's key over `to-status:`). KennelOS's
+  status page turns it into its own 90-day sign-in (KennelOS cloud migration 0029, same
+  branch name there). Her view ("See their portal") gets their plain link, never signed
+  in as them; a family not from KennelOS, or a site unlinked, gets the plain link too.
+- No KennelPort migration, no version bump (no file under `public/_kp/f/` changed).
+  Tests: `portal-feed.test.js`, `portal-view.test.js` (478 pass).
+## 2026-11-18: Publish from KennelOS; portals started before the contract
+
+- **`POST /v1/publish`** (`kennelos/api.js`, device token): the draft goes live through
+  `publish()` as Site Manager's Publish does, recorded as published by `kennelos`; her Undo
+  publish still steps it back. KennelOS calls it right after each bundle unless she keeps
+  sends in the draft there. A refusal is `409 cannot_publish` with a line KennelOS shows.
+- **The feed's `contract_signed_on` is optional** (`portal/feed.js`): KennelOS sends a family
+  early when she starts their portal before the contract is signed; the date fills in with a
+  later feed. Family-portal plan 3.4 **Modified**.
+- Site Manager's Today waitlist line now mentions portals started early
+  (`portal/admin/today.js`; not in `manage/wording.js` yet, like the rest of that screen).
+- Tests: `worker/tests/kennelos.test.js`, `worker/tests/portal-feed.test.js`. No migration,
+  no version bump (no file under `worker/public/` changed).

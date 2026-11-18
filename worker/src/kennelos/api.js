@@ -6,6 +6,9 @@
 //   POST   /v1/bundle  (Bearer, the bundle as JSON) → { summary, addresses, site }
 //   POST   /v1/settings (Bearer) { kennelos_prices: true | false } → { site }
 //   POST   /v1/portal  (Bearer, the family feed, portal/feed.js) → { received, summary, facts, portal }
+//   POST   /v1/publish (Bearer) → { published: { id, at } }: the draft goes live, as
+//          Publish in Site Manager does (her Undo publish still steps it back). KennelOS
+//          calls it right after a bundle, so what she sends from KennelOS goes live.
 //
 // KennelOS Pro is a static app on its own origin, so a browser call comes with an
 // Origin that must be one of KENNELOS_APP_ORIGINS (comma-separated), and gets the
@@ -18,6 +21,7 @@ import { ApiError, json, readJson } from '../lib/http.js';
 import { redeemCode, deviceFor, siteFacts, stopDevice, setKennelosPrices } from './link.js';
 import { applyBundle, MAX_BUNDLE_BYTES } from './bundle.js';
 import { applyFeed, MAX_FEED_BYTES } from '../portal/feed.js';
+import { publish } from '../publish.js';
 import { handleResendEvent } from '../portal/bounces.js';
 
 export const appOrigins = (env) => String(env.KENNELOS_APP_ORIGINS ?? '').split(',').map((s) => s.trim().replace(/\/+$/, '')).filter(Boolean);
@@ -75,6 +79,19 @@ export async function handleApi(request, env, url) {
       const device = await deviceFor(env, request);
       const body = await readJson(request, MAX_FEED_BYTES);
       return reply(await applyFeed(env, device, body));
+    }
+    // Publish now, from KennelOS (the owner's request, 2026-11-18): the whole draft goes
+    // live, her own Site Manager edits included, recorded as published by KennelOS.
+    if (url.pathname === '/v1/publish') {
+      if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
+      const device = await deviceFor(env, request);
+      let out;
+      try {
+        out = await publish(env, device.site_id, 'kennelos');
+      } catch (err) {
+        throw new ApiError(409, 'cannot_publish', { message: `Sent to your website's draft, but KennelPort couldn't publish it: ${err?.message || 'try Publish in Site Manager'}.` });
+      }
+      return reply({ published: { id: out.id, at: new Date().toISOString() } });
     }
     // Her settings here that KennelOS may change for her (Kels's Update my website):
     // only those named; anything else is refused.

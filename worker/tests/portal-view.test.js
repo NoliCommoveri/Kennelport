@@ -170,3 +170,31 @@ test('on her own domain, the link goes there', async () => {
   env.DB.raw.prepare("INSERT INTO custom_domains (site_id, hostname, status, created_at) VALUES (?, 'akbostons.example', 'active', ?)").run(site.id, new Date().toISOString());
   assert.match((await her(`/portal/f/${id}/view`)).headers.get('location'), /^https:\/\/akbostons\.example\/family\/view\?t=/);
 });
+
+test('the owner, signed in through /ops and not one of the site\'s people, can see their portal too', async () => {
+  const { env, at, addFamily } = await setup();
+  const id = await addFamily({ name: 'The Reed family', emails: 'sam@example.com', puppy_id: 'pup1', call_name: 'Opal Mae' });
+  const login = await call(env, M, '/ops/login', { method: 'POST', body: form({ token: 'ops-token' }) });
+  const admin = login.headers.getSetCookie().map((c) => c.split(';')[0]).find((c) => c.startsWith('kp_admin='));
+  const res = await call(env, M, `/s/akbostons/portal/f/${id}/view`, { headers: { cookie: admin } });
+  assert.equal(res.status, 303);
+  const opened = await call(env, H, res.headers.get('location').replace(/^https:\/\/[^/]+/, ''));
+  assert.equal(opened.status, 303, 'the link opens, not "used or has expired"');
+  const seen = await (await at(cookieOf(opened))('/family')).text();
+  assert.match(seen, /You&#39;re seeing The Reed family&#39;s portal as they see it/);
+  assert.match(seen, /Opal Mae/);
+  // Still read-only.
+  const tried = await at(cookieOf(opened))('/family/vet', { day: '2026-12-01' });
+  assert.equal(tried.status, 303);
+  assert.match(tried.headers.get('location'), /viewing=nochange/);
+});
+
+test('viewing: Open your status page goes to their plain link, never signed in as them', async () => {
+  const { env, at, addFamily, view } = await setup();
+  const id = await addFamily({ name: 'The Reed family', emails: 'sam@example.com', puppy_id: 'pup1', call_name: 'Opal Mae' });
+  env.DB.raw.prepare("UPDATE portal_families SET status_url = 'https://apply.kennelos.app/s/abc', kennelos_id = 'fam-reed' WHERE id = ?").run(id);
+  const { cookie } = await view(id);
+  const res = await at(cookie)('/family/status-page');
+  assert.equal(res.status, 303);
+  assert.equal(res.headers.get('location'), 'https://apply.kennelos.app/s/abc');
+});

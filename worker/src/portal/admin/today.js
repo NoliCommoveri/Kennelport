@@ -56,7 +56,7 @@ export async function waitlistPart(env, site, kennel, w) {
   const sub = esc(site.subdomain);
   if (w.linked) {
     return `<span class="eyebrow">${esc(kennel)}</span><h1>Families</h1>${familyFilters(site, 'wait', null)}
-      <section class="card band" id="waitlist"><h2>Waitlist</h2><p>Your waitlist is in KennelOS. When a family's contract is signed there, they arrive under Puppy families to invite.</p></section>`;
+      <section class="card band" id="waitlist"><h2>Waitlist</h2><p>Your waitlist is in KennelOS. When a family's contract is signed there (or you start their portal early there), they arrive under Puppy families to invite.</p></section>`;
   }
   const { results } = await env.DB.prepare("SELECT id, name, wants, added_on FROM waitlist_entries WHERE site_id = ? AND status = 'waiting' ORDER BY sort LIMIT 100").bind(site.id).all();
   return `<span class="eyebrow">${esc(kennel)}</span><h1>Families</h1>${familyFilters(site, 'wait', w.n)}
