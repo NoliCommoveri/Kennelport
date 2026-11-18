@@ -1925,3 +1925,17 @@ choice at upload).
   later without an entry shows its type's name instead of crashing.
 - The card's "none right now, so it hides" is still in the code, not yet in `wording.js`.
 - No migration, no version bump. Tests: `extras-block.test.js` (474 pass).
+
+## 2026-11-18: Publish from KennelOS; portals started before the contract
+
+- **`POST /v1/publish`** (`kennelos/api.js`, device token): the draft goes live through
+  `publish()` as Site Manager's Publish does, recorded as published by `kennelos`; her Undo
+  publish still steps it back. KennelOS calls it right after each bundle unless she keeps
+  sends in the draft there. A refusal is `409 cannot_publish` with a line KennelOS shows.
+- **The feed's `contract_signed_on` is optional** (`portal/feed.js`): KennelOS sends a family
+  early when she starts their portal before the contract is signed; the date fills in with a
+  later feed. Family-portal plan 3.4 **Modified**.
+- Site Manager's Today waitlist line now mentions portals started early
+  (`portal/admin/today.js`; not in `manage/wording.js` yet, like the rest of that screen).
+- Tests: `worker/tests/kennelos.test.js`, `worker/tests/portal-feed.test.js`. No migration,
+  no version bump (no file under `worker/public/` changed).

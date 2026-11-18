@@ -1,6 +1,6 @@
 // The KennelOS family feed (docs/plans/family-portal.md sections 3.1, 3.2 and
 // 3.4; build chunk 3). For her kennel, KennelOS sends each family from their signed
-// contract on, on its own whenever one of their records changes, to
+// contract on (or earlier, when she starts a family's portal early in KennelOS), on its own whenever one of their records changes, to
 //
 //   POST api.kennelport.com/v1/portal   (Bearer: the device's link token)
 //
@@ -11,7 +11,9 @@
 //
 //   { format: 1, feed_id, kennel_id, sent_at?,
 //     families?: [{ id, name, emails: [..], status_url?,
-//       placements: [{ id (the sale), puppy_id (its Dog), puppy_name, contract_signed_on,
+//       placements: [{ id (the sale), puppy_id (its Dog), puppy_name, contract_signed_on?
+//         (blank while she started their portal before the contract was signed; it fills
+//         in with the next feed once it is),
 //         go_home_on?, pickup_at? (ISO: the placement event, hers or the family's approved booking),
 //         microchip?, registration_no?,
 //         voided?: { reason: died | failed_health | backed_out | other, on },
@@ -67,7 +69,7 @@ const F = {
 const SHAPES = {
   family: { id: F.id, name: F.text(120, true), emails: { list: 'email', max: MAX.emails }, status_url: F.url, placements: { list: 'placement', max: MAX.placements } },
   placement: {
-    id: F.id, puppy_id: F.ref, puppy_name: F.text(60, true), contract_signed_on: F.date(true), go_home_on: F.date(), pickup_at: F.at,
+    id: F.id, puppy_id: F.ref, puppy_name: F.text(60, true), contract_signed_on: F.date(), go_home_on: F.date(), pickup_at: F.at,
     microchip: F.text(40), registration_no: F.text(40), voided: { object: 'voided' }, health: { list: 'health', max: MAX.health },
     extras: { list: 'extra', max: 10 },
   },

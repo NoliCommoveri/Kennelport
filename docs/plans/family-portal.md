@@ -191,7 +191,10 @@ needs do.
    linked to the sale, status Signed, with its signed date; by e-sign or marked by her),
    the feed sends the family and their puppy. Picking a puppy alone isn't enough:
    a family can still change their pick or back out before signing, and all of that stays
-   on the status page. Her Today shows **Invite the Reed family**; the invite goes out
+   on the status page. **Modified (2026-11-18, the owner):** she may start one family's
+   portal earlier, from their sale in KennelOS (Start puppy portal now); the placement then
+   arrives with no `contract_signed_on`, which fills in once the contract is signed. A
+   back-out before then closes the placement as any voided sale does. Her Today shows **Invite the Reed family**; the invite goes out
    when she confirms.
 2. **From the signed contract to pickup.** The family uses both. The status page keeps booking the
    pickup, asking for extras, transport, backing out and messages; each approved change

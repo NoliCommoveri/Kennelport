@@ -417,6 +417,23 @@ test("KennelOS's link-code link opens Link KennelOS", async () => {
   assert.equal((await call(b.env, M, '/link-kennelos')).headers.get('location'), '/', 'signed out: sign in first');
 });
 
+test('Publish now from KennelOS: the draft goes live, recorded as KennelOS; a bad token is refused', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  await api(b.env, '/v1/bundle', { token, body: bundle({ dogs: [DOG('d-ruby', 'Ruby')] }) });
+  const before = b.row('SELECT published_snapshot_id FROM sites WHERE id = ?', b.site.id).published_snapshot_id;
+  const res = await api(b.env, '/v1/publish', { token, body: {} });
+  assert.equal(res.status, 200);
+  const out = await res.json();
+  assert.ok(out.published.id);
+  const site = b.row('SELECT published_snapshot_id FROM sites WHERE id = ?', b.site.id);
+  assert.equal(site.published_snapshot_id, out.published.id);
+  assert.notEqual(site.published_snapshot_id, before);
+  assert.equal(b.row('SELECT published_by FROM snapshots WHERE id = ?', out.published.id).published_by, 'kennelos');
+  assert.equal((await api(b.env, '/v1/publish', { token: 'kpl_' + '0'.repeat(64), body: {} })).status, 401);
+  assert.equal((await api(b.env, '/v1/publish', { method: 'GET', token })).status, 405);
+});
+
 test('KennelOS can set Use my KennelOS prices, and nothing else', async () => {
   const b = await breeder();
   const token = await linked(b);

@@ -67,6 +67,8 @@ anyone outside the family.
   typed placement; **Merge** for a typed placement or family into KennelOS's; **Delete
   now**; **Let KennelOS send them again** for a family deleted for good. Migration 0032
   (tombstone labels). No version bump. Build log, 2026-11-13.
+- Portals started early from KennelOS (no signed contract yet) and Publish from KennelOS
+  (`POST /v1/publish`): built 2026-11-18. No migration, no version bump.
 - Seeing a family's portal as they see it (read-only, live): built 2026-11-13
   ([`plans/done/family-view.md`](plans/done/family-view.md)). No migration, no version bump.
 

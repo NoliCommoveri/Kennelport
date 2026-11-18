@@ -98,6 +98,16 @@ test('a signed contract arrives as a family to invite, with the puppy, the picku
   assert.deepEqual(again.summary, {});
 });
 
+test('a portal started early arrives with no contract date, and the date fills in once it is signed', async () => {
+  const { feed, row } = await setup();
+  const early = await feed({ families: [REED({}, { contract_signed_on: undefined })] });
+  assert.equal(early.status, 200);
+  const fam = row("SELECT * FROM portal_families WHERE kennelos_id = 'fam-reed'");
+  assert.equal(row('SELECT contract_signed_on FROM portal_placements WHERE family_id = ?', fam.id).contract_signed_on, null);
+  await feed({ families: [REED()] });
+  assert.equal(row('SELECT contract_signed_on FROM portal_placements WHERE family_id = ?', fam.id).contract_signed_on, '2026-11-01');
+});
+
 test('a family she typed in is linked by address, not doubled', async () => {
   const { her, feed, row } = await setup();
   const res = await her('/portal/new', { name: 'Reeds', emails: 'sam@example.com', puppy_id: 'pup1' });
