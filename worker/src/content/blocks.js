@@ -54,6 +54,7 @@ export const BLOCK_TYPES = Object.freeze({
   overlay: { name: 'Text over a photo', ic: 'camera', kind: 'own', hint: 'A photo with a heading, a line and a button over it.' },
   factrow: { name: 'Facts row (any page)', ic: 'star', kind: 'own', hint: 'Up to four facts side by side, each a big value over a small label (as on Home).' },
   words: { name: 'Text block', ic: 'draft', kind: 'own', hint: 'A heading, a line under it, and words: as many paragraphs as you like.' },
+  cards: { name: 'Cards', ic: 'layers', kind: 'own', hint: 'Up to twelve cards, each with any of a photo, a big figure, small labels, a heading, words and a button.' },
   columns: { name: 'Text in columns', ic: 'draft', kind: 'own', hint: 'A heading, then up to six short sections side by side, each a subheading over its words: two or three across on a computer, one under another on a phone.' },
 });
 
@@ -63,7 +64,8 @@ export const BLOCK_TYPES = Object.freeze({
 // (a call or a text) or email: those follow Kennel details unless a number or
 // address is typed in for the button. The breeder can change an outside link, a
 // phone number or an email address; a page link is the owner's (decision 18).
-export const LINK_TO = Object.freeze({ page: 'A page', url: 'An outside site', tel: 'A phone call', sms: 'A text message', email: 'An email' });
+// doc: one of the site's documents (documents.js), by its id.
+export const LINK_TO = Object.freeze({ page: 'A page', url: 'An outside site', tel: 'A phone call', sms: 'A text message', email: 'An email', doc: 'A document' });
 export const BUTTON_SIZE = Object.freeze({ s: 'Small', m: 'Medium', l: 'Large' });
 export const BUTTON_LOOK = Object.freeze({ solid: 'Filled', line: 'Outline' });
 export const ALIGN = Object.freeze({ left: 'Left', center: 'Centre', right: 'Right' });
@@ -134,6 +136,17 @@ export const LIMIT_MAX = 24;
 export const FACTS_MAX = 4;
 export const FACT_SIZES = Object.freeze([40, 240]);
 // Text in columns: up to six [subheading, words] sections, two or three across.
+// Cards (2026-11-18): free cards, no wording of their own. Each card any of a photo, a
+// big figure (as a step's number), labels (pills in one colour), a heading, words and a
+// button to a page, an outside site, a call, a text, an email or a document.
+export const CARDS_MAX = 12;
+export const CARD_LABELS_MAX = 4;
+export const CARD_SIZES = Object.freeze({ big: 24, label: 30, heading: 120, text: 2000, button: 40 });
+export const CARD_STYLE = Object.freeze({ grid: 'Side by side', slider: 'In a slider' });
+export const CARD_ACROSS = Object.freeze({ 2: 'Two', 3: 'Three', 4: 'Four' });
+export const CARD_SHAPE = Object.freeze({ wide: 'Wide (4:3)', square: 'Square', tall: 'Tall (4:5)', whole: 'The whole photo, uncropped' });
+export const CARD_PILL = Object.freeze({ accent: 'Accent', brass: 'Brass', ok: 'Green', held: 'Muted gold', ink: 'Ink', muted: 'Grey' });
+export const CARD_LINK_TO = Object.freeze({ '': 'No button', ...LINK_TO });
 export const COLS_MAX = 6;
 export const COL_SIZES = Object.freeze([80, 1500]);
 export const COLS_ACROSS = Object.freeze({ 2: 'Two', 3: 'Three' });
@@ -235,6 +248,7 @@ export function newBlock(type, id) {
   if (type === 'collage') Object.assign(b, { layout: 'tall_two_wide', frame: 'mat', photos: [], focus: [], mayChange: true });
   if (type === 'factrow') Object.assign(b, { items: [] });
   if (type === 'words') Object.assign(b, { w: { heading: 'A few words from us', line: '', body: '' }, align: 'center' });
+  if (type === 'cards') Object.assign(b, { w: { heading: '', line: '' }, cards: [], style: 'grid', across: '3', shape: 'wide', pill: 'accent', align: 'left' });
   if (type === 'columns') Object.assign(b, { w: { heading: 'Our approach', line: '' }, cols: [], across: '2', align: 'center' });
   if (type === 'gallery') Object.assign(b, { source: 'album', album: null, photos: [], count: '6', frame: 'none', more: true, w: { heading: 'From our photo albums', line: '', label: 'See the whole album' }, mayChange: true });
   if (type === 'beside') Object.assign(b, { photo: null, focus: 'middle', frame: 'none', side: 'left', align: 'left', w: { heading: 'A little about us', body: '', label: '' }, link: null, mayChange: true });
@@ -367,10 +381,12 @@ const WORD_MAX = { label: 40, body: 4000 };
 const words = (w, keys = ['eyebrow', 'heading', 'lede']) => Object.fromEntries(Object.entries(w && typeof w === 'object' ? w : {}).filter(([k, v]) => keys.includes(k) && typeof v === 'string').map(([k, v]) => [k, (k === 'body' ? v.replace(/\r\n?/g, '\n') : v).trim().slice(0, WORD_MAX[k] ?? 200)]));
 const PHOTO_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
+const DOC_ID = /^[A-Za-z0-9_-]{1,64}$/;
 // A button's link, as the build keeps it, or null (no button).
 export function cleanLink(l) {
   if (!l || typeof l !== 'object' || !Object.hasOwn(LINK_TO, l.to)) return null;
   if (l.to === 'page') return /^[a-z][a-z0-9_-]{0,44}$/.test(String(l.page ?? '')) ? { to: 'page', page: l.page } : null;
+  if (l.to === 'doc') return DOC_ID.test(String(l.value ?? '')) ? { to: 'doc', value: l.value } : { to: 'doc' };
   const value = String(l.value ?? '').trim().slice(0, 300);
   if (l.to === 'url') return { to: 'url', value };
   return value ? { to: l.to, value } : { to: l.to };
@@ -399,6 +415,22 @@ export const cleanCols = (v) => (Array.isArray(v) ? v : [])
   .filter((p) => Array.isArray(p) && p.length === 2)
   .map(([a, t]) => [String(a ?? '').replace(/\s+/g, ' ').trim().slice(0, COL_SIZES[0]), String(t ?? '').replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, COL_SIZES[1])])
   .filter(([a, t]) => a || t).slice(0, COLS_MAX);
+
+// Cards: every part trimmed to size, labels split on commas, empty cards dropped.
+const line1 = (v, max) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+export const cleanCards = (v) => (Array.isArray(v) ? v : []).filter((c) => c && typeof c === 'object').map((c) => {
+  const labels = (Array.isArray(c.labels) ? c.labels : String(c.labels ?? '').split(','))
+    .map((x) => line1(x, CARD_SIZES.label)).filter(Boolean).slice(0, CARD_LABELS_MAX);
+  return {
+    photo: PHOTO_ID.test(String(c.photo ?? '')) ? c.photo : null,
+    big: line1(c.big, CARD_SIZES.big),
+    labels,
+    heading: line1(c.heading, CARD_SIZES.heading),
+    text: String(c.text ?? '').replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, CARD_SIZES.text),
+    button: line1(c.button, CARD_SIZES.button),
+    link: cleanLink(c.link),
+  };
+}).filter((c) => c.photo || c.big || c.labels.length || c.heading || c.text || (c.button && c.link)).slice(0, CARDS_MAX);
 
 // A data block's records: its conditions, order, grouping and the headings per group.
 // The renderer reads a published block through this too, so an older snapshot's
@@ -470,6 +502,15 @@ export function cleanBlock(b) {
   }
   if (b.type === 'factrow') out.items = cleanFacts(b.items);
   if (b.type === 'words') { out.w = words(b.w, ['heading', 'line', 'body']); out.align = pick(b.align, ALIGN, 'center'); }
+  if (b.type === 'cards') {
+    out.w = words(b.w, ['heading', 'line']);
+    out.cards = cleanCards(b.cards);
+    out.style = pick(b.style, CARD_STYLE, 'grid');
+    out.across = pick(String(b.across ?? ''), CARD_ACROSS, '3');
+    out.shape = pick(b.shape, CARD_SHAPE, 'wide');
+    out.pill = pick(b.pill, CARD_PILL, 'accent');
+    out.align = pick(b.align, ALIGN, 'left');
+  }
   if (b.type === 'columns') { out.w = words(b.w, ['heading', 'line']); out.cols = cleanCols(b.cols); out.across = pick(String(b.across ?? ''), COLS_ACROSS, '2'); out.align = pick(b.align, ALIGN, 'center'); }
   if (b.type === 'divider') { out.style = pick(b.style, DIVIDER_STYLE, 'line'); out.width = pick(b.width, DIVIDER_WIDTH, 'wide'); }
   if (b.type === 'spacer') out.height = pick(b.height, SPACER_HEIGHT, 'm');
@@ -663,7 +704,7 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
       if (b.w) next.w = Object.fromEntries(Object.keys(b.w).map((x) => [x, str(`w.${x}`)]));
       if ('link' in b) {
         const to = str('link.to');
-        next.link = !to ? null : to === 'page' ? { to, page: str('link.page') } : { to, value: str('link.value') };
+        next.link = !to ? null : to === 'page' ? { to, page: str('link.page') } : { to, value: str(to === 'doc' ? 'link.doc' : 'link.value') };
         if (next.link && next.link.to === 'url' && next.link.value && !/^https?:\/\//i.test(next.link.value)) throw new BlockError('A button\'s outside link needs an address starting https://');
         if (next.link && ['tel', 'sms'].includes(to) && next.link.value && !looksLikePhone(next.link.value)) throw new BlockError('That phone number doesn\'t look like one.');
         if (next.link && to === 'email' && next.link.value && !looksLikeEmail(next.link.value)) throw new BlockError('That email address doesn\'t look like one.');
@@ -671,6 +712,20 @@ export function blocksFromForm(blocks, get, getAll, key = 'home') {
       }
       for (const f of ['size', 'look', 'align', 'style', 'width', 'height', 'shape', 'frame', 'focus', 'side', 'v', 'h', 'shade', 'across', 'source', 'count', 'album']) if (f in b) next[f] = str(f);
       if ('items' in b) next.items = Array.from({ length: FACTS_MAX }, (_, i) => [str(`items.${i}.0`), str(`items.${i}.1`)]);
+      if (b.type === 'cards') {
+        next.pill = str('pill');
+        // The cards shown (each filled one and two empty), in their order; ↑ ↓ handled by the caller.
+        const n = Number(get(k('cards.n')) ?? 0);
+        next.cards = Array.from({ length: Math.min(n, CARDS_MAX) }, (_, i) => {
+          const c = (f) => str(`cards.${i}.${f}`);
+          return { photo: c('photo') || null, big: c('big'), labels: c('labels'), heading: c('heading'), text: c('text'), button: c('button'), link: c('link.to') ? { to: c('link.to'), page: c('link.page'), value: c('link.to') === 'doc' ? c('link.doc') : c('link.value') } : null };
+        });
+        for (const c of next.cards) {
+          if (c.link?.to === 'url' && c.link.value && !/^https?:\/\//i.test(c.link.value)) throw new BlockError('A card\'s outside link needs an address starting https://');
+          if (c.link && ['tel', 'sms'].includes(c.link.to) && c.link.value && !looksLikePhone(c.link.value)) throw new BlockError('A card\'s phone number doesn\'t look like one.');
+          if (c.link?.to === 'email' && c.link.value && !looksLikeEmail(c.link.value)) throw new BlockError('A card\'s email address doesn\'t look like one.');
+        }
+      }
       if ('cols' in b) next.cols = Array.from({ length: COLS_MAX }, (_, i) => [str(`cols.${i}.0`), str(`cols.${i}.1`)]);
       if ('photo' in b) { next.photo = str('photo') || null; next.mayChange = get(k('mayChange')) != null; }
       if (b.type === 'gallery') Object.assign(next, { photos: getAll(k('photos')).map(String).filter(Boolean), more: get(k('more')) != null, mayChange: get(k('mayChange')) != null });

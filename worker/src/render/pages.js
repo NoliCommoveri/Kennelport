@@ -21,6 +21,8 @@ import { v, honeypot, turnstileBox, formResult } from './pages/formParts.js';
 import { kennelosForm } from './pages/applicationForm.js';
 import { dataBlock, saleOf } from './pages/blocks.js';
 import { descriptionOf } from './pages/extras.js';
+import { docUrl } from '../documents.js';
+import { cardsBlock } from './pages/cards.js';
 import { homeBlocks, pageBlocks, BREEDER_SWITCH, PAGE_PARTS, PAGE_HEADS, headFor, BLOCK_TYPES, cleanProfile, DOGS_ALL } from '../content/blocks.js';
 import { HOME_WORDS, COLLAGE_LAYOUTS, collageLayout, HOME_BADGES_MAX, brandImageOk, badgeAddress, PAGES } from '../content/model.js';
 
@@ -253,6 +255,7 @@ export function linkFor(snap, ctx, link, her = {}) {
     const path = pagePath(snap, link.page);
     return path && pageOn(snap, link.page, ctx) ? { href: path } : null;
   }
+  if (link.to === 'doc') return link.value && snap.documents?.[link.value] ? { href: docUrl(link.value), external: true, doc: snap.documents[link.value] } : null;
   if (link.to === 'url') { const u = her.url || link.value; return /^https?:\/\//i.test(u ?? '') ? { href: u, external: true } : null; }
   if (link.to === 'email') { const e = her.email || link.value || s.contact_email; return e ? { href: `mailto:${e}` } : null; }
   const n = String(her.phone || link.value || s.contact_phone || '').replace(/[^\d+]/g, '');
@@ -285,6 +288,7 @@ function ownBlock(snap, ctx, b, key) {
     const top = w.heading || w.line ? `<div class="head">${w.heading ? `<h2>${esc(w.heading)}</h2>` : ''}${w.line ? `<p class="lede">${esc(w.line)}</p>` : ''}</div>` : '';
     return `<section class="own-words a-${b.align}"><div class="wrap">${top}${w.body ? `<div class="prose">${paras(w.body)}</div>` : ''}</div></section>`;
   }
+  if (b.type === 'cards') return cardsBlock(snap, ctx, b, w, { linkFor, aTo });
   if (b.type === 'columns') {
     // Hers over the owner's; the prototype's features (a subheading over its words),
     // two or three across on a computer, one under another on a phone.

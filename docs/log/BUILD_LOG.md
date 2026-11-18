@@ -1802,3 +1802,38 @@ changed.
   expanders. The owner's admin settings use the existing controls (segments, ordered switch
   list); not screenshotted.
 - Tests: 461 pass (`extras-block.test.js`, and an admin round trip in `blocks.test.js`).
+
+## 2026-11-18: Extras highlight, the Cards block, and documents (migration 0038, continued)
+
+- **Extras block, highlight** (the owner's ask: "highlight one as premier"): `hl`, the owner's
+  pick of one extra, or those the breeder marks "most complete" (the default), or none. Its card
+  gets the Extras page's accent border (`.step.top`, new; `.pkg.top`, as before), an expander
+  opens by itself, and the owner's label (`w.flag`, optional, any words) sits over it as a pill.
+- **Cards block** (`cards`, one of the owner's own blocks, any page; the owner asked for it with
+  no use in mind, so no wording points it at one): up to 12 cards, each any of a photo, a big
+  figure (a step's brass number), labels (up to 4 pills in one colour), a heading, words and a
+  button. The block: heading and line, side by side (2, 3 or 4 across on a computer; one on a
+  phone) or in the slider, the photo's shape (wide, square, tall, or the whole photo uncropped:
+  a flyer fits whole), the labels' colour and alignment. Drawn from the portal prototype's
+  photo-top card (`.pcard`) in the site's surface (`render/pages/cards.js`, CSS `.own-card*`).
+  The breeder switches it off and rewords its heading and line; the cards are the owner's.
+  The owner's settings: `manage/builder/cards.js`.
+- **Documents** (`src/documents.js`, `manage/builder/documents.js`, the `documents` table in
+  migration 0038): a site's PDFs, not tied to any block (the owner's call). The admin view has a
+  **Documents** screen (upload, retitle, open, remove). Checked by their first bytes (`%PDF-`),
+  10 MB at most; nothing is compressed on the server (a Worker can't redo a PDF's images), so the
+  screen says to save a reduced-size PDF. Kept in R2 under the site's files
+  (`sites/<id>/docs/`), so backup and closing a site carry them; `documents` is in `SITE_TABLES`.
+  **"A document" is now a place every button can go** (`LINK_TO.doc`): Button, Banner, Photo
+  beside words, Text over a photo, and each card. It opens the PDF in a new tab (served at
+  `/_kp/d/<id>`, inline, under its file name); a card says "PDF · size" beside it. A button
+  whose document is gone hides. The snapshot carries the site's documents.
+- **Not done:** documents don't count toward a site's storage limit yet (`photos.js` counts
+  photos only); a document has no preview of its own (a card's photo is its preview); the
+  breeder can't upload documents (admin only); the menu can't link to a document yet; cards
+  can't be reordered except by retyping.
+- **Checked** in Chromium at 390 and 1280px: cards with and without photos, the flyer as the
+  whole photo and cropped wide, the document button and its size.
+- **`ASSET_VERSION`: the template's CSS changed** (`.step.top`, `.own-card*`), so
+  `versions.test.js` fails until the owner says yes to the bump. Asked.
+- Tests: 466 pass, 1 expected failure (the version). `cards-documents.test.js`.

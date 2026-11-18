@@ -799,3 +799,32 @@ dialog.viewer img { width: auto; height: auto; max-width: 96vw; max-height: 88dv
 .own-over p { max-width: 56ch; margin-top: 8px; text-shadow: 0 1px 2px rgba(0, 0, 0, .45); display: inline-block; }
 .own-over .btn { margin-top: 16px; display: flex; width: fit-content; }
 .own-over.h-center .btn { margin-inline: auto; } .own-over.h-right .btn { margin-left: auto; }
+
+/* The owner's Cards block (render/pages/cards.js): the portal prototype's photo-top
+   card (.pcard) in the site's surface, line and corners; a step's brass figure; the
+   site's pills. Side by side two, three or four across (one on a phone), or in the
+   slider. shape-*: the photo's box; shape-whole keeps each photo's own shape. */
+.own-cards .head { margin-bottom: 28px; }
+.own-cards.a-left .head { justify-items: start; text-align: left; }
+.own-cards.a-right .head { justify-items: end; text-align: right; }
+.own-cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: stretch; }
+.own-cardgrid.n-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.own-cardgrid.n-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 960px) { .own-cardgrid.n-3, .own-cardgrid.n-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .own-cardgrid, .own-cardgrid.n-2, .own-cardgrid.n-3, .own-cardgrid.n-4 { grid-template-columns: 1fr; gap: 16px; } }
+.own-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; display: grid; grid-template-rows: auto 1fr; min-width: 0; height: 100%; }
+.own-card > .ph { line-height: 0; }
+.own-card > .ph img { width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; display: block; }
+.shape-square .own-card > .ph img { aspect-ratio: 1; }
+.shape-tall .own-card > .ph img { aspect-ratio: 4 / 5; }
+.shape-whole .own-card > .ph img { aspect-ratio: auto; object-fit: contain; }
+.own-card > .body { padding: 18px 20px 20px; display: grid; gap: 10px; align-content: start; }
+.own-card .n { font: var(--display-w) 2.2rem/1 var(--f-display); color: var(--brass); }
+.own-card .tags { display: flex; flex-wrap: wrap; gap: 6px 10px; }
+.own-card h3 { font-size: 1.2rem; }
+.own-card .words { display: grid; gap: 8px; color: var(--muted); font-size: .92rem; }
+.own-card .go { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 4px; }
+.own-cards.a-center .own-card > .body { justify-items: center; text-align: center; }
+.own-cards.a-center .own-card .tags, .own-cards.a-center .own-card .go { justify-content: center; }
+.own-cards.a-right .own-card > .body { justify-items: end; text-align: right; }
+.own-cards.a-right .own-card .tags, .own-cards.a-right .own-card .go { justify-content: flex-end; }
