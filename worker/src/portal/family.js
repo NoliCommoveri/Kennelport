@@ -25,7 +25,7 @@ import { stepsFor, openTasks, programsFor, setDone, setProgramStatus } from './s
 import { PORTAL_VERSION } from './version.js';
 import { CODE_TTL_MS } from '../auth.js';
 import { withCookie } from '../signin.js';
-import { redeemHandoff } from './feed.js';
+import { redeemHandoff, statusPageLink } from './feed.js';
 import { stayFor, mediaFor, mediaResponse } from './stays.js';
 import { messagesOpen, thread, unreadFrom, markRead, familyWrites, isLoss, eraseFamily, MAX_MESSAGE } from './account.js';
 import { TYPE_ICON, SPRITE, ic } from './family/icons.js';
@@ -275,8 +275,8 @@ function lossPage(site, fam, p, main) {
     <h1>${p.closed_reason === 'died' ? `We're so sorry about ${esc(name)}` : `About ${esc(name)}`}</h1>
     ${p.loss_note ? p.loss_note.split(/\n{2,}/).map((x) => `<p>${esc(x).replace(/\n/g, '<br>')}</p>`).join('') : `<p class="muted">${esc(kennel)} will write to you here soon.</p>`}
     ${statusUrl ? `<p>You're back on ${esc(kennel)}'s list at your original place. When you're ready, your status page is where you choose your next puppy.</p>
-    <p><a class="btn solid" href="${esc(statusUrl)}">Go to your status page</a></p>
-    <p><a class="go" href="${esc(statusUrl)}">Message ${esc(kennel)} ${ic('arrow')}</a></p>` : ''}
+    <p><a class="btn solid" href="${STATUS_PATH}">Go to your status page</a></p>
+    <p><a class="go" href="${STATUS_PATH}">Message ${esc(kennel)} ${ic('arrow')}</a></p>` : ''}
     <p class="small"><a href="/family/photos">${esc(name)}'s photos</a> stay here for you.</p></section>`;
   return frame(site, 'Home', body, { fam, tab: '/family' });
 }
@@ -296,15 +296,17 @@ const inDays = (n) => (n > 1 ? `${n} days` : n === 1 ? 'Tomorrow' : n === 0 ? 'T
 const numSteps = (items) => `<ol class="numsteps">${items.map((it, i) => `<li${it.done ? ' class="done"' : ''}><span class="num" aria-hidden="true">${it.done ? ic('check') : i + 1}</span><div><h3>${it.h}</h3>${it.p ? `<p>${it.p}</p>` : ''}${it.act ?? ''}</div></li>`).join('')}</ol>`;
 // The bar pinned above the tabs: one thing to do now.
 const actionBar = (x) => `<div class="actionbar" role="region" aria-label="Do this now"><div class="in"><span class="ico">${ic(x.icon)}</span><p><b>${x.title}</b>${x.sub ?? ''}</p><a class="btn solid small" href="${x.href}">${x.label}</a></div></div>`;
-// Before pickup the status page keeps pickup, extras and messages (plan 3.4).
-function statusBand(p, s, name, kennel, statusUrl) {
-  const when = goHomeWords(p, s);
+// Before pickup the status page keeps payments, extras and pickup (plan 3.4). The
+// family's wording here is the owner's (2026-11-18).
+function statusBand(p, s, name, kennel) {
   const row = (icon, title, sub) => `<li><div><span class="badge">${ic(icon)}</span><span><b>${title}</b><span class="small muted">${sub}</span></span></div></li>`;
-  return `<section class="sec paper bleed"><p class="eyebrow">On your status page, until pickup</p><h2>Pickup, extras and messages</h2>
-    <ul class="hl">${row('calendar', when ? `Pickup ${esc(when)}` : 'Book your pickup', when ? 'Change the time or place there' : 'Choose the day and time there')}
-    ${row('gift', 'Ask for an extra', 'A photo package, a longer stay')}
+  const booked = p.pickup_booked_at ? formatAt(p.pickup_booked_at, s.time_zone) : null;
+  return `<section class="sec paper bleed"><p class="eyebrow">Until ${esc(name)} comes home</p><h2>Payments, additional services, and pickups</h2>
+    <ul class="hl">${row('tag', 'Payments', 'See your payment schedule: payments so far, scheduled due dates, and remaining balances')}
+    ${row('gift', 'Additional services', 'Request paid extra packages, like photo sessions and extended homegoing')}
+    ${row('calendar', 'Pickup', booked ? esc(booked) : 'Not booked yet · Request your day and time')}
     ${row('message', `Message ${esc(kennel)}`, `Messages move here once ${esc(name)} is home`)}</ul>
-    <p><a class="btn solid" href="${esc(statusUrl)}">Open your status page</a></p></section>`;
+    <p><a class="btn solid" href="${STATUS_PATH}">Open your status page</a></p><p class="small muted">Opens signed in. No code needed.</p></section>`;
 }
 
 async function homePage(env, site, fam, now = new Date()) {
@@ -334,7 +336,7 @@ async function homePage(env, site, fam, now = new Date()) {
     const expected = p.pickup_booked_at ? vetDeadline(p.pickup_booked_at, s.vet_rule, s.time_zone) : null;
     calendar = `<div class="tile green"><p class="eyebrow">Comes home</p>${goYmd
       ? `<div class="calrow">${calPage(goYmd)}<div><p class="bigline">${esc(inDays(days) ?? formatDay(goYmd))}</p><p class="small">${p.pickup_booked_at ? `Pickup ${esc(clock(localParts(p.pickup_booked_at, s.time_zone).hm))}` : 'Pickup time to come'}</p></div></div>`
-      : `<p>${statusUrl ? `<a href="${esc(statusUrl)}">Book your pickup on your status page ${ic('arrow')}</a>` : `Not booked yet. ${esc(kennel)} will confirm the day and time with you.`}</p>`}
+      : `<p>${statusUrl ? `<a href="${STATUS_PATH}">Book your pickup on your status page ${ic('arrow')}</a>` : `Not booked yet. ${esc(kennel)} will confirm the day and time with you.`}</p>`}
       <a class="btn onfill small" href="/family/timeline">What to do first</a></div>`;
     band = `<section class="tile warm"><div class="calrow"><span class="ico big">${ic('stethoscope')}</span><div><p class="eyebrow">Before ${esc(name)} comes home</p><h2>Book the vet visit now</h2></div></div>
       <p class="small">Your contract asks for a vet visit ${s.vet_rule === 'days3' ? `by the end of the third day after the day you take ${esc(name)} home` : 'within 72 hours of pickup'}.${expected ? ` With pickup ${esc(formatAt(p.pickup_booked_at, s.time_zone))}, that's by <b>${deadlineLine(expected, s)}</b>.` : ''} Vets are often booked days ahead.</p>
@@ -403,7 +405,7 @@ async function homePage(env, site, fam, now = new Date()) {
   ${band}
   ${contactsLead(p, s, now) ? contactsCard(site, s, name, { lead: true }) : ''}
   ${checklist}
-  ${st === 'before' && statusUrl && live ? statusBand(p, s, name, kennel, statusUrl) : ''}
+  ${st === 'before' && statusUrl && live ? statusBand(p, s, name, kennel) : ''}
   ${live ? foodBand(s, name, food) : ''}
   ${list.length ? `<section class="sec paper bleed"><h2>Included with ${esc(name)}</h2>${programList(list, 'home', kennel)}</section>` : ''}
   <section class="tile quick"><h2>Quick links</h2><div class="qgrid">${quick.map(([href, icon, label]) => `<a class="qtile" href="${href}"><span class="ico">${ic(icon)}</span>${label}</a>`).join('')}</div></section>
@@ -537,7 +539,7 @@ async function messagesPage(env, site, fam, { error, draft = '' } = {}) {
     const email = s.her_email || site.contact_email;
     return frame(site, 'Messages', `<section class="card"><h1>Messages</h1>
       <p>Until your puppy comes home, ${statusUrl ? `message ${esc(kennel)} from your status page.` : `contact ${esc(kennel)} directly.`} Messages here open on pickup day.</p>
-      ${statusUrl ? `<p><a class="btn solid" href="${esc(statusUrl)}">Message ${esc(kennel)} ${ic('arrow')}</a></p>` : email ? `<p><a class="btn line" href="mailto:${esc(email)}">${ic('mail')} Email ${esc(kennel)}</a></p>` : ''}</section>`, { fam, status: error ? 400 : 200 });
+      ${statusUrl ? `<p><a class="btn solid" href="${STATUS_PATH}">Message ${esc(kennel)} ${ic('arrow')}</a></p>` : email ? `<p><a class="btn line" href="mailto:${esc(email)}">${ic('mail')} Email ${esc(kennel)}</a></p>` : ''}</section>`, { fam, status: error ? 400 : 200 });
   }
   const list = await thread(env, site.id, fam.familyId);
   if (!fam.viewing) await markRead(env, site.id, fam.familyId, 'breeder');
@@ -591,6 +593,9 @@ async function viewEnded(env, site, why, familyId = null) {
   res.headers.append('set-cookie', viewCookie('', 0));
   return res;
 }
+
+// "Open your status page" and every other link to it: signed in on the way (plan 3.4).
+const STATUS_PATH = '/family/status-page';
 
 // ---------- routes ----------
 
@@ -681,6 +686,12 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
   if (fam.viewing) fam.band = viewBand(fam, path, url.searchParams.get('viewing') === 'nochange');
 
   if (!post) {
+    // Her view never signs anyone in as the family: their plain link instead.
+    if (path === STATUS_PATH) {
+      const to = fam.viewing ? (/^https:\/\//i.test(fam.statusUrl ?? '') ? fam.statusUrl : null) : await statusPageLink(env, site, fam.familyId);
+      if (!to) return redirect('/family');
+      return new Response(null, { status: 303, headers: { location: to, 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' } });
+    }
     if (path === '/family') return homePage(env, site, fam);
     if (path === '/family/vet') return vetPage(env, site, fam, { note: url.searchParams.get('note') === 'booked' ? 'Saved. Thank you!' : url.searchParams.get('note') === 'uploaded' ? 'Uploaded. Thank you!' : null });
     if (path === '/family/records') return recordsPage(env, site, fam);

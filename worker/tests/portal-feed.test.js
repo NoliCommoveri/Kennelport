@@ -13,7 +13,7 @@ const form = (o) => new URLSearchParams(o);
 const outbox = (env) => env.DB.raw.prepare('SELECT kind, subject, body FROM dev_outbox ORDER BY id').all();
 const DAY = 86400000;
 
-const { makeHandoffToken } = await import('../src/portal/feed.js');
+const { makeHandoffToken, makeStatusToken } = await import('../src/portal/feed.js');
 const { hmacHex } = await import('../src/lib/crypto.js');
 const { runPortalHourly } = await import('../src/portal/reminders.js');
 const { runPortalDaily } = await import('../src/portal/account.js');
@@ -225,7 +225,7 @@ test('the status page\'s one tap signs the family in, once, for ten minutes', as
   const cookie = res.headers.get('set-cookie').split(';')[0];
   const home = await (await call(env, H, '/family', { headers: { cookie } })).text();
   assert.match(home, /Opal/);
-  assert.match(home, /status\.kennelos\.app\/s\/abc/);
+  assert.match(home, /href="\/family\/status-page"/);
   // Used: refused. Old, forged, or for a family not here: refused.
   assert.match(await (await call(env, H, `/family/handoff?t=${t}`)).text(), /has been used or has expired/);
   const old = await makeHandoffToken(portal.handoff_key, 'fam-reed', Date.now() - 11 * 60000);
@@ -365,4 +365,46 @@ test('a family deleted before names were kept can be given back too, with its pu
   const out = await (await feed({ families: [REED()] })).json();
   assert.equal(out.summary.families_new, 1);
   assert.equal(out.summary.health_new, 1);
+});
+
+test('Open your status page: before pickup, the band in her wording, and a link that signs them in on KennelOS', async () => {
+  const { env, site, feed } = await setup();
+  const far = new Date(Date.now() + 28 * DAY).toISOString().slice(0, 10);
+  const { portal } = await (await feed({ families: [REED({}, { go_home_on: far })] })).json();
+  const cookie = (await call(env, H, `/family/handoff?t=${await makeHandoffToken(portal.handoff_key, 'fam-reed')}`)).headers.get('set-cookie').split(';')[0];
+  const home = await (await call(env, H, '/family', { headers: { cookie } })).text();
+  assert.match(home, /<p class="eyebrow">Until Opal comes home<\/p><h2>Payments, additional services, and pickups<\/h2>/);
+  assert.match(home, /<b>Payments<\/b><span class="small muted">See your payment schedule: payments so far, scheduled due dates, and remaining balances/);
+  assert.match(home, /<b>Additional services<\/b><span class="small muted">Request paid extra packages, like photo sessions and extended homegoing/);
+  assert.match(home, /<b>Pickup<\/b><span class="small muted">Not booked yet · Request your day and time/, 'a go-home date alone is not a booked pickup');
+  assert.match(home, /Opens signed in\. No code needed\./);
+  assert.doesNotMatch(home, /status\.kennelos\.app/, 'every link goes through the signing route');
+
+  const res = await call(env, H, '/family/status-page', { headers: { cookie } });
+  assert.equal(res.status, 303);
+  assert.equal(res.headers.get('referrer-policy'), 'no-referrer');
+  const to = res.headers.get('location');
+  const m = /^https:\/\/status\.kennelos\.app\/s\/abc#from=([A-Za-z0-9_-]+)\.([0-9a-f]{64})$/.exec(to);
+  assert.ok(m, to);
+  // What KennelOS checks (its familyActions.js handleFromPortal): the shared key, over "to-status:".
+  assert.equal(await hmacHex(portal.handoff_key, `to-status:${m[1]}`), m[2]);
+  assert.notEqual(await hmacHex(portal.handoff_key, m[1]), m[2], 'not the other direction\'s signature');
+  const body = JSON.parse(atob(m[1].replace(/-/g, '+').replace(/_/g, '/')));
+  assert.equal(body.f, 'fam-reed');
+  assert.ok(body.x > Date.now() && body.x <= Date.now() + 10 * 60000);
+  assert.match(await makeStatusToken(portal.handoff_key, 'fam-reed'), /^[A-Za-z0-9_-]+\.[0-9a-f]{64}$/);
+  // Signed out: no link; unlinked from KennelOS: their plain link, not signed.
+  assert.equal((await call(env, H, '/family/status-page')).headers.get('location'), '/family');
+  env.DB.raw.prepare('UPDATE links SET revoked_at = ? WHERE site_id = ?').run(new Date().toISOString(), site.id);
+  assert.equal((await call(env, H, '/family/status-page', { headers: { cookie } })).headers.get('location'), 'https://status.kennelos.app/s/abc');
+});
+
+test('Open your status page, booked: the band shows the booked time', async () => {
+  const { env, feed } = await setup();
+  const far = new Date(Date.now() + 28 * DAY).toISOString().slice(0, 10);
+  const { portal } = await (await feed({ families: [REED({}, { go_home_on: far, pickup_at: `${far}T19:00:00Z` })] })).json();
+  const cookie = (await call(env, H, `/family/handoff?t=${await makeHandoffToken(portal.handoff_key, 'fam-reed')}`)).headers.get('set-cookie').split(';')[0];
+  const home = await (await call(env, H, '/family', { headers: { cookie } })).text();
+  const pickup = /<b>Pickup<\/b><span class="small muted">([^<]+)</.exec(home)?.[1];
+  assert.ok(pickup && !/Not booked/.test(pickup) && /\d/.test(pickup), pickup);
 });
