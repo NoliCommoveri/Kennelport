@@ -1838,7 +1838,7 @@ changed.
   (`.step.top`, `.own-card*`). `TEMPLATE_FILES` 4a7222de7618c03e.
 - Tests: 467 pass. `cards-documents.test.js`.
 
-## 2026-11-18: fix, the Extras page broke on a package with no checklist
+## 2026-11-18: fix, the Extras page broke on a package with no checklist; a note when she saves one
 
 - **What she saw:** "Something went wrong" (the Worker's last-resort 500, `index.js`) on her
   site after she deleted her hand-typed extras and edited the ones KennelOS sends instead.
@@ -1852,6 +1852,13 @@ changed.
   photos (`.filter` on null would have stopped publishing) and a safe notice with no content.
   The Extras page guards `checklist?.length`, so the snapshot already published draws again
   as soon as this deploys, with no republish needed.
+- **Confirmed** by the breeder: one package's checklist had been typed but not saved.
+- **A note when it happens again:** saving (or adding) a homegoing package with nothing
+  under What's included still saves, but the note after it says the list is empty and to
+  add it before publishing (`note.saved_no_checklist`, `note.added_no_checklist` in
+  `manage/wording.js`, for the owner to reword). A new one opens on its own page so the
+  note sits beside the form. Items need no list.
 - No migration, no version bump (server-side code only; `worker/public/` unchanged).
-- Tests: 468 pass. `extras-block.test.js`: a KennelOS extra made a package with no
+- Tests: 469 pass. `editing.test.js`: the package note.
+- Tests (the fix alone): 468 pass. `extras-block.test.js`: a KennelOS extra made a package with no
   checklist, and a snapshot that still carries null.

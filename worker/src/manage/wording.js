@@ -149,6 +149,9 @@ const NOTES = {
   saved: 'Saved to your draft. Publish when you\'re ready.',
   not_saved: 'Not saved: one of the lines is too long.',
   added: 'Added to your draft.',
+  // After saving a homegoing package with nothing under What's included (2026-11-18).
+  saved_no_checklist: 'Saved to your draft, but this package has nothing under What\'s included yet. Add the list and save again before you publish, or your Extras page shows it without one.',
+  added_no_checklist: 'Added to your draft, but this package has nothing under What\'s included yet. Add the list and save again before you publish, or your Extras page shows it without one.',
   removed: 'Removed from your draft.',
   moved: 'Moved.',
   status: 'Status changed in your draft.',

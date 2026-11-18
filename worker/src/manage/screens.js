@@ -45,6 +45,9 @@ import { picksScreens, isPicksPath } from './screens/picks.js';
 import { dogFormFields, withLifeStage, fromLifeStage, lockLifeStage, pedigreeCard } from './screens/dogform.js';
 
 // The note after a change, and a form's error, in the owner's wording (wording.js).
+// A homegoing package saved with nothing under What's included: saved all the same,
+// with a note saying so (she can save before she's typed the list).
+const bareKit = (v) => v.kind === 'homegoing' && !(v.checklist ?? []).length;
 const noteFor = (url, say) => (NOTE_KEYS.includes(url.searchParams.get('note')) ? `<p class="notice" role="status">${esc(say(`note.${url.searchParams.get('note')}`))}</p>` : '');
 const errorFor = (err, say) => (err ? `<p class="error" role="alert">${esc(say('list.error', { error: sayError(err, say, fieldLabel(say)) }))}</p>` : '');
 // A field's label on her forms, by its name, for {field} in an error.
@@ -422,7 +425,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
         throw err;
       }
       if (one) await tagFromForm(formFields, values, fd, subsFor(saved.id));
-      return redirect(`${path}?note=added`);
+      return redirect(kind === 'extras' && bareKit(values) ? `${path}/${saved.id}?note=added_no_checklist` : `${path}?note=added`);
     }
     // A parent known only by name, made a dog record (its pedigree card).
     const mk = dogs && rest.match(/^([0-9a-f-]{36})\/make-(sire|dam)$/);
@@ -468,7 +471,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       throw err;
     }
     if (one) await tagFromForm(formFields, values, fd, subsFor(rec.id));
-    return redirect(`${path}/${rec.id}?note=saved`);
+    return redirect(`${path}/${rec.id}?note=${kind === 'extras' && bareKit(values) ? 'saved_no_checklist' : 'saved'}`);
   }
 
   // An album's photos, to say who is in them, several at a time: its litter's

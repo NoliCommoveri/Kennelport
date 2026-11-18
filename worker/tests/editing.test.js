@@ -134,6 +134,21 @@ test('lists: add an extra with a checklist, reorder, remove', async () => {
   assert.match(await (await b.post('/lists/extras/new', { kind: 'item', name: 'X', price_from: '100', price_to: '50' })).text(), /lower than the starting price/);
 });
 
+test('a homegoing package saved with nothing under What\'s included is saved, with a note saying so', async () => {
+  const b = await breeder();
+  const res = await b.post('/lists/extras/new', { kind: 'homegoing', name: '10 Week Extended Stay', weeks: '10' });
+  const x = b.env.DB.raw.prepare("SELECT id FROM extras WHERE name = '10 Week Extended Stay'").get();
+  assert.equal(res.headers.get('location'), `/s/${b.site.subdomain}/lists/extras/${x.id}?note=added_no_checklist`);
+  assert.match(await (await b.get(`/lists/extras/${x.id}?note=added_no_checklist`)).text(), /nothing under What&#39;s included yet|nothing under What's included yet/);
+  let r = await b.post(`/lists/extras/${x.id}`, { kind: 'homegoing', name: '10 Week Extended Stay', weeks: '10', checklist: '' });
+  assert.match(r.headers.get('location'), /note=saved_no_checklist$/);
+  r = await b.post(`/lists/extras/${x.id}`, { kind: 'homegoing', name: '10 Week Extended Stay', weeks: '10', checklist: 'Socialization' });
+  assert.match(r.headers.get('location'), /note=saved$/);
+  // An extra that isn't a package needs no list.
+  r = await b.post(`/lists/extras/${x.id}`, { kind: 'item', name: '10 Week Extended Stay' });
+  assert.match(r.headers.get('location'), /note=saved$/);
+});
+
 test('upload a photo and put it on a dog', async () => {
   const b = await breeder();
   await b.post('/publish');
