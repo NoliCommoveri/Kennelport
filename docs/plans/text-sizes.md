@@ -2,7 +2,8 @@
 
 The owner's ask (2026-11-18): as admin, set the text size of each kind of text on a
 site, starting from what the site uses today, with **one place to change a kind of text
-everywhere** ("labels from 16 to 20") instead of hunting through components. Not built.
+everywhere** ("headers from 16 to 20": by headers she means headings, 2026-11-18) instead of
+hunting through components. Not built.
 
 This carries forward site-builder.md step 4's "text size on the built-in blocks", and sits
 beside the template colours and the font library there. Decision 16 holds: the owner is
@@ -18,22 +19,29 @@ h2 29–40px); everything else has one size. Each scheme sets only the script li
 to large: `.kb.t-*`, a multiplier); it stays, on top of what this plan adds.
 
 Many values are near-duplicates of the same idea: card text is .86, .88, .92 or .93rem
-depending on the card; small text is .8 to .9rem. That is why one change can't reach "all
-labels" today.
+depending on the card; a card's heading is 1.1, 1.2, 1.3 or 1.35rem depending on the card.
+That is why one change can't reach "all headings" today.
 
 ## The idea: text roles, then components
 
 Two levels, both in one screen:
 
 1. **Roles** (the one-stop change): each kind of text the site has, about 16, with its
-   size. Change a role and every component in it follows: "Labels 11.8px → 14px" changes
-   eyebrows, pills, the Show filter's label, table headings, footer headings, and so on, at once.
+   size. Change a role and every component in it follows: "Card heading 20.8px → 24px"
+   changes the dog and pup names on cards, package and extra names, the Cards block's
+   headings, parent cards, album and badge names, at once.
 2. **Components** (optional, under each role): each place that role is used, listed with its
    size. By default a component follows its role, keeping its proportion to it. The owner can
    give one component its own size, which then stops following the role. A **Follow the role
    again** link undoes that.
 
-On top of both, an **All text** scale (90%, 100%, 110%, …) multiplies everything, for "make
+**All headings** (the owner's main ask): the four heading roles (Page title, Section heading,
+Card heading, Expander title) also move together, from one control at the top of the screen:
+a percentage (90% to 150%) or "make the smallest heading N px", which scales all four and
+keeps their proportions to each other. Changing one heading role on its own still works, and
+the All headings control then scales from there.
+
+On top of everything, an **All text** scale (90%, 100%, 110%, …) multiplies everything, for "make
 the whole site a bit bigger".
 
 ### The roles, prefilled with today's sizes
@@ -103,7 +111,8 @@ A screen per site (and one for every site's defaults), built from the prototype'
 (highlight rows, segmented toggles, the pinned action bar; checked at 390px and on a
 computer):
 
-- **All text:** a segmented choice, 90% to 130%.
+- **All headings** first (the one-stop change the owner asked for), then **All text**: each a
+  segmented choice of percentages, with − and + for finer steps.
 - **A row per role:** its name, a sample line in the site's own fonts and colours at that size,
   the size in px with − and + (1px steps) and a box to type it, and **Back to today's**.
   Headings show their phone and computer sizes.
@@ -139,8 +148,7 @@ computer):
 
 1. Near-duplicates: keep each component's proportion to its role (no change today), or snap
    them to the role (tidier, a few texts move by up to 1px)?
-2. Is "Labels" what you meant by labels: the small uppercase lines (eyebrows, status
-   lines, table and footer headings)? Pills are a role of their own above; they could join
-   Labels instead.
+2. ~~What "labels" meant~~: answered, headings (2026-11-18). The small uppercase lines stay
+   their own role, Labels.
 3. Should the breeder have any say (for example, All text bigger for her older families), or
    is it admin only?
