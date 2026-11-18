@@ -34,11 +34,19 @@ async function open(env, siteId, kind, token) {
   } catch { return null; }
 }
 
-// Still allowed: her account still has the site, and the family is still active.
+// Who a link is for when the owner opens it from /ops' sign-in (src/admin.js) and
+// isn't one of the site's people: no account to check again, so the signed link
+// and the hour's cookie are what she has.
+export const VIEW_AS_ADMIN = 'admin';
+
+// Still allowed: her account still has the site (or it's the owner's), and the
+// family is still active.
 async function allowed(env, siteId, familyId, emailHash) {
   if (typeof familyId !== 'string' || typeof emailHash !== 'string') return null;
-  const member = await env.DB.prepare('SELECT 1 FROM site_users WHERE site_id = ? AND email_hash = ?').bind(siteId, emailHash).first();
-  if (!member) return null;
+  if (emailHash !== VIEW_AS_ADMIN) {
+    const member = await env.DB.prepare('SELECT 1 FROM site_users WHERE site_id = ? AND email_hash = ?').bind(siteId, emailHash).first();
+    if (!member) return null;
+  }
   return getFamily(env, siteId, familyId);
 }
 

@@ -1925,3 +1925,13 @@ choice at upload).
   later without an entry shows its type's name instead of crashing.
 - The card's "none right now, so it hides" is still in the code, not yet in `wording.js`.
 - No migration, no version bump. Tests: `extras-block.test.js` (474 pass).
+
+## 2026-11-18: fix, See their portal said "used or has expired" for the owner
+
+- The owner, in the Site Manager through her `/ops` sign-in (`src/admin.js` `asAdmin`), isn't
+  one of the site's people, so her view link carried "admin" (or her own address) and the
+  portal's check (`portal/view.js` `allowed`, a `site_users` row) refused it at once, with
+  "That link has been used or has expired". Her link now says `VIEW_AS_ADMIN` when she's
+  signed in as admin and not on the site's people list, and the portal accepts that without
+  the people check (the link and the hour's cookie are signed, and only made for an admin).
+- No migration, no version bump. Tests: `portal-view.test.js` (475 pass).

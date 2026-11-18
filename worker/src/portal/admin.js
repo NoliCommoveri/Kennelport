@@ -16,7 +16,7 @@ import {
   saveFile, getFile, fileResponse, emailLog, history, placeablePuppies, puppyFor, PortalError, RECORD_TYPES, MAX_FILE_BYTES,
 } from './store.js';
 import { sendInvites, portalBase } from './auth.js';
-import { makeViewLink } from './view.js';
+import { makeViewLink, VIEW_AS_ADMIN } from './view.js';
 import { defaultSay } from '../manage/wording.js';
 import {
   listItems, saveItem, removeItem, moveItem, addSuggested, stepsFor, programsFor, setDone, setHidden, setDueOn, setProgramStatus, setProgramCode,
@@ -572,7 +572,9 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   // A GET, since the Site Manager's forms may only post to itself.
   if (!post && action === 'view') {
     if (!user || !(await getFamily(env, site.id, familyId))) return show();
-    const link = await makeViewLink(env, site.id, familyId, user.emailHash);
+    // The owner signed in through /ops may not be one of the site's people.
+    const member = user.sites?.some((x) => x.id === site.id && x.role !== 'admin');
+    const link = await makeViewLink(env, site.id, familyId, user.admin && !member ? VIEW_AS_ADMIN : user.emailHash);
     return new Response(null, { status: 303, headers: { location: `${portalBase(env, site)}/family/view?t=${link}`, 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' } });
   }
   if (!post) return action ? null : show();
