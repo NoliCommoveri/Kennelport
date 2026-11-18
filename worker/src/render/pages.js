@@ -11,7 +11,7 @@ import {
   partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, expanders, pagehead, head, ICONS, paySection,
   payShown, litterChoices, ANY_LITTER, ABOUT_LABEL, dogGroups, descendantsOf, depositsAhead, soonSection, pricesOff, sitePrice, word, sexWord, fullRegLink,
   fullRegSurchargeRow, galleryHtml, faqBlock, addedOn, addedWords, addedRow, customPage, rulesOf, pillClass, snapCtx,
-  pagePath,
+  pagePath, zoomed,
 } from './parts.js';
 import { pedigreeOf } from '../content/fields.js';
 import { DEFAULT_RULES, HEALTH_KINDS, HEALTH_KIND_PLACES } from '../content/rules.js';
@@ -303,7 +303,7 @@ function ownBlock(snap, ctx, b, key) {
   }
   if (b.type === 'spacer') return `<div class="own-spacer h-${b.height}" aria-hidden="true"></div>`;
   if (b.type === 'photo') {
-    const pic = img(snap, photoId);
+    const pic = img(snap, photoId) && (b.zoom ? zoomed(photoId, img(snap, photoId), `b-${b.id}`) : img(snap, photoId));
     if (!pic) return '';
     const cap = b.mayChange && her.caption ? her.caption : w.caption;
     // A frame (the collage's) round the photo; a full-width photo goes edge to edge, unframed.

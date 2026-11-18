@@ -198,3 +198,9 @@ test('the change list says what a first publish is, and what was added or remove
   assert.ok(lines.includes('Pearl*: removed'));
   assert.ok(lines.includes('Reviews: The Lee family added'));
 });
+
+test('the upload buttons offer Full detail, for a flyer\'s small print', async () => {
+  const b = await breeder();
+  assert.match(await (await b.get('/photos')).text(), /<input type="checkbox" data-full-detail>Full detail, for a flyer or anything with small print/);
+  assert.match(await (await b.get('/photos/library')).text(), /data-lib-upload>[\s\S]*?<input type="checkbox" data-full-detail>/);
+});

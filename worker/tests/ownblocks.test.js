@@ -283,6 +283,45 @@ test('a text block and a facts row take every block\'s look: background, space a
   }
 });
 
+test('a flyer: a photo block whole and uncropped, opening full size on a tap, with its description', async () => {
+  const s = await setup();
+  await s.post('about', {}, { act: 'add:photo' });
+  const p = (await s.blocks('about')).at(-1);
+  assert.equal(p.zoom, false);
+  await s.post('about', { [`b.${p.id}.photo`]: 'ph1' }, { open: p.id });
+  // Off by default: a plain photo, as before.
+  assert.doesNotMatch(await s.render('/about'), /class="zoom"|id="viewer"/);
+  await s.post('about', { [`b.${p.id}.shape`]: 'whole', [`b.${p.id}.zoom`]: 'on' }, { open: p.id });
+  assert.equal((await s.blocks('about')).at(-1).zoom, true);
+  const html = await s.render('/about');
+  assert.match(html, new RegExp(`<figure class="own-photo whole wrap f-middle"><a class="zoom" href="/_kp/p/ph1" data-gallery="b-${p.id}"><img src="/_kp/p/ph1"[^>]*><span class="zoom-ic" aria-hidden="true">`));
+  // The viewer comes with it.
+  assert.match(html, /<dialog class="viewer" id="viewer"/);
+  // The owner's screen: no description yet says so; one written shows.
+  assert.match(await s.get(`/admin/akbostons/pages/about?open=${p.id}`), /This photo has no description/);
+  s.env.DB.raw.prepare("UPDATE photos SET alt = 'Puppy memory packages: prices and what each includes' WHERE id = 'ph1'").run();
+  const screen = await s.get(`/admin/akbostons/pages/about?open=${p.id}`);
+  assert.doesNotMatch(screen, /This photo has no description/);
+  assert.match(screen, /Puppy memory packages: prices and what each includes/);
+  // Switched off again.
+  await s.post('about', { [`b.${p.id}.zoom`]: null }, { open: p.id });
+  assert.doesNotMatch(await s.render('/about'), /class="zoom"/);
+});
+
+test('a Cards block can open its photos full size: each card\'s photo in the block\'s own set, read by its description', async () => {
+  const s = await setup();
+  s.env.DB.raw.prepare("UPDATE photos SET alt = 'The flyer' WHERE id = 'ph1'").run();
+  await s.post('about', {}, { act: 'add:cards' });
+  const c = (await s.blocks('about')).at(-1);
+  assert.equal(c.zoom, false);
+  await s.post('about', { [`b.${c.id}.cards.0.photo`]: 'ph1', [`b.${c.id}.cards.0.heading`]: 'Memory packages' }, { open: c.id });
+  assert.match(await s.render('/about'), /<div class="ph"><img src="\/_kp\/p\/ph1"[^>]*alt="Memory packages"/);
+  await s.post('about', { [`b.${c.id}.zoom`]: 'on', [`b.${c.id}.shape`]: 'whole' }, { open: c.id });
+  const html = await s.render('/about');
+  assert.match(html, new RegExp(`<div class="ph"><a class="zoom" href="/_kp/p/ph1" data-gallery="b-${c.id}"><img src="/_kp/p/ph1"[^>]*alt="The flyer"`));
+  assert.match(html, /id="viewer"/);
+});
+
 test('the owner adds a collage: Home\'s layouts and frames, a photo for each box; the breeder can change its photos', async () => {
   const s = await setup();
   for (const id of ['ph2', 'ph3']) s.env.DB.raw.prepare("INSERT INTO photos (id, site_id, r2_key, type, bytes, width, height, created_at) VALUES (?, ?, ?, 'image/webp', 10, 1600, 1000, '2026-11-02T00:00:00Z')").run(id, s.site.id, `sites/${s.site.id}/photos/${id}.webp`);

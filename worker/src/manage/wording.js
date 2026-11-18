@@ -372,6 +372,7 @@ const SCREEN_LINES = {
   "slot.count": ["photos", "How many photos a spot has", "{n} photos"],
   "library.title": ["photos", "Heading of the photo library window", "Your photos"],
   "library.upload": ["photos", "Button: upload in the photo library window", "Upload new photos"],
+  "library.full_detail": ["photos", "Tickbox beside the upload buttons (the library window and the Photos screen): keep more detail", "Full detail, for a flyer or anything with small print"],
   "library.page_photos": ["photos", "Photo library: the tab of photos on her pages", "Page photos"],
   "library.profile_photos": ["photos", "Photo library: the tab of photos on dog, litter and puppy profiles", "Profile photos"],
   "library.pick_one": ["photos", "Photo library: help line, choosing one", "Tap a photo, then Replace."],

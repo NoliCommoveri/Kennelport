@@ -363,6 +363,19 @@ function photoChoice(b, pics, { name = `b.${b.id}.photo`, chosen = b.photo, labe
   return photoSlot(name, label, hint, chosen ? [chosen] : [], { say: defaultSay, photoUrl: pics.url, library: pics.library, photos: pics.photos }, { shape });
 }
 
+// A photo to be read (a flyer: whole, or opening full size): its description, which is
+// what screen readers and search engines get, or a line when it has none. A warning,
+// never a block (decision 16). Written on the breeder's Photos screen.
+function describeLine(pics, id) {
+  if (!id || !pics.photos) return '';
+  const p = pics.photos.find((x) => x.id === id);
+  if (!p) return '';
+  const where = `<a href="${esc(pics.library.list.replace(/\/library$/, ''))}">the Photos screen</a>`;
+  return p.alt
+    ? `<p class="hint">Its description, for screen readers and search engines: \u201c${esc(p.alt)}\u201d. Change it on ${where}.</p>`
+    : `<p class="error small">This photo has no description. Describe what it says on ${where}: screen readers and search engines can't read a picture.</p>`;
+}
+
 // A collage block's photos: one box per box of the layout, each with which part
 // to keep; the boxes it doesn't have are hidden (app.js shows them when the layout changes).
 function collageBoxes(b, pics) {
@@ -389,7 +402,7 @@ function ownSettings(snap, key, b, pics) {
   if (b.type === 'words') return `<div class="fgroup"><h2>Starting wording</h2><p class="small muted">${esc(her)}</p><div class="fgrid">${w('heading', 'Heading')}${w('line', 'Line under the heading', 'half', 'Optional.')}
       <label>Words<textarea name="${k('w.body')}" rows="6">${esc(b.w?.body ?? '')}</textarea><span class="hint">Optional. A blank line starts a new paragraph.</span></label></div>
       ${fld('Where it sits', seg(k('align'), b.align, ALIGN))}</div>`;
-  if (b.type === 'cards') return cardsSettings(snap, b, pics, { photoChoice, pageChoices, docChoice, her: `The breeder can switch it off and reword its heading in ${hersAt(snap, key)}. The cards are yours.` });
+  if (b.type === 'cards') return cardsSettings(snap, b, pics, { photoChoice, pageChoices, docChoice, describeLine, her: `The breeder can switch it off and reword its heading in ${hersAt(snap, key)}. The cards are yours.` });
   if (b.type === 'columns') {
     const rows = Array.from({ length: COLS_MAX }, (_, i) => b.cols?.[i] ?? ['', '']);
     return `<div class="fgroup"><h2>Starting wording</h2><p class="small muted">${esc(her)}</p><div class="fgrid">${w('heading', 'Heading')}${w('line', 'Line under the heading', 'half', 'Optional.')}</div>
@@ -413,8 +426,9 @@ function ownSettings(snap, key, b, pics) {
   if (b.type === 'collage') return `<div class="fgroup"><h2>The collage</h2><p class="small muted">${esc(her.replace(' and reword it', ''))} Home's collage, as a block: pick the boxes, then a photo for each box. With fewer photos than boxes, the site uses a layout for that many.</p>
     ${layoutChoice(k('layout'), b.layout, 'Photo layout')}${fld('Frame', seg(k('frame'), b.frame, COLLAGE_FRAME), 'The Home banner\'s frames, in the site\'s colours.')}</div>
     <div class="fgroup"><h2>The photos</h2><p class="small muted">${esc(FROM_HERS)}</p>${collageBoxes(b, pics)}${change}</div>`;
-  if (b.type === 'photo') return `<div class="fgroup"><h2>The photo</h2><p class="small muted">${esc(her.replace(' and reword it', ''))}</p>${photoChoice(b, pics)}
-    ${fld('Shape', seg(k('shape'), b.shape, PHOTO_SHAPE))}${fld('Frame', seg(k('frame'), b.frame, PHOTO_FRAME), 'The Home banner\'s frames, in the site\'s colours. A full-width photo stays unframed.')}${fld('Which part to keep', seg(k('focus'), b.focus, PHOTO_FOCUS))}<div class="fgrid">${w('caption', 'Caption', '', 'Optional.')}</div>${change}</div>`;
+  if (b.type === 'photo') return `<div class="fgroup"><h2>The photo</h2><p class="small muted">${esc(her.replace(' and reword it', ''))}</p>${photoChoice(b, pics)}${b.zoom || b.shape === 'whole' ? describeLine(pics, b.photo) : ''}
+    ${fld('Shape', seg(k('shape'), b.shape, PHOTO_SHAPE), 'The whole photo keeps its own shape, nothing cut off: for a flyer.')}
+    <div class="switches boxed">${toggle(k('zoom'), b.zoom, 'Opens full size on a tap (for a flyer or anything with small print)')}</div>${fld('Frame', seg(k('frame'), b.frame, PHOTO_FRAME), 'The Home banner\'s frames, in the site\'s colours. A full-width photo stays unframed.')}${fld('Which part to keep', seg(k('focus'), b.focus, PHOTO_FOCUS))}<div class="fgrid">${w('caption', 'Caption', '', 'Optional.')}</div>${change}</div>`;
   if (b.type === 'beside') return `<div class="fgroup"><h2>The photo</h2>${photoChoice(b, pics)}${fld('Where it sits', seg(k('side'), b.side, PHOTO_SIDE), 'On a computer. On a phone the photo goes above the words.')}${fld('Frame', seg(k('frame'), b.frame, PHOTO_FRAME), 'The Home banner\'s frames, in the site\'s colours.')}${fld('Which part to keep', seg(k('focus'), b.focus, PHOTO_FOCUS))}${change}</div>
     <div class="fgroup"><h2>The words beside it</h2><p class="small muted">${esc(her)}</p><div class="fgrid">${w('heading', 'Heading')}${w('label', 'Button words')}
       <label>Words<textarea name="${k('w.body')}" rows="6">${esc(b.w?.body ?? '')}</textarea><span class="hint">Optional. A blank line starts a new paragraph.</span></label></div>
@@ -589,7 +603,7 @@ async function pageScreen(env, site, build, key, { open = null, error = null } =
   // A photo block's spot: its photo (served through the admin view of her site), and
   // her photo library window, from her Site Manager.
   const pics = { build, docs: await listDocuments(env, site.id), photos: open && blocks.some((b) => b.id === open && ['photo', 'overlay', 'collage', 'beside', 'gallery', 'cards'].includes(b.type))
-    ? (await env.DB.prepare('SELECT id FROM photos WHERE site_id = ? AND removed_at IS NULL').bind(site.id).all()).results : null,
+    ? (await env.DB.prepare('SELECT id, alt FROM photos WHERE site_id = ? AND removed_at IS NULL').bind(site.id).all()).results : null,
   albums: open && blocks.some((b) => b.id === open && b.type === 'gallery')
     ? (await env.DB.prepare('SELECT id, title, show_on_site FROM albums WHERE site_id = ? ORDER BY sort, title').bind(site.id).all()).results : [],
   url: (id) => `/admin/${site.subdomain}/site/_kp/p/${encodeURIComponent(id)}?s=t`,

@@ -1,5 +1,6 @@
 // Photo upload, for the manage app and /ops (the form's action says where):
-// resize in the browser to about 1600px plus a 400px thumbnail, as WebP where the
+// resize in the browser to about 1600px (2400px with Full detail ticked, for a
+// flyer's small print; the server allows 2400px and 3 MB) plus a 400px thumbnail, as WebP where the
 // browser can make it and JPEG where it can't (iPhone Safari may hand back PNG
 // when asked for WebP), then upload. Re-encoding drops the camera's location
 // data; the server checks again (src/photos.js, plan 4.2).
@@ -32,7 +33,12 @@
   }
   // strip-jpeg-meta:end
 
-  async function encode(bitmap, side) {
+  // Full detail: the tickbox beside the upload button (data-full-detail), if any.
+  const FULL = 1600;
+  const DETAIL = 2400;
+  const sideIn = (root) => (root?.querySelector('input[data-full-detail]')?.checked ? DETAIL : FULL);
+
+  async function encode(bitmap, side, q = 0.82) {
     const scale = Math.min(1, side / Math.max(bitmap.width, bitmap.height));
     const w = Math.max(1, Math.round(bitmap.width * scale));
     const h = Math.max(1, Math.round(bitmap.height * scale));
@@ -40,7 +46,7 @@
     canvas.width = w; canvas.height = h;
     canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
     const blob = (type, q) => new Promise((resolve) => canvas.toBlob(resolve, type, q));
-    let b = await blob('image/webp', 0.82);
+    let b = await blob('image/webp', q);
     if (!b || b.type !== 'image/webp') {
       // JPEG has no transparency: a logo's clear background would turn black, so
       // white goes behind it first (WebP keeps it clear).
@@ -48,21 +54,24 @@
       ctx.globalCompositeOperation = 'destination-over';
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, w, h);
-      b = await stripJpegMeta(await blob('image/jpeg', 0.85));
+      b = await stripJpegMeta(await blob('image/jpeg', q === 0.82 ? 0.85 : q));
     }
     return b;
   }
 
   // Upload files one by one; say() reports progress. Returns the uploaded
   // photos ({ id, thumb }) and stops at the first problem.
-  async function uploadAll(files, { action, alt, tags, say, onEach }) {
+  async function uploadAll(files, { action, alt, tags, say, onEach, side = FULL }) {
     const done = [];
     for (const file of files) {
       say(`Preparing ${file.name} (${done.length + 1} of ${files.length})…`);
       let bitmap;
       try { bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
       catch { say(`${file.name} couldn't be read. Try a screenshot of it or a different photo.`); return done; }
-      const full = await encode(bitmap, 1600);
+      let full = await encode(bitmap, side);
+      // Full detail can come out over the server's 3 MB: a little more squeezed, then smaller.
+      if (full && full.size > 2.9 * 1024 * 1024) full = await encode(bitmap, side, 0.7);
+      if (full && full.size > 2.9 * 1024 * 1024) full = await encode(bitmap, 2000, 0.7);
       const thumb = await encode(bitmap, 400);
       const body = new FormData();
       body.append('full', full, 'full');
@@ -198,7 +207,7 @@
       }
       for (const r of lib.querySelectorAll('input[name=lib-tab]')) if (r.value === 'page' && !r.checked) { r.checked = true; r.dispatchEvent(new Event('change')); }
       const done = await uploadAll(files, {
-        action: slot.dataset.upload, alt: slot.dataset.alt || '', tags: slot.dataset.tags, say: (m) => { status.textContent = m; },
+        action: slot.dataset.upload, alt: slot.dataset.alt || '', tags: slot.dataset.tags, say: (m) => { status.textContent = m; }, side: sideIn(lib),
         onEach: (photo) => {
           const b = document.createElement('button');
           b.type = 'button'; b.className = 'lib-ph'; b.dataset.id = photo.id; b.dataset.thumb = photo.thumb;
@@ -238,7 +247,7 @@
       const files = [...input.files];
       if (!files.length) return;
       input.disabled = true;
-      const done = await uploadAll(files, { action: here.dataset.uploadHere, alt: '', tags: '', say: (m) => { out.textContent = m; } });
+      const done = await uploadAll(files, { action: here.dataset.uploadHere, alt: '', tags: '', say: (m) => { out.textContent = m; }, side: sideIn(here) });
       if (done.length === files.length) location.reload();
       input.value = ''; input.disabled = false;
     });

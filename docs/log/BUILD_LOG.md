@@ -1862,3 +1862,38 @@ changed.
 - Tests: 469 pass. `editing.test.js`: the package note.
 - Tests (the fix alone): 468 pass. `extras-block.test.js`: a KennelOS extra made a package with no
   checklist, and a snapshot that still carries null.
+
+## 2026-11-18: flyers, step 6 of the documents and cards gaps
+
+[`plans/documents-cards-gaps.md`](../plans/documents-cards-gaps.md) step 6, the owner's ask
+("build the flyer"), with the owner's answers to the plan's questions recorded there (step 4
+for chosen breeders with a size cap; the breeder can change a card's words; full detail as a
+choice at upload).
+
+- **The Photo block takes "The whole photo, uncropped"** (`PHOTO_SHAPE.whole`): its own shape,
+  no wider than 620px on a computer, frames as the others (`.own-photo.whole`).
+- **"Opens full size on a tap"** (`zoom`, off by default, so every existing block draws as
+  before), on the Photo block and the Cards block (all its photos). The photo becomes a link
+  to the full photo (`render/parts.js` `zoomed`) with a small magnifier in its corner
+  (`.zoom-ic`, an inline SVG: the site's CSP has no `data:` images), and opens in the album
+  viewer the site already has. **The viewer now keeps to one set:** previous and next stay
+  among photos with the same `data-gallery` value (an album's share none, each Photo or Cards
+  block's are `b-<id>`), and a set of one shows no arrows or count (`.viewer.one`). A card
+  that opens full size is read by its photo's description first, then its heading.
+- **The description line** on the owner's Photo and Cards settings, when the photo is whole or
+  opens full size: the photo's description, or "This photo has no description…" with a link
+  to the breeder's Photos screen. A warning, not a block (decision 16). Owner's screen: not in
+  `wording.js`.
+- **Full detail on upload:** a tickbox beside the upload buttons in the photo library window
+  and on the Photos screen (`library.full_detail` in `wording.js`). Ticked, the photo is kept
+  at 2400px on its long side instead of 1600px; one that comes out over 2.9 MB is squeezed a
+  little more, then made 2000px, under the server's 3 MB. Upload elsewhere (/ops, older
+  pickers) stays at 1600px.
+- **Checked** in Chromium at 390 and 1280px: a tall flyer whole, framed, in a Photo block and
+  in two Cards; the viewer opens the Photo block's alone (no arrows), the cards' as 1 of 2,
+  and an album strip's as its own 1 of 2; no sideways scroll. Pinch to zoom in the viewer is
+  the browser's own (the page allows zooming).
+- No migration. **Both versions need a bump** (asked): the template (`site.css`, `site.js`) and
+  the Site Manager (`photos.js`). Until then `versions.test.js` fails, as expected.
+- Tests: 470 pass, 2 fail (the version checks). `ownblocks.test.js`: the flyer Photo block and
+  Cards; `editing.test.js`: the Full detail tickbox.

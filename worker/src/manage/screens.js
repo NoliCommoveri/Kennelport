@@ -637,6 +637,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     return `<div class="lib" data-lib data-chosen="${esc(say('library.chosen', { n: '{n}' }))}" data-too-many="${esc(say('library.too_many', { n: '{n}' }))}" data-just-added="${esc(say('library.just_added'))}">
       <div class="lib-top"><h2>${esc(say('library.title'))}</h2>
         <label class="button small primary">${esc(say('library.upload'))}<input type="file" accept="image/*" multiple data-lib-upload></label>
+        <label class="check small"><input type="checkbox" data-full-detail>${esc(say('library.full_detail'))}</label>
         <p class="small muted" role="status" data-lib-status></p></div>
       <div class="seg sm lib-tabs" role="radiogroup"><label><input type="radio" name="lib-tab" value="page" checked><span>${esc(say('library.page_photos'))}</span></label><label><input type="radio" name="lib-tab" value="profile"><span>${esc(say('library.profile_photos'))}</span></label></div>
       <p class="small muted" data-for="one">${esc(say('library.pick_one'))}</p><p class="small muted" data-for="many">${esc(say('library.pick_many'))}</p>
@@ -775,7 +776,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     return {
       title: say('photos.photos'), back: base,
       body: `${note(url)}<p class="row"><a class="button" href="${base}/lists/albums">${esc(say('photos.albums'))}</a><span class="muted small">${esc(say('photos.galleries_with_their_own'))}</span></p>${await usageLine()}
-        <section class="card pm-up" data-upload-here="${base}/photos/upload"><label class="button primary">${esc(say('library.upload'))}<input type="file" accept="image/*" multiple></label><p class="muted small" role="status"></p><p class="muted small">${esc(say('photos.photos_are_made_smaller'))}</p></section>
+        <section class="card pm-up" data-upload-here="${base}/photos/upload"><label class="button primary">${esc(say('library.upload'))}<input type="file" accept="image/*" multiple></label><label class="check small"><input type="checkbox" data-full-detail>${esc(say('library.full_detail'))}</label><p class="muted small" role="status"></p><p class="muted small">${esc(say('photos.photos_are_made_smaller'))}</p></section>
         <nav class="pm-tabs seg sm" aria-label="${esc(say('photos.photos'))}">${tabLink('page', say('library.page_photos'))}${tabLink('profile', say('library.profile_photos'))}</nav>
         <p class="muted small">${esc(say('pm.how'))}</p>
         <section class="card pm-rows">${rows.map(row).join('') || `<p class="muted small">${esc(say('library.empty'))}</p>`}</section>${bar}`,

@@ -154,11 +154,15 @@
 
   // An album's viewer: a tap on a photo opens it full size; previous and next by
   // buttons, arrow keys or a swipe; Escape, × or a tap outside the photo closes it.
+  // Previous and next stay among the photos of the same set (data-gallery's value:
+  // an album's photos share none; a Photo or Cards block's are its own), and a set
+  // of one (a flyer) shows no arrows or count.
   const viewer = $('#viewer');
-  const shots = $$('[data-gallery]');
-  if (viewer && viewer.showModal && shots.length) {
+  const all = $$('[data-gallery]');
+  if (viewer && viewer.showModal && all.length) {
     const pic = $('img', viewer);
     const count = $('.v-count', viewer);
+    let shots = all;
     let at = 0;
     const show = (i) => {
       at = (i + shots.length) % shots.length;
@@ -166,7 +170,13 @@
       pic.alt = $('img', shots[at])?.alt ?? '';
       count.textContent = `${at + 1} / ${shots.length}`;
     };
-    shots.forEach((a, i) => a.addEventListener('click', (e) => { e.preventDefault(); show(i); viewer.showModal(); }));
+    all.forEach((a) => a.addEventListener('click', (e) => {
+      e.preventDefault();
+      shots = all.filter((x) => x.dataset.gallery === a.dataset.gallery);
+      viewer.classList.toggle('one', shots.length === 1);
+      show(shots.indexOf(a));
+      viewer.showModal();
+    }));
     $('.v-prev', viewer).addEventListener('click', () => show(at - 1));
     $('.v-next', viewer).addEventListener('click', () => show(at + 1));
     $('.v-close', viewer).addEventListener('click', () => viewer.close());
