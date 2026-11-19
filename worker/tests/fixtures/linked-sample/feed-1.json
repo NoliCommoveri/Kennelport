@@ -52,6 +52,12 @@
      "pickup_at": "2026-10-29T16:00:00Z",
      "microchip": "985000000000201",
      "registration_no": "NP12345601",
+     "vet": {
+      "clinic": "Birch Hill Veterinary*",
+      "doctor": "Dr. Sam Okafor*",
+      "phone": "555-0177",
+      "address": "4 Birch Hill Rd, Springfield"
+     },
      "health": [
       {
        "id": "ev-o1",

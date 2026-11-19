@@ -1966,3 +1966,33 @@ choice at upload).
   (`portal/admin/today.js`; not in `manage/wording.js` yet, like the rest of that screen).
 - Tests: `worker/tests/kennelos.test.js`, `worker/tests/portal-feed.test.js`. No migration,
   no version bump (no file under `worker/public/` changed).
+
+## 2026-11-19: A family's puppy kept after its litter leaves the website; each puppy's vet
+
+- **Migration 0039** (`kept_pups`): new tables `portal_pups` and `portal_pup_photos`, four
+  new columns `portal_placements.pup_vet_*`, filled from the site's vet for every existing
+  placement. Additive; applies by itself on the first request after the merge.
+- `portal/pups.js`: `keepStatements` copies each kept placement's puppy (families with a
+  portal) and pins its photos, first in every batch that deletes puppies, litters or
+  photos (`deleteLitter`, `removeRecord`, `importContent`, the photo library's Remove).
+  `pupOf` / `photosOf` read the website's puppy, else the copy: `family.js`, `family/files.js`,
+  `stays.js`, `admin.js`; Families and Going home read the copy's photo, sex and litter.
+- `kennelos/clock.js`: the 30-day clock no longer spares a litter with an open placement.
+- `cleanup.js`: a photo a family keeps is never purged; it goes with the next cleanup once
+  the family is deleted for good (`store.deleteFamily`), erased (`account.eraseFamily`) or
+  merged away (`merge.js` moves it).
+- The puppy's own vet: `store.vetOf` on Home and Records; `freezeSiteVetStatement` before any
+  site vet change; her placement form edits it (`PLACEMENT_FIELDS`). The feed takes
+  `placements[].vet` (`feed.js`), and now applies the top-level `vet` before the families.
+- Wording: new group `keptpups` in `manage/wording.js` (the kept puppy's choice and hint,
+  the puppy's vet heading, hint and labels). The suggestion labels for `pup_vet_*` are in
+  `portal/admin/parts.js` `SUGGEST_LABEL`, with the others there (not moved yet).
+- Linked sample: Onyx*'s placement carries its own vet (`feed-1.json`).
+- Tests: `portal-kept-pups.test.js` (new), `portal.test.js` (the closing-the-site test, which
+  had expected a placed litter never to expire). 486 pass. No version bump (no file under
+  `worker/public/` changed).
+- Same day, the owner: no copy may describe how it works underneath. The puppy's choice
+  reads "{name} · {litter}" like any other (was "… (kept for this family)"), the hint
+  under it is the usual one, and the vet hint is "The vet the family sees as {name}'s
+  vet." New rule in `CLAUDE.md`, "Never describe the plumbing in copy".
+

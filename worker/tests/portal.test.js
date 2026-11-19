@@ -251,14 +251,17 @@ test('records: her health records and contract show on the family\'s Records pag
   assert.match(page, /Winter litter/);
 });
 
-test('closing the site removes the portal; a litter with an open placement is never expired', async () => {
+test('closing the site removes the portal, kept puppies too', async () => {
   const { env, site, her } = await setup();
   await addFamily(her, { name: 'The Reed family', emails: 'sam@example.com', puppy_id: 'pup1' });
-  env.DB.raw.prepare("UPDATE litters SET left_site_at = '2026-01-01T00:00:00Z'").run();
+  // A litter with an open placement goes like any other; the family keeps their puppy (portal-kept-pups.test.js).
+  env.DB.raw.prepare('UPDATE litters SET show_on_site = 0').run();
   await expireLitters(env, new Date());
-  assert.equal(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM litters').get().n, 1);
+  await expireLitters(env, new Date(Date.now() + 31 * DAY));
+  assert.equal(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM litters').get().n, 0);
+  assert.equal(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM portal_pups').get().n, 1);
   await closeSite(env, site.id, 'akbostons');
-  for (const t of ['portal_families', 'portal_emails', 'portal_placements', 'portal_history']) {
+  for (const t of ['portal_families', 'portal_emails', 'portal_placements', 'portal_history', 'portal_pups', 'portal_pup_photos']) {
     assert.equal(env.DB.raw.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get().n, 0, t);
   }
 });

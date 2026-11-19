@@ -13,9 +13,10 @@ import { escapeHtml as esc } from '../lib/html.js';
 import {
   getSettings, saveSettings, listFamilies, getFamily, familyEmails, createFamily, updateFamily, deleteFamily, placementFor, createPlacement,
   updatePlacement, markPickedUp, confirmPickup, pickupNotYet, acceptProof, setLifeStatus, addHealthRecord, removeHealthRecord, healthRecords,
-  saveFile, getFile, fileResponse, emailLog, history, placeablePuppies, puppyFor, PortalError, RECORD_TYPES, MAX_FILE_BYTES,
+  saveFile, getFile, fileResponse, emailLog, history, placeablePuppies, PortalError, RECORD_TYPES, MAX_FILE_BYTES,
 } from './store.js';
 import { sendInvites, portalBase } from './auth.js';
+import { pupOf } from './pups.js';
 import { makeViewLink, VIEW_AS_ADMIN } from './view.js';
 import { defaultSay } from '../manage/wording.js';
 import {
@@ -184,13 +185,18 @@ function familiesScreen(site, families, s, url, { deleted = [], erased = [], gon
     <dl class="kv">${erased.map((r) => `<dt>${esc(r.name)}</dt><dd><b>${esc(r.call_name || r.puppy_name)}</b>${r.picked_up_at ? ` · went home ${esc(formatAt(r.picked_up_at, s.time_zone, { weekday: false }))}` : ''}${r.proof_file_id ? ` · <a href="${base}/file/${esc(r.proof_file_id)}">vet record</a>${r.proof_accepted_at ? ' (accepted)' : ''}` : ''}${r.contract_file_id ? ` · <a href="${base}/file/${esc(r.contract_file_id)}">contract</a>` : ''} <span class="hint">erased ${esc(formatAt(r.erased_at, s.time_zone, { weekday: false }))}</span></dd>`).join('')}</dl></details>` : ''}`;
 }
 
-function puppyOptions(puppies, current) {
-  return `<option value="">Choose…</option>${puppies.map((p) => `<option value="${esc(p.id)}"${p.id === current ? ' selected' : ''}${p.family && p.id !== current ? ' disabled' : ''}>${esc(p.name)} · ${esc(p.litter_name)}${p.family && p.id !== current ? ` (${esc(p.family)})` : ''}</option>`).join('')}`;
+// A puppy whose litter has left the website (portal/pups.js) stays the placement's
+// choice: `kept` is its copy, and choosing it changes nothing.
+function puppyOptions(puppies, current, kept, say) {
+  const keptOption = kept ? `<option value="${KEPT_PUPPY}" selected>${esc(say('keptpups.option', { name: kept.name ?? '', litter: kept.litter_name ?? '' }))}</option>` : '';
+  return `<option value="">Choose…</option>${keptOption}${puppies.map((p) => `<option value="${esc(p.id)}"${p.id === current ? ' selected' : ''}${p.family && p.id !== current ? ' disabled' : ''}>${esc(p.name)} · ${esc(p.litter_name)}${p.family && p.id !== current ? ` (${esc(p.family)})` : ''}</option>`).join('')}`;
 }
 
-function placementFields(p, puppies, s) {
+export const KEPT_PUPPY = 'kept';
+
+function placementFields(p, puppies, s, { kept = null, say = defaultSay } = {}) {
   const booked = p?.pickup_booked_at ? localParts(p.pickup_booked_at, s.time_zone) : null;
-  return `<label>Puppy<select name="puppy_id" required>${puppyOptions(puppies, p?.puppy_id)}</select><span class="hint">From your site's litters. Add the litter and puppy there first.</span></label>
+  return `<label>Puppy<select name="puppy_id" required>${puppyOptions(puppies, p?.puppy_id, kept, say)}</select><span class="hint">From your site's litters. Add the litter and puppy there first.</span></label>
     <label>The name they've given ${p ? esc(p.puppy_name) : 'the puppy'}<input name="call_name" value="${esc(p?.call_name ?? '')}" maxlength="60"><span class="hint">Used on their pages and in emails, if they've chosen one.</span></label>
     <div class="row"><label>Planned go-home<input type="date" name="go_home_on" value="${esc(p?.go_home_on ?? '')}"><span class="hint">The day, before a pickup time is booked.</span></label></div>
     <div class="row"><label>Pickup booked for<input type="date" name="pickup_day" value="${esc(booked?.ymd ?? '')}"></label><label>at<input type="time" name="pickup_time" value="${esc(booked?.hm ?? '')}"><span class="hint">${esc(ZONE_NAMES[s.time_zone] ?? s.time_zone)} time. If it passes without you marking pickup, the vet clock starts from it.</span></label></div>`;
@@ -295,7 +301,7 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
     </section>`);
 
     // The checklist, the timeline and the programs, as this family has them.
-    const steps = await stepsFor(env, site.id, p, await puppyFor(env, site.id, p.puppy_id), s, { now, all: true, name });
+    const steps = await stepsFor(env, site.id, p, await pupOf(env, site.id, p), s, { now, all: true, name });
     const op = (kind, x, what, label, cls = 'link') => form(`step/${kind}/${esc(x.id)}/${what}`, `<button class="${cls}">${label}</button>`, 'inline');
     const stepOps = (kind, x) => [
       !x.auto && !(x.hers) ? op(kind, x, x.done ? 'undo' : 'done', x.done ? 'Untick' : 'Tick') : '',
@@ -378,8 +384,12 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
       <form method="post" action="${base}/contract" enctype="multipart/form-data"><label>${contract ? 'Replace with' : 'Add'} a PDF or photo, up to 10 MB<input type="file" name="file" accept="application/pdf,image/*" required></label><p><button>Upload</button></p></form>
     </section>`);
 
-    parts.push(form('placement', `<section class="card"><h2>${esc(name)}'s details</h2><div class="fgrid">${placementFields(p, puppies, s)}
+    const kept = p.puppy_id && puppies.some((x) => x.id === p.puppy_id) ? null : await pupOf(env, site.id, p);
+    parts.push(form('placement', `<section class="card"><h2>${esc(name)}'s details</h2><div class="fgrid">${placementFields(p, puppies, s, { kept: kept?.kept ? kept : null, say })}
       <div class="row"><label>Microchip<input name="microchip" value="${esc(p.microchip ?? '')}" maxlength="40"></label><label>Registration number<input name="registration_no" value="${esc(p.registration_no ?? '')}" maxlength="40"></label></div>
+      <div class="fgroup"><h2>${esc(say('keptpups.vet_title', { name }))}</h2><p class="hint">${esc(say('keptpups.vet_hint', { name }))}</p>
+        <div class="row"><label>${esc(say('keptpups.vet_clinic'))}<input name="pup_vet_clinic" value="${esc(p.pup_vet_clinic ?? '')}" maxlength="120"></label><label>${esc(say('keptpups.vet_doctor'))}<input name="pup_vet_doctor" value="${esc(p.pup_vet_doctor ?? '')}" maxlength="120"></label></div>
+        <div class="row"><label>${esc(say('keptpups.vet_phone'))}<input name="pup_vet_phone" type="tel" value="${esc(p.pup_vet_phone ?? '')}" maxlength="40"></label><label>${esc(say('keptpups.vet_address'))}<input name="pup_vet_address" value="${esc(p.pup_vet_address ?? '')}" maxlength="200"></label></div></div>
       <p><button class="primary">Save</button></p></div></section>`));
 
     parts.push(form('life', `<section class="card"><h2>Life status</h2><div class="row"><label>Status<select name="life_status">${[['with_family', 'With the family'], ['deceased', 'Died'], ['rehomed', 'Rehomed'], ['returned', 'Returned to you']].map(([k, l]) => `<option value="${k}"${p.life_status === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label><label>Since<input type="date" name="on" value="${esc(p.life_status_on ?? '')}"></label></div>
@@ -599,6 +609,8 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
       }
       case 'family': await updateFamily(env, site.id, familyId, values); return to('saved');
       case 'placement':
+        // The kept puppy (its litter has left the website): the puppy stays as it is.
+        if (values.puppy_id === KEPT_PUPPY) delete values.puppy_id;
         if (p) await updatePlacement(env, site.id, p.id, values);
         else await createPlacement(env, site.id, familyId, values);
         return to('saved');

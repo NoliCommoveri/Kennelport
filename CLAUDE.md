@@ -82,6 +82,22 @@ it yet, keep its wording in one place and note it in the build log, so it's easy
 later. The owner's own admin screens and messages about KennelPort itself failing are
 left out.
 
+## Never describe the plumbing in copy
+
+Nothing a breeder or a family reads may say how KennelPort works underneath: where data
+is stored or copied, that a record was kept, moved, frozen, snapshotted, archived or
+cached, which table or system it came from, or that anything changed behind the
+scenes. No "(kept for this family)", no "a copy is kept", no "saved separately", no
+"its litter has left the website, but...". A screen shows the thing itself, the same
+way it always has; if the storage changed, the words don't.
+
+- Families see nothing that hints their data moved. Their pages read exactly as before.
+- The breeder sees what she needs to act on, in her terms (the puppy, its vet, the
+  family), never the mechanism.
+- Explanations of how it works go in code comments, plans and the build log only.
+- Before adding or changing any line someone reads, check it against this. If a line
+  only makes sense to someone who knows the internals, cut it.
+
 ## Migrations: one per merge
 
 A branch adds at most one migration file. Before adding one, check what the branch

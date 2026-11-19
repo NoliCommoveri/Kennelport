@@ -46,7 +46,7 @@ export const roundPhoto = (sub, photoId, alt) => (photoId
 export async function goingHome(env, site, now = new Date()) {
   const s = await getSettings(env, site.id);
   const today = localParts(now, s.time_zone).ymd;
-  const { results } = await env.DB.prepare(`SELECT p.*, f.name AS family, pu.photo_id, pu.sex FROM portal_placements p JOIN portal_families f ON f.id = p.family_id LEFT JOIN puppies pu ON pu.id = p.puppy_id
+  const { results } = await env.DB.prepare(`SELECT p.*, f.name AS family, COALESCE(pu.photo_id, k.photo_id) AS photo_id, COALESCE(pu.sex, k.sex) AS sex FROM portal_placements p JOIN portal_families f ON f.id = p.family_id LEFT JOIN puppies pu ON pu.id = p.puppy_id LEFT JOIN portal_pups k ON k.placement_id = p.id
     WHERE p.site_id = ? AND p.status = 'open' AND p.life_status = 'with_family' AND p.picked_up_at IS NULL AND p.pickup_state != 'not_yet'
       AND f.status = 'active' AND f.deleted_at IS NULL AND (p.pickup_booked_at IS NOT NULL OR p.go_home_on IS NOT NULL)`).bind(site.id).all();
   const soon = results.map((p) => ({ ...p, day: p.pickup_booked_at ? localParts(p.pickup_booked_at, s.time_zone).ymd : p.go_home_on }))

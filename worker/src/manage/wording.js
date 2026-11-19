@@ -56,6 +56,7 @@ export const SCREENS = Object.freeze({
   notifications: 'Notifications',
   familyview: 'A family\'s portal, as they see it',
   familydupes: 'Puppy families: the same family twice, and deleted families',
+  keptpups: 'Puppy families: the puppy and its vet',
 });
 
 // Which screen a form's kind belongs to.
@@ -719,7 +720,14 @@ const SCREEN_LINES = {
   "familydupes.gone_title": ["familydupes", "Heading of the fold-out listing families deleted for good", "Deleted for good"],
   "familydupes.gone_line": ["familydupes", "Line in it", "KennelOS doesn't send these families again. To have one back, let KennelOS send them: they come back as a new family to invite, the next time KennelOS sends them."],
   "familydupes.gone_no_name": ["familydupes", "In the list, for a family deleted before their name was kept", "A family whose name wasn't kept"],
-  "familydupes.give_back": ["familydupes", "Button beside each", "Let KennelOS send them again"]
+  "familydupes.give_back": ["familydupes", "Button beside each", "Let KennelOS send them again"],
+  "keptpups.option": ["keptpups", "The puppy's choice on a family's screen ({name}: the puppy, {litter}: its litter)", "{name} · {litter}"],
+  "keptpups.vet_title": ["keptpups", "Heading over the puppy's vet on a family's screen ({name}: the puppy)", "{name}'s vet"],
+  "keptpups.vet_hint": ["keptpups", "Line under it ({name}: the puppy)", "The vet the family sees as {name}'s vet."],
+  "keptpups.vet_clinic": ["keptpups", "Field label", "Clinic"],
+  "keptpups.vet_doctor": ["keptpups", "Field label", "Vet's name"],
+  "keptpups.vet_phone": ["keptpups", "Field label", "Phone"],
+  "keptpups.vet_address": ["keptpups", "Field label", "Address"],
 };
 
 // The Publish screen's list of changes (diff.js), one line a change: "{part}: {what}"

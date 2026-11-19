@@ -149,8 +149,9 @@ that record's id in KennelOS, and is how the link finds it again. Keep both.
 | `portal_settings` | Her portal settings: time zone, vet rule, contacts, food | |
 | `portal_families` | A family | |
 | `portal_emails` | One of a family's addresses: `email_hash`, `email_enc` (encrypted), `_email` (readable, backup only) | `family_id` |
-| `portal_placements` | One puppy going to one family: pickup, the vet clock, proof, contract | `family_id`, `puppy_id` → puppies, `proof_file_id`, `contract_file_id` → portal_files |
+| `portal_placements` | One puppy going to one family: pickup, the vet clock, proof, contract, the puppy's own vet (`pup_vet_*`) | `family_id`, `puppy_id` → puppies, `proof_file_id`, `contract_file_id` → portal_files |
 | `portal_files` | A file on a placement; the file is at `r2_key` | `placement_id` |
+| `portal_pups`, `portal_pup_photos` | A family's puppy kept after its litter left the website, and the photos the family keeps (`docs/plans/portal-kept-pups.md`) | `placement_id`, `photo_id` → photos |
 | `portal_health_records` | A shot, deworming or vet visit | `placement_id` |
 | `portal_checklist_items`, `portal_timeline_tasks` | Her templates (`placement_id` empty) and additions for one family | `placement_id`, `product_id` → products |
 | `portal_placement_progress` | A family's tick, hidden step or moved date | `placement_id`, `item_id` → the item or task |

@@ -114,6 +114,9 @@ read that before the rest. Update this map when you add, move or split a file.
   `bounces.js` Resend's delivery results; `account.js` the account over time (loss, delete,
   Delete now, giving a deleted family back); `merge.js` the same family twice (merging a
   typed placement or family into KennelOS's).
+- `pups.js` a family's puppy kept after its litter leaves the website (`plans/portal-kept-pups.md`):
+  the copy and its photos, made by every delete of a puppy, litter or photo; `pupOf` and
+  `photosOf` read the website's puppy, else the copy.
 - `view.js` her read-only view of a family's portal (`plans/done/family-view.md`): the view
   link and the view cookie; `family.js` refuses every write under one.
 - `feed.js` KennelOS's family feed. `version.js`: `PORTAL_VERSION`; files in `public/_kp/f/`

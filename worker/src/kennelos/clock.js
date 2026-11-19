@@ -13,6 +13,7 @@
 // daily cleanup, which also starts the clock for litters already off the site on
 // the day this ships.
 import { DEFAULT_TIMING, litterDaysFor, rulesFor } from '../content/rules.js';
+import { keepStatements } from '../portal/pups.js';
 
 export const LITTER_DAYS = DEFAULT_TIMING.litter_days;
 const DAY = 86400000;
@@ -100,6 +101,8 @@ export async function deleteLitter(env, siteId, litterId) {
   const t = new Date().toISOString();
   const albums = (await db.prepare('SELECT id FROM albums WHERE site_id = ? AND litter_id = ?').bind(siteId, litterId).all()).results;
   await db.batch([
+    // A family with a portal keeps their puppy's details and photos (portal/pups.js).
+    ...keepStatements(env, siteId, t),
     db.prepare("DELETE FROM photo_tags WHERE site_id = ? AND subject IN (SELECT 'puppy:' || id FROM puppies WHERE site_id = ? AND litter_id = ?)").bind(siteId, siteId, litterId),
     db.prepare('DELETE FROM photo_tags WHERE site_id = ? AND subject = ?').bind(siteId, `litter:${litterId}`),
     db.prepare('DELETE FROM embeds WHERE site_id = ? AND place = ?').bind(siteId, `litter:${litterId}`),
@@ -114,9 +117,10 @@ export async function deleteLitter(env, siteId, litterId) {
 }
 
 // The daily cleanup's part: start clocks, then delete litters past their site's
-// days (today 30), except a litter whose puppy has an open placement in the
-// family portal. Returns the ids of the photos removed with them, so their files
-// go tonight.
+// days (today 30). A puppy placed with a family keeps its portal page from the
+// copy deleteLitter makes (portal/pups.js), so its litter goes too. Returns the
+// ids of the photos removed with them, so their files go tonight (all but the
+// ones a family keeps).
 export async function expireLitters(env, now = new Date(), limit = 50) {
   await env.DB.batch(litterClockStatements(env, null, now.toISOString()));
   // The shortest any site keeps them: only litters past that can be due.
@@ -130,7 +134,6 @@ export async function expireLitters(env, now = new Date(), limit = 50) {
   const cutoff = new Date(now.getTime() - fewest * DAY).toISOString();
   const { results } = await env.DB.prepare(`SELECT l.id, l.site_id, l.left_site_at FROM litters l JOIN sites s ON s.id = l.site_id
     WHERE l.left_site_at IS NOT NULL AND l.left_site_at < ? AND l.kept_at IS NULL AND s.status != 'closed'
-      AND NOT EXISTS (SELECT 1 FROM portal_placements pp JOIN puppies p ON p.id = pp.puppy_id WHERE p.litter_id = l.id AND pp.status = 'open')
     ORDER BY l.left_site_at`).bind(cutoff).all();
   const due = results.filter((l) => Date.parse(l.left_site_at) < now.getTime() - (daysBySite.get(l.site_id) ?? LITTER_DAYS) * DAY).slice(0, limit);
   const photos = [];

@@ -13,6 +13,7 @@ import { loadSnapshot } from './publish.js';
 import { expireLitters } from './kennelos/clock.js';
 import { chunks, placeholders } from './lib/sql.js';
 import { runPortalDaily } from './portal/account.js';
+import { keptPhotoIds } from './portal/pups.js';
 
 export const INQUIRY_DAYS = 90;
 const DAY = 86400000;
@@ -40,7 +41,8 @@ export async function runCleanup(env, now = new Date()) {
 // Delete the R2 files of photos removed before `cutoff`, skipping any that a kept
 // snapshot still lists (the live site serves photos from its snapshot, and Undo
 // publish can go back to an older one). Those wait until the snapshots naming
-// them are replaced or pruned. Returns how many photos' files were deleted.
+// them are replaced or pruned. A photo a family keeps of their puppy
+// (portal/pups.js) is never deleted while they keep it. Returns how many photos' files were deleted.
 // With `ids`, just those photos, whenever they were removed.
 export async function purgeRemovedPhotos(env, cutoff, limit = PURGE_PER_RUN, ids = null) {
   const removed = [];
@@ -64,6 +66,7 @@ export async function purgeRemovedPhotos(env, cutoff, limit = PURGE_PER_RUN, ids
       const snap = await loadSnapshot(env, siteId, s.id);
       for (const id of Object.keys(snap?.photos ?? {})) inUse.add(id);
     }
+    for (const id of await keptPhotoIds(env, siteId)) inUse.add(id);
   }
 
   const gone = removed.filter((p) => !inUse.has(p.id));
