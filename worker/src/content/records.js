@@ -10,6 +10,7 @@ import {
 import { untagStatements } from '../photoTags.js';
 import { chunks, placeholders } from '../lib/sql.js';
 import { litterClockStatements } from '../kennelos/clock.js';
+import { keepStatements } from '../portal/pups.js';
 import { loadBuild } from './rules.js';
 import { customPages } from './blocks.js';
 import { canRename, checkAddress } from './addresses.js';
@@ -311,7 +312,8 @@ export async function makeAncestorRecord(env, siteId, ownerId, path) {
 
 export async function removeRecord(env, siteId, kind, id) {
   const k = kindOf(kind);
-  const s = untagStatements(env, siteId, kind, id);
+  // A puppy or litter going: a family with a portal keeps theirs (portal/pups.js).
+  const s = [...(kind === 'litters' || kind === 'puppies' ? keepStatements(env, siteId) : []), ...untagStatements(env, siteId, kind, id)];
   if (kind === 'dogs') {
     s.push(env.DB.prepare('UPDATE litters SET dam_id = NULL WHERE site_id = ? AND dam_id = ?').bind(siteId, id));
     s.push(env.DB.prepare('UPDATE litters SET sire_id = NULL WHERE site_id = ? AND sire_id = ?').bind(siteId, id));

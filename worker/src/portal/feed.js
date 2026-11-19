@@ -18,7 +18,11 @@
 //         microchip?, registration_no?,
 //         voided?: { reason: died | failed_health | backed_out | other, on },
 //         health?: [{ id, type: vaccine | deworming | vet_visit | other, given_on, name, notes? }],
-//         extras?: [{ id (the sale's extra charge), extra_id (the extra, as the website bundle sends it) }] }] }],
+//         extras?: [{ id (the sale's extra charge), extra_id (the extra, as the website bundle sends it) }],
+//         vet?: { clinic?, doctor?, phone?, address? } (the puppy's own vet: the one
+//           its family sees as its vet since birth. Never changed by `vet` below.
+//           Not sent: the placement keeps the one it has, or takes her site vet
+//           when it's made) }] }],
 //     vet?: { clinic?, doctor?, phone?, address? },
 //     removed?: [{ type: family | placement | health, id }] }
 //
@@ -43,7 +47,7 @@
 import { ApiError } from '../lib/http.js';
 import { hmacHex, sha256Hex, timingSafeEqual, randomHex } from '../lib/crypto.js';
 import { emailHash, normalizeEmail } from '../auth.js';
-import { encryptEmail, applyChanges, getSettings, PLACEMENT_FIELDS } from './store.js';
+import { encryptEmail, applyChanges, getSettings, PLACEMENT_FIELDS, PUP_VET_FIELDS, freezeSiteVetStatement, siteVet } from './store.js';
 import { siteBase } from '../kennelos/link.js';
 import { scheduleDelete } from './account.js';
 import { addExtra } from './stays.js';
@@ -71,7 +75,7 @@ const SHAPES = {
   placement: {
     id: F.id, puppy_id: F.ref, puppy_name: F.text(60, true), contract_signed_on: F.date(), go_home_on: F.date(), pickup_at: F.at,
     microchip: F.text(40), registration_no: F.text(40), voided: { object: 'voided' }, health: { list: 'health', max: MAX.health },
-    extras: { list: 'extra', max: 10 },
+    extras: { list: 'extra', max: 10 }, vet: { object: 'vet' },
   },
   extra: { id: F.id, extra_id: F.id },
   voided: { reason: F.enumOf(['died', 'failed_health', 'backed_out', 'other'], true), on: F.date(true) },
@@ -253,6 +257,8 @@ async function placementValues(env, siteId, bp) {
   return {
     puppy_id: pup?.id ?? null, puppy_name: bp.puppy_name, go_home_on: bp.go_home_on, pickup_booked_at: bp.pickup_at,
     microchip: bp.microchip, registration_no: bp.registration_no, contract_signed_on: bp.contract_signed_on,
+    // The puppy's own vet, only when KennelOS sends one: otherwise it stays as it is.
+    ...(bp.vet ? Object.fromEntries(Object.entries(VET_FIELDS).map(([k, col]) => [`pup_${col}`, bp.vet[k]])) : {}),
   };
 }
 
@@ -272,7 +278,8 @@ async function upsertPlacement(env, siteId, fam, bp, at, counts) {
     }
     if (p) {
       // Every field she filled in is hers; KennelOS fills the blanks.
-      const mineNow = JSON.stringify([...new Set([...edited(p), ...PLACEMENT_FIELDS.filter((k) => p[k] !== null && p[k] !== undefined)])]);
+      // (Not the puppy's vet: that was her site vet, copied in, unless she changed it.)
+      const mineNow = JSON.stringify([...new Set([...edited(p), ...PLACEMENT_FIELDS.filter((k) => !PUP_VET_FIELDS.includes(k) && p[k] !== null && p[k] !== undefined)])]);
       await env.DB.prepare('UPDATE portal_placements SET kennelos_id = ?, edited_fields = ? WHERE id = ?').bind(bp.id, mineNow, p.id).run();
       p = { ...p, kennelos_id: bp.id, edited_fields: mineNow };
       counts.placements_linked++;
@@ -280,6 +287,8 @@ async function upsertPlacement(env, siteId, fam, bp, at, counts) {
       if (bp.voided) return; // voided before it ever reached the portal
       if (v.puppy_id && await env.DB.prepare("SELECT 1 FROM portal_placements WHERE puppy_id = ? AND status = 'open'").bind(v.puppy_id).first()) { counts.puppy_conflicts++; v.puppy_id = null; }
       const id = crypto.randomUUID();
+      // No vet of its own from KennelOS: her site vet now is its vet.
+      if (!PUP_VET_FIELDS.some((k) => v[k])) Object.assign(v, siteVet(await getSettings(env, siteId)));
       const cols = { id, site_id: siteId, family_id: fam.id, ...v, source: 'kennelos', kennelos_id: bp.id, created_at: at, updated_at: at };
       await env.DB.batch([
         env.DB.prepare(`INSERT INTO portal_placements (${Object.keys(cols).join(', ')}) VALUES (${Object.keys(cols).map(() => '?').join(', ')})`).bind(...Object.values(cols)),
@@ -379,8 +388,11 @@ async function applyVet(env, siteId, vet, at, counts) {
   }
   const cols = Object.keys(fill);
   if (!cols.length) return;
-  await env.DB.prepare(`INSERT INTO portal_settings (site_id, ${cols.join(', ')}, updated_at) VALUES (?, ${cols.map(() => '?').join(', ')}, ?)
-    ON CONFLICT (site_id) DO UPDATE SET ${cols.map((c) => `${c} = excluded.${c}`).join(', ')}, updated_at = excluded.updated_at`).bind(siteId, ...Object.values(fill), at).run();
+  await env.DB.batch([
+    freezeSiteVetStatement(env, siteId),
+    env.DB.prepare(`INSERT INTO portal_settings (site_id, ${cols.join(', ')}, updated_at) VALUES (?, ${cols.map(() => '?').join(', ')}, ?)
+      ON CONFLICT (site_id) DO UPDATE SET ${cols.map((c) => `${c} = excluded.${c}`).join(', ')}, updated_at = excluded.updated_at`).bind(siteId, ...Object.values(fill), at),
+  ]);
   counts.vet_filled += cols.length;
 }
 
@@ -478,12 +490,13 @@ export async function applyFeed(env, device, body) {
     families_new: 0, families_linked: 0, families_updated: 0, emails_added: 0, email_conflicts: 0, placements_new: 0, placements_linked: 0,
     placements_updated: 0, placements_closed: 0, families_leaving: 0, extras_new: 0, puppy_conflicts: 0, health_new: 0, health_updated: 0, suggestions: 0, vet_filled: 0, gone: 0, skipped_deleted: 0,
   };
+  // Her vet first: a placement made in this feed without its own vet takes it.
+  await applyVet(env, site.id, feed.vet, at, counts);
   for (const bf of feed.families) {
     const fam = await upsertFamily(env, site.id, bf, at, counts);
     if (!fam) continue;
     for (const bp of bf.placements) await upsertPlacement(env, site.id, fam, bp, at, counts);
   }
-  await applyVet(env, site.id, feed.vet, at, counts);
   for (const r of feed.removed) await markGone(env, site.id, r, at, counts);
   await env.DB.prepare('UPDATE sites SET portal_feed_at = ? WHERE id = ?').bind(at, site.id).run();
   return {
@@ -527,7 +540,7 @@ export async function takeSuggestion(env, siteId, tbl, rowId, field) {
       ]);
     }
   } else if (tbl === 'portal_settings' && Object.values(VET_FIELDS).includes(field)) {
-    await env.DB.prepare(`UPDATE portal_settings SET ${field} = ?, updated_at = ? WHERE site_id = ?`).bind(row.value, at, siteId).run();
+    await env.DB.batch([freezeSiteVetStatement(env, siteId), env.DB.prepare(`UPDATE portal_settings SET ${field} = ?, updated_at = ? WHERE site_id = ?`).bind(row.value, at, siteId)]);
   }
   await unsuggest(env, tbl, rowId, field);
 }

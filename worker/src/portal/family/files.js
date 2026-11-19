@@ -1,14 +1,15 @@
 // Files and photos on the family portal: a photo of their puppy, a file the breeder
 // shared, and a program's link (counted, then sent on). Routed by portal/family.js;
 // each checks the family may see it.
-import { puppyPhotos, active } from './parts.js';
+import { active } from './parts.js';
+import { photosOf } from '../pups.js';
 import { getFile, fileResponse, placementFor } from '../store.js';
 import { noteClick } from '../steps.js';
 
 export async function servePhoto(env, site, fam, id, thumb) {
-  const { results: ps } = await env.DB.prepare('SELECT puppy_id FROM portal_placements WHERE site_id = ? AND family_id = ?').bind(site.id, fam.familyId).all();
+  const { results: ps } = await env.DB.prepare('SELECT id, puppy_id FROM portal_placements WHERE site_id = ? AND family_id = ?').bind(site.id, fam.familyId).all();
   let mine = false;
-  for (const p of ps) if (!mine) mine = (await puppyPhotos(env, site.id, p.puppy_id)).some((ph) => ph.id === id);
+  for (const p of ps) if (!mine) mine = (await photosOf(env, site.id, p)).some((ph) => ph.id === id);
   const row = mine ? await env.DB.prepare('SELECT r2_key, thumb_key, type FROM photos WHERE id = ? AND site_id = ?').bind(id, site.id).first() : null;
   const obj = row && await env.FILES.get(thumb && row.thumb_key ? row.thumb_key : row.r2_key);
   if (!obj) return new Response('Not found', { status: 404, headers: { 'cache-control': 'no-store' } });

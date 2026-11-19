@@ -4,7 +4,7 @@ The one place for progress. Keep it short: one line per item, a link to where th
 is. When a step is built, change its line here and add the detail to the build log
 ([`log/BUILD_LOG.md`](log/BUILD_LOG.md)); the plans describe intent, not progress.
 
-Last updated 2026-11-18. Released on `main`: Site Manager (`APP_VERSION`) 18, site
+Last updated 2026-11-19. Released on `main`: Site Manager (`APP_VERSION`) 18, site
 template (`ASSET_VERSION`) 27 (flip cards that grow to fit, 2026-11-17).
 
 ## Platform
@@ -74,6 +74,10 @@ anyone outside the family.
 - Open your status page, signed in (no code, 90 days on KennelOS), and Home's band in the
   owner's wording (payments, additional services, pickups): built 2026-11-18, with KennelOS
   cloud migration 0029. See their portal fixed for the owner the same day. Build log, 2026-11-18.
+- A family's puppy kept after its litter leaves the website, and each puppy's own vet:
+  built 2026-11-19, **migration 0039** ([`plans/portal-kept-pups.md`](plans/portal-kept-pups.md)).
+  Closed litters now leave on time even with families. KennelOS's half (a vet on each
+  placement) is in the plan's last section. No version bump. Build log, 2026-11-19.
 
 ## Finished feature plans
 

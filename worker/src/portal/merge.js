@@ -93,6 +93,12 @@ export async function mergePlacement(env, siteId, familyId, fromId, intoId) {
     env.DB.prepare('DELETE FROM portal_placements_programs WHERE placement_id = ?').bind(H),
     env.DB.prepare("UPDATE portal_history SET row_id = ? WHERE site_id = ? AND tbl = 'portal_placements' AND row_id = ?").bind(K, siteId, H),
     env.DB.prepare("DELETE FROM portal_suggestions WHERE tbl = 'portal_placements' AND row_id = ?").bind(H),
+    // The kept puppy (portal/pups.js) follows the puppy: hers if she chose it, else KennelOS's.
+    ...('puppy_id' in set ? [env.DB.prepare('DELETE FROM portal_pups WHERE placement_id = ? AND EXISTS (SELECT 1 FROM portal_pups x WHERE x.placement_id = ?)').bind(K, H)] : []),
+    env.DB.prepare('UPDATE OR IGNORE portal_pups SET placement_id = ? WHERE placement_id = ?').bind(K, H),
+    env.DB.prepare('DELETE FROM portal_pups WHERE placement_id = ?').bind(H),
+    env.DB.prepare('UPDATE OR IGNORE portal_pup_photos SET placement_id = ? WHERE placement_id = ?').bind(K, H),
+    env.DB.prepare('DELETE FROM portal_pup_photos WHERE placement_id = ?').bind(H),
     hist(env, siteId, 'portal_placements', K, 'merged', null, h.call_name || h.puppy_name, at),
     env.DB.prepare('DELETE FROM portal_placements WHERE id = ?').bind(H),
   ]);

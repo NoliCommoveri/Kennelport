@@ -26,6 +26,7 @@ import {
 import { PROVIDERS } from '../embeds.js';
 import { canRename, typedAddress, freeAddress } from './addresses.js';
 import { coOwnedRules, outsideRules, stageRules, unlinkPartnerStatements } from './records.js';
+import { keepStatements } from '../portal/pups.js';
 
 const SECTIONS = ['site', 'pages', 'home', 'blocks', 'dogs', 'litters', 'reviews', 'steps', 'expanders', 'extras', 'products', 'partners', 'payment', 'questions', 'albums', 'embeds'];
 const MAX_ITEMS = 200;
@@ -278,7 +279,8 @@ export async function importContent(env, siteId, doc) {
     existingPartnerNames: new Set(partnerRows.map((x) => x.name)),
   });
   const t = now();
-  const s = [];
+  // Litters replaced may drop puppies: a family with a portal keeps theirs first (portal/pups.js).
+  const s = clean.litters ? keepStatements(env, siteId, t) : [];
   const dogId = (slug) => (slug ? db.prepare('SELECT id FROM dogs WHERE site_id = ? AND slug = ?').bind(siteId, slug) : null);
 
   if (clean.site) {

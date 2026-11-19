@@ -12,8 +12,9 @@
 //   emails the family. Today lists the stays whose update is due.
 // - The stay's tasks need no copy: birth-dated tasks before go-home are already hers
 //   (steps.js), and pickup-dated ones move with the later go-home.
-import { PortalError, getPlacement, applyChanges, puppyFor, familyEmails, sniff } from './store.js';
+import { PortalError, getPlacement, applyChanges, familyEmails, sniff } from './store.js';
 import { localParts, addDays } from './vet.js';
+import { pupOf } from './pups.js';
 import { sendMail, MailError } from '../mail.js';
 import { portalBase } from './auth.js';
 
@@ -90,7 +91,7 @@ export async function stayFor(env, siteId, placementId) {
 
 // A stay sets go-home to birth + its weeks, and starts at 8 weeks old.
 async function startStay(env, siteId, p, pe) {
-  const pup = await puppyFor(env, siteId, p.puppy_id);
+  const pup = await pupOf(env, siteId, p);
   if (!pup?.born_on) return;
   const starts = pe.starts_on ?? addDays(pup.born_on, STAY_STARTS_DAYS);
   if (!pe.starts_on) await env.DB.prepare('UPDATE portal_placement_extras SET starts_on = ? WHERE id = ?').bind(starts, pe.id).run();

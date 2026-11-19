@@ -32,6 +32,7 @@ import { makeLinkCode, showCode, devices, stopDevice, unlinkSite, waitingForDevi
 import { OWNED, OWNED_PRICES, ownedLineage } from '../kennelos/bundle.js';
 import { pendingMatches, matchChanges, confirmMatch, declineMatch, MatchError } from '../kennelos/match.js';
 import { leavingLitters, keepLitter, deleteLitter } from '../kennelos/clock.js';
+import { keepStatements } from '../portal/pups.js';
 import { NOT_FOR_DEMO } from '../lib/demo.js';
 import { litterDaysFor, loadBuild } from '../content/rules.js';
 import { cleanTags, shownTags } from '../content/tags.js';
@@ -697,7 +698,8 @@ export function createScreens({ env, request, url, site, user, page, say = defau
         await env.DB.batch([env.DB.prepare('UPDATE photos SET alt = ? WHERE id = ? AND site_id = ?').bind(alt, photo.id, site.id), env.DB.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(t, site.id)]);
         return back('saved', of);
       }
-      await env.DB.batch([env.DB.prepare('UPDATE photos SET removed_at = ? WHERE id = ? AND site_id = ?').bind(t, photo.id, site.id), env.DB.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(t, site.id)]);
+      // A family with a portal keeps a photo of their puppy she removes from the website (portal/pups.js).
+      await env.DB.batch([...keepStatements(env, site.id, t), env.DB.prepare('UPDATE photos SET removed_at = ? WHERE id = ? AND site_id = ?').bind(t, photo.id, site.id), env.DB.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(t, site.id)]);
       return back('removed', of);
     }
     // The pinned bar's actions on the photos she chose (decision 20, step 2).
@@ -744,7 +746,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
             <input type="hidden" name="tab" value="${tab}"><input type="hidden" name="confirm" value="1">
             <div class="row"><button class="primary danger" name="act" value="remove">${esc(say('pm.remove_anyway'))}</button><a class="link" href="${base}/photos${tab === 'profile' ? '?tab=profile' : ''}">${esc(say('pm.keep'))}</a></div></form>` };
         }
-        await env.DB.batch([...ids.map((id) => env.DB.prepare('UPDATE photos SET removed_at = ? WHERE id = ? AND site_id = ?').bind(t, id, site.id)), touch]);
+        await env.DB.batch([...keepStatements(env, site.id, t), ...ids.map((id) => env.DB.prepare('UPDATE photos SET removed_at = ? WHERE id = ? AND site_id = ?').bind(t, id, site.id)), touch]);
         return back('removed');
       }
       return back('pick_none');

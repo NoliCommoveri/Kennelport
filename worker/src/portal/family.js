@@ -17,7 +17,7 @@ import {
   startFamilySignIn, verifyFamilySignIn, acceptInvite, currentFamily, signOutFamily, familyCookie, startSession, AuthError,
 } from './auth.js';
 import {
-  getSettings, placementFor, puppyFor, healthRecords, recordVetBooking, saveFile, getFile, familyEmails, PortalError, RECORD_TYPES, MAX_FILE_BYTES,
+  getSettings, placementFor, healthRecords, vetOf, recordVetBooking, saveFile, getFile, familyEmails, PortalError, RECORD_TYPES, MAX_FILE_BYTES,
   DEFAULT_DISCLOSURE, dialable,
 } from './store.js';
 import { stage, vetDeadline, formatAt, formatDay, timeLeft, localParts, addDays, VET_RULES } from './vet.js';
@@ -30,7 +30,8 @@ import { stayFor, mediaFor, mediaResponse } from './stays.js';
 import { messagesOpen, thread, unreadFrom, markRead, familyWrites, isLoss, eraseFamily, MAX_MESSAGE } from './account.js';
 import { TYPE_ICON, SPRITE, ic } from './family/icons.js';
 import { skillsList, updateCard, stayContext } from './family/stay.js';
-import { active, puppyPhotos } from './family/parts.js';
+import { active } from './family/parts.js';
+import { pupOf, photosOf } from './pups.js';
 import { servePhoto, serveFile, goToProgram } from './family/files.js';
 import { redeemViewLink, currentView, viewCookie } from './view.js';
 import { sayer, everyWording, siteWording } from '../manage/wording.js';
@@ -230,8 +231,9 @@ function nextBand(tasks, name, kennel) {
 async function loadContext(env, site, fam) {
   const p = await placementFor(env, site.id, fam.familyId);
   const s = await getSettings(env, site.id);
-  const pup = p ? await puppyFor(env, site.id, p.puppy_id) : null;
-  const photos = p ? await puppyPhotos(env, site.id, p.puppy_id) : [];
+  // The website's puppy while it's there, then the copy kept for them (portal/pups.js).
+  const pup = await pupOf(env, site.id, p);
+  const photos = await photosOf(env, site.id, p);
   return { p, s, pup, photos, main: photos[0] ? `/family/photo/${photos[0].id}` : null };
 }
 
@@ -241,23 +243,25 @@ function noPlacement(site, fam) {
 }
 
 // Her and her vet's contacts for the family (her portal settings), as one-tap
-// buttons: call or text her, email her, call the vet who knows the puppy.
-function contactsCard(site, s, name, { lead = false } = {}) {
+// buttons: call or text her, email her, call the vet who knows the puppy: the
+// puppy's own vet on its placement, else her site vet (store.vetOf).
+function contactsCard(site, s, p, name, { lead = false } = {}) {
   const kennel = site.kennel_name || site.subdomain;
   const phone = s.her_phone || site.contact_phone;
   const email = s.her_email || site.contact_email;
-  const vet = s.vet_clinic || s.vet_doctor || s.vet_phone;
+  const v = vetOf(p, s);
+  const vet = v.clinic || v.doctor || v.phone;
   if (!phone && !email && !vet) return '';
   const her = phone || email ? `<div class="contact"><p class="eyebrow">${esc(kennel)}</p><div class="row">
       ${phone ? `<a class="btn line" href="tel:${esc(dialable(phone))}">${ic('phone')} Call</a><a class="btn line" href="sms:${esc(dialable(phone))}">${ic('message')} Text</a>` : ''}
       ${email ? `<a class="btn line" href="mailto:${esc(email)}?subject=${encodeURIComponent(`Question about ${name}`)}">${ic('mail')} Email</a>` : ''}</div>
       ${phone ? `<p class="small muted">${esc(phone)}</p>` : ''}</div>` : '';
   const vetBlock = vet ? `<div class="contact"><p class="eyebrow">${esc(name)}'s vet since birth</p>
-      <p><b>${esc([s.vet_clinic, s.vet_doctor].filter(Boolean).join(' · '))}</b></p>
-      ${s.vet_note ? `<p class="small">${esc(s.vet_note)}</p>` : ''}
-      <div class="row">${s.vet_phone ? `<a class="btn line" href="tel:${esc(dialable(s.vet_phone))}">${ic('phone')} Call the vet</a>` : ''}
-      ${s.vet_address ? `<a class="go" href="https://www.google.com/maps/search/?api=1&amp;query=${encodeURIComponent(s.vet_address)}">${ic('pin')} ${esc(s.vet_address)} ${ic('arrow')}</a>` : ''}</div>
-      ${s.vet_phone ? `<p class="small muted">${esc(s.vet_phone)}</p>` : ''}</div>` : '';
+      <p><b>${esc([v.clinic, v.doctor].filter(Boolean).join(' · '))}</b></p>
+      ${v.note ? `<p class="small">${esc(v.note)}</p>` : ''}
+      <div class="row">${v.phone ? `<a class="btn line" href="tel:${esc(dialable(v.phone))}">${ic('phone')} Call the vet</a>` : ''}
+      ${v.address ? `<a class="go" href="https://www.google.com/maps/search/?api=1&amp;query=${encodeURIComponent(v.address)}">${ic('pin')} ${esc(v.address)} ${ic('arrow')}</a>` : ''}</div>
+      ${v.phone ? `<p class="small muted">${esc(v.phone)}</p>` : ''}</div>` : '';
   return `<section class="card contacts" id="contacts">${lead ? `<p class="eyebrow">The first weeks at home</p><h2>Questions about ${esc(name)}? One tap</h2>` : '<h2>Contacts</h2>'}${her}${vetBlock}</section>`;
 }
 
@@ -403,7 +407,7 @@ async function homePage(env, site, fam, now = new Date()) {
     ${calendar}
   </section>
   ${band}
-  ${contactsLead(p, s, now) ? contactsCard(site, s, name, { lead: true }) : ''}
+  ${contactsLead(p, s, now) ? contactsCard(site, s, p, name, { lead: true }) : ''}
   ${checklist}
   ${st === 'before' && statusUrl && live ? statusBand(p, s, name, kennel) : ''}
   ${live ? foodBand(s, name, food) : ''}
@@ -497,7 +501,7 @@ async function recordsPage(env, site, fam) {
     ${contract ? `<li><a href="/family/file/${esc(contract.id)}">${ic('file')} Your contract</a></li>` : '<li class="muted">Your contract will be here once it\'s added.</li>'}
     ${p.proof_file_id ? `<li><a href="/family/file/${esc(p.proof_file_id)}">${ic('stethoscope')} Vet visit record</a></li>` : ''}
   </ul></section>
-  ${contactsCard(site, s, name)}
+  ${contactsCard(site, s, p, name)}
   <section class="card" id="photos"><h2>Photos of ${esc(name)}</h2>
     ${photos.length ? `<ul class="gallery">${photos.map((ph) => `<li><a href="/family/photo/${esc(ph.id)}"><img src="/family/photo/${esc(ph.id)}?s=t" alt="${esc(ph.alt ?? '')}" loading="lazy"></a></li>`).join('')}</ul>` : '<p class="muted">Photos will appear here.</p>'}</section>`;
   return frame(site, 'Records', body, { fam, tab: '/family/records' });
@@ -521,10 +525,10 @@ async function stayPage(env, site, fam, now = new Date()) {
 
 // Every puppy of theirs, with her photos (a lost puppy's stay, under its name).
 async function photosPage(env, site, fam) {
-  const { results: ps } = await env.DB.prepare('SELECT puppy_id, puppy_name, call_name FROM portal_placements WHERE site_id = ? AND family_id = ? ORDER BY created_at DESC').bind(site.id, fam.familyId).all();
+  const { results: ps } = await env.DB.prepare('SELECT id, puppy_id, puppy_name, call_name FROM portal_placements WHERE site_id = ? AND family_id = ? ORDER BY created_at DESC').bind(site.id, fam.familyId).all();
   const parts = [];
   for (const p of ps) {
-    const photos = await puppyPhotos(env, site.id, p.puppy_id);
+    const photos = await photosOf(env, site.id, p);
     parts.push(`<section class="card"><h2>Photos of ${esc(pupName(p))}</h2>${photos.length ? `<ul class="gallery">${photos.map((ph) => `<li><a href="/family/photo/${esc(ph.id)}"><img src="/family/photo/${esc(ph.id)}?s=t" alt="${esc(ph.alt ?? '')}" loading="lazy"></a></li>`).join('')}</ul>` : '<p class="muted">No photos yet.</p>'}</section>`);
   }
   return frame(site, 'Photos', parts.join('') || '<section class="card"><p class="muted">Photos will appear here.</p></section>', { fam, tab: '/family/photos' });

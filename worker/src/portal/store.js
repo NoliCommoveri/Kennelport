@@ -63,10 +63,16 @@ export async function saveSettings(env, siteId, input) {
     food_name: clean(input.food_name, 160), food_bag: clean(input.food_bag, 80), food_how: clean(input.food_how, 160), food_note: clean(input.food_note, 300),
   };
   const cols = Object.keys(v);
-  await env.DB.prepare(`INSERT INTO portal_settings (site_id, ${cols.join(', ')}, updated_at) VALUES (?, ${cols.map(() => '?').join(', ')}, ?)
-    ON CONFLICT (site_id) DO UPDATE SET ${cols.map((c) => `${c} = excluded.${c}`).join(', ')}, updated_at = excluded.updated_at`)
-    .bind(siteId, ...Object.values(v), now()).run();
+  await env.DB.batch([
+    freezeSiteVetStatement(env, siteId),
+    env.DB.prepare(`INSERT INTO portal_settings (site_id, ${cols.join(', ')}, updated_at) VALUES (?, ${cols.map(() => '?').join(', ')}, ?)
+      ON CONFLICT (site_id) DO UPDATE SET ${cols.map((c) => `${c} = excluded.${c}`).join(', ')}, updated_at = excluded.updated_at`)
+      .bind(siteId, ...Object.values(v), now()),
+  ]);
 }
+
+// Her site vet, as a placement's own vet columns (blank ones left out).
+export const siteVet = (s) => Object.fromEntries([['pup_vet_clinic', s.vet_clinic], ['pup_vet_doctor', s.vet_doctor], ['pup_vet_phone', s.vet_phone], ['pup_vet_address', s.vet_address]].filter(([, x]) => x));
 
 export async function setPortalOn(env, siteId, on) {
   await env.DB.prepare('UPDATE sites SET portal_on = ? WHERE id = ?').bind(on ? 1 : 0, siteId).run();
@@ -195,10 +201,11 @@ export async function listFamilies(env, siteId) {
   const { results } = await env.DB.prepare(`SELECT f.id, f.name, f.invited_at, f.first_signed_in_at, f.last_activity_at, f.kennelos_id,
       p.id AS placement_id, p.puppy_name, p.call_name, p.go_home_on, p.pickup_booked_at, p.picked_up_at, p.pickup_state, p.vet_deadline_at,
       p.vet_booked_at, p.proof_uploaded_at, p.proof_accepted_at, p.status, p.life_status, p.vet_booked_for, p.kennelos_id AS placement_kennelos_id,
-      pu.photo_id, pu.sex, l.name AS litter_name,
+      COALESCE(pu.photo_id, k.photo_id) AS photo_id, COALESCE(pu.sex, k.sex) AS sex, COALESCE(l.name, k.litter_name) AS litter_name,
       (SELECT GROUP_CONCAT(x.name, '|') FROM portal_placement_extras x WHERE x.placement_id = p.id AND x.confirmed_at IS NOT NULL) AS extras
     FROM portal_families f LEFT JOIN portal_placements p ON p.family_id = f.id AND p.status = 'open'
       LEFT JOIN puppies pu ON pu.id = p.puppy_id LEFT JOIN litters l ON l.id = pu.litter_id
+      LEFT JOIN portal_pups k ON k.placement_id = p.id AND pu.id IS NULL
     WHERE f.site_id = ? AND f.status = 'active' AND f.deleted_at IS NULL ORDER BY COALESCE(p.go_home_on, '9999'), f.name`).bind(siteId).all();
   return results;
 }
@@ -218,6 +225,9 @@ export async function deleteFamily(env, siteId, familyId) {
     env.DB.prepare(`DELETE FROM portal_placements_programs WHERE placement_id IN (${inPlacements})`).bind(familyId),
     env.DB.prepare(`DELETE FROM portal_checklist_items WHERE placement_id IN (${inPlacements})`).bind(familyId),
     env.DB.prepare(`DELETE FROM portal_timeline_tasks WHERE placement_id IN (${inPlacements})`).bind(familyId),
+    // Their kept puppy (portal/pups.js); its photos' files go with the next cleanup if the website removed them.
+    env.DB.prepare(`DELETE FROM portal_pup_photos WHERE placement_id IN (${inPlacements})`).bind(familyId),
+    env.DB.prepare(`DELETE FROM portal_pups WHERE placement_id IN (${inPlacements})`).bind(familyId),
     env.DB.prepare(`DELETE FROM portal_history WHERE site_id = ? AND tbl = 'portal_placements' AND row_id IN (${inPlacements})`).bind(siteId, familyId),
     env.DB.prepare("DELETE FROM portal_history WHERE site_id = ? AND tbl = 'portal_families' AND row_id = ?").bind(siteId, familyId),
     env.DB.prepare('UPDATE portal_email_log SET family_id = NULL WHERE family_id = ?').bind(familyId),
@@ -276,7 +286,29 @@ export async function placeablePuppies(env, siteId) {
 }
 
 // Her fields on a placement, as she types them. Times are local (her zone).
-export const PLACEMENT_FIELDS = ['puppy_id', 'call_name', 'microchip', 'registration_no', 'go_home_on', 'pickup_booked_at'];
+// The puppy's own vet (pup_vet_*) is the one its family sees ("vet since birth"):
+// from KennelOS, else her site vet when the placement is made; she can correct it.
+export const PUP_VET_FIELDS = ['pup_vet_clinic', 'pup_vet_doctor', 'pup_vet_phone', 'pup_vet_address'];
+export const PLACEMENT_FIELDS = ['puppy_id', 'call_name', 'microchip', 'registration_no', 'go_home_on', 'pickup_booked_at', ...PUP_VET_FIELDS];
+
+// Her site vet onto every placement that has no vet of its own yet, before her site
+// vet changes: a family's "vet since birth" never becomes one their puppy never saw.
+export function freezeSiteVetStatement(env, siteId) {
+  const col = (c) => `(SELECT ${c} FROM portal_settings s WHERE s.site_id = portal_placements.site_id)`;
+  return env.DB.prepare(`UPDATE portal_placements SET pup_vet_clinic = ${col('vet_clinic')}, pup_vet_doctor = ${col('vet_doctor')}, pup_vet_phone = ${col('vet_phone')}, pup_vet_address = ${col('vet_address')}
+    WHERE site_id = ? AND pup_vet_clinic IS NULL AND pup_vet_doctor IS NULL AND pup_vet_phone IS NULL AND pup_vet_address IS NULL`).bind(siteId);
+}
+
+// The vet a placement's family sees: its own, else her site vet. Her note about
+// the vet shows with her site vet only.
+export function vetOf(p, s) {
+  const own = p && PUP_VET_FIELDS.some((k) => p[k]);
+  if (own) {
+    const same = p.pup_vet_clinic === s.vet_clinic && p.pup_vet_phone === s.vet_phone;
+    return { clinic: p.pup_vet_clinic, doctor: p.pup_vet_doctor, phone: p.pup_vet_phone, address: p.pup_vet_address, note: same ? s.vet_note : null };
+  }
+  return { clinic: s.vet_clinic, doctor: s.vet_doctor, phone: s.vet_phone, address: s.vet_address, note: s.vet_note };
+}
 
 async function placementValues(env, siteId, input, tz) {
   const out = {};
@@ -291,6 +323,10 @@ async function placementValues(env, siteId, input, tz) {
   if ('call_name' in input) out.call_name = clean(input.call_name, 60);
   if ('microchip' in input) out.microchip = clean(input.microchip, 40);
   if ('registration_no' in input) out.registration_no = clean(input.registration_no, 40);
+  if ('pup_vet_clinic' in input) out.pup_vet_clinic = clean(input.pup_vet_clinic, 120);
+  if ('pup_vet_doctor' in input) out.pup_vet_doctor = clean(input.pup_vet_doctor, 120);
+  if ('pup_vet_phone' in input) out.pup_vet_phone = cleanPhone(input.pup_vet_phone, 'The vet\'s phone');
+  if ('pup_vet_address' in input) out.pup_vet_address = clean(input.pup_vet_address, 200);
   if ('go_home_on' in input) {
     const d = clean(input.go_home_on, 10);
     if (d && !DATE_RE.test(d)) throw new PortalError('Go-home is a date.');
@@ -314,6 +350,8 @@ export async function createPlacement(env, siteId, familyId, input) {
   if (open) throw new PortalError('That puppy already has a family here.');
   const id = crypto.randomUUID();
   const t = now();
+  // Her vet now is this puppy's vet, unless she gave one.
+  if (!PUP_VET_FIELDS.some((k) => v[k])) Object.assign(v, siteVet(settings));
   const cols = { id, site_id: siteId, family_id: familyId, ...v, created_at: t, updated_at: t };
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO portal_placements (${Object.keys(cols).join(', ')}) VALUES (${Object.keys(cols).map(() => '?').join(', ')})`).bind(...Object.values(cols)),
