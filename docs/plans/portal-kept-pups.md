@@ -34,7 +34,8 @@ vets. Built 2026-11-19, migration 0039. KennelOS's half: the last section.
   while a family keeps it (`cleanup.js`). The family keeps a photo she removes by hand
   too (the owner, 2026-11-19).
 - **Her placement form:** once the puppy's litter has gone, the puppy's choice reads
-  "{name} · {litter} (kept for this family)" and saving leaves the puppy as it is.
+  "{name} · {litter}", like any other, and saving leaves the puppy as it is. Nothing on
+  her screens or the family's says where it's kept or that anything moved.
 
 ## Each puppy's vet
 

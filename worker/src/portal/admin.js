@@ -196,7 +196,7 @@ export const KEPT_PUPPY = 'kept';
 
 function placementFields(p, puppies, s, { kept = null, say = defaultSay } = {}) {
   const booked = p?.pickup_booked_at ? localParts(p.pickup_booked_at, s.time_zone) : null;
-  return `<label>Puppy<select name="puppy_id" required>${puppyOptions(puppies, p?.puppy_id, kept, say)}</select><span class="hint">${esc(kept ? say('keptpups.hint') : 'From your site\'s litters. Add the litter and puppy there first.')}</span></label>
+  return `<label>Puppy<select name="puppy_id" required>${puppyOptions(puppies, p?.puppy_id, kept, say)}</select><span class="hint">From your site's litters. Add the litter and puppy there first.</span></label>
     <label>The name they've given ${p ? esc(p.puppy_name) : 'the puppy'}<input name="call_name" value="${esc(p?.call_name ?? '')}" maxlength="60"><span class="hint">Used on their pages and in emails, if they've chosen one.</span></label>
     <div class="row"><label>Planned go-home<input type="date" name="go_home_on" value="${esc(p?.go_home_on ?? '')}"><span class="hint">The day, before a pickup time is booked.</span></label></div>
     <div class="row"><label>Pickup booked for<input type="date" name="pickup_day" value="${esc(booked?.ymd ?? '')}"></label><label>at<input type="time" name="pickup_time" value="${esc(booked?.hm ?? '')}"><span class="hint">${esc(ZONE_NAMES[s.time_zone] ?? s.time_zone)} time. If it passes without you marking pickup, the vet clock starts from it.</span></label></div>`;

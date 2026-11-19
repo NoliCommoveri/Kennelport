@@ -1991,4 +1991,8 @@ choice at upload).
 - Tests: `portal-kept-pups.test.js` (new), `portal.test.js` (the closing-the-site test, which
   had expected a placed litter never to expire). 486 pass. No version bump (no file under
   `worker/public/` changed).
+- Same day, the owner: no copy may describe how it works underneath. The puppy's choice
+  reads "{name} · {litter}" like any other (was "… (kept for this family)"), the hint
+  under it is the usual one, and the vet hint is "The vet the family sees as {name}'s
+  vet." New rule in `CLAUDE.md`, "Never describe the plumbing in copy".
 

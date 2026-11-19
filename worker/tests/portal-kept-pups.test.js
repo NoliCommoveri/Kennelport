@@ -108,7 +108,7 @@ test('the litter goes from the website and her lists; the family\'s page stays w
 
   // Her family screen still names the puppy, and saving its details keeps it.
   const screen = await (await her(`/portal/f/${id}`)).text();
-  assert.match(screen, /Opal · Winter litter \(kept for this family\)/);
+  assert.match(screen, /<option value="kept" selected>Opal · Winter litter<\/option>/);
   assert.equal((await her(`/portal/f/${id}/placement`, { puppy_id: 'kept', call_name: 'Opal Mae', microchip: '985000000000009' })).status, 303);
   assert.equal(row('SELECT call_name FROM portal_placements').call_name, 'Opal Mae');
   assert.match(await (await her('/portal')).text(), /Winter litter/);
