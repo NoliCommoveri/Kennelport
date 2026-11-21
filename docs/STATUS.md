@@ -62,7 +62,11 @@ anyone outside the family.
 - Still open from "Before building" (plan section 14): her programs list, vet-visit
   wording, guarantee periods, handbook and food details, baseline sign-up rates,
   application-to-buyer mapping, photo and video package details, R2 and HEVC checks.
-- Phases 2 and 3: not started.
+- Phase 2 started 2026-11-21 (before phase 1's gate, the owner's call): **the handbook built**,
+  migration 0040 (`portal_chapters`). Her chapters on the Portal tab; families read it as a flipbook
+  with search; chapters she writes with Claude upload as a file, styled, with her photos; Read next and a quick link, shown only once a chapter has words. `PORTAL_VERSION` 4 on this
+  branch. Next in phase 2: to choose. Build log, 2026-11-21.
+- Phase 3: not started.
 - The same family twice, and deleted families (2026-11-13): the feed links a family's only
   typed placement; **Merge** for a typed placement or family into KennelOS's; **Delete
   now**; **Let KennelOS send them again** for a family deleted for good. Migration 0032

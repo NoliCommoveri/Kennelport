@@ -107,13 +107,17 @@ read that before the rest. Update this map when you add, move or split a file.
   `family/`: `icons.js`, `stay.js` (the extended stay's pieces), `files.js` (photos, files,
   program links), `parts.js`.
 - `admin.js` her side (Puppy families, each family's screen). Split out into `admin/`:
-  `templates.js` (checklist and timeline), `settings.js`, `today.js` (the Families and
+  `templates.js` (checklist and timeline), `handbook.js` (the handbook's chapters), `settings.js`, `today.js` (the Families and
   Portal tabs' lists, Today's portal part), `parts.js`.
 - `store.js` the records; `steps.js` checklist, timeline, programs; `stays.js` extended
   stays; `vet.js` the 3-day vet visit; `reminders.js` the hourly job; `messages.js` emails;
   `bounces.js` Resend's delivery results; `account.js` the account over time (loss, delete,
   Delete now, giving a deleted family back); `merge.js` the same family twice (merging a
   typed placement or family into KennelOS's).
+- `handbook.js` the puppy handbook: her chapters, their words' format (paragraphs, lists,
+  `[link: Program]`, `---` pages, her styles and photos), its search, and chapters from a
+  file (`chaptersFrom`, `htmlToText`); her screen is `admin/handbook.js`; the family's flipbook
+  and Read next are in `family.js`, turned by `public/_kp/f/handbook.js`.
 - `pups.js` a family's puppy kept after its litter leaves the website (`plans/portal-kept-pups.md`):
   the copy and its photos, made by every delete of a puppy, litter or photo; `pupOf` and
   `photosOf` read the website's puppy, else the copy.

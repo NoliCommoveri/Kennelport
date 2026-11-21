@@ -147,6 +147,7 @@ that record's id in KennelOS, and is how the link finds it again. Keep both.
 | Table | One row is | Refers to |
 |---|---|---|
 | `portal_settings` | Her portal settings: time zone, vet rule, contacts, food | |
+| `portal_chapters` | Her puppy handbook's chapters: title, words, on or off, order (migration 0040) | |
 | `portal_families` | A family | |
 | `portal_emails` | One of a family's addresses: `email_hash`, `email_enc` (encrypted), `_email` (readable, backup only) | `family_id` |
 | `portal_placements` | One puppy going to one family: pickup, the vet clock, proof, contract, the puppy's own vet (`pup_vet_*`) | `family_id`, `puppy_id` → puppies, `proof_file_id`, `contract_file_id` → portal_files |

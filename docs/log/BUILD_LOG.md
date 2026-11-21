@@ -2025,3 +2025,79 @@ timeline template with the puppy's name typed in, so every family reads "Maveric
   whenever her timeline has steps but not that task: one tap adds it, linked to her shown
   registration program if she has one. A task she adjusted or kept is left as it is.
   New sites get it from the suggested timeline as before. 488 pass.
+
+## 2026-11-21: the puppy handbook (family portal, phase 2 begins)
+
+The owner chose to start phase 2 before phase 1's gate (no real litter yet), handbook
+first. Her answers: a program's link goes inside the words, not one per chapter; and
+nothing shows to families where it's empty, so new sites start with no chapters.
+
+- **Migration 0040** (`handbook`): new table `portal_chapters` (title, body, shown, sort).
+  Additive; applies by itself on the first request after the merge. In `SITE_TABLES`, so
+  backups, restores and closing a site carry it (`plans/backup-format.md`).
+- `portal/handbook.js`: chapters (list, save, move, on/off, remove) and the body's plain
+  format: blank line = paragraph, `- ` = list, `{name}`, and `[link: Program]` or
+  `[link: Program | her words]`, matched by name to a program families see; a button on
+  its own line, a link inside a sentence; a tag matching nothing shows nothing to families.
+- Her side, `portal/admin/handbook.js` at `/s/<sub>/portal/handbook`, a row on the Portal
+  tab: each chapter opens to edit, Move up / Move down, Remove asks first; "Add a program's
+  button at the end" puts `[link: …]` on the last line; a tag naming no shown program is
+  flagged in red. No prototype screen for the editor (the prototype's admPortal has the
+  list only); built from the template screens' card, fgrid and hint.
+- Families, `portal/family.js`: `/family/handbook` (the prototype's famHandbook: search as a
+  plain GET form, chapters that open, the first open, or every match, or the one Read next
+  led to); Home's **Read next** (the first three chapters as the prototype's photo rows,
+  with their own puppy's photos after the hero's; words alone with none) and **Handbook**
+  first in Quick links, in Account's place (Account stays in the header). None of it shows
+  while no chapter is on with words, nor for a closed placement or the loss page. Program
+  clicks count with place `handbook`; the disclosure shows when a link does.
+- Wording: new group `handbook` in `manage/wording.js` (every line on her screen, the
+  errors and notes). The family page's own lines are in `family.js`, as on its other pages.
+- `public/_kp/f/portal.css`: the prototype's chapter, search and photo-row styles.
+  **Needs a `PORTAL_VERSION` bump (3, on `main`): asked the owner.** Until then
+  `versions.test.js` fails as expected.
+- Tests: `portal-handbook.test.js` (new, 2). 489 pass, 1 expected fail (versions).
+- Same day, the owner: the handbook is a **flipbook**, styled after her buyer-guide book
+  (the "Puppy Waitlist Guide" artifact). `/family/handbook` is now a cover (their own puppy's
+  photo to boop, hearts, a collar and tag), then a book on a desk: title page, Contents with
+  page numbers, a page for each chapter (a `---` line starts another page of it), and a
+  "Happy puppy days!" end page; running heads, folios, the maroon, cocoa and tan trim.
+  Two pages side by side on a computer, one on a phone; arrows, swipe, keyboard, a Contents
+  dialog; Read next opens the book at its chapter (`#ch-<id>`). New `public/_kp/f/handbook.js`
+  (loaded without `defer`, only to mark `<html>` before the page shows); the page has no
+  portal header or tabs (`frame(..., { bare: true })`), with Back to the portal and Portal
+  instead. The portal's own fonts (Fraunces, Mulish), not the guide's Google fonts: the
+  portal's CSP allows only its own. Without the script the cover and pages stack and read
+  in order. Search is gone (the book has Contents); `## ` is a small heading in a chapter.
+  Her hints updated in `manage/wording.js`. Still needs the `PORTAL_VERSION` bump (asked).
+- Same day, the owner: **search back**, in the book. A search box on the Contents page and
+  in the Contents dialog; as they type (`handbook.js`), the pages that match every word
+  (in the chapter's title or that page's words), each with its page number and a few
+  whole words around the first one found; a tap turns the book there. Without the script
+  it's a plain form (`?q=`): the Contents page lists the matches (`handbook.js` on the
+  server: `plainText`, `matches`, `snippet`). A continuation page has its own address
+  (`#ch-<id>-2`). Only the words families see are searched: a link tag naming no program
+  isn't.
+- Same day, the owner: **chapters from a file she writes with Claude**, styled. Her Handbook
+  screen has "Add chapters from a file" (.md, .txt or .html, 400 KB at most) with "What to
+  ask Claude" (`handbook.js` `CLAUDE_PROMPT`, kept in code: longer than a wording line may
+  be): each `# Title` in the file is a chapter (a file with one `# ` and several `## ` is a
+  book: its `## ` are the chapters); a chapter with the same title is replaced (her tick),
+  keeping its place and on/off; new ones are off unless she ticks "Families see the new
+  chapters straight away". HTML (`htmlToText`) is turned into the same format; its scripts,
+  styles and anything else are dropped, nothing of the file runs or shows as it was.
+- The chapter format grows (`bodyHtml`, read line by line): `#` big, `##`, `###` small
+  headings; `{center}` at the end of a heading or line; `**bold**`, `*italic*`; `1.`
+  numbered lists; `> ` a note in a box; `+++ Title` … `+++` a fold that opens on a tap;
+  `[photo: what it shows | caption]`. Still never taken as HTML.
+- Photos come from her photo library: a file's photo spots say what they should show
+  ("Pick a photo: Opal asleep in the crate" in red under the chapter); the picker
+  (`/portal/handbook/<id>/photo/<n>`, the app's `ph-grid`) puts the photo's id in the tag,
+  and what the spot said becomes its caption. A photo since removed from her photos shows
+  nothing to families and asks her to pick another. Families get the 400px copy at
+  `/family/handbook/photo/<id>`, only for a photo in a chapter they can read. Her photo
+  library lists each chapter's photos ("Puppy handbook: Welcome home", `photoPlaces.js`).
+- Wording: new lines in the `handbook` group, and `library.handbook`. No migration beyond
+  0040. Tests: `portal-handbook.test.js` (3). 490 pass, 1 expected fail (versions).
+- Same day, the owner said yes: **`PORTAL_VERSION` 4** (`PORTAL_FILES` `ec94d3d9f829dbc7`), for
+  `portal.css` and the new `handbook.js`. 491 pass.

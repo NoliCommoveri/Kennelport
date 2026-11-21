@@ -47,6 +47,7 @@ import kennelosHidden from './0036_kennelos_hidden.sql';
 import productsExtrasShow from './0037_products_extras_show.sql';
 import extrasDocuments from './0038_extras_documents.sql';
 import keptPups from './0039_kept_pups.sql';
+import handbook from './0040_handbook.sql';
 
 export const MIGRATIONS = [
   { id: '0001', name: 'schema', sql: schema },
@@ -88,4 +89,5 @@ export const MIGRATIONS = [
   { id: '0037', name: 'products_extras_show', sql: productsExtrasShow },
   { id: '0038', name: 'extras_documents', sql: extrasDocuments },
   { id: '0039', name: 'kept_pups', sql: keptPups },
+  { id: '0040', name: 'handbook', sql: handbook },
 ];

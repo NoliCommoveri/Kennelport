@@ -36,6 +36,9 @@ import { servePhoto, serveFile, goToProgram } from './family/files.js';
 import { redeemViewLink, currentView, viewCookie } from './view.js';
 import { sayer, everyWording, siteWording } from '../manage/wording.js';
 import { loadBuild } from '../content/rules.js';
+import {
+  shownChapters, linkablePrograms, bodyHtml, linkedPrograms, plainText, searchWords, matches, snippet, photoIdsIn,
+} from './handbook.js';
 
 export const PORTAL_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
 const HEADERS = {
@@ -62,7 +65,7 @@ const LOSS_TABS = [['/family', 'home', 'Home'], ['/family/photos', 'paw', 'Photo
 // During an extended stay, Stay takes Timeline's place (plan 8.5).
 const STAY_TABS = [['/family', 'home', 'Home'], ['/family/stay', 'award', 'Stay'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records']];
 
-function frame(site, title, body, { status = 200, fam = null, tab = null, action = '', headers = {} } = {}) {
+function frame(site, title, body, { status = 200, fam = null, tab = null, action = '', headers = {}, bare = false, script = null } = {}) {
   const kennel = site.kennel_name || site.subdomain;
   const tabs = fam ? `<nav class="tabs" aria-label="Portal">${(fam.loss ? LOSS_TABS : fam.stay ? STAY_TABS : TABS)
     .map(([href, icon, label]) => `<a href="${href}"${tab === href ? ' aria-current="page"' : ''}>${ic(icon)}<span>${label}</span></a>`).join('')}</nav>` : '';
@@ -71,13 +74,13 @@ function frame(site, title, body, { status = 200, fam = null, tab = null, action
 <meta name="robots" content="noindex, nofollow">
 <title>${esc(title)}${fam?.viewing ? ' (viewing)' : ''} · ${esc(kennel)}</title>
 <link rel="stylesheet" href="/_kp/f/portal.css?v=${PORTAL_VERSION}">
-<script src="/_kp/f/portal.js?v=${PORTAL_VERSION}" defer></script>
-</head><body class="${fam ? 'in' : 'out'}">
+<script src="/_kp/f/portal.js?v=${PORTAL_VERSION}" defer></script>${script ? `\n<script src="/_kp/f/${script}?v=${PORTAL_VERSION}"></script>` : ''}
+</head><body class="${bare ? 'bare' : fam ? 'in' : 'out'}">
 ${SPRITE}
-<header class="top"><a class="brand" href="/family">${brandMark(site)}<span class="bt"><b>${esc(kennel)}</b><span class="sub">${ic('paw')}Puppy Parent Portal</span></span></a>
+${bare ? `${fam?.viewing ? fam.band : ''}${body}` : `<header class="top"><a class="brand" href="/family">${brandMark(site)}<span class="bt"><b>${esc(kennel)}</b><span class="sub">${ic('paw')}Puppy Parent Portal</span></span></a>
 <span class="top-end"><button type="button" class="aa" id="aa" aria-label="Text size">Aa</button>${fam && !fam.loss ? `<a class="acct" href="/family/messages" aria-label="${fam.unread ? `Messages, ${fam.unread} new` : 'Messages'}">${ic('message')}${fam.unread ? `<b class="small">${fam.unread}</b>` : ''}</a>` : ''}${fam ? `<a class="acct" href="/family/account" aria-label="Account">${ic('user')}</a>` : ''}</span></header>
 <main>${fam?.viewing ? fam.band : ''}${body}</main>
-${action}${tabs}
+${action}${tabs}`}
 </body></html>`, { status, headers: { ...HEADERS, ...headers } });
 }
 
@@ -314,7 +317,7 @@ function statusBand(p, s, name, kennel) {
 }
 
 async function homePage(env, site, fam, now = new Date()) {
-  const { p, s, pup, main } = await loadContext(env, site, fam);
+  const { p, s, pup, main, photos } = await loadContext(env, site, fam);
   if (!p) return noPlacement(site, fam);
   if (isLoss(p)) return lossPage(site, fam, p, main);
   const name = pupName(p);
@@ -395,8 +398,11 @@ async function homePage(env, site, fam, now = new Date()) {
 
   const born = pup?.born_on ? new Date(`${pup.born_on}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : null;
   const facts = [born ? `<li>${ic('calendar')}Born ${esc(born)}</li>` : '', goYmd ? `<li>${ic('home')}${p.picked_up_at ? 'Went home' : 'Home'} ${esc(formatDay(goYmd).replace(/^\w+, /, ''))}</li>` : ''].join('');
-  const quick = [[stay ? '/family/stay' : '/family/timeline', stay ? 'award' : 'calendar', stay ? 'Stay updates' : 'Timeline'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records'],
-    ['/family/records#photos', 'paw', 'Photos'], ['/family/messages', 'message', 'Messages'], ['/family/account', 'user', 'Account']];
+  // The handbook, once she has a chapter families see: first in Quick links (as the
+  // prototype has it, in Account's place: Account is in the header), and Read next.
+  const chapters = live ? await shownChapters(env, site.id) : [];
+  const quick = [...(chapters.length ? [['/family/handbook', 'book', 'Handbook']] : []), [stay ? '/family/stay' : '/family/timeline', stay ? 'award' : 'calendar', stay ? 'Stay updates' : 'Timeline'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records'],
+    ['/family/records#photos', 'paw', 'Photos'], ['/family/messages', 'message', 'Messages'], ...(chapters.length ? [] : [['/family/account', 'user', 'Account']])];
   const body = `
   <section class="hero bleed">${main ? `<img src="${esc(main)}" alt="">` : `<span class="ph" aria-hidden="true">${ic('paw')}</span>`}<div class="cap"><span class="script">${esc(hello)}</span><h1>${esc(greeting)}</h1></div></section>
   <section class="bento">
@@ -412,9 +418,119 @@ async function homePage(env, site, fam, now = new Date()) {
   ${st === 'before' && statusUrl && live ? statusBand(p, s, name, kennel) : ''}
   ${live ? foodBand(s, name, food) : ''}
   ${list.length ? `<section class="sec paper bleed"><h2>Included with ${esc(name)}</h2>${programList(list, 'home', kennel)}</section>` : ''}
+  ${readNext(chapters, photos)}
   <section class="tile quick"><h2>Quick links</h2><div class="qgrid">${quick.map(([href, icon, label]) => `<a class="qtile" href="${href}"><span class="ico">${ic(icon)}</span>${label}</a>`).join('')}</div></section>
   ${list.length ? disclosure(s) : ''}`;
   return frame(site, 'Home', body, { fam, tab: '/family', action: action ? actionBar(action) : '' });
+}
+
+// ---------- the handbook (portal/handbook.js) ----------
+
+const chapterHref = (c) => `/family/handbook#ch-${esc(c.id)}`;
+
+// Read next on Home (plan 7.2, item 9): her first three chapters as photo rows, with
+// their own puppy's photos (after the one at the top of Home); words alone without.
+function readNext(chapters, photos) {
+  if (!chapters.length) return '';
+  const pics = photos.length > 1 ? photos.slice(1) : photos;
+  const rows = chapters.slice(0, 3).map((c, i) => {
+    const ph = pics.length ? pics[i % pics.length] : null;
+    return `<a class="prow${ph ? '' : ' words'}" href="${chapterHref(c)}">${ph ? `<span class="ph"><img src="/family/photo/${esc(ph.id)}?s=t" alt="" loading="lazy"></span>` : ''}<span class="lab">${esc(c.title)}<span class="chev">${ic('chev')}</span></span></a>`;
+  });
+  return `<section class="readnext"><div class="between"><h2>Read next</h2><a class="go" href="/family/handbook">Handbook ${ic('arrow')}</a></div><div class="prows">${rows.join('')}</div></section>`;
+}
+
+const handbookLink = (x, words, inline) => (inline
+  ? `<a class="ext" href="/family/go/${esc(x.id)}?from=handbook">${esc(words)}</a>`
+  : `<a class="btn line small" href="/family/go/${esc(x.id)}?from=handbook">${esc(words)} ${ic('arrow')}</a>`);
+
+// The handbook as a flipbook (the owner's buyer-guide book, 2026-11-21): a cover with
+// their own puppy to boop, a title page, contents, her chapters (a "---" line starts a
+// new page), and an end page. The server writes every page; public/_kp/f/handbook.js
+// turns them into the book (spreads on a computer, one page on a phone, swipe, arrows,
+// keys, a Contents list). Without the script the pages stack and read top to bottom.
+async function handbookPage(env, site, fam, url) {
+  const { p, s, main } = await loadContext(env, site, fam);
+  const chapters = p && active(p) ? await shownChapters(env, site.id) : [];
+  if (!chapters.length) return redirect('/family');
+  const kennel = site.kennel_name || site.subdomain;
+  const name = pupName(p);
+  const programs = await linkablePrograms(env, site.id);
+  const vars = { name, kennel };
+  // Her photos in the chapters, those still in her photos (one removed shows nothing).
+  const want = photoIdsIn(chapters);
+  const live = new Map(want.length ? (await env.DB.prepare(`SELECT id, alt FROM photos WHERE site_id = ? AND removed_at IS NULL AND id IN (${want.map(() => '?').join(',')})`).bind(site.id, ...want).all()).results.map((x) => [x.id, x]) : []);
+  const photo = (id, caption) => (live.has(id) ? `<figure class="hbphoto"><img src="/family/handbook/photo/${esc(id)}" alt="${esc(caption || live.get(id).alt || '')}" loading="lazy">${caption ? `<figcaption>${esc(caption)}</figcaption>` : ''}</figure>` : '');
+  const of = (n) => `${n}${/s$/i.test(n) ? "'" : "'s"}`;
+  const face = (cls) => (main ? `<img src="${esc(main)}?s=t" alt="" class="${cls}">` : `<span class="${cls} nopic">${ic('paw')}</span>`);
+  const pages = [];
+  const page = (html, { id = null, cls = '', head = 'Puppy handbook', go = null } = {}) => pages.push({ html, id, cls, head, go });
+  page(`<div class="badge">${face('')}</div><h2>${esc(of(kennel))} puppy handbook</h2><p>Everything we tell every family, in one place: for you and ${esc(name)}.</p>
+    <p class="tip">Turn the page with the arrows, a swipe, or your keyboard. Contents jumps to any chapter.</p>`, { cls: 'titlepage', head: '', id: 'title' });
+  const tocAt = pages.length;
+  page('', { id: 'contents', head: 'Contents' });
+  const toc = [];
+  const texts = []; // every chapter page's words, for search
+  for (const c of chapters) {
+    const parts = String(c.body).split(/\n[ \t]*---+[ \t]*(?:\n|$)/);
+    parts.forEach((part, i) => {
+      const links = linkedPrograms(part, programs).length;
+      const id = i ? `ch-${c.id}-${i + 1}` : `ch-${c.id}`;
+      if (!i) toc.push({ c, at: pages.length });
+      texts.push({ id, title: c.title, at: pages.length, text: plainText(part, vars, programs) });
+      page(`${i ? '' : `<h2>${esc(c.title)}</h2>`}${bodyHtml(part, programs, vars, handbookLink, photo)}${links ? `<p class="tip disclose">${esc(s.disclosure || DEFAULT_DISCLOSURE)}</p>` : ''}`,
+        { id, head: c.title, go: c.id });
+    });
+  }
+  page(`<p class="happy">Happy puppy days!</p><p>Come back to this book whenever you need it. ${esc(kennel)} is a message away.</p>`, { cls: 'blank end', head: '', id: 'end' });
+
+  // Search: on the Contents page and in the Contents dialog. A plain form (?q=), so it
+  // works without the script: the Contents page then lists the pages that match.
+  // handbook.js filters as they type instead, from each page's words in data-text.
+  const q = String(url.searchParams.get('q') ?? '').trim().slice(0, 80);
+  const words = searchWords(q);
+  const searchBox = (id) => `<form method="get" action="/family/handbook" role="search" class="hsearch"><label class="sr" for="${id}">Search the handbook</label><input id="${id}" type="search" name="q" value="${esc(q)}" placeholder="Search: crate, food, the first night…" maxlength="80" autocomplete="off"></form>`;
+  const tocList = `<ul class="toc">${toc.map(({ c, at }) => `<li><a href="#ch-${esc(c.id)}" data-go="ch-${esc(c.id)}"><span>${esc(c.title)}</span><span>${at + 1}</span></a></li>`).join('')}</ul>`;
+  const hit = (x, shown) => `<li data-text="${esc(x.text)}" data-title="${esc(x.title)}"${shown ? '' : ' hidden'}><a href="#${esc(x.id)}" data-go="${esc(x.id)}"><span>${esc(x.title)}</span><span>${x.at + 1}</span></a><small class="snip">${shown ? esc(snippet(x.text, words)) : ''}</small></li>`;
+  const found = words.length ? texts.filter((x) => matches(x.title, x.text, words)) : [];
+  const none = '<p class="tip nohits">Nothing matches. Try another word.</p>';
+  pages[tocAt].html = `<h2>Contents</h2>${searchBox('hq')}${words.length
+    ? `${found.length ? `<ul class="toc hits">${found.map((x) => hit(x, true)).join('')}</ul>` : none}<p class="tip"><a href="/family/handbook#contents" data-clear>Every chapter</a></p>`
+    : tocList}`;
+  const dialogBody = `${searchBox('hq2')}<div class="toc-all"${words.length ? ' hidden' : ''}>${tocList}</div>
+    <ul class="toc hits"${words.length ? '' : ' hidden'}>${texts.map((x) => hit(x, found.includes(x))).join('')}</ul>
+    <p class="tip nohits"${words.length && !found.length ? '' : ' hidden'}>Nothing matches. Try another word.</p>`;
+  const body = `<div class="hb">
+  <section class="hb-cover" id="hb-cover">
+    <a class="hb-out" href="/family">${ic('home')}Back to the portal</a>
+    <p class="kicker">A little book for ${esc(of(name))} family</p>
+    <h1>Puppy <span>handbook</span></h1>
+    <a class="boop" id="boop" href="#hb-reader" aria-label="Boop ${esc(name)} to open the handbook">${face('face')}<span class="collar"></span><span class="tag">Boop to open</span></a>
+    <p class="hint">Tap ${esc(name)} to open the handbook, then flip through it like a book.</p>
+  </section>
+  <section class="hb-reader" id="hb-reader">
+    <div class="bar"><a class="mini" id="hb-home" href="#hb-cover" aria-label="Back to the cover" title="Back to the cover">${face('')}</a><div class="ttl">${esc(of(kennel))} puppy handbook</div>
+      <button type="button" class="pill" id="hb-toc">Contents</button><a class="pill" href="/family">Portal</a></div>
+    <div class="stage" id="hb-stage"><div class="book" id="hb-book" aria-live="polite">
+    ${pages.map((x, i) => `<article class="page ${x.cls}"${x.id ? ` id="${esc(x.id)}"` : ''}><div class="runhead"><span>${esc(x.head)}</span></div><div class="content">${x.html}</div><div class="folio">${i + 1}</div></article>`).join('\n')}
+    </div></div>
+    <div class="controls"><button type="button" class="nav" id="hb-prev" aria-label="Previous page">&#8592;</button><div class="count" id="hb-count"></div><button type="button" class="nav" id="hb-next" aria-label="Next page">&#8594;</button></div>
+  </section>
+  <dialog id="hb-tocdlg" aria-labelledby="hb-toctitle"><div class="dlg-head"><h2 id="hb-toctitle">Contents</h2><button type="button" class="x" data-close aria-label="Close">&#215;</button></div>
+    <div class="dlg-body">${dialogBody}</div></dialog>
+</div>`;
+  return frame(site, 'Puppy handbook', body, { fam, bare: true, script: 'handbook.js' });
+}
+
+// A photo in her handbook: only one a chapter they can read shows, and only while it's
+// in her photos. The 400px copy: a book page is no wider.
+async function handbookPhoto(env, site, fam, id) {
+  const p = await placementFor(env, site.id, fam.familyId);
+  const ok = p && active(p) && photoIdsIn(await shownChapters(env, site.id)).includes(id);
+  const row = ok ? await env.DB.prepare('SELECT r2_key, thumb_key, type FROM photos WHERE id = ? AND site_id = ? AND removed_at IS NULL').bind(id, site.id).first() : null;
+  const obj = row && await env.FILES.get(row.thumb_key || row.r2_key);
+  if (!obj) return new Response('Not found', { status: 404, headers: { 'cache-control': 'no-store' } });
+  return new Response(obj.body, { headers: { 'content-type': row.type || 'image/webp', 'cache-control': 'private, max-age=3600', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'none'" } });
 }
 
 // The first months, grouped by when: what she does before go-home, the first
@@ -699,8 +815,11 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
     if (path === '/family') return homePage(env, site, fam);
     if (path === '/family/vet') return vetPage(env, site, fam, { note: url.searchParams.get('note') === 'booked' ? 'Saved. Thank you!' : url.searchParams.get('note') === 'uploaded' ? 'Uploaded. Thank you!' : null });
     if (path === '/family/records') return recordsPage(env, site, fam);
-    if (fam.loss && ['/family/timeline', '/family/vet', '/family/records', '/family/messages'].includes(path)) return redirect('/family');
+    if (fam.loss && ['/family/timeline', '/family/vet', '/family/records', '/family/messages', '/family/handbook'].includes(path)) return redirect('/family');
     if (path === '/family/timeline') return timelinePage(env, site, fam);
+    if (path === '/family/handbook') return handbookPage(env, site, fam, url);
+    const hp = path.match(/^\/family\/handbook\/photo\/([0-9a-f-]{36})$/);
+    if (hp) return handbookPhoto(env, site, fam, hp[1]);
     if (path === '/family/photos') return photosPage(env, site, fam);
     if (path === '/family/stay') return stayPage(env, site, fam);
     const mm = path.match(/^\/family\/media\/([0-9a-f-]{36})$/);
