@@ -222,7 +222,9 @@ test('programs: only the ones she shows, each click counted, with the disclosure
   await addFamily(her, { name: 'The Reed family', emails: 'sam@example.com', puppy_id: 'pup1' });
   const reed = fam(await familySignIn(env, 'sam@example.com'));
   const home = await (await reed('/family')).text();
-  assert.match(home, /Included with Opal/);
+  // On the band's insurance card, not again in a list below, and never "Included with".
+  assert.match(home, /Activate Opal's pet insurance/);
+  assert.doesNotMatch(home, /Included with|Recommended for Opal/);
   assert.match(home, /Activate within 5 days of pickup/);
   assert.match(home, /AKB30/);
   assert.match(home, /affiliate links/);

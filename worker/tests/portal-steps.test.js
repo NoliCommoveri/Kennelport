@@ -280,7 +280,8 @@ test('for one family she hides a step, adds one, moves a day; their code shows t
   assert.doesNotMatch(await (await d('/family')).text(), /TRIAL-7781/);
   // "I've done this" on a program with a step.
   assert.equal((await r('/family/program', { product: 'ins', back: 'home' })).status, 303);
-  assert.match(await (await r('/family')).text(), /<span class="st ok">Done<\/span>/);
+  assert.match(await (await r('/family')).text(), /Opal is protected!/);
+  assert.match(await (await r('/family/timeline')).text(), /<span class="st ok">Done<\/span>/);
   // A program she doesn't show can't be marked.
   assert.equal((await r('/family/program', { product: 'nope', back: 'home' })).status, 400);
 });

@@ -195,7 +195,7 @@ function checklistCard(list) {
 // protected!" and no button) and a slim card for one more program with a link, if
 // she shows one. The insurance card grows to fill the column when it's alone. A card
 // with nothing to show is left out; with only one, it takes the full width.
-function foodBand(s, name, food, ins, extra) {
+function foodBand(s, name, food, ins, extra, kennel) {
   const left = [];
   const right = [];
   if (s.food_name) {
@@ -214,10 +214,10 @@ function foodBand(s, name, food, ins, extra) {
     <p class="small">Email or call them for questions about coverage or to file a claim.</p></div>`);
     } else {
       const code = ins.portal_per_family ? ins.family_code : ins.code;
-      right.push(`<div class="fcard grow"><p class="eyebrow">Included with ${esc(name)}</p><h2 class="card-h">Activate ${esc(name)}'s pet insurance</h2>
+      right.push(`<div class="fcard grow"><p class="eyebrow">Pet insurance</p><h2 class="card-h">Activate ${esc(name)}'s pet insurance</h2>
     <div class="prodrow">${shield}<div><b>${esc(ins.name)}</b></div></div>
     ${ins.family_action || ins.description ? `<p class="small under">${esc(ins.family_action || ins.description)}</p>` : ''}
-    ${code ? `<p class="small">${ins.portal_per_family ? 'Your code' : 'Code'} <strong>${esc(code)}</strong>${ins.code_note ? ` ${esc(ins.code_note)}` : ''}</p>` : ''}
+    ${code ? `<p class="small">${ins.portal_per_family ? 'Your code' : 'Code'} <strong>${esc(code)}</strong>${ins.code_note ? ` ${esc(ins.code_note)}` : ''}</p>` : ins.portal_per_family ? `<p class="small under">Your own code will be here once ${esc(kennel)} adds it.</p>` : ''}
     <a class="pill light" href="/family/go/${esc(ins.id)}?from=insurance">${esc(ins.link_label || 'Activate insurance')} ${ic('arrow')}</a>
     <form method="post" action="/family/program" class="did"><input type="hidden" name="product" value="${esc(ins.id)}"><input type="hidden" name="back" value="home"><button class="btn text small">I've activated it</button></form></div>`);
     }
@@ -431,6 +431,10 @@ async function homePage(env, site, fam, now = new Date()) {
   const ins = list.find((x) => x.portal_type === 'insurance' && (x.link_url || x.status === 'done'));
   // A third, slim card in the food band: the next program with a link that isn't the food or insurance.
   const extra = list.find((x) => x.link_url && x !== food && x !== ins && x.portal_type !== 'food' && x.portal_type !== 'insurance');
+  // The programs below the band: those not already on one of its cards (the owner,
+  // 2026-11-21: listed twice, and under "Included with", read as gifts from her).
+  const inBand = live && (s.food_name || ins) ? [s.food_name ? food : null, ins, extra] : [];
+  const rest = list.filter((x) => !inBand.includes(x));
   if (p.life_status !== 'with_family' || p.status !== 'open') action = null;
 
   const born = pup?.born_on ? new Date(`${pup.born_on}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : null;
@@ -453,8 +457,8 @@ async function homePage(env, site, fam, now = new Date()) {
   ${contactsLead(p, s, now) ? contactsCard(site, s, p, name, { lead: true }) : ''}
   ${checklist}
   ${st === 'before' && statusUrl && live ? statusBand(p, s, name, kennel) : ''}
-  ${live ? foodBand(s, name, food, ins, extra) : ''}
-  ${list.length ? `<section class="sec paper bleed"><h2>Included with ${esc(name)}</h2>${programList(list, 'home', kennel)}</section>` : ''}
+  ${live ? foodBand(s, name, food, ins, extra, kennel) : ''}
+  ${rest.length ? `<section class="sec paper bleed"><h2>Recommended for ${esc(name)}</h2>${programList(rest, 'home', kennel)}</section>` : ''}
   ${readNext(chapters, photos)}
   <section class="tile quick"><h2>Quick links</h2><div class="qgrid">${quick.map(([href, icon, label]) => `<a class="qtile" href="${href}"><span class="ico">${ic(icon)}</span>${label}</a>`).join('')}</div></section>
   ${list.length ? disclosure(s) : ''}`;
@@ -598,7 +602,7 @@ async function timelinePage(env, site, fam, { error } = {}, now = new Date()) {
     ${groups.length ? groups.map(([g, l]) => `<section class="card"><h2>${esc(g)}</h2><ul class="tasks">${l.map((t) => taskRow(t, kennel, 'timeline')).join('')}</ul></section>`).join('')
       : `<section class="card"><p class="muted">${esc(kennel)} hasn't added the timeline yet.</p></section>`}
     ${stage(p, now) === 'before' && checklist.length ? `<p class="small"><a class="go" href="/family#checklist">The go-home checklist ${ic('arrow')}</a></p>` : ''}
-    ${list.length ? `<section class="card"><h2>Included with ${esc(name)}</h2>${programList(list, 'timeline', kennel)}</section>${disclosure(s)}` : ''}`;
+    ${list.length ? `<section class="card"><h2>Recommended for ${esc(name)}</h2>${programList(list, 'timeline', kennel)}</section>${disclosure(s)}` : ''}`;
   return frame(site, 'Timeline', body, { fam, tab: '/family/timeline', status: error ? 400 : 200 });
 }
 
