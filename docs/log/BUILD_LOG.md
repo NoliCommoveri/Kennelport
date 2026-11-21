@@ -2101,3 +2101,12 @@ nothing shows to families where it's empty, so new sites start with no chapters.
   0040. Tests: `portal-handbook.test.js` (3). 490 pass, 1 expected fail (versions).
 - Same day, the owner said yes: **`PORTAL_VERSION` 4** (`PORTAL_FILES` `ec94d3d9f829dbc7`), for
   `portal.css` and the new `handbook.js`. 491 pass.
+
+## 2026-11-21: the go-home bag, planned
+
+- The owner chose the go-home bag as phase 2's next chunk (not the baby book). Plan:
+  [`plans/portal-go-home-bag.md`](../plans/portal-go-home-bag.md), from family-portal.md
+  8.4 and the prototype's three bag screens (her template on the Portal tab, Sent home
+  with on the family's screen, What came home in Opal's bag on Records). One migration
+  (0041: `portal_bag_items`, `portal_placement_bag`, `portal_placements.bag_saved_at`);
+  nothing on the KennelOS side. Five questions for the owner before building. No code.
