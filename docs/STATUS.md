@@ -77,7 +77,7 @@ anyone outside the family.
   beside it, stacked, the insurance card (her shield picture, "Activate {pup}'s pet
   insurance" and a button to the program shown as Insurance; "{pup} is protected!" once
   marked done) and a slim card for one more program with a link. `PORTAL_VERSION` 5 on
-  this branch (the owner's yes). No migration. Build log, 2026-11-21.
+  `main` (the owner's yes). Her referral programs are no longer listed under "Included with": Home lists only those not on the band, as "Recommended for {pup}". No migration. Build log, 2026-11-21.
 - Phase 3: not started.
 - The same family twice, and deleted families (2026-11-13): the feed links a family's only
   typed placement; **Merge** for a typed placement or family into KennelOS's; **Delete

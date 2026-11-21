@@ -2226,3 +2226,16 @@ beside the food with a button straight to her insurance referral link.
 - The owner, after: the note (her food note; the insurance's What the family does, else its
   description) moves under the picture, the name alone beside it (`.fcard .under`).
 - `PORTAL_VERSION` 4 → 5 with the owner's yes (`PORTAL_FILES` 342de44b3b6c4478). 498 pass.
+
+## 2026-11-21: no "Included with" for her referral programs
+
+The owner, from her live Home: the food and insurance showed again under "Included with
+Cash", which reads as if she gave them. Now:
+
+- Home's list leaves out the programs already on the food band's cards (the food, the
+  insurance, the slim third), and is headed "Recommended for {pup}"; with nothing left, no
+  list. The Timeline's list has the same heading.
+- The insurance card's eyebrow is "Pet insurance" (was "Included with {pup}"), and it shows
+  "Your own code will be here once {kennel} adds it" for a per-family program, as the list did.
+- Server HTML only: no portal file changed, no version bump. Tests: `portal`,
+  `portal-steps` updated. 498 pass.
