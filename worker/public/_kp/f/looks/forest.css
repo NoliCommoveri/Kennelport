@@ -2,62 +2,112 @@
    strip, gold icons and cream titles, and the content on a cream panel inside; gold waves,
    a cream vet tile with a gold Upload, the vet visit as one row on Home, the vet page's
    green head with a stethoscope, and an olive-gold pill for the tab you're on.
-   Over looks/mockup.css. Changing this file means bumping PORTAL_VERSION. */
+   Over looks/mockup.css, in its two parts: the prototype's Forest rules for the four pages
+   (body.mkp, ported as mockup.css says), then the other pages.
+   Changing this file means bumping PORTAL_VERSION. */
 body[data-look="forest"] {
   --lk-page: #123222; --lk-page-2: #0E2A1C; --lk-card: #F4ECDA; --lk-card-2: #EADFC6; --lk-strip: #EADFC6; --lk-line: #D6C7A4;
   --lk-ink: #1F2A22; --lk-muted: #5D5848; --lk-gold: #B8893A; --lk-leaf: #1E4A33; --lk-leaf-hi: #2C6447; --lk-leaf-ink: #F4ECDA;
   --lk-soft: #F8F2E4; --lk-soft-line: #BFAE86; --lk-tile: #F4ECDA; --lk-tile-2: #EADFC6; --lk-tab: #5A6A3A; --lk-tab-ink: #F3D99A;
   --lk-head-2: #183B2A; --lk-pfacts-ico: #D9B26A;
   --fo-card: #183B2A; --fo-card-h: #21473A; --fo-title: #F4ECDA; --fo-gold: #D9B26A; --fo-edge: rgba(217,178,106,.28);
-  --lk-wave-hero: url("wave-forest-hero.svg"); --lk-wave-head: url("wave-forest-head.svg");
-  --lk-head-art: url("paw-gold.svg"); --lk-vet-art: url("stethoscope-forest.svg"); --lk-mypup-art: url("boston.svg"); --lk-mypup-art-size: 5.8rem;
-  --lk-hero-paw: url("paw-gold.svg");
 }
-body[data-look="forest"] .vetrow { display: grid; }
-body[data-look="forest"] .hero .script { color: #F3D99A; }
-body[data-look="forest"] .pname { font: 600 2.05rem/1 var(--f-display); }
 
-/* Cards: deep green, the first line (the title) on a green strip with a gold icon, and
-   the rest on a cream panel inside a green frame. */
-body[data-look="forest"] .card, body[data-look="forest"] .tile:not(.pup):not(.green), body[data-look="forest"] .sec:not(.food), body[data-look="forest"] .readnext {
-  background: var(--lk-card); border: 6px solid var(--fo-card); border-top-width: 0; box-shadow: var(--lk-shadow), 0 0 0 1px var(--fo-edge); }
-body[data-look="forest"] :is(.card, .tile, .sec, .readnext) > :is(h1, h2, .between, .eyebrow):first-child {
+/* ---------- 1. The four pages, as the prototype ---------- */
+body[data-look="forest"].mkp, body[data-look="forest"].mkp.in { background: var(--fo-page); }
+body[data-look="forest"].mkp.in .mk-b, body[data-look="forest"].mkp.in .tile.peach, body[data-look="forest"].mkp.in .mypup, body[data-look="forest"].mkp.in .timeline-body, body[data-look="forest"].mkp.in .notebox, body[data-look="forest"].mkp.in .duo2 .mk { --mk-card: var(--fo-panel); --mk-card-h: var(--fo-panel-h); --mk-line: var(--fo-panel-line); --mk-ink: var(--fo-panel-ink); --mk-muted: var(--fo-panel-muted); --surface: var(--fo-panel); --line: var(--fo-panel-line); --ink: var(--fo-panel-ink); --muted: var(--fo-panel-muted); --band: var(--fo-panel-h); --mk-leaf: var(--fo-btn); --mk-leaf-ink: var(--fo-btn-ink); --accent: var(--fo-btn); --mk-soft: var(--fo-soft); --mk-soft-line: var(--fo-soft-line); color: var(--fo-panel-ink); }
+body[data-look="forest"].mkp.in .mk { background: var(--fo-card); border-color: var(--fo-edge); color: var(--fo-title); }
+body[data-look="forest"].mkp.in .mk-h { background: linear-gradient(var(--fo-card-h), var(--fo-card)); padding-bottom: .5rem; }
+body[data-look="forest"].mkp.in .mk-h h2, body[data-look="forest"].mkp.in .mk-h .eyebrow { color: var(--fo-title); }
+body[data-look="forest"].mkp.in .mk-h .mk-i svg.i, body[data-look="forest"].mkp.in .mk-h a.go { color: var(--fo-gold); }
+body[data-look="forest"].mkp.in .mk-sub { color: var(--fo-title); opacity: .8; }
+body[data-look="forest"].mkp.in .mk-b { background: var(--fo-panel); margin: 0 .5rem .5rem; border-radius: 12px; padding: .75rem .8rem .85rem; }
+body[data-look="forest"].mkp.in .mk .eyebrow { color: #8A6B2C; }
+body[data-look="forest"].mkp.in .mk-b .eyebrow { color: var(--fo-gold-2); }
+body[data-look="forest"].mkp.in .btn.solid { background: linear-gradient(var(--fo-btn-hi), var(--fo-btn)); border-color: var(--fo-btn); color: var(--fo-btn-ink); }
+body[data-look="forest"].mkp.in .tile.peach .btn.solid, body[data-look="forest"].mkp.in .actionbar .btn.solid { background: linear-gradient(#F7E2AE, var(--fo-gold) 55%, var(--fo-gold-2)); border-color: #B8893A; color: var(--fo-gold-ink); box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 2px 6px rgba(0,0,0,.3); }
+body[data-look="forest"].mkp.in .duo2 .btn.line { background: var(--fo-btn); border-color: var(--fo-btn); color: var(--fo-btn-ink); }
+body[data-look="forest"].mkp.in .duo2 .btn.text { color: var(--fo-btn); }
+body[data-look="forest"].mkp.in .hero .script { color: var(--fo-gold-1); }
+body[data-look="forest"].mkp.in .tile.pup { background: transparent; border-color: transparent; box-shadow: none; color: var(--fo-title); }
+body[data-look="forest"].mkp.in .tile.peach { background: var(--fo-panel); border-color: var(--fo-edge); }
+body[data-look="forest"].mkp.in .tile.peach .eyebrow { color: var(--fo-panel-ink); }
+body[data-look="forest"].mkp.in .tile.peach .bigline { color: var(--fo-panel-ink); }
+body[data-look="forest"].mkp.in .tile.peach .calpage { background: var(--fo-card); color: var(--fo-title); }
+body[data-look="forest"].mkp.in .duo2 .mk { background: var(--fo-panel); border-color: var(--fo-panel-line); }
+body[data-look="forest"].mkp.in .duo2 .mk-h { background: transparent; }
+body[data-look="forest"].mkp.in .duo2 .mk-h .eyebrow { color: var(--fo-gold-2); }
+body[data-look="forest"].mkp.in .duo2 .mk-b { margin: 0; background: transparent; }
+body[data-look="forest"].mkp.in .duo2 .pic { background: transparent; }
+body[data-look="forest"].mkp.in .qtile { background: var(--fo-panel); border-color: var(--fo-panel-line); color: var(--fo-panel-ink); }
+body[data-look="forest"].mkp.in .qtile .ico { color: var(--fo-btn); }
+body[data-look="forest"].mkp.in .mk-b:has(.qgrid) { background: transparent; padding: 0; margin-top: 0; }
+body[data-look="forest"].mkp.in .mk-head.green, body[data-look="forest"].mkp.in .mk-head.cream { background: var(--fo-card); border: 1px solid var(--fo-edge); color: var(--fo-title); }
+body[data-look="forest"].mkp.in .mk-head .eyebrow { color: var(--fo-gold); }
+body[data-look="forest"].mkp.in .mk-head .art { display: none; }
+body[data-look="forest"].mkp.in .mk-head .fo-paw { display: block; }
+body[data-look="forest"].mkp.in .mk-head .wave .w2 { fill: var(--fo-panel); }
+body[data-look="forest"].mkp.in .timeline-body { background: var(--fo-panel); border-color: var(--fo-edge); }
+body[data-look="forest"].mkp.in .timeline-body > h2 { color: var(--fo-panel-ink); }
+body[data-look="forest"].mkp.in .mypup { background: var(--fo-panel); }
+body[data-look="forest"].mkp.in .mypup .mk-b { margin: 0; }
+body[data-look="forest"].mkp.in .mypup .script { color: var(--fo-btn); }
+body[data-look="forest"].mkp.in .actionbar { background: var(--fo-card); border-top-color: var(--fo-edge); color: var(--fo-title); }
+body[data-look="forest"].mkp.in .actionbar .ico { background: var(--fo-card-h); color: var(--fo-gold); }
+body[data-look="forest"].mkp.in nav.tabs { background: var(--fo-page); border-top-color: var(--fo-edge); }
+body[data-look="forest"].mkp.in nav.tabs a[aria-current="page"] { background: var(--fo-tab); color: var(--fo-tab-ink); }
+body[data-look="forest"].mkp.in .disclose { color: var(--fo-title); }
+body[data-look="forest"].mkp .wave .w0 { display: none; }
+body[data-look="forest"].mkp .wave .w1 { fill: url(#g-gold); }
+body[data-look="forest"].mkp .wave .w2 { fill: var(--fo-card); }
+body[data-look="forest"].mkp .mk-head .wave .w2 { fill: var(--fo-panel); }
+body[data-look="forest"].mkp .herocard { background: linear-gradient(var(--fo-card), var(--fo-page)); border-color: var(--fo-edge); }
+body[data-look="forest"].mkp.in .hero h1 svg.i { fill: var(--fo-gold); }
+body[data-look="forest"].mkp.in .herocard .pup .ph.round { border-color: var(--fo-card); }
+body[data-look="forest"].mkp.in .pname { font: 600 2.05rem/1 var(--f-display); color: var(--fo-title); }
+body[data-look="forest"].mkp.in .tile.pup .facts svg.i { color: var(--fo-gold); }
+body[data-look="forest"].mkp.in .tile.pup .facts { opacity: 1; }
+body[data-look="forest"].mkp.in .tile.peach { background: linear-gradient(var(--fo-panel), var(--fo-panel-h)); }
+body[data-look="forest"].mkp.in .mk-head.cream { background: radial-gradient(circle at 88% 12%, rgba(255,255,255,.09), transparent 55%), var(--fo-card); }
+body[data-look="forest"].mkp.in .mk-head.cream h1 { max-width: 62%; }
+body[data-look="forest"].mkp.in { --head: var(--fo-page); }
+body[data-look="forest"].mkp .hero .wave .l1 { fill: url(#g-gold); }
+body[data-look="forest"].mkp .hero .wave .l2 { fill: url(#g-gold2); }
+body[data-look="forest"].mkp .hero .wave .l3 { fill: #24503A; }
+body[data-look="forest"].mkp .hero .wave .l4 { fill: #1F4534; }
+body[data-look="forest"].mkp .hero .wave .l5 { fill: #1B3D2D; }
+body[data-look="forest"].mkp .hero .wave .l6 { fill: #193A2A; }
+body[data-look="forest"].mkp .mk-head .wave .l1 { fill: url(#g-gold); }
+body[data-look="forest"].mkp .mk-head .wave .l2 { fill: url(#g-gold2); }
+body[data-look="forest"].mkp .mk-head .wave .l3, body[data-look="forest"].mkp .mk-head .wave .l4, body[data-look="forest"].mkp .mk-head .wave .l5, body[data-look="forest"].mkp .mk-head .wave .l6 { fill: var(--fo-panel); }
+body[data-look="forest"].mkp .herocard { border: 0; background: linear-gradient(#193A2A, var(--fo-page) 85%); }
+body[data-look="forest"].mkp.in .mk-head.green.bleed { background: radial-gradient(circle at 85% 0%, rgba(255,255,255,.06), transparent 60%), linear-gradient(var(--fo-page), var(--fo-card)); }
+body[data-look="forest"].mkp.in .timeline-body.bleed { background: var(--fo-panel); }
+body[data-look="forest"].mkp .sheet { background: none; box-shadow: none; border-radius: 0; padding: 0 max(10px, env(safe-area-inset-left, 0px)) 1rem; margin-top: 0; }
+body[data-look="forest"].mkp.in .sheet .mk-head.cream { margin: 0 calc(-1 * max(10px, env(safe-area-inset-left, 0px))); border-radius: 0; padding: 1.2rem max(16px, env(safe-area-inset-left, 0px)) 1rem; background: radial-gradient(circle at 80% 15%, rgba(255,255,255,.1), transparent 50%), linear-gradient(var(--fo-page), var(--fo-card)); }
+body[data-look="forest"].mkp .sheet .mk { background: var(--fo-card); }
+body[data-look="forest"].mkp .timeline-body .mk { background: linear-gradient(#FCF9F1, #F5EFE2); border-color: var(--fo-panel-line); color: var(--fo-panel-ink); box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+body[data-look="forest"].mkp .timeline-body .mk-h { background: linear-gradient(#F1E8D3, #FAF6EC); }
+body[data-look="forest"].mkp .timeline-body .mk-h h2 { color: var(--fo-panel-ink); }
+body[data-look="forest"].mkp .timeline-body .mk-h .mk-i svg.i { color: var(--fo-gold-2); }
+body[data-look="forest"].mkp .timeline-body .mk-b { background: transparent; margin: 0; }
+body[data-look="forest"].mkp.in .mk-head.green.bleed, body[data-look="forest"].mkp.in .timeline-body.bleed, body[data-look="forest"].mkp.in .sheet .mk-head.cream { border: 0; }
+
+/* ---------- 2. The other pages ---------- */
+body[data-look="forest"]:not(.mkp) :is(.card, .tile, .sec, .readnext) > :is(h1, h2, .between, .eyebrow):first-child {
   margin: -1rem -1.05rem .8rem; padding: .8rem 1rem .65rem; background: linear-gradient(var(--fo-card-h), var(--fo-card)); color: var(--fo-title); border-radius: 10px 10px 0 0; }
-body[data-look="forest"] :is(.card, .tile, .sec, .readnext) > :is(h2, .between, .eyebrow):first-child :is(h2, a.go) { color: var(--fo-title); margin: 0; }
-body[data-look="forest"] :is(.card, .tile, .sec, .readnext) > .between:first-child a.go { color: var(--fo-gold); }
-body[data-look="forest"] :is(.card, .tile, .sec, .readnext) > :is(h2, .between, .eyebrow):first-child .hico { color: var(--fo-gold); }
+body[data-look="forest"]:not(.mkp) :is(.card, .tile, .sec, .readnext) > :is(h2, .between, .eyebrow):first-child :is(h2, a.go) { color: var(--fo-title); margin: 0; }
+body[data-look="forest"]:not(.mkp) :is(.card, .tile, .sec, .readnext) > .between:first-child a.go { color: var(--fo-gold); }
+body[data-look="forest"]:not(.mkp) :is(.card, .tile, .sec, .readnext) > :is(h2, .between, .eyebrow):first-child .hico { color: var(--fo-gold); }
 /* Cards whose first line isn't a title (the contacts' eyebrow, My puppy, the vet page's
    head) keep the strip slim. */
-body[data-look="forest"] .contacts > .eyebrow:first-child { margin-bottom: .6rem; }
+body[data-look="forest"]:not(.mkp) .contacts > .eyebrow:first-child { margin-bottom: .6rem; }
 
 /* Home: the vet tile cream with a gold Upload; the food cards cream on the page. */
-body[data-look="forest"] .tile.green .btn, body[data-look="forest"] .actionbar .btn.solid {
+body[data-look="forest"]:not(.mkp) .actionbar .btn.solid {
   background: linear-gradient(#F7E2AE, #D9B26A 55%, #C9973F); border-color: #B8893A; color: #2A2110; box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 2px 6px rgba(0,0,0,.3); }
-body[data-look="forest"] .food .duo.two .fcard, body[data-look="forest"] .food .stack .fcard, body[data-look="forest"] .food .fcard { background: linear-gradient(var(--lk-card), var(--lk-card-2)); }
-body[data-look="forest"] .vetrow { background: linear-gradient(var(--lk-card), var(--lk-card-2)); border-color: var(--fo-edge); }
-
-/* Timeline: cream cards on the cream page, dark titles, gold icons. */
-body[data-look="forest"].pg-timeline .card { border: 1px solid var(--lk-line); padding-top: 1rem; background: linear-gradient(#F1E8D3, #FAF6EC 3.4rem, #F5EFE2); }
-body[data-look="forest"].pg-timeline .card > :is(h2, .between, .eyebrow):first-child { margin: 0 0 .6rem; padding: 0; background: none; color: var(--lk-ink); }
-body[data-look="forest"].pg-timeline .card > :is(h2, .between):first-child :is(h2, a.go) { color: var(--lk-ink); }
-body[data-look="forest"].pg-timeline .card .hico { color: var(--lk-gold); }
-
-/* The vet page: the green head runs edge to edge, the stethoscope in its corner. */
-body[data-look="forest"].pg-vet .vethead { margin: calc(-1 * var(--gut)) calc(-1 * var(--gut)) 0; border: 0; border-radius: 0; box-shadow: none; padding: 1.2rem 1rem 1rem; color: var(--fo-title);
-  background: radial-gradient(circle at 80% 15%, rgba(255,255,255,.1), transparent 50%), linear-gradient(var(--lk-page), var(--fo-card)); }
-body[data-look="forest"].pg-vet .vethead > .eyebrow:first-child { margin: 0 0 .3rem; padding: 0; background: none; color: var(--fo-gold); }
-body[data-look="forest"].pg-vet .vethead::before { top: .5rem; right: -.2rem; width: 8.4rem; aspect-ratio: 172 / 150; filter: drop-shadow(0 6px 10px rgba(0,0,0,.35)); }
-body[data-look="forest"].pg-vet .vethead h1 { max-width: 62%; color: var(--fo-title); }
-body[data-look="forest"].pg-vet .vethead p:not(.remind) { color: #E4E9DE; }
-body[data-look="forest"] .remind { background: linear-gradient(var(--lk-card), var(--lk-card-2)); }
 @media (min-width: 720px) { body[data-look="forest"].pg-vet .vethead { margin: 0; border-radius: var(--rc); } }
 
-/* My puppy: cream, the Boston in the corner. */
-body[data-look="forest"] .mypup { border: 1px solid var(--fo-edge); padding-top: 1rem; }
-body[data-look="forest"] .mypup > .eyebrow:first-child { margin: 0 0 .3rem; padding: 0; background: none; color: var(--lk-ink); }
-body[data-look="forest"] .mypup .script { color: var(--lk-leaf); }
-
-body[data-look="forest"] .actionbar { background: var(--fo-card); color: var(--fo-title); border-top-color: var(--fo-edge); }
-body[data-look="forest"] .actionbar .ico { background: var(--fo-card-h); color: var(--fo-gold); }
-body[data-look="forest"] :is(.card, .tile, .sec, .readnext) > :is(h2, .between, .eyebrow):first-child .muted { color: #D7DCCF; }
-body[data-look="forest"].pg-vet .vethead p:not(.remind) { max-width: 72%; }
+body[data-look="forest"]:not(.mkp) .actionbar { background: var(--fo-card); color: var(--fo-title); border-top-color: var(--fo-edge); }
+body[data-look="forest"]:not(.mkp) .actionbar .ico { background: var(--fo-card-h); color: var(--fo-gold); }
+body[data-look="forest"]:not(.mkp) :is(.card, .tile, .sec, .readnext) > :is(h2, .between, .eyebrow):first-child .muted { color: #D7DCCF; }

@@ -68,7 +68,9 @@ anyone outside the family.
   branch. Build log, 2026-11-21.
 - **Looks** (2026-11-21, migration 0042): each breeder picks Classic, Forest or Cream in
   her portal settings; Forest and Cream are the owner's mockups (`docs/reference/portal-looks.html`).
-  `PORTAL_VERSION` 6 on this branch.
+  `PORTAL_VERSION` 6 on this branch. Forest and Cream drawn as the prototype draws them
+  (2026-11-21, `family/mk.js`, the looks' CSS a port of the prototype's), measured by
+  `scripts/portal-looks-check.mjs`. `PORTAL_VERSION` 7 on this branch (the owner's yes). Build log, 2026-11-21.
 - Card colours (2026-11-21): paper, green and a new sand, fixed per card, no two alike
   one above the other on any tab; the food band above the contacts. `PORTAL_VERSION` 6 on this branch.
 - Phase 2: **the go-home bag built** 2026-11-21, migration 0041

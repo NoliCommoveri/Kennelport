@@ -68,14 +68,39 @@ test('she picks a look; families see it; Classic reads as before', async () => {
   assert.equal(env.DB.raw.prepare('SELECT look FROM portal_settings WHERE site_id = ?').get(site.id).look, 'forest');
   assert.match(await (await her('/portal/settings')).text(), /name="look" value="forest" checked/);
   home = await fam('/family');
-  assert.match(home, /<body class="in pg-home" data-look="forest">/);
+  // The four pages drawn as the mockup (family/mk.js): body.mkp, the prototype's markup,
+  // its icons and gradients; Classic has none of it.
+  assert.match(home, /<body class="in pg-home mkp has-bar" data-look="forest">/);
   assert.match(home, /href="\/_kp\/f\/looks\/mockup\.css\?v=\d+">\n<link rel="stylesheet" href="\/_kp\/f\/looks\/forest\.css\?v=\d+">/);
-  assert.match(home, /class="card lookonly vetcard"/);
-  assert.match(home, /class="lookonly vetrow" href="\/family\/vet"/);
+  assert.match(home, /<linearGradient id="g-gold"/);
+  assert.match(home, /<symbol id="i-k-steth"/);
+  assert.match(home, /<section class="herocard"><div class="tile photo hero">/);
+  assert.match(home, /<svg class="wave"/);
+  assert.match(home, /<div class="tile peach"><span class="eyebrow">3-day vet visit<\/span>/);
+  assert.match(home, /class="mk only-cream vetcard"/);
+  assert.match(home, /<a class="vetrow only-forest" href="\/family\/vet">/);
   assert.match(home, /Opal's vet visit/);
-  assert.match(await fam('/family/timeline'), /<body class="in pg-timeline" data-look="forest">/);
-  assert.match(await fam('/family/vet'), /class="card c-sand vethead"/);
-  assert.match(await fam('/family/records'), /class="card c-sand mypup"/);
+  assert.match(home, /<section class="mk"><header class="mk-h"><span class="mk-i"><svg class="i" aria-hidden="true"><use href="#i-k-pin2"\/><\/svg><\/span><h2>Quick links<\/h2>/);
+  // Upload sends itself once a file is picked; a button for a phone without the script.
+  assert.match(home, /<form method="post" action="\/family\/vet\/proof" enctype="multipart\/form-data" class="upf"><label class="btn solid small">[^]*?<input class="sr" type="file" name="file" accept="image\/\*,application\/pdf" required data-send><\/label><noscript><button class="btn line small">Upload record<\/button><\/noscript><\/form>/);
+  // The header: Messages before Aa.
+  assert.match(home, /<header class="top"><div class="in">[^]*?aria-label="Messages"[^]*?id="aa"/);
+  assert.doesNotMatch(home, /class="numsteps"/);
+  const timeline = await fam('/family/timeline');
+  assert.match(timeline, /<body class="in pg-timeline mkp" data-look="forest">/);
+  assert.match(timeline, /<div class="mk-head green bleed">[^]*?<svg class="wave"[^]*?<div class="timeline-body bleed">/);
+  const vet = await fam('/family/vet');
+  assert.match(vet, /<div class="sheet bleed"><div class="mk-head cream"><svg class="swoosh only-cream"[^]*?<svg class="stethart only-forest"/);
+  assert.match(vet, /<p class="notebox"><span class="ring">/);
+  assert.match(vet, /<form method="post" action="\/family\/vet\/booked" class="stack vf">/);
+  const records = await fam('/family/records');
+  assert.match(records, /<section class="mk mypup"><span class="paw only-cream">[^]*?<svg class="boston only-forest"/);
+  assert.match(records, /<use href="#i-k-syringe"\/><\/svg><\/span><h2>Shots, deworming and vet visits<\/h2>/);
+  // Classic: none of the mockup's markup.
+  env.DB.raw.prepare('UPDATE portal_settings SET look = NULL WHERE site_id = ?').run(site.id);
+  const classic = await fam('/family');
+  assert.doesNotMatch(classic, /mkp|i-k-|g-gold|herocard|data-send/);
+  env.DB.raw.prepare("UPDATE portal_settings SET look = 'forest' WHERE site_id = ?").run(site.id);
   // Cream; then an unknown look is refused and nothing changes.
   assert.equal((await her('/portal/settings', { ...SETTINGS, look: 'cream' })).status, 303);
   assert.match(await fam('/family'), /data-look="cream"/);
@@ -91,13 +116,13 @@ test('she picks a look; families see it; Classic reads as before', async () => {
   assert.equal(env.DB.raw.prepare('SELECT look FROM portal_settings WHERE site_id = ?').get(site.id).look, null);
 });
 
-test('every look stylesheet and its art is there', async () => {
+test('every look stylesheet is there, and draws no file that is gone', async () => {
   const { readFile } = await import('node:fs/promises');
   const dir = new URL('../public/_kp/f/looks/', import.meta.url);
   for (const x of Object.values(LOOKS)) {
     for (const c of x.css) {
       const css = await readFile(new URL(`${c}.css`, dir), 'utf8');
-      for (const [, f] of css.matchAll(/url\("([^"]+)"\)/g)) await readFile(new URL(f, dir));
+      for (const [, f] of css.matchAll(/url\("([^"]+)"\)/g)) if (!f.startsWith('data:')) await readFile(new URL(f, dir));
     }
   }
 });
@@ -136,4 +161,17 @@ test('the vet visit once it is done: the page says so, the tab gives way', async
   // Uploaded but never accepted, a week after pickup: the tab gives way too.
   db.prepare('UPDATE portal_placements SET proof_accepted_at = NULL, picked_up_at = ? WHERE id = ?').run(new Date(Date.now() - 8 * DAY).toISOString(), p.id);
   assert.deepEqual(tabs(await fam('/family/records')), ['Home', 'Timeline', 'Photos', 'Records']);
+});
+
+// The looks' checklist (family/mk.js): a box that sends its form. Ticked, the form carries
+// done=1 then the hidden done=0, and the server reads the first; unticked, only done=0.
+test('the looks\' checklist ticks and unticks', async () => {
+  const { checklist } = await import('../src/portal/family/mk.js');
+  const html = checklist([{ id: 'c1', title: 'Crate ready', done: false, raw: {} }, { id: 'v', title: 'Vet booked', done: true, auto: 'vet_booking', raw: {} }]);
+  assert.match(html, /<input type="checkbox" name="done" value="1" data-send>Crate ready<\/label><input type="hidden" name="done" value="0">/);
+  assert.match(html, /<input type="checkbox" checked disabled>Vet booked/);
+  assert.match(html, /1 of 2 ready/);
+  const sent = (checked) => { const f = new URLSearchParams({ kind: 'checklist', id: 'c1', back: 'home' }); if (checked) f.append('done', '1'); f.append('done', '0'); return f.get('done'); };
+  assert.equal(sent(true), '1');
+  assert.equal(sent(false), '0');
 });

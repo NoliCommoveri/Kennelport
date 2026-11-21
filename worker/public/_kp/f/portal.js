@@ -10,6 +10,13 @@
   // Her logo, when it can't load (a site not yet published): the monogram under it shows.
   const gone = (img) => img.classList.add('gone');
   document.addEventListener('error', (e) => { if (e.target.matches?.('.logo img')) gone(e.target); }, true);
+  // A file picked or a box ticked sends its form (the looks' Upload buttons and checklist,
+  // family/mk.js); without the script, the button beside it in <noscript> does.
+  document.addEventListener('change', (e) => {
+    const el = e.target;
+    if (!el.matches?.('[data-send]') || !el.form) return;
+    if (el.form.requestSubmit) el.form.requestSubmit(); else el.form.submit();
+  });
   document.addEventListener('DOMContentLoaded', () => {
     for (const img of document.querySelectorAll('.logo img')) if (img.complete && !img.naturalWidth) gone(img);
     const aa = document.getElementById('aa');
