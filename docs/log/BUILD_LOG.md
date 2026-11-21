@@ -2263,3 +2263,13 @@ differ, with a third colour in the scheme, light and dark.
   with and without her lists and handbook, and fails on two same-colour neighbours.
 - `portal.css` changed: `PORTAL_VERSION` still 5 (on `main`), the owner asked before a bump;
   `versions.test.js` fails until then. 500 pass, 1 fail (that one).
+
+## 2026-11-21: the portal's two mockup looks, as a prototype
+
+The owner sent two mockups of the family portal (cream cards on green; deep green cards with
+cream panels and gold). The original prototype artifact can't be published from here, so
+`docs/reference/portal-looks.html` is `portal-prototype.html` from `main` plus a layer: a
+stylesheet for the family screens (`The mockup look`, then `The Forest look` over it, chosen by
+`html[data-look]`), and Home, Timeline, a new Vet visit page and Records redrawn, with the live
+portal's four tabs. A Look switch (Forest, Cream) sits in the prototype bar. Published at
+https://claude.ai/artifact/9APC1R1PumMwC9xU88etDe. Prototype only: the live portal is unchanged.
