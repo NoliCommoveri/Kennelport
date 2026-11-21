@@ -188,15 +188,29 @@ function checklistCard(list) {
       : tickForm('checklist', x, 'home', x.done)}<span>${esc(x.title)}</span>${x.link ? `<a class="go" href="/family/go/${esc(x.link.id)}?from=checklist">${esc(x.raw.auto ? 'Open' : 'See')} ${ic('arrow')}</a>` : ''}</li>`).join('')}</ul></section>`;
 }
 
-// The dark green band: the exact food, the bag, how much and how often, and a
-// round button to the food program, if she shows one.
-function foodBand(s, name, food) {
-  if (!s.food_name) return '';
-  const points = [s.food_bag, s.food_how, 'The same food for the first two weeks'].filter(Boolean);
-  return `<section class="sec deep bleed food"><p class="eyebrow">What ${esc(name)}'s eating now</p><h2 class="big-h">Keep ${esc(name)} on the same food</h2>
-    <div class="prodrow"><span class="box">${ic('bowl')}</span><div><b>${esc(s.food_name)}</b>${s.food_note ? `<p class="small">${esc(s.food_note)}</p>` : ''}</div></div>
-    <ul class="trio">${points.map((x) => `<li>${ic('check')}<span>${esc(x)}</span></li>`).join('')}</ul>
-    ${food?.link_url ? `<a class="pill light" href="/family/go/${esc(food.id)}?from=food">Order ${esc(name)}'s food ${ic('arrow')}</a>` : ''}</section>`;
+// The dark green band (the owner's layout, 2026-11-21): two cards side by side, the
+// food (her bowl picture, the exact food, the bag, how much, a round button to the
+// food program) and the pet insurance (a round button to her insurance program).
+// Either shows alone, full width, when the other has nothing to show.
+function foodBand(s, name, food, ins) {
+  const cards = [];
+  if (s.food_name) {
+    const points = [s.food_bag, s.food_how, 'The same food for the first two weeks'].filter(Boolean);
+    cards.push(`<div class="fcard"><p class="eyebrow">What ${esc(name)}'s eating now</p><h2 class="card-h">Keep ${esc(name)} on the same food</h2>
+    <div class="prodrow"><span class="box pic"><img src="/_kp/f/food-bowl.webp" alt="" width="128" height="128"></span><div><b>${esc(s.food_name)}</b>${s.food_note ? `<p class="small">${esc(s.food_note)}</p>` : ''}</div></div>
+    <ul class="ticks">${points.map((x) => `<li>${ic('check')}<span>${esc(x)}</span></li>`).join('')}</ul>
+    ${food?.link_url ? `<a class="pill light" href="/family/go/${esc(food.id)}?from=food">Order ${esc(name)}'s food ${ic('arrow')}</a>` : ''}</div>`);
+  }
+  if (ins) {
+    const done = ins.status === 'done';
+    const code = ins.portal_per_family ? ins.family_code : ins.code;
+    cards.push(`<div class="fcard"><p class="eyebrow">${done ? `${ic('check')} Done` : `Included with ${esc(name)}`}</p><h2 class="card-h">Activate ${esc(name)}'s pet insurance</h2>
+    <div class="prodrow"><span class="box">${ic('shield')}</span><div><b>${esc(ins.name)}</b>${ins.family_action ? `<p class="small">${esc(ins.family_action)}</p>` : ins.description ? `<p class="small">${esc(ins.description)}</p>` : ''}</div></div>
+    ${code ? `<p class="small">${ins.portal_per_family ? 'Your code' : 'Code'} <strong>${esc(code)}</strong>${ins.code_note ? ` ${esc(ins.code_note)}` : ''}</p>` : ''}
+    <a class="pill light" href="/family/go/${esc(ins.id)}?from=insurance">${esc(ins.link_label || 'Activate insurance')} ${ic('arrow')}</a></div>`);
+  }
+  if (!cards.length) return '';
+  return `<section class="sec deep bleed food"><div class="duo${cards.length === 2 ? ' two' : ''}">${cards.join('')}</div></section>`;
 }
 
 // A task's status: a word with a small mark (plan 7.1). Red only when overdue.
@@ -395,6 +409,7 @@ async function homePage(env, site, fam, now = new Date()) {
   // The checklist from two weeks before go-home (or while there's no date yet).
   const checklist = st === 'before' && (days === null || days <= 14) ? checklistCard(steps.checklist) : '';
   const food = list.find((x) => x.portal_type === 'food' && x.link_url);
+  const ins = list.find((x) => x.portal_type === 'insurance' && x.link_url);
   if (p.life_status !== 'with_family' || p.status !== 'open') action = null;
 
   const born = pup?.born_on ? new Date(`${pup.born_on}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : null;
@@ -417,7 +432,7 @@ async function homePage(env, site, fam, now = new Date()) {
   ${contactsLead(p, s, now) ? contactsCard(site, s, p, name, { lead: true }) : ''}
   ${checklist}
   ${st === 'before' && statusUrl && live ? statusBand(p, s, name, kennel) : ''}
-  ${live ? foodBand(s, name, food) : ''}
+  ${live ? foodBand(s, name, food, ins) : ''}
   ${list.length ? `<section class="sec paper bleed"><h2>Included with ${esc(name)}</h2>${programList(list, 'home', kennel)}</section>` : ''}
   ${readNext(chapters, photos)}
   <section class="tile quick"><h2>Quick links</h2><div class="qgrid">${quick.map(([href, icon, label]) => `<a class="qtile" href="${href}"><span class="ico">${ic(icon)}</span>${label}</a>`).join('')}</div></section>

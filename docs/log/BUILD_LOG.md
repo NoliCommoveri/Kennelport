@@ -2180,3 +2180,28 @@ section 9 lists where the build differs). Branch `ccr-00a76f7b-evincp`.
   497 pass, 1 expected fail (versions).
 - For KennelOS to build on its side: the plan's sections 4a (send `bag_items`, cost included)
   and 4b (record what went home as an expense on the sale).
+
+## 2026-11-21: Home's food band, two across, with the insurance card
+
+The owner's request, from her phone's screenshots: replace the food band's bowl icon with
+her picture, set the band two across, and put an "Activate {pup}'s pet insurance" card
+beside the food with a button straight to her insurance referral link.
+
+- `portal/family.js` `foodBand`: now one or two cards in the dark band. The food card as
+  before (its heading moved into the card), with her picture
+  (`public/_kp/f/food-bowl.webp`, 256px, cropped from her upload) in place of the `bowl`
+  icon, and the points as a ticked list instead of the three-up row (a single point sat
+  alone in a third of the width). The insurance card shows when a program is set to Show
+  as Insurance and has a referral link: its name, What the family does (or its
+  description), its code (or the family's own), and a button (her Button wording, else
+  "Activate insurance") to `/family/go/{id}?from=insurance`, so clicks count like the
+  others (`insurance` added to `PLACES`, `family/files.js`). Either card shows alone, full
+  width, when the other has nothing; neither, no band.
+- No new breeder wording: she sets it up with the existing Recommended products fields
+  and Portal settings' Show as. The family-facing lines stay in `family.js`.
+- `public/_kp/f/portal.css`: `.food .duo`, `.fcard`, `.card-h`, `.ticks`, `.box.pic`; two
+  across at every width (one column at the largest text size), buttons level at the
+  bottom. No prototype for two across: built from the band, highlight and pill pieces.
+  **Needs a `PORTAL_VERSION` bump (4, on `main`): asked the owner.**
+- Checked at 390px and 1200px. Tests: `portal-steps` (the insurance card, its link, the
+  picture). 497 pass, 1 expected fail (versions).

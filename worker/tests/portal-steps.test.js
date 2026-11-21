@@ -156,6 +156,11 @@ test('the family ticks the checklist from Home; she sees it, and their ticks are
   assert.match(home, /4 lb bag/);
   assert.match(home, /Order Opal's food/);
   assert.match(home, /\/family\/go\/food\?from=food/);
+  // Beside it, two across: the insurance card, its button to her insurance program.
+  assert.match(home, /class="duo two"/);
+  assert.match(home, /Activate Opal's pet insurance/);
+  assert.match(home, /\/family\/go\/ins\?from=insurance/);
+  assert.match(home, /\/_kp\/f\/food-bowl\.webp/);
   // Go-home a month away: no checklist yet.
   assert.doesNotMatch(await (await d('/family')).text(), /Go-home checklist/);
 
