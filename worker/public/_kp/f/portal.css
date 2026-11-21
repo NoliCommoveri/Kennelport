@@ -173,6 +173,9 @@ a.tile:hover { box-shadow: var(--shadow); }
 .hl .badge { width: 3.4rem; height: 3.4rem; border-radius: 50%; border: 2.5px solid var(--accent); color: var(--accent); display: grid; place-items: center; }
 .hl .badge svg.i { width: 1.8rem; height: 1.8rem; }
 .hl b { font-size: .98rem; display: block; }
+/* What came home in the puppy's bag (Records): the badge, the words, its button. */
+.hl.bag > li > div { display: grid; grid-template-columns: 3.4rem 1fr auto; gap: .8rem; align-items: center; }
+.hl.bag .small { display: block; }
 .programs li { display: grid; grid-template-columns: 3.4rem 1fr; gap: .8rem; align-items: start; }
 .programs p { margin: .1rem 0; }
 .programs .st { margin-top: .2rem; }

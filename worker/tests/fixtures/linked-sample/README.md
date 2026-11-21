@@ -43,6 +43,7 @@ a field or value the sample doesn't use. Add it to the step-1 files.
 
 **Extras**: two stays (one fixed price), a photo package (from a price), a starter pack (no price).
 **Products**: a food program with a code, insurance with a link only, two transport services.
+**Go-home bag**: three items: the food program's starter bag and the insurance certificate (free, tied to their programs), and a scent blanket ($4.50, expensed).
 **Steps**: five. **Payment**: application fee and deposit, with methods. **Waitlist**: an id.
 
 **Family feed**

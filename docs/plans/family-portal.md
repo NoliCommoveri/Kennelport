@@ -159,8 +159,10 @@ pages: it lands in the portal's own tables, signed-in only.
 Never from KennelOS: page text, handbook, email wording, layout, photo choice, visibility.
 Never from KennelOS either, because it doesn't record them: who used a program's link or
 code (no program reports that, `referralShare.js`), so program sign-ups come from the
-programs' own reports (section 12.1); and the go-home bag (section 8.4), which is the
-portal's own.
+programs' own reports (section 12.1). The go-home bag (section 8.4) was here too, until
+the owner chose (2026-11-21) to have KennelOS send her bag's items, cost included, as
+`bag_items` in its website bundle; what each family was sent is recorded here and goes
+back in the facts (section 3.4, [`portal-go-home-bag.md`](done/portal-go-home-bag.md)).
 
 ### 3.3 Milestones: data in, story out
 
@@ -251,6 +253,9 @@ since she made the change herself:
 - **a corrected pickup time** before pickup: the same event moves;
 - **the microchip** she enters or corrects;
 - **a death after pickup** she records: the dog is marked deceased with its date.
+- **what went home in the go-home bag**, each item's cost and whether she expenses it,
+  recorded by KennelOS as an expense on the sale ([`portal-go-home-bag.md`](done/portal-go-home-bag.md)
+  4b; the owner's exception to the rule below, 2026-11-21: her own cost, not a charge).
 
 Anything with money in it (a return, a rehoming, a refund) never goes back on its own:
 KennelOS shows it as a Today nudge for her to handle there. Everything else she edits in
@@ -378,6 +383,8 @@ including one pickup she forgot to mark (section 5).
   status, download all (section 8.3); video in stay updates
 - The go-home bag: her template, what each family was sent, and **What came home in
   Opal's bag** on Records (section 8.4)
+  **Built 2026-11-21** (migration 0041, [`portal-go-home-bag.md`](done/portal-go-home-bag.md)): with
+  an expense column, items from KennelOS, and what went home sent back to it. Build log, 2026-11-21.
 - Buyer details she records on each family's screen, pre-filled from KennelOS
   (section 12.2)
 - The Reports page, which uses both: sign-ups by litter, where families click, earnings, extras income,
@@ -768,6 +775,10 @@ services today. Hosting them means:
 
 ### 8.4 The go-home bag
 
+**Built 2026-11-21:** [`portal-go-home-bag.md`](done/portal-go-home-bag.md) has the decisions
+(an expense column per item; KennelOS sends the items and gets what went home; no
+quantities; families see it from pickup; her own button words).
+
 She sends every puppy home with goodies: a food starter bag, the insurance certificate,
 the AKC paper, a blanket with the litter's scent, toys, a collar and leash, samples, the
 go-home folder. Several come from the programs' breeder kits, so the bag is also a
@@ -823,8 +834,8 @@ New tables, all with `site_id` like the rest of KennelPort. Imported tables also
 | `portal_program_results` | litter, product, families signed up, amount earned, period, entered at, source (typed / CSV) | What each program's own report says, per litter (section 12.1) |
 | `portal_detail_fields` | label, type (choice / yes-no / text / tick-any), options, order, on/off | The buyer details she tracks (section 12.2) |
 | `portal_family_details` | family, field, value | Her answers for each family. Kept with her sale records |
-| `portal_bag_items` | name, cost to her, where it comes from, product (nullable), order, on/off | Her go-home bag template |
-| `portal_placement_bag` | placement, bag item or free text, quantity | What each puppy actually went home with |
+| `portal_bag_items` | name, cost to her, expense (yes/no), where it comes from, product (nullable), button words, order, on/off, KennelOS id | Her go-home bag template (built, migration 0041) |
+| `portal_placement_bag` | placement, bag item (nullable), name, cost, expense, product, button words | What each puppy actually went home with, as it was then (built; no quantity) |
 | `extras` (existing) | adds delivery type (stay / media / none), update cadence in days (stay), what the package includes and a delivery note (media) | The website's catalog, also the portal's list of what it delivers |
 | `portal_placement_extras` | placement, extra, `kennelos_id`, status (stay: booked / staying / home; media: booked / shooting / editing / delivered), due date, delivered at | Which family has which extra |
 | `portal_stay_skills` | placement extra, skill, order, from the package (yes/no) | The stay's skills list, copied from the package's checklist so she can add her own |

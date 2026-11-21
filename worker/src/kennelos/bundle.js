@@ -25,6 +25,7 @@
 //     heats: [{ id, dam_id, dam_name, month }],
 //     extras?: [{ id, name, group, description, price_from, price_to }],
 //     products?: [{ id, name, link_url, code, code_note, website?, transport?, account_type? }],
+//     bag_items?: [{ id, name, cost, expense?, origin?, product_id? }] (bag_items),
 //     steps?: [{ id, heading, body }],
 //     partner_kennels?: [{ id, name, website }],
 //     payment?: { application_fee?: {…}, deposit?: {…} } }
@@ -54,13 +55,15 @@ import { siteBase, siteFacts } from './link.js';
 import { litterClockStatements } from './clock.js';
 import { coOwnedRules } from '../content/records.js';
 import { DEFAULT_RULES, DOG_PLACES, PUP_DISPOSITIONS, ACCOUNT_TYPES, rulesFor, loadBuild } from '../content/rules.js';
+import { sayer, everyWording, siteWording } from '../manage/wording.js';
+import { suggestedButtonKey } from '../portal/bag.js';
 
 // A litter's KennelOS statuses (litter_status): only live litters are sent.
 export const LITTER_KOS_STATUSES = ['expected', 'whelped', 'weaning', 'ready'];
 
 export const BUNDLE_FORMAT = 1;
 export const MAX_BUNDLE_BYTES = 1024 * 1024;
-export const MAX = { ancestors: 30, dogs: 200, litters: 100, puppies: 30, pairings: 50, heats: 50, health: 60, extras: 100, products: 50, steps: 20, titles: 20, partner_kennels: 50, co_owner_kennels: 10 };
+export const MAX = { ancestors: 30, dogs: 200, litters: 100, puppies: 30, pairings: 50, heats: 50, health: 60, extras: 100, products: 50, bag_items: 50, steps: 20, titles: 20, partner_kennels: 50, co_owner_kennels: 10 };
 
 // The optional sections this Worker takes. Each answer lists them (siteFacts), so
 // KennelOS sends a new section only to a Worker that knows it, instead of having
@@ -89,7 +92,10 @@ export const MAX = { ancestors: 30, dogs: 200, litters: 100, puppies: 30, pairin
 // Import-descended is worked out here from them (content/fields.js).
 // 'origin_country': on a dog and on each ancestor, country_of_origin (a country name,
 // or null), apart from Imported: for Foreign bloodlines (content/fields.js).
-export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail', 'origin', 'lineage', 'origin_country'];
+// 'bag_items': her go-home bag's items (docs/plans/portal-go-home-bag.md 4a): name,
+// cost in dollars (12.5), expense (default yes with a cost), where it comes from and
+// the product (a KennelOS Account id from products) it's tied to.
+export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail', 'origin', 'lineage', 'origin_country', 'bag_items'];
 
 // ---------- checking ----------
 
@@ -146,6 +152,9 @@ const SHAPES = {
   // `transport`, with its website for the address under its badge.
   product: { id: ID, name: S(80, true), link_url: { type: 'url' }, code: S(40), code_note: S(120), website: { type: 'url' }, transport: { type: 'bool' },
     account_type: S(30) },
+  // An item of her go-home bag, for the family portal (bag_items): cost to her in
+  // dollars and cents, never shown to families.
+  bag_item: { id: ID, name: S(80, true), cost: { type: 'money' }, expense: { type: 'bool' }, origin: S(120), product_id: REF },
   pay: Object.fromEntries(Object.entries(PAYMENT_FIELDS).filter(([k]) => k !== 'show_on_site')),
 };
 
@@ -164,6 +173,7 @@ function cleanShape(shape, obj, path) {
     else if (f.ancestors) out[k] = k in obj && obj[k] != null ? cleanAncestors(obj[k], `${path}.${k}`, f.max) : null;
     else if (f.list) out[k] = cleanList(f.list, obj[k] ?? [], `${path}.${k}`, f.max);
     else if (f.object) out[k] = obj[k] == null ? null : cleanShape(f.object, obj[k], `${path}.${k}`);
+    else if (f.type === 'money') out[k] = cleanMoney(obj[k], `${path}.${k}`);
     else {
       try { out[k] = cleanValue(f, obj[k], `${path}.${k}`) ?? (f.type === 'list' ? [] : null); } catch (err) {
         if (err instanceof ContentError) throw bad(`${path}.${k}`, err.message.replace(/^[^:]*: /, ''));
@@ -172,6 +182,14 @@ function cleanShape(shape, obj, path) {
     }
   }
   return out;
+}
+
+// A sum of money in dollars (12.5, "12.50") → whole cents; null when not sent.
+function cleanMoney(v, path) {
+  if (v === undefined || v === null || v === '') return null;
+  const n = typeof v === 'number' ? v : /^\d+(\.\d{1,2})?$/.test(String(v).trim()) ? Number(String(v).trim()) : NaN;
+  if (!Number.isFinite(n) || n < 0 || n > 10000) throw bad(path, 'a sum of money from 0 to 10000');
+  return Math.round(n * 100);
 }
 
 // A dog's titles: abbreviations (as before), or with titles_detail each one as
@@ -226,7 +244,7 @@ function cleanList(shape, v, path, max) {
   return rows;
 }
 
-const TOP = ['format', 'bundle_id', 'kennel_id', 'sent_at', 'waitlist_public_id', 'dogs', 'litters', 'pairings', 'heats', 'extras', 'products', 'steps', 'payment', 'partner_kennels'];
+const TOP = ['format', 'bundle_id', 'kennel_id', 'sent_at', 'waitlist_public_id', 'dogs', 'litters', 'pairings', 'heats', 'extras', 'products', 'bag_items', 'steps', 'payment', 'partner_kennels'];
 
 // For the linked sample's coverage test (tests/fixtures/linked-sample).
 export { SHAPES as BUNDLE_SHAPES, TOP as BUNDLE_TOP };
@@ -249,6 +267,7 @@ export function cleanBundle(body) {
     heats: cleanList('heat', body.heats ?? [], 'heats', MAX.heats),
     extras: 'extras' in body ? cleanList('extra', body.extras, 'extras', MAX.extras) : null,
     products: 'products' in body ? cleanList('product', body.products, 'products', MAX.products) : null,
+    bag_items: 'bag_items' in body ? cleanList('bag_item', body.bag_items, 'bag_items', MAX.bag_items) : null,
     steps: 'steps' in body ? cleanList('step', body.steps, 'steps', MAX.steps) : null,
     partner_kennels: 'partner_kennels' in body ? cleanList('partner_kennel', body.partner_kennels, 'partner_kennels', MAX.partner_kennels) : null,
     payment: null,
@@ -290,6 +309,8 @@ export const OWNED = {
   health: ['test', 'result', 'normal', 'date', 'verify_url', 'test_type'],
   extras: ['name', 'grp', 'description'],
   products: ['name', 'link_url', 'code', 'code_note', 'website_url', 'transport', 'account_type'],
+  // Her go-home bag: KennelOS is where she sets these; her switch, order and button words stay hers.
+  bag_items: ['name', 'cost_cents', 'expense', 'origin', 'product_id'],
   // Steps: none. KennelOS's wording only starts a step; her edits and order stay.
   steps: [],
 };
@@ -848,6 +869,8 @@ export async function applyBundle(env, device, body) {
   // not deleted (finding 01-1): off the public site, still a program in the family
   // portal (families' statuses and codes point at its id), and the same row comes
   // back if KennelOS sends it again.
+  // KennelOS Account id → her product, for the go-home bag's items below.
+  const productByKos = new Map();
   if (clean.products) {
     const products = (await env.DB.prepare('SELECT * FROM products WHERE site_id = ?').bind(site.id).all()).results;
     const byKos = new Map(products.filter((x) => x.kennelos_id).map((x) => [x.kennelos_id, x]));
@@ -867,17 +890,70 @@ export async function applyBundle(env, device, body) {
         if (j >= 0) [cur] = free.splice(j, 1);
       }
       if (cur) {
+        productByKos.set(x.id, cur);
         if (cur.hidden_by_kennelos) w.counts.back++;
         if (w.update('products', cur, { ...values, source: 'kennelos', kennelos_id: x.id, hidden_by_kennelos: 0 })) w.counts.updated++;
         continue;
       }
-      w.insert('products', { id: crypto.randomUUID(), site_id: site.id, ...values, grp: (type && w.L[`acct_group_${type}`]) || null, home_badge: 0, sort: ++sort, source: 'kennelos', kennelos_id: x.id });
+      const productId = crypto.randomUUID();
+      productByKos.set(x.id, { id: productId, portal_type: null });
+      w.insert('products', { id: productId, site_id: site.id, ...values, grp: (type && w.L[`acct_group_${type}`]) || null, home_badge: 0, sort: ++sort, source: 'kennelos', kennelos_id: x.id });
       w.counts.created++;
     }
     const sent = new Set(clean.products.map((x) => x.id));
     for (const x of products) {
       if (x.source === 'kennelos' && x.kennelos_id && !sent.has(x.kennelos_id) && !x.hidden_by_kennelos) {
         w.s.push(env.DB.prepare('UPDATE products SET hidden_by_kennelos = 1 WHERE id = ?').bind(x.id));
+        w.counts.off++;
+      }
+    }
+  }
+
+  // Her go-home bag's items (bag_items; docs/plans/portal-go-home-bag.md 4a): name,
+  // cost, expense, where it comes from and its program are KennelOS's (OWNED); her
+  // switch, order and button words stay hers. The first time, one of hers with the
+  // same name is taken over. One KennelOS stops sending is hidden, never deleted, and
+  // what families already went home with is untouched (portal/bag.js). Hers, with no
+  // KennelOS id, are never touched. A product it names that this bundle doesn't send
+  // (nor an earlier one) is dropped from the item, not refused.
+  if (clean.bag_items) {
+    const bag = (await env.DB.prepare('SELECT * FROM portal_bag_items WHERE site_id = ?').bind(site.id).all()).results;
+    if (!clean.products) {
+      for (const x of (await env.DB.prepare('SELECT id, kennelos_id, portal_type FROM products WHERE site_id = ? AND kennelos_id IS NOT NULL').bind(site.id).all()).results) productByKos.set(x.kennelos_id, x);
+    }
+    const byKos = new Map(bag.filter((x) => x.kennelos_id).map((x) => [x.kennelos_id, x]));
+    const free = bag.filter((x) => !x.kennelos_id);
+    let sort = Math.max(-1, ...bag.map((x) => x.sort));
+    let say = null;
+    const buttonFor = async (product) => {
+      say ??= sayer({ every: await everyWording(env).catch(() => ({})), site: siteWording(await loadBuild(env, site.id)) });
+      return say(suggestedButtonKey(product.portal_type));
+    };
+    for (const x of clean.bag_items) {
+      const product = x.product_id ? productByKos.get(x.product_id) ?? null : null;
+      const cost = x.cost ?? 0;
+      const values = { name: x.name, cost_cents: cost, expense: cost > 0 && (x.sent.has('expense') && x.expense !== null ? x.expense : true) ? 1 : 0, origin: x.origin, product_id: product?.id ?? null };
+      let cur = byKos.get(x.id);
+      if (!cur) {
+        const j = free.findIndex((e) => lower(e.name) === lower(x.name));
+        if (j >= 0) [cur] = free.splice(j, 1);
+      }
+      if (cur) {
+        if (cur.hidden_by_kennelos) w.counts.back++;
+        const button = !cur.button && product && product.id !== cur.product_id ? { button: await buttonFor(product) } : {};
+        if (w.update('portal_bag_items', cur, { ...values, ...button, source: 'kennelos', kennelos_id: x.id, hidden_by_kennelos: 0 })) {
+          w.s.push(env.DB.prepare('UPDATE portal_bag_items SET updated_at = ? WHERE id = ?').bind(w.t, cur.id));
+          w.counts.updated++;
+        }
+        continue;
+      }
+      w.insert('portal_bag_items', { id: crypto.randomUUID(), site_id: site.id, ...values, button: product ? await buttonFor(product) : null, shown: 1, sort: ++sort, source: 'kennelos', kennelos_id: x.id, created_at: w.t, updated_at: w.t });
+      w.counts.created++;
+    }
+    const sent = new Set(clean.bag_items.map((x) => x.id));
+    for (const x of bag) {
+      if (x.source === 'kennelos' && x.kennelos_id && !sent.has(x.kennelos_id) && !x.hidden_by_kennelos) {
+        w.s.push(env.DB.prepare('UPDATE portal_bag_items SET hidden_by_kennelos = 1, updated_at = ? WHERE id = ?').bind(w.t, x.id));
         w.counts.off++;
       }
     }

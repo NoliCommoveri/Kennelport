@@ -107,7 +107,7 @@ read that before the rest. Update this map when you add, move or split a file.
   `family/`: `icons.js`, `stay.js` (the extended stay's pieces), `files.js` (photos, files,
   program links), `parts.js`.
 - `admin.js` her side (Puppy families, each family's screen). Split out into `admin/`:
-  `templates.js` (checklist and timeline), `handbook.js` (the handbook's chapters), `settings.js`, `today.js` (the Families and
+  `templates.js` (checklist and timeline), `handbook.js` (the handbook's chapters), `bag.js` (the go-home bag), `settings.js`, `today.js` (the Families and
   Portal tabs' lists, Today's portal part), `parts.js`.
 - `store.js` the records; `steps.js` checklist, timeline, programs; `stays.js` extended
   stays; `vet.js` the 3-day vet visit; `reminders.js` the hourly job; `messages.js` emails;
@@ -118,6 +118,10 @@ read that before the rest. Update this map when you add, move or split a file.
   `[link: Program]`, `---` pages, her styles and photos), its search, and chapters from a
   file (`chaptersFrom`, `htmlToText`); her screen is `admin/handbook.js`; the family's flipbook
   and Read next are in `family.js`, turned by `public/_kp/f/handbook.js`.
+- `bag.js` the go-home bag (`plans/done/portal-go-home-bag.md`): her bag's items, what each puppy
+  went home with (fixed at her Save or at pickup), the family's list, and what goes back to
+  KennelOS (`bagFact`); her screen and the Sent home with card are `admin/bag.js`; KennelOS's
+  `bag_items` land in `kennelos/bundle.js`.
 - `pups.js` a family's puppy kept after its litter leaves the website (`plans/portal-kept-pups.md`):
   the copy and its photos, made by every delete of a puppy, litter or photo; `pupOf` and
   `photosOf` read the website's puppy, else the copy.

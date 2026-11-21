@@ -55,7 +55,7 @@ function missing(shapes, seen) {
   return out;
 }
 
-const BUNDLE_PARTS = { dogs: 'dog', litters: 'litter', pairings: 'pairing', heats: 'heat', extras: 'extra', products: 'product', steps: 'step', partner_kennels: 'partner_kennel', payment: 'payment' };
+const BUNDLE_PARTS = { dogs: 'dog', litters: 'litter', pairings: 'pairing', heats: 'heat', extras: 'extra', products: 'product', bag_items: 'bag_item', steps: 'step', partner_kennels: 'partner_kennel', payment: 'payment' };
 const FEED_PARTS = { families: 'family', vet: 'vet', removed: 'removed' };
 
 test('the sample uses every section, field and value the website bundle takes', () => {

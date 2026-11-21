@@ -6,6 +6,7 @@ import { startAssumedClocks, getSettings, familyEmails } from './store.js';
 import { dueReminders } from './vet.js';
 import { vetMessage } from './messages.js';
 import { portalBase } from './auth.js';
+import { fixDueBags } from './bag.js';
 
 export async function sendDueFor(env, site, p, settings, now = new Date()) {
   const { results: log } = await env.DB.prepare("SELECT kind, basis, MIN(sent_at) AS at FROM portal_email_log WHERE placement_id = ? AND result != 'failed' GROUP BY kind, basis").bind(p.id).all();
@@ -39,6 +40,8 @@ export async function sendDueFor(env, site, p, settings, now = new Date()) {
 
 export async function runPortalHourly(env, now = new Date()) {
   const started = await startAssumedClocks(env, now);
+  // A puppy home by its booked time, or by KennelOS, gets its go-home bag fixed (portal/bag.js).
+  try { await fixDueBags(env); } catch (err) { console.error(`portal: go-home bags not fixed: ${err?.message ?? err}`); }
   const { results } = await env.DB.prepare(`SELECT p.*, s.subdomain, s.kennel_name, d.hostname AS domain FROM portal_placements p
     JOIN sites s ON s.id = p.site_id JOIN portal_families f ON f.id = p.family_id
     LEFT JOIN custom_domains d ON d.site_id = s.id AND d.status = 'active'

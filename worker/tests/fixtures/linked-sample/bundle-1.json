@@ -583,6 +583,29 @@
    "account_type": "transport"
   }
  ],
+ "bag_items": [
+  {
+   "id": "bag-food",
+   "name": "Food starter bag (2 lb)*",
+   "cost": 0,
+   "expense": false,
+   "origin": "The food program's breeder kit",
+   "product_id": "prod-food"
+  },
+  {
+   "id": "bag-ins",
+   "name": "Insurance trial certificate*",
+   "cost": 0,
+   "product_id": "prod-ins"
+  },
+  {
+   "id": "bag-blanket",
+   "name": "Blanket with the litter's scent*",
+   "cost": 4.5,
+   "expense": true,
+   "origin": "Bought in bulk"
+  }
+ ],
  "steps": [
   {
    "id": "st-1",
