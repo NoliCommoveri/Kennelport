@@ -274,9 +274,10 @@ a.tick:not(.on) { border-style: dashed; }
 .food .duo.two .fcard, .food .stack .fcard { background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .12); border-radius: var(--rc); padding: .8rem; display: flex; flex-direction: column; }
 .food .stack .fcard.grow { flex: 1 0 auto; }
 .food .duo.two .card-h { font-size: 1.2rem; line-height: 1.1; }
-.food .duo.two .prodrow { grid-template-columns: 1fr; gap: .5rem; }
-.food .duo.two .box { width: 3.6rem; height: 3.6rem; }
-.food .duo.two .box svg.i { width: 2.1rem; height: 2.1rem; }
+.food .duo.two .prodrow { grid-template-columns: 3.1rem minmax(0, 1fr); gap: .55rem; align-items: center; }
+.food .duo.two .prodrow b { font-size: .92rem; line-height: 1.2; overflow-wrap: anywhere; }
+.food .duo.two .box { width: 3.1rem; height: 3.1rem; border-radius: 11px; }
+.food .duo.two .box svg.i { width: 1.8rem; height: 1.8rem; }
 .food .duo.two .pill { margin-top: auto; align-self: stretch; padding: .6rem .7rem; font-size: .85rem; min-height: 2.6rem; text-align: center; }
 .food .duo.two .did { margin-top: -.3rem; }
 .food .duo.two .did .btn { width: 100%; justify-content: center; padding: .3rem 0; }
@@ -288,7 +289,7 @@ a.tick:not(.on) { border-style: dashed; }
 .food .fcard.slim .box svg.i { width: 1.4rem; height: 1.4rem; stroke-width: 1.6; }
 .food .duo.two .fcard.slim .pill { margin-top: 0; }
 html[data-zoom="3"] .food .duo.two { grid-template-columns: 1fr; }
-@media (min-width: 720px) { .food .duo.two .card-h { font-size: 1.45rem; } .food .duo.two .prodrow { grid-template-columns: 3.6rem 1fr; } .food .duo.two .fcard { padding: 1rem; } .food .duo.two .pill { align-self: flex-start; padding: .6rem 1.4rem; } .food .duo.two .did .btn { width: auto; justify-content: flex-start; } }
+@media (min-width: 720px) { .food .duo.two .card-h { font-size: 1.45rem; } .food .duo.two .prodrow { grid-template-columns: 3.6rem minmax(0, 1fr); } .food .duo.two .prodrow .box { width: 3.6rem; height: 3.6rem; } .food .duo.two .prodrow b { font-size: 1rem; } .food .duo.two .fcard { padding: 1rem; } .food .duo.two .pill { align-self: flex-start; padding: .6rem 1.4rem; } .food .duo.two .did .btn { width: auto; justify-content: flex-start; } }
 .food .prodrow p { opacity: .85; margin: .15rem 0 0; }
 .trio { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; text-align: center; font-size: .82rem; font-weight: 700; line-height: 1.2; }
 .trio svg.i { display: block; width: 1.7rem; height: 1.7rem; margin: 0 auto .3rem; stroke-width: 2; }

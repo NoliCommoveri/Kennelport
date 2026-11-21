@@ -2220,3 +2220,6 @@ beside the food with a button straight to her insurance referral link.
   and no buttons. It shows done even when the program has no link.
 - Checked at 390px and 1200px in all three states. `portal-steps` covers the stack, the
   slim card's link, and the done state. Still needs the `PORTAL_VERSION` bump (asked).
+- The owner, after: the words stay beside the picture on both cards at phone width too
+  (`.food .duo.two .prodrow`: a 3.1rem picture, the name and line beside it; 3.6rem on a
+  computer). Checked at 390px and 1200px.
