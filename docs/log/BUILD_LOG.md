@@ -2419,3 +2419,9 @@ mkVet, mkRecords, mkCard, the waves and the art), so the two could only come clo
   sheet, My puppy; none of it in Classic) and the checklist's ticks. All pass but the
   version check: `PORTAL_VERSION` is 6 on `main`, so these changes need 7. **Asked the
   owner.** No migration.
+
+## 2026-11-21: PORTAL_VERSION 7
+
+With the owner's yes: `PORTAL_VERSION` 6 → 7 (`PORTAL_FILES` d790fbdbc776259e), for the
+looks drawn as the prototype (`looks/`, the art files gone) and Upload and the checklist
+sending themselves (`portal.js`), so phones pick them up at once. All tests pass (506).
