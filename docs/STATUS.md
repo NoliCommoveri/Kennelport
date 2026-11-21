@@ -69,7 +69,8 @@ anyone outside the family.
 - Phase 2, next: **the go-home bag**, planned 2026-11-21 in
   [`plans/portal-go-home-bag.md`](plans/portal-go-home-bag.md) (migration 0041; bag items with
   their cost and an expense column, pushed from KennelOS in the bundle, and what
-  went home sent back to KennelOS as an expense; five questions still open in its section 8). Not started.
+  went home sent back to KennelOS as an expense; every question answered).
+  Ready to build; not started.
 - Phase 3: not started.
 - The same family twice, and deleted families (2026-11-13): the feed links a family's only
   typed placement; **Merge** for a typed placement or family into KennelOS's; **Delete

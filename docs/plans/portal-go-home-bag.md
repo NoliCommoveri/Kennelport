@@ -22,7 +22,8 @@ folder). Several come from programs' breeder kits, so the bag is also a revenue 
   default; she unticks what didn't go and adds anything else. The card's heading line
   shows the count, what the bag cost her and how much of that she expenses.
 - **The family's side** (Records, from pickup on): **What came home in Opal's bag**, each
-  item with its program's line and **Get more**, **Activate** or **Register** where it's
+  item with its program's line and a button in her own words (**Get more**, **Activate**,
+  **Register**…) where it's
   tied to a program. Clicks count with place `bag`.
 
 ## 2. Prototype screens to match
@@ -39,7 +40,7 @@ The prototype's template rows aren't editable in place; editing an item opens th
 small form as adding one (built from the template screens' `card`, `fgrid` and `hint`,
 as the handbook's editor was). Say so in the build log.
 
-## 3. Decisions (proposed; the owner confirms in section 8)
+## 3. Decisions (confirmed by the owner, 2026-11-21)
 
 1. **The template is live until pickup, then fixed.** A placement with no saved bag shows
    her template, ticked. When she saves **Sent home with**, or when the puppy is marked
@@ -51,11 +52,21 @@ as the handbook's editor was). Say so in the build log.
    It keeps its link to the template item and program, for Reports and the button.
 3. **Families see the band from pickup on**, only while the placement is open and the
    puppy is with them (`active(p)` in `family/parts.js`), and only if at least one item
-   went. Not on the loss page, not before pickup (the go-home checklist covers that time).
-4. **The button's wording comes from the program's type** (`products.portal_type`):
-   food → **Get more**, insurance → **Activate**, registration → **Register**, anything
-   else → **Get more**. Each is a wording line. The program's own line under the name is
-   its `family_action` ("what the family must do"), as on Home.
+   went. Not on the loss page, and not before pickup (the owner, 2026-11-21; the go-home
+   checklist covers that time).
+11. **Her bag starts empty** (the owner, 2026-11-21): no starting items. Her template
+   screen's empty message (a wording line) says what the bag is for and to add the first
+   item; Sent home with doesn't show until she has one, or one came from KennelOS.
+12. **No quantities** (the owner, 2026-11-21): one of each. For two of something she adds
+   it with its number in the name ("2 chew toys").
+4. **She sets each item's button words** (the owner, 2026-11-21). When she ties an item
+   to a program, the button field is filled in for her from the program's type
+   (`products.portal_type`: food → **Get more**, insurance → **Activate**, registration →
+   **Register**, anything else → **Get more**; these three are wording lines), and she
+   changes it as she likes. Cleared, it reads **Get more**. A KennelOS item gets the same
+   filled-in words when it first arrives; after that they're hers (not KennelOS-owned).
+   The words go with each sent item (decision 2). The program's own line under the name
+   is its `family_action` ("what the family must do"), as on Home.
    A program that's off in the portal (`portal_show = 0`) or hidden by KennelOS shows the
    item with no button.
 5. **Cost is in whole cents, hers alone.** Families never see costs, where an item came
@@ -94,6 +105,7 @@ CREATE TABLE IF NOT EXISTS portal_bag_items (
   expense     INTEGER NOT NULL DEFAULT 1,   -- she expenses it (decision 8)
   origin      TEXT,                 -- where it comes from, her words ("The food program's kit")
   product_id  TEXT REFERENCES products(id),
+  button      TEXT,                 -- her words on the family's button (decision 4)
   shown       INTEGER NOT NULL DEFAULT 1,   -- in the template for new families
   sort        INTEGER NOT NULL DEFAULT 0,
   source      TEXT NOT NULL DEFAULT 'breeder',  -- breeder / kennelos, as on extras
@@ -112,7 +124,7 @@ CREATE TABLE IF NOT EXISTS portal_placement_bag (
   cost_cents   INTEGER NOT NULL DEFAULT 0,
   expense      INTEGER NOT NULL DEFAULT 1,
   product_id   TEXT,
-  quantity     INTEGER NOT NULL DEFAULT 1,
+  button       TEXT,
   sort         INTEGER NOT NULL DEFAULT 0
 );
 -- Set when the placement's own rows are made (decision 1); null means "her template".
@@ -120,8 +132,8 @@ ALTER TABLE portal_placements ADD COLUMN bag_saved_at TEXT;
 ```
 
 `bag_saved_at` set with zero rows means "nothing went", distinct from "not saved yet".
-Indexes on `(site_id, sort)`, `(site_id, kennelos_id)` and `(placement_id)`. Quantity
-is stored but not shown in this chunk (section 8, question 3). The column is `origin`,
+Indexes on `(site_id, sort)`, `(site_id, kennelos_id)` and `(placement_id)`. No
+quantity (decision 12). The column is `origin`,
 not `source`, because `source` already means "who made the row" on imported tables.
 
 ## 4a. From KennelOS: bag items in the bundle
@@ -166,7 +178,7 @@ The feed's facts that go back (`feed.js` `factsFor`, family-portal.md 3.4) gain 
 Save or by pickup):
 
 ```
-bag: { items: [{ bag_item_id?, name, cost, expense, quantity }], cost, expensed }
+bag: { items: [{ bag_item_id?, name, cost, expense }], cost, expensed }
 ```
 
 - `bag_item_id` is KennelOS's own id for the item when it came from KennelOS (so its
@@ -215,7 +227,7 @@ bag: { items: [{ bag_item_id?, name, cost, expense, quantity }], cost, expensed 
 6. **Her read-only view** (`view.js`) shows the band as the family does, nothing more.
 7. **Wording:** a new `bag` group in `manage/wording.js`: every line on her two screens
    (headings, hints, buttons, the count line "{n} items · {cost} to you", errors,
-   confirmations) and the three button words. The family page's heading and "From
+   confirmations, the empty template's message) and the three suggested button words. The family page's heading and "From
    {kennel}" stay in `family.js`, as on its other pages.
 8. **Styles:** her screens use the Site Manager's existing `card`, `list`, `chips` and
    `fgrid` (`.chips` is already in `app.css`). The family band needs the prototype's
@@ -251,22 +263,16 @@ bag: { items: [{ bag_item_id?, name, cost, expense, quantity }], cost, expensed 
 - Mark picked up fixes an unsaved bag; it leaves a saved one alone; zero ticked = nothing
   went.
 - Records: no band before pickup, for a closed placement, or on the loss page; items with
-  the right button per program type; no button for a program that's off; no cost or
+  her own button words, filled in from the program's type and changeable, and **Get
+  more** when cleared; no button for a program that's off; no cost or
   source anywhere on the family's page.
 - A bag click is counted with place `bag`, not under her view.
 - Erase keeps the bag rows; Delete now and site close remove them; backup round-trip.
 
-## 8. Questions for the owner (before building)
+## 8. Questions for the owner
 
-Answered 2026-11-21: 6 (yes/no is enough), 7 (yes, it goes back: section 4b), 8 (yes,
-she can still add by hand). Still open:
-
-1. Decision 1: is "her usual bag until she saves it or marks pickup, then fixed" right?
-2. Should families see the bag **before** pickup ("What's coming home in Opal's bag"),
-   or only once it's home, as the prototype has it?
-3. Quantities ("2 chew toys"): needed now, or one of each is fine?
-4. Her starting template: build it empty, or start her with the prototype's eight items
-   (food starter bag, insurance certificate, AKC paper, scent blanket, toys, collar and
-   leash, shampoo sample, go-home folder) at zero cost for her to change?
-5. The button words (Get more / Activate / Register): fixed by program type, or should
-   she set the button wording on each item?
+All answered 2026-11-21, and folded into section 3: 1 (yes, decision 1), 2 (no, not
+before pickup: decision 3), 3 (no quantities: decision 12), 4 (start empty: decision 11),
+5 (she sets the button words: decision 4), 6 (expense is a yes/no: decision 8), 7 (what
+went home goes back to KennelOS: decision 9, section 4b), 8 (she can still add items by
+hand: decision 10). Ready to build.

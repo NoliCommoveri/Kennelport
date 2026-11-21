@@ -2120,3 +2120,7 @@ nothing shows to families where it's empty, so new sites start with no chapters.
   (`factsFor`, plan section 4b; an exception she chose to "money never goes back on its
   own", noted in family-portal.md 3.4); and she can still add bag items by hand while
   linked. Five questions still open.
+- Same day, the owner answered the rest: the bag is her usual one until she saves it or
+  marks pickup, then fixed; families see it only from pickup; no quantities; her bag
+  starts empty; she sets each item's button words (filled in from the program's type,
+  hers to change; a `button` column). Plan ready to build.
