@@ -2013,7 +2013,7 @@ function mkHero(p, ph) {
 function mkPupTile(p) {
   const home = S.pickup[p.id];
   return `<a class="tile pup" href="#f-records">${photo(p.img, p.name, 'round')}<span class="pname">${p.name}${sexMark(p)}</span><span class="small muted">Boston Terrier</span>
-    <ul class="facts"><li>${icon('cal')}Born ${short(BORN)}, ${BORN.getFullYear()}</li><li>${icon('home')}${home ? `Went home ${short(home)}` : `Home ${short(p.goHome)}`}</li></ul></a>`;
+    <ul class="facts"><li>${icon('cal')}Born ${short(BORN)}, ${BORN.getFullYear()}</li><li>${icon('home')}${home ? `Came home ${short(home)}` : `Home ${short(p.goHome)}`}</li></ul></a>`;
 }
 function mkStatusTile(p, ph) {
   if (ph === 'vet') {
@@ -2109,7 +2109,7 @@ function mkRecords() {
   const rows = [[D(2026, 11, 11), 'Pyrantel + Panacur', 'Deworming'], [D(2026, 11, 25), 'Pyrantel + Panacur', 'Deworming'], [D(2026, 12, 9), 'Pyrantel + Panacur', 'Deworming'], [D(2026, 12, 9), 'DHPP', 'Vaccine', 'next due ' + short(addDays(D(2026, 12, 9), 21))], [D(2026, 12, 21), 'Puppy readiness exam', 'Vet visit']];
   const pr = S.proof[p.id];
   if (pr) rows.push([pr.at, '3-day visit', 'Vet visit', pr.ok ? 'accepted' : 'waiting for A-K']);
-  const facts = [['Name', p.name], ['Litter', 'Gem litter'], ['Born', `${WD[BORN.getDay()].slice(0, 3)}, ${short(BORN)}`], ['Sex', p.sex === 'Female' ? 'Female' : 'Male'], ['Parents', 'Willow × Boone'], ['Registration', 'Limited (AKC)'], [pick ? 'Went home' : 'Going home', `${WD[(pick || p.goHome).getDay()].slice(0, 3)}, ${short(pick || p.goHome)}, ${time(pick || p.goHome)}`]];
+  const facts = [['Name', p.name], ['Litter', 'Gem litter'], ['Born', `${WD[BORN.getDay()].slice(0, 3)}, ${short(BORN)}`], ['Sex', p.sex === 'Female' ? 'Female' : 'Male'], ['Parents', 'Willow × Boone'], ['Registration', 'Limited (AKC)'], [pick ? 'Came home' : 'Coming home', `${WD[(pick || p.goHome).getDay()].slice(0, 3)}, ${short(pick || p.goHome)}, ${time(pick || p.goHome)}`]];
   return `<section class="mk mypup"><span class="paw only-cream">${icon('paw')}</span>${BOSTON}<div class="mk-b"><p class="eyebrow" style="display:flex;gap:.35rem;align-items:center;color:var(--mk-ink)">${icon('paw')}My puppy</p><h1 class="script">${p.name}</h1>
       <dl>${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></div></section>
     ${mkCard('syringe', 'Shots, deworming and vet visits', `<div class="tablewrap"><table><thead><tr><th>Date</th><th>What</th><th>Kind</th></tr></thead><tbody>${rows.sort((a, b) => a[0] - b[0]).map((r) => `<tr><td>${WD[r[0].getDay()].slice(0, 3)}, ${short(r[0])}</td><td>${esc(r[1])}${r[3] ? `<br><span class="small muted">${esc(r[3])}</span>` : ''}</td><td>${r[2]}</td></tr>`).join('')}</tbody></table></div>`)}

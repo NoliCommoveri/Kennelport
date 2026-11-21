@@ -2293,3 +2293,10 @@ https://claude.ai/artifact/9APC1R1PumMwC9xU88etDe. Prototype only: the live port
   prototype's four dates (`worker/scripts/portal-current-snapshots.mjs`, Date mocked), with
   the live `portal.css`, in a shadow root so the two stylesheets never meet. It follows dark
   mode as the live portal does; its tabs and links move between the prototype's pages.
+
+## 2026-11-21: "Came home" on the family's pages
+
+The owner: Records said "Went home", which is her side of it; families read it. The family's
+Records card now says "Came home" (before pickup, "Coming home"), and the pup card on Home
+"Came home". Her own screens keep "went home". Server HTML only, no version bump. The portal
+looks prototype and its Current snapshot are updated to match.

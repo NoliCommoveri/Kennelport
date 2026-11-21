@@ -448,7 +448,7 @@ async function homePage(env, site, fam, now = new Date()) {
   if (p.life_status !== 'with_family' || p.status !== 'open') action = null;
 
   const born = pup?.born_on ? new Date(`${pup.born_on}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : null;
-  const facts = [born ? `<li>${ic('calendar')}Born ${esc(born)}</li>` : '', goYmd ? `<li>${ic('home')}${p.picked_up_at ? 'Went home' : 'Home'} ${esc(formatDay(goYmd).replace(/^\w+, /, ''))}</li>` : ''].join('');
+  const facts = [born ? `<li>${ic('calendar')}Born ${esc(born)}</li>` : '', goYmd ? `<li>${ic('home')}${p.picked_up_at ? 'Came home' : 'Home'} ${esc(formatDay(goYmd).replace(/^\w+, /, ''))}</li>` : ''].join('');
   // The handbook, once she has a chapter families see: first in Quick links (as the
   // prototype has it, in Account's place: Account is in the header), and Read next.
   const chapters = live ? await shownChapters(env, site.id) : [];
@@ -678,7 +678,7 @@ async function recordsPage(env, site, fam) {
       ${row('Sex', pup ? (pup.sex === 'female' ? 'Female' : 'Male') : null)}${row('Colour', pup?.color)}
       ${row('Parents', [pup?.dam_call || pup?.dam_name, pup?.sire_call || pup?.sire_name].filter(Boolean).join(' × ') || null)}
       ${row('Microchip', p.microchip)}${row('Registration', reg)}${row('Registration number', p.registration_no)}
-      ${row(p.picked_up_at ? 'Went home' : 'Going home', goHomeWords(p, s))}
+      ${row(p.picked_up_at ? 'Came home' : 'Coming home', goHomeWords(p, s))}
     </dl></section>
   <section class="card c-paper"><h2>Shots, deworming and vet visits</h2>
     ${records.length ? `<table class="records"><thead><tr><th>Date</th><th>What</th><th>Kind</th></tr></thead><tbody>${records.map((r) => `<tr><td>${esc(formatDay(r.given_on))}</td><td>${esc(r.name)}${r.notes ? `<br><span class="muted small">${esc(r.notes)}</span>` : ''}</td><td>${esc(RECORD_TYPES[r.type])}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">None recorded yet.</p>'}</section>
