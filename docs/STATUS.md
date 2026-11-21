@@ -63,8 +63,8 @@ anyone outside the family.
   wording, guarantee periods, handbook and food details, baseline sign-up rates,
   application-to-buyer mapping, photo and video package details, R2 and HEVC checks.
 - Phase 2 started 2026-11-21 (before phase 1's gate, the owner's call): **the handbook built**,
-  migration 0040 (`portal_chapters`). Her chapters on the Portal tab; families read it as a flipbook,
-  with Read next and a quick link, shown only once a chapter has words. `PORTAL_VERSION` bump asked
+  migration 0040 (`portal_chapters`). Her chapters on the Portal tab; families read it as a flipbook
+  with search, Read next and a quick link, shown only once a chapter has words. `PORTAL_VERSION` bump asked
   for. Next in phase 2: to choose. Build log, 2026-11-21.
 - Phase 3: not started.
 - The same family twice, and deleted families (2026-11-13): the feed links a family's only

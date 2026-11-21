@@ -36,7 +36,7 @@ import { servePhoto, serveFile, goToProgram } from './family/files.js';
 import { redeemViewLink, currentView, viewCookie } from './view.js';
 import { sayer, everyWording, siteWording } from '../manage/wording.js';
 import { loadBuild } from '../content/rules.js';
-import { shownChapters, linkablePrograms, bodyHtml, linkedPrograms } from './handbook.js';
+import { shownChapters, linkablePrograms, bodyHtml, linkedPrograms, plainText, searchWords, matches, snippet } from './handbook.js';
 
 export const PORTAL_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
 const HEADERS = {
@@ -447,7 +447,7 @@ const handbookLink = (x, words, inline) => (inline
 // new page), and an end page. The server writes every page; public/_kp/f/handbook.js
 // turns them into the book (spreads on a computer, one page on a phone, swipe, arrows,
 // keys, a Contents list). Without the script the pages stack and read top to bottom.
-async function handbookPage(env, site, fam) {
+async function handbookPage(env, site, fam, url) {
   const { p, s, main } = await loadContext(env, site, fam);
   const chapters = p && active(p) ? await shownChapters(env, site.id) : [];
   if (!chapters.length) return redirect('/family');
@@ -464,17 +464,36 @@ async function handbookPage(env, site, fam) {
   const tocAt = pages.length;
   page('', { id: 'contents', head: 'Contents' });
   const toc = [];
+  const texts = []; // every chapter page's words, for search
   for (const c of chapters) {
     const parts = String(c.body).split(/\n[ \t]*---+[ \t]*(?:\n|$)/);
     parts.forEach((part, i) => {
       const links = linkedPrograms(part, programs).length;
+      const id = i ? `ch-${c.id}-${i + 1}` : `ch-${c.id}`;
       if (!i) toc.push({ c, at: pages.length });
+      texts.push({ id, title: c.title, at: pages.length, text: plainText(part, vars, programs) });
       page(`${i ? '' : `<h2>${esc(c.title)}</h2>`}${bodyHtml(part, programs, vars, handbookLink)}${links ? `<p class="tip disclose">${esc(s.disclosure || DEFAULT_DISCLOSURE)}</p>` : ''}`,
-        { id: i ? null : `ch-${c.id}`, head: c.title, go: c.id });
+        { id, head: c.title, go: c.id });
     });
   }
   page(`<p class="happy">Happy puppy days!</p><p>Come back to this book whenever you need it. ${esc(kennel)} is a message away.</p>`, { cls: 'blank end', head: '', id: 'end' });
-  pages[tocAt].html = `<h2>Contents</h2><ul class="toc">${toc.map(({ c, at }) => `<li><a href="#ch-${esc(c.id)}" data-go="ch-${esc(c.id)}"><span>${esc(c.title)}</span><span>${at + 1}</span></a></li>`).join('')}</ul>`;
+
+  // Search: on the Contents page and in the Contents dialog. A plain form (?q=), so it
+  // works without the script: the Contents page then lists the pages that match.
+  // handbook.js filters as they type instead, from each page's words in data-text.
+  const q = String(url.searchParams.get('q') ?? '').trim().slice(0, 80);
+  const words = searchWords(q);
+  const searchBox = (id) => `<form method="get" action="/family/handbook" role="search" class="hsearch"><label class="sr" for="${id}">Search the handbook</label><input id="${id}" type="search" name="q" value="${esc(q)}" placeholder="Search: crate, food, the first night…" maxlength="80" autocomplete="off"></form>`;
+  const tocList = `<ul class="toc">${toc.map(({ c, at }) => `<li><a href="#ch-${esc(c.id)}" data-go="ch-${esc(c.id)}"><span>${esc(c.title)}</span><span>${at + 1}</span></a></li>`).join('')}</ul>`;
+  const hit = (x, shown) => `<li data-text="${esc(x.text)}" data-title="${esc(x.title)}"${shown ? '' : ' hidden'}><a href="#${esc(x.id)}" data-go="${esc(x.id)}"><span>${esc(x.title)}</span><span>${x.at + 1}</span></a><small class="snip">${shown ? esc(snippet(x.text, words)) : ''}</small></li>`;
+  const found = words.length ? texts.filter((x) => matches(x.title, x.text, words)) : [];
+  const none = '<p class="tip nohits">Nothing matches. Try another word.</p>';
+  pages[tocAt].html = `<h2>Contents</h2>${searchBox('hq')}${words.length
+    ? `${found.length ? `<ul class="toc hits">${found.map((x) => hit(x, true)).join('')}</ul>` : none}<p class="tip"><a href="/family/handbook#contents" data-clear>Every chapter</a></p>`
+    : tocList}`;
+  const dialogBody = `${searchBox('hq2')}<div class="toc-all"${words.length ? ' hidden' : ''}>${tocList}</div>
+    <ul class="toc hits"${words.length ? '' : ' hidden'}>${texts.map((x) => hit(x, found.includes(x))).join('')}</ul>
+    <p class="tip nohits"${words.length && !found.length ? '' : ' hidden'}>Nothing matches. Try another word.</p>`;
   const body = `<div class="hb">
   <section class="hb-cover" id="hb-cover">
     <a class="hb-out" href="/family">${ic('home')}Back to the portal</a>
@@ -492,7 +511,7 @@ async function handbookPage(env, site, fam) {
     <div class="controls"><button type="button" class="nav" id="hb-prev" aria-label="Previous page">&#8592;</button><div class="count" id="hb-count"></div><button type="button" class="nav" id="hb-next" aria-label="Next page">&#8594;</button></div>
   </section>
   <dialog id="hb-tocdlg" aria-labelledby="hb-toctitle"><div class="dlg-head"><h2 id="hb-toctitle">Contents</h2><button type="button" class="x" data-close aria-label="Close">&#215;</button></div>
-    <div class="dlg-body"><ul class="toc">${toc.map(({ c, at }) => `<li><a href="#ch-${esc(c.id)}" data-go="ch-${esc(c.id)}"><span>${esc(c.title)}</span><span>${at + 1}</span></a></li>`).join('')}</ul></div></dialog>
+    <div class="dlg-body">${dialogBody}</div></dialog>
 </div>`;
   return frame(site, 'Puppy handbook', body, { fam, bare: true, script: 'handbook.js' });
 }
@@ -781,7 +800,7 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
     if (path === '/family/records') return recordsPage(env, site, fam);
     if (fam.loss && ['/family/timeline', '/family/vet', '/family/records', '/family/messages', '/family/handbook'].includes(path)) return redirect('/family');
     if (path === '/family/timeline') return timelinePage(env, site, fam);
-    if (path === '/family/handbook') return handbookPage(env, site, fam);
+    if (path === '/family/handbook') return handbookPage(env, site, fam, url);
     if (path === '/family/photos') return photosPage(env, site, fam);
     if (path === '/family/stay') return stayPage(env, site, fam);
     const mm = path.match(/^\/family\/media\/([0-9a-f-]{36})$/);

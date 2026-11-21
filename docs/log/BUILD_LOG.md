@@ -2070,3 +2070,11 @@ nothing shows to families where it's empty, so new sites start with no chapters.
   portal's CSP allows only its own. Without the script the cover and pages stack and read
   in order. Search is gone (the book has Contents); `## ` is a small heading in a chapter.
   Her hints updated in `manage/wording.js`. Still needs the `PORTAL_VERSION` bump (asked).
+- Same day, the owner: **search back**, in the book. A search box on the Contents page and
+  in the Contents dialog; as they type (`handbook.js`), the pages that match every word
+  (in the chapter's title or that page's words), each with its page number and a few
+  whole words around the first one found; a tap turns the book there. Without the script
+  it's a plain form (`?q=`): the Contents page lists the matches (`handbook.js` on the
+  server: `plainText`, `matches`, `snippet`). A continuation page has its own address
+  (`#ch-<id>-2`). Only the words families see are searched: a link tag naming no program
+  isn't.

@@ -168,3 +168,43 @@ export function linkedPrograms(body, programs) {
   }
   return out;
 }
+
+// ---------- search ----------
+
+// A page's words as plain text, for search: each link tag as the words families see
+// (nothing for a tag that matches no program), list and heading marks gone, {name}
+// and {kennel} filled in, spaces run together.
+export function plainText(body, vars = {}, programs = []) {
+  return String(body ?? '').replace(TAG, (m, name, words) => {
+    const x = matchProgram(programs, name);
+    return x ? (words ?? (x.link_label || x.name)) : '';
+  })
+    .replace(/^[ \t]*(?:[-•]|#{1,3})[ \t]+/gm, '')
+    .replace(/\{(name|kennel)\}/g, (m, k) => vars[k] ?? m)
+    .split(/\n/).map((l) => l.trim()).filter(Boolean)
+    // A line with no stop of its own (a list item, a heading) ends with " · ".
+    .map((l, i, all) => (i < all.length - 1 && !/[.!?:;,…]$/.test(l) ? `${l} ·` : l))
+    .join(' ').replace(/\s+/g, ' ').trim();
+}
+
+export const searchWords = (q) => String(q ?? '').toLowerCase().split(/\s+/).filter(Boolean).slice(0, 8);
+
+// Whether every word is in the title or the text.
+export const matches = (title, text, words) => {
+  const hay = `${title} ${text}`.toLowerCase();
+  return words.every((w) => hay.includes(w));
+};
+
+// A few words around the first word found in the text ("… the crate beside your …"),
+// or its start. public/_kp/f/handbook.js does the same as you type.
+export function snippet(text, words, room = 60) {
+  const low = text.toLowerCase();
+  const at = words.map((w) => low.indexOf(w)).filter((i) => i >= 0).sort((a, b) => a - b)[0] ?? 0;
+  let from = Math.max(0, at - room);
+  let to = Math.min(text.length, Math.round(at + room * 1.6));
+  // Whole words only: start after a space, stop before one.
+  if (from) { const sp = text.indexOf(' ', from); from = sp >= 0 && sp < at ? sp + 1 : from; }
+  if (to < text.length) { const sp = text.lastIndexOf(' ', to); to = sp > at ? sp : to; }
+  return `${from ? '… ' : ''}${text.slice(from, to).trim()}${to < text.length ? ' …' : ''}`;
+}
+

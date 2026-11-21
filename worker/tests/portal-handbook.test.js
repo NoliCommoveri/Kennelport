@@ -12,7 +12,7 @@ const outbox = (env) => env.DB.raw.prepare('SELECT kind, subject, body FROM dev_
 const ymd = (d) => d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 const DAY = 86400000;
 
-const { bodyHtml, brokenLinks } = await import('../src/portal/handbook.js');
+const { bodyHtml, brokenLinks, plainText, snippet, searchWords } = await import('../src/portal/handbook.js');
 
 async function setup() {
   const env = await makeEnv({ PORTAL_EMAIL_KEY: 'portal-test-key' });
@@ -68,6 +68,10 @@ test('a chapter\'s words: paragraphs, lists, headings, {name}, program links on 
   const html = bodyHtml(body, programs, { name: 'Opal', kennel: 'AK' }, link);
   assert.equal(html, '<p>First night for Opal.<br>A line break.</p><h3>The crate</h3><ul><li>crate</li><li>towel</li></ul><p><b:ins>Activate the trial</></p><p>Order through <i:food>the food program</> today.</p><p>&lt;b&gt;tags&lt;/b&gt;</p>');
   assert.deepEqual(brokenLinks(body, programs), ['Nope']);
+  const text = plainText('## The crate\n- a towel for {name}\n[link: Puppy insurance | the trial] [link: Nope]', { name: 'Opal' }, programs);
+  assert.equal(text, 'The crate · a towel for Opal · the trial');
+  assert.equal(snippet(`${'a '.repeat(80)}crate here`, searchWords('Crate')).slice(0, 2), '… ');
+  assert.equal(snippet('short words', searchWords('nothing')), 'short words');
 });
 
 test('her handbook: add, edit, order, off, remove after asking; families see it only once a chapter is on with words', async () => {
@@ -128,6 +132,19 @@ test('her handbook: add, edit, order, off, remove after asking; families see it 
   assert.match(page, /class="tip disclose"/);
   assert.match(page, /Happy puppy days!<\/p>.*<div class="folio">6<\/div>/);
   assert.match(home, new RegExp(`href="/family/handbook#ch-${first}"`));
+
+  // Search: a plain form (works without the script). The Contents page lists the pages
+  // that match, with a few words around the word; every page carries its words for
+  // the script's search as they type.
+  assert.match(page, /<form method="get" action="\/family\/handbook" role="search" class="hsearch">/);
+  assert.match(page, new RegExp(`data-text="The second night is easier." data-title="The first night" hidden><a href="#ch-${first}-2" data-go="ch-${first}-2">`));
+  page = await (await r('/family/handbook?q=SECOND+night')).text();
+  assert.match(page, new RegExp(`<ul class="toc hits"><li data-text="The second night is easier." data-title="The first night"><a href="#ch-${first}-2" data-go="ch-${first}-2"><span>The first night</span><span>4</span></a><small class="snip">The second night is easier.</small></li></ul>`));
+  assert.match(page, /Every chapter/);
+  page = await (await r('/family/handbook?q=food+program')).text();
+  assert.match(page, new RegExp(`data-go="ch-${feeding.id}"><span>Feeding</span><span>5</span></a><small class="snip">Keep the same food`));
+  page = await (await r('/family/handbook?q=heatstroke')).text();
+  assert.match(page, /<p class="tip nohits">Nothing matches/);
 
   // The click is counted with where it came from.
   res = await r('/family/go/food?from=handbook');

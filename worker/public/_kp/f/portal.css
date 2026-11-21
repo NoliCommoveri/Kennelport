@@ -401,6 +401,17 @@ html.hb-js .hb .flip.l { transform-origin: right center; }
 .hb .nav:disabled { opacity: .35; cursor: default; }
 .hb .count { font: 700 .9rem/1 var(--f-body); font-variant-numeric: tabular-nums; min-width: 9ch; text-align: center; }
 
+/* Search, on the Contents page and in its dialog */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.hb .hsearch input { font: inherit; font-size: 1em; color: var(--book-ink); background: #fff; border: 1.5px solid var(--rule); border-radius: 999px; padding: .55em 1em; min-height: 2.6em; width: 100%; }
+.hb .hsearch input:focus { outline: 2px solid var(--leaf); outline-offset: 1px; }
+.hb .dlg-body .hsearch { margin: 12px 0 6px; }
+.hb .hits li { display: grid; gap: .1em; padding: .25em 0; border-bottom: 1px dotted var(--rule); }
+.hb .hits li a { border-bottom: 0; padding-bottom: 0; }
+.hb .hits .snip { color: var(--book-muted); font-size: .86em; line-height: 1.35; }
+.hb .hits .snip:empty { display: none; }
+.hb .nohits { padding: .6em 0; }
+
 /* Contents, as a dialog */
 .hb dialog { border: 0; border-radius: 14px; padding: 0; background: var(--paper); color: var(--book-ink); box-shadow: 0 20px 50px var(--bookshadow); max-width: min(560px, calc(100vw - 32px)); width: 100%; }
 .hb dialog::backdrop { background: rgba(30,20,19,.55); }

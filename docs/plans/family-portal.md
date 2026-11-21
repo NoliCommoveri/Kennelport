@@ -366,7 +366,7 @@ including one pickup she forgot to mark (section 5).
 
 - Handbook chapters with links in context (she may be writing these during phase 1)
   **Built 2026-11-21** (migration 0040): her chapters on the Portal tab, links placed in
-  the words as `[link: Program]`; families read it as a flipbook (the owner's change), Read next on Home
+  the words as `[link: Program]`; families read it as a flipbook with search (the owner's change), Read next on Home
   and its quick link, none of them shown while no chapter has words. Build log, 2026-11-21.
 - Baby book: her entries weeks 0–8, family entries after pickup; KennelOS drafts
 - Sharing levels and her view of shared entries

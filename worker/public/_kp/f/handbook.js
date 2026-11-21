@@ -182,6 +182,56 @@
       if (e.target.closest('[data-close]')) e.target.closest('dialog')?.close();
     });
     tocDlg?.addEventListener('click', (e) => { if (e.target === tocDlg) tocDlg.close(); });
+
+    // Search, in the Contents dialog, as they type: every word in a page's chapter title
+    // or its words (data-title, data-text), each hit with a few words around the first
+    // found. The Contents page's own box (on a page of the book) opens the dialog.
+    const box = document.getElementById('hq2');
+    const all = tocDlg?.querySelector('.toc-all');
+    const hits = tocDlg ? [...tocDlg.querySelectorAll('.hits li')] : [];
+    const none = tocDlg?.querySelector('.nohits');
+    const snippet = (text, words) => {
+      const low = text.toLowerCase();
+      const at = words.map((w) => low.indexOf(w)).filter((i) => i >= 0).sort((a, b) => a - b)[0] ?? 0;
+      let from = Math.max(0, at - 60); let to = Math.min(text.length, at + 96);
+      if (from) { const sp = text.indexOf(' ', from); from = sp >= 0 && sp < at ? sp + 1 : from; }
+      if (to < text.length) { const sp = text.lastIndexOf(' ', to); to = sp > at ? sp : to; }
+      return `${from ? '… ' : ''}${text.slice(from, to).trim()}${to < text.length ? ' …' : ''}`;
+    };
+    function search(q) {
+      const words = q.toLowerCase().split(/\s+/).filter(Boolean).slice(0, 8);
+      if (all) all.hidden = words.length > 0;
+      tocDlg?.querySelector('.hits')?.toggleAttribute('hidden', !words.length);
+      let n = 0;
+      for (const li of hits) {
+        const text = li.dataset.text ?? '';
+        const ok = words.length > 0 && words.every((w) => `${li.dataset.title} ${text}`.toLowerCase().includes(w));
+        li.hidden = !ok;
+        if (ok) { n++; li.querySelector('.snip').textContent = snippet(text, words); }
+      }
+      if (none) none.hidden = !words.length || n > 0;
+    }
+    function openSearch(q = null) {
+      if (!tocDlg || !box) return;
+      if (q !== null) { box.value = q; search(q); }
+      if (!tocDlg.open) tocDlg.showModal();
+      box.focus();
+    }
+    box?.addEventListener('input', () => search(box.value));
+    document.addEventListener('submit', (e) => {
+      const f = e.target.closest('.hsearch');
+      if (!f) return;
+      e.preventDefault();
+      const q = f.querySelector('input')?.value ?? '';
+      if (f.closest('dialog')) search(q); else openSearch(q);
+    });
+    book.addEventListener('focusin', (e) => { if (e.target.matches('.hsearch input')) { const q = e.target.value; e.target.blur(); openSearch(q); } });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('[data-clear]')) return;
+      e.preventDefault();
+      if (box) { box.value = ''; search(''); }
+      goToId('contents');
+    }, true);
     let rz;
     addEventListener('resize', () => {
       if (reader.hidden) return;
@@ -190,7 +240,9 @@
     });
 
     // Read next on Home links to a chapter (#ch-…): open the book there; else the cover.
+    // A search sent without the script (?q=): the book at its Contents, with the hits.
     const at = location.hash ? indexOf(decodeURIComponent(location.hash.slice(1))) : -1;
-    if (at >= 0) showReader(at); else { reader.hidden = true; cover.hidden = false; }
+    if (new URLSearchParams(location.search).get('q')) showReader(indexOf('contents'));
+    else if (at >= 0) showReader(at); else { reader.hidden = true; cover.hidden = false; }
   });
 })();
