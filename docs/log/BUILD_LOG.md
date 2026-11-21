@@ -1996,3 +1996,32 @@ choice at upload).
   under it is the usual one, and the vet hint is "The vet the family sees as {name}'s
   vet." New rule in `CLAUDE.md`, "Never describe the plumbing in copy".
 
+
+## 2026-11-21: ready-made timeline tasks, and a puppy's name in her template
+
+The owner saw "Register Maverick / Your registration papers are in the go home folder" on
+Cash's portal. That wording isn't in the code (the suggested one is "Register {name} /
+Your registration paper is in the go-home folder."): it's a task in the breeder's own
+timeline template with the puppy's name typed in, so every family reads "Maverick".
+
+- `portal/steps.js`: `READY_TASKS`, ready-made tasks by program type (registration,
+  insurance, food, product, other), each with two or three wordings and the usual day
+  after pickup; `addReady` adds one like a task she typed (`{program}` becomes the
+  program's name, `{name}` stays). Registration can go in with no program. `puppyNames`
+  and `namedPuppy` find one of her puppies' names in a step.
+- `portal/admin/templates.js`: `readyForm`, "Add a ready-made task" on her Timeline screen:
+  one group per shown program (its link and code go with the button), plus "Registration,
+  no link" while no registration program is shown. A template task that names one of her
+  puppies says so in red: "Every family reads "Maverick" here. Write {name} instead…".
+- `portal/admin.js`: routes `/portal/timeline/ready` and, on a family's screen, "Add a
+  ready-made task for them alone" (`f/<id>/steps/ready`).
+- Wording: the ready-made wordings and the new lines are in `READY_TASKS` and `readyForm`
+  (portal screens aren't in `manage/wording.js` yet; site-builder step 2.4).
+- No prototype screen for her templates; built from the existing card, fgrid and hint.
+- Tests: one new in `portal-steps.test.js`. 487 pass. No migration, no version bump (no
+  file under `worker/public/` changed).
+- Same day, the owner: no replacing on delete (built and reverted). Instead "Register
+  {name}" stays suggested on her Timeline screen (`templates.js` `registerSuggestion`)
+  whenever her timeline has steps but not that task: one tap adds it, linked to her shown
+  registration program if she has one. A task she adjusted or kept is left as it is.
+  New sites get it from the suggested timeline as before. 488 pass.

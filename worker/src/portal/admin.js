@@ -20,7 +20,7 @@ import { pupOf } from './pups.js';
 import { makeViewLink, VIEW_AS_ADMIN } from './view.js';
 import { defaultSay } from '../manage/wording.js';
 import {
-  listItems, saveItem, removeItem, moveItem, addSuggested, stepsFor, programsFor, setDone, setHidden, setDueOn, setProgramStatus, setProgramCode,
+  listItems, saveItem, removeItem, moveItem, addSuggested, addReady, puppyNames, stepsFor, programsFor, setDone, setHidden, setDueOn, setProgramStatus, setProgramCode,
   PROGRAM_WORDS,
 } from './steps.js';
 import { sendDueFor } from './reminders.js';
@@ -38,7 +38,7 @@ import {
 } from './account.js';
 import { placementDuplicates, familyCandidates, mergePlacement, mergeFamily } from './merge.js';
 import { redirect, note, errorBox, pupName, familyFilters, SUGGEST_LABEL, ZONE_NAMES } from './admin/parts.js';
-import { products, KIND_WORDS, itemFields, whenWords, formOffset, templateScreen } from './admin/templates.js';
+import { products, KIND_WORDS, itemFields, whenWords, formOffset, templateScreen, readyForm } from './admin/templates.js';
 import { settingsScreen } from './admin/settings.js';
 import { waitlistCount, waitlistPart, setupScreen } from './admin/today.js';
 
@@ -323,6 +323,7 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
       <details><summary>Add a checklist item for ${esc(f.name)} alone</summary>${form('steps/new/checklist', `<div class="fgrid">${itemFields('checklist', null, prods)}<p><button>Add</button></p></div>`)}</details>
       ${timelinePart}
       <details><summary>Add a timeline task for ${esc(f.name)} alone</summary>${form('steps/new/task', `<div class="fgrid">${itemFields('task', null, prods)}<p><button>Add</button></p></div>`)}</details>
+      <details><summary>Add a ready-made task for ${esc(f.name)} alone</summary>${readyForm(`${base}/steps/ready`, prods)}</details>
     </section>`);
 
     const progs = await programsFor(env, site.id, p);
@@ -527,17 +528,22 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   }
 
   // Her checklist and timeline templates.
-  const tm = rest.match(/^\/(checklist|timeline)(?:\/(suggested|new|[0-9a-f-]{36})(?:\/(up|down|remove))?)?$/);
+  const tm = rest.match(/^\/(checklist|timeline)(?:\/(suggested|new|ready|[0-9a-f-]{36})(?:\/(up|down|remove))?)?$/);
   if (tm) {
     const kind = tm[1] === 'checklist' ? 'checklist' : 'task';
     const here = `${home}/${tm[1]}`;
-    const show = async (opts = {}) => page(KIND_WORDS[kind].title, templateScreen(site, kind, await listItems(env, site.id, kind), await products(env, site.id), url, opts), { back: `${home}/settings`, status: opts.error ? 400 : 200 });
+    const show = async (opts = {}) => page(KIND_WORDS[kind].title, templateScreen(site, kind, await listItems(env, site.id, kind), await products(env, site.id), url, { ...opts, names: await puppyNames(env, site.id) }), { back: `${home}/settings`, status: opts.error ? 400 : 200 });
     if (!post) return tm[2] ? null : show();
     try {
       if (tm[2] === 'suggested') { await addSuggested(env, site.id, kind); return redirect(`${here}?note=suggested`); }
       if (tm[3] === 'remove') { await removeItem(env, site.id, kind, tm[2]); return redirect(`${here}?note=stepremoved`); }
       if (tm[3]) { await moveItem(env, site.id, kind, tm[2], tm[3]); return redirect(here); }
       const form = await request.formData();
+      if (tm[2] === 'ready') {
+        if (kind !== 'task') return null;
+        await addReady(env, site.id, form.get('ready'));
+        return redirect(`${here}?note=stepadded`);
+      }
       const values = formOffset(Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)])));
       await saveItem(env, site.id, kind, tm[2] === 'new' ? null : tm[2], values);
       return redirect(`${here}?note=${tm[2] === 'new' ? 'stepadded' : 'saved'}`);
@@ -686,6 +692,10 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
           for (const f of form.getAll('photos')) if (f && typeof f !== 'string' && f.size) photos.push(new Uint8Array(await f.arrayBuffer()));
           await writeUpdate(env, site, s, pl.id, peId, values, photos);
           return back('update');
+        }
+        if (action === 'steps/ready') {
+          await addReady(env, site.id, get('ready'), needP().id);
+          return redirect(`${home}/f/${familyId}?note=stepadded#steps`);
         }
         const nm = action?.match(/^steps\/new\/(checklist|task)$/);
         if (nm) {

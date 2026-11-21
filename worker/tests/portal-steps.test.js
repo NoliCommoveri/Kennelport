@@ -292,3 +292,61 @@ test('a family deleted or a site closed takes their steps, ticks and statuses wi
   await closeSite(env, site.id, 'akbostons');
   assert.equal(count('portal_checklist_items'), 0);
 });
+
+test('ready-made tasks: she picks a program and a wording; registration goes in with no program; a puppy\'s name in her template is flagged', async () => {
+  const { env, her } = await setup();
+  const page = await (await her('/portal/timeline')).text();
+  assert.match(page, /Add a ready-made task/);
+  assert.match(page, /<optgroup label="Puppy insurance">/);
+  assert.match(page, /<optgroup label="Registration, no link">/);
+  assert.match(page, /Sign up for Crate and bedding/);
+
+  assert.equal((await her('/portal/timeline/ready', { ready: '|registration|0' })).status, 303);
+  const reg = item(env, 'portal_timeline_tasks', 'Register {name}');
+  assert.equal(reg.body, 'Your registration paper is in the go-home folder.');
+  assert.equal(reg.offset_days, 30);
+  assert.equal(reg.count_from, 'pickup');
+  assert.equal(reg.product_id, null);
+  assert.equal(reg.button_label, null);
+
+  assert.equal((await her('/portal/timeline/ready', { ready: 'crate|product|1' })).status, 303);
+  const crate = item(env, 'portal_timeline_tasks', 'Sign up for Crate and bedding');
+  assert.equal(crate.product_id, 'crate');
+  assert.equal(crate.button_label, 'Have a look');
+  assert.equal((await her('/portal/timeline/ready', { ready: 'ins|insurance|0' })).status, 303);
+  assert.equal(item(env, 'portal_timeline_tasks', 'Activate {name}\'s insurance trial').button_label, 'Activate the trial');
+
+  // Nonsense, a wording of another kind, or a program she doesn't show: refused.
+  for (const ready of ['', 'ins|food|0', 'ins|insurance|9', 'nope|other|0', '|food|0']) {
+    const res = await her('/portal/timeline/ready', { ready });
+    assert.equal(res.status, 400, ready);
+  }
+
+  // One puppy's name typed into her template is flagged; {name} is not.
+  await her('/portal/timeline/new', { title: 'Register Opal', body: 'Papers in the folder.', days: '30', when: 'after', count_from: 'pickup' });
+  const flagged = await (await her('/portal/timeline')).text();
+  assert.match(flagged, /Every family reads "Opal" here/);
+  assert.equal((flagged.match(/Every family reads/g) ?? []).length, 1);
+
+  // For one family alone.
+  const fid = await addFamily(her, { name: 'The Parkers', emails: 'parker@example.com', puppy_id: 'pup1', go_home_on: ymd(new Date(Date.now() + 5 * DAY)) });
+  assert.equal((await her(`/portal/f/${fid}/steps/ready`, { ready: 'food|food|0' })).status, 303);
+  const mine = item(env, 'portal_timeline_tasks', 'Order {name}\'s food');
+  assert.ok(mine.placement_id);
+  assert.equal(mine.product_id, 'food');
+});
+
+test('Register {name} stays suggested on her timeline until it\'s on it', async () => {
+  const { env, her } = await setup();
+  env.DB.raw.prepare("UPDATE products SET portal_type = 'registration' WHERE id = 'crate'").run();
+  await her('/portal/timeline/new', { title: 'Register Opal', body: 'Papers in the folder.', days: '30', when: 'after', count_from: 'pickup' });
+  let page = await (await her('/portal/timeline')).text();
+  assert.match(page, /Suggested: Register \{name\}/);
+  assert.match(page, /value="crate\|registration\|0"/);
+  assert.equal((await her('/portal/timeline/ready', { ready: 'crate|registration|0' })).status, 303);
+  // Hers stays; the suggested one is added beside it, and no longer suggested.
+  assert.ok(item(env, 'portal_timeline_tasks', 'Register Opal'));
+  assert.equal(item(env, 'portal_timeline_tasks', 'Register {name}').button_label, 'Register');
+  page = await (await her('/portal/timeline')).text();
+  assert.doesNotMatch(page, /Suggested: Register/);
+});

@@ -2,7 +2,7 @@
 // checklist and /timeline, routed by portal/admin.js): the items every new family's
 // checklist and timeline start from, and the programs (products) they can link to.
 import { escapeHtml as esc } from '../../lib/html.js';
-import { CHECK_AUTO, TASK_AUTO } from '../steps.js';
+import { CHECK_AUTO, TASK_AUTO, READY_TASKS, namedPuppy } from '../steps.js';
 import { note, errorBox } from './parts.js';
 
 export const products = async (env, siteId) => (await env.DB.prepare('SELECT id, name, portal_show, portal_type, family_action, portal_per_family FROM products WHERE site_id = ? ORDER BY sort, name').bind(siteId).all()).results;
@@ -36,6 +36,24 @@ export function itemFields(kind, x, products) {
     ${autoField}`;
 }
 
+// The ready-made tasks, grouped by her shown programs (each with its type's
+// wordings), and registration with no program. {name} is left as she writes it.
+export function readyForm(action, products, { forOne = '' } = {}) {
+  const opt = (pid, kind, i, c) => `<option value="${esc(`${pid}|${kind}|${i}`)}">${esc(c.title)}: ${esc(c.body)}</option>`;
+  const shown = products.filter((x) => x.portal_show);
+  const groups = shown.map((x) => {
+    const kind = READY_TASKS[x.portal_type] ? x.portal_type : 'other';
+    return `<optgroup label="${esc(x.name)}">${READY_TASKS[kind].choices.map((c, i) => opt(x.id, kind, i, c).replace(/\{program\}/g, esc(x.name))).join('')}</optgroup>`;
+  });
+  if (!shown.some((x) => x.portal_type === 'registration')) groups.push(`<optgroup label="Registration, no link">${READY_TASKS.registration.choices.map((c, i) => opt('', 'registration', i, c)).join('')}</optgroup>`);
+  const days = Object.entries(READY_TASKS).map(([, r]) => `${r.label.toLowerCase()} ${r.days}`).join(', ');
+  return `<form method="post" action="${action}" class="card"><h2>Add a ready-made task${forOne}</h2>
+    <p class="hint">Pick one of your programs and the wording you like. Its button opens the program's link, with its code.${shown.length ? '' : ' Show your programs in Portal settings to link them here.'}</p>
+    <div class="fgrid"><label>Task<select name="ready" required><option value="">Choose…</option>${groups.join('')}</select>
+      <span class="hint">Dated in days after pickup: ${esc(days)}. Change the day or the words after.</span></label>
+    <p><button>Add</button></p></div></form>`;
+}
+
 // "5 days after pickup", "70 days from birth".
 export const whenWords = (t) => (t.count_from === 'birth' ? `${t.offset_days} days from birth` : t.offset_days === 0 ? 'Pickup day' : `${Math.abs(t.offset_days)} day${Math.abs(t.offset_days) === 1 ? '' : 's'} ${t.offset_days < 0 ? 'before' : 'after'} pickup`);
 
@@ -51,15 +69,35 @@ export function itemMeta(kind, x, products) {
   return bits.join(' · ');
 }
 
-export function templateScreen(site, kind, items, products, url, { error } = {}) {
+// A template step naming one puppy: every family would read that name.
+const nameWarning = (x, names) => {
+  const n = namedPuppy(x, names);
+  return n ? `<br><span class="error">Every family reads "${esc(n)}" here. Write {name} instead, and each family sees their own puppy's name.</span>` : '';
+};
+
+// "Register {name}" stays suggested on her timeline until it's on it: her own wording
+// (a task she adjusted or removed) is hers to keep, and this is one tap to add.
+function registerSuggestion(base, items, products) {
+  const reg = READY_TASKS.registration;
+  const c = reg.choices[0];
+  if (items.some((x) => x.title === c.title)) return '';
+  const prog = products.find((x) => x.portal_show && x.portal_type === 'registration');
+  return `<form method="post" action="${base}/ready" class="card"><h2>Suggested: ${esc(c.title)}</h2>
+    <p>${esc(c.body)}</p><p class="hint">${reg.days} days after pickup${prog ? `, with a ${esc(reg.button)} button to ${esc(prog.name)}` : ''}. Write {name} and each family sees their own puppy's name. Keep your own task instead if you like it better.</p>
+    <input type="hidden" name="ready" value="${esc(`${prog?.id ?? ''}|registration|0`)}"><p><button class="primary">Add it to the timeline</button></p></form>`;
+}
+
+export function templateScreen(site, kind, items, products, url, { error, names = [] } = {}) {
   const w = KIND_WORDS[kind];
   const base = `/s/${esc(site.subdomain)}/portal/${kind === 'checklist' ? 'checklist' : 'timeline'}`;
-  const rows = items.map((x, i) => `<details class="card"><summary><b>${esc(x.title)}</b><br><span class="hint">${esc(itemMeta(kind, x, products))}</span></summary>
+  const rows = items.map((x, i) => `<details class="card"><summary><b>${esc(x.title)}</b><br><span class="hint">${esc(itemMeta(kind, x, products))}</span>${nameWarning(x, names)}</summary>
     <form method="post" action="${base}/${esc(x.id)}"><div class="fgrid">${itemFields(kind, x, products)}<p><button class="primary">Save</button></p></div></form>
     <div class="row">${i ? `<form method="post" action="${base}/${esc(x.id)}/up"><button>Move up</button></form>` : ''}${i < items.length - 1 ? `<form method="post" action="${base}/${esc(x.id)}/down"><button>Move down</button></form>` : ''}
     <form method="post" action="${base}/${esc(x.id)}/remove"><button class="link">Remove from every family's list</button></form></div></details>`).join('');
   return `${note(url)}${errorBox(error)}<section class="card"><h1>${esc(w.title)}</h1><p class="hint">${esc(w.hint)}</p>
     ${items.length ? '' : `<form method="post" action="${base}/suggested"><p><button class="primary">Start with the suggested ${kind === 'checklist' ? 'list' : 'timeline'}</button></p><p class="hint">${kind === 'checklist' ? 'Crate, bed, food, bowls, collar and leash, pads, chews, the vet booking and a carrier.' : 'The vet booking, pickup, the vet visit, insurance, food, registration, deworming and vaccines.'} Each links to your programs of that kind. Change anything after.</p></form>`}</section>
     ${rows}
+    ${kind === 'task' && items.length ? registerSuggestion(base, items, products) : ''}
+    ${kind === 'task' ? readyForm(`${base}/ready`, products) : ''}
     <form method="post" action="${base}/new" class="card"><h2>Add ${kind === 'checklist' ? 'an item' : 'a task'}</h2><div class="fgrid">${itemFields(kind, null, products)}<p><button>Add</button></p></div></form>`;
 }

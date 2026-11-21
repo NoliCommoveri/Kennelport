@@ -78,6 +78,9 @@ anyone outside the family.
   built 2026-11-19, **migration 0039** ([`plans/portal-kept-pups.md`](plans/portal-kept-pups.md)).
   Closed litters now leave on time even with families. KennelOS's half (a vet on each
   placement) is in the plan's last section. No version bump. Build log, 2026-11-19.
+- Ready-made timeline tasks (registration, and a wording to choose for each program with
+  its link), and a warning on a template task that names one puppy: built 2026-11-21. No
+  migration, no version bump. Build log, 2026-11-21.
 
 ## Finished feature plans
 
