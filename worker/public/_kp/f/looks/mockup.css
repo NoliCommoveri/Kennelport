@@ -1,0 +1,142 @@
+/* What the owner's mockup looks share (portal/looks.js; docs/reference/portal-looks.html),
+   over portal.css: cream cards with a soft header strip on the deep green page, an icon
+   before each card's title, the photo and the tiles under it on the page itself with a
+   wave between, a vet tile, soft green buttons with a shine, Timeline's green head running
+   into a cream page, the vet page's head with its art, and the tab you're on as a pill.
+   Each look sets the --lk tokens and its art (looks/cream.css, looks/forest.css); these
+   values are Cream's. Light only, as the mockups are drawn: the tokens are set on <body>,
+   so the phone's dark mode (portal.css's :root) doesn't reach them.
+   Changing this file means bumping PORTAL_VERSION (src/portal/version.js). */
+body[data-look] {
+  color-scheme: light;
+  --lk-page: #1E3A2A; --lk-page-2: #17301F; --lk-card: #F7F2E5; --lk-card-2: #F1EAD7; --lk-strip: #EEE5CF; --lk-line: #DDD1B6;
+  --lk-ink: #1F2A22; --lk-muted: #5F5A4D; --lk-gold: #8A6B2C; --lk-leaf: #2F5D3D; --lk-leaf-hi: #3F7550; --lk-leaf-ink: #FFFFFF;
+  --lk-soft: #DDE9D2; --lk-soft-line: #93B98F; --lk-tile: #F8E0C7; --lk-tile-2: #F3D2B2; --lk-tile-ink: #1F2A22; --lk-pup-ink: #F5EEDC;
+  --lk-tab: #4C8A5B; --lk-tab-ink: #FFFFFF; --lk-cream-page: #F6F1E4; --lk-head-2: #23462F; --lk-shadow: 0 6px 16px rgba(0,0,0,.22);
+  /* portal.css's own tokens, read from the look's */
+  --bg: var(--lk-page); --surface: var(--lk-card); --ink: var(--lk-ink); --muted: var(--lk-muted); --line: var(--lk-line);
+  --accent: var(--lk-leaf); --accent-ink: var(--lk-leaf-ink); --accent-soft: var(--lk-soft); --brass: var(--lk-gold); --band: var(--lk-strip);
+  --sand: var(--lk-card); --sand-line: var(--lk-line); --sand-brass: var(--lk-gold);
+  --head: var(--lk-page); --head-ink: #F5F2EA; --head-muted: #B9C8BC; --tab-on: var(--lk-tab); --tab-on-ink: var(--lk-tab-ink);
+  --ok: #3E7A4B; --warn: #8A5A1E; --warn-soft: var(--lk-tile); --bad: #A3261E; --bad-soft: #F6DEDB; --cal: #B5462F;
+  --girl: #A8456F; --girl-soft: #F6E1EA; --boy: #2F6690; --boy-soft: #DDEAF5; --rc: 16px;
+  background: var(--lk-page); color: var(--lk-ink);
+}
+body[data-look] main { gap: .7rem; }
+body[data-look] .top { box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+body[data-look] .disclose { color: #CFE0CF; opacity: .85; }
+
+/* Heading icons, and the look-only pieces (portal.css hides them for Classic). */
+body[data-look] .hico { display: inline-grid; place-items: center; margin-right: .45rem; vertical-align: -.2rem; color: var(--lk-leaf); }
+body[data-look] .hico svg.i { width: 1.35rem; height: 1.35rem; stroke-width: 1.6; }
+body[data-look] .eyebrow .hico svg.i { width: 1.05rem; height: 1.05rem; }
+
+/* Cards: cream, a soft strip behind the first line, a shadow; every band and tile kind
+   of Classic reads as one. */
+body[data-look] .card, body[data-look] .tile:not(.pup):not(.green), body[data-look] .sec:not(.food), body[data-look] .readnext {
+  background: linear-gradient(var(--lk-strip), var(--lk-card) 3.4rem, var(--lk-card-2)); border: 1px solid var(--lk-line);
+  border-radius: var(--rc); box-shadow: var(--lk-shadow); color: var(--lk-ink); margin-left: 0; margin-right: 0; }
+body[data-look] .sec { padding: 1rem; gap: .7rem; }
+body[data-look] .readnext { padding: 1rem; }
+body[data-look] .sec .big-h, body[data-look] .card h2, body[data-look] .tile h2 { font: 500 1.25rem/1.15 var(--f-display); }
+body[data-look] .eyebrow { color: var(--lk-gold); }
+
+/* The photo, a wave into the page, and the pup and vet tiles on the page itself. */
+body[data-look] .hero { border-radius: var(--rc) var(--rc) 0 0; margin-top: .5rem; min-height: 15rem; }
+body[data-look] .hero::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3.6rem; background: var(--lk-wave-hero) bottom / 100% 100% no-repeat; z-index: 1; }
+body[data-look] .hero .cap { padding-bottom: 3.6rem; background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,.4) 45%, rgba(0,0,0,.55)); }
+body[data-look] .hero h1::after { content: ""; display: inline-block; width: 1.5rem; height: 1.5rem; margin-left: .45rem; vertical-align: -.1rem; background: var(--lk-hero-paw) center / contain no-repeat; }
+body[data-look] .bento { margin-top: -.7rem; padding: .3rem .1rem .2rem; }
+body[data-look] .tile.pup { background: transparent; border: 0; box-shadow: none; color: var(--lk-pup-ink); }
+body[data-look] .tile.pup .muted, body[data-look] .tile.pup .pfacts { color: inherit; opacity: .9; }
+body[data-look] .tile.pup .pfacts svg.i { color: var(--lk-pfacts-ico, inherit); }
+body[data-look] .pup .round { width: 5.4rem; height: 5.4rem; border: 3px solid var(--lk-page); box-shadow: 0 0 0 2.5px #F5EEDC; }
+body[data-look] .tile.green { background: linear-gradient(160deg, var(--lk-tile), var(--lk-tile-2)); color: var(--lk-tile-ink); border: 1px solid rgba(138,90,30,.18); box-shadow: var(--lk-shadow); padding: .9rem .85rem; gap: .6rem; }
+body[data-look] .tile.green .eyebrow { color: var(--lk-tile-ink); opacity: 1; letter-spacing: .12em; }
+body[data-look] .tile.green a:not(.btn) { color: var(--lk-leaf); }
+body[data-look] .tile.green .calpage { width: 3.9rem; border-radius: 10px; padding: .3rem 0 .4rem; background: var(--lk-page); color: #F5EEDC; box-shadow: 0 3px 8px rgba(0,0,0,.22); }
+body[data-look] .tile.green .calpage b { background: transparent; color: inherit; padding-top: .1rem; }
+body[data-look] .tile.green .calpage span { font: 600 1.9rem/1.05 var(--f-display); }
+body[data-look] .tile.green .calpage i { color: inherit; opacity: .8; }
+body[data-look] .tile.green .bigline { font: 600 1.45rem/1 var(--f-display); white-space: nowrap; }
+body[data-look] .tile.green .btn { width: 100%; min-height: 2.8rem; font-size: .9rem; }
+
+/* Buttons: soft green with a green edge; the one to press solid with a shine. */
+body[data-look] .btn { border-radius: 10px; }
+body[data-look] .btn.line { background: var(--lk-soft); border-color: var(--lk-soft-line); color: var(--lk-leaf); }
+body[data-look] .btn.line:hover { background: var(--lk-soft); color: var(--lk-leaf); filter: brightness(.97); }
+body[data-look] .btn.solid, body[data-look] .btn.onfill, body[data-look] .pill.light { background: linear-gradient(var(--lk-leaf-hi), var(--lk-leaf)); border: 1.5px solid var(--lk-leaf); color: var(--lk-leaf-ink);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 2px 5px rgba(0,0,0,.22); }
+body[data-look] .pill.light { border-radius: 10px; min-height: 2.6rem; font-size: .88rem; }
+
+/* Home's vet card: the clock row (Cream); the vet row (Forest) is the look's own. */
+body[data-look] .vetcard h2 { font: 500 1.6rem/1.1 var(--f-display); margin: -.2rem 0 .6rem; }
+body[data-look] .timer { display: flex; align-items: center; gap: .6rem; padding: .6rem .65rem; background: linear-gradient(var(--lk-strip), var(--lk-card)); border: 1px solid var(--lk-line); border-radius: 12px; }
+body[data-look] .timer .clockdot { width: 2.6rem; height: 2.6rem; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--lk-leaf); color: var(--lk-leaf-ink); box-shadow: 0 0 0 3px var(--lk-soft), 0 0 0 4.5px var(--lk-soft-line); }
+body[data-look] .timer .clockdot svg.i { width: 1.4rem; height: 1.4rem; stroke-width: 2; }
+body[data-look] .timer p { flex: 1; min-width: 0; margin: 0; font-size: .8rem; color: var(--lk-muted); line-height: 1.25; }
+body[data-look] .timer p b { display: block; color: var(--lk-ink); font: 700 .95rem/1.2 var(--f-body); }
+body[data-look] .vetrow { grid-template-columns: 3rem 1fr auto; gap: .75rem; align-items: center; padding: .85rem 1rem; border-radius: var(--rc); text-decoration: none;
+  background: linear-gradient(var(--lk-card), var(--lk-card-2)); color: var(--lk-ink); border: 1px solid var(--lk-line); box-shadow: var(--lk-shadow); }
+body[data-look] .vetrow .vr-i svg.i { width: 2.7rem; height: 2.7rem; color: var(--lk-leaf); stroke-width: 1.7; }
+body[data-look] .vetrow .vr-t b { display: block; font: 600 1.2rem/1.15 var(--f-display); }
+body[data-look] .vetrow .vr-t span { font-size: .92rem; }
+body[data-look] .vetrow .vr-c svg.i { width: 1.4rem; height: 1.4rem; stroke-width: 2.2; }
+
+/* Tasks: the date in a small cream box; the status a dot and a word. */
+body[data-look] .task { border-top-color: var(--lk-line); }
+body[data-look] .task .d { background: var(--lk-card); border: 1px solid var(--lk-line); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+
+/* Food and insurance: their own cream cards on the page, side by side. */
+body[data-look] .sec.food { background: none; padding: 0; color: var(--lk-ink); }
+body[data-look] .food .duo.two .fcard, body[data-look] .food .stack .fcard, body[data-look] .food .fcard {
+  background: linear-gradient(var(--lk-strip), var(--lk-card) 3.4rem, var(--lk-card-2)); border: 1px solid var(--lk-line); border-radius: var(--rc); box-shadow: var(--lk-shadow); color: var(--lk-ink); padding: .9rem; }
+body[data-look] .food .eyebrow { color: var(--lk-gold); }
+body[data-look] .food .card-h { font: 500 1.2rem/1.15 var(--f-display); }
+body[data-look] .food .ticks svg.i { color: var(--lk-leaf); }
+body[data-look] .food .small, body[data-look] .food .under { color: var(--lk-muted); opacity: 1; }
+body[data-look] .food .btn.text { color: var(--lk-leaf); }
+
+/* Contacts, Quick links, programs. */
+body[data-look] .contact { border-top-color: var(--lk-line); }
+body[data-look] .qtile { background: var(--lk-card); border: 1px solid var(--lk-line); border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,.06); padding: .8rem .2rem .7rem; }
+body[data-look] .qtile .ico { background: transparent; }
+body[data-look] .qtile .ico svg.i { width: 1.6rem; height: 1.6rem; stroke-width: 1.5; }
+body[data-look] .hl .badge { border-color: var(--lk-soft-line); background: var(--lk-soft); }
+
+/* Timeline: the green head runs edge to edge and the wave carries it into a cream page. */
+body[data-look].pg-timeline { background: linear-gradient(var(--lk-page) 0 18rem, var(--lk-cream-page) 18rem); }
+body[data-look].pg-timeline main { background: var(--lk-cream-page); padding-top: 0; min-height: calc(100vh - 8rem); }
+body[data-look].pg-timeline .band { position: relative; margin: 0 calc(-1 * var(--gut)) .2rem; border-radius: 0; border: 0; box-shadow: none; padding: 1.2rem 1rem 4.2rem; color: #F5EEDC;
+  background: radial-gradient(circle at 85% 0%, rgba(255,255,255,.07), transparent 60%), linear-gradient(var(--lk-page), var(--lk-head-2)); }
+body[data-look].pg-timeline .band::before { content: ""; position: absolute; right: 1rem; top: 1rem; width: 4.4rem; height: 4.4rem; background: var(--lk-head-art) center / contain no-repeat; }
+body[data-look].pg-timeline .band::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3.4rem; background: var(--lk-wave-head) bottom / 100% 100% no-repeat; }
+body[data-look].pg-timeline .band h1 { font: 500 2.1rem/1.05 var(--f-display); color: #F5EEDC; }
+body[data-look].pg-timeline .band p { max-width: 30ch; }
+body[data-look].pg-timeline .band .muted { color: #E4E9DE; }
+body[data-look].pg-timeline .band .eyebrow { color: #E9C77E; }
+body[data-look].pg-timeline .card { box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+body[data-look].pg-timeline .disclose { color: var(--lk-muted); }
+@media (min-width: 720px) { body[data-look].pg-timeline .band { margin: 0 0 .2rem; border-radius: var(--rc) var(--rc) 0 0; } }
+
+/* Vet visit: the head's art, the reminder in a box with its icon in a ring. */
+body[data-look] .vethead { position: relative; overflow: hidden; }
+body[data-look] .vethead h1 { max-width: 66%; font: 500 1.6rem/1.1 var(--f-display); }
+body[data-look] .vethead::before { content: ""; position: absolute; top: 0; right: 0; width: 62%; aspect-ratio: 300 / 170; background: var(--lk-vet-art) top right / contain no-repeat; pointer-events: none; }
+body[data-look] .vethead > * { position: relative; }
+body[data-look] .remind { display: flex; gap: .55rem; align-items: center; background: linear-gradient(var(--lk-strip), var(--lk-card)); border: 1px solid var(--lk-line); border-radius: 10px; padding: .55rem .7rem; color: var(--lk-ink); }
+body[data-look] .remind .hico { width: 2.1rem; height: 2.1rem; flex: none; margin: 0; border-radius: 50%; border: 1.6px solid var(--lk-gold); color: var(--lk-gold); vertical-align: 0; }
+body[data-look] .remind .hico svg.i { width: 1.15rem; height: 1.15rem; }
+
+/* Records: My puppy, the name in script, a mark in the corner, the facts in two columns. */
+body[data-look] .mypup { position: relative; }
+body[data-look] .mypup::after { content: ""; position: absolute; right: .8rem; top: .7rem; width: var(--lk-mypup-art-size, 2.6rem); height: var(--lk-mypup-art-size, 2.6rem); background: var(--lk-mypup-art) center / contain no-repeat; opacity: .6; }
+body[data-look] .mypup .eyebrow { color: var(--lk-ink); }
+body[data-look] .mypup .script { font-size: 2.6rem; }
+body[data-look] .mypup .facts > div:nth-child(even) { border-left: 1px solid var(--lk-line); padding-left: 1rem; }
+body[data-look] .records th, body[data-look] .facts dt { color: var(--lk-gold); }
+
+/* The pinned bar and the tabs. */
+body[data-look] .actionbar { background: var(--lk-card); border-top-color: var(--lk-line); }
+body[data-look] .tabs { background: var(--lk-page-2); border-top: 1px solid rgba(255,255,255,.08); }
+body[data-look] .tabs a { border-radius: 14px; }

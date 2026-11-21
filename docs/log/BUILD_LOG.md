@@ -2300,3 +2300,34 @@ The owner: Records said "Went home", which is her side of it; families read it. 
 Records card now says "Came home" (before pickup, "Coming home"), and the pup card on Home
 "Came home". Her own screens keep "went home". Server HTML only, no version bump. The portal
 looks prototype and its Current snapshot are updated to match.
+
+## 2026-11-21: the portal's looks, hers to choose (migration 0042)
+
+The owner: all three looks (today's portal, and her two mockups) available to breeders,
+each choosing one, so more can be added later.
+
+- **Migration 0042** (`0042_portal_look.sql`): `portal_settings.look`, a new column, empty
+  (Classic) until she picks another. Additive; applies itself on the first request after
+  the merge.
+- `portal/looks.js`: the list (Classic, Forest, Cream), each with its name and a line for
+  her, and its stylesheets; `lookOf` reads an unknown or missing look as Classic. Her
+  Portal settings screen opens with "How the portal looks" (radio buttons; this screen's
+  wording isn't in `manage/wording.js` yet, as before). `saveSettings` refuses a look
+  not on the list and stores Classic as none.
+- Every portal page carries her look: `data-look` and `pg-<page>` on `<body>`, and for
+  Forest and Cream `looks/mockup.css` (what the mockups share) and the look's own sheet
+  after `portal.css`. The handbook's cover keeps its own design in every look.
+- Hooks in `family.js`, invisible in Classic (`portal.css` hides `.hico` and `.lookonly`):
+  an icon before each card's title (`hh()`, four new icons: image, link, syringe, info),
+  `vethead`, `remind` and `mypup` classes, and on Home in the vet visit, for a look, the
+  vet card with its clock row and the vet row (Cream shows the card, Forest the row) in
+  place of Classic's numbered steps.
+- The art is SVG files in `public/_kp/f/looks/`: the waves (one curve in seven layers,
+  graded), the swoosh, the stethoscope, the Boston, the calendar page, a gold paw.
+- The looks are light only, as drawn; Classic follows the phone. The three-colour rule
+  stays Classic's (CLAUDE.md updated).
+- Tests: `portal-looks.test.js` (the list, picking and saving, each look's page, the
+  refusal, the stylesheets and art there); two tests allow the heading icon. Checked the
+  real pages in each look at 390px on the prototype's four dates (Home, Timeline, Vet
+  visit, Records, Messages, Account). `PORTAL_VERSION` 5 is on `main`: a bump to 6 is
+  needed for `portal.css`, the icons and `looks/`; asked. 503 pass, 1 fail (that one).

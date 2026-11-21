@@ -3,6 +3,7 @@
 // and history. Every change to a placement is written to portal_history with who
 // made it (plan 3.1); fields she edits are listed in edited_fields, so a later
 // KennelOS sync (build chunk 3) never overwrites them.
+import { LOOKS } from './looks.js';
 import { emailHash, normalizeEmail } from '../auth.js';
 import { randomHex } from '../lib/crypto.js';
 import { vetDeadline, validTimeZone, zonedToUtc, VET_RULES } from './vet.js';
@@ -27,7 +28,7 @@ export async function portalOn(env, siteId) {
 const SETTINGS_DEFAULTS = {
   time_zone: 'America/New_York', vet_rule: 'hours72', proof_note: null, disclosure: null,
   her_phone: null, her_email: null, vet_clinic: null, vet_doctor: null, vet_phone: null, vet_address: null, vet_note: null, help_weeks: 8,
-  food_name: null, food_bag: null, food_how: null, food_note: null,
+  food_name: null, food_bag: null, food_how: null, food_note: null, look: null,
 };
 
 export async function getSettings(env, siteId) {
@@ -62,6 +63,12 @@ export async function saveSettings(env, siteId, input) {
     vet_address: clean(input.vet_address, 200), vet_note: clean(input.vet_note, 400), help_weeks: Number(weeks),
     food_name: clean(input.food_name, 160), food_bag: clean(input.food_bag, 80), food_how: clean(input.food_how, 160), food_note: clean(input.food_note, 300),
   };
+  // The look: one of portal/looks.js, Classic (null) when not given.
+  if ('look' in input) {
+    const look = String(input.look ?? '');
+    if (look && !Object.hasOwn(LOOKS, look)) throw new PortalError('Choose a look from the list.');
+    v.look = look && look !== 'classic' ? look : null;
+  }
   const cols = Object.keys(v);
   await env.DB.batch([
     freezeSiteVetStatement(env, siteId),

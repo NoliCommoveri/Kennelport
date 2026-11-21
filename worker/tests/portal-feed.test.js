@@ -378,7 +378,7 @@ test('Open your status page: before pickup, the band in her wording, and a link 
   const { portal } = await (await feed({ families: [REED({}, { go_home_on: far })] })).json();
   const cookie = (await call(env, H, `/family/handoff?t=${await makeHandoffToken(portal.handoff_key, 'fam-reed')}`)).headers.get('set-cookie').split(';')[0];
   const home = await (await call(env, H, '/family', { headers: { cookie } })).text();
-  assert.match(home, /<p class="eyebrow">Until Opal comes home<\/p><h2>Payments, additional services, and pickups<\/h2>/);
+  assert.match(home, /<p class="eyebrow">Until Opal comes home<\/p><h2>(?:<span class="hico".*?<\/span>)?Payments, additional services, and pickups<\/h2>/);
   assert.match(home, /<b>Payments<\/b><span class="small muted">See your payment schedule: payments so far, scheduled due dates, and remaining balances/);
   assert.match(home, /<b>Additional services<\/b><span class="small muted">Request paid extra packages, like photo sessions and extended homegoing/);
   assert.match(home, /<b>Pickup<\/b><span class="small muted">Not booked yet · Request your day and time/, 'a go-home date alone is not a booked pickup');

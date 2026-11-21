@@ -66,6 +66,9 @@ anyone outside the family.
   migration 0040 (`portal_chapters`). Her chapters on the Portal tab; families read it as a flipbook
   with search; chapters she writes with Claude upload as a file, styled, with her photos; Read next and a quick link, shown only once a chapter has words. `PORTAL_VERSION` 4 on this
   branch. Build log, 2026-11-21.
+- **Looks** (2026-11-21, migration 0042): each breeder picks Classic, Forest or Cream in
+  her portal settings; Forest and Cream are the owner's mockups (`docs/reference/portal-looks.html`).
+  Needs `PORTAL_VERSION` 6 (asked).
 - Card colours (2026-11-21): paper, green and a new sand, fixed per card, no two alike
   one above the other on any tab; the food band above the contacts. Needs `PORTAL_VERSION` 6 (asked).
 - Phase 2: **the go-home bag built** 2026-11-21, migration 0041

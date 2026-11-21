@@ -114,7 +114,7 @@ test('her handbook: add, edit, order, off, remove after asking; families see it 
   home = await (await r('/family')).text();
   assert.match(home, /href="\/family\/handbook"><span class="ico">.*Handbook<\/a>/);
   assert.doesNotMatch(home, /href="\/family\/account"><span class="ico">/);
-  assert.match(home, /<h2>Read next<\/h2>/);
+  assert.match(home, /<h2>(?:<span class="hico".*?<\/span>)?Read next<\/h2>/);
   assert.ok(home.indexOf('The first night') < home.indexOf('Feeding'));
   // The book: cover with their puppy, title page, contents with page numbers, a page a
   // chapter (two for one with ---), the end; the flipbook's script; no portal tabs.

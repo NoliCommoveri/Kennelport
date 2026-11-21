@@ -498,3 +498,7 @@ html.hb-js .hb .flip.l { transform-origin: right center; }
 .hb .dlg-body { padding: 6px 18px 18px; max-height: 70vh; overflow: auto; font-size: 15px; }
 .hb .x { border: 0; background: transparent; font-size: 1.4rem; cursor: pointer; color: var(--maroon) !important; width: 40px; height: 40px; }
 @media (prefers-reduced-motion: reduce) { .hb *, .hb *::before, .hb *::after { animation: none !important; transition-duration: .01ms !important; } }
+
+/* The looks (portal/looks.js): pieces only a look other than Classic shows, each look's
+   stylesheet in looks/ bringing them out. Classic keeps them hidden. */
+.hico, .lookonly { display: none; }

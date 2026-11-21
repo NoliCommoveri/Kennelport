@@ -23,6 +23,7 @@ import {
 import { stage, vetDeadline, formatAt, formatDay, timeLeft, localParts, addDays, VET_RULES } from './vet.js';
 import { stepsFor, openTasks, programsFor, setDone, setProgramStatus } from './steps.js';
 import { PORTAL_VERSION } from './version.js';
+import { LOOKS, lookOf } from './looks.js';
 import { CODE_TTL_MS } from '../auth.js';
 import { withCookie } from '../signin.js';
 import { redeemHandoff, statusPageLink } from './feed.js';
@@ -74,9 +75,9 @@ function frame(site, title, body, { status = 200, fam = null, tab = null, action
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>${esc(title)}${fam?.viewing ? ' (viewing)' : ''} · ${esc(kennel)}</title>
-<link rel="stylesheet" href="/_kp/f/portal.css?v=${PORTAL_VERSION}">
+<link rel="stylesheet" href="/_kp/f/portal.css?v=${PORTAL_VERSION}">${(bare ? [] : LOOKS[site.portalLook]?.css ?? []).map((c) => `\n<link rel="stylesheet" href="/_kp/f/looks/${c}.css?v=${PORTAL_VERSION}">`).join('')}
 <script src="/_kp/f/portal.js?v=${PORTAL_VERSION}" defer></script>${script ? `\n<script src="/_kp/f/${script}?v=${PORTAL_VERSION}"></script>` : ''}
-</head><body class="${bare ? 'bare' : fam ? 'in' : 'out'}">
+</head><body class="${bare ? 'bare' : fam ? 'in' : 'out'}${tab ? ` pg-${tab.split('/')[2] ?? 'home'}` : ''}"${!bare && site.portalLook && site.portalLook !== 'classic' ? ` data-look="${site.portalLook}"` : ''}>
 ${SPRITE}
 ${bare ? `${fam?.viewing ? fam.band : ''}${body}` : `<header class="top"><a class="brand" href="/family">${brandMark(site)}<span class="bt"><b>${esc(kennel)}</b><span class="sub">${ic('paw')}Puppy Parent Portal</span></span></a>
 <span class="top-end"><button type="button" class="aa" id="aa" aria-label="Text size">Aa</button>${fam && !fam.loss ? `<a class="acct" href="/family/messages" aria-label="${fam.unread ? `Messages, ${fam.unread} new` : 'Messages'}">${ic('message')}${fam.unread ? `<b class="small">${fam.unread}</b>` : ''}</a>` : ''}${fam ? `<a class="acct" href="/family/account" aria-label="Account">${ic('user')}</a>` : ''}</span></header>
@@ -85,6 +86,8 @@ ${action}${tabs}`}
 </body></html>`, { status, headers: { ...HEADERS, ...headers } });
 }
 
+// A heading's icon: shown by the looks other than Classic (portal/looks.js), hidden in Classic.
+const hh = (icon) => `<span class="hico" aria-hidden="true">${ic(icon)}</span>`;
 const errorBox = (msg) => (msg ? `<p class="error" role="alert">${esc(msg)}</p>` : '');
 const noteBox = (msg) => (msg ? `<p class="note" role="status">${esc(msg)}</p>` : '');
 
@@ -181,7 +184,7 @@ function tickForm(kind, x, back, done) {
 function checklistCard(list) {
   if (!list.length) return '';
   const done = list.filter((x) => x.done).length;
-  return `<section class="tile full c-sand" id="checklist"><div class="between"><h2>Go-home checklist</h2><span class="small muted">${done} of ${list.length} ready</span></div>
+  return `<section class="tile full c-sand" id="checklist"><div class="between"><h2>${hh('list')}Go-home checklist</h2><span class="small muted">${done} of ${list.length} ready</span></div>
     <div class="progress" aria-hidden="true"><i style="width:${Math.round((done / list.length) * 100)}%"></i></div>
     <ul class="checks">${list.map((x) => `<li${x.done ? ' class="done"' : ''}>${x.auto
       ? `<a class="tick${x.done ? ' on' : ''}" href="/family/vet#booked" aria-label="${esc(x.done ? 'Done' : 'Tap I\'ve booked it on the Vet visit page')}">${ic('check')}</a>`
@@ -299,7 +302,7 @@ function contactsCard(site, s, p, name, { lead = false } = {}) {
       <div class="row">${v.phone ? `<a class="btn line" href="tel:${esc(dialable(v.phone))}">${ic('phone')} Call the vet</a>` : ''}
       ${v.address ? `<a class="go" href="https://www.google.com/maps/search/?api=1&amp;query=${encodeURIComponent(v.address)}">${ic('pin')} ${esc(v.address)} ${ic('arrow')}</a>` : ''}</div>
       ${v.phone ? `<p class="small muted">${esc(v.phone)}</p>` : ''}</div>` : '';
-  return `<section class="card c-paper contacts" id="contacts">${lead ? `<p class="eyebrow">The first weeks at home</p><h2>Questions about ${esc(name)}? One tap</h2>` : '<h2>Contacts</h2>'}${her}${vetBlock}</section>`;
+  return `<section class="card c-paper contacts" id="contacts">${lead ? `<p class="eyebrow">${hh('home')}The first weeks at home</p><h2>Questions about ${esc(name)}? One tap</h2>` : `<h2>${hh('user')}Contacts</h2>`}${her}${vetBlock}</section>`;
 }
 
 // From pickup, for her chosen number of weeks, the contacts lead Home.
@@ -352,7 +355,7 @@ const actionBar = (x) => `<div class="actionbar" role="region" aria-label="Do th
 function statusBand(p, s, name, kennel) {
   const row = (icon, title, sub) => `<li><div><span class="badge">${ic(icon)}</span><span><b>${title}</b><span class="small muted">${sub}</span></span></div></li>`;
   const booked = p.pickup_booked_at ? formatAt(p.pickup_booked_at, s.time_zone) : null;
-  return `<section class="sec paper bleed"><p class="eyebrow">Until ${esc(name)} comes home</p><h2>Payments, additional services, and pickups</h2>
+  return `<section class="sec paper bleed"><p class="eyebrow">Until ${esc(name)} comes home</p><h2>${hh('calendar')}Payments, additional services, and pickups</h2>
     <ul class="hl">${row('tag', 'Payments', 'See your payment schedule: payments so far, scheduled due dates, and remaining balances')}
     ${row('gift', 'Additional services', 'Request paid extra packages, like photo sessions and extended homegoing')}
     ${row('calendar', 'Pickup', booked ? esc(booked) : 'Not booked yet · Request your day and time')}
@@ -407,9 +410,17 @@ async function homePage(env, site, fam, now = new Date()) {
         { done: Boolean(p.proof_uploaded_at), h: `See the vet by ${esc(formatAt(p.vet_deadline_at, s.time_zone))}`, p: 'Bring this portal\'s Records page.' },
         { done: Boolean(p.proof_uploaded_at), h: p.proof_uploaded_at ? 'Record uploaded' : 'Upload the record', p: p.proof_uploaded_at ? (p.proof_accepted_at ? `Accepted by ${esc(kennel)}.` : `${esc(kennel)} will check it.`) : 'A photo or PDF of the vet\'s record is fine.', act: p.proof_uploaded_at ? '' : '<a class="btn solid small" href="/family/vet#proof">Upload vet record</a>' },
       ])}<p class="small muted">This is a reminder. Your contract sets the requirement and the deadline.</p></section>`;
+    // In a look other than Classic the steps are on the Vet visit page; Home has the
+    // vet card (the clock row) and the vet row, each look showing one (looks/*.css).
+    if (site.portalLook && site.portalLook !== 'classic') {
+      const left = p.proof_uploaded_at ? (p.proof_accepted_at ? `Accepted by ${esc(kennel)}` : 'Record uploaded') : `${esc(timeLeft(p.vet_deadline_at, now))} left`;
+      band = `<section class="card lookonly vetcard"><p class="eyebrow">Your contract's 3-day visit</p><h2>${esc(name)}'s vet visit</h2>
+        ${p.proof_uploaded_at ? `<p class="status ok">${ic('check')} ${left}</p>` : `<div class="timer"><span class="clockdot">${ic('clock')}</span><p><b>${left}</b>Vet visit due ${esc(formatAt(p.vet_deadline_at, s.time_zone))}</p><a class="btn solid small" href="/family/vet#proof">Upload</a></div>`}</section>
+        <a class="lookonly vetrow" href="/family/vet"><span class="vr-i">${ic('stethoscope')}</span><span class="vr-t"><b>${esc(name)}'s vet visit</b><span>${left}</span></span><span class="vr-c">${ic('chev')}</span></a>`;
+    }
     if (!p.proof_uploaded_at) action = { icon: 'clock', title: `${esc(timeLeft(p.vet_deadline_at, now))} left`, sub: `Vet visit due ${esc(formatAt(p.vet_deadline_at, s.time_zone))}`, href: '/family/vet#proof', label: 'Upload' };
     const soon = openTasks(steps.tasks.filter((t) => t.auto !== 'vet_visit' && t.auto !== 'vet_booking'), 2);
-    if (soon.length) band += `<section class="card c-paper"><div class="between"><h2>Coming up</h2><a class="go" href="/family/timeline">All ${ic('arrow')}</a></div><ul class="tasks">${soon.map((t) => taskRow(t, kennel, 'home')).join('')}</ul></section>`;
+    if (soon.length) band += `<section class="card c-paper"><div class="between"><h2>${hh('calendar')}Coming up</h2><a class="go" href="/family/timeline">All ${ic('arrow')}</a></div><ul class="tasks">${soon.map((t) => taskRow(t, kennel, 'home')).join('')}</ul></section>`;
   } else {
     hello = 'Hello again';
     const weeks = p.picked_up_at ? Math.floor((new Date(now).getTime() - Date.parse(p.picked_up_at)) / (7 * 86400000)) : 0;
@@ -462,7 +473,7 @@ async function homePage(env, site, fam, now = new Date()) {
   ${contactsLead(p, s, now) ? contactsCard(site, s, p, name, { lead: true }) : ''}
   ${checklist}
   ${st === 'before' && statusUrl && live ? statusBand(p, s, name, kennel) : ''}
-  ${rest.length ? `<section class="sec sand bleed"><h2>Recommended for ${esc(name)}</h2>${programList(rest, 'home', kennel)}</section>` : ''}
+  ${rest.length ? `<section class="sec sand bleed"><h2>${hh('paw')}Recommended for ${esc(name)}</h2>${programList(rest, 'home', kennel)}</section>` : ''}
   ${readNext(chapters, photos)}`.trim();
   const body = `
   <section class="hero bleed">${main ? `<img src="${esc(main)}" alt="">` : `<span class="ph" aria-hidden="true">${ic('paw')}</span>`}<div class="cap"><span class="script">${esc(hello)}</span><h1>${esc(greeting)}</h1></div></section>
@@ -475,7 +486,7 @@ async function homePage(env, site, fam, now = new Date()) {
   </section>
   ${band}
   ${middle}
-  <section class="tile quick ${toneOf(middle || band) === 'green' ? 'c-paper' : 'c-green'}"><h2>Quick links</h2><div class="qgrid">${quick.map(([href, icon, label]) => `<a class="qtile" href="${href}"><span class="ico">${ic(icon)}</span>${label}</a>`).join('')}</div></section>
+  <section class="tile quick ${toneOf(middle || band) === 'green' ? 'c-paper' : 'c-green'}"><h2>${hh('link')}Quick links</h2><div class="qgrid">${quick.map(([href, icon, label]) => `<a class="qtile" href="${href}"><span class="ico">${ic(icon)}</span>${label}</a>`).join('')}</div></section>
   ${list.length ? disclosure(s) : ''}`;
   return frame(site, 'Home', body, { fam, tab: '/family', action: action ? actionBar(action) : '' });
 }
@@ -493,7 +504,7 @@ function readNext(chapters, photos) {
     const ph = pics.length ? pics[i % pics.length] : null;
     return `<a class="prow${ph ? '' : ' words'}" href="${chapterHref(c)}">${ph ? `<span class="ph"><img src="/family/photo/${esc(ph.id)}?s=t" alt="" loading="lazy"></span>` : ''}<span class="lab">${esc(c.title)}<span class="chev">${ic('chev')}</span></span></a>`;
   });
-  return `<section class="readnext"><div class="between"><h2>Read next</h2><a class="go" href="/family/handbook">Handbook ${ic('arrow')}</a></div><div class="prows">${rows.join('')}</div></section>`;
+  return `<section class="readnext"><div class="between"><h2>${hh('book')}Read next</h2><a class="go" href="/family/handbook">Handbook ${ic('arrow')}</a></div><div class="prows">${rows.join('')}</div></section>`;
 }
 
 const handbookLink = (x, words, inline) => (inline
@@ -614,10 +625,10 @@ async function timelinePage(env, site, fam, { error } = {}, now = new Date()) {
   const pickup = home ? `${p.picked_up_at ? 'pickup' : 'go-home'} (${esc(formatDay(home))})` : null;
   const body = `${errorBox(error)}<section class="band"><p class="eyebrow">${esc(name)}'s first months</p><h1>Timeline</h1>
     <p class="small muted">${[born, pickup].filter(Boolean).length ? `Dated from ${[born, pickup].filter(Boolean).join(' and ')}. ` : ''}Mark a step done and its reminders stop.</p></section>
-    ${groups.length ? groups.map(([g, l], i) => `<section class="card ${i % 2 ? 'c-paper' : 'c-green'}"><h2>${esc(g)}</h2><ul class="tasks">${l.map((t) => taskRow(t, kennel, 'timeline')).join('')}</ul></section>`).join('')
+    ${groups.length ? groups.map(([g, l], i) => `<section class="card ${i % 2 ? 'c-paper' : 'c-green'}"><h2>${hh('calendar')}${esc(g)}</h2><ul class="tasks">${l.map((t) => taskRow(t, kennel, 'timeline')).join('')}</ul></section>`).join('')
       : `<section class="card c-paper"><p class="muted">${esc(kennel)} hasn't added the timeline yet.</p></section>`}
     ${stage(p, now) === 'before' && checklist.length ? `<p class="small"><a class="go" href="/family#checklist">The go-home checklist ${ic('arrow')}</a></p>` : ''}
-    ${list.length ? `<section class="card c-sand"><h2>Recommended for ${esc(name)}</h2>${programList(list, 'timeline', kennel)}</section>${disclosure(s)}` : ''}`;
+    ${list.length ? `<section class="card c-sand"><h2>${hh('paw')}Recommended for ${esc(name)}</h2>${programList(list, 'timeline', kennel)}</section>${disclosure(s)}` : ''}`;
   return frame(site, 'Timeline', body, { fam, tab: '/family/timeline', status: error ? 400 : 200 });
 }
 
@@ -629,19 +640,19 @@ async function vetPage(env, site, fam, { error, note } = {}, now = new Date()) {
   const proof = p.proof_file_id ? await getFile(env, site.id, p.proof_file_id) : null;
   const running = stage(p, now) !== 'before';
   const body = `${noteBox(note)}${errorBox(error)}
-  <section class="card c-sand"><p class="eyebrow">The vet visit</p>
+  <section class="card c-sand vethead"><p class="eyebrow">The vet visit</p>
     <h1>${running && p.vet_deadline_at ? `Due by ${esc(formatAt(p.vet_deadline_at, s.time_zone))}` : `Book ${esc(name)}'s first vet visit`}</h1>
     <p>${esc(VET_RULES[s.vet_rule])}${running && p.vet_deadline_at ? `: by ${deadlineLine(p.vet_deadline_at, s)}${Date.parse(p.vet_deadline_at) > now.getTime() ? `, ${esc(timeLeft(p.vet_deadline_at, now))} from now` : ''}.` : `. The clock starts when you take ${esc(name)} home.`}</p>
     ${s.proof_note ? `<p class="muted">What counts as proof: ${esc(s.proof_note)}</p>` : ''}
-    <p class="muted small">This page is a reminder. Your contract states the vet visit requirement.</p>
+    <p class="muted small remind">${hh('info')}This page is a reminder. Your contract states the vet visit requirement.</p>
   </section>
-  <section class="card c-paper" id="booked"><h2>${p.vet_booked_at ? 'Your appointment' : 'I\'ve booked it'}</h2>
+  <section class="card c-paper" id="booked"><h2>${hh('calendar')}${p.vet_booked_at ? 'Your appointment' : 'I\'ve booked it'}</h2>
     <form method="post" action="/family/vet/booked" class="stack">
       <div class="two"><label>Day<input type="date" name="day" value="${esc(bookedDay ?? '')}" required></label><label>Time<input type="time" name="time" value="${esc(bookedTime ?? '')}"></label></div>
       <label>Clinic <span class="muted">(if you like)</span><input name="clinic" value="${esc(p.vet_clinic ?? '')}" maxlength="120"></label>
       <button class="btn ${p.vet_booked_at ? 'line' : 'solid'}">${p.vet_booked_at ? 'Save changes' : 'I\'ve booked it'}</button>
     </form></section>
-  <section class="card c-green" id="proof"><h2>Upload the vet's record</h2>
+  <section class="card c-green" id="proof"><h2>${hh('file')}Upload the vet's record</h2>
     ${proof ? `<p class="status ok">${ic('check')} Uploaded ${esc(formatAt(p.proof_uploaded_at, s.time_zone))}${p.proof_accepted_at ? `, accepted by ${esc(site.kennel_name || site.subdomain)}` : ''}. <a href="/family/file/${esc(proof.id)}">View it</a></p>` : ''}
     <form method="post" action="/family/vet/proof" enctype="multipart/form-data" class="stack">
       <label>A photo or PDF, up to 10 MB<input type="file" name="file" accept="image/*,application/pdf" required></label>
@@ -658,7 +669,7 @@ function bagBand(items, name, kennel, s) {
     return `<li><div><span class="badge">${ic(pr ? TYPE_ICON[pr.portal_type] ?? 'gift' : 'gift')}</span><span><b>${esc(x.name)}</b>${pr?.family_action ? `<span class="small muted">${esc(pr.family_action)}</span>` : ''}</span>
       ${pr ? `<a class="btn line small" href="/family/go/${esc(pr.id)}?from=bag">${esc(x.button || 'Get more')} ${ic('arrow')}</a>` : '<span></span>'}</div></li>`;
   };
-  return `<section class="band" id="bag"><div class="between"><h2>What came home in ${esc(name)}'s bag</h2><span class="small muted">From ${esc(kennel)}</span></div>
+  return `<section class="band" id="bag"><div class="between"><h2>${hh('gift')}What came home in ${esc(name)}'s bag</h2><span class="small muted">From ${esc(kennel)}</span></div>
     <ul class="hl bag">${items.map(row).join('')}</ul></section>${items.some((x) => x.program) ? disclosure(s) : ''}`;
 }
 
@@ -671,7 +682,7 @@ async function recordsPage(env, site, fam) {
   const contract = p.contract_file_id ? await getFile(env, site.id, p.contract_file_id) : null;
   const row = (k, v) => (v ? `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>` : '');
   const reg = pup?.registration ? `${pup.registration === 'full' ? 'Full' : 'Limited'}${pup.registry ? ` (${pup.registry})` : ''}` : null;
-  const body = `<section class="card c-sand"><p class="eyebrow">My puppy</p><h1 class="script">${esc(name)}</h1>
+  const body = `<section class="card c-sand mypup"><p class="eyebrow">${hh('paw')}My puppy</p><h1 class="script">${esc(name)}</h1>
     <dl class="facts">
       ${row('Name', p.call_name && p.call_name !== p.puppy_name ? `${p.call_name} (${p.puppy_name} here)` : p.puppy_name)}
       ${row('Litter', pup?.litter_name)}${row('Born', pup?.born_on ? formatDay(pup.born_on) : null)}
@@ -680,15 +691,15 @@ async function recordsPage(env, site, fam) {
       ${row('Microchip', p.microchip)}${row('Registration', reg)}${row('Registration number', p.registration_no)}
       ${row(p.picked_up_at ? 'Came home' : 'Coming home', goHomeWords(p, s))}
     </dl></section>
-  <section class="card c-paper"><h2>Shots, deworming and vet visits</h2>
+  <section class="card c-paper"><h2>${hh('syringe')}Shots, deworming and vet visits</h2>
     ${records.length ? `<table class="records"><thead><tr><th>Date</th><th>What</th><th>Kind</th></tr></thead><tbody>${records.map((r) => `<tr><td>${esc(formatDay(r.given_on))}</td><td>${esc(r.name)}${r.notes ? `<br><span class="muted small">${esc(r.notes)}</span>` : ''}</td><td>${esc(RECORD_TYPES[r.type])}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">None recorded yet.</p>'}</section>
-  <section class="card c-green"><h2>Papers</h2><ul class="links">
+  <section class="card c-green"><h2>${hh('file')}Papers</h2><ul class="links">
     ${contract ? `<li><a href="/family/file/${esc(contract.id)}">${ic('file')} Your contract</a></li>` : '<li class="muted">Your contract will be here once it\'s added.</li>'}
     ${p.proof_file_id ? `<li><a href="/family/file/${esc(p.proof_file_id)}">${ic('stethoscope')} Vet visit record</a></li>` : ''}
   </ul></section>
   ${bag.length ? bagBand(bag, name, site.kennel_name || site.subdomain, s) : ''}
   ${contactsCard(site, s, p, name)}
-  <section class="card c-green" id="photos"><h2>Photos of ${esc(name)}</h2>
+  <section class="card c-green" id="photos"><h2>${hh('image')}Photos of ${esc(name)}</h2>
     ${photos.length ? `<ul class="gallery">${photos.map((ph) => `<li><a href="/family/photo/${esc(ph.id)}"><img src="/family/photo/${esc(ph.id)}?s=t" alt="${esc(ph.alt ?? '')}" loading="lazy"></a></li>`).join('')}</ul>` : '<p class="muted">Photos will appear here.</p>'}</section>`;
   return frame(site, 'Records', body, { fam, tab: '/family/records' });
 }
@@ -815,6 +826,8 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
   const post = request.method === 'POST';
   if (!post && request.method !== 'GET' && request.method !== 'HEAD') return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD, POST' } });
   if (post && !sameOrigin(request, url)) return new Response('Forbidden', { status: 403 });
+  // Her chosen look (portal/looks.js), for the pages; photos and files don't need it.
+  if (!/^\/family\/(photo|media|file|go|handbook\/photo)\//.test(path)) site.portalLook = lookOf(await env.DB.prepare('SELECT look FROM portal_settings WHERE site_id = ?').bind(site.id).first());
 
   // Seeing their portal (plan family-view.md): her view link, once, to a view cookie
   // that wins over a family session in the same browser while it lasts.

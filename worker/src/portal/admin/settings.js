@@ -5,12 +5,17 @@ import { escapeHtml as esc } from '../../lib/html.js';
 import { DEFAULT_DISCLOSURE } from '../store.js';
 import { VET_RULES } from '../vet.js';
 import { note, errorBox, SUGGEST_LABEL, ZONES, ZONE_NAMES } from './parts.js';
+import { LOOKS, lookOf } from '../looks.js';
 
 export function settingsScreen(site, s, products, { error, waiting = [], extras = [] } = {}, url) {
   const zones = ZONES.includes(s.time_zone) ? ZONES : [s.time_zone, ...ZONES];
   const TYPES = { '': 'Not shown', food: 'Food', insurance: 'Insurance', registration: 'Registration', product: 'Product', other: 'Other' };
   return `${url ? note(url) : ''}${errorBox(error)}<form method="post" action="/s/${esc(site.subdomain)}/portal/settings" class="card">
     <h1>Portal settings</h1>
+    <section class="fgroup" id="look"><h2>How the portal looks</h2><div class="fgrid">
+      <fieldset><legend>Your families see</legend>${Object.entries(LOOKS).map(([k, x]) => `<label class="check"><input type="radio" name="look" value="${k}"${lookOf(s) === k ? ' checked' : ''}> <span><b>${esc(x.name)}</b> <span class="hint">${esc(x.about)}</span></span></label>`).join('')}
+        <span class="hint">The same pages and buttons in every look. To see it as a family does, use See their portal on a family\'s screen.</span></fieldset>
+    </div></section>
     <section class="fgroup"><h2>The vet visit</h2><div class="fgrid">
       <fieldset><legend>How your contract counts it</legend>${Object.entries(VET_RULES).map(([k, l]) => `<label class="check"><input type="radio" name="vet_rule" value="${k}"${s.vet_rule === k ? ' checked' : ''}> <span>${esc(l)}</span></label>`).join('')}
         <span class="hint">Applies to clocks that start from now on; a clock already running keeps its deadline.</span></fieldset>

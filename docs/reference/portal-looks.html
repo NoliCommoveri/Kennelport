@@ -2062,7 +2062,7 @@ function mkHome() {
     const dl = vetDeadline(p.goHome), b = S.booked[p.id];
     out.push(mkCard('steth', `Book ${p.name}’s vet visit`, `<p class="small">Your contract asks for a visit within 72 hours of pickup: by <b>${long(dl)}, ${time(dl)}</b>. Vets fill up fast.</p>
       ${b ? `<p class="small"><span class="st ok">Booked</span> ${long(b)}, ${time(b)}</p>` : `<a class="btn solid small" href="#f-vet" style="justify-self:start">${icon('check')}I’ve booked it</a>`}`));
-    if (calDays(S.now, p.goHome) <= 14) out.push(checklistTile(p).replace('class="tile full"', 'class="mk mk-b" style="padding-top:.9rem"'));
+    if (calDays(S.now, p.goHome) <= 14) out.push(`<section class="mk"><div class="mk-b" style="padding-top:.9rem">${checklistTile(p).replace('class="tile full"', 'class="stack" style="display:grid;gap:.45rem"')}</div></section>`);
   } else if (ph === 'stay') {
     out.push(`<section class="mk"><header class="mk-h"><span class="mk-i">${icon('star')}</span><h2>How ${p.name} is doing</h2><a class="go" href="#f-stay">All ${icon('chev')}</a></header><div class="mk-b">${gaugesFor(p, 4)}</div></section>`);
   } else {
@@ -2070,7 +2070,7 @@ function mkHome() {
   }
   out.push(mkFoodDuo(p));
   if (ph === 'vet' || ph === 'settling') out.push(mkContacts(p, true));
-  if (!homeYet(p)) out.push(statusBand(p).replace('class="sec paper bleed"', 'class="mk mk-b" style="padding-top:.9rem"'));
+  if (!homeYet(p)) out.push(`<section class="mk"><div class="mk-b" style="padding-top:.9rem">${statusBand(p).replace(/^<section class="sec paper bleed">/, '<div style="display:grid;gap:.6rem">').replace(/<\/section>$/, '</div>')}</div></section>`);
   out.push(mkQuick(), disclosure);
   return out.join('');
 }
