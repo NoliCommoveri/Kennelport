@@ -1,9 +1,15 @@
 // Scratch: renders the live family portal for the prototype's sample family (the Reeds,
 // Opal) on the prototype's four dates, for the "Current" look of docs/reference/portal-looks.html.
 // Run: SNAP_OUT=/path/snap.json node --test worker/scripts/portal-current-snapshots.mjs (not picked up by the test run).
+// SNAP_LOOK=forest|cream|classic renders in that look (portal_settings.look; Classic by default).
+// SNAP_DIR=/path also writes each page as <dir>/<stage>-<page>.html, viewable on its own: /_kp/
+// points at worker/public/_kp/ on disk, and Opal's photo at SNAP_PHOTO (the prototype's
+// img/opal.jpg; her logo and Opal's other photos at the prototype's ak-logo.jpg, contessa.jpg
+// and willow.jpg beside it). worker/scripts/portal-looks-check.mjs measures these against the prototype.
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { makeEnv, call, addSite } from '../tests/helpers/env.js';
 
 const M = 'manage.kennelport.com';
@@ -12,6 +18,8 @@ const form = (o) => new URLSearchParams(o);
 const outbox = (env) => env.DB.raw.prepare('SELECT kind, subject, body FROM dev_outbox ORDER BY id').all();
 // New York times as UTC instants (EST, -5).
 const NY = (y, m, d, h = 0, mi = 0) => Date.UTC(y, m - 1, d, h + 5, mi);
+const LOOK = process.env.SNAP_LOOK || 'classic';
+const KP = pathToFileURL(fileURLToPath(new URL('../public/_kp/', import.meta.url))).href;
 const STAGES = { before: NY(2026, 12, 18, 9), vet: NY(2026, 12, 24, 16, 30), weeks: NY(2027, 1, 12, 10), later: NY(2027, 10, 28, 8) };
 
 async function render(stage) {
@@ -28,8 +36,14 @@ async function render(stage) {
     const t = new Date().toISOString();
     const db = env.DB.raw;
     db.prepare("INSERT INTO photos (id, site_id, r2_key, type, bytes, alt, created_at) VALUES ('ph-opal', ?, 'x', 'image/jpeg', 1, 'Opal', ?)").run(site.id, t);
+    // The prototype's sample (docs/reference/portal-looks.html): her logo, and two more photos of Opal.
+    for (const [id, alt, at] of [['ph-logo', 'A-K logo', t], ['ph-contessa', 'Opal', '2026-11-19T00:00:00.000Z'], ['ph-willow', 'Opal', '2026-11-18T00:00:00.000Z']]) {
+      db.prepare("INSERT INTO photos (id, site_id, r2_key, type, bytes, alt, created_at) VALUES (?, ?, 'x', 'image/jpeg', 1, ?, ?)").run(id, site.id, alt, at);
+    }
+    db.prepare("UPDATE sites SET logo_photo_id = 'ph-logo' WHERE id = ?").run(site.id);
     db.prepare("INSERT INTO litters (id, site_id, slug, name, stage, born_on, dam_name, sire_name, created_at, updated_at) VALUES ('gem', ?, 'gem', 'Gem litter', 'current', '2026-10-28', 'Willow', 'Boone', ?, ?)").run(site.id, t, t);
     db.prepare("INSERT INTO puppies (id, site_id, litter_id, slug, name, sex, color, registration, registry, photo_id, created_at, updated_at) VALUES ('opal', ?, 'gem', 'opal', 'Opal', 'female', 'Black & white', 'limited', 'AKC', 'ph-opal', ?, ?)").run(site.id, t, t);
+    for (const ph of ['ph-contessa', 'ph-willow']) db.prepare("INSERT INTO photo_tags (site_id, photo_id, subject) VALUES (?, ?, 'puppy:opal')").run(site.id, ph);
     for (const [id, name, url, sort] of [['food', 'Puppy food program', 'https://food.example/akb', 1], ['ins', 'Pet insurance trial', 'https://insure.example/akb', 2], ['akc', 'AKC registration', 'https://akc.example/akb', 3], ['crate', 'Crate and bedding', 'https://crate.example/akb', 4]]) {
       db.prepare('INSERT INTO products (id, site_id, name, link_url, sort) VALUES (?, ?, ?, ?, ?)').run(id, site.id, name, url, sort);
     }
@@ -39,7 +53,7 @@ async function render(stage) {
       vet_clinic: 'Parkway Animal Clinic', vet_phone: '706-555-0180', vet_address: '1622 Dietz Rd, Ringgold, GA 30736',
       food_name: 'Small-breed puppy formula, chicken & rice', food_bag: '4 lb bag', food_how: '⅓ cup, three times a day',
       'type.food': 'food', 'action.food': 'Order with A-K’s code for a first-order discount', 'type.ins': 'insurance', 'action.ins': 'Activate the free trial within 5 days of pickup',
-      'type.akc': 'registration', 'action.akc': 'Register with the papers in your go-home folder', 'type.crate': 'product',
+      look: LOOK, 'type.akc': 'registration', 'action.akc': 'Register with the papers in your go-home folder', 'type.crate': 'product',
     });
     assert.equal(saved.status, 303, await saved.text());
     await her('/portal/checklist/suggested', {});
@@ -56,6 +70,8 @@ async function render(stage) {
     const famId = res.headers.get('location').match(/\/f\/([0-9a-f-]{36})/)[1];
     const p = db.prepare('SELECT id FROM portal_placements WHERE family_id = ?').get(famId);
     db.prepare('UPDATE portal_placements SET microchip = ? WHERE id = ?').run('985 112 004 471', p.id);
+    db.prepare("INSERT INTO portal_files (id, site_id, placement_id, kind, r2_key, type, bytes, name, uploaded_by, uploaded_at) VALUES ('contract1', ?, ?, 'contract', 'c', 'application/pdf', 1, 'contract.pdf', 'breeder', ?)").run(site.id, p.id, t);
+    db.prepare("UPDATE portal_placements SET contract_file_id = 'contract1' WHERE id = ?").run(p.id);
     for (const [ty, on, nm, notes] of [['deworming', '2026-11-11', 'Pyrantel', '2 weeks'], ['deworming', '2026-11-25', 'Pyrantel', '4 weeks'], ['vaccine', '2026-12-09', 'DHPP', 'First puppy shot'], ['deworming', '2026-12-09', 'Pyrantel', '6 weeks'], ['vet_visit', '2026-12-21', 'Health certificate', null]]) {
       db.prepare('INSERT INTO portal_health_records (id, site_id, placement_id, type, given_on, name, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(crypto.randomUUID(), site.id, p.id, ty, on, nm, notes, t);
     }
@@ -84,5 +100,17 @@ async function render(stage) {
 test('snapshots', async () => {
   const all = {};
   for (const stage of Object.keys(STAGES)) all[stage] = await render(stage);
-  writeFileSync(process.env.SNAP_OUT, JSON.stringify(all));
+  if (process.env.SNAP_OUT) writeFileSync(process.env.SNAP_OUT, JSON.stringify(all));
+  if (process.env.SNAP_DIR) {
+    mkdirSync(process.env.SNAP_DIR, { recursive: true });
+    const photo = process.env.SNAP_PHOTO ? pathToFileURL(process.env.SNAP_PHOTO).href : 'img/opal.jpg';
+    for (const [stage, pages] of Object.entries(all)) {
+      for (const [k, html] of Object.entries(pages)) {
+        const file = html.replace(/\/(?:family\/photo|_kp\/p)\/ph-(logo|contessa|willow)(\?s=t)?/g, (m, n) => photo.replace(/opal\.jpg$/, `${n === 'logo' ? 'ak-logo' : n}.jpg`))
+          .replace(/\/family\/photo\/ph-opal(\?s=t)?/g, photo)
+          .replace(/(["'(])\/_kp\/([^"')?]*)(\?v=[^"')]*)?/g, (m, q, rest) => `${q}${KP}${rest}`);
+        writeFileSync(`${process.env.SNAP_DIR}/${stage}-${k}.html`, file);
+      }
+    }
+  }
 });
