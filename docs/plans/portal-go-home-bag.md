@@ -73,7 +73,12 @@ as the handbook's editor was). Say so in the build log.
    item with its cost (decision 2), so she can untick it for one family (a toy she was
    given free that time). Her family card shows "8 items · $24 to you · $20 expensed",
    and her future Reports show expensed cost per litter. Hers alone, never shown to
-   families. From KennelOS it arrives as `expense`.
+   families. From KennelOS it arrives as `expense`. A yes/no is enough: no category
+   (the owner, 2026-11-21).
+9. **What went home goes back to KennelOS** (the owner, 2026-11-21), with each item's
+   cost and expense, so KennelOS records the expense against the sale. Section 4b.
+10. **She can still add bag items by hand** with KennelOS linked (the owner, 2026-11-21).
+   Hers stay hers; KennelOS's are matched as in section 4a.
 
 ## 4. Data (migration 0041, additive only)
 
@@ -143,6 +148,9 @@ bag_items?: [{ id, name, cost, expense?, origin?, product_id? }]
   and leaves the template for new families; what families were already sent is
   untouched (decision 2). Sent again, it comes back.
 - **Unlink** makes them hers, as extras and products (review finding 02-1).
+- **Hers beside KennelOS's** (decision 10): she can add items by hand while linked. They
+  have no `kennelos_id`, a push never touches them, and they are never hidden for not
+  being sent. The take-over by name happens only on an item's first arrival.
 - **Her screen:** a KennelOS item shows the small "From KennelOS" note the extras and
   products screens use, and its owned fields say they're changed in KennelOS (the same
   wording those screens use, moved to the `bag` group). She can still turn it off or move
@@ -150,6 +158,31 @@ bag_items?: [{ id, name, cost, expense?, origin?, product_id? }]
 - The bundle's comment block, the section list in `SECTIONS`, `kennelos-contract.md`
   and `portal-kennelos` tests gain `bag_items`. The KennelOS side (its screen and the
   push) is built in the KennelOS repository; this plan's section 4a is what to hand them.
+
+## 4b. What went home, back to KennelOS
+
+The feed's facts that go back (`feed.js` `factsFor`, family-portal.md 3.4) gain a
+`bag` on a placement KennelOS knows, once its bag is fixed (`bag_saved_at` set, by her
+Save or by pickup):
+
+```
+bag: { items: [{ bag_item_id?, name, cost, expense, quantity }], cost, expensed }
+```
+
+- `bag_item_id` is KennelOS's own id for the item when it came from KennelOS (so its
+  income and expense lines match up), absent for one she added by hand or for that
+  family alone. `cost` and `expensed` are totals in dollars and cents. Zero items
+  (nothing went) is sent as an empty list, so KennelOS can tell it from "not yet".
+- Sent in every reply while the placement is in the facts, as the other facts are: the
+  whole bag each time, which KennelOS replaces, so a later change to one family's bag
+  just arrives. No new setting, no approval in KennelOS (she made it herself).
+- **An exception to "anything with money never goes back on its own"**
+  (family-portal.md 3.4), chosen by the owner: this is her own cost, not a charge,
+  refund or return to the family, so KennelOS records it as an expense on the sale.
+  Note it in that section.
+- Not for an erased or deleted family (`factsFor` already leaves those out).
+- KennelOS builds its side (recording the expense on the sale) in its own repository;
+  section 4a and this section are what to hand them.
 
 ## 5. The build, in order
 
@@ -169,6 +202,8 @@ bag_items?: [{ id, name, cost, expense?, origin?, product_id? }]
    The list shows the expense column (section 2).
 3a. **KennelOS's `bag_items`** in `kennelos/bundle.js` (section 4a), after the
    products step so `product_id` can be matched.
+3b. **`bag` in the facts that go back** (`feed.js` `factsFor`, section 4b), and the
+   line in family-portal.md 3.4's list of facts.
 4. **Sent home with** on the family's screen (`portal/admin.js`, after the placement's
    details card), only once a placement has a puppy. The prototype's chips, the add
    input, Save. Shows "(Not saved yet: your usual bag)" style hint while it's the
@@ -207,7 +242,10 @@ bag_items?: [{ id, name, cost, expense?, origin?, product_id? }]
   expense; a later push changes them; her on/off and order survive; one of hers with the
   same name is taken over; an item not sent again is hidden, not deleted, and families'
   sent rows are unchanged; a bad `product_id` is dropped; no section leaves the bag alone;
-  Unlink makes them hers.
+  Unlink makes them hers; her own items survive every push.
+- Facts back (`portal-feed` tests): no `bag` before the bag is fixed; the bag with
+  KennelOS ids, costs, expense and totals after; an empty list for nothing went; a change
+  to one family's bag is in the next reply; none for an erased family.
 - A placement with no saved bag reads the template ticked; Save makes its rows; a later
   template rename doesn't change them.
 - Mark picked up fixes an unsaved bag; it leaves a saved one alone; zero ticked = nothing
@@ -220,6 +258,9 @@ bag_items?: [{ id, name, cost, expense?, origin?, product_id? }]
 
 ## 8. Questions for the owner (before building)
 
+Answered 2026-11-21: 6 (yes/no is enough), 7 (yes, it goes back: section 4b), 8 (yes,
+she can still add by hand). Still open:
+
 1. Decision 1: is "her usual bag until she saves it or marks pickup, then fixed" right?
 2. Should families see the bag **before** pickup ("What's coming home in Opal's bag"),
    or only once it's home, as the prototype has it?
@@ -229,10 +270,3 @@ bag_items?: [{ id, name, cost, expense?, origin?, product_id? }]
    leash, shampoo sample, go-home folder) at zero cost for her to change?
 5. The button words (Get more / Activate / Register): fixed by program type, or should
    she set the button wording on each item?
-6. Expense: is a yes/no enough, or does she want a category too (supplies, food,
-   paperwork) for her bookkeeping?
-7. Should what each family was sent, with its expensed cost, go back to KennelOS (as a
-   fact in the family feed, like a pickup) so KennelOS can record the expense against
-   the sale? Not in this chunk unless she says yes; the data here already supports it.
-8. With KennelOS linked, should she still be able to add bag items by hand in KennelPort,
-   or only in KennelOS?

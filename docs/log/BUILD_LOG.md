@@ -2115,3 +2115,8 @@ nothing shows to families where it's empty, so new sites start with no chapters.
   included**: a new `bag_items` bundle section matched like extras and products (owned
   fields, take-over by name, hidden not deleted, Unlink). Plan section 4a is the contract
   for KennelOS. Eight questions now.
+- Same day, the owner answered three: the expense is a yes/no (no category); what went
+  home, with each item's cost and expense, **goes back to KennelOS** in the facts
+  (`factsFor`, plan section 4b; an exception she chose to "money never goes back on its
+  own", noted in family-portal.md 3.4); and she can still add bag items by hand while
+  linked. Five questions still open.

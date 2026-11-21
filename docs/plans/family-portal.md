@@ -251,6 +251,9 @@ since she made the change herself:
 - **a corrected pickup time** before pickup: the same event moves;
 - **the microchip** she enters or corrects;
 - **a death after pickup** she records: the dog is marked deceased with its date.
+- **what went home in the go-home bag**, each item's cost and whether she expenses it,
+  recorded by KennelOS as an expense on the sale ([`portal-go-home-bag.md`](portal-go-home-bag.md)
+  4b; the owner's exception to the rule below, 2026-11-21: her own cost, not a charge).
 
 Anything with money in it (a return, a rehoming, a refund) never goes back on its own:
 KennelOS shows it as a Today nudge for her to handle there. Everything else she edits in
