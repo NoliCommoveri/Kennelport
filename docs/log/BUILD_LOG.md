@@ -2273,3 +2273,10 @@ stylesheet for the family screens (`The mockup look`, then `The Forest look` ove
 `html[data-look]`), and Home, Timeline, a new Vet visit page and Records redrawn, with the live
 portal's four tabs. A Look switch (Forest, Cream) sits in the prototype bar. Published at
 https://claude.ai/artifact/9APC1R1PumMwC9xU88etDe. Prototype only: the live portal is unchanged.
+- Second pass, closer to the mockups (the owner: the vet cards and the accent curves had been
+  simplified): the photo and the pup and vet tiles are one card; the waves are a tapered
+  ribbon (mint with a soft echo in Cream, gold in Forest); each look has its own vet card on
+  Home (Cream: the card with the clock row; Forest: one row with the stethoscope and a
+  chevron); shiny buttons (gold for Upload in Forest); the vet page's art (Cream: a green
+  swoosh with a mint edge and a white stethoscope; Forest: a drawn stethoscope); the reminder's
+  icon in a gold ring; a Boston sketch on My puppy in Forest.

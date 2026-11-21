@@ -494,17 +494,18 @@ details.hist li b { font-weight: 700; color: var(--muted); }
   --mk-ink: #1F2A22; --mk-muted: #5F5A4D; --mk-leaf: #2F5D3D; --mk-leaf-ink: #FFFFFF; --mk-soft: #DDE9D2; --mk-soft-line: #93B98F;
   --mk-peach: #F8E0C7; --mk-peach-h: #8A5A1E; --mk-pup: #23452F; --mk-pup-ink: #F5EEDC; --mk-gold: #8A6B2C; --mk-wave: #3E6E4B;
   --mk-shadow: 0 1px 0 rgba(255,255,255,.5) inset, 0 6px 16px rgba(0,0,0,.22); --mk-on: #4C8A5B;
+  --mk-leaf-hi: #3F7550; --mk-peach-2: #F3D2B2;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --mk-canvas: #0F1D15; --mk-canvas-2: #0B160F; --mk-card: #1C2620; --mk-card-h: #233029; --mk-line: #33433A;
   --mk-ink: #ECE7DC; --mk-muted: #A9A294; --mk-leaf: #9CC6A3; --mk-leaf-ink: #0F1A12; --mk-soft: #2A4031; --mk-soft-line: #4F7958;
   --mk-peach: #3B2B1D; --mk-peach-h: #F0C08A; --mk-pup: #18352A; --mk-pup-ink: #ECE7DC; --mk-gold: #D9B870; --mk-wave: #2C5038;
-  --mk-shadow: 0 6px 16px rgba(0,0,0,.4); --mk-on: #3B6E48; } }
+  --mk-shadow: 0 6px 16px rgba(0,0,0,.4); --mk-on: #3B6E48; --mk-leaf-hi: #B9DCBE; --mk-peach-2: #2E2117; } }
 :root[data-theme="dark"] {
   --mk-canvas: #0F1D15; --mk-canvas-2: #0B160F; --mk-card: #1C2620; --mk-card-h: #233029; --mk-line: #33433A;
   --mk-ink: #ECE7DC; --mk-muted: #A9A294; --mk-leaf: #9CC6A3; --mk-leaf-ink: #0F1A12; --mk-soft: #2A4031; --mk-soft-line: #4F7958;
   --mk-peach: #3B2B1D; --mk-peach-h: #F0C08A; --mk-pup: #18352A; --mk-pup-ink: #ECE7DC; --mk-gold: #D9B870; --mk-wave: #2C5038;
-  --mk-shadow: 0 6px 16px rgba(0,0,0,.4); --mk-on: #3B6E48; }
+  --mk-shadow: 0 6px 16px rgba(0,0,0,.4); --mk-on: #3B6E48; --mk-leaf-hi: #B9DCBE; --mk-peach-2: #2E2117; }
 
 body:has(.fam) { background: var(--mk-canvas); }
 .fam { --surface: var(--mk-card); --line: var(--mk-line); --ink: var(--mk-ink); --muted: var(--mk-muted); --accent: var(--mk-leaf); --accent-ink: var(--mk-leaf-ink);
@@ -546,7 +547,6 @@ body:has(.fam) { background: var(--mk-canvas); }
 .fam .hero h1 { display: flex; align-items: center; gap: .4rem; }
 .fam .hero h1 svg.i { width: 1.6rem; height: 1.6rem; fill: #fff; stroke: none; }
 .wave { position: absolute; left: 0; right: 0; bottom: -1px; width: 100%; height: 2.2rem; z-index: 2; display: block; }
-.wave .w1 { fill: var(--mk-wave); } .wave .w2 { fill: var(--mk-canvas); }
 
 /* The pup card (dark green) and the vet tile (peach). */
 .fam .tile { border-radius: var(--rc); box-shadow: var(--mk-shadow); }
@@ -602,13 +602,9 @@ html[data-zoom="3"] .duo2 { grid-template-columns: 1fr; }
 .mk-head h1 { font: 500 2rem/1.05 var(--f-display); }
 .mk-head p { font-size: .86rem; max-width: 30ch; opacity: .9; }
 .mk-head .art { position: absolute; right: .9rem; top: .9rem; width: 4.4rem; height: 4.4rem; }
-.mk-head .wave .w2 { fill: var(--mk-card); }
 .mk-head.cream { background: var(--mk-card); border: 1px solid var(--mk-line); padding-bottom: 1rem; }
 .mk-head.cream h1 { font-size: 1.6rem; max-width: 80%; }
 .mk-head.cream p { max-width: 36ch; opacity: 1; }
-.mk-head .swoosh { position: absolute; right: -1px; top: -1px; width: 9rem; height: 6.5rem; }
-.mk-head .swoosh path { fill: var(--mk-pup); }
-.mk-head .steth { position: absolute; right: .9rem; top: .9rem; width: 2.8rem; height: 2.8rem; color: #F5EEDC; }
 .notebox { display: flex; gap: .55rem; align-items: center; background: var(--mk-card-h); border-radius: 10px; padding: .55rem .7rem; font-size: .82rem; }
 .notebox svg.i { width: 1.3rem; height: 1.3rem; color: var(--mk-gold); }
 .timeline-body { background: var(--mk-card); border-radius: 0 0 var(--rc) var(--rc); margin-top: calc(-1 * var(--rc) - .7rem); padding: 1.1rem .6rem .7rem; display: grid; gap: .7rem; border: 1px solid var(--mk-line); border-top: 0; }
@@ -648,16 +644,16 @@ html[data-zoom="3"] .duo2 { grid-template-columns: 1fr; }
   --fo-page: #123222; --fo-card: #183B2A; --fo-card-h: #21473A; --fo-edge: rgba(217,178,106,.28); --fo-title: #F4ECDA;
   --fo-gold: #D9B26A; --fo-gold-1: #F0D394; --fo-gold-2: #C9973F; --fo-gold-ink: #2A2110;
   --fo-panel: #F4ECDA; --fo-panel-h: #EADFC6; --fo-panel-line: #D6C7A4; --fo-panel-ink: #1F2A22; --fo-panel-muted: #5D5848;
-  --fo-btn: #1E4A33; --fo-btn-ink: #F4ECDA; --fo-soft: #F8F2E4; --fo-soft-line: #BFAE86; --fo-tab: #5A6A3A; --fo-tab-ink: #F3D99A;
+  --fo-btn: #1E4A33; --fo-btn-ink: #F4ECDA; --fo-soft: #F8F2E4; --fo-soft-line: #BFAE86; --fo-tab: #5A6A3A; --fo-tab-ink: #F3D99A; --fo-btn-hi: #2C6447; --fo-icon: #1E4A33;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --fo-page: #0B1A12; --fo-card: #122A1E; --fo-card-h: #183527; --fo-title: #ECE3CF;
   --fo-panel: #20271F; --fo-panel-h: #283126; --fo-panel-line: #3A4535; --fo-panel-ink: #ECE7DC; --fo-panel-muted: #ABA48F;
-  --fo-btn: #2D6145; --fo-btn-ink: #F4ECDA; --fo-soft: #2A3328; --fo-soft-line: #59684C; --fo-tab: #45532C; } }
+  --fo-btn: #2D6145; --fo-btn-ink: #F4ECDA; --fo-soft: #2A3328; --fo-soft-line: #59684C; --fo-tab: #45532C; --fo-btn-hi: #3A7556; --fo-icon: #9CC6A3; } }
 :root[data-theme="dark"] {
   --fo-page: #0B1A12; --fo-card: #122A1E; --fo-card-h: #183527; --fo-title: #ECE3CF;
   --fo-panel: #20271F; --fo-panel-h: #283126; --fo-panel-line: #3A4535; --fo-panel-ink: #ECE7DC; --fo-panel-muted: #ABA48F;
-  --fo-btn: #2D6145; --fo-btn-ink: #F4ECDA; --fo-soft: #2A3328; --fo-soft-line: #59684C; --fo-tab: #45532C; }
+  --fo-btn: #2D6145; --fo-btn-ink: #F4ECDA; --fo-soft: #2A3328; --fo-soft-line: #59684C; --fo-tab: #45532C; --fo-btn-hi: #3A7556; --fo-icon: #9CC6A3; }
 
 html[data-look="forest"] body:has(.fam), html[data-look="forest"] .fam { background: var(--fo-page); }
 /* Inside the cream panels, every card token reads as the panel. */
@@ -677,20 +673,16 @@ html[data-look="forest"] .fam .mk .eyebrow { color: #8A6B2C; }
 html[data-look="forest"] .fam .mk-b .eyebrow { color: var(--fo-gold-2); }
 
 /* Buttons: deep green with cream words; soft ones cream with a tan edge; gold for Upload. */
-html[data-look="forest"] .fam .btn.solid { background: var(--fo-btn); border-color: var(--fo-btn); color: var(--fo-btn-ink); }
-html[data-look="forest"] .fam .tile.peach .btn.solid, html[data-look="forest"] .fam .actionbar .btn.solid { background: linear-gradient(var(--fo-gold-1), var(--fo-gold-2)); border-color: var(--fo-gold-2); color: var(--fo-gold-ink); }
+html[data-look="forest"] .fam .btn.solid { background: linear-gradient(var(--fo-btn-hi), var(--fo-btn)); border-color: var(--fo-btn); color: var(--fo-btn-ink); }
+html[data-look="forest"] .fam .tile.peach .btn.solid, html[data-look="forest"] .fam .actionbar .btn.solid { background: linear-gradient(#F7E2AE, var(--fo-gold) 55%, var(--fo-gold-2)); border-color: #B8893A; color: var(--fo-gold-ink); box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 2px 6px rgba(0,0,0,.3); }
 html[data-look="forest"] .fam .duo2 .btn.line { background: var(--fo-btn); border-color: var(--fo-btn); color: var(--fo-btn-ink); }
 html[data-look="forest"] .fam .duo2 .btn.text { color: var(--fo-btn); }
 
 /* Hero: a gold line along the wave; the greeting in gold script. */
-html[data-look="forest"] .fam .wave .w1 { fill: var(--fo-gold); }
-html[data-look="forest"] .fam .wave .w2 { fill: var(--fo-page); }
 html[data-look="forest"] .fam .hero .script { color: var(--fo-gold-1); }
 
 /* The pup sits on the page itself; the vet tile is a cream panel. */
 html[data-look="forest"] .fam .tile.pup { background: transparent; border-color: transparent; box-shadow: none; color: var(--fo-title); }
-html[data-look="forest"] .fam .pup .ph.round { border-color: var(--fo-page); box-shadow: 0 0 0 2px var(--fo-gold); }
-html[data-look="forest"] .fam .pname { color: var(--fo-gold-1); }
 html[data-look="forest"] .fam .tile.peach { background: var(--fo-panel); border-color: var(--fo-edge); }
 html[data-look="forest"] .fam .tile.peach .eyebrow { color: var(--fo-panel-ink); }
 html[data-look="forest"] .fam .tile.peach .bigline { color: var(--fo-panel-ink); }
@@ -713,11 +705,7 @@ html[data-look="forest"] .fam .mk-head.green, html[data-look="forest"] .fam .mk-
 html[data-look="forest"] .fam .mk-head .eyebrow { color: var(--fo-gold); }
 html[data-look="forest"] .fam .mk-head .art { display: none; }
 html[data-look="forest"] .fam .mk-head .fo-paw { display: block; }
-html[data-look="forest"] .fam .mk-head .wave .w1 { fill: var(--fo-gold); }
 html[data-look="forest"] .fam .mk-head .wave .w2 { fill: var(--fo-panel); }
-html[data-look="forest"] .fam .mk-head .swoosh { display: none; }
-html[data-look="forest"] .fam .mk-head .steth { color: var(--fo-gold); width: 4rem; height: 4rem; }
-html[data-look="forest"] .fam .mk-head .steth svg.i { width: 100%; height: 100%; stroke-width: 1.3; }
 html[data-look="forest"] .fam .timeline-body { background: var(--fo-panel); border-color: var(--fo-edge); }
 html[data-look="forest"] .fam .timeline-body > h2 { color: var(--fo-panel-ink); }
 .fo-paw { display: none; position: absolute; right: 1rem; top: .8rem; width: 3.6rem; height: 3.6rem; color: var(--fo-gold); opacity: .3; }
@@ -734,10 +722,97 @@ html[data-look="forest"] .fam .actionbar .ico { background: var(--fo-card-h); co
 html[data-look="forest"] .fam nav.tabs { background: var(--fo-page); border-top-color: var(--fo-edge); }
 html[data-look="forest"] .fam nav.tabs a[aria-current="page"] { background: var(--fo-tab); color: var(--fo-tab-ink); }
 html[data-look="forest"] .fam .disclose { color: var(--fo-title); }
+
+/* ---------- Closer to the mockups: each look's own vet cards, waves and art ---------- */
+html[data-look="forest"] .only-cream, html:not([data-look="forest"]) .only-forest { display: none !important; }
+
+/* The waves: a tapered ribbon, mint with a soft echo above it in Cream, gold in Forest,
+   over the colour of what follows. */
+.wave { height: 2.8rem; }
+.wave .w0 { fill: url(#g-mint); opacity: .4; }
+.wave .w1 { fill: url(#g-mint); }
+.wave .w2 { fill: var(--mk-pup); }
+.mk-head .wave .w2 { fill: var(--mk-card); }
+html[data-look="forest"] .wave .w0 { display: none; }
+html[data-look="forest"] .wave .w1 { fill: url(#g-gold); }
+html[data-look="forest"] .wave .w2 { fill: var(--fo-card); }
+html[data-look="forest"] .mk-head .wave .w2 { fill: var(--fo-panel); }
+
+/* The photo and the two tiles under it are one card. */
+.herocard { border-radius: var(--rc); overflow: hidden; margin-top: .6rem; background: linear-gradient(var(--mk-pup), var(--mk-canvas-2)); box-shadow: var(--mk-shadow); border: 1px solid rgba(255,255,255,.08); }
+.fam .herocard .hero { border-radius: 0; box-shadow: none; min-height: 14.5rem; border: 0; }
+.herocard .hero .cap { padding-bottom: 3rem; }
+.hc-panel { padding: .1rem .7rem .8rem; }
+.fam .herocard .tile.pup { background: transparent; border-color: transparent; box-shadow: none; color: var(--mk-pup-ink); }
+.fam .herocard .pup .ph.round { border: 3px solid var(--mk-pup); box-shadow: 0 0 0 2.5px #F5EEDC; }
+.fam .hero h1 svg.i { fill: #F2DFAE; }
+html[data-look="forest"] .herocard { background: linear-gradient(var(--fo-card), var(--fo-page)); border-color: var(--fo-edge); }
+html[data-look="forest"] .fam .hero h1 svg.i { fill: var(--fo-gold); }
+html[data-look="forest"] .fam .herocard .pup .ph.round { border-color: var(--fo-card); }
+html[data-look="forest"] .fam .pname { font: 600 2.05rem/1 var(--f-display); color: var(--fo-title); }
+html[data-look="forest"] .fam .tile.pup .facts svg.i { color: var(--fo-gold); }
+html[data-look="forest"] .fam .tile.pup .facts { opacity: 1; }
+
+/* The vet tile: peach with a soft fall in Cream, cream in Forest; the calendar page in deep
+   green; the time left large; the button full width with a shine. */
+.fam .tile.peach { background: linear-gradient(160deg, var(--mk-peach), var(--mk-peach-2)); padding: .9rem .85rem; gap: .6rem; }
+.fam .tile.peach .eyebrow { color: var(--mk-ink); letter-spacing: .12em; }
+.fam .tile.peach .calpage { width: 3.9rem; border-radius: 10px; padding: .3rem 0 .4rem; box-shadow: 0 3px 8px rgba(0,0,0,.22); }
+.fam .tile.peach .calpage span { font: 600 1.9rem/1.05 var(--f-display); }
+.fam .tile.peach .bigline { font: 600 1.6rem/1 var(--f-display); color: var(--mk-ink); }
+.fam .tile.peach .btn { width: 100%; min-height: 2.8rem; font-size: .9rem; }
+.fam .btn.solid { background: linear-gradient(var(--mk-leaf-hi), var(--mk-leaf)); box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 2px 5px rgba(0,0,0,.22); }
+html[data-look="forest"] .fam .tile.peach { background: linear-gradient(var(--fo-panel), var(--fo-panel-h)); }
+
+/* Cream: the vet card with its clock row. */
+.vet-h { font: 500 1.6rem/1.1 var(--f-display); margin-top: -.35rem; }
+.timer { background: linear-gradient(var(--mk-card-h), var(--mk-card)); padding: .6rem .65rem; }
+.timer .clockdot { width: 2.6rem; height: 2.6rem; border-radius: 50%; background: var(--mk-leaf); color: var(--mk-leaf-ink); box-shadow: 0 0 0 3px var(--mk-soft), 0 0 0 4.5px var(--mk-soft-line); }
+.timer .clockdot svg.i { width: 1.4rem; height: 1.4rem; stroke-width: 2; }
+
+/* Forest: the vet visit as one row to tap. */
+.vetrow { display: grid; grid-template-columns: 3rem 1fr auto; gap: .75rem; align-items: center; padding: .85rem 1rem; border-radius: var(--rc); text-decoration: none;
+  background: linear-gradient(var(--fo-panel), var(--fo-panel-h)); color: var(--fo-panel-ink); border: 1px solid var(--fo-edge); box-shadow: var(--mk-shadow); }
+.vetrow .vr-i svg.i { width: 2.7rem; height: 2.7rem; color: var(--fo-icon); stroke-width: 1.7; }
+.vetrow .vr-t b { display: block; font: 600 1.2rem/1.15 var(--f-display); }
+.vetrow .vr-t span { font-size: .92rem; }
+.vetrow .vr-c svg.i { width: 1.4rem; height: 1.4rem; stroke-width: 2.2; }
+
+/* The vet page head: Cream's swoosh with the stethoscope in white; Forest's drawn one. */
+.mk-head.cream { padding-top: 1.1rem; }
+.mk-head.cream h1 { max-width: 68%; }
+.mk-head .swoosh { position: absolute; right: -1px; top: -1px; width: 52%; height: 8rem; }
+.mk-head .swoosh .s1 { fill: url(#g-deep); }
+.mk-head .swoosh .s2 { fill: url(#g-mint); }
+.mk-head .steth { position: absolute; right: 1rem; top: .9rem; width: 3.3rem; height: 3.3rem; color: #FFFFFF; }
+.mk-head .steth svg.i { width: 100%; height: 100%; stroke-width: 1.6; }
+.mk-head .stethart { position: absolute; right: -.5rem; top: -.3rem; width: 9.5rem; height: auto; filter: drop-shadow(0 6px 10px rgba(0,0,0,.35)); }
+html[data-look="forest"] .fam .mk-head.cream { background: radial-gradient(circle at 88% 12%, rgba(255,255,255,.09), transparent 55%), var(--fo-card); }
+html[data-look="forest"] .fam .mk-head.cream h1 { max-width: 62%; }
+.notebox { background: linear-gradient(var(--mk-card-h), var(--mk-card)); border: 1px solid var(--mk-line); }
+.notebox .ring { width: 2.1rem; height: 2.1rem; flex: none; border-radius: 50%; border: 1.6px solid var(--mk-gold); display: grid; place-items: center; }
+.notebox .ring svg.i { width: 1.15rem; height: 1.15rem; color: var(--mk-gold); }
+
+/* My puppy in Forest: the Boston sketch. */
+.mypup .boston { position: absolute; right: .7rem; top: .6rem; width: 5.8rem; height: 5.8rem; color: var(--fo-gold-2); opacity: .55; }
+.fam .tile.peach .bigline { font-size: 1.45rem; white-space: nowrap; }
+.fam .tile.peach .calrow > div { min-width: 0; }
+.mk-head .stethart { top: .5rem; right: -.2rem; width: 8.4rem; }
+.mk-head p.notebox { max-width: none; opacity: 1; }
+.mk label.btn { display: inline-flex; font-weight: 700; }
+.mk-head.green { border-radius: var(--rc) var(--rc) 0 0; }
+.fam .timeline-body { margin-top: -.7rem; padding-top: .3rem; }
 </style>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="sprig" viewBox="0 0 120 60"><g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M4 50 C 34 44, 64 32, 116 8"/><path d="M28 44 c-4-10 2-18 10-20 c2 9-3 17-10 20z"/><path d="M28 44 c10 4 18 0 22-7 c-9-3-17 0-22 7z"/><path d="M58 33 c-3-10 3-18 11-19 c1 9-4 16-11 19z"/><path d="M58 33 c10 3 18-1 21-9 c-9-2-17 1-21 9z"/><path d="M88 20 c-2-8 3-14 9-15 c1 7-3 12-9 15z"/><path d="M88 20 c8 2 14-2 16-8 c-7-1-13 2-16 8z"/></g></symbol>
   <symbol id="mono" viewBox="0 0 48 48"><g fill="none" stroke="currentColor"><rect x="9" y="9" width="30" height="30" transform="rotate(45 24 24)" stroke-width="1.4"/><rect x="12.5" y="12.5" width="23" height="23" transform="rotate(45 24 24)" stroke-width=".7"/></g><text x="24" y="29.5" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="15" font-style="italic" fill="currentColor">AK</text></symbol>
+  <defs>
+    <linearGradient id="g-gold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#A97A2E"/><stop offset=".45" stop-color="#F3D99A"/><stop offset=".75" stop-color="#D9B26A"/><stop offset="1" stop-color="#B8893A"/></linearGradient>
+    <linearGradient id="g-mint" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3E7A4B"/><stop offset=".5" stop-color="#A3CF9B"/><stop offset="1" stop-color="#5E9A63"/></linearGradient>
+    <linearGradient id="g-deep" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E5D3D"/><stop offset="1" stop-color="#1B3826"/></linearGradient>
+    <linearGradient id="g-silver" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8E9692"/><stop offset=".5" stop-color="#F1F3F1"/><stop offset="1" stop-color="#A2AAA6"/></linearGradient>
+    <radialGradient id="g-steel" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="#C8CECB"/><stop offset="1" stop-color="#6E7672"/></radialGradient>
+  </defs>
   <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 3.5h3.2l1.6 4.2-2.1 1.3a11 11 0 0 0 5.3 5.3l1.3-2.1 4.2 1.6V17a2 2 0 0 1-2 2A15.5 15.5 0 0 1 3 5.5a2 2 0 0 1 2-2z"/></symbol>
   <symbol id="i-msg" viewBox="0 0 24 24"><path d="M4 4.5h16v11H9l-5 4z"/></symbol>
   <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></symbol>
@@ -1848,7 +1923,27 @@ document.addEventListener('submit', (e) => {
 // Home, Timeline, Vet visit and Records drawn the mockup's way; the tabs are the live
 // portal's four. The other pages (Stay, Photos, Baby book, Handbook) keep the
 // prototype's drawing, in the new colours.
-const WAVE = '<svg class="wave" viewBox="0 0 400 40" preserveAspectRatio="none" aria-hidden="true"><path class="w1" d="M0 20 C 80 2, 160 34, 250 16 S 370 2, 400 12 V40 H0z"/><path class="w2" d="M0 27 C 90 10, 170 40, 260 22 S 380 10, 400 18 V40 H0z"/></svg>';
+const RIB = 'M0 32 C 120 16, 210 44, 300 22 C 390 0, 380 4, 400 0 L400 10 C 380 12, 390 8, 300 30 C 210 52, 120 21, 0 35 Z';
+const WAVE = `<svg class="wave" viewBox="0 0 400 48" preserveAspectRatio="none" aria-hidden="true"><path class="w0" transform="translate(0 -5)" d="${RIB}"/><path class="w2" d="M0 35 C 120 21, 210 52, 300 30 C 390 8, 380 12, 400 10 V48 H0 Z"/><path class="w1" d="${RIB}"/></svg>`;
+// The vet page's art: in Cream a green swoosh with a mint edge and the stethoscope in
+// white; in Forest a drawn stethoscope, metal and tubing.
+const SWOOSH = '<svg class="swoosh only-cream" viewBox="0 0 200 120" preserveAspectRatio="none" aria-hidden="true"><path class="s2" d="M52 0 C 72 24, 84 54, 116 66 C 146 78, 168 100, 200 108 V0 Z"/><path class="s1" d="M62 0 C 80 20, 90 46, 120 58 C 150 70, 170 92, 200 100 V0 Z"/></svg>';
+const STETH = `<svg class="stethart only-forest" viewBox="0 -8 172 150" aria-hidden="true">
+  <path d="M40 2 C 26 30, 40 58, 78 60" fill="none" stroke="url(#g-silver)" stroke-width="5" stroke-linecap="round"/>
+  <path d="M64 0 C 58 28, 70 50, 92 56" fill="none" stroke="url(#g-silver)" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="40" cy="3" r="4.5" fill="#1B2620"/><circle cx="64" cy="2" r="4.5" fill="#1B2620"/>
+  <path d="M84 58 C 120 64, 160 52, 168 82 C 172 100, 150 104, 132 96" fill="none" stroke="#14201A" stroke-width="9" stroke-linecap="round"/>
+  <path d="M84 56 C 120 62, 158 50, 166 80" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2" stroke-linecap="round"/>
+  <rect x="118" y="90" width="18" height="9" rx="3" fill="url(#g-silver)" transform="rotate(20 127 94)"/>
+  <circle cx="104" cy="104" r="30" fill="url(#g-steel)"/><circle cx="104" cy="104" r="23" fill="#2A332F"/><circle cx="104" cy="104" r="19" fill="url(#g-steel)"/>
+  <circle cx="104" cy="104" r="11" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="1.5"/><ellipse cx="96" cy="94" rx="8" ry="4" fill="rgba(255,255,255,.55)" transform="rotate(-30 96 94)"/></svg>`;
+// A Boston's head in sepia lines, for My puppy in Forest.
+const BOSTON = `<svg class="boston only-forest" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M27 31 C 16 23, 9 11, 11 2 C 22 5, 33 13, 39 24"/><path d="M73 31 C 84 23, 91 11, 89 2 C 78 5, 67 13, 61 24"/><path d="M17 8 C 21 15, 27 21, 31 25M83 8 C 79 15, 73 21, 69 25" stroke-width="1"/>
+  <path d="M20 47 C 18 31, 32 22, 50 22 C 68 22, 82 31, 80 47 C 80 63, 71 77, 50 79 C 29 77, 20 63, 20 47 Z"/>
+  <path d="M46 23 C 45 34, 43 41, 40 50M54 23 C 55 34, 57 41, 60 50"/><path d="M37 57 C 39 68, 61 68, 63 57"/><path d="M50 58 V63M42 67 C 46 70, 54 70, 58 67"/>
+  <path d="M30 76 C 35 86, 43 92, 50 95 C 57 92, 65 86, 70 76" stroke-width="1.2"/></g>
+  <g fill="currentColor"><circle cx="35" cy="45" r="5.5"/><circle cx="65" cy="45" r="5.5"/><ellipse cx="50" cy="55" rx="7" ry="4.5"/></g><g fill="#F4ECDA"><circle cx="33.5" cy="43.5" r="1.5"/><circle cx="63.5" cy="43.5" r="1.5"/></g></svg>`;
 const CLINIC = { name: 'Parkway Animal Clinic', phone: '706-555-0180', address: '1622 Dietz Rd, Ringgold, GA 30736' };
 const HER_PHONE = '423-555-0142';
 const mkCard = (ic, title, body, o = {}) => `<section class="mk ${o.cls || ''}"${o.id ? ` id="${o.id}"` : ''}><header class="mk-h">${ic ? `<span class="mk-i ${o.gold ? 'gold' : ''}">${icon(ic)}</span>` : ''}${o.eyebrow ? `<p class="eyebrow">${title}</p>` : `<h2>${title}</h2>`}${o.aside || ''}</header>${o.sub ? `<p class="mk-sub">${o.sub}</p>` : ''}<div class="mk-b">${body}</div></section>`;
@@ -1856,7 +1951,8 @@ const leftWords = (dl) => { const h = Math.max(0, Math.round((dl - S.now) / HOUR
 const dueWords = (d) => `${WD[d.getDay()].slice(0, 3)}, ${short(d)}, ${time(d)}`;
 
 function mkHero(p, ph) {
-  return heroTile(p, ph).replace('class="tile photo hero s2"', 'class="tile photo hero bleed"').replace(/<h1>(.*?)<\/h1>/, `<h1>$1${icon('paw')}</h1>`).replace(/<\/div><\/div>$/, `</div>${WAVE}</div>`);
+  const hero = heroTile(p, ph).replace('class="tile photo hero s2"', 'class="tile photo hero"').replace(/<h1>(.*?)<\/h1>/, `<h1>$1${icon('paw')}</h1>`).replace(/<\/div><\/div>$/, `</div>${WAVE}</div>`);
+  return `<section class="herocard">${hero}<div class="hc-panel"><div class="bento">${mkPupTile(p)}${mkStatusTile(p, ph)}</div></div></section>`;
 }
 function mkPupTile(p) {
   const home = S.pickup[p.id];
@@ -1899,11 +1995,12 @@ function mkQuick() {
 function mkHome() {
   const p = P(), ph = phase(p), out = [];
   if (lostPup(p)) return famLost(p);
-  out.push(mkHero(p, ph), `<div class="bento">${mkPupTile(p)}${mkStatusTile(p, ph)}</div>`);
+  out.push(mkHero(p, ph));
   if (ph === 'vet') {
     const dl = vetDeadline(S.pickup[p.id]), pr = S.proof[p.id];
-    out.push(mkCard('', 'Your contract’s 3-day visit', `<h2 style="font:500 1.45rem/1.1 var(--f-display);margin-top:-.3rem">${p.name}’s vet visit</h2>
-      ${pr ? `<p class="small">${icon('check')} Record uploaded. ${pr.ok ? 'Accepted by A-K.' : 'A-K will check it.'}</p>` : `<div class="timer"><span class="ico">${icon('clock')}</span><p><b>${leftWords(dl)}</b>Vet visit due ${dueWords(dl)}</p><label class="btn solid small">Upload<input class="sr" type="file" accept="image/*,application/pdf" data-act="proof"></label></div>`}`, { eyebrow: true }));
+    out.push(mkCard('', 'Your contract’s 3-day visit', `<h2 class="vet-h">${p.name}’s vet visit</h2>
+      ${pr ? `<p class="small">${icon('check')} Record uploaded. ${pr.ok ? 'Accepted by A-K.' : 'A-K will check it.'}</p>` : `<div class="timer"><span class="ico clockdot">${icon('clock')}</span><p><b>${leftWords(dl)}</b>Vet visit due ${dueWords(dl)}</p><label class="btn solid small">Upload<input class="sr" type="file" accept="image/*,application/pdf" data-act="proof"></label></div>`}`, { eyebrow: true, cls: 'only-cream' }),
+      `<a class="vetrow only-forest" href="#f-vet"><span class="vr-i">${icon('steth')}</span><span class="vr-t"><b>${p.name}’s vet visit</b><span>${pr ? (pr.ok ? 'Accepted by A-K' : 'Record uploaded') : leftWords(dl)}</span></span><span class="vr-c">${icon('chev')}</span></a>`);
     out.push(mkComingUp(p, 2));
   } else if (ph === 'pre') {
     const dl = vetDeadline(p.goHome), b = S.booked[p.id];
@@ -1940,11 +2037,10 @@ function mkTimeline() {
 function mkVet() {
   const p = P(), pick = S.pickup[p.id], dl = pick ? vetDeadline(pick) : null, b = S.booked[p.id], pr = S.proof[p.id];
   const day = b ? toLocalInput(b).slice(0, 10) : '', tm = b ? toLocalInput(b).slice(11) : '';
-  const swoosh = '<svg class="swoosh" viewBox="0 0 140 100" preserveAspectRatio="none" aria-hidden="true"><path d="M30 0 H140 V100 C 120 70, 70 80, 50 50 S 40 10, 30 0z"/></svg>';
-  return `<div class="mk-head cream">${swoosh}<span class="steth">${icon('steth')}</span><span class="eyebrow">The vet visit</span>
+  return `<div class="mk-head cream">${SWOOSH}<span class="steth only-cream">${icon('steth')}</span>${STETH}<span class="eyebrow">The vet visit</span>
       <h1>${dl ? `Due by ${dueWords(dl)}` : `Book ${p.name}’s first vet visit`}</h1>
       <p>${dl ? `72 hours from pickup: by ${long(dl)}, ${time(dl)}${dl > S.now ? `, ${leftWords(dl).replace(' left', '')} from now` : ''}.` : `Your contract asks for a visit within 72 hours of pickup. The clock starts when you take ${p.name} home.`}</p>
-      <p class="notebox">${icon('info')}This page is a reminder. Your contract states the vet visit requirement.</p></div>
+      <p class="notebox"><span class="ring">${icon('info')}</span>This page is a reminder. Your contract states the vet visit requirement.</p></div>
     ${mkCard('cal', b ? 'Your appointment' : 'I’ve booked it', `<form class="stack" data-act="mkbook" style="display:grid;gap:.6rem"><div class="two"><label for="v-day">Day<input id="v-day" type="date" name="day" value="${day}" required></label><label for="v-time">Time<input id="v-time" type="time" name="time" value="${tm}"></label></div>
       <label for="v-clinic">Clinic <span class="muted" style="font-weight:400">(if you like)</span><input id="v-clinic" name="clinic" value="${b ? CLINIC.name : ''}"></label>
       <button class="btn solid wide">${b ? 'Save changes' : 'I’ve booked it'}</button></form>`)}
@@ -1958,7 +2054,7 @@ function mkRecords() {
   const pr = S.proof[p.id];
   if (pr) rows.push([pr.at, '3-day visit', 'Vet visit', pr.ok ? 'accepted' : 'waiting for A-K']);
   const facts = [['Name', p.name], ['Litter', 'Gem litter'], ['Born', `${WD[BORN.getDay()].slice(0, 3)}, ${short(BORN)}`], ['Sex', p.sex === 'Female' ? 'Female' : 'Male'], ['Parents', 'Willow × Boone'], ['Registration', 'Limited (AKC)'], [pick ? 'Went home' : 'Going home', `${WD[(pick || p.goHome).getDay()].slice(0, 3)}, ${short(pick || p.goHome)}, ${time(pick || p.goHome)}`]];
-  return `<section class="mk mypup"><span class="paw">${icon('paw')}</span><div class="mk-b"><p class="eyebrow" style="display:flex;gap:.35rem;align-items:center;color:var(--mk-ink)">${icon('paw')}My puppy</p><h1 class="script">${p.name}</h1>
+  return `<section class="mk mypup"><span class="paw only-cream">${icon('paw')}</span>${BOSTON}<div class="mk-b"><p class="eyebrow" style="display:flex;gap:.35rem;align-items:center;color:var(--mk-ink)">${icon('paw')}My puppy</p><h1 class="script">${p.name}</h1>
       <dl>${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></div></section>
     ${mkCard('syringe', 'Shots, deworming and vet visits', `<div class="tablewrap"><table><thead><tr><th>Date</th><th>What</th><th>Kind</th></tr></thead><tbody>${rows.sort((a, b) => a[0] - b[0]).map((r) => `<tr><td>${WD[r[0].getDay()].slice(0, 3)}, ${short(r[0])}</td><td>${esc(r[1])}${r[3] ? `<br><span class="small muted">${esc(r[3])}</span>` : ''}</td><td>${r[2]}</td></tr>`).join('')}</tbody></table></div>`)}
     ${mkCard('file', 'Papers', `<a class="pinline" href="#" data-act="toast" data-msg="Opens your contract">${icon('file')}<u>Your contract</u></a>${pr ? `<a class="pinline" href="#" data-act="toast" data-msg="Opens the vet’s record">${icon('steth')}<u>Vet visit record</u></a>` : ''}`)}
