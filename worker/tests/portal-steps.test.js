@@ -335,3 +335,18 @@ test('ready-made tasks: she picks a program and a wording; registration goes in 
   assert.ok(mine.placement_id);
   assert.equal(mine.product_id, 'food');
 });
+
+test('Register {name} stays suggested on her timeline until it\'s on it', async () => {
+  const { env, her } = await setup();
+  env.DB.raw.prepare("UPDATE products SET portal_type = 'registration' WHERE id = 'crate'").run();
+  await her('/portal/timeline/new', { title: 'Register Opal', body: 'Papers in the folder.', days: '30', when: 'after', count_from: 'pickup' });
+  let page = await (await her('/portal/timeline')).text();
+  assert.match(page, /Suggested: Register \{name\}/);
+  assert.match(page, /value="crate\|registration\|0"/);
+  assert.equal((await her('/portal/timeline/ready', { ready: 'crate|registration|0' })).status, 303);
+  // Hers stays; the suggested one is added beside it, and no longer suggested.
+  assert.ok(item(env, 'portal_timeline_tasks', 'Register Opal'));
+  assert.equal(item(env, 'portal_timeline_tasks', 'Register {name}').button_label, 'Register');
+  page = await (await her('/portal/timeline')).text();
+  assert.doesNotMatch(page, /Suggested: Register/);
+});

@@ -75,6 +75,18 @@ const nameWarning = (x, names) => {
   return n ? `<br><span class="error">Every family reads "${esc(n)}" here. Write {name} instead, and each family sees their own puppy's name.</span>` : '';
 };
 
+// "Register {name}" stays suggested on her timeline until it's on it: her own wording
+// (a task she adjusted or removed) is hers to keep, and this is one tap to add.
+function registerSuggestion(base, items, products) {
+  const reg = READY_TASKS.registration;
+  const c = reg.choices[0];
+  if (items.some((x) => x.title === c.title)) return '';
+  const prog = products.find((x) => x.portal_show && x.portal_type === 'registration');
+  return `<form method="post" action="${base}/ready" class="card"><h2>Suggested: ${esc(c.title)}</h2>
+    <p>${esc(c.body)}</p><p class="hint">${reg.days} days after pickup${prog ? `, with a ${esc(reg.button)} button to ${esc(prog.name)}` : ''}. Write {name} and each family sees their own puppy's name. Keep your own task instead if you like it better.</p>
+    <input type="hidden" name="ready" value="${esc(`${prog?.id ?? ''}|registration|0`)}"><p><button class="primary">Add it to the timeline</button></p></form>`;
+}
+
 export function templateScreen(site, kind, items, products, url, { error, names = [] } = {}) {
   const w = KIND_WORDS[kind];
   const base = `/s/${esc(site.subdomain)}/portal/${kind === 'checklist' ? 'checklist' : 'timeline'}`;
@@ -85,6 +97,7 @@ export function templateScreen(site, kind, items, products, url, { error, names 
   return `${note(url)}${errorBox(error)}<section class="card"><h1>${esc(w.title)}</h1><p class="hint">${esc(w.hint)}</p>
     ${items.length ? '' : `<form method="post" action="${base}/suggested"><p><button class="primary">Start with the suggested ${kind === 'checklist' ? 'list' : 'timeline'}</button></p><p class="hint">${kind === 'checklist' ? 'Crate, bed, food, bowls, collar and leash, pads, chews, the vet booking and a carrier.' : 'The vet booking, pickup, the vet visit, insurance, food, registration, deworming and vaccines.'} Each links to your programs of that kind. Change anything after.</p></form>`}</section>
     ${rows}
+    ${kind === 'task' && items.length ? registerSuggestion(base, items, products) : ''}
     ${kind === 'task' ? readyForm(`${base}/ready`, products) : ''}
     <form method="post" action="${base}/new" class="card"><h2>Add ${kind === 'checklist' ? 'an item' : 'a task'}</h2><div class="fgrid">${itemFields(kind, null, products)}<p><button>Add</button></p></div></form>`;
 }

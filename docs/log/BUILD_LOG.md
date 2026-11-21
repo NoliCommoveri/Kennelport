@@ -2020,3 +2020,8 @@ timeline template with the puppy's name typed in, so every family reads "Maveric
 - No prototype screen for her templates; built from the existing card, fgrid and hint.
 - Tests: one new in `portal-steps.test.js`. 487 pass. No migration, no version bump (no
   file under `worker/public/` changed).
+- Same day, the owner: no replacing on delete (built and reverted). Instead "Register
+  {name}" stays suggested on her Timeline screen (`templates.js` `registerSuggestion`)
+  whenever her timeline has steps but not that task: one tap adds it, linked to her shown
+  registration program if she has one. A task she adjusted or kept is left as it is.
+  New sites get it from the suggested timeline as before. 488 pass.
