@@ -4,6 +4,16 @@ Published copies (claude.ai artifacts, with the photos):
 - The AK sample, shared with the first breeder: https://claude.ai/artifact/CP9T5ouidYfr1KfLvTY18D
 - The scheme lab (private): https://claude.ai/artifact/XzWppS7x8epbNHA1uicRDh
 - The portal prototype: https://claude.ai/artifact/ELrT2DnhfmSbPe72SwVG28
+- The portal's two mockup looks, Forest and Cream (`portal-looks.html`, 2026-11-21): https://claude.ai/artifact/9APC1R1PumMwC9xU88etDe
+  It is `portal-prototype.html` with a layer added at the ends of its style and script
+  (`The mockup look`, `The Forest look`); Home, Timeline, Vet visit and Records are redrawn.
+  Its third look, Current, is the live portal itself: `worker/scripts/portal-current-snapshots.mjs`
+  renders the real pages for the Reeds and Opal on the prototype's four dates, and
+  `portal-looks-current.json` (published beside the page as `current.json`) holds them with
+  `portal.css` (`:root` as `:host`, `body` as `.kp-body`), shown in a shadow root. Re-run it after
+  a portal change to refresh the Current look. The Handbook (a sample of four chapters) is
+  the live flipbook in every look, `handbook.js` running in the shadow root with a stand-in
+  for the document (`runHandbook`); the old prototype's handbook screen is no longer shown.
 
 To change either, update the file here and republish it to the same link (pass the link
 as the artifact's `url`) so the shared address keeps working.

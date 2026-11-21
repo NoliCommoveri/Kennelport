@@ -1,0 +1,19 @@
+/* Cream (the owner's first mockup; portal/looks.js): cream cards on deep green, mint waves,
+   a peach vet tile, the vet card with its clock row on Home, and the vet page as one cream
+   sheet with a green swoosh. Over looks/mockup.css, whose tokens are this look's.
+   A new look can start from this file: its tokens, its art, and which of Home's vet card
+   (.vetcard) or vet row (.vetrow) it shows.
+   Changing this file means bumping PORTAL_VERSION (src/portal/version.js). */
+body[data-look="cream"] {
+  --lk-wave-hero: url("wave-cream-hero.svg"); --lk-wave-head: url("wave-cream-head.svg");
+  --lk-head-art: url("calendar.svg"); --lk-vet-art: url("swoosh-cream.svg"); --lk-mypup-art: url("paw-gold.svg");
+  --lk-hero-paw: url("paw-gold.svg");
+}
+body[data-look="cream"] .vetcard { display: block; }
+
+/* The vet page: one cream sheet under the bar, its head carrying the swoosh. */
+body[data-look="cream"].pg-vet main { background: linear-gradient(#F9F5EA, #F1EAD8); border-radius: 22px 22px 0 0; margin-top: .5rem; min-height: calc(100vh - 9rem); box-shadow: 0 -2px 14px rgba(0,0,0,.22); }
+body[data-look="cream"].pg-vet .vethead { background: transparent; border: 0; box-shadow: none; margin: calc(-1 * var(--gut)) calc(-1 * var(--gut)) 0; border-radius: 22px 22px 0 0; padding: 1.2rem 1.3rem .4rem; }
+body[data-look="cream"].pg-vet .card:not(.vethead) { box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+body[data-look="cream"].pg-vet .disclose { color: var(--lk-muted); }
+body[data-look="cream"].pg-vet .vethead p:not(.remind) { max-width: 78%; }

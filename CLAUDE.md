@@ -70,6 +70,19 @@ side with the prototype at phone width (390px) and on a computer. Any change fro
 prototype should add pleasing variety, never remove it. If a screen has no prototype,
 build it from the prototype's existing components, and say so.
 
+The family portal has looks, one per site, chosen by the breeder in her portal settings
+(`portal/looks.js`): **Classic** (the portal as built from `portal-prototype.html`) and the
+owner's mockups, **Forest** and **Cream** (`docs/reference/portal-looks.html`, its Look
+switch). A screen change must work in every look: Classic is `portal.css`; the others are
+`public/_kp/f/looks/` over it (`mockup.css`, then the look's own), light only, hooked on
+`data-look` and `pg-<page>` on `<body>`, the heading icons (`hh()` in `family.js`) and the
+look-only pieces (`.lookonly`). Check a changed screen in each look at 390px.
+
+In Classic, cards and bands come in three colours, paper, green and sand, in light and
+dark (`portal.css`, "Card colours"). Each card has one fixed colour, and no two of the
+same colour sit one directly above the other: a new card takes a colour its neighbours
+above and below don't have. `tests/portal-colours.test.js` checks it.
+
 ## Breeder-facing wording goes in the owner's list
 
 The owner writes every line the breeder reads in the Site Manager: help lines, hints,

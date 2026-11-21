@@ -2239,3 +2239,133 @@ Cash", which reads as if she gave them. Now:
   "Your own code will be here once {kennel} adds it" for a per-family program, as the list did.
 - Server HTML only: no portal file changed, no version bump. Tests: `portal`,
   `portal-steps` updated. 498 pass.
+
+## 2026-11-21: three card colours in the family portal, food band above the contacts
+
+The owner, from her live Home (dark): the food and insurance band goes above the "Questions
+about {pup}? One tap" contacts; every tab but Home was one colour; alternating cards should
+differ, with a third colour in the scheme, light and dark.
+
+- A third colour, **sand** (`--sand` #EFE2C3 light, #352C19 dark; `--sand-brass` for its
+  eyebrows, 4.5:1 or better), beside **paper** (the surface) and **green** (the mint, and the
+  deep green of the food band). The sand page heads (`.band`) and the warm tile use it too.
+  Classes `c-paper`, `c-green`, `c-sand`, `.sec.sand` (`portal.css`, "Card colours").
+- The rule, also in CLAUDE.md ("Look"): each card has one fixed colour; no two cards of the
+  same colour sit one above the other; a new card takes a colour its neighbours don't have.
+- Timeline: sand head, groups taking turns green and paper, Recommended sand. Vet visit:
+  sand, paper, green. Records: My puppy sand, Shots paper, Papers green, the bag sand,
+  Contacts paper, Photos green. Stay: sand head, Skills green, updates paper and green in turn.
+- Home: the vet visit's steps and What's next move from mint to sand (the food band's deep
+  green now follows them), the checklist sand, Recommended sand. Fixed colours can't keep
+  Home's last card clear of every stage's mix, so **Quick links** alone is green unless the
+  piece above it is green, then paper (`toneOf` in `family.js`).
+- `tests/portal-colours.test.js` renders Home, Timeline, Vet visit and Records at four stages,
+  with and without her lists and handbook, and fails on two same-colour neighbours.
+- `portal.css` changed: `PORTAL_VERSION` still 5 (on `main`), the owner asked before a bump;
+  `versions.test.js` fails until then. 500 pass, 1 fail (that one).
+
+## 2026-11-21: the portal's two mockup looks, as a prototype
+
+The owner sent two mockups of the family portal (cream cards on green; deep green cards with
+cream panels and gold). The original prototype artifact can't be published from here, so
+`docs/reference/portal-looks.html` is `portal-prototype.html` from `main` plus a layer: a
+stylesheet for the family screens (`The mockup look`, then `The Forest look` over it, chosen by
+`html[data-look]`), and Home, Timeline, a new Vet visit page and Records redrawn, with the live
+portal's four tabs. A Look switch (Forest, Cream) sits in the prototype bar. Published at
+https://claude.ai/artifact/9APC1R1PumMwC9xU88etDe. Prototype only: the live portal is unchanged.
+- Second pass, closer to the mockups (the owner: the vet cards and the accent curves had been
+  simplified): the photo and the pup and vet tiles are one card; the waves are a tapered
+  ribbon (mint with a soft echo in Cream, gold in Forest); each look has its own vet card on
+  Home (Cream: the card with the clock row; Forest: one row with the stethoscope and a
+  chevron); shiny buttons (gold for Upload in Forest); the vet page's art (Cream: a green
+  swoosh with a mint edge and a white stethoscope; Forest: a drawn stethoscope); the reminder's
+  icon in a gold ring; a Boston sketch on My puppy in Forest.
+- Third pass (the owner: the waves had no graded colour, the vet swoosh was crude, and the top
+  pieces showed card edges): both looks now keep the mockups' colours in dark mode (her phone
+  is in dark mode, which had turned the cream cards charcoal); each wave is one curve drawn
+  in seven layers, each lower and a shade on, softened, so the colour grades along it (mint
+  into green in Cream, a gold band in Forest); the vet swoosh is an S in proportion, a mint
+  glow under a lighter green under the deep green; Timeline's head and page and the vet
+  page's head run edge to edge with no card edges (Cream's vet page is one cream sheet), and
+  Home's photo and tiles sit on the page itself.
+- A third look, **Current** (the owner: the live portal has drifted from the prototype in
+  places): the live portal's own pages, rendered by its code for the Reeds and Opal on the
+  prototype's four dates (`worker/scripts/portal-current-snapshots.mjs`, Date mocked), with
+  the live `portal.css`, in a shadow root so the two stylesheets never meet. It follows dark
+  mode as the live portal does; its tabs and links move between the prototype's pages.
+
+## 2026-11-21: "Came home" on the family's pages
+
+The owner: Records said "Went home", which is her side of it; families read it. The family's
+Records card now says "Came home" (before pickup, "Coming home"), and the pup card on Home
+"Came home". Her own screens keep "went home". Server HTML only, no version bump. The portal
+looks prototype and its Current snapshot are updated to match.
+
+## 2026-11-21: the portal's looks, hers to choose (migration 0042)
+
+The owner: all three looks (today's portal, and her two mockups) available to breeders,
+each choosing one, so more can be added later.
+
+- **Migration 0042** (`0042_portal_look.sql`): `portal_settings.look`, a new column, empty
+  (Classic) until she picks another. Additive; applies itself on the first request after
+  the merge.
+- `portal/looks.js`: the list (Classic, Forest, Cream), each with its name and a line for
+  her, and its stylesheets; `lookOf` reads an unknown or missing look as Classic. Her
+  Portal settings screen opens with "How the portal looks" (radio buttons; this screen's
+  wording isn't in `manage/wording.js` yet, as before). `saveSettings` refuses a look
+  not on the list and stores Classic as none.
+- Every portal page carries her look: `data-look` and `pg-<page>` on `<body>`, and for
+  Forest and Cream `looks/mockup.css` (what the mockups share) and the look's own sheet
+  after `portal.css`. The handbook's cover keeps its own design in every look.
+- Hooks in `family.js`, invisible in Classic (`portal.css` hides `.hico` and `.lookonly`):
+  an icon before each card's title (`hh()`, four new icons: image, link, syringe, info),
+  `vethead`, `remind` and `mypup` classes, and on Home in the vet visit, for a look, the
+  vet card with its clock row and the vet row (Cream shows the card, Forest the row) in
+  place of Classic's numbered steps.
+- The art is SVG files in `public/_kp/f/looks/`: the waves (one curve in seven layers,
+  graded), the swoosh, the stethoscope, the Boston, the calendar page, a gold paw.
+- The looks are light only, as drawn; Classic follows the phone. The three-colour rule
+  stays Classic's (CLAUDE.md updated).
+- Tests: `portal-looks.test.js` (the list, picking and saving, each look's page, the
+  refusal, the stylesheets and art there); two tests allow the heading icon. Checked the
+  real pages in each look at 390px on the prototype's four dates (Home, Timeline, Vet
+  visit, Records, Messages, Account). `PORTAL_VERSION` 5 is on `main`: a bump to 6 is
+  needed for `portal.css`, the icons and `looks/`; asked. 503 pass, 1 fail (that one).
+
+## 2026-11-21: the vet visit once it's done; Next up wraps
+
+The owner: once the visit is done, the vet card should change or go; it's for the first
+week. And in the new looks, Next up's title ran off the tile.
+
+- `family.js` `vetDone`: the record accepted, or uploaded with pickup over a week ago.
+  Then the Vet visit tab gives way to Handbook (or Photos, with no chapter shown); with
+  nothing uploaded it stays, the contract still asking for it.
+- The Vet visit page once a record is in: "{pup}'s vet visit is done" (accepted) or "Record
+  uploaded: thank you", seen when and where, uploaded when, who accepted it, View the
+  record; no booking form, and "Upload a different record" only until she accepts it.
+  The page keeps its look's styling (`page: 'vet'` on the frame) with no tab lit.
+- Her booked visit reads as a day ("Booked for Thu, Dec 24, 10:30 am", `bookedWords`),
+  not the raw "2026-12-24 at 10:30", on Home and the vet page.
+- `looks/mockup.css`: Next up's title wraps; only the countdown keeps to one line.
+- The prototype (all three looks) does the same; the Current snapshot now has the record
+  as a file (`portal-current-snapshots.mjs`). Test: `portal-looks.test.js`, the vet visit
+  once done. 504 pass, 1 fail (the version check).
+
+## 2026-11-21: the live handbook in the prototype
+
+The owner: check the handbook tab live now and add it to the sample and the prototype.
+The handbook on `main` is the flipbook (`family.js` handbookPage, `public/_kp/f/handbook.js`):
+a cover with Boop to open, pages turned by arrows, swipe or keys, Contents with search.
+- `worker/scripts/portal-current-snapshots.mjs` now gives the Reeds a sample handbook of
+  four chapters (The first night, Crate and potty training with a page break, Feeding with
+  a program link, Boston basics; 8 pages) and renders the handbook page too.
+- The prototype (`docs/reference/portal-looks.html`): the Handbook is the live page in
+  every look (it keeps its own design live too), with `handbook.js` itself running in the
+  shadow root; Handbook leads the mockup looks' Quick links, as live. Checked: the cover,
+  opening it, turning pages, Contents.
+
+## 2026-11-21: PORTAL_VERSION 6
+
+With the owner's yes: `PORTAL_VERSION` 5 → 6 (`PORTAL_FILES` e692d88236fdb4b2), for the
+three card colours, the looks (`looks/`, the heading icons) and the Next up fix, so phones
+pick them up at once. All tests pass.

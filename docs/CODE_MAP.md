@@ -127,6 +127,8 @@ read that before the rest. Update this map when you add, move or split a file.
   `photosOf` read the website's puppy, else the copy.
 - `view.js` her read-only view of a family's portal (`plans/done/family-view.md`): the view
   link and the view cookie; `family.js` refuses every write under one.
+- `looks.js` the portal's looks (Classic, Forest, Cream; migration 0042), chosen on her
+  settings screen; each look but Classic is stylesheets and art in `public/_kp/f/looks/`.
 - `feed.js` KennelOS's family feed. `version.js`: `PORTAL_VERSION`; files in `public/_kp/f/` (with `food-bowl.webp` and `insurance-shield.webp`, the food band's pictures)
   (ask before bumping).
 

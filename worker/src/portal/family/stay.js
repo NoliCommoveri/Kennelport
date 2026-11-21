@@ -16,9 +16,9 @@ export function skillsList(progress, { compact = false } = {}) {
   return `<ul class="skills">${progress.map((sk) => `<li><span>${esc(sk.name)}</span>${meter(sk.now)}<b class="small">${esc(sk.now ? LEVELS[sk.now] : 'Not started')}</b>${!compact && sk.first && sk.first !== sk.now ? `<span class="small muted">from ${esc(LEVELS[sk.first].toLowerCase())} in the first update</span>` : ''}${!compact && sk.note ? `<span class="small muted">${esc(sk.note)}</span>` : ''}</li>`).join('')}</ul>`;
 }
 
-export function updateCard(u, skills, name) {
+export function updateCard(u, skills, name, tone = 'c-paper') {
   const named = new Map(skills.map((sk) => [sk.id, sk.name]));
-  return `<article class="card update"><p class="eyebrow">Week ${u.week} · ${esc(formatDay(u.written_on))}</p>
+  return `<article class="card update ${tone}"><p class="eyebrow">Week ${u.week} · ${esc(formatDay(u.written_on))}</p>
     ${u.note ? u.note.split(/\n{2,}/).map((x) => `<p>${esc(x).replace(/\n/g, '<br>')}</p>`).join('') : ''}
     ${u.weight ? `<p class="small"><b>Weight:</b> ${esc(u.weight)}</p>` : ''}
     ${u.photos.length ? `<ul class="gallery">${u.photos.map((id) => `<li><a href="/family/media/${esc(id)}"><img src="/family/media/${esc(id)}" alt="${esc(name)}, week ${u.week}" loading="lazy"></a></li>`).join('')}</ul>` : ''}
