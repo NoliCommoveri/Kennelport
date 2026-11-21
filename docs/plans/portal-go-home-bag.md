@@ -12,12 +12,15 @@ She sends every puppy home with goodies (food starter bag, insurance certificate
 paper, a blanket with the litter's scent, toys, collar and leash, samples, the go-home
 folder). Several come from programs' breeder kits, so the bag is also a revenue tool.
 
-- **Her bag template** (Portal tab): each item with what it costs her, where it comes
-  from, and the program or product it's tied to, if any. Order, on or off, add, edit,
-  remove.
+- **Her bag template** (Portal tab): each item with what it costs her, whether she
+  **expenses** it (a column of its own, section 3 decision 8), where it comes from, and
+  the program or product it's tied to, if any. Order, on or off, add, edit, remove.
+- **From KennelOS** (the owner, 2026-11-21): KennelOS will let its users set up their bag
+  items, cost included, and push them here. They arrive in the bundle beside extras and
+  products (section 4a) and show in her template as any other item.
 - **Per family** (the family's screen, **Sent home with**): the template ticked by
   default; she unticks what didn't go and adds anything else. The card's heading line
-  shows the count and what the bag cost her.
+  shows the count, what the bag cost her and how much of that she expenses.
 - **The family's side** (Records, from pickup on): **What came home in Opal's bag**, each
   item with its program's line and **Get more**, **Activate** or **Register** where it's
   tied to a program. Clicks count with place `bag`.
@@ -28,7 +31,7 @@ folder). Several come from programs' breeder kits, so the bag is also a revenue 
 
 | Screen | Prototype | What to carry over |
 |---|---|---|
-| Her template | Portal tab, "Go-home bag" card (around line 1327) | `card` with `between` heading and **Add an item** (`btn line small`); `list` of rows: `ico` (the program's icon, else `gift`), name bold, small muted line "Costs you $4 · where from · tied to Program" ("Free to you" at 0); the small muted hint under it |
+| Her template | Portal tab, "Go-home bag" card (around line 1327) | `card` with `between` heading and **Add an item** (`btn line small`); `list` of rows: `ico` (the program's icon, else `gift`), name bold, small muted line "Costs you $4 · where from · tied to Program" ("Free to you" at 0); the small muted hint under it. **New, not in the prototype:** the expense column, a `pill` at the row's end ("Expensed") with its switch in the item's form, so the list reads as a column on a computer and stays one line on a phone |
 | Her per-family card | Family screen, "Sent home with" (around line 1235) | `card` form; heading with "8 items · $24 to you"; `chips` of ticks (template items, then her own added ones, ticked); a `row` with "Something else, like …" input and **Save** |
 | The family's band | Records (around line 1031) | `tile full band`, heading "What came home in Opal's bag" with "From A-K" beside it; `hl` list, each row a `badge` icon, bold name, the program's small muted line, and a `btn line small ext` link |
 
@@ -61,8 +64,16 @@ as the handbook's editor was). Say so in the build log.
    need it), so an **erase** keeps the bag rows with the placement, like the placement
    itself. **Delete now** of a family removes them with the placement. Site close removes
    everything (add both tables to `SITE_TABLES`).
-7. **KennelOS sends nothing for the bag** (plan section 3.2: the bag is the portal's own).
-   No feed change, nothing for KennelOS to do.
+7. **KennelOS sends her bag items** (the owner, 2026-11-21; this replaces plan section
+   3.2's "the bag is the portal's own"). The template arrives from KennelOS; what each
+   family was sent is still recorded here. Section 4a has the contract and the rules,
+   the same as for extras and products.
+8. **Expense, per item** (the owner, 2026-11-21): a yes/no column, "Expense it", on each
+   template item, defaulting to yes when it costs her anything. Copied onto each sent
+   item with its cost (decision 2), so she can untick it for one family (a toy she was
+   given free that time). Her family card shows "8 items · $24 to you · $20 expensed",
+   and her future Reports show expensed cost per litter. Hers alone, never shown to
+   families. From KennelOS it arrives as `expense`.
 
 ## 4. Data (migration 0041, additive only)
 
@@ -75,10 +86,14 @@ CREATE TABLE IF NOT EXISTS portal_bag_items (
   site_id     TEXT NOT NULL REFERENCES sites(id),
   name        TEXT NOT NULL,
   cost_cents  INTEGER NOT NULL DEFAULT 0,
-  source      TEXT,                 -- where it comes from, her words
+  expense     INTEGER NOT NULL DEFAULT 1,   -- she expenses it (decision 8)
+  origin      TEXT,                 -- where it comes from, her words ("The food program's kit")
   product_id  TEXT REFERENCES products(id),
   shown       INTEGER NOT NULL DEFAULT 1,   -- in the template for new families
   sort        INTEGER NOT NULL DEFAULT 0,
+  source      TEXT NOT NULL DEFAULT 'breeder',  -- breeder / kennelos, as on extras
+  kennelos_id TEXT,                 -- KennelOS's id for the item (section 4a)
+  hidden_by_kennelos INTEGER NOT NULL DEFAULT 0, -- KennelOS stopped sending it
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL
 );
@@ -90,6 +105,7 @@ CREATE TABLE IF NOT EXISTS portal_placement_bag (
   bag_item_id  TEXT,                -- null for something she added for this family only
   name         TEXT NOT NULL,
   cost_cents   INTEGER NOT NULL DEFAULT 0,
+  expense      INTEGER NOT NULL DEFAULT 1,
   product_id   TEXT,
   quantity     INTEGER NOT NULL DEFAULT 1,
   sort         INTEGER NOT NULL DEFAULT 0
@@ -99,8 +115,41 @@ ALTER TABLE portal_placements ADD COLUMN bag_saved_at TEXT;
 ```
 
 `bag_saved_at` set with zero rows means "nothing went", distinct from "not saved yet".
-Indexes on `(site_id, sort)` and `(placement_id)`. Quantity is stored but not shown in
-this chunk (section 8, question 3).
+Indexes on `(site_id, sort)`, `(site_id, kennelos_id)` and `(placement_id)`. Quantity
+is stored but not shown in this chunk (section 8, question 3). The column is `origin`,
+not `source`, because `source` already means "who made the row" on imported tables.
+
+## 4a. From KennelOS: bag items in the bundle
+
+A new optional section of the bundle KennelOS already pushes (`kennelos/bundle.js`),
+beside `extras` and `products`:
+
+```
+bag_items?: [{ id, name, cost, expense?, origin?, product_id? }]
+```
+
+- `cost` in dollars and cents as KennelOS holds it (`12.50`), stored as cents; refused if
+  negative. `expense` true/false, default true when `cost > 0`. `product_id` is the
+  KennelOS Account id of one of the `products` in the same bundle (matched by
+  `kennelos_id`); one that names no product it sent is dropped, not refused. A limit in
+  `MAX` (50).
+- A bundle without the section leaves her bag as it is (as `extras` and `products`).
+- **Matching and owned fields, as for extras and products:** matched by `kennelos_id`;
+  the first time, one of hers with the same name is taken over (so she doesn't get it
+  twice). `OWNED.bag_items = ['name', 'cost_cents', 'expense', 'origin', 'product_id']`:
+  KennelOS's values replace hers on each push, since KennelOS is where she sets them.
+  Her on/off and her order stay hers.
+- **KennelOS stops sending one:** it's hidden (`hidden_by_kennelos = 1`), never deleted,
+  and leaves the template for new families; what families were already sent is
+  untouched (decision 2). Sent again, it comes back.
+- **Unlink** makes them hers, as extras and products (review finding 02-1).
+- **Her screen:** a KennelOS item shows the small "From KennelOS" note the extras and
+  products screens use, and its owned fields say they're changed in KennelOS (the same
+  wording those screens use, moved to the `bag` group). She can still turn it off or move
+  it.
+- The bundle's comment block, the section list in `SECTIONS`, `kennelos-contract.md`
+  and `portal-kennelos` tests gain `bag_items`. The KennelOS side (its screen and the
+  push) is built in the KennelOS repository; this plan's section 4a is what to hand them.
 
 ## 5. The build, in order
 
@@ -115,8 +164,11 @@ this chunk (section 8, question 3).
    `bag_saved_at` is null. History lines in `portal_history` for her saves
    ("Sent home with: 7 items").
 3. **Her template, `portal/admin/bag.js`** (new), linked from the Portal tab's list in
-   `admin/today.js` beside Handbook. Add, edit (name, cost, where from, program from her
-   programs list, on/off), remove with a confirmation, move up and down.
+   `admin/today.js` beside Handbook. Add, edit (name, cost, **Expense it**, where from,
+   program from her programs list, on/off), remove with a confirmation, move up and down.
+   The list shows the expense column (section 2).
+3a. **KennelOS's `bag_items`** in `kennelos/bundle.js` (section 4a), after the
+   products step so `product_id` can be matched.
 4. **Sent home with** on the family's screen (`portal/admin.js`, after the placement's
    details card), only once a placement has a puppy. The prototype's chips, the add
    input, Save. Shows "(Not saved yet: your usual bag)" style hint while it's the
@@ -147,7 +199,15 @@ this chunk (section 8, question 3).
 
 ## 7. Tests (`worker/tests/portal-bag.test.js`, new)
 
-- Template: add, edit, reorder, turn off, remove; a cost refused if not a sum of money.
+- Template: add, edit, reorder, turn off, remove; a cost refused if not a sum of money;
+  expense defaults to yes with a cost, no at zero, and can be changed.
+- Sent home with: expense copied per item and changeable for one family; the card's
+  totals (cost, expensed).
+- KennelOS (`portal-kennelos` or `kennelos-bundle` tests): bag items arrive with cost and
+  expense; a later push changes them; her on/off and order survive; one of hers with the
+  same name is taken over; an item not sent again is hidden, not deleted, and families'
+  sent rows are unchanged; a bad `product_id` is dropped; no section leaves the bag alone;
+  Unlink makes them hers.
 - A placement with no saved bag reads the template ticked; Save makes its rows; a later
   template rename doesn't change them.
 - Mark picked up fixes an unsaved bag; it leaves a saved one alone; zero ticked = nothing
@@ -169,3 +229,10 @@ this chunk (section 8, question 3).
    leash, shampoo sample, go-home folder) at zero cost for her to change?
 5. The button words (Get more / Activate / Register): fixed by program type, or should
    she set the button wording on each item?
+6. Expense: is a yes/no enough, or does she want a category too (supplies, food,
+   paperwork) for her bookkeeping?
+7. Should what each family was sent, with its expensed cost, go back to KennelOS (as a
+   fact in the family feed, like a pickup) so KennelOS can record the expense against
+   the sale? Not in this chunk unless she says yes; the data here already supports it.
+8. With KennelOS linked, should she still be able to add bag items by hand in KennelPort,
+   or only in KennelOS?

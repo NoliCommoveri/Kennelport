@@ -67,7 +67,8 @@ anyone outside the family.
   with search; chapters she writes with Claude upload as a file, styled, with her photos; Read next and a quick link, shown only once a chapter has words. `PORTAL_VERSION` 4 on this
   branch. Build log, 2026-11-21.
 - Phase 2, next: **the go-home bag**, planned 2026-11-21 in
-  [`plans/portal-go-home-bag.md`](plans/portal-go-home-bag.md) (migration 0041; five
+  [`plans/portal-go-home-bag.md`](plans/portal-go-home-bag.md) (migration 0041; bag items with
+  their cost and an expense column, also pushed from KennelOS in the bundle; eight
   questions for the owner in its section 8). Not started.
 - Phase 3: not started.
 - The same family twice, and deleted families (2026-11-13): the feed links a family's only

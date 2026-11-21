@@ -2109,4 +2109,9 @@ nothing shows to families where it's empty, so new sites start with no chapters.
   8.4 and the prototype's three bag screens (her template on the Portal tab, Sent home
   with on the family's screen, What came home in Opal's bag on Records). One migration
   (0041: `portal_bag_items`, `portal_placement_bag`, `portal_placements.bag_saved_at`);
-  nothing on the KennelOS side. Five questions for the owner before building. No code.
+  five questions for the owner before building. No code.
+- Same day, the owner: **an expense column on each item** (yes/no, copied onto what each
+  family was sent, totals on her family card), and **KennelOS will push bag items, cost
+  included**: a new `bag_items` bundle section matched like extras and products (owned
+  fields, take-over by name, hidden not deleted, Unlink). Plan section 4a is the contract
+  for KennelOS. Eight questions now.
