@@ -2225,3 +2225,4 @@ beside the food with a button straight to her insurance referral link.
   computer). Checked at 390px and 1200px.
 - The owner, after: the note (her food note; the insurance's What the family does, else its
   description) moves under the picture, the name alone beside it (`.fcard .under`).
+- `PORTAL_VERSION` 4 → 5 with the owner's yes (`PORTAL_FILES` 342de44b3b6c4478). 498 pass.
