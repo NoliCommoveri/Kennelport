@@ -2363,3 +2363,9 @@ a cover with Boop to open, pages turned by arrows, swipe or keys, Contents with 
   every look (it keeps its own design live too), with `handbook.js` itself running in the
   shadow root; Handbook leads the mockup looks' Quick links, as live. Checked: the cover,
   opening it, turning pages, Contents.
+
+## 2026-11-21: PORTAL_VERSION 6
+
+With the owner's yes: `PORTAL_VERSION` 5 → 6 (`PORTAL_FILES` e692d88236fdb4b2), for the
+three card colours, the looks (`looks/`, the heading icons) and the Next up fix, so phones
+pick them up at once. All tests pass.
