@@ -2331,3 +2331,22 @@ each choosing one, so more can be added later.
   real pages in each look at 390px on the prototype's four dates (Home, Timeline, Vet
   visit, Records, Messages, Account). `PORTAL_VERSION` 5 is on `main`: a bump to 6 is
   needed for `portal.css`, the icons and `looks/`; asked. 503 pass, 1 fail (that one).
+
+## 2026-11-21: the vet visit once it's done; Next up wraps
+
+The owner: once the visit is done, the vet card should change or go; it's for the first
+week. And in the new looks, Next up's title ran off the tile.
+
+- `family.js` `vetDone`: the record accepted, or uploaded with pickup over a week ago.
+  Then the Vet visit tab gives way to Handbook (or Photos, with no chapter shown); with
+  nothing uploaded it stays, the contract still asking for it.
+- The Vet visit page once a record is in: "{pup}'s vet visit is done" (accepted) or "Record
+  uploaded: thank you", seen when and where, uploaded when, who accepted it, View the
+  record; no booking form, and "Upload a different record" only until she accepts it.
+  The page keeps its look's styling (`page: 'vet'` on the frame) with no tab lit.
+- Her booked visit reads as a day ("Booked for Thu, Dec 24, 10:30 am", `bookedWords`),
+  not the raw "2026-12-24 at 10:30", on Home and the vet page.
+- `looks/mockup.css`: Next up's title wraps; only the countdown keeps to one line.
+- The prototype (all three looks) does the same; the Current snapshot now has the record
+  as a file (`portal-current-snapshots.mjs`). Test: `portal-looks.test.js`, the vet visit
+  once done. 504 pass, 1 fail (the version check).

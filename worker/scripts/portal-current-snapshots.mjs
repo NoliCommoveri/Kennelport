@@ -57,6 +57,8 @@ async function render(stage) {
       mock.timers.setTime(NY(2026, 12, 23, 11));
       assert.equal((await her(`/portal/f/${famId}/picked-up`, {})).status, 303);
       db.prepare('UPDATE portal_placements SET vet_booked_at = ?, vet_booked_for = ?, vet_clinic = ? WHERE id = ?').run(new Date().toISOString(), '2026-12-24T10:30', 'Parkway Animal Clinic', p.id);
+      if (stage !== 'vet') db.prepare("INSERT INTO portal_files (id, site_id, placement_id, kind, r2_key, type, bytes, name, uploaded_by, uploaded_at) VALUES ('proof1', ?, ?, 'proof', 'k', 'application/pdf', 1, 'vet-record.pdf', 'family', ?)").run(site.id, p.id, new Date(NY(2026, 12, 24, 15)).toISOString());
+      if (stage !== 'vet') db.prepare("UPDATE portal_placements SET proof_file_id = 'proof1' WHERE id = ?").run(p.id);
       if (stage !== 'vet') db.prepare('UPDATE portal_placements SET proof_uploaded_at = ?, proof_accepted_at = ? WHERE id = ?').run(new Date(NY(2026, 12, 24, 15)).toISOString(), new Date(NY(2026, 12, 24, 18)).toISOString(), p.id);
     }
     mock.timers.setTime(STAGES[stage]);

@@ -843,6 +843,8 @@ html[data-look="forest"] .fam .mk-head.green.bleed, html[data-look="forest"] .fa
 /* The Current look: the live portal in its own box; the prototype's page stays out of the way. */
 .kp-wrap { min-height: 100vh; }
 .kp-host { display: block; min-height: 100vh; }
+.fam .tile.peach .bigline[style] { white-space: normal; overflow-wrap: anywhere; line-height: 1.2; }
+.sheet { align-content: start; }
 </style>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="sprig" viewBox="0 0 120 60"><g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M4 50 C 34 44, 64 32, 116 8"/><path d="M28 44 c-4-10 2-18 10-20 c2 9-3 17-10 20z"/><path d="M28 44 c10 4 18 0 22-7 c-9-3-17 0-22 7z"/><path d="M58 33 c-3-10 3-18 11-19 c1 9-4 16-11 19z"/><path d="M58 33 c10 3 18-1 21-9 c-9-2-17 1-21 9z"/><path d="M88 20 c-2-8 3-14 9-15 c1 7-3 12-9 15z"/><path d="M88 20 c8 2 14-2 16-8 c-7-1-13 2-16 8z"/></g></symbol>
@@ -1458,7 +1460,7 @@ function famPage(route) {
   const pages = { home: mkHome, timeline: mkTimeline, vet: mkVet, stay: famStay, records: mkRecords, book: famBook, handbook: famHandbook, photos: famPhotos, picks: famPicks, messages: famMessages };
   const second = p.stay && (ph === 'stay' || ph === 'pre') ? ['stay', 'Stay', 'star'] : ['timeline', 'Timeline', 'cal'];
   const lost = lostPup(p);
-  const tabs = lost ? [['home', 'Home', 'home'], ['photos', 'Photos', 'camera']] : [['home', 'Home', 'home'], second, ['vet', 'Vet visit', 'steth'], ['records', 'Records', 'file']];
+  const tabs = lost ? [['home', 'Home', 'home'], ['photos', 'Photos', 'camera']] : [['home', 'Home', 'home'], second, vetDoneP(p) ? ['handbook', 'Handbook', 'book'] : ['vet', 'Vet visit', 'steth'], ['records', 'Records', 'file']];
   const r = pages[route] && (!lost || route === 'photos') ? route : 'home';
   const bar = r === 'home' && !lost ? actionBar(p, ph) : '';
   return `<div class="fam ${bar ? 'has-bar' : ''}">${header('Puppy Parent Portal', 'paw')}<main id="main">${pages[r]()}</main>${bar}
@@ -2003,6 +2005,7 @@ const BOSTON = `<svg class="boston only-forest" viewBox="0 0 100 100" aria-hidde
 const CLINIC = { name: 'Parkway Animal Clinic', phone: '706-555-0180', address: '1622 Dietz Rd, Ringgold, GA 30736' };
 const HER_PHONE = '423-555-0142';
 const mkCard = (ic, title, body, o = {}) => `<section class="mk ${o.cls || ''}"${o.id ? ` id="${o.id}"` : ''}><header class="mk-h">${ic ? `<span class="mk-i ${o.gold ? 'gold' : ''}">${icon(ic)}</span>` : ''}${o.eyebrow ? `<p class="eyebrow">${title}</p>` : `<h2>${title}</h2>`}${o.aside || ''}</header>${o.sub ? `<p class="mk-sub">${o.sub}</p>` : ''}<div class="mk-b">${body}</div></section>`;
+const vetDoneP = (p) => { const pr = S.proof[p.id], pk = S.pickup[p.id]; return !!(pr && (pr.ok || (pk && S.now - pk > 7 * DAY))); };
 const leftWords = (dl) => { const h = Math.max(0, Math.round((dl - S.now) / HOUR)); const d = Math.floor(h / 24); return d ? `${d} day${d === 1 ? '' : 's'} ${h % 24} hour${h % 24 === 1 ? '' : 's'} left` : `${h} hour${h === 1 ? '' : 's'} left`; };
 const dueWords = (d) => `${WD[d.getDay()].slice(0, 3)}, ${short(d)}, ${time(d)}`;
 
@@ -2092,6 +2095,13 @@ function mkTimeline() {
 
 function mkVet() {
   const p = P(), pick = S.pickup[p.id], dl = pick ? vetDeadline(pick) : null, b = S.booked[p.id], pr = S.proof[p.id];
+  // Done (the owner, 2026-11-21): once the record is in, the page says so; accepted, no forms.
+  if (pr) return `<div class="sheet bleed"><div class="mk-head cream">${SWOOSH}<span class="steth only-cream">${icon('steth')}</span>${STETH}<span class="eyebrow">The vet visit</span>
+      <h1>${pr.ok ? `${p.name}’s vet visit is done` : 'Record uploaded: thank you'}</h1>
+      <p>${b ? `Seen ${long(b)}, ${time(b)} at ${CLINIC.name}. ` : ''}Record uploaded ${short(pr.at)}, ${time(pr.at)}.</p>
+      <p class="notebox"><span class="ring">${icon('check')}</span>${pr.ok ? 'Accepted by A-K' : 'A-K will check it'}</p>
+      <p><button class="btn line small" data-act="toast" data-msg="Opens ${esc(pr.file)}">${icon('file')}View the record</button></p></div>
+    ${pr.ok ? '' : mkCard('file', 'Upload a different record', `<label class="btn line wide">${icon('up')}Upload<input class="sr" type="file" accept="image/*,application/pdf" data-act="proof"></label>`)}</div>`;
   const day = b ? toLocalInput(b).slice(0, 10) : '', tm = b ? toLocalInput(b).slice(11) : '';
   return `<div class="sheet bleed"><div class="mk-head cream">${SWOOSH}<span class="steth only-cream">${icon('steth')}</span>${STETH}<span class="eyebrow">The vet visit</span>
       <h1>${dl ? `Due by ${dueWords(dl)}` : `Book ${p.name}’s first vet visit`}</h1>

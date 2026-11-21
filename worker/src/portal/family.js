@@ -67,9 +67,10 @@ const LOSS_TABS = [['/family', 'home', 'Home'], ['/family/photos', 'paw', 'Photo
 // During an extended stay, Stay takes Timeline's place (plan 8.5).
 const STAY_TABS = [['/family', 'home', 'Home'], ['/family/stay', 'award', 'Stay'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records']];
 
-function frame(site, title, body, { status = 200, fam = null, tab = null, action = '', headers = {}, bare = false, script = null } = {}) {
+function frame(site, title, body, { status = 200, fam = null, tab = null, action = '', headers = {}, bare = false, script = null, page = null } = {}) {
   const kennel = site.kennel_name || site.subdomain;
-  const tabs = fam ? `<nav class="tabs" aria-label="Portal">${(fam.loss ? LOSS_TABS : fam.stay ? STAY_TABS : TABS)
+  const list = fam ? (fam.loss ? LOSS_TABS : fam.stay ? STAY_TABS : TABS).map((t) => (t[0] === '/family/vet' && fam.vetDone ? fam.afterVet : t)) : [];
+  const tabs = fam ? `<nav class="tabs" aria-label="Portal">${list
     .map(([href, icon, label]) => `<a href="${href}"${tab === href ? ' aria-current="page"' : ''}>${ic(icon)}<span>${label}</span></a>`).join('')}</nav>` : '';
   return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -77,7 +78,7 @@ function frame(site, title, body, { status = 200, fam = null, tab = null, action
 <title>${esc(title)}${fam?.viewing ? ' (viewing)' : ''} · ${esc(kennel)}</title>
 <link rel="stylesheet" href="/_kp/f/portal.css?v=${PORTAL_VERSION}">${(bare ? [] : LOOKS[site.portalLook]?.css ?? []).map((c) => `\n<link rel="stylesheet" href="/_kp/f/looks/${c}.css?v=${PORTAL_VERSION}">`).join('')}
 <script src="/_kp/f/portal.js?v=${PORTAL_VERSION}" defer></script>${script ? `\n<script src="/_kp/f/${script}?v=${PORTAL_VERSION}"></script>` : ''}
-</head><body class="${bare ? 'bare' : fam ? 'in' : 'out'}${tab ? ` pg-${tab.split('/')[2] ?? 'home'}` : ''}"${!bare && site.portalLook && site.portalLook !== 'classic' ? ` data-look="${site.portalLook}"` : ''}>
+</head><body class="${bare ? 'bare' : fam ? 'in' : 'out'}${page || tab ? ` pg-${page ?? tab.split('/')[2] ?? 'home'}` : ''}"${!bare && site.portalLook && site.portalLook !== 'classic' ? ` data-look="${site.portalLook}"` : ''}>
 ${SPRITE}
 ${bare ? `${fam?.viewing ? fam.band : ''}${body}` : `<header class="top"><a class="brand" href="/family">${brandMark(site)}<span class="bt"><b>${esc(kennel)}</b><span class="sub">${ic('paw')}Puppy Parent Portal</span></span></a>
 <span class="top-end"><button type="button" class="aa" id="aa" aria-label="Text size">Aa</button>${fam && !fam.loss ? `<a class="acct" href="/family/messages" aria-label="${fam.unread ? `Messages, ${fam.unread} new` : 'Messages'}">${ic('message')}${fam.unread ? `<b class="small">${fam.unread}</b>` : ''}</a>` : ''}${fam ? `<a class="acct" href="/family/account" aria-label="Account">${ic('user')}</a>` : ''}</span></header>
@@ -345,6 +346,11 @@ function clock(hm) {
   const [h, m] = hm.split(':').map(Number);
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`;
 }
+// Her booked visit, "Thu, Dec 24, 10:30 am", from the local "2026-12-24T10:30" they typed.
+const bookedWords = (v) => { const [d, t] = String(v ?? '').split('T'); return d ? `${formatDay(d)}${t ? `, ${clock(t)}` : ''}` : ''; };
+// The vet visit is behind them (the owner, 2026-11-21): the record accepted, or uploaded
+// and pickup a week ago. Then the Vet visit tab gives way and the page shows it done.
+const vetDone = (p, now = new Date()) => Boolean(p?.proof_accepted_at || (p?.proof_uploaded_at && p.picked_up_at && new Date(now).getTime() - Date.parse(p.picked_up_at) > 7 * 86400000));
 const inDays = (n) => (n > 1 ? `${n} days` : n === 1 ? 'Tomorrow' : n === 0 ? 'Today' : null);
 // Numbered steps on soft blobs (the vet visit, what's next).
 const numSteps = (items) => `<ol class="numsteps">${items.map((it, i) => `<li${it.done ? ' class="done"' : ''}><span class="num" aria-hidden="true">${it.done ? ic('check') : i + 1}</span><div><h3>${it.h}</h3>${it.p ? `<p>${it.p}</p>` : ''}${it.act ?? ''}</div></li>`).join('')}</ol>`;
@@ -394,7 +400,7 @@ async function homePage(env, site, fam, now = new Date()) {
       <a class="btn onfill small" href="/family/timeline">What to do first</a></div>`;
     band = `<section class="tile warm"><div class="calrow"><span class="ico big">${ic('stethoscope')}</span><div><p class="eyebrow">Before ${esc(name)} comes home</p><h2>Book the vet visit now</h2></div></div>
       <p class="small">Your contract asks for a vet visit ${s.vet_rule === 'days3' ? `by the end of the third day after the day you take ${esc(name)} home` : 'within 72 hours of pickup'}.${expected ? ` With pickup ${esc(formatAt(p.pickup_booked_at, s.time_zone))}, that's by <b>${deadlineLine(expected, s)}</b>.` : ''} Vets are often booked days ahead.</p>
-      ${p.vet_booked_at ? `<p class="status ok">${ic('check')} Booked${p.vet_booked_for ? ` for ${esc(p.vet_booked_for.replace('T', ' at '))}` : ''}${p.vet_clinic ? `, ${esc(p.vet_clinic)}` : ''}</p>` : `<p><a class="btn line small" href="/family/vet">${ic('check')}I've booked it</a></p>`}</section>`;
+      ${p.vet_booked_at ? `<p class="status ok">${ic('check')} Booked${p.vet_booked_for ? ` for ${esc(bookedWords(p.vet_booked_for))}` : ''}${p.vet_clinic ? `, ${esc(p.vet_clinic)}` : ''}</p>` : `<p><a class="btn line small" href="/family/vet">${ic('check')}I've booked it</a></p>`}</section>`;
     if (!p.vet_booked_at) action = { icon: 'calendar', title: 'Book the vet visit', sub: expected ? `Needed by ${esc(formatAt(expected, s.time_zone))}` : `Book ${esc(name)}'s visit, then tell us`, href: '/family/vet', label: 'I\'ve booked it' };
   } else if (st === 'vet') {
     hello = 'Welcome home';
@@ -406,7 +412,7 @@ async function homePage(env, site, fam, now = new Date()) {
       ${p.proof_uploaded_at ? `<p class="small"><b>${p.proof_accepted_at ? `${ic('check')} Accepted by ${esc(kennel)}` : `${esc(kennel)} will check it`}</b></p>` : `<a class="btn onfill small" href="/family/vet#proof">${ic('upload')}Upload record</a>`}</div>`;
     band = `<section class="sec sand bleed"><p class="eyebrow">Your contract's 3-day visit</p><h2 class="big-h">${p.proof_uploaded_at ? 'Record uploaded: thank you' : `${esc(name)}'s vet visit`}</h2>
       ${numSteps([
-        { done: Boolean(p.vet_booked_at), h: p.vet_booked_at ? `Booked${p.vet_booked_for ? ` for ${esc(p.vet_booked_for.replace('T', ' at '))}` : ''}` : 'Book the visit', act: p.vet_booked_at ? '' : '<a class="btn text small" href="/family/vet">Add the booking</a>' },
+        { done: Boolean(p.vet_booked_at), h: p.vet_booked_at ? `Booked${p.vet_booked_for ? ` for ${esc(bookedWords(p.vet_booked_for))}` : ''}` : 'Book the visit', act: p.vet_booked_at ? '' : '<a class="btn text small" href="/family/vet">Add the booking</a>' },
         { done: Boolean(p.proof_uploaded_at), h: `See the vet by ${esc(formatAt(p.vet_deadline_at, s.time_zone))}`, p: 'Bring this portal\'s Records page.' },
         { done: Boolean(p.proof_uploaded_at), h: p.proof_uploaded_at ? 'Record uploaded' : 'Upload the record', p: p.proof_uploaded_at ? (p.proof_accepted_at ? `Accepted by ${esc(kennel)}.` : `${esc(kennel)} will check it.`) : 'A photo or PDF of the vet\'s record is fine.', act: p.proof_uploaded_at ? '' : '<a class="btn solid small" href="/family/vet#proof">Upload vet record</a>' },
       ])}<p class="small muted">This is a reminder. Your contract sets the requirement and the deadline.</p></section>`;
@@ -639,6 +645,24 @@ async function vetPage(env, site, fam, { error, note } = {}, now = new Date()) {
   const [bookedDay, bookedTime] = (p.vet_booked_for ?? '').split('T');
   const proof = p.proof_file_id ? await getFile(env, site.id, p.proof_file_id) : null;
   const running = stage(p, now) !== 'before';
+  if (proof && p.proof_uploaded_at) {
+    const kennel = site.kennel_name || site.subdomain;
+    const accepted = Boolean(p.proof_accepted_at);
+    const seen = p.vet_booked_for ? `Seen ${esc(bookedWords(p.vet_booked_for))}${p.vet_clinic ? ` at ${esc(p.vet_clinic)}` : ''}. ` : p.vet_clinic ? `Seen at ${esc(p.vet_clinic)}. ` : '';
+    const done = `${noteBox(note)}${errorBox(error)}
+  <section class="card c-sand vethead"><p class="eyebrow">The vet visit</p>
+    <h1>${accepted ? `${esc(name)}'s vet visit is done` : 'Record uploaded: thank you'}</h1>
+    <p>${seen}Record uploaded ${esc(formatAt(p.proof_uploaded_at, s.time_zone))}.</p>
+    <p class="status ok">${ic('check')} ${accepted ? `Accepted by ${esc(kennel)}` : `${esc(kennel)} will check it`}</p>
+    <p><a class="btn line small" href="/family/file/${esc(proof.id)}">${ic('file')} View the record</a></p>
+  </section>
+  ${accepted ? '' : `<details class="card c-paper" id="proof"><summary><b>Upload a different record</b></summary>
+    <form method="post" action="/family/vet/proof" enctype="multipart/form-data" class="stack">
+      <label>A photo or PDF, up to 10 MB<input type="file" name="file" accept="image/*,application/pdf" required></label>
+      <button class="btn line">${ic('upload')} Upload</button>
+    </form></details>`}`;
+    return frame(site, 'Vet visit', done, { fam, tab: fam.vetDone ? null : '/family/vet', page: 'vet', status: error ? 400 : 200 });
+  }
   const body = `${noteBox(note)}${errorBox(error)}
   <section class="card c-sand vethead"><p class="eyebrow">The vet visit</p>
     <h1>${running && p.vet_deadline_at ? `Due by ${esc(formatAt(p.vet_deadline_at, s.time_zone))}` : `Book ${esc(name)}'s first vet visit`}</h1>
@@ -884,6 +908,8 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
   const current = await placementFor(env, site.id, fam.familyId);
   fam.loss = isLoss(current);
   fam.stay = Boolean(!fam.loss && current && active(current) && !current.picked_up_at && await stayFor(env, site.id, current.id));
+  fam.vetDone = Boolean(!fam.loss && current && vetDone(current));
+  if (fam.vetDone) fam.afterVet = (await shownChapters(env, site.id)).length ? ['/family/handbook', 'book', 'Handbook'] : ['/family/photos', 'paw', 'Photos'];
   // On Messages itself they're read as the page shows them.
   fam.unread = fam.loss || path === '/family/messages' ? 0 : await unreadFrom(env, site.id, fam.familyId, 'breeder');
   if (fam.viewing) fam.band = viewBand(fam, path, url.searchParams.get('viewing') === 'nochange');

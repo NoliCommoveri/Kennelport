@@ -101,3 +101,39 @@ test('every look stylesheet and its art is there', async () => {
     }
   }
 });
+
+// The owner, 2026-11-21: once the vet visit is behind them, the Vet visit page shows it
+// done and its tab gives way (to the handbook, else Photos); nothing uploaded, it stays.
+test('the vet visit once it is done: the page says so, the tab gives way', async () => {
+  const { env, site, fam } = await setup();
+  const db = env.DB.raw;
+  const p = db.prepare('SELECT id FROM portal_placements WHERE site_id = ?').get(site.id);
+  const tabs = (html) => [...html.match(/<nav class="tabs"[^]*?<\/nav>/)[0].matchAll(/<span>([^<]+)<\/span>/g)].map((m) => m[1]);
+  // Booked, nothing uploaded: the tab and the forms stay; the booking reads as a day.
+  db.prepare("UPDATE portal_placements SET vet_booked_at = ?, vet_booked_for = '2026-12-24T10:30', vet_clinic = 'Parkway Animal Clinic' WHERE id = ?").run(new Date().toISOString(), p.id);
+  assert.deepEqual(tabs(await fam('/family')), ['Home', 'Timeline', 'Vet visit', 'Records']);
+  assert.match(await fam('/family'), /Booked for Thu, Dec 24, 10:30 am/);
+  assert.match(await fam('/family/vet'), /action="\/family\/vet\/booked"/);
+  // Uploaded, not yet accepted, in the first week: done-looking, a new record still possible, the tab stays.
+  db.prepare("INSERT INTO portal_files (id, site_id, placement_id, kind, r2_key, type, bytes, name, uploaded_by, uploaded_at) VALUES ('f1', ?, ?, 'proof', 'k', 'application/pdf', 1, 'record.pdf', 'family', ?)").run(site.id, p.id, new Date().toISOString());
+  db.prepare("UPDATE portal_placements SET proof_file_id = 'f1', proof_uploaded_at = ? WHERE id = ?").run(new Date().toISOString(), p.id);
+  let vet = await fam('/family/vet');
+  assert.match(vet, /Record uploaded: thank you/);
+  assert.match(vet, /Seen Thu, Dec 24, 10:30 am at Parkway Animal Clinic\./);
+  assert.match(vet, /AK Boston Terriers will check it/);
+  assert.match(vet, /Upload a different record/);
+  assert.doesNotMatch(vet, /action="\/family\/vet\/booked"/);
+  assert.deepEqual(tabs(vet), ['Home', 'Timeline', 'Vet visit', 'Records']);
+  // Accepted: done, no forms; the tab gives way to Photos (no handbook here).
+  db.prepare('UPDATE portal_placements SET proof_accepted_at = ? WHERE id = ?').run(new Date().toISOString(), p.id);
+  vet = await fam('/family/vet');
+  assert.match(vet, /Opal's vet visit is done/);
+  assert.match(vet, /Accepted by AK Boston Terriers/);
+  assert.match(vet, /href="\/family\/file\/f1"/);
+  assert.doesNotMatch(vet, /<form method="post" action="\/family\/vet/);
+  assert.match(vet, /<body class="in pg-vet"/);
+  assert.deepEqual(tabs(await fam('/family')), ['Home', 'Timeline', 'Photos', 'Records']);
+  // Uploaded but never accepted, a week after pickup: the tab gives way too.
+  db.prepare('UPDATE portal_placements SET proof_accepted_at = NULL, picked_up_at = ? WHERE id = ?').run(new Date(Date.now() - 8 * DAY).toISOString(), p.id);
+  assert.deepEqual(tabs(await fam('/family/records')), ['Home', 'Timeline', 'Photos', 'Records']);
+});

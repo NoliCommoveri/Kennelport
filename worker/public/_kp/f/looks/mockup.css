@@ -59,6 +59,9 @@ body[data-look] .tile.green .calpage b { background: transparent; color: inherit
 body[data-look] .tile.green .calpage span { font: 600 1.9rem/1.05 var(--f-display); }
 body[data-look] .tile.green .calpage i { color: inherit; opacity: .8; }
 body[data-look] .tile.green .bigline { font: 600 1.45rem/1 var(--f-display); white-space: nowrap; }
+/* A task's title (Next up) wraps; only the short countdown keeps to one line. */
+body[data-look] .tile.green .bigline.small-line { font-size: 1.1rem; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
+body[data-look] .tile.green .calrow > div { min-width: 0; }
 body[data-look] .tile.green .btn { width: 100%; min-height: 2.8rem; font-size: .9rem; }
 
 /* Buttons: soft green with a green edge; the one to press solid with a shine. */
