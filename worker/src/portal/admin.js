@@ -41,8 +41,10 @@ import { redirect, note, errorBox, pupName, familyFilters, SUGGEST_LABEL, ZONE_N
 import { products, KIND_WORDS, itemFields, whenWords, formOffset, templateScreen, readyForm } from './admin/templates.js';
 import { settingsScreen } from './admin/settings.js';
 import { waitlistCount, waitlistPart, setupScreen } from './admin/today.js';
-import { handbookScreen, removeScreen } from './admin/handbook.js';
-import { listChapters, getChapter, saveChapter, removeChapter, moveChapter, linkablePrograms } from './handbook.js';
+import { handbookScreen, removeScreen, photoScreen } from './admin/handbook.js';
+import {
+  listChapters, getChapter, saveChapter, removeChapter, moveChapter, linkablePrograms, photoTags, setChapterPhoto, chaptersFrom, importChapters, MAX_UPLOAD,
+} from './handbook.js';
 
 // "2 hours ago", for Last from KennelOS.
 export function ago(at, now = new Date()) {
@@ -530,18 +532,54 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   }
 
   // Her puppy handbook (portal/admin/handbook.js).
-  const hm = rest.match(/^\/handbook(?:\/(new|[0-9a-f-]{36})(?:\/(up|down|remove))?)?$/);
+  const hm = rest.match(/^\/handbook(?:\/(new|upload|[0-9a-f-]{36})(?:\/(up|down|remove|photo\/(\d{1,3})))?)?$/);
   if (hm) {
     const here = `${home}/handbook`;
     const programs = await linkablePrograms(env, site.id);
-    const show = async (opts = {}) => page(say('handbook.title'), handbookScreen(site, await listChapters(env, site.id), programs, url, { ...opts, say }), { back: `${home}/setup`, status: opts.error ? 400 : 200 });
+    const livePhotos = async () => (await env.DB.prepare('SELECT id, alt FROM photos WHERE site_id = ? AND removed_at IS NULL ORDER BY created_at DESC LIMIT 400').bind(site.id).all()).results;
+    const show = async (opts = {}) => page(say('handbook.title'), handbookScreen(site, await listChapters(env, site.id), programs, url, { ...opts, say, live: new Set((await livePhotos()).map((x) => x.id)) }), { back: `${home}/setup`, status: opts.error ? 400 : 200 });
+    // A photo for one of a chapter's photo spots.
+    if (hm[3] !== undefined) {
+      const c = await getChapter(env, site.id, hm[1]);
+      const spot = c && photoTags(c.body)[Number(hm[3])];
+      if (!spot) return redirect(here);
+      const picker = async (error) => page(say('handbook.title'), photoScreen(site, c, spot, await livePhotos(), say, { error }), { back: `${here}#c-${c.id}`, status: error ? 400 : 200 });
+      if (!post) return picker();
+      const form = await request.formData();
+      const photo = form.get('leave') ? null : String(form.get('photo') ?? '');
+      if (photo === '') return picker(say('handbook.photo_pick'));
+      try { await setChapterPhoto(env, site.id, c.id, spot.n, photo); } catch (err) {
+        if (err instanceof PortalError) return picker(say(err.message));
+        throw err;
+      }
+      return redirect(`${here}?note=${photo ? 'photo_set' : 'saved'}#c-${c.id}`);
+    }
     if (!post) {
       if (!hm[1]) return show();
-      if (hm[2] !== 'remove' || hm[1] === 'new') return null;
+      if (hm[2] !== 'remove' || hm[1] === 'new' || hm[1] === 'upload') return null;
       const c = await getChapter(env, site.id, hm[1]);
       return c ? page(say('handbook.title'), removeScreen(site, c, say), { back: here }) : redirect(here);
     }
     if (!hm[1]) return null;
+    // Chapters from a file she made with Claude (handbook.js chaptersFrom).
+    if (hm[1] === 'upload') {
+      if (hm[2]) return null;
+      const form = await request.formData();
+      const file = form.get('file');
+      try {
+        if (!file || typeof file === 'string' || !file.size) throw new PortalError('handbook.upload_none');
+        if (file.size > MAX_UPLOAD) throw new PortalError('handbook.upload_big');
+        if (!/\.(md|markdown|txt|html?)$/i.test(file.name ?? '') && !/^text\//.test(file.type ?? '')) throw new PortalError('handbook.upload_type');
+        const text = new TextDecoder('utf-8', { fatal: false }).decode(await file.arrayBuffer());
+        if (text.includes('\u0000')) throw new PortalError('handbook.upload_type');
+        const shown = Boolean(form.get('shown'));
+        const { added, replaced } = await importChapters(env, site.id, chaptersFrom(text, file.name ?? ''), { replace: Boolean(form.get('replace')), shown });
+        return redirect(`${here}?note=imported&a=${added}&r=${replaced}${shown ? '&on=1' : ''}`);
+      } catch (err) {
+        if (err instanceof PortalError) return show({ error: say(err.message) });
+        throw err;
+      }
+    }
     if (hm[2] === 'remove') { await removeChapter(env, site.id, hm[1]); return redirect(`${here}?note=removed`); }
     if (hm[2]) { await moveChapter(env, site.id, hm[1], hm[2]); return redirect(`${here}#c-${hm[1]}`); }
     const form = await request.formData();

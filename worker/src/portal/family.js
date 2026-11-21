@@ -36,7 +36,9 @@ import { servePhoto, serveFile, goToProgram } from './family/files.js';
 import { redeemViewLink, currentView, viewCookie } from './view.js';
 import { sayer, everyWording, siteWording } from '../manage/wording.js';
 import { loadBuild } from '../content/rules.js';
-import { shownChapters, linkablePrograms, bodyHtml, linkedPrograms, plainText, searchWords, matches, snippet } from './handbook.js';
+import {
+  shownChapters, linkablePrograms, bodyHtml, linkedPrograms, plainText, searchWords, matches, snippet, photoIdsIn,
+} from './handbook.js';
 
 export const PORTAL_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
 const HEADERS = {
@@ -455,6 +457,10 @@ async function handbookPage(env, site, fam, url) {
   const name = pupName(p);
   const programs = await linkablePrograms(env, site.id);
   const vars = { name, kennel };
+  // Her photos in the chapters, those still in her photos (one removed shows nothing).
+  const want = photoIdsIn(chapters);
+  const live = new Map(want.length ? (await env.DB.prepare(`SELECT id, alt FROM photos WHERE site_id = ? AND removed_at IS NULL AND id IN (${want.map(() => '?').join(',')})`).bind(site.id, ...want).all()).results.map((x) => [x.id, x]) : []);
+  const photo = (id, caption) => (live.has(id) ? `<figure class="hbphoto"><img src="/family/handbook/photo/${esc(id)}" alt="${esc(caption || live.get(id).alt || '')}" loading="lazy">${caption ? `<figcaption>${esc(caption)}</figcaption>` : ''}</figure>` : '');
   const of = (n) => `${n}${/s$/i.test(n) ? "'" : "'s"}`;
   const face = (cls) => (main ? `<img src="${esc(main)}?s=t" alt="" class="${cls}">` : `<span class="${cls} nopic">${ic('paw')}</span>`);
   const pages = [];
@@ -472,7 +478,7 @@ async function handbookPage(env, site, fam, url) {
       const id = i ? `ch-${c.id}-${i + 1}` : `ch-${c.id}`;
       if (!i) toc.push({ c, at: pages.length });
       texts.push({ id, title: c.title, at: pages.length, text: plainText(part, vars, programs) });
-      page(`${i ? '' : `<h2>${esc(c.title)}</h2>`}${bodyHtml(part, programs, vars, handbookLink)}${links ? `<p class="tip disclose">${esc(s.disclosure || DEFAULT_DISCLOSURE)}</p>` : ''}`,
+      page(`${i ? '' : `<h2>${esc(c.title)}</h2>`}${bodyHtml(part, programs, vars, handbookLink, photo)}${links ? `<p class="tip disclose">${esc(s.disclosure || DEFAULT_DISCLOSURE)}</p>` : ''}`,
         { id, head: c.title, go: c.id });
     });
   }
@@ -514,6 +520,17 @@ async function handbookPage(env, site, fam, url) {
     <div class="dlg-body">${dialogBody}</div></dialog>
 </div>`;
   return frame(site, 'Puppy handbook', body, { fam, bare: true, script: 'handbook.js' });
+}
+
+// A photo in her handbook: only one a chapter they can read shows, and only while it's
+// in her photos. The 400px copy: a book page is no wider.
+async function handbookPhoto(env, site, fam, id) {
+  const p = await placementFor(env, site.id, fam.familyId);
+  const ok = p && active(p) && photoIdsIn(await shownChapters(env, site.id)).includes(id);
+  const row = ok ? await env.DB.prepare('SELECT r2_key, thumb_key, type FROM photos WHERE id = ? AND site_id = ? AND removed_at IS NULL').bind(id, site.id).first() : null;
+  const obj = row && await env.FILES.get(row.thumb_key || row.r2_key);
+  if (!obj) return new Response('Not found', { status: 404, headers: { 'cache-control': 'no-store' } });
+  return new Response(obj.body, { headers: { 'content-type': row.type || 'image/webp', 'cache-control': 'private, max-age=3600', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'none'" } });
 }
 
 // The first months, grouped by when: what she does before go-home, the first
@@ -801,6 +818,8 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
     if (fam.loss && ['/family/timeline', '/family/vet', '/family/records', '/family/messages', '/family/handbook'].includes(path)) return redirect('/family');
     if (path === '/family/timeline') return timelinePage(env, site, fam);
     if (path === '/family/handbook') return handbookPage(env, site, fam, url);
+    const hp = path.match(/^\/family\/handbook\/photo\/([0-9a-f-]{36})$/);
+    if (hp) return handbookPhoto(env, site, fam, hp[1]);
     if (path === '/family/photos') return photosPage(env, site, fam);
     if (path === '/family/stay') return stayPage(env, site, fam);
     const mm = path.match(/^\/family\/media\/([0-9a-f-]{36})$/);

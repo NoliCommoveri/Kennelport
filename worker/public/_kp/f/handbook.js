@@ -48,6 +48,7 @@
       book.style.width = `${wide ? pw * 2 : pw}px`;
       book.style.height = `${ph}px`;
       book.style.setProperty('--fs', `${Math.max(12.5, Math.min(16, pw / 27))}px`);
+      book.style.setProperty('--shotmax', `${Math.round(ph * 0.36)}px`);
       const m = wide ? 'spread' : 'single';
       if (m !== mode) { mode = m; build(); }
     }

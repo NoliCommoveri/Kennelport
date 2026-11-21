@@ -2078,3 +2078,24 @@ nothing shows to families where it's empty, so new sites start with no chapters.
   server: `plainText`, `matches`, `snippet`). A continuation page has its own address
   (`#ch-<id>-2`). Only the words families see are searched: a link tag naming no program
   isn't.
+- Same day, the owner: **chapters from a file she writes with Claude**, styled. Her Handbook
+  screen has "Add chapters from a file" (.md, .txt or .html, 400 KB at most) with "What to
+  ask Claude" (`handbook.js` `CLAUDE_PROMPT`, kept in code: longer than a wording line may
+  be): each `# Title` in the file is a chapter (a file with one `# ` and several `## ` is a
+  book: its `## ` are the chapters); a chapter with the same title is replaced (her tick),
+  keeping its place and on/off; new ones are off unless she ticks "Families see the new
+  chapters straight away". HTML (`htmlToText`) is turned into the same format; its scripts,
+  styles and anything else are dropped, nothing of the file runs or shows as it was.
+- The chapter format grows (`bodyHtml`, read line by line): `#` big, `##`, `###` small
+  headings; `{center}` at the end of a heading or line; `**bold**`, `*italic*`; `1.`
+  numbered lists; `> ` a note in a box; `+++ Title` … `+++` a fold that opens on a tap;
+  `[photo: what it shows | caption]`. Still never taken as HTML.
+- Photos come from her photo library: a file's photo spots say what they should show
+  ("Pick a photo: Opal asleep in the crate" in red under the chapter); the picker
+  (`/portal/handbook/<id>/photo/<n>`, the app's `ph-grid`) puts the photo's id in the tag,
+  and what the spot said becomes its caption. A photo since removed from her photos shows
+  nothing to families and asks her to pick another. Families get the 400px copy at
+  `/family/handbook/photo/<id>`, only for a photo in a chapter they can read. Her photo
+  library lists each chapter's photos ("Puppy handbook: Welcome home", `photoPlaces.js`).
+- Wording: new lines in the `handbook` group, and `library.handbook`. No migration beyond
+  0040. Tests: `portal-handbook.test.js` (3). 490 pass, 1 expected fail (versions).

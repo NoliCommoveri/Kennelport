@@ -401,6 +401,26 @@ html.hb-js .hb .flip.l { transform-origin: right center; }
 .hb .nav:disabled { opacity: .35; cursor: default; }
 .hb .count { font: 700 .9rem/1 var(--f-body); font-variant-numeric: tabular-nums; min-width: 9ch; text-align: center; }
 
+/* Her styles inside a chapter: big and small headings, centered lines, a note in a box,
+   a fold that opens, numbered lists, photos with a caption (handbook.js bodyHtml). */
+.hb .page h3.big { font-size: 1.3em; color: var(--cocoa); }
+.hb .page h3.small { font-size: .98em; color: var(--book-ink); }
+.hb .page .center { text-align: center; align-self: stretch; }
+.hb .page strong { color: var(--cocoa); }
+.hb .page ol { margin: 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: .35em; }
+.hb .page ol li::marker { color: var(--maroon); font-weight: 700; }
+.hb .page .note { background: #f4e6d4; border: 1.5px solid var(--tan); border-radius: 10px; padding: .6em .8em; color: var(--maroon); display: flex; flex-direction: column; gap: .4em; }
+.hb .page .note strong { color: inherit; }
+.hb .page details.fold { border: 1.5px solid var(--rule); border-radius: 10px; background: color-mix(in srgb, var(--paper-edge) 45%, var(--paper)); }
+.hb .page details.fold summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: .6em; padding: .55em .8em; font: 700 1em/1.25 var(--f-display); color: var(--cocoa); }
+.hb .page details.fold summary::-webkit-details-marker { display: none; }
+.hb .page details.fold summary::after { content: "+"; color: var(--maroon); font-family: var(--f-body); }
+.hb .page details.fold[open] summary::after { content: "\2013"; }
+.hb .page details.fold .inner { padding: 0 .8em .7em; display: flex; flex-direction: column; gap: .6em; }
+.hb .page figure.hbphoto { margin: 0; align-self: center; display: flex; flex-direction: column; align-items: center; gap: .35em; max-width: 100%; }
+.hb .page figure.hbphoto img { display: block; max-width: 100%; max-height: var(--shotmax, 260px); width: auto; height: auto; border-radius: 8px; border: 4px solid #fff; box-shadow: 0 0 0 1.5px var(--tan), 0 6px 14px rgba(46,27,26,.18); }
+.hb .page figcaption { font-size: .86em; font-style: italic; color: var(--book-muted); text-align: center; }
+
 /* Search, on the Contents page and in its dialog */
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .hb .hsearch input { font: inherit; font-size: 1em; color: var(--book-ink); background: #fff; border: 1.5px solid var(--rule); border-radius: 999px; padding: .55em 1em; min-height: 2.6em; width: 100%; }

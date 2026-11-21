@@ -11,6 +11,7 @@
 import { PAGES } from './content/model.js';
 import { pageBlocks, customPages, BUILT_PAGES } from './content/blocks.js';
 import { loadBuild } from './content/rules.js';
+import { photoTags } from './portal/handbook.js';
 
 const json = (s, d) => { try { return s ? JSON.parse(s) : d; } catch { return d; } };
 // The owner's blocks that hold photos, and what each row calls them.
@@ -75,6 +76,9 @@ export async function photoPlaces(env, siteId, say) {
   put('page', say('library.reviews'), reviews.map((x) => x.photo_id));
   put('page', say('library.embeds'), embeds.map((x) => x.preview_photo_id));
   for (const a of albums) put('page', say('library.album', { name: a.title }), [a.cover_photo_id, ...json(a.photos, [])]);
+  // Her puppy handbook's chapters (the family portal), each its own row.
+  const chapters = (await env.DB.prepare('SELECT title, body FROM portal_chapters WHERE site_id = ? ORDER BY sort').bind(siteId).all().catch(() => ({ results: [] }))).results;
+  for (const c of chapters) put('page', say('library.handbook', { name: c.title }), photoTags(c.body).map((t) => t.id));
 
   // Profiles: a dog's, litter's or puppy's own photo, and those set to show on it.
   const tagged = new Map();
