@@ -11,7 +11,9 @@ Published copies (claude.ai artifacts, with the photos):
   renders the real pages for the Reeds and Opal on the prototype's four dates, and
   `portal-looks-current.json` (published beside the page as `current.json`) holds them with
   `portal.css` (`:root` as `:host`, `body` as `.kp-body`), shown in a shadow root. Re-run it after
-  a portal change to refresh the Current look.
+  a portal change to refresh the Current look. The Handbook (a sample of four chapters) is
+  the live flipbook in every look, `handbook.js` running in the shadow root with a stand-in
+  for the document (`runHandbook`); the old prototype's handbook screen is no longer shown.
 
 To change either, update the file here and republish it to the same link (pass the link
 as the artifact's `url`) so the shared address keeps working.

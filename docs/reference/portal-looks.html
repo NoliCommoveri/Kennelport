@@ -1455,7 +1455,7 @@ function famPicks() {
     ${S.programs.filter((x) => x.on).map((x, i) => `<a class="tile ${tones[i % 4]}" href="#" data-act="go" data-prog="${x.id}"><span class="ico big">${icon(x.ic)}</span><span class="eyebrow">${x.type}</span><h3>${x.name}</h3><span class="small muted">${x.why}</span><span class="btn line small ext" style="justify-self:start">Open</span></a>`).join('')}</div>${disclosure}`;
 }
 function famPage(route) {
-  if (document.documentElement.dataset.look === 'current') return currentPage(route);
+  if (document.documentElement.dataset.look === 'current' || route === 'handbook') return currentPage(route);
   const p = P(), ph = phase(p);
   const pages = { home: mkHome, timeline: mkTimeline, vet: mkVet, stay: famStay, records: mkRecords, book: famBook, handbook: famHandbook, photos: famPhotos, picks: famPicks, messages: famMessages };
   const second = p.stay && (ph === 'stay' || ph === 'pre') ? ['stay', 'Stay', 'star'] : ['timeline', 'Timeline', 'cal'];
@@ -2048,7 +2048,7 @@ function mkFoodDuo(p) {
       : `<h3>Activate ${p.name}’s pet insurance</h3><span class="pic"><img src="img/insurance-shield.webp" alt="" width="128" height="128"></span><span class="chip">Trupanion Puppy Insurance</span><a class="btn line small ext" href="#" data-act="go" data-prog="ins">Activate now</a><button class="btn text small" data-act="done" data-id="ins">I’ve activated it</button>`, { eyebrow: true })}</div>`;
 }
 function mkQuick() {
-  const tiles = [['#f-timeline', 'cal', 'Timeline'], ['#f-vet', 'steth', 'Vet visit'], ['#f-records', 'file', 'Records'], ['#f-photos', 'image', 'Photos'], ['#f-messages', 'msg', 'Messages'], ['#', 'user', 'Account', 'account']];
+  const tiles = [['#f-handbook', 'book', 'Handbook'], ['#f-timeline', 'cal', 'Timeline'], ['#f-vet', 'steth', 'Vet visit'], ['#f-records', 'file', 'Records'], ['#f-photos', 'image', 'Photos'], ['#f-messages', 'msg', 'Messages']];
   return mkCard('pin2', 'Quick links', `<div class="qgrid">${tiles.map(([h, ic, l, act]) => `<a class="qtile" href="${h}"${act ? ` data-act="${act}"` : ''}><span class="ico">${icon(ic)}</span>${l}</a>`).join('')}</div>`);
 }
 function mkHome() {
@@ -2152,7 +2152,21 @@ document.querySelector('#pk').addEventListener('click', (e) => { const b = e.tar
 // so the live CSS and the prototype's never meet. Its links move between the prototype's
 // pages; anything else says where it would go.
 let CURRENT = null, currentLoading = false;
-const currentPage = (route) => `<div class="kp-wrap"${S.fam !== 'reed' || S.lostChoice ? ' data-note="1"' : ''}><div class="kp-host" data-r="${['home', 'timeline', 'vet', 'records'].includes(route) ? route : 'home'}"></div></div>`;
+// The pages the live portal is shown for; Handbook in every look (its design is its own).
+const CURRENT_PAGES = ['home', 'timeline', 'vet', 'records', 'handbook'];
+const currentPage = (route) => `<div class="kp-wrap"${S.fam !== 'reed' || S.lostChoice ? ' data-note="1"' : ''}><div class="kp-host" data-r="${CURRENT_PAGES.includes(route) ? route : 'home'}"></div></div>`;
+// handbook.js as the live page runs it, here inside the shadow root: a stand-in for the
+// document that finds its elements there, and the page's start right away.
+function runHandbook(host, root, hash) {
+  const doc = {
+    documentElement: host,
+    getElementById: (id) => root.getElementById(id), querySelector: (s) => root.querySelector(s), querySelectorAll: (s) => root.querySelectorAll(s),
+    createElement: (t) => document.createElement(t),
+    addEventListener: (t, f, o) => (t === 'DOMContentLoaded' ? queueMicrotask(f) : root.addEventListener(t, f, o)),
+  };
+  new Function('document', 'location', CURRENT.handbookJs)(doc, { hash, search: '' });
+}
+let hbAt = '';
 function mountCurrent() {
   const host = document.querySelector('.kp-host'); if (!host) return;
   if (!CURRENT) {
@@ -2160,25 +2174,30 @@ function mountCurrent() {
     if (!currentLoading) { currentLoading = true; fetch('current.json').then((r) => r.json()).then((d) => { CURRENT = d; render(true); }).catch(() => { host.textContent = 'The live pages could not be loaded.'; }); }
     return;
   }
+  const page = CURRENT.pages[S.stage][host.dataset.r];
   host.className = `kp-host ${S.theme === 'auto' ? '' : S.theme}`;
   const root = host.shadowRoot || host.attachShadow({ mode: 'open' });
-  const note = host.parentElement.dataset.note ? '<p class="kp-note">The live portal is shown for the Reeds and Opal, going home.</p>' : '';
-  root.innerHTML = `<style>${CURRENT.css}\n.kp-note { margin: 0; padding: .5rem 10px; font: 600 .8rem/1.3 var(--f-body); background: #FFF3D6; color: #5A4512; }</style>${note}<div class="kp-body in">${CURRENT.pages[S.stage][host.dataset.r]}</div>`;
+  const note = host.parentElement.dataset.note && host.dataset.r !== 'handbook' ? '<p class="kp-note">The live portal is shown for the Reeds and Opal, going home.</p>' : '';
+  root.innerHTML = `<style>${CURRENT.css}\n.kp-note { margin: 0; padding: .5rem 10px; font: 600 .8rem/1.3 var(--f-body); background: #FFF3D6; color: #5A4512; }</style>${note}<div class="kp-body ${page.cls}">${page.html}</div>`;
+  if (host.dataset.r === 'handbook') { runHandbook(host, root, hbAt); hbAt = ''; }
   root.addEventListener('click', (e) => {
+    if (e.defaultPrevented) return;
     const a = e.target.closest('a[href]');
     if (a) {
       const h = a.getAttribute('href');
+      if (h.startsWith('#') || a.closest('[data-go]')) return;
       if (/^https?:/.test(h)) { a.target = '_blank'; a.rel = 'noopener'; return; }
       e.preventDefault();
-      const to = { '/family': 'f-home', '/family/timeline': 'f-timeline', '/family/vet': 'f-vet', '/family/records': 'f-records' }[h.split(/[?#]/)[0]];
-      if (to) { location.hash = '#' + to; return; }
-      toast(`Opens ${h.replace('/family/', '').split(/[?#]/)[0] || 'that page'} in the live portal`);
+      const [path, frag] = h.split('#');
+      const to = { '/family': 'f-home', '/family/timeline': 'f-timeline', '/family/vet': 'f-vet', '/family/records': 'f-records', '/family/handbook': 'f-handbook' }[path.split('?')[0]];
+      if (to) { if (to === 'f-handbook') hbAt = frag ? `#${frag}` : ''; const same = location.hash === '#' + to; location.hash = '#' + to; if (same) render(true); return; }
+      toast(`Opens ${path.replace('/family/', '').split('?')[0] || 'that page'} in the live portal`);
       return;
     }
     const b = e.target.closest('button');
     if (b && b.id === 'aa') { e.preventDefault(); S.zoom = S.zoom % 3 + 1; document.documentElement.dataset.zoom = S.zoom; render(true); }
   });
-  root.addEventListener('submit', (e) => { e.preventDefault(); toast('Saved in the live portal'); });
+  root.addEventListener('submit', (e) => { if (!e.defaultPrevented) { e.preventDefault(); toast('Saved in the live portal'); } });
 }
 
 window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });

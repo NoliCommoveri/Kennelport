@@ -44,7 +44,13 @@ async function render(stage) {
     assert.equal(saved.status, 303, await saved.text());
     await her('/portal/checklist/suggested', {});
     await her('/portal/timeline/suggested', {});
-    await her('/portal/handbook/new', { title: 'The first night', body: 'A quiet room, the crate beside your bed.', shown: '1' });
+    // The sample handbook: four chapters, with a list, a page break and a program link.
+    for (const [title, body] of [
+      ['The first night', 'Bring Opal home in the afternoon if you can, so she has a few hours to sniff around before bedtime.\n\nSet the crate beside your bed. She can hear you breathe and settles faster.\n\n- An old towel that smells of her littermates\n- A chew toy sized for small breeds\n- One trip out around 2 am\n\nShe may cry for ten minutes or so. A hand on the crate helps more than taking her out.'],
+      ['Crate and potty training', 'Bostons learn fast and love a routine. Take her out after every meal, every nap and every play session.\n\n---\n\nPraise her the moment she goes, outside, every time. Accidents inside get cleaned with an enzyme cleaner and no fuss.\n\n- Out first thing in the morning\n- Out within 15 minutes of eating\n- Out last thing at night'],
+      ['Feeding', 'Keep Opal on the food she eats here for at least two weeks. If you change, mix it in slowly over 7 to 10 days.\n\n⅓ cup, three times a day, soaked in warm water the first week.\n\n[link: Puppy food program]'],
+      ['Boston basics', 'Bostons are sturdy, funny and very attached to their people. They snore, they love a lap, and they don\'t love heat: keep walks short on hot days.\n\nTheir eyes are large and easy to scratch. Check them daily and call your vet about any redness or squinting.'],
+    ]) await her('/portal/handbook/new', { title, body, shown: '1' });
     const res = await her('/portal/new', { name: 'The Reed family', emails: 'sam.reed@example.com', puppy_id: 'opal', pickup_day: '2026-12-23', pickup_time: '11:00' });
     assert.equal(res.status, 303, await res.text());
     const famId = res.headers.get('location').match(/\/f\/([0-9a-f-]{36})/)[1];
@@ -66,7 +72,7 @@ async function render(stage) {
     const fcode = outbox(env).at(-1).subject.match(/(\d{6})/)[1];
     const cookie = (await call(env, H, '/family/signin/verify', { method: 'POST', body: form({ email: 'sam.reed@example.com', code: fcode }), headers: { origin: `https://${H}` } })).headers.get('set-cookie').split(';')[0];
     const out = {};
-    for (const [k, path] of [['home', '/family'], ['timeline', '/family/timeline'], ['vet', '/family/vet'], ['records', '/family/records']]) {
+    for (const [k, path] of [['home', '/family'], ['timeline', '/family/timeline'], ['vet', '/family/vet'], ['records', '/family/records'], ['handbook', '/family/handbook']]) {
       const r = await call(env, H, path, { headers: { cookie } });
       assert.equal(r.status, 200, `${stage} ${path}`);
       out[k] = await r.text();

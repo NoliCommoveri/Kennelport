@@ -2350,3 +2350,16 @@ week. And in the new looks, Next up's title ran off the tile.
 - The prototype (all three looks) does the same; the Current snapshot now has the record
   as a file (`portal-current-snapshots.mjs`). Test: `portal-looks.test.js`, the vet visit
   once done. 504 pass, 1 fail (the version check).
+
+## 2026-11-21: the live handbook in the prototype
+
+The owner: check the handbook tab live now and add it to the sample and the prototype.
+The handbook on `main` is the flipbook (`family.js` handbookPage, `public/_kp/f/handbook.js`):
+a cover with Boop to open, pages turned by arrows, swipe or keys, Contents with search.
+- `worker/scripts/portal-current-snapshots.mjs` now gives the Reeds a sample handbook of
+  four chapters (The first night, Crate and potty training with a page break, Feeding with
+  a program link, Boston basics; 8 pages) and renders the handbook page too.
+- The prototype (`docs/reference/portal-looks.html`): the Handbook is the live page in
+  every look (it keeps its own design live too), with `handbook.js` itself running in the
+  shadow root; Handbook leads the mockup looks' Quick links, as live. Checked: the cover,
+  opening it, turning pages, Contents.
