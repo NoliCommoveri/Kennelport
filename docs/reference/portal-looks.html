@@ -839,6 +839,10 @@ html[data-look="forest"] .timeline-body .mk-h h2 { color: var(--fo-panel-ink); }
 html[data-look="forest"] .timeline-body .mk-h .mk-i svg.i { color: var(--fo-gold-2); }
 html[data-look="forest"] .timeline-body .mk-b { background: transparent; margin: 0; }
 html[data-look="forest"] .fam .mk-head.green.bleed, html[data-look="forest"] .fam .timeline-body.bleed, html[data-look="forest"] .fam .sheet .mk-head.cream { border: 0; }
+
+/* The Current look: the live portal in its own box; the prototype's page stays out of the way. */
+.kp-wrap { min-height: 100vh; }
+.kp-host { display: block; min-height: 100vh; }
 </style>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="sprig" viewBox="0 0 120 60"><g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M4 50 C 34 44, 64 32, 116 8"/><path d="M28 44 c-4-10 2-18 10-20 c2 9-3 17-10 20z"/><path d="M28 44 c10 4 18 0 22-7 c-9-3-17 0-22 7z"/><path d="M58 33 c-3-10 3-18 11-19 c1 9-4 16-11 19z"/><path d="M58 33 c10 3 18-1 21-9 c-9-2-17 1-21 9z"/><path d="M88 20 c-2-8 3-14 9-15 c1 7-3 12-9 15z"/><path d="M88 20 c8 2 14-2 16-8 c-7-1-13 2-16 8z"/></g></symbol>
@@ -903,7 +907,7 @@ html[data-look="forest"] .fam .mk-head.green.bleed, html[data-look="forest"] .fa
   <div class="grp" id="pf"><span class="note">Family:</span><button data-fam="reed">Reeds · Opal</button><button data-fam="hale">Hales · Onyx, 12-week stay + photos</button></div>
   <div class="grp" id="ps"><span class="note">Today is:</span><button data-stage="before">Dec 18</button><button data-stage="vet">Dec 24</button><button data-stage="weeks">Jan 12</button><button data-stage="later">Oct 28, a year on</button></div>
   <div class="grp" id="pl"><span class="note">Opal, before pickup:</span><button data-lost="">Going home</button><button data-lost="died">Dies</button><button data-lost="health">Fails a health check</button></div>
-  <div class="grp" id="pk"><span class="note">Look:</span><button data-look="forest">Forest</button><button data-look="cream">Cream</button></div>
+  <div class="grp" id="pk"><span class="note">Look:</span><button data-look="forest">Forest</button><button data-look="cream">Cream</button><button data-look="current">Current</button></div>
   <div class="grp" id="pt"><button data-theme="auto">Auto</button><button data-theme="light">Light</button><button data-theme="dark">Dark</button></div>
   <span class="note">Sample families and details; photos from A-K's website.</span>
 </div>
@@ -1449,6 +1453,7 @@ function famPicks() {
     ${S.programs.filter((x) => x.on).map((x, i) => `<a class="tile ${tones[i % 4]}" href="#" data-act="go" data-prog="${x.id}"><span class="ico big">${icon(x.ic)}</span><span class="eyebrow">${x.type}</span><h3>${x.name}</h3><span class="small muted">${x.why}</span><span class="btn line small ext" style="justify-self:start">Open</span></a>`).join('')}</div>${disclosure}`;
 }
 function famPage(route) {
+  if (document.documentElement.dataset.look === 'current') return currentPage(route);
   const p = P(), ph = phase(p);
   const pages = { home: mkHome, timeline: mkTimeline, vet: mkVet, stay: famStay, records: mkRecords, book: famBook, handbook: famHandbook, photos: famPhotos, picks: famPicks, messages: famMessages };
   const second = p.stay && (ph === 'stay' || ph === 'pre') ? ['stay', 'Stay', 'star'] : ['timeline', 'Timeline', 'cal'];
@@ -1856,6 +1861,7 @@ function render(keepScroll) {
   const { v, r } = route(), y = window.scrollY;
   S.view = v;
   app.innerHTML = v === 'admin' ? admPage(r) : v === 'status' ? kosPage() : famPage(r);
+  mountCurrent();
   document.querySelectorAll('#pv button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.view === S.view));
   document.querySelectorAll('#pf button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.fam === S.fam));
   document.querySelectorAll('#pl button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.lost === S.lostChoice));
@@ -2127,8 +2133,43 @@ const setLook = (look) => {
   document.querySelectorAll('#pk button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.look === look));
   try { localStorage.setItem('portal-look', look); } catch (err) { /* storage blocked */ }
 };
-document.querySelector('#pk').addEventListener('click', (e) => { const b = e.target.closest('button[data-look]'); if (b) setLook(b.dataset.look); });
-{ let saved = null; try { saved = localStorage.getItem('portal-look'); } catch (err) { /* storage blocked */ } setLook(saved === 'cream' ? 'cream' : 'forest'); }
+document.querySelector('#pk').addEventListener('click', (e) => { const b = e.target.closest('button[data-look]'); if (b) { setLook(b.dataset.look); render(true); } });
+{ let saved = null; try { saved = localStorage.getItem('portal-look'); } catch (err) { /* storage blocked */ } setLook(['cream', 'current'].includes(saved) ? saved : 'forest'); }
+
+// ---------- The Current look: the live portal as it renders today ----------
+// current.json holds the live portal's own pages, rendered by its code for the Reeds and
+// Opal on the prototype's four dates, and its stylesheet. They're shown in a shadow root,
+// so the live CSS and the prototype's never meet. Its links move between the prototype's
+// pages; anything else says where it would go.
+let CURRENT = null, currentLoading = false;
+const currentPage = (route) => `<div class="kp-wrap"${S.fam !== 'reed' || S.lostChoice ? ' data-note="1"' : ''}><div class="kp-host" data-r="${['home', 'timeline', 'vet', 'records'].includes(route) ? route : 'home'}"></div></div>`;
+function mountCurrent() {
+  const host = document.querySelector('.kp-host'); if (!host) return;
+  if (!CURRENT) {
+    host.textContent = 'Loading the live portal…';
+    if (!currentLoading) { currentLoading = true; fetch('current.json').then((r) => r.json()).then((d) => { CURRENT = d; render(true); }).catch(() => { host.textContent = 'The live pages could not be loaded.'; }); }
+    return;
+  }
+  host.className = `kp-host ${S.theme === 'auto' ? '' : S.theme}`;
+  const root = host.shadowRoot || host.attachShadow({ mode: 'open' });
+  const note = host.parentElement.dataset.note ? '<p class="kp-note">The live portal is shown for the Reeds and Opal, going home.</p>' : '';
+  root.innerHTML = `<style>${CURRENT.css}\n.kp-note { margin: 0; padding: .5rem 10px; font: 600 .8rem/1.3 var(--f-body); background: #FFF3D6; color: #5A4512; }</style>${note}<div class="kp-body in">${CURRENT.pages[S.stage][host.dataset.r]}</div>`;
+  root.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href]');
+    if (a) {
+      const h = a.getAttribute('href');
+      if (/^https?:/.test(h)) { a.target = '_blank'; a.rel = 'noopener'; return; }
+      e.preventDefault();
+      const to = { '/family': 'f-home', '/family/timeline': 'f-timeline', '/family/vet': 'f-vet', '/family/records': 'f-records' }[h.split(/[?#]/)[0]];
+      if (to) { location.hash = '#' + to; return; }
+      toast(`Opens ${h.replace('/family/', '').split(/[?#]/)[0] || 'that page'} in the live portal`);
+      return;
+    }
+    const b = e.target.closest('button');
+    if (b && b.id === 'aa') { e.preventDefault(); S.zoom = S.zoom % 3 + 1; document.documentElement.dataset.zoom = S.zoom; render(true); }
+  });
+  root.addEventListener('submit', (e) => { e.preventDefault(); toast('Saved in the live portal'); });
+}
 
 window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
 reset();

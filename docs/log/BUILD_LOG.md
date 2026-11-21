@@ -2288,3 +2288,8 @@ https://claude.ai/artifact/9APC1R1PumMwC9xU88etDe. Prototype only: the live port
   glow under a lighter green under the deep green; Timeline's head and page and the vet
   page's head run edge to edge with no card edges (Cream's vet page is one cream sheet), and
   Home's photo and tiles sit on the page itself.
+- A third look, **Current** (the owner: the live portal has drifted from the prototype in
+  places): the live portal's own pages, rendered by its code for the Reeds and Opal on the
+  prototype's four dates (`worker/scripts/portal-current-snapshots.mjs`, Date mocked), with
+  the live `portal.css`, in a shadow root so the two stylesheets never meet. It follows dark
+  mode as the live portal does; its tabs and links move between the prototype's pages.
