@@ -41,6 +41,8 @@ import { redirect, note, errorBox, pupName, familyFilters, SUGGEST_LABEL, ZONE_N
 import { products, KIND_WORDS, itemFields, whenWords, formOffset, templateScreen, readyForm } from './admin/templates.js';
 import { settingsScreen } from './admin/settings.js';
 import { waitlistCount, waitlistPart, setupScreen } from './admin/today.js';
+import { handbookScreen, removeScreen } from './admin/handbook.js';
+import { listChapters, getChapter, saveChapter, removeChapter, moveChapter, linkablePrograms } from './handbook.js';
 
 // "2 hours ago", for Last from KennelOS.
 export function ago(at, now = new Date()) {
@@ -476,7 +478,7 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
     return page('Families', familiesScreen(site, families, s, url, { deleted: await recentlyDeleted(env, site.id), erased: await erasedRecords(env, site.id), gone: await deletedForGood(env, site.id), waitlistCount: w.n, kennel, say }), tabs('families'));
   }
   // The Portal tab (plan 7.3): what families see, in one place.
-  if (rest === '/setup' && !post) return page('Portal', setupScreen(site, s), tabs('portal'));
+  if (rest === '/setup' && !post) return page('Portal', setupScreen(site, s, say), tabs('portal'));
   const um = rest.match(/^\/undo\/([0-9a-f-]{36})$/);
   if (um && post) {
     try { await undoDelete(env, site.id, um[1]); } catch (err) { if (!(err instanceof PortalError)) throw err; }
@@ -525,6 +527,32 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
       }));
     }
     return redirect(`${home}/settings?note=saved`);
+  }
+
+  // Her puppy handbook (portal/admin/handbook.js).
+  const hm = rest.match(/^\/handbook(?:\/(new|[0-9a-f-]{36})(?:\/(up|down|remove))?)?$/);
+  if (hm) {
+    const here = `${home}/handbook`;
+    const programs = await linkablePrograms(env, site.id);
+    const show = async (opts = {}) => page(say('handbook.title'), handbookScreen(site, await listChapters(env, site.id), programs, url, { ...opts, say }), { back: `${home}/setup`, status: opts.error ? 400 : 200 });
+    if (!post) {
+      if (!hm[1]) return show();
+      if (hm[2] !== 'remove' || hm[1] === 'new') return null;
+      const c = await getChapter(env, site.id, hm[1]);
+      return c ? page(say('handbook.title'), removeScreen(site, c, say), { back: here }) : redirect(here);
+    }
+    if (!hm[1]) return null;
+    if (hm[2] === 'remove') { await removeChapter(env, site.id, hm[1]); return redirect(`${here}?note=removed`); }
+    if (hm[2]) { await moveChapter(env, site.id, hm[1], hm[2]); return redirect(`${here}#c-${hm[1]}`); }
+    const form = await request.formData();
+    const values = Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
+    try {
+      const id = await saveChapter(env, site.id, hm[1] === 'new' ? null : hm[1], values, programs);
+      return redirect(`${here}?note=${hm[1] === 'new' ? 'added' : 'saved'}#c-${id}`);
+    } catch (err) {
+      if (err instanceof PortalError) return show({ error: say(err.message), values: hm[1] === 'new' ? { ...values, shown: values.shown ? 1 : 0 } : null });
+      throw err;
+    }
   }
 
   // Her checklist and timeline templates.

@@ -284,3 +284,29 @@ details.card > summary { cursor: pointer; }
 .meter i.on { background: var(--accent); }
 .update .gallery { margin: .6rem 0; }
 .update ul.small { padding-left: 1.1rem; margin: .4rem 0 0; }
+
+/* The handbook (the prototype's famHandbook and readNext): its search box, chapters
+   that open, program links, and Home's Read next photo rows. */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.hsearch input { background: var(--bg); }
+.ext::after { content: " \2197"; }
+details.ch { border-bottom: 1px solid var(--line); }
+details.ch:last-child { border-bottom: 0; }
+details.ch summary { list-style: none; cursor: pointer; padding: .75rem 0; display: flex; justify-content: space-between; gap: .6rem; font-family: var(--f-display); font-size: 1.02rem; }
+details.ch summary::-webkit-details-marker { display: none; }
+details.ch summary::after { content: "+"; font-family: var(--f-body); color: var(--accent); font-weight: 700; }
+details.ch[open] summary::after { content: "\2013"; }
+details.ch .body { padding: 0 0 .9rem; display: grid; gap: .5rem; }
+details.ch .body p, details.ch .body ul { margin: 0; }
+details.ch .body ul { padding-left: 1.2rem; display: grid; gap: .25rem; }
+.readnext { display: grid; gap: .5rem; }
+.readnext h2 { margin: 0; }
+.prows { display: grid; gap: .45rem; }
+@media (min-width: 720px) { .prows { grid-template-columns: repeat(3, 1fr); } }
+.prow { display: grid; grid-template-columns: 40% 1fr; height: 5.6rem; border-radius: var(--rc); overflow: hidden; text-decoration: none; }
+.prow.words { grid-template-columns: 1fr; height: auto; min-height: 4.2rem; }
+.prow .ph { position: relative; display: block; overflow: hidden; background: var(--band); }
+.prow .ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+.prow .lab { background: var(--head); color: var(--head-ink); display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .7rem .8rem; font: 600 1.05rem/1.15 var(--f-display); }
+.prow:nth-child(2) .lab { background: var(--accent); color: var(--accent-ink); }
+.prow .chev { flex: none; display: inline-flex; }

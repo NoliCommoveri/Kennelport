@@ -7,6 +7,7 @@ import { vetStatus, formatAt, timeLeft, clockRunning, formatDay, VET_RULES } fro
 import { roundPhoto } from '../../manage/hub.js';
 import { pupName, familyFilters } from './parts.js';
 import { getSettings, listFamilies } from '../store.js';
+import { defaultSay } from '../../manage/wording.js';
 
 // Vet visits: each placement's status in words and time left; red only in trouble.
 // Vet visits: each placement with its status in words, red only when in trouble.
@@ -66,7 +67,7 @@ export async function waitlistPart(env, site, kennel, w) {
     <p class="small muted">The same list your website's Waitlist page shows. When a family signs their contract, add them as a puppy family and send their invite.</p>`;
 }
 
-export function setupScreen(site, s) {
+export function setupScreen(site, s, say = defaultSay) {
   const b = `/s/${esc(site.subdomain)}/portal`;
   const item = (href, label, note) => `<li class="item"><a href="${href}"><b>${esc(label)}</b><span>${esc(note)}</span></a></li>`;
   return `<section class="card"><h1>What families see</h1><p class="muted small">Families sign in at <strong>${esc(site.portalUrl)}</strong>.</p></section>
@@ -74,6 +75,7 @@ export function setupScreen(site, s) {
       ${item(`${b}/settings`, 'Portal settings', `Vet visit (${VET_RULES[s.vet_rule].toLowerCase()}), contacts, the food, programs, extras`)}
       ${item(`${b}/checklist`, 'Go-home checklist', 'What every family has ready')}
       ${item(`${b}/timeline`, 'First-weeks timeline', 'Tasks dated from birth or pickup')}
+      ${item(`${b}/handbook`, say('handbook.item'), say('handbook.item_note'))}
       ${item(`${b}/settings#programs`, 'Programs and where they show', 'Your recommended products, as families see them')}
       ${item(`/s/${esc(site.subdomain)}/lists/extras`, 'Extras', 'The catalog; how the portal delivers each is in Portal settings')}
     </ul>`;

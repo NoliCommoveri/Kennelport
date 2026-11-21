@@ -2025,3 +2025,35 @@ timeline template with the puppy's name typed in, so every family reads "Maveric
   whenever her timeline has steps but not that task: one tap adds it, linked to her shown
   registration program if she has one. A task she adjusted or kept is left as it is.
   New sites get it from the suggested timeline as before. 488 pass.
+
+## 2026-11-21: the puppy handbook (family portal, phase 2 begins)
+
+The owner chose to start phase 2 before phase 1's gate (no real litter yet), handbook
+first. Her answers: a program's link goes inside the words, not one per chapter; and
+nothing shows to families where it's empty, so new sites start with no chapters.
+
+- **Migration 0040** (`handbook`): new table `portal_chapters` (title, body, shown, sort).
+  Additive; applies by itself on the first request after the merge. In `SITE_TABLES`, so
+  backups, restores and closing a site carry it (`plans/backup-format.md`).
+- `portal/handbook.js`: chapters (list, save, move, on/off, remove) and the body's plain
+  format: blank line = paragraph, `- ` = list, `{name}`, and `[link: Program]` or
+  `[link: Program | her words]`, matched by name to a program families see; a button on
+  its own line, a link inside a sentence; a tag matching nothing shows nothing to families.
+- Her side, `portal/admin/handbook.js` at `/s/<sub>/portal/handbook`, a row on the Portal
+  tab: each chapter opens to edit, Move up / Move down, Remove asks first; "Add a program's
+  button at the end" puts `[link: …]` on the last line; a tag naming no shown program is
+  flagged in red. No prototype screen for the editor (the prototype's admPortal has the
+  list only); built from the template screens' card, fgrid and hint.
+- Families, `portal/family.js`: `/family/handbook` (the prototype's famHandbook: search as a
+  plain GET form, chapters that open, the first open, or every match, or the one Read next
+  led to); Home's **Read next** (the first three chapters as the prototype's photo rows,
+  with their own puppy's photos after the hero's; words alone with none) and **Handbook**
+  first in Quick links, in Account's place (Account stays in the header). None of it shows
+  while no chapter is on with words, nor for a closed placement or the loss page. Program
+  clicks count with place `handbook`; the disclosure shows when a link does.
+- Wording: new group `handbook` in `manage/wording.js` (every line on her screen, the
+  errors and notes). The family page's own lines are in `family.js`, as on its other pages.
+- `public/_kp/f/portal.css`: the prototype's chapter, search and photo-row styles.
+  **Needs a `PORTAL_VERSION` bump (3, on `main`): asked the owner.** Until then
+  `versions.test.js` fails as expected.
+- Tests: `portal-handbook.test.js` (new, 2). 489 pass, 1 expected fail (versions).

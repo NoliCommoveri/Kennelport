@@ -36,6 +36,7 @@ import { servePhoto, serveFile, goToProgram } from './family/files.js';
 import { redeemViewLink, currentView, viewCookie } from './view.js';
 import { sayer, everyWording, siteWording } from '../manage/wording.js';
 import { loadBuild } from '../content/rules.js';
+import { shownChapters, linkablePrograms, bodyHtml, linkedPrograms, searchChapters } from './handbook.js';
 
 export const PORTAL_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
 const HEADERS = {
@@ -314,7 +315,7 @@ function statusBand(p, s, name, kennel) {
 }
 
 async function homePage(env, site, fam, now = new Date()) {
-  const { p, s, pup, main } = await loadContext(env, site, fam);
+  const { p, s, pup, main, photos } = await loadContext(env, site, fam);
   if (!p) return noPlacement(site, fam);
   if (isLoss(p)) return lossPage(site, fam, p, main);
   const name = pupName(p);
@@ -395,8 +396,11 @@ async function homePage(env, site, fam, now = new Date()) {
 
   const born = pup?.born_on ? new Date(`${pup.born_on}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : null;
   const facts = [born ? `<li>${ic('calendar')}Born ${esc(born)}</li>` : '', goYmd ? `<li>${ic('home')}${p.picked_up_at ? 'Went home' : 'Home'} ${esc(formatDay(goYmd).replace(/^\w+, /, ''))}</li>` : ''].join('');
-  const quick = [[stay ? '/family/stay' : '/family/timeline', stay ? 'award' : 'calendar', stay ? 'Stay updates' : 'Timeline'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records'],
-    ['/family/records#photos', 'paw', 'Photos'], ['/family/messages', 'message', 'Messages'], ['/family/account', 'user', 'Account']];
+  // The handbook, once she has a chapter families see: first in Quick links (as the
+  // prototype has it, in Account's place: Account is in the header), and Read next.
+  const chapters = live ? await shownChapters(env, site.id) : [];
+  const quick = [...(chapters.length ? [['/family/handbook', 'book', 'Handbook']] : []), [stay ? '/family/stay' : '/family/timeline', stay ? 'award' : 'calendar', stay ? 'Stay updates' : 'Timeline'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records'],
+    ['/family/records#photos', 'paw', 'Photos'], ['/family/messages', 'message', 'Messages'], ...(chapters.length ? [] : [['/family/account', 'user', 'Account']])];
   const body = `
   <section class="hero bleed">${main ? `<img src="${esc(main)}" alt="">` : `<span class="ph" aria-hidden="true">${ic('paw')}</span>`}<div class="cap"><span class="script">${esc(hello)}</span><h1>${esc(greeting)}</h1></div></section>
   <section class="bento">
@@ -412,9 +416,53 @@ async function homePage(env, site, fam, now = new Date()) {
   ${st === 'before' && statusUrl && live ? statusBand(p, s, name, kennel) : ''}
   ${live ? foodBand(s, name, food) : ''}
   ${list.length ? `<section class="sec paper bleed"><h2>Included with ${esc(name)}</h2>${programList(list, 'home', kennel)}</section>` : ''}
+  ${readNext(chapters, photos)}
   <section class="tile quick"><h2>Quick links</h2><div class="qgrid">${quick.map(([href, icon, label]) => `<a class="qtile" href="${href}"><span class="ico">${ic(icon)}</span>${label}</a>`).join('')}</div></section>
   ${list.length ? disclosure(s) : ''}`;
   return frame(site, 'Home', body, { fam, tab: '/family', action: action ? actionBar(action) : '' });
+}
+
+// ---------- the handbook (portal/handbook.js) ----------
+
+const chapterHref = (c) => `/family/handbook?open=${encodeURIComponent(c.id)}#ch-${esc(c.id)}`;
+
+// Read next on Home (plan 7.2, item 9): her first three chapters as photo rows, with
+// their own puppy's photos (after the one at the top of Home); words alone without.
+function readNext(chapters, photos) {
+  if (!chapters.length) return '';
+  const pics = photos.length > 1 ? photos.slice(1) : photos;
+  const rows = chapters.slice(0, 3).map((c, i) => {
+    const ph = pics.length ? pics[i % pics.length] : null;
+    return `<a class="prow${ph ? '' : ' words'}" href="${chapterHref(c)}">${ph ? `<span class="ph"><img src="/family/photo/${esc(ph.id)}?s=t" alt="" loading="lazy"></span>` : ''}<span class="lab">${esc(c.title)}<span class="chev">${ic('chev')}</span></span></a>`;
+  });
+  return `<section class="readnext"><div class="between"><h2>Read next</h2><a class="go" href="/family/handbook">Handbook ${ic('arrow')}</a></div><div class="prows">${rows.join('')}</div></section>`;
+}
+
+const handbookLink = (x, words, inline) => (inline
+  ? `<a class="ext" href="/family/go/${esc(x.id)}?from=handbook">${esc(words)}</a>`
+  : `<a class="btn line small" href="/family/go/${esc(x.id)}?from=handbook">${esc(words)} ${ic('arrow')}</a>`);
+
+// Her chapters, in her order, with a search box (a plain form, so it works without
+// the script). The first opens by itself, or the one Read next led to, or every match.
+async function handbookPage(env, site, fam, url) {
+  const { p, s } = await loadContext(env, site, fam);
+  const chapters = p && active(p) ? await shownChapters(env, site.id) : [];
+  if (!chapters.length) return redirect('/family');
+  const kennel = site.kennel_name || site.subdomain;
+  const q = String(url.searchParams.get('q') ?? '').trim().slice(0, 80);
+  const open = url.searchParams.get('open');
+  const programs = await linkablePrograms(env, site.id);
+  const list = searchChapters(chapters, q);
+  const vars = { name: pupName(p), kennel };
+  const linked = list.some((c) => linkedPrograms(c.body, programs).length);
+  const opened = (c, i) => (q ? true : open ? c.id === open : i === 0);
+  const body = `<section class="band"><p class="eyebrow">${esc(kennel)}</p><h1>Puppy handbook</h1><p class="small muted">Everything we tell every family, in one place.</p></section>
+    <section class="card"><form method="get" action="/family/handbook" role="search" class="hsearch"><label class="sr" for="hq">Search the handbook</label><input id="hq" type="search" name="q" value="${esc(q)}" placeholder="Search: crate, food, the first night…" maxlength="80"></form>
+    ${list.length ? `<div>${list.map((c, i) => `<details class="ch" id="ch-${esc(c.id)}"${opened(c, i) ? ' open' : ''}><summary>${esc(c.title)}</summary><div class="body">${bodyHtml(c.body, programs, vars, handbookLink)}</div></details>`).join('')}</div>`
+      : `<p class="muted">Nothing matches. Try another word.</p>`}
+    ${q ? `<p class="small"><a href="/family/handbook">Every chapter</a></p>` : ''}</section>
+    ${linked ? disclosure(s) : ''}`;
+  return frame(site, 'Puppy handbook', body, { fam });
 }
 
 // The first months, grouped by when: what she does before go-home, the first
@@ -699,8 +747,9 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
     if (path === '/family') return homePage(env, site, fam);
     if (path === '/family/vet') return vetPage(env, site, fam, { note: url.searchParams.get('note') === 'booked' ? 'Saved. Thank you!' : url.searchParams.get('note') === 'uploaded' ? 'Uploaded. Thank you!' : null });
     if (path === '/family/records') return recordsPage(env, site, fam);
-    if (fam.loss && ['/family/timeline', '/family/vet', '/family/records', '/family/messages'].includes(path)) return redirect('/family');
+    if (fam.loss && ['/family/timeline', '/family/vet', '/family/records', '/family/messages', '/family/handbook'].includes(path)) return redirect('/family');
     if (path === '/family/timeline') return timelinePage(env, site, fam);
+    if (path === '/family/handbook') return handbookPage(env, site, fam, url);
     if (path === '/family/photos') return photosPage(env, site, fam);
     if (path === '/family/stay') return stayPage(env, site, fam);
     const mm = path.match(/^\/family\/media\/([0-9a-f-]{36})$/);
