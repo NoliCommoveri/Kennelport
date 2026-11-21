@@ -105,7 +105,8 @@ read that before the rest. Update this map when you add, move or split a file.
 
 - `family.js` the family's pages under `/family`; `auth.js` family sign-in (on `src/signin.js`). Split out into
   `family/`: `icons.js`, `stay.js` (the extended stay's pieces), `files.js` (photos, files,
-  program links), `parts.js`.
+  program links), `parts.js`, `mk.js` (Home, Timeline, Vet visit and Records in the
+  Forest and Cream looks: the prototype's markup, its waves, art and icons, fed by `family.js`).
 - `admin.js` her side (Puppy families, each family's screen). Split out into `admin/`:
   `templates.js` (checklist and timeline), `handbook.js` (the handbook's chapters), `bag.js` (the go-home bag), `settings.js`, `today.js` (the Families and
   Portal tabs' lists, Today's portal part), `parts.js`.
@@ -128,7 +129,9 @@ read that before the rest. Update this map when you add, move or split a file.
 - `view.js` her read-only view of a family's portal (`plans/done/family-view.md`): the view
   link and the view cookie; `family.js` refuses every write under one.
 - `looks.js` the portal's looks (Classic, Forest, Cream; migration 0042), chosen on her
-  settings screen; each look but Classic is stylesheets and art in `public/_kp/f/looks/`.
+  settings screen; each look but Classic is stylesheets in `public/_kp/f/looks/` (`mockup.css`,
+  then the look's own): a port of the prototype's CSS for the four pages `family/mk.js` draws
+  (`body.mkp`), and the looks' colours for the other pages.
 - `feed.js` KennelOS's family feed. `version.js`: `PORTAL_VERSION`; files in `public/_kp/f/` (with `food-bowl.webp` and `insurance-shield.webp`, the food band's pictures)
   (ask before bumping).
 
@@ -155,6 +158,12 @@ read that before the rest. Update this map when you add, move or split a file.
 
 - `scripts/fingerprint.mjs`: the fingerprints for the three versions. `scripts/schemes.mjs`:
   writes the scheme CSS. `scripts/cpu-check.mjs`: CPU time of publish and render.
+- `scripts/portal-current-snapshots.mjs`: the live portal for the prototype's sample family
+  on its four dates, per look, as standalone `.html` files (run with `node --test`, not
+  part of the test run). `scripts/portal-looks-check.mjs`: measures those against the
+  published prototype (`docs/reference/portal-looks.html`), component by component:
+  computed styles, pixels (a port of pixelmatch), the whole page; a table, and exit 1 on
+  a fail. Both files' tops say how to run them.
 - `tests/`: one `*.test.js` per area, named after it (`portal-feed.test.js`,
   `blocks.test.js`…). `tests/helpers/`: a D1 over `node:sqlite` (`d1.js`), a staging-like
   environment and calls as any host (`env.js`), the Worker loaded with its `.sql` hook

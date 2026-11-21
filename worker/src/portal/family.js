@@ -10,7 +10,8 @@
 // every photo and file is checked against the signed-in family's own placement.
 //
 // Split out into family/ (docs/review/senior-review-2026-11.md, item 7): icons.js,
-// stay.js, files.js, and parts.js, the pieces they share.
+// stay.js, files.js, and parts.js, the pieces they share; mk.js draws Home, Timeline,
+// Vet visit and Records in the mockup looks (Forest, Cream), from what these pages work out.
 import { schemaReady } from '../gate.js';
 import { escapeHtml as esc, htmlPage } from '../lib/html.js';
 import {
@@ -32,6 +33,7 @@ import { messagesOpen, thread, unreadFrom, markRead, familyWrites, isLoss, erase
 import { TYPE_ICON, SPRITE, ic } from './family/icons.js';
 import { skillsList, updateCard, stayContext } from './family/stay.js';
 import { active } from './family/parts.js';
+import * as mk from './family/mk.js';
 import { familyBag } from './bag.js';
 import { pupOf, photosOf } from './pups.js';
 import { servePhoto, serveFile, goToProgram } from './family/files.js';
@@ -67,25 +69,34 @@ const LOSS_TABS = [['/family', 'home', 'Home'], ['/family/photos', 'paw', 'Photo
 // During an extended stay, Stay takes Timeline's place (plan 8.5).
 const STAY_TABS = [['/family', 'home', 'Home'], ['/family/stay', 'award', 'Stay'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records']];
 
-function frame(site, title, body, { status = 200, fam = null, tab = null, action = '', headers = {}, bare = false, script = null, page = null } = {}) {
+function frame(site, title, body, { status = 200, fam = null, tab = null, action = '', headers = {}, bare = false, script = null, page = null, mkp = false } = {}) {
   const kennel = site.kennel_name || site.subdomain;
   const list = fam ? (fam.loss ? LOSS_TABS : fam.stay ? STAY_TABS : TABS).map((t) => (t[0] === '/family/vet' && fam.vetDone ? fam.afterVet : t)) : [];
-  const tabs = fam ? `<nav class="tabs" aria-label="Portal">${list
-    .map(([href, icon, label]) => `<a href="${href}"${tab === href ? ' aria-current="page"' : ''}>${ic(icon)}<span>${label}</span></a>`).join('')}</nav>` : '';
+  // In a look other than Classic (portal/looks.js) the tabs and the header are the mockup's
+  // (family/mk.js): its icons, the tabs in a row, Messages first in the header.
+  const look = !bare && isLook(site);
+  const tabLinks = list.map(([href, icon, label]) => `<a href="${href}"${tab === href ? ' aria-current="page"' : ''}>${look ? mk.lk(icon) : ic(icon)}<span>${label}</span></a>`).join('');
+  const tabs = fam ? `<nav class="tabs" aria-label="Portal">${look ? `<div class="in">${tabLinks}</div>` : tabLinks}</nav>` : '';
+  const aa = '<button type="button" class="aa" id="aa" aria-label="Text size">Aa</button>';
+  const msgs = fam && !fam.loss ? `<a class="acct" href="/family/messages" aria-label="${fam.unread ? `Messages, ${fam.unread} new` : 'Messages'}">${ic('message')}${fam.unread ? `<b class="small">${fam.unread}</b>` : ''}</a>` : '';
   return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>${esc(title)}${fam?.viewing ? ' (viewing)' : ''} · ${esc(kennel)}</title>
 <link rel="stylesheet" href="/_kp/f/portal.css?v=${PORTAL_VERSION}">${(bare ? [] : LOOKS[site.portalLook]?.css ?? []).map((c) => `\n<link rel="stylesheet" href="/_kp/f/looks/${c}.css?v=${PORTAL_VERSION}">`).join('')}
 <script src="/_kp/f/portal.js?v=${PORTAL_VERSION}" defer></script>${script ? `\n<script src="/_kp/f/${script}?v=${PORTAL_VERSION}"></script>` : ''}
-</head><body class="${bare ? 'bare' : fam ? 'in' : 'out'}${page || tab ? ` pg-${page ?? tab.split('/')[2] ?? 'home'}` : ''}"${!bare && site.portalLook && site.portalLook !== 'classic' ? ` data-look="${site.portalLook}"` : ''}>
-${SPRITE}
-${bare ? `${fam?.viewing ? fam.band : ''}${body}` : `<header class="top"><a class="brand" href="/family">${brandMark(site)}<span class="bt"><b>${esc(kennel)}</b><span class="sub">${ic('paw')}Puppy Parent Portal</span></span></a>
-<span class="top-end"><button type="button" class="aa" id="aa" aria-label="Text size">Aa</button>${fam && !fam.loss ? `<a class="acct" href="/family/messages" aria-label="${fam.unread ? `Messages, ${fam.unread} new` : 'Messages'}">${ic('message')}${fam.unread ? `<b class="small">${fam.unread}</b>` : ''}</a>` : ''}${fam ? `<a class="acct" href="/family/account" aria-label="Account">${ic('user')}</a>` : ''}</span></header>
+</head><body class="${bare ? 'bare' : fam ? 'in' : 'out'}${page || tab ? ` pg-${page ?? tab.split('/')[2] ?? 'home'}` : ''}${look && mkp ? ` mkp${action ? ' has-bar' : ''}` : ''}"${!bare && site.portalLook && site.portalLook !== 'classic' ? ` data-look="${site.portalLook}"` : ''}>
+${SPRITE}${look ? `\n${mk.LOOK_SPRITE}` : ''}
+${bare ? `${fam?.viewing ? fam.band : ''}${body}` : `<header class="top">${look ? '<div class="in">' : ''}<a class="brand" href="/family">${brandMark(site)}<span class="bt"><b>${esc(kennel)}</b><span class="sub">${ic('paw')}Puppy Parent Portal</span></span></a>
+<span class="top-end">${look ? `${msgs}${aa}` : `${aa}${msgs}`}${fam ? `<a class="acct" href="/family/account" aria-label="Account">${ic('user')}</a>` : ''}</span>${look ? '</div>' : ''}</header>
 <main>${fam?.viewing ? fam.band : ''}${body}</main>
 ${action}${tabs}`}
 </body></html>`, { status, headers: { ...HEADERS, ...headers } });
 }
+
+const isLook = (site) => Boolean(site.portalLook && site.portalLook !== 'classic');
+// family.js's own helpers, for the looks' pages (family/mk.js).
+const H = () => ({ MON, taskWord, calPage, clock, inDays, formatDay, formatAt, localParts, timeLeft, openTasks, deadlineLine, bookedWords, STATUS_PATH });
 
 // A heading's icon: shown by the looks other than Classic (portal/looks.js), hidden in Classic.
 const hh = (icon) => `<span class="hico" aria-hidden="true">${ic(icon)}</span>`;
@@ -355,7 +366,7 @@ const inDays = (n) => (n > 1 ? `${n} days` : n === 1 ? 'Tomorrow' : n === 0 ? 'T
 // Numbered steps on soft blobs (the vet visit, what's next).
 const numSteps = (items) => `<ol class="numsteps">${items.map((it, i) => `<li${it.done ? ' class="done"' : ''}><span class="num" aria-hidden="true">${it.done ? ic('check') : i + 1}</span><div><h3>${it.h}</h3>${it.p ? `<p>${it.p}</p>` : ''}${it.act ?? ''}</div></li>`).join('')}</ol>`;
 // The bar pinned above the tabs: one thing to do now.
-const actionBar = (x) => `<div class="actionbar" role="region" aria-label="Do this now"><div class="in"><span class="ico">${ic(x.icon)}</span><p><b>${x.title}</b>${x.sub ?? ''}</p><a class="btn solid small" href="${x.href}">${x.label}</a></div></div>`;
+const actionBar = (x, look = false) => `<div class="actionbar" role="region" aria-label="Do this now"><div class="in"><span class="ico">${look ? mk.lk({ clock: 'vet', calendar: 'cal', list: 'cal' }[x.icon] ?? x.icon) : ic(x.icon)}</span><p><b>${x.title}</b>${x.sub ?? ''}</p><a class="btn solid small" href="${x.href}">${look && x.icon === 'clock' ? mk.lk('up') : ''}${x.label}</a></div></div>`;
 // Before pickup the status page keeps payments, extras and pickup (plan 3.4). The
 // family's wording here is the owner's (2026-11-18).
 function statusBand(p, s, name, kennel) {
@@ -416,14 +427,6 @@ async function homePage(env, site, fam, now = new Date()) {
         { done: Boolean(p.proof_uploaded_at), h: `See the vet by ${esc(formatAt(p.vet_deadline_at, s.time_zone))}`, p: 'Bring this portal\'s Records page.' },
         { done: Boolean(p.proof_uploaded_at), h: p.proof_uploaded_at ? 'Record uploaded' : 'Upload the record', p: p.proof_uploaded_at ? (p.proof_accepted_at ? `Accepted by ${esc(kennel)}.` : `${esc(kennel)} will check it.`) : 'A photo or PDF of the vet\'s record is fine.', act: p.proof_uploaded_at ? '' : '<a class="btn solid small" href="/family/vet#proof">Upload vet record</a>' },
       ])}<p class="small muted">This is a reminder. Your contract sets the requirement and the deadline.</p></section>`;
-    // In a look other than Classic the steps are on the Vet visit page; Home has the
-    // vet card (the clock row) and the vet row, each look showing one (looks/*.css).
-    if (site.portalLook && site.portalLook !== 'classic') {
-      const left = p.proof_uploaded_at ? (p.proof_accepted_at ? `Accepted by ${esc(kennel)}` : 'Record uploaded') : `${esc(timeLeft(p.vet_deadline_at, now))} left`;
-      band = `<section class="card lookonly vetcard"><p class="eyebrow">Your contract's 3-day visit</p><h2>${esc(name)}'s vet visit</h2>
-        ${p.proof_uploaded_at ? `<p class="status ok">${ic('check')} ${left}</p>` : `<div class="timer"><span class="clockdot">${ic('clock')}</span><p><b>${left}</b>Vet visit due ${esc(formatAt(p.vet_deadline_at, s.time_zone))}</p><a class="btn solid small" href="/family/vet#proof">Upload</a></div>`}</section>
-        <a class="lookonly vetrow" href="/family/vet"><span class="vr-i">${ic('stethoscope')}</span><span class="vr-t"><b>${esc(name)}'s vet visit</b><span>${left}</span></span><span class="vr-c">${ic('chev')}</span></a>`;
-    }
     if (!p.proof_uploaded_at) action = { icon: 'clock', title: `${esc(timeLeft(p.vet_deadline_at, now))} left`, sub: `Vet visit due ${esc(formatAt(p.vet_deadline_at, s.time_zone))}`, href: '/family/vet#proof', label: 'Upload' };
     const soon = openTasks(steps.tasks.filter((t) => t.auto !== 'vet_visit' && t.auto !== 'vet_booking'), 2);
     if (soon.length) band += `<section class="card c-paper"><div class="between"><h2>${hh('calendar')}Coming up</h2><a class="go" href="/family/timeline">All ${ic('arrow')}</a></div><ul class="tasks">${soon.map((t) => taskRow(t, kennel, 'home')).join('')}</ul></section>`;
@@ -481,6 +484,24 @@ async function homePage(env, site, fam, now = new Date()) {
   ${st === 'before' && statusUrl && live ? statusBand(p, s, name, kennel) : ''}
   ${rest.length ? `<section class="sec sand bleed"><h2>${hh('paw')}Recommended for ${esc(name)}</h2>${programList(rest, 'home', kennel)}</section>` : ''}
   ${readNext(chapters, photos)}`.trim();
+  if (isLook(site)) {
+    const h = H();
+    const c = {
+      p, s, st, name, kennel, now, days, goYmd, statusUrl, main, sex, hello, greeting, tasks: steps.tasks, next: openTasks(steps.tasks, 1)[0],
+      breed: site.breed || pup?.litter_name, expected: st === 'before' && p.pickup_booked_at ? vetDeadline(p.pickup_booked_at, s.vet_rule, s.time_zone) : null,
+      facts: [born ? ['cal', `Born ${born}`] : null, goYmd ? ['home', `${p.picked_up_at ? 'Came home' : 'Home'} ${formatDay(goYmd).replace(/^\w+, /, '')}`] : null].filter(Boolean),
+      contactsLead: contactsLead(p, s, now), rest, food, ins, extra, phone: s.her_phone || site.contact_phone, email: s.her_email || site.contact_email, v: vetOf(p, s), dialable,
+      quick: quick.map(([href, icon, label]) => [href, icon === 'paw' ? 'image' : icon, label]),
+      disclosure: list.length ? disclosure(s) : '',
+    };
+    c.tile = stay ? calendar : mk.homeTile(c, h);
+    c.band = stay ? mk.mkCard('star', `How ${esc(name)} is doing`, `${skillsList(stay.progress, { compact: true })}${stay.updates[0] ? `<p class="small">${esc((stay.updates[0].note ?? '').slice(0, 220))}${(stay.updates[0].note ?? '').length > 220 ? '…' : ''}</p>` : ''}`, { aside: `<a class="go" href="/family/stay">All ${mk.lk('chev')}</a>` }) : mk.homeBand(c, h);
+    c.food = live ? mk.foodDuo({ s, name, food, ins, extra, kennel }) : '';
+    c.checklist = st === 'before' && (days === null || days <= 14) ? mk.checklist(steps.checklist) : '';
+    c.statusBand = st === 'before' && statusUrl && live ? `<section class="mk"><div class="mk-b pt">${statusBand(p, s, name, kennel).replace(/^<section class="sec paper bleed">/, '<div class="stack sb">').replace(/<\/section>$/, '</div>')}</div></section>` : '';
+    c.readNext = mk.readNext(chapters.length ? readRows(chapters, photos) : []);
+    return frame(site, 'Home', mk.home(c, h), { mkp: true, fam, tab: '/family', action: action ? actionBar(action, true) : '' });
+  }
   const body = `
   <section class="hero bleed">${main ? `<img src="${esc(main)}" alt="">` : `<span class="ph" aria-hidden="true">${ic('paw')}</span>`}<div class="cap"><span class="script">${esc(hello)}</span><h1>${esc(greeting)}</h1></div></section>
   <section class="bento">
@@ -505,12 +526,14 @@ const chapterHref = (c) => `/family/handbook#ch-${esc(c.id)}`;
 // their own puppy's photos (after the one at the top of Home); words alone without.
 function readNext(chapters, photos) {
   if (!chapters.length) return '';
+  return `<section class="readnext"><div class="between"><h2>${hh('book')}Read next</h2><a class="go" href="/family/handbook">Handbook ${ic('arrow')}</a></div><div class="prows">${readRows(chapters, photos).join('')}</div></section>`;
+}
+function readRows(chapters, photos) {
   const pics = photos.length > 1 ? photos.slice(1) : photos;
-  const rows = chapters.slice(0, 3).map((c, i) => {
+  return chapters.slice(0, 3).map((c, i) => {
     const ph = pics.length ? pics[i % pics.length] : null;
     return `<a class="prow${ph ? '' : ' words'}" href="${chapterHref(c)}">${ph ? `<span class="ph"><img src="/family/photo/${esc(ph.id)}?s=t" alt="" loading="lazy"></span>` : ''}<span class="lab">${esc(c.title)}<span class="chev">${ic('chev')}</span></span></a>`;
   });
-  return `<section class="readnext"><div class="between"><h2>${hh('book')}Read next</h2><a class="go" href="/family/handbook">Handbook ${ic('arrow')}</a></div><div class="prows">${rows.join('')}</div></section>`;
 }
 
 const handbookLink = (x, words, inline) => (inline
@@ -629,6 +652,11 @@ async function timelinePage(env, site, fam, { error } = {}, now = new Date()) {
   const list = await programsFor(env, site.id, p);
   const born = pup?.born_on ? `${esc(name)}'s birthday (${esc(formatDay(pup.born_on))})` : null;
   const pickup = home ? `${p.picked_up_at ? 'pickup' : 'go-home'} (${esc(formatDay(home))})` : null;
+  if (isLook(site)) {
+    const dated = [born, pickup].filter(Boolean).length ? `Dated from ${[born, pickup].filter(Boolean).join(' and ')}. ` : '';
+    const page = mk.timeline({ name, kennel, groups, dated, list, disclosure: disclosure(s), checklistLink: stage(p, now) === 'before' && checklist.length }, H());
+    return frame(site, 'Timeline', `${errorBox(error)}${page}`, { mkp: true, fam, tab: '/family/timeline', status: error ? 400 : 200 });
+  }
   const body = `${errorBox(error)}<section class="band"><p class="eyebrow">${esc(name)}'s first months</p><h1>Timeline</h1>
     <p class="small muted">${[born, pickup].filter(Boolean).length ? `Dated from ${[born, pickup].filter(Boolean).join(' and ')}. ` : ''}Mark a step done and its reminders stop.</p></section>
     ${groups.length ? groups.map(([g, l], i) => `<section class="card ${i % 2 ? 'c-paper' : 'c-green'}"><h2>${hh('calendar')}${esc(g)}</h2><ul class="tasks">${l.map((t) => taskRow(t, kennel, 'timeline')).join('')}</ul></section>`).join('')
@@ -649,6 +677,10 @@ async function vetPage(env, site, fam, { error, note } = {}, now = new Date()) {
     const kennel = site.kennel_name || site.subdomain;
     const accepted = Boolean(p.proof_accepted_at);
     const seen = p.vet_booked_for ? `Seen ${esc(bookedWords(p.vet_booked_for))}${p.vet_clinic ? ` at ${esc(p.vet_clinic)}` : ''}. ` : p.vet_clinic ? `Seen at ${esc(p.vet_clinic)}. ` : '';
+    if (isLook(site)) {
+      const page = mk.vetDone({ accepted, kennel, name, seen, uploaded: formatAt(p.proof_uploaded_at, s.time_zone), proofId: proof.id });
+      return frame(site, 'Vet visit', `${noteBox(note)}${errorBox(error)}${page}`, { mkp: true, fam, tab: fam.vetDone ? null : '/family/vet', page: 'vet', status: error ? 400 : 200 });
+    }
     const done = `${noteBox(note)}${errorBox(error)}
   <section class="card c-sand vethead"><p class="eyebrow">The vet visit</p>
     <h1>${accepted ? `${esc(name)}'s vet visit is done` : 'Record uploaded: thank you'}</h1>
@@ -662,6 +694,16 @@ async function vetPage(env, site, fam, { error, note } = {}, now = new Date()) {
       <button class="btn line">${ic('upload')} Upload</button>
     </form></details>`}`;
     return frame(site, 'Vet visit', done, { fam, tab: fam.vetDone ? null : '/family/vet', page: 'vet', status: error ? 400 : 200 });
+  }
+  if (isLook(site)) {
+    const due = running && p.vet_deadline_at;
+    const page = mk.vet({
+      p, name, kennel: site.kennel_name || site.subdomain, proof, day: bookedDay ?? '', time: bookedTime ?? '', proofNote: s.proof_note,
+      uploaded: proof ? formatAt(p.proof_uploaded_at, s.time_zone) : '',
+      h1: due ? `Due by ${esc(formatAt(p.vet_deadline_at, s.time_zone))}` : `Book ${esc(name)}'s first vet visit`,
+      rule: `${esc(VET_RULES[s.vet_rule])}${due ? `: by ${deadlineLine(p.vet_deadline_at, s)}${Date.parse(p.vet_deadline_at) > now.getTime() ? `, ${esc(timeLeft(p.vet_deadline_at, now))} from now` : ''}.` : `. The clock starts when you take ${esc(name)} home.`}`,
+    });
+    return frame(site, 'Vet visit', `${noteBox(note)}${errorBox(error)}${page}`, { mkp: true, fam, tab: '/family/vet', status: error ? 400 : 200 });
   }
   const body = `${noteBox(note)}${errorBox(error)}
   <section class="card c-sand vethead"><p class="eyebrow">The vet visit</p>
@@ -706,6 +748,17 @@ async function recordsPage(env, site, fam) {
   const contract = p.contract_file_id ? await getFile(env, site.id, p.contract_file_id) : null;
   const row = (k, v) => (v ? `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>` : '');
   const reg = pup?.registration ? `${pup.registration === 'full' ? 'Full' : 'Limited'}${pup.registry ? ` (${pup.registry})` : ''}` : null;
+  if (isLook(site)) {
+    const kennel = site.kennel_name || site.subdomain;
+    const facts = [['Name', p.call_name && p.call_name !== p.puppy_name ? `${p.call_name} (${p.puppy_name} here)` : p.puppy_name], ['Litter', pup?.litter_name], ['Born', pup?.born_on ? formatDay(pup.born_on) : null],
+      ['Sex', pup ? (pup.sex === 'female' ? 'Female' : 'Male') : null], ['Colour', pup?.color], ['Parents', [pup?.dam_call || pup?.dam_name, pup?.sire_call || pup?.sire_name].filter(Boolean).join(' × ') || null],
+      ['Microchip', p.microchip], ['Registration', reg], ['Registration number', p.registration_no], [p.picked_up_at ? 'Came home' : 'Coming home', goHomeWords(p, s)]].filter(([, v]) => v);
+    const page = mk.records({
+      name, kennel, facts, records: records.map((r) => [formatDay(r.given_on), r.name, r.notes, RECORD_TYPES[r.type]]), contractId: contract?.id, proofId: p.proof_file_id,
+      bag: mk.bag(bag, name, kennel, disclosure(s)), photos, phone: s.her_phone || site.contact_phone, email: s.her_email || site.contact_email, v: vetOf(p, s), dialable,
+    });
+    return frame(site, 'Records', page, { mkp: true, fam, tab: '/family/records' });
+  }
   const body = `<section class="card c-sand mypup"><p class="eyebrow">${hh('paw')}My puppy</p><h1 class="script">${esc(name)}</h1>
     <dl class="facts">
       ${row('Name', p.call_name && p.call_name !== p.puppy_name ? `${p.call_name} (${p.puppy_name} here)` : p.puppy_name)}

@@ -2369,3 +2369,53 @@ a cover with Boop to open, pages turned by arrows, swipe or keys, Contents with 
 With the owner's yes: `PORTAL_VERSION` 5 → 6 (`PORTAL_FILES` e692d88236fdb4b2), for the
 three card colours, the looks (`looks/`, the heading icons) and the Next up fix, so phones
 pick them up at once. All tests pass.
+
+## 2026-11-21: Forest and Cream drawn as the prototype draws them
+
+The owner: make the live portal's Forest and Cream looks match the prototype
+(`docs/reference/portal-looks.html`) exactly. Before, the looks were stylesheets over
+Classic's markup; the prototype's mockup layer uses its own markup (mkHome, mkTimeline,
+mkVet, mkRecords, mkCard, the waves and the art), so the two could only come close.
+- `src/portal/family/mk.js` (new): Home, Timeline, Vet visit and Records in a look other
+  than Classic, in the prototype's markup (section.mk with its header strip, the herocard
+  with the wave, the peach tile, the vet card and vet row, food and insurance side by
+  side, Timeline's green head over a cream page, the vet sheet with the swoosh or the
+  drawn stethoscope, My puppy with the Boston), fed by what `family.js` already works out.
+  The gradients and the prototype's icon drawings go on look pages only (`LOOK_SPRITE`,
+  ids `i-k-*`); the header has Messages first and the tabs a row of four (`frame`).
+  Classic's pages are untouched: all 20 sample pages' HTML byte-identical and their
+  light and dark screenshots identical to the pixel, before and after.
+- Uploads in the looks are the prototype's button (a label with a hidden file input); it
+  sends itself once a file is picked (`portal.js`, `data-send`), with a `<noscript>`
+  button. The looks' checklist is the prototype's ticks, each a form that sends itself
+  (the box first, then a hidden done=0, so an unticked box sends 0).
+- `public/_kp/f/looks/`: `mockup.css` and `forest.css` are now, for the four pages
+  (`body.mkp`), a port of the prototype's CSS (its base and its mockup layer, rule for
+  rule, each selector keeping its weight: `.fam X` is `.mkp.in X`, a plain `X` is
+  `.mkp X`, the Forest rules `body[data-look="forest"].mkp.in X`), then the few rules
+  the live markup needs (the header's, the forms', a live `.facts`, `.task`, `.eyebrow`,
+  `.gallery` rule reset). The other pages keep the looks' earlier rules, scoped to
+  `:not(.mkp)`. `cream.css` is almost empty: Cream is mockup.css's default. The art
+  `.svg` files are gone (the art is inline now).
+- `scripts/portal-looks-check.mjs` finished: the component map, computed styles of each
+  component and (where both are built alike) of every element inside, a pixelmatch port
+  per component and for the whole page, a table (check.md, check.json) and exit 1 on a
+  fail. Final run (2 looks × 4 dates × 4 pages × light and dark, against the prototype in
+  light): 1228 of 1228 rows pass; no computed style differs anywhere. 560 components with
+  the same content on both sides are held to pixels too: the most any differs is 0.75%.
+  576 rows whose content differs are held to their styles (not size or pixels), with
+  their parts measured on rows of their own; 28 are KNOWN (on one side only, on purpose).
+  The whole Vet visit page is 0.0% apart; Home, Timeline and Records differ as pages by
+  their content (Home 29–44%, Timeline 7–22%, Records 19–36%).
+- Content that differs on purpose, listed in the checker (KNOWN) or measured by its parts:
+  the hero photo (Opal live); times ("11:00 AM EST"); Recommended, Read next and the slim
+  third food card (AKC) live; the food card's three ticks and food name; the contacts
+  heading ("Questions about Opal? One tap"); Oct 28 (the prototype's birthday tile, live
+  all caught up); no status band (the sample has no status page); the checklist's forms;
+  the vet page's wording; Records' Microchip and Colour rows; the header's message and
+  account icons.
+- Tests: `portal-looks.test.js` for the new hooks (body.mkp, the sprite, herocard, waves,
+  the vet card and row, Upload's form, the header's order, the timeline head, the vet
+  sheet, My puppy; none of it in Classic) and the checklist's ticks. All pass but the
+  version check: `PORTAL_VERSION` is 6 on `main`, so these changes need 7. **Asked the
+  owner.** No migration.
