@@ -2280,3 +2280,11 @@ https://claude.ai/artifact/9APC1R1PumMwC9xU88etDe. Prototype only: the live port
   chevron); shiny buttons (gold for Upload in Forest); the vet page's art (Cream: a green
   swoosh with a mint edge and a white stethoscope; Forest: a drawn stethoscope); the reminder's
   icon in a gold ring; a Boston sketch on My puppy in Forest.
+- Third pass (the owner: the waves had no graded colour, the vet swoosh was crude, and the top
+  pieces showed card edges): both looks now keep the mockups' colours in dark mode (her phone
+  is in dark mode, which had turned the cream cards charcoal); each wave is one curve drawn
+  in seven layers, each lower and a shade on, softened, so the colour grades along it (mint
+  into green in Cream, a gold band in Forest); the vet swoosh is an S in proportion, a mint
+  glow under a lighter green under the deep green; Timeline's head and page and the vet
+  page's head run edge to edge with no card edges (Cream's vet page is one cream sheet), and
+  Home's photo and tiles sit on the page itself.

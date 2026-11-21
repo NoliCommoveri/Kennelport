@@ -496,16 +496,6 @@ details.hist li b { font-weight: 700; color: var(--muted); }
   --mk-shadow: 0 1px 0 rgba(255,255,255,.5) inset, 0 6px 16px rgba(0,0,0,.22); --mk-on: #4C8A5B;
   --mk-leaf-hi: #3F7550; --mk-peach-2: #F3D2B2;
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --mk-canvas: #0F1D15; --mk-canvas-2: #0B160F; --mk-card: #1C2620; --mk-card-h: #233029; --mk-line: #33433A;
-  --mk-ink: #ECE7DC; --mk-muted: #A9A294; --mk-leaf: #9CC6A3; --mk-leaf-ink: #0F1A12; --mk-soft: #2A4031; --mk-soft-line: #4F7958;
-  --mk-peach: #3B2B1D; --mk-peach-h: #F0C08A; --mk-pup: #18352A; --mk-pup-ink: #ECE7DC; --mk-gold: #D9B870; --mk-wave: #2C5038;
-  --mk-shadow: 0 6px 16px rgba(0,0,0,.4); --mk-on: #3B6E48; --mk-leaf-hi: #B9DCBE; --mk-peach-2: #2E2117; } }
-:root[data-theme="dark"] {
-  --mk-canvas: #0F1D15; --mk-canvas-2: #0B160F; --mk-card: #1C2620; --mk-card-h: #233029; --mk-line: #33433A;
-  --mk-ink: #ECE7DC; --mk-muted: #A9A294; --mk-leaf: #9CC6A3; --mk-leaf-ink: #0F1A12; --mk-soft: #2A4031; --mk-soft-line: #4F7958;
-  --mk-peach: #3B2B1D; --mk-peach-h: #F0C08A; --mk-pup: #18352A; --mk-pup-ink: #ECE7DC; --mk-gold: #D9B870; --mk-wave: #2C5038;
-  --mk-shadow: 0 6px 16px rgba(0,0,0,.4); --mk-on: #3B6E48; --mk-leaf-hi: #B9DCBE; --mk-peach-2: #2E2117; }
 
 body:has(.fam) { background: var(--mk-canvas); }
 .fam { --surface: var(--mk-card); --line: var(--mk-line); --ink: var(--mk-ink); --muted: var(--mk-muted); --accent: var(--mk-leaf); --accent-ink: var(--mk-leaf-ink);
@@ -639,21 +629,13 @@ html[data-zoom="3"] .duo2 { grid-template-columns: 1fr; }
    A layer over the cream look, switched on by html[data-look="forest"]: deep green cards
    with a green header strip, gold icons and cream titles, and the content on a cream panel
    inside; gold for the one button that matters most; an olive-gold pill for the tab
-   you're on. In dark mode the panels go dark and the gold stays. */
+   you're on. Both looks keep their colours in dark mode, as the mockups do. */
 :root {
   --fo-page: #123222; --fo-card: #183B2A; --fo-card-h: #21473A; --fo-edge: rgba(217,178,106,.28); --fo-title: #F4ECDA;
   --fo-gold: #D9B26A; --fo-gold-1: #F0D394; --fo-gold-2: #C9973F; --fo-gold-ink: #2A2110;
   --fo-panel: #F4ECDA; --fo-panel-h: #EADFC6; --fo-panel-line: #D6C7A4; --fo-panel-ink: #1F2A22; --fo-panel-muted: #5D5848;
   --fo-btn: #1E4A33; --fo-btn-ink: #F4ECDA; --fo-soft: #F8F2E4; --fo-soft-line: #BFAE86; --fo-tab: #5A6A3A; --fo-tab-ink: #F3D99A; --fo-btn-hi: #2C6447; --fo-icon: #1E4A33;
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --fo-page: #0B1A12; --fo-card: #122A1E; --fo-card-h: #183527; --fo-title: #ECE3CF;
-  --fo-panel: #20271F; --fo-panel-h: #283126; --fo-panel-line: #3A4535; --fo-panel-ink: #ECE7DC; --fo-panel-muted: #ABA48F;
-  --fo-btn: #2D6145; --fo-btn-ink: #F4ECDA; --fo-soft: #2A3328; --fo-soft-line: #59684C; --fo-tab: #45532C; --fo-btn-hi: #3A7556; --fo-icon: #9CC6A3; } }
-:root[data-theme="dark"] {
-  --fo-page: #0B1A12; --fo-card: #122A1E; --fo-card-h: #183527; --fo-title: #ECE3CF;
-  --fo-panel: #20271F; --fo-panel-h: #283126; --fo-panel-line: #3A4535; --fo-panel-ink: #ECE7DC; --fo-panel-muted: #ABA48F;
-  --fo-btn: #2D6145; --fo-btn-ink: #F4ECDA; --fo-soft: #2A3328; --fo-soft-line: #59684C; --fo-tab: #45532C; --fo-btn-hi: #3A7556; --fo-icon: #9CC6A3; }
 
 html[data-look="forest"] body:has(.fam), html[data-look="forest"] .fam { background: var(--fo-page); }
 /* Inside the cream panels, every card token reads as the panel. */
@@ -802,6 +784,61 @@ html[data-look="forest"] .fam .mk-head.cream h1 { max-width: 62%; }
 .mk label.btn { display: inline-flex; font-weight: 700; }
 .mk-head.green { border-radius: var(--rc) var(--rc) 0 0; }
 .fam .timeline-body { margin-top: -.7rem; padding-top: .3rem; }
+
+/* ---------- Third pass (the owner: graded waves, a real swoosh, no card edges at the top) ---------- */
+/* The looks are the mockups' colours on any phone, dark mode or not. */
+.fam { color-scheme: light; --head: #1E3A2A; --head-ink: #F5F2EA; --head-muted: #B9C8BC; }
+html[data-look="forest"] .fam { --head: var(--fo-page); }
+.fam header.app { box-shadow: 0 2px 8px rgba(0,0,0,.25); position: relative; z-index: 2; }
+
+/* The waves, layer by layer: a soft shadow above, a pale edge, then the green grading down
+   into what follows (Cream); a gold band, then the green (Forest). */
+.wave { height: 3.6rem; bottom: -1px; }
+.wave path { fill: none; }
+.wave .l0 { fill: rgba(0,0,0,.3); }
+.hero .wave .l1 { fill: #E4F3D8; } .hero .wave .l2 { fill: #A3CF9A; } .hero .wave .l3 { fill: #5E9B65; }
+.hero .wave .l4 { fill: #36693F; } .hero .wave .l5 { fill: #254A33; } .hero .wave .l6 { fill: #1F3D2B; }
+html[data-look="forest"] .hero .wave .l1 { fill: url(#g-gold); } html[data-look="forest"] .hero .wave .l2 { fill: url(#g-gold2); }
+html[data-look="forest"] .hero .wave .l3 { fill: #24503A; } html[data-look="forest"] .hero .wave .l4 { fill: #1F4534; }
+html[data-look="forest"] .hero .wave .l5 { fill: #1B3D2D; } html[data-look="forest"] .hero .wave .l6 { fill: #193A2A; }
+.mk-head .wave .l0 { fill: rgba(0,0,0,.22); }
+.mk-head .wave .l1 { fill: #33663F; } .mk-head .wave .l2 { fill: #4F8A57; } .mk-head .wave .l3 { fill: #84BA7E; }
+.mk-head .wave .l4 { fill: #C6E0BA; } .mk-head .wave .l5, .mk-head .wave .l6 { fill: #F6F1E4; }
+html[data-look="forest"] .mk-head .wave .l1 { fill: url(#g-gold); } html[data-look="forest"] .mk-head .wave .l2 { fill: url(#g-gold2); }
+html[data-look="forest"] .mk-head .wave .l3, html[data-look="forest"] .mk-head .wave .l4, html[data-look="forest"] .mk-head .wave .l5, html[data-look="forest"] .mk-head .wave .l6 { fill: var(--fo-panel); }
+
+/* Home: the photo and the tiles under it sit on the page itself, no card edge. */
+.herocard { border: 0; box-shadow: none; background: linear-gradient(#1F3D2B, var(--mk-canvas) 85%); }
+.herocard .hero .cap { padding-bottom: 3.6rem; }
+html[data-look="forest"] .herocard { border: 0; background: linear-gradient(#193A2A, var(--fo-page) 85%); }
+
+/* Timeline: the green head runs edge to edge from the bar above, the wave carries it into a
+   cream page, and the cards sit on that. */
+.fam .mk-head.green.bleed { border: 0; border-radius: 0; box-shadow: none; padding: 1.1rem max(16px, env(safe-area-inset-left, 0px)) 4rem;
+  background: radial-gradient(circle at 85% 0%, rgba(255,255,255,.07), transparent 60%), linear-gradient(var(--mk-canvas), #23462F); }
+.fam .timeline-body.bleed { border: 0; border-radius: 0; margin-top: -.7rem; padding: .3rem max(10px, env(safe-area-inset-left, 0px)) 1.4rem; background: #F6F1E4; min-height: 50vh; }
+.timeline-body .mk { background: linear-gradient(#FCF9F1, #F5EFE2); }
+html[data-look="forest"] .fam .mk-head.green.bleed { background: radial-gradient(circle at 85% 0%, rgba(255,255,255,.06), transparent 60%), linear-gradient(var(--fo-page), var(--fo-card)); }
+html[data-look="forest"] .fam .timeline-body.bleed { background: var(--fo-panel); }
+
+/* Vet visit (Cream): one cream sheet under the bar, its head carrying the swoosh. */
+.sheet { margin-top: .5rem; border-radius: 22px 22px 0 0; background: linear-gradient(#F9F5EA, #F1EAD8); padding: 0 .7rem 1.2rem; display: grid; gap: .7rem; min-height: calc(100vh - 9rem); box-shadow: 0 -2px 14px rgba(0,0,0,.22); }
+.sheet .mk-head.cream { margin: 0 -.7rem; border: 0; box-shadow: none; background: transparent; border-radius: 22px 22px 0 0; padding: 1.2rem 1.3rem .4rem; }
+.sheet .mk { box-shadow: 0 1px 4px rgba(0,0,0,.08); background: linear-gradient(#FCF9F1, #F5EFE2); }
+.mk-head .swoosh { position: absolute; top: 0; right: 0; width: 64%; height: auto; }
+.mk-head .steth { right: 1.1rem; top: 1rem; width: 3.6rem; height: 3.6rem; filter: drop-shadow(0 1px 2px rgba(0,0,0,.3)); }
+/* Forest: no sheet; the green head runs edge to edge into the page. */
+html[data-look="forest"] .sheet { background: none; box-shadow: none; border-radius: 0; padding: 0 max(10px, env(safe-area-inset-left, 0px)) 1rem; margin-top: 0; }
+html[data-look="forest"] .fam .sheet .mk-head.cream { margin: 0 calc(-1 * max(10px, env(safe-area-inset-left, 0px))); border-radius: 0; padding: 1.2rem max(16px, env(safe-area-inset-left, 0px)) 1rem;
+  background: radial-gradient(circle at 80% 15%, rgba(255,255,255,.1), transparent 50%), linear-gradient(var(--fo-page), var(--fo-card)); }
+html[data-look="forest"] .sheet .mk { background: var(--fo-card); }
+/* Forest's Timeline: cream cards on the cream page, dark titles, gold icons. */
+html[data-look="forest"] .timeline-body .mk { background: linear-gradient(#FCF9F1, #F5EFE2); border-color: var(--fo-panel-line); color: var(--fo-panel-ink); box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+html[data-look="forest"] .timeline-body .mk-h { background: linear-gradient(#F1E8D3, #FAF6EC); }
+html[data-look="forest"] .timeline-body .mk-h h2 { color: var(--fo-panel-ink); }
+html[data-look="forest"] .timeline-body .mk-h .mk-i svg.i { color: var(--fo-gold-2); }
+html[data-look="forest"] .timeline-body .mk-b { background: transparent; margin: 0; }
+html[data-look="forest"] .fam .mk-head.green.bleed, html[data-look="forest"] .fam .timeline-body.bleed, html[data-look="forest"] .fam .sheet .mk-head.cream { border: 0; }
 </style>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="sprig" viewBox="0 0 120 60"><g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M4 50 C 34 44, 64 32, 116 8"/><path d="M28 44 c-4-10 2-18 10-20 c2 9-3 17-10 20z"/><path d="M28 44 c10 4 18 0 22-7 c-9-3-17 0-22 7z"/><path d="M58 33 c-3-10 3-18 11-19 c1 9-4 16-11 19z"/><path d="M58 33 c10 3 18-1 21-9 c-9-2-17 1-21 9z"/><path d="M88 20 c-2-8 3-14 9-15 c1 7-3 12-9 15z"/><path d="M88 20 c8 2 14-2 16-8 c-7-1-13 2-16 8z"/></g></symbol>
@@ -812,6 +849,13 @@ html[data-look="forest"] .fam .mk-head.cream h1 { max-width: 62%; }
     <linearGradient id="g-deep" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E5D3D"/><stop offset="1" stop-color="#1B3826"/></linearGradient>
     <linearGradient id="g-silver" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8E9692"/><stop offset=".5" stop-color="#F1F3F1"/><stop offset="1" stop-color="#A2AAA6"/></linearGradient>
     <radialGradient id="g-steel" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="#C8CECB"/><stop offset="1" stop-color="#6E7672"/></radialGradient>
+    <linearGradient id="g-gold2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8F6524"/><stop offset=".5" stop-color="#D3A455"/><stop offset="1" stop-color="#9C7230"/></linearGradient>
+    <linearGradient id="sw-main" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#4A8455"/><stop offset=".45" stop-color="#2E5E3D"/><stop offset="1" stop-color="#1B3D29"/></linearGradient>
+    <linearGradient id="sw-mid" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#A6D29C"/><stop offset="1" stop-color="#5F9A62"/></linearGradient>
+    <linearGradient id="sw-glow" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#D7EDCB" stop-opacity=".95"/><stop offset="1" stop-color="#A6D29C" stop-opacity=".3"/></linearGradient>
+    <linearGradient id="sw-sheen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".12"/><stop offset=".6" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient>
+    <filter id="soft" x="-2%" y="-20%" width="104%" height="140%"><feGaussianBlur stdDeviation="1.3"/></filter>
+    <filter id="blur4" x="-10%" y="-10%" width="120%" height="130%"><feGaussianBlur stdDeviation="4"/></filter>
   </defs>
   <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 3.5h3.2l1.6 4.2-2.1 1.3a11 11 0 0 0 5.3 5.3l1.3-2.1 4.2 1.6V17a2 2 0 0 1-2 2A15.5 15.5 0 0 1 3 5.5a2 2 0 0 1 2-2z"/></symbol>
   <symbol id="i-msg" viewBox="0 0 24 24"><path d="M4 4.5h16v11H9l-5 4z"/></symbol>
@@ -1923,11 +1967,17 @@ document.addEventListener('submit', (e) => {
 // Home, Timeline, Vet visit and Records drawn the mockup's way; the tabs are the live
 // portal's four. The other pages (Stay, Photos, Baby book, Handbook) keep the
 // prototype's drawing, in the new colours.
-const RIB = 'M0 32 C 120 16, 210 44, 300 22 C 390 0, 380 4, 400 0 L400 10 C 380 12, 390 8, 300 30 C 210 52, 120 21, 0 35 Z';
-const WAVE = `<svg class="wave" viewBox="0 0 400 48" preserveAspectRatio="none" aria-hidden="true"><path class="w0" transform="translate(0 -5)" d="${RIB}"/><path class="w2" d="M0 35 C 120 21, 210 52, 300 30 C 390 8, 380 12, 400 10 V48 H0 Z"/><path class="w1" d="${RIB}"/></svg>`;
+// The waves: one curve, drawn several times, each copy a little lower and a little darker
+// (or lighter), so the colour grades along the curve: a pale edge, the green (or the
+// gold), then whatever follows. The colours of each layer are in the CSS, per look.
+const CURVE = (dy) => `M-20 ${38 + dy} C 90 ${58 + dy}, 200 ${50 + dy}, 290 ${26 + dy} S 380 ${2 + dy}, 400 ${2 + dy} L420 ${1 + dy} L420 100 L-20 100 Z`;
+const WAVE = `<svg class="wave" viewBox="0 0 400 80" preserveAspectRatio="none" aria-hidden="true">${[[-4, 'l0', 1], [0, 'l1'], [3.5, 'l2'], [8, 'l3', 1], [13, 'l4', 1], [19, 'l5', 1], [26, 'l6']].map(([dy, c, soft]) => `<path class="${c}" d="${CURVE(dy)}"${soft ? ' filter="url(#soft)"' : ''}/>`).join('')}</svg>`;
 // The vet page's art: in Cream a green swoosh with a mint edge and the stethoscope in
 // white; in Forest a drawn stethoscope, metal and tubing.
-const SWOOSH = '<svg class="swoosh only-cream" viewBox="0 0 200 120" preserveAspectRatio="none" aria-hidden="true"><path class="s2" d="M52 0 C 72 24, 84 54, 116 66 C 146 78, 168 100, 200 108 V0 Z"/><path class="s1" d="M62 0 C 80 20, 90 46, 120 58 C 150 70, 170 92, 200 100 V0 Z"/></svg>';
+// The vet page's swoosh (Cream): a soft mint glow, a lighter green, then the deep green,
+// each an S from the top edge down to the right edge, in proportion (not stretched).
+const SW = (x, y) => `M${x} 0 C ${x + 40} 0, ${x + 62} ${36 + y}, ${x + 96} ${68 + y} C ${x + 128} ${98 + y}, ${x + 160} ${110 + y}, 300 ${112 + y} V0 Z`;
+const SWOOSH = `<svg class="swoosh only-cream" viewBox="0 0 300 170" aria-hidden="true"><path d="${SW(92, 22)}" fill="url(#sw-glow)" filter="url(#blur4)"/><path d="${SW(100, 10)}" fill="url(#sw-mid)"/><path d="${SW(112, 0)}" fill="url(#sw-main)"/><path d="${SW(112, 0)}" fill="url(#sw-sheen)"/></svg>`;
 const STETH = `<svg class="stethart only-forest" viewBox="0 -8 172 150" aria-hidden="true">
   <path d="M40 2 C 26 30, 40 58, 78 60" fill="none" stroke="url(#g-silver)" stroke-width="5" stroke-linecap="round"/>
   <path d="M64 0 C 58 28, 70 50, 92 56" fill="none" stroke="url(#g-silver)" stroke-width="5" stroke-linecap="round"/>
@@ -2028,8 +2078,8 @@ function mkTimeline() {
   const now = groups.find((g) => rows.some((x) => grp(x) === g && !x.s.done && x.s.by === 'family')) || groups[0];
   const order = [now, ...groups.filter((g) => g !== now)];
   const art = `<svg class="art" viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="12" width="48" height="44" rx="6" fill="#FFF8EC"/><rect x="8" y="12" width="48" height="12" rx="6" fill="#C9583F"/><rect x="8" y="18" width="48" height="6" fill="#C9583F"/><g fill="#C9A15A"><circle cx="18" cy="11" r="2.4"/><circle cx="26" cy="11" r="2.4"/><circle cx="34" cy="11" r="2.4"/><circle cx="42" cy="11" r="2.4"/><circle cx="50" cy="11" r="2.4"/></g><g fill="#B98A3E" transform="translate(20 28) scale(1.05)"><circle cx="6" cy="8" r="2.6"/><circle cx="11" cy="4" r="2.6"/><circle cx="17" cy="4" r="2.6"/><circle cx="22" cy="8" r="2.6"/><path d="M14 10c-4 0-8 5-8 8.5 0 2 2 2.7 4 2.1 1.6-.4 2.7-.8 4-.8s2.4.4 4 .8c2 .6 4-.1 4-2.1C22 15 18 10 14 10z"/></g></svg>`;
-  return `<div class="mk-head green"><span class="eyebrow">${p.name}’s first months</span><h1>Timeline</h1><span class="fo-paw">${icon('paw')}</span><p>Dated from ${p.name}’s birthday (${WD[BORN.getDay()].slice(0, 3)}, ${short(BORN)}) and pickup (${short(p.goHome)}). Mark a step done and its reminders stop.</p>${art}${WAVE}</div>
-    <div class="timeline-body"><h2>${now}</h2>${mkCard('', '', rows.filter((x) => grp(x) === now).map((x) => taskRow(p, x.t, x.s)).join('')).replace('<header class="mk-h"><h2></h2></header>', '')}
+  return `<div class="mk-head green bleed"><span class="eyebrow">${p.name}’s first months</span><h1>Timeline</h1><span class="fo-paw">${icon('paw')}</span><p>Dated from ${p.name}’s birthday (${WD[BORN.getDay()].slice(0, 3)}, ${short(BORN)}) and pickup (${short(p.goHome)}). Mark a step done and its reminders stop.</p>${art}${WAVE}</div>
+    <div class="timeline-body bleed"><h2>${now}</h2>${mkCard('', '', rows.filter((x) => grp(x) === now).map((x) => taskRow(p, x.t, x.s)).join('')).replace('<header class="mk-h"><h2></h2></header>', '')}
     ${order.slice(1).map((g) => mkCard('cal', g, rows.filter((x) => grp(x) === g).map((x) => taskRow(p, x.t, x.s)).join(''))).join('')}
     ${mkCard('paw', `Recommended for ${p.name}`, `<div style="display:grid;grid-template-columns:4.4rem 1fr;gap:.8rem;align-items:start"><span class="pic" style="width:4.4rem;height:4.4rem;border-radius:14px;overflow:hidden;background:#FBF3EB"><img src="img/food-bowl.webp" alt="" style="width:100%;height:100%;object-fit:cover"></span><div style="display:grid;gap:.35rem"><b>TLC Puppy Food</b><p class="small">The food ${p.name} already eats, delivered. Use A-K’s link for a first-order discount.</p><a class="btn line small ext" href="#" data-act="go" data-prog="food" style="justify-self:start">Order</a></div></div>`, { gold: true })}</div>${disclosure}`;
 }
@@ -2037,7 +2087,7 @@ function mkTimeline() {
 function mkVet() {
   const p = P(), pick = S.pickup[p.id], dl = pick ? vetDeadline(pick) : null, b = S.booked[p.id], pr = S.proof[p.id];
   const day = b ? toLocalInput(b).slice(0, 10) : '', tm = b ? toLocalInput(b).slice(11) : '';
-  return `<div class="mk-head cream">${SWOOSH}<span class="steth only-cream">${icon('steth')}</span>${STETH}<span class="eyebrow">The vet visit</span>
+  return `<div class="sheet bleed"><div class="mk-head cream">${SWOOSH}<span class="steth only-cream">${icon('steth')}</span>${STETH}<span class="eyebrow">The vet visit</span>
       <h1>${dl ? `Due by ${dueWords(dl)}` : `Book ${p.name}’s first vet visit`}</h1>
       <p>${dl ? `72 hours from pickup: by ${long(dl)}, ${time(dl)}${dl > S.now ? `, ${leftWords(dl).replace(' left', '')} from now` : ''}.` : `Your contract asks for a visit within 72 hours of pickup. The clock starts when you take ${p.name} home.`}</p>
       <p class="notebox"><span class="ring">${icon('info')}</span>This page is a reminder. Your contract states the vet visit requirement.</p></div>
@@ -2045,7 +2095,7 @@ function mkVet() {
       <label for="v-clinic">Clinic <span class="muted" style="font-weight:400">(if you like)</span><input id="v-clinic" name="clinic" value="${b ? CLINIC.name : ''}"></label>
       <button class="btn solid wide">${b ? 'Save changes' : 'I’ve booked it'}</button></form>`)}
     ${mkCard('file', 'Upload the vet’s record', `${pr ? `<p class="small"><span class="st ok">Uploaded</span> ${esc(pr.file)}${pr.ok ? ', accepted by A-K' : ''}</p>` : '<p class="small">A photo or PDF, up to 10 MB.</p>'}
-      <label class="btn ${pr ? 'line' : 'solid'} wide">${icon('up')}${pr ? 'Upload a new one' : 'Upload'}<input class="sr" type="file" accept="image/*,application/pdf" data-act="proof"></label>`)}`;
+      <label class="btn ${pr ? 'line' : 'solid'} wide">${icon('up')}${pr ? 'Upload a new one' : 'Upload'}<input class="sr" type="file" accept="image/*,application/pdf" data-act="proof"></label>`)}</div>`;
 }
 
 function mkRecords() {
