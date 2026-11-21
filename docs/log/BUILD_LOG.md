@@ -2223,3 +2223,5 @@ beside the food with a button straight to her insurance referral link.
 - The owner, after: the words stay beside the picture on both cards at phone width too
   (`.food .duo.two .prodrow`: a 3.1rem picture, the name and line beside it; 3.6rem on a
   computer). Checked at 390px and 1200px.
+- The owner, after: the note (her food note; the insurance's What the family does, else its
+  description) moves under the picture, the name alone beside it (`.fcard .under`).

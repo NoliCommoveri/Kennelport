@@ -190,7 +190,7 @@ function checklistCard(list) {
 
 // The dark green band (the owner's layout, 2026-11-21): the food card on the left
 // (her bowl picture, the exact food, the bag, how much, a round button to the food
-// program); on the right, stacked, the pet insurance (her shield picture, a round
+// program; the note under the picture, the owner's call); on the right, stacked, the pet insurance (her shield picture, a round
 // button to her insurance program; once the family has marked it done, "{pup} is
 // protected!" and no button) and a slim card for one more program with a link, if
 // she shows one. The insurance card grows to fill the column when it's alone. A card
@@ -201,7 +201,8 @@ function foodBand(s, name, food, ins, extra) {
   if (s.food_name) {
     const points = [s.food_bag, s.food_how, 'The same food for the first two weeks'].filter(Boolean);
     left.push(`<div class="fcard"><p class="eyebrow">What ${esc(name)}'s eating now</p><h2 class="card-h">Keep ${esc(name)} on the same food</h2>
-    <div class="prodrow"><span class="box pic"><img src="/_kp/f/food-bowl.webp" alt="" width="128" height="128"></span><div><b>${esc(s.food_name)}</b>${s.food_note ? `<p class="small">${esc(s.food_note)}</p>` : ''}</div></div>
+    <div class="prodrow"><span class="box pic"><img src="/_kp/f/food-bowl.webp" alt="" width="128" height="128"></span><div><b>${esc(s.food_name)}</b></div></div>
+    ${s.food_note ? `<p class="small under">${esc(s.food_note)}</p>` : ''}
     <ul class="ticks">${points.map((x) => `<li>${ic('check')}<span>${esc(x)}</span></li>`).join('')}</ul>
     ${food?.link_url ? `<a class="pill light" href="/family/go/${esc(food.id)}?from=food">Order ${esc(name)}'s food ${ic('arrow')}</a>` : ''}</div>`);
   }
@@ -214,7 +215,8 @@ function foodBand(s, name, food, ins, extra) {
     } else {
       const code = ins.portal_per_family ? ins.family_code : ins.code;
       right.push(`<div class="fcard grow"><p class="eyebrow">Included with ${esc(name)}</p><h2 class="card-h">Activate ${esc(name)}'s pet insurance</h2>
-    <div class="prodrow">${shield}<div><b>${esc(ins.name)}</b>${ins.family_action ? `<p class="small">${esc(ins.family_action)}</p>` : ins.description ? `<p class="small">${esc(ins.description)}</p>` : ''}</div></div>
+    <div class="prodrow">${shield}<div><b>${esc(ins.name)}</b></div></div>
+    ${ins.family_action || ins.description ? `<p class="small under">${esc(ins.family_action || ins.description)}</p>` : ''}
     ${code ? `<p class="small">${ins.portal_per_family ? 'Your code' : 'Code'} <strong>${esc(code)}</strong>${ins.code_note ? ` ${esc(ins.code_note)}` : ''}</p>` : ''}
     <a class="pill light" href="/family/go/${esc(ins.id)}?from=insurance">${esc(ins.link_label || 'Activate insurance')} ${ic('arrow')}</a>
     <form method="post" action="/family/program" class="did"><input type="hidden" name="product" value="${esc(ins.id)}"><input type="hidden" name="back" value="home"><button class="btn text small">I've activated it</button></form></div>`);

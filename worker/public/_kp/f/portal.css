@@ -267,6 +267,7 @@ a.tick:not(.on) { border-style: dashed; }
 .food .ticks li { display: grid; grid-template-columns: 1.2rem 1fr; gap: .45rem; align-items: start; }
 .food .ticks svg.i { width: 1.1rem; height: 1.1rem; stroke-width: 2.2; margin-top: .05rem; }
 .food .fcard .pill { margin-top: .2rem; }
+.food .fcard .under { opacity: .85; margin-top: -.2rem; }
 .food .did { margin: -.3rem 0 0; }
 .food .did .btn { color: inherit; opacity: .85; padding-left: 0; }
 /* Two across (or a stack on the right): each card a soft panel on the dark band, the
