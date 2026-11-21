@@ -2180,3 +2180,49 @@ section 9 lists where the build differs). Branch `ccr-00a76f7b-evincp`.
   497 pass, 1 expected fail (versions).
 - For KennelOS to build on its side: the plan's sections 4a (send `bag_items`, cost included)
   and 4b (record what went home as an expense on the sale).
+
+## 2026-11-21: Home's food band, two across, with the insurance card
+
+The owner's request, from her phone's screenshots: replace the food band's bowl icon with
+her picture, set the band two across, and put an "Activate {pup}'s pet insurance" card
+beside the food with a button straight to her insurance referral link.
+
+- `portal/family.js` `foodBand`: now one or two cards in the dark band. The food card as
+  before (its heading moved into the card), with her picture
+  (`public/_kp/f/food-bowl.webp`, 256px, cropped from her upload) in place of the `bowl`
+  icon, and the points as a ticked list instead of the three-up row (a single point sat
+  alone in a third of the width). The insurance card shows when a program is set to Show
+  as Insurance and has a referral link: its name, What the family does (or its
+  description), its code (or the family's own), and a button (her Button wording, else
+  "Activate insurance") to `/family/go/{id}?from=insurance`, so clicks count like the
+  others (`insurance` added to `PLACES`, `family/files.js`). Either card shows alone, full
+  width, when the other has nothing; neither, no band.
+- No new breeder wording: she sets it up with the existing Recommended products fields
+  and Portal settings' Show as. The family-facing lines stay in `family.js`.
+- `public/_kp/f/portal.css`: `.food .duo`, `.fcard`, `.card-h`, `.ticks`, `.box.pic`; two
+  across at every width (one column at the largest text size), buttons level at the
+  bottom. No prototype for two across: built from the band, highlight and pill pieces.
+  **Needs a `PORTAL_VERSION` bump (4, on `main`): asked the owner.**
+- Checked at 390px and 1200px. Tests: `portal-steps` (the insurance card, its link, the
+  picture). 497 pass, 1 expected fail (versions).
+
+### Later the same day: the right column stacked, a third card, "protected"
+
+- The right column is now a stack: the insurance card, then a slim card for one more
+  program (the first shown with a link that isn't the food or insurance: its icon, name,
+  code, and a button, her Button wording or "Shop now", counted as place `home`). With no
+  third program, the insurance card grows to fill the column, its button at the bottom.
+- The insurance card has her shield picture (`public/_kp/f/insurance-shield.webp`, cropped
+  from her upload) and an "I've activated it" button (the same `/family/program` post as
+  "I've done this" in Included with). Once the program is done (that button, Included with,
+  ticking its timeline task, or her setting it): "Activated", "{pup} is protected!", the
+  program's name, "Email or call them for questions about coverage or to file a claim.",
+  and no buttons. It shows done even when the program has no link.
+- Checked at 390px and 1200px in all three states. `portal-steps` covers the stack, the
+  slim card's link, and the done state. Still needs the `PORTAL_VERSION` bump (asked).
+- The owner, after: the words stay beside the picture on both cards at phone width too
+  (`.food .duo.two .prodrow`: a 3.1rem picture, the name and line beside it; 3.6rem on a
+  computer). Checked at 390px and 1200px.
+- The owner, after: the note (her food note; the insurance's What the family does, else its
+  description) moves under the picture, the name alone beside it (`.fcard .under`).
+- `PORTAL_VERSION` 4 → 5 with the owner's yes (`PORTAL_FILES` 342de44b3b6c4478). 498 pass.
