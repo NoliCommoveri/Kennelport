@@ -73,9 +73,10 @@ anyone outside the family.
   pickup; KennelOS sends her items (`bag_items` in the bundle) and gets what went home back
   in the feed's facts. **Needs a `PORTAL_VERSION` bump (4, on `main`): asked the owner.**
   For KennelOS: plan sections 4a and 4b. Build log, 2026-11-21. Next in phase 2: to choose.
-- Home's food band, two across (the owner, 2026-11-21): her bowl picture on the food card,
-  and an insurance card beside it, "Activate {pup}'s pet insurance", whose button opens the
-  program shown as Insurance with a link. **Needs a `PORTAL_VERSION` bump (4, on `main`):
+- Home's food band, two across (the owner, 2026-11-21): her bowl picture on the food card;
+  beside it, stacked, the insurance card (her shield picture, "Activate {pup}'s pet
+  insurance" and a button to the program shown as Insurance; "{pup} is protected!" once
+  marked done) and a slim card for one more program with a link. **Needs a `PORTAL_VERSION` bump (4, on `main`):
   asked the owner.** No migration. Build log, 2026-11-21.
 - Phase 3: not started.
 - The same family twice, and deleted families (2026-11-13): the feed links a family's only

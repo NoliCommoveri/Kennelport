@@ -188,29 +188,46 @@ function checklistCard(list) {
       : tickForm('checklist', x, 'home', x.done)}<span>${esc(x.title)}</span>${x.link ? `<a class="go" href="/family/go/${esc(x.link.id)}?from=checklist">${esc(x.raw.auto ? 'Open' : 'See')} ${ic('arrow')}</a>` : ''}</li>`).join('')}</ul></section>`;
 }
 
-// The dark green band (the owner's layout, 2026-11-21): two cards side by side, the
-// food (her bowl picture, the exact food, the bag, how much, a round button to the
-// food program) and the pet insurance (a round button to her insurance program).
-// Either shows alone, full width, when the other has nothing to show.
-function foodBand(s, name, food, ins) {
-  const cards = [];
+// The dark green band (the owner's layout, 2026-11-21): the food card on the left
+// (her bowl picture, the exact food, the bag, how much, a round button to the food
+// program); on the right, stacked, the pet insurance (her shield picture, a round
+// button to her insurance program; once the family has marked it done, "{pup} is
+// protected!" and no button) and a slim card for one more program with a link, if
+// she shows one. The insurance card grows to fill the column when it's alone. A card
+// with nothing to show is left out; with only one, it takes the full width.
+function foodBand(s, name, food, ins, extra) {
+  const left = [];
+  const right = [];
   if (s.food_name) {
     const points = [s.food_bag, s.food_how, 'The same food for the first two weeks'].filter(Boolean);
-    cards.push(`<div class="fcard"><p class="eyebrow">What ${esc(name)}'s eating now</p><h2 class="card-h">Keep ${esc(name)} on the same food</h2>
+    left.push(`<div class="fcard"><p class="eyebrow">What ${esc(name)}'s eating now</p><h2 class="card-h">Keep ${esc(name)} on the same food</h2>
     <div class="prodrow"><span class="box pic"><img src="/_kp/f/food-bowl.webp" alt="" width="128" height="128"></span><div><b>${esc(s.food_name)}</b>${s.food_note ? `<p class="small">${esc(s.food_note)}</p>` : ''}</div></div>
     <ul class="ticks">${points.map((x) => `<li>${ic('check')}<span>${esc(x)}</span></li>`).join('')}</ul>
     ${food?.link_url ? `<a class="pill light" href="/family/go/${esc(food.id)}?from=food">Order ${esc(name)}'s food ${ic('arrow')}</a>` : ''}</div>`);
   }
   if (ins) {
-    const done = ins.status === 'done';
-    const code = ins.portal_per_family ? ins.family_code : ins.code;
-    cards.push(`<div class="fcard"><p class="eyebrow">${done ? `${ic('check')} Done` : `Included with ${esc(name)}`}</p><h2 class="card-h">Activate ${esc(name)}'s pet insurance</h2>
-    <div class="prodrow"><span class="box">${ic('shield')}</span><div><b>${esc(ins.name)}</b>${ins.family_action ? `<p class="small">${esc(ins.family_action)}</p>` : ins.description ? `<p class="small">${esc(ins.description)}</p>` : ''}</div></div>
+    const shield = '<span class="box pic"><img src="/_kp/f/insurance-shield.webp" alt="" width="128" height="128"></span>';
+    if (ins.status === 'done') {
+      right.push(`<div class="fcard grow"><p class="eyebrow">${ic('check')} Activated</p><h2 class="card-h">${esc(name)} is protected!</h2>
+    <div class="prodrow">${shield}<div><b>${esc(ins.name)}</b></div></div>
+    <p class="small">Email or call them for questions about coverage or to file a claim.</p></div>`);
+    } else {
+      const code = ins.portal_per_family ? ins.family_code : ins.code;
+      right.push(`<div class="fcard grow"><p class="eyebrow">Included with ${esc(name)}</p><h2 class="card-h">Activate ${esc(name)}'s pet insurance</h2>
+    <div class="prodrow">${shield}<div><b>${esc(ins.name)}</b>${ins.family_action ? `<p class="small">${esc(ins.family_action)}</p>` : ins.description ? `<p class="small">${esc(ins.description)}</p>` : ''}</div></div>
     ${code ? `<p class="small">${ins.portal_per_family ? 'Your code' : 'Code'} <strong>${esc(code)}</strong>${ins.code_note ? ` ${esc(ins.code_note)}` : ''}</p>` : ''}
-    <a class="pill light" href="/family/go/${esc(ins.id)}?from=insurance">${esc(ins.link_label || 'Activate insurance')} ${ic('arrow')}</a></div>`);
+    <a class="pill light" href="/family/go/${esc(ins.id)}?from=insurance">${esc(ins.link_label || 'Activate insurance')} ${ic('arrow')}</a>
+    <form method="post" action="/family/program" class="did"><input type="hidden" name="product" value="${esc(ins.id)}"><input type="hidden" name="back" value="home"><button class="btn text small">I've activated it</button></form></div>`);
+    }
   }
-  if (!cards.length) return '';
-  return `<section class="sec deep bleed food"><div class="duo${cards.length === 2 ? ' two' : ''}">${cards.join('')}</div></section>`;
+  if (extra && (left.length || right.length)) {
+    right.push(`<div class="fcard slim"><div class="slimrow"><span class="box">${ic(TYPE_ICON[extra.portal_type] ?? 'tag')}</span><div><b>${esc(extra.name)}</b>${extra.code ? `<p class="small">Code <strong>${esc(extra.code)}</strong></p>` : ''}</div></div>
+    <a class="pill light" href="/family/go/${esc(extra.id)}?from=home">${esc(extra.link_label || 'Shop now')} ${ic('arrow')}</a></div>`);
+  }
+  if (!left.length && !right.length) return '';
+  const col = right.length ? `<div class="stack">${right.join('')}</div>` : '';
+  if (!left.length) return `<section class="sec deep bleed food"><div class="duo">${col}</div></section>`;
+  return `<section class="sec deep bleed food"><div class="duo${right.length ? ' two' : ''}">${left.join('')}${col}</div></section>`;
 }
 
 // A task's status: a word with a small mark (plan 7.1). Red only when overdue.
@@ -409,7 +426,9 @@ async function homePage(env, site, fam, now = new Date()) {
   // The checklist from two weeks before go-home (or while there's no date yet).
   const checklist = st === 'before' && (days === null || days <= 14) ? checklistCard(steps.checklist) : '';
   const food = list.find((x) => x.portal_type === 'food' && x.link_url);
-  const ins = list.find((x) => x.portal_type === 'insurance' && x.link_url);
+  const ins = list.find((x) => x.portal_type === 'insurance' && (x.link_url || x.status === 'done'));
+  // A third, slim card in the food band: the next program with a link that isn't the food or insurance.
+  const extra = list.find((x) => x.link_url && x !== food && x !== ins && x.portal_type !== 'food' && x.portal_type !== 'insurance');
   if (p.life_status !== 'with_family' || p.status !== 'open') action = null;
 
   const born = pup?.born_on ? new Date(`${pup.born_on}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : null;
@@ -432,7 +451,7 @@ async function homePage(env, site, fam, now = new Date()) {
   ${contactsLead(p, s, now) ? contactsCard(site, s, p, name, { lead: true }) : ''}
   ${checklist}
   ${st === 'before' && statusUrl && live ? statusBand(p, s, name, kennel) : ''}
-  ${live ? foodBand(s, name, food, ins) : ''}
+  ${live ? foodBand(s, name, food, ins, extra) : ''}
   ${list.length ? `<section class="sec paper bleed"><h2>Included with ${esc(name)}</h2>${programList(list, 'home', kennel)}</section>` : ''}
   ${readNext(chapters, photos)}
   <section class="tile quick"><h2>Quick links</h2><div class="qgrid">${quick.map(([href, icon, label]) => `<a class="qtile" href="${href}"><span class="ico">${ic(icon)}</span>${label}</a>`).join('')}</div></section>

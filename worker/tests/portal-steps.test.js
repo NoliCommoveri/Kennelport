@@ -161,6 +161,15 @@ test('the family ticks the checklist from Home; she sees it, and their ticks are
   assert.match(home, /Activate Opal's pet insurance/);
   assert.match(home, /\/family\/go\/ins\?from=insurance/);
   assert.match(home, /\/_kp\/f\/food-bowl\.webp/);
+  // Under it, stacked, a slim card for her next program with a link (the crate).
+  assert.match(home, /class="stack"><div class="fcard grow">[\s\S]*class="fcard slim"[\s\S]*\/family\/go\/crate\?from=home/);
+  // Marked activated: protected, the program's name, and no button.
+  await r('/family/program', { product: 'ins', back: 'home' });
+  const safe = await (await r('/family')).text();
+  assert.match(safe, /Opal is protected!/);
+  assert.match(safe, /Email or call them for questions about coverage or to file a claim\./);
+  assert.doesNotMatch(safe, /\/family\/go\/ins\?from=insurance/);
+  assert.doesNotMatch(safe, /I've activated it/);
   // Go-home a month away: no checklist yet.
   assert.doesNotMatch(await (await d('/family')).text(), /Go-home checklist/);
 

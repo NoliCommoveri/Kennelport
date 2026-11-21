@@ -2205,3 +2205,18 @@ beside the food with a button straight to her insurance referral link.
   **Needs a `PORTAL_VERSION` bump (4, on `main`): asked the owner.**
 - Checked at 390px and 1200px. Tests: `portal-steps` (the insurance card, its link, the
   picture). 497 pass, 1 expected fail (versions).
+
+### Later the same day: the right column stacked, a third card, "protected"
+
+- The right column is now a stack: the insurance card, then a slim card for one more
+  program (the first shown with a link that isn't the food or insurance: its icon, name,
+  code, and a button, her Button wording or "Shop now", counted as place `home`). With no
+  third program, the insurance card grows to fill the column, its button at the bottom.
+- The insurance card has her shield picture (`public/_kp/f/insurance-shield.webp`, cropped
+  from her upload) and an "I've activated it" button (the same `/family/program` post as
+  "I've done this" in Included with). Once the program is done (that button, Included with,
+  ticking its timeline task, or her setting it): "Activated", "{pup} is protected!", the
+  program's name, "Email or call them for questions about coverage or to file a claim.",
+  and no buttons. It shows done even when the program has no link.
+- Checked at 390px and 1200px in all three states. `portal-steps` covers the stack, the
+  slim card's link, and the done state. Still needs the `PORTAL_VERSION` bump (asked).
