@@ -2057,3 +2057,16 @@ nothing shows to families where it's empty, so new sites start with no chapters.
   **Needs a `PORTAL_VERSION` bump (3, on `main`): asked the owner.** Until then
   `versions.test.js` fails as expected.
 - Tests: `portal-handbook.test.js` (new, 2). 489 pass, 1 expected fail (versions).
+- Same day, the owner: the handbook is a **flipbook**, styled after her buyer-guide book
+  (the "Puppy Waitlist Guide" artifact). `/family/handbook` is now a cover (their own puppy's
+  photo to boop, hearts, a collar and tag), then a book on a desk: title page, Contents with
+  page numbers, a page for each chapter (a `---` line starts another page of it), and a
+  "Happy puppy days!" end page; running heads, folios, the maroon, cocoa and tan trim.
+  Two pages side by side on a computer, one on a phone; arrows, swipe, keyboard, a Contents
+  dialog; Read next opens the book at its chapter (`#ch-<id>`). New `public/_kp/f/handbook.js`
+  (loaded without `defer`, only to mark `<html>` before the page shows); the page has no
+  portal header or tabs (`frame(..., { bare: true })`), with Back to the portal and Portal
+  instead. The portal's own fonts (Fraunces, Mulish), not the guide's Google fonts: the
+  portal's CSP allows only its own. Without the script the cover and pages stack and read
+  in order. Search is gone (the book has Contents); `## ` is a small heading in a chapter.
+  Her hints updated in `manage/wording.js`. Still needs the `PORTAL_VERSION` bump (asked).

@@ -1,10 +1,12 @@
 // The puppy handbook (docs/plans/family-portal.md sections 4, 6 phase 2 and 7.2):
 // chapters she writes and orders on her Portal tab (portal/admin/handbook.js), read
-// by families at /family/handbook and in Home's Read next (portal/family.js).
+// by families as a flipbook at /family/handbook (portal/family.js, public/_kp/f/
+// handbook.js), with Home's Read next.
 //
 // A chapter's body is plain text, so it needs no editor script:
 // - a blank line starts a new paragraph; a line break stays a line break;
-// - lines starting "- " are a list;
+// - lines starting "- " are a list; a line starting "## " is a small heading;
+// - a line of "---" starts a new page of the flipbook (portal/family.js);
 // - "[link: Embark]" is that program's link (one of her programs families see,
 //   matched by name, any case); "[link: Embark | Order the kit]" gives it her words.
 //   On a line of its own it's a button, inside a sentence a link. A tag that matches
@@ -91,6 +93,7 @@ export async function moveChapter(env, siteId, id, dir) {
 const TAG = /\[link:\s*([^\]|]{1,80}?)\s*(?:\|\s*([^\]]{1,80}?)\s*)?\]/gi;
 const OWN_LINE = new RegExp(`^${TAG.source}$`, 'i');
 const BULLET = /^[-•]\s+/;
+const HEADING = /^#{1,3}\s+/;
 const key = (s) => String(s ?? '').trim().toLowerCase();
 
 const matchProgram = (programs, name) => programs.find((x) => key(x.name) === key(name));
@@ -101,9 +104,6 @@ export function brokenLinks(body, programs) {
   for (const m of String(body ?? '').matchAll(TAG)) if (!matchProgram(programs, m[1]) && !out.includes(m[1].trim())) out.push(m[1].trim());
   return out;
 }
-
-// The words without their tags, for searching and for the Read next line.
-export const plainText = (body) => String(body ?? '').replace(TAG, (m, name, words) => words ?? name);
 
 // A body as the family's HTML. vars: { name, kennel }. link(program, words, inline)
 // → the link's HTML (family.js counts its clicks).
@@ -142,6 +142,10 @@ export function bodyHtml(body, programs, vars, link) {
         flushPara(); flushList();
         const x = matchProgram(programs, own[1]);
         if (x) blocks.push(`<p>${link(x, own[2] ? fill(own[2]) : (x.link_label || x.name), false)}</p>`);
+      } else if (HEADING.test(l)) {
+        flushPara(); flushList();
+        const h = inline(l.replace(HEADING, ''));
+        if (h.trim()) blocks.push(`<h3>${h}</h3>`);
       } else if (BULLET.test(l)) {
         flushPara();
         list.push(l.replace(BULLET, ''));
@@ -163,14 +167,4 @@ export function linkedPrograms(body, programs) {
     if (x && !out.includes(x)) out.push(x);
   }
   return out;
-}
-
-// Chapters matching a search: every word in the title or the words.
-export function searchChapters(chapters, q) {
-  const words = key(q).split(/\s+/).filter(Boolean);
-  if (!words.length) return chapters;
-  return chapters.filter((c) => {
-    const hay = key(`${c.title} ${plainText(c.body)}`);
-    return words.every((w) => hay.includes(w));
-  });
 }

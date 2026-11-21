@@ -115,8 +115,8 @@ read that before the rest. Update this map when you add, move or split a file.
   Delete now, giving a deleted family back); `merge.js` the same family twice (merging a
   typed placement or family into KennelOS's).
 - `handbook.js` the puppy handbook: her chapters, their words' format (paragraphs, lists,
-  `[link: Program]`), search; her screen is `admin/handbook.js`, the family's page and Read
-  next are in `family.js`.
+  `[link: Program]`, `---` pages); her screen is `admin/handbook.js`; the family's flipbook
+  and Read next are in `family.js`, turned by `public/_kp/f/handbook.js`.
 - `pups.js` a family's puppy kept after its litter leaves the website (`plans/portal-kept-pups.md`):
   the copy and its photos, made by every delete of a puppy, litter or photo; `pupOf` and
   `photosOf` read the website's puppy, else the copy.

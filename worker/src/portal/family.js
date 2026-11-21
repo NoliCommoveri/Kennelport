@@ -36,7 +36,7 @@ import { servePhoto, serveFile, goToProgram } from './family/files.js';
 import { redeemViewLink, currentView, viewCookie } from './view.js';
 import { sayer, everyWording, siteWording } from '../manage/wording.js';
 import { loadBuild } from '../content/rules.js';
-import { shownChapters, linkablePrograms, bodyHtml, linkedPrograms, searchChapters } from './handbook.js';
+import { shownChapters, linkablePrograms, bodyHtml, linkedPrograms } from './handbook.js';
 
 export const PORTAL_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
 const HEADERS = {
@@ -63,7 +63,7 @@ const LOSS_TABS = [['/family', 'home', 'Home'], ['/family/photos', 'paw', 'Photo
 // During an extended stay, Stay takes Timeline's place (plan 8.5).
 const STAY_TABS = [['/family', 'home', 'Home'], ['/family/stay', 'award', 'Stay'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records']];
 
-function frame(site, title, body, { status = 200, fam = null, tab = null, action = '', headers = {} } = {}) {
+function frame(site, title, body, { status = 200, fam = null, tab = null, action = '', headers = {}, bare = false, script = null } = {}) {
   const kennel = site.kennel_name || site.subdomain;
   const tabs = fam ? `<nav class="tabs" aria-label="Portal">${(fam.loss ? LOSS_TABS : fam.stay ? STAY_TABS : TABS)
     .map(([href, icon, label]) => `<a href="${href}"${tab === href ? ' aria-current="page"' : ''}>${ic(icon)}<span>${label}</span></a>`).join('')}</nav>` : '';
@@ -72,13 +72,13 @@ function frame(site, title, body, { status = 200, fam = null, tab = null, action
 <meta name="robots" content="noindex, nofollow">
 <title>${esc(title)}${fam?.viewing ? ' (viewing)' : ''} · ${esc(kennel)}</title>
 <link rel="stylesheet" href="/_kp/f/portal.css?v=${PORTAL_VERSION}">
-<script src="/_kp/f/portal.js?v=${PORTAL_VERSION}" defer></script>
-</head><body class="${fam ? 'in' : 'out'}">
+<script src="/_kp/f/portal.js?v=${PORTAL_VERSION}" defer></script>${script ? `\n<script src="/_kp/f/${script}?v=${PORTAL_VERSION}"></script>` : ''}
+</head><body class="${bare ? 'bare' : fam ? 'in' : 'out'}">
 ${SPRITE}
-<header class="top"><a class="brand" href="/family">${brandMark(site)}<span class="bt"><b>${esc(kennel)}</b><span class="sub">${ic('paw')}Puppy Parent Portal</span></span></a>
+${bare ? `${fam?.viewing ? fam.band : ''}${body}` : `<header class="top"><a class="brand" href="/family">${brandMark(site)}<span class="bt"><b>${esc(kennel)}</b><span class="sub">${ic('paw')}Puppy Parent Portal</span></span></a>
 <span class="top-end"><button type="button" class="aa" id="aa" aria-label="Text size">Aa</button>${fam && !fam.loss ? `<a class="acct" href="/family/messages" aria-label="${fam.unread ? `Messages, ${fam.unread} new` : 'Messages'}">${ic('message')}${fam.unread ? `<b class="small">${fam.unread}</b>` : ''}</a>` : ''}${fam ? `<a class="acct" href="/family/account" aria-label="Account">${ic('user')}</a>` : ''}</span></header>
 <main>${fam?.viewing ? fam.band : ''}${body}</main>
-${action}${tabs}
+${action}${tabs}`}
 </body></html>`, { status, headers: { ...HEADERS, ...headers } });
 }
 
@@ -424,7 +424,7 @@ async function homePage(env, site, fam, now = new Date()) {
 
 // ---------- the handbook (portal/handbook.js) ----------
 
-const chapterHref = (c) => `/family/handbook?open=${encodeURIComponent(c.id)}#ch-${esc(c.id)}`;
+const chapterHref = (c) => `/family/handbook#ch-${esc(c.id)}`;
 
 // Read next on Home (plan 7.2, item 9): her first three chapters as photo rows, with
 // their own puppy's photos (after the one at the top of Home); words alone without.
@@ -442,27 +442,59 @@ const handbookLink = (x, words, inline) => (inline
   ? `<a class="ext" href="/family/go/${esc(x.id)}?from=handbook">${esc(words)}</a>`
   : `<a class="btn line small" href="/family/go/${esc(x.id)}?from=handbook">${esc(words)} ${ic('arrow')}</a>`);
 
-// Her chapters, in her order, with a search box (a plain form, so it works without
-// the script). The first opens by itself, or the one Read next led to, or every match.
-async function handbookPage(env, site, fam, url) {
-  const { p, s } = await loadContext(env, site, fam);
+// The handbook as a flipbook (the owner's buyer-guide book, 2026-11-21): a cover with
+// their own puppy to boop, a title page, contents, her chapters (a "---" line starts a
+// new page), and an end page. The server writes every page; public/_kp/f/handbook.js
+// turns them into the book (spreads on a computer, one page on a phone, swipe, arrows,
+// keys, a Contents list). Without the script the pages stack and read top to bottom.
+async function handbookPage(env, site, fam) {
+  const { p, s, main } = await loadContext(env, site, fam);
   const chapters = p && active(p) ? await shownChapters(env, site.id) : [];
   if (!chapters.length) return redirect('/family');
   const kennel = site.kennel_name || site.subdomain;
-  const q = String(url.searchParams.get('q') ?? '').trim().slice(0, 80);
-  const open = url.searchParams.get('open');
+  const name = pupName(p);
   const programs = await linkablePrograms(env, site.id);
-  const list = searchChapters(chapters, q);
-  const vars = { name: pupName(p), kennel };
-  const linked = list.some((c) => linkedPrograms(c.body, programs).length);
-  const opened = (c, i) => (q ? true : open ? c.id === open : i === 0);
-  const body = `<section class="band"><p class="eyebrow">${esc(kennel)}</p><h1>Puppy handbook</h1><p class="small muted">Everything we tell every family, in one place.</p></section>
-    <section class="card"><form method="get" action="/family/handbook" role="search" class="hsearch"><label class="sr" for="hq">Search the handbook</label><input id="hq" type="search" name="q" value="${esc(q)}" placeholder="Search: crate, food, the first night…" maxlength="80"></form>
-    ${list.length ? `<div>${list.map((c, i) => `<details class="ch" id="ch-${esc(c.id)}"${opened(c, i) ? ' open' : ''}><summary>${esc(c.title)}</summary><div class="body">${bodyHtml(c.body, programs, vars, handbookLink)}</div></details>`).join('')}</div>`
-      : `<p class="muted">Nothing matches. Try another word.</p>`}
-    ${q ? `<p class="small"><a href="/family/handbook">Every chapter</a></p>` : ''}</section>
-    ${linked ? disclosure(s) : ''}`;
-  return frame(site, 'Puppy handbook', body, { fam });
+  const vars = { name, kennel };
+  const of = (n) => `${n}${/s$/i.test(n) ? "'" : "'s"}`;
+  const face = (cls) => (main ? `<img src="${esc(main)}?s=t" alt="" class="${cls}">` : `<span class="${cls} nopic">${ic('paw')}</span>`);
+  const pages = [];
+  const page = (html, { id = null, cls = '', head = 'Puppy handbook', go = null } = {}) => pages.push({ html, id, cls, head, go });
+  page(`<div class="badge">${face('')}</div><h2>${esc(of(kennel))} puppy handbook</h2><p>Everything we tell every family, in one place: for you and ${esc(name)}.</p>
+    <p class="tip">Turn the page with the arrows, a swipe, or your keyboard. Contents jumps to any chapter.</p>`, { cls: 'titlepage', head: '', id: 'title' });
+  const tocAt = pages.length;
+  page('', { id: 'contents', head: 'Contents' });
+  const toc = [];
+  for (const c of chapters) {
+    const parts = String(c.body).split(/\n[ \t]*---+[ \t]*(?:\n|$)/);
+    parts.forEach((part, i) => {
+      const links = linkedPrograms(part, programs).length;
+      if (!i) toc.push({ c, at: pages.length });
+      page(`${i ? '' : `<h2>${esc(c.title)}</h2>`}${bodyHtml(part, programs, vars, handbookLink)}${links ? `<p class="tip disclose">${esc(s.disclosure || DEFAULT_DISCLOSURE)}</p>` : ''}`,
+        { id: i ? null : `ch-${c.id}`, head: c.title, go: c.id });
+    });
+  }
+  page(`<p class="happy">Happy puppy days!</p><p>Come back to this book whenever you need it. ${esc(kennel)} is a message away.</p>`, { cls: 'blank end', head: '', id: 'end' });
+  pages[tocAt].html = `<h2>Contents</h2><ul class="toc">${toc.map(({ c, at }) => `<li><a href="#ch-${esc(c.id)}" data-go="ch-${esc(c.id)}"><span>${esc(c.title)}</span><span>${at + 1}</span></a></li>`).join('')}</ul>`;
+  const body = `<div class="hb">
+  <section class="hb-cover" id="hb-cover">
+    <a class="hb-out" href="/family">${ic('home')}Back to the portal</a>
+    <p class="kicker">A little book for ${esc(of(name))} family</p>
+    <h1>Puppy <span>handbook</span></h1>
+    <a class="boop" id="boop" href="#hb-reader" aria-label="Boop ${esc(name)} to open the handbook">${face('face')}<span class="collar"></span><span class="tag">Boop to open</span></a>
+    <p class="hint">Tap ${esc(name)} to open the handbook, then flip through it like a book.</p>
+  </section>
+  <section class="hb-reader" id="hb-reader">
+    <div class="bar"><a class="mini" id="hb-home" href="#hb-cover" aria-label="Back to the cover" title="Back to the cover">${face('')}</a><div class="ttl">${esc(of(kennel))} puppy handbook</div>
+      <button type="button" class="pill" id="hb-toc">Contents</button><a class="pill" href="/family">Portal</a></div>
+    <div class="stage" id="hb-stage"><div class="book" id="hb-book" aria-live="polite">
+    ${pages.map((x, i) => `<article class="page ${x.cls}"${x.id ? ` id="${esc(x.id)}"` : ''}><div class="runhead"><span>${esc(x.head)}</span></div><div class="content">${x.html}</div><div class="folio">${i + 1}</div></article>`).join('\n')}
+    </div></div>
+    <div class="controls"><button type="button" class="nav" id="hb-prev" aria-label="Previous page">&#8592;</button><div class="count" id="hb-count"></div><button type="button" class="nav" id="hb-next" aria-label="Next page">&#8594;</button></div>
+  </section>
+  <dialog id="hb-tocdlg" aria-labelledby="hb-toctitle"><div class="dlg-head"><h2 id="hb-toctitle">Contents</h2><button type="button" class="x" data-close aria-label="Close">&#215;</button></div>
+    <div class="dlg-body"><ul class="toc">${toc.map(({ c, at }) => `<li><a href="#ch-${esc(c.id)}" data-go="ch-${esc(c.id)}"><span>${esc(c.title)}</span><span>${at + 1}</span></a></li>`).join('')}</ul></div></dialog>
+</div>`;
+  return frame(site, 'Puppy handbook', body, { fam, bare: true, script: 'handbook.js' });
 }
 
 // The first months, grouped by when: what she does before go-home, the first
@@ -749,7 +781,7 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
     if (path === '/family/records') return recordsPage(env, site, fam);
     if (fam.loss && ['/family/timeline', '/family/vet', '/family/records', '/family/messages', '/family/handbook'].includes(path)) return redirect('/family');
     if (path === '/family/timeline') return timelinePage(env, site, fam);
-    if (path === '/family/handbook') return handbookPage(env, site, fam, url);
+    if (path === '/family/handbook') return handbookPage(env, site, fam);
     if (path === '/family/photos') return photosPage(env, site, fam);
     if (path === '/family/stay') return stayPage(env, site, fam);
     const mm = path.match(/^\/family\/media\/([0-9a-f-]{36})$/);
