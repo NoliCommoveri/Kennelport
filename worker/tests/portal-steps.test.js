@@ -335,3 +335,30 @@ test('ready-made tasks: she picks a program and a wording; registration goes in 
   assert.ok(mine.placement_id);
   assert.equal(mine.product_id, 'food');
 });
+
+test('removing a template task with a puppy\'s name typed in puts the suggested one in its place', async () => {
+  const { env, her } = await setup();
+  env.DB.raw.prepare("UPDATE products SET portal_type = 'registration' WHERE id = 'crate'").run();
+  await her('/portal/timeline/new', { title: 'Puppy class', days: '10', when: 'after', count_from: 'pickup' });
+  await her('/portal/timeline/new', { title: 'Register Opal', body: 'Your registration papers are in the go home folder', days: '30', when: 'after', count_from: 'pickup' });
+  await her('/portal/timeline/new', { title: 'Visit Opal', days: '40', when: 'after', count_from: 'pickup' });
+  const page = await (await her('/portal/timeline')).text();
+  assert.match(page, /Remove it and the suggested "Register \{name\}" takes its place/);
+  assert.match(page, /Remove, and add the suggested "Register \{name\}"/);
+
+  const old = item(env, 'portal_timeline_tasks', 'Register Opal');
+  const res = await her(`/portal/timeline/${old.id}/remove`, {});
+  assert.match(res.headers.get('location'), /note=stepreplaced/);
+  assert.equal(item(env, 'portal_timeline_tasks', 'Register Opal'), undefined);
+  const reg = item(env, 'portal_timeline_tasks', 'Register {name}');
+  assert.equal(reg.body, 'Your registration paper is in the go-home folder.');
+  assert.equal(reg.sort, old.sort);
+  assert.equal(reg.offset_days, 30);
+  assert.equal(reg.product_id, 'crate');
+  assert.equal(reg.button_label, 'Register');
+
+  // A task with a name but no suggested twin is just removed.
+  const visit = item(env, 'portal_timeline_tasks', 'Visit Opal');
+  assert.match((await her(`/portal/timeline/${visit.id}/remove`, {})).headers.get('location'), /note=stepremoved/);
+  assert.equal(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM portal_timeline_tasks').get().n, 2);
+});

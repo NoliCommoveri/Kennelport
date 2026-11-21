@@ -2,7 +2,7 @@
 // checklist and /timeline, routed by portal/admin.js): the items every new family's
 // checklist and timeline start from, and the programs (products) they can link to.
 import { escapeHtml as esc } from '../../lib/html.js';
-import { CHECK_AUTO, TASK_AUTO, READY_TASKS, namedPuppy } from '../steps.js';
+import { CHECK_AUTO, TASK_AUTO, READY_TASKS, namedPuppy, suggestedFor } from '../steps.js';
 import { note, errorBox } from './parts.js';
 
 export const products = async (env, siteId) => (await env.DB.prepare('SELECT id, name, portal_show, portal_type, family_action, portal_per_family FROM products WHERE site_id = ? ORDER BY sort, name').bind(siteId).all()).results;
@@ -70,18 +70,19 @@ export function itemMeta(kind, x, products) {
 }
 
 // A template step naming one puppy: every family would read that name.
-const nameWarning = (x, names) => {
+const nameWarning = (x, names, sug) => {
   const n = namedPuppy(x, names);
-  return n ? `<br><span class="error">Every family reads "${esc(n)}" here. Write {name} instead, and each family sees their own puppy's name.</span>` : '';
+  if (!n) return '';
+  return `<br><span class="error">Every family reads "${esc(n)}" here. ${sug ? `Remove it and the suggested "${esc(sug.title)}" takes its place, with each family's own puppy's name.` : 'Write {name} instead, and each family sees their own puppy\'s name.'}</span>`;
 };
 
 export function templateScreen(site, kind, items, products, url, { error, names = [] } = {}) {
   const w = KIND_WORDS[kind];
   const base = `/s/${esc(site.subdomain)}/portal/${kind === 'checklist' ? 'checklist' : 'timeline'}`;
-  const rows = items.map((x, i) => `<details class="card"><summary><b>${esc(x.title)}</b><br><span class="hint">${esc(itemMeta(kind, x, products))}</span>${nameWarning(x, names)}</summary>
+  const rows = items.map((x, i) => [x, i, kind === 'task' ? suggestedFor(x, names, items) : null]).map(([x, i, sug]) => `<details class="card"><summary><b>${esc(x.title)}</b><br><span class="hint">${esc(itemMeta(kind, x, products))}</span>${nameWarning(x, names, sug)}</summary>
     <form method="post" action="${base}/${esc(x.id)}"><div class="fgrid">${itemFields(kind, x, products)}<p><button class="primary">Save</button></p></div></form>
     <div class="row">${i ? `<form method="post" action="${base}/${esc(x.id)}/up"><button>Move up</button></form>` : ''}${i < items.length - 1 ? `<form method="post" action="${base}/${esc(x.id)}/down"><button>Move down</button></form>` : ''}
-    <form method="post" action="${base}/${esc(x.id)}/remove"><button class="link">Remove from every family's list</button></form></div></details>`).join('');
+    <form method="post" action="${base}/${esc(x.id)}/remove"><button class="link">${sug ? `Remove, and add the suggested "${esc(sug.title)}"` : 'Remove from every family\'s list'}</button></form></div></details>`).join('');
   return `${note(url)}${errorBox(error)}<section class="card"><h1>${esc(w.title)}</h1><p class="hint">${esc(w.hint)}</p>
     ${items.length ? '' : `<form method="post" action="${base}/suggested"><p><button class="primary">Start with the suggested ${kind === 'checklist' ? 'list' : 'timeline'}</button></p><p class="hint">${kind === 'checklist' ? 'Crate, bed, food, bowls, collar and leash, pads, chews, the vet booking and a carrier.' : 'The vet booking, pickup, the vet visit, insurance, food, registration, deworming and vaccines.'} Each links to your programs of that kind. Change anything after.</p></form>`}</section>
     ${rows}

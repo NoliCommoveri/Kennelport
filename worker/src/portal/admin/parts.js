@@ -35,6 +35,7 @@ export const NOTES = {
   suggested: 'Suggested steps added. Change, reorder or remove any of them.',
   stepadded: 'Step added.',
   stepremoved: 'Step removed.',
+  stepreplaced: 'Removed. The suggested task is in its place, with each family\'s own puppy\'s name.',
   step: 'Saved. The family sees it.',
 };
 

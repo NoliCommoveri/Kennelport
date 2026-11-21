@@ -20,7 +20,7 @@ import { pupOf } from './pups.js';
 import { makeViewLink, VIEW_AS_ADMIN } from './view.js';
 import { defaultSay } from '../manage/wording.js';
 import {
-  listItems, saveItem, removeItem, moveItem, addSuggested, addReady, puppyNames, stepsFor, programsFor, setDone, setHidden, setDueOn, setProgramStatus, setProgramCode,
+  listItems, saveItem, removeItem, moveItem, addSuggested, addReady, puppyNames, removeTemplateTask, stepsFor, programsFor, setDone, setHidden, setDueOn, setProgramStatus, setProgramCode,
   PROGRAM_WORDS,
 } from './steps.js';
 import { sendDueFor } from './reminders.js';
@@ -536,6 +536,7 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
     if (!post) return tm[2] ? null : show();
     try {
       if (tm[2] === 'suggested') { await addSuggested(env, site.id, kind); return redirect(`${here}?note=suggested`); }
+      if (tm[3] === 'remove' && kind === 'task') return redirect(`${here}?note=${await removeTemplateTask(env, site.id, tm[2]) ? 'stepreplaced' : 'stepremoved'}`);
       if (tm[3] === 'remove') { await removeItem(env, site.id, kind, tm[2]); return redirect(`${here}?note=stepremoved`); }
       if (tm[3]) { await moveItem(env, site.id, kind, tm[2], tm[3]); return redirect(here); }
       const form = await request.formData();
