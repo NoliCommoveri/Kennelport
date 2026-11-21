@@ -157,6 +157,8 @@ that record's id in KennelOS, and is how the link finds it again. Keep both.
 | `portal_checklist_items`, `portal_timeline_tasks` | Her templates (`placement_id` empty) and additions for one family | `placement_id`, `product_id` → products |
 | `portal_placement_progress` | A family's tick, hidden step or moved date | `placement_id`, `item_id` → the item or task |
 | `portal_placements_programs` | A family's status and code for a program | `placement_id`, `product_id` |
+| `portal_bag_items` | An item of her go-home bag: cost to her, expensed or not, where it comes from, its program and button words (migration 0041) | `product_id` → products |
+| `portal_placement_bag` | An item one puppy went home with, as it was then (`bag_item_id` empty: added for that family alone) | `placement_id`, `bag_item_id`, `product_id` |
 | `portal_placement_extras`, `portal_stay_skills`, `portal_stay_updates`, `portal_update_skills`, `portal_media` | An extended stay: what was bought, its skills, the weekly updates, their photos and videos (files at `r2_key`) | `placement_id`, `extra_id` → extras, each to the one before it |
 | `portal_messages` | A message between her and a family | `family_id` |
 | `portal_email_log` | Every email the portal sent: her evidence | `family_id`, `placement_id` |

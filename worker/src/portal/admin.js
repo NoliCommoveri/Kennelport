@@ -42,6 +42,8 @@ import { products, KIND_WORDS, itemFields, whenWords, formOffset, templateScreen
 import { settingsScreen } from './admin/settings.js';
 import { waitlistCount, waitlistPart, setupScreen } from './admin/today.js';
 import { handbookScreen, removeScreen, photoScreen } from './admin/handbook.js';
+import { bagScreen, bagItemScreen, removeBagScreen, sentHomeCard } from './admin/bag.js';
+import { bagTemplate, bagPrograms, getBagItem, saveBagItem, removeBagItem, moveBagItem, bagFor, saveBag, fixBag, inTemplate } from './bag.js';
 import {
   listChapters, getChapter, saveChapter, removeChapter, moveChapter, linkablePrograms, photoTags, setChapterPhoto, chaptersFrom, importChapters, MAX_UPLOAD,
 } from './handbook.js';
@@ -397,6 +399,11 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
         <div class="row"><label>${esc(say('keptpups.vet_phone'))}<input name="pup_vet_phone" type="tel" value="${esc(p.pup_vet_phone ?? '')}" maxlength="40"></label><label>${esc(say('keptpups.vet_address'))}<input name="pup_vet_address" value="${esc(p.pup_vet_address ?? '')}" maxlength="200"></label></div></div>
       <p><button class="primary">Save</button></p></div></section>`));
 
+    // Sent home with (portal/admin/bag.js): once she has a bag, or this puppy has one of its own.
+    const bag = await bagFor(env, site.id, p);
+    const template = (await bagTemplate(env, site.id)).filter(inTemplate);
+    if (bag.own || template.length) parts.push(sentHomeCard(`${base}/bag`, bag, template, name, url, say));
+
     parts.push(form('life', `<section class="card"><h2>Life status</h2><div class="row"><label>Status<select name="life_status">${[['with_family', 'With the family'], ['deceased', 'Died'], ['rehomed', 'Rehomed'], ['returned', 'Returned to you']].map(([k, l]) => `<option value="${k}"${p.life_status === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label><label>Since<input type="date" name="on" value="${esc(p.life_status_on ?? '')}"></label></div>
       <p class="hint">Anything but "With the family" stops every reminder at once.</p><p><button>Save</button></p></section>`));
     if (p.status === 'open' && !p.picked_up_at) {
@@ -415,7 +422,7 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
         return `<dt>${esc(formatAt(r.sent_at, s.time_zone, { weekday: false }))}</dt><dd><b>${esc(KINDS[r.kind] ?? r.kind)}</b>: <span${['failed', 'bounced'].includes(r.result) ? ' class="error"' : ''}>${esc(WORDS[r.result] ?? r.result)}</span> to ${esc(addr)}${r.basis && r.kind !== 'invite' ? `<br><span class="hint">Counted from ${esc(r.basis.includes('T') ? `the deadline ${formatAt(r.basis, s.time_zone, { weekday: false })}` : `go-home ${formatDay(r.basis)}`)}</span>` : ''}</dd>`;
       }).join('')}</dl>` : '<p class="muted">Nothing sent yet.</p>'}</section>`);
 
-    const FIELD = { picked_up_at: 'Picked up', pickup_state: 'Pickup', vet_deadline_at: 'Vet deadline', pickup_booked_at: 'Pickup booked', go_home_on: 'Go-home', puppy_id: 'Puppy', puppy_name: 'Puppy', call_name: 'Name', microchip: 'Microchip', registration_no: 'Registration number', vet_booked_for: 'Vet booked for', vet_clinic: 'Clinic', vet_booked_at: 'Vet booking recorded', proof_file_id: 'Vet record', proof_uploaded_at: 'Vet record uploaded', proof_accepted_at: 'Vet record accepted', contract_file_id: 'Contract', life_status: 'Life status', life_status_on: 'Since', health_record: 'Health record', extra: 'Extra', extra_suggested: 'Extra from KennelOS, to confirm', extra_declined: 'KennelOS extra turned down', stay_update: 'Stay update sent', account_erased: 'Account erased', checklist: 'Checklist ticked', task: 'Task done', step_hidden: 'Step hidden for them', step_shown: 'Step shown again', task_day: 'Task moved', program: 'Program', program_code: 'Their program code', merged: 'Merged with the record you typed in' };
+    const FIELD = { picked_up_at: 'Picked up', pickup_state: 'Pickup', vet_deadline_at: 'Vet deadline', pickup_booked_at: 'Pickup booked', go_home_on: 'Go-home', puppy_id: 'Puppy', puppy_name: 'Puppy', call_name: 'Name', microchip: 'Microchip', registration_no: 'Registration number', vet_booked_for: 'Vet booked for', vet_clinic: 'Clinic', vet_booked_at: 'Vet booking recorded', proof_file_id: 'Vet record', proof_uploaded_at: 'Vet record uploaded', proof_accepted_at: 'Vet record accepted', contract_file_id: 'Contract', life_status: 'Life status', life_status_on: 'Since', health_record: 'Health record', extra: 'Extra', extra_suggested: 'Extra from KennelOS, to confirm', extra_declined: 'KennelOS extra turned down', stay_update: 'Stay update sent', account_erased: 'Account erased', checklist: 'Checklist ticked', task: 'Task done', step_hidden: 'Step hidden for them', step_shown: 'Step shown again', task_day: 'Task moved', program: 'Program', program_code: 'Their program code', bag: say('bag.history'), merged: 'Merged with the record you typed in' };
     const UNDONE = { checklist: 'Checklist unticked', task: 'Task undone', program_code: 'Their program code removed' };
     const BY = { breeder: 'you', family: 'the family', kennelos: 'KennelOS', portal: 'the portal' };
     const isTime = (v) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(v ?? '');
@@ -593,6 +600,44 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
     }
   }
 
+  // Her go-home bag (portal/admin/bag.js).
+  const bm = rest.match(/^\/bag(?:\/(new|[0-9a-f-]{36})(?:\/(up|down|remove))?)?$/);
+  if (bm) {
+    const here = `${home}/bag`;
+    const programs = await bagPrograms(env, site.id);
+    const show = async (opts = {}) => page(say('bag.title'), bagScreen(site, await bagTemplate(env, site.id), programs, url, { ...opts, say }), { back: `${home}/setup`, status: opts.error ? 400 : 200 });
+    // One item, to change (its own screen, opened from the list).
+    const itemPage = async (id, opts = {}) => {
+      const list = await bagTemplate(env, site.id);
+      const i = list.findIndex((x) => x.id === id);
+      if (i < 0) return redirect(here);
+      return page(say('bag.title'), bagItemScreen(site, list[i], i, list.length, programs, { ...opts, say }), { back: `${here}#b-${id}`, status: opts.error ? 400 : 200 });
+    };
+    if (!post) {
+      if (!bm[1]) return show();
+      if (bm[1] === 'new') return null;
+      if (!bm[2]) return itemPage(bm[1]);
+      if (bm[2] !== 'remove') return null;
+      const x = await getBagItem(env, site.id, bm[1]);
+      return x ? page(say('bag.title'), removeBagScreen(site, x, say), { back: here }) : redirect(here);
+    }
+    if (!bm[1]) return null;
+    let values = null;
+    try {
+      if (bm[2] === 'remove') { await removeBagItem(env, site.id, bm[1]); return redirect(`${here}?note=removed`); }
+      if (bm[2]) { await moveBagItem(env, site.id, bm[1], bm[2]); return redirect(`${here}/${bm[1]}`); }
+      const form = await request.formData();
+      values = Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
+      const id = await saveBagItem(env, site.id, bm[1] === 'new' ? null : bm[1], values, say);
+      return redirect(`${here}?note=${bm[1] === 'new' ? 'added' : 'saved'}#b-${id}`);
+    } catch (err) {
+      const kept = values ? { ...values, shown: values.shown ? 1 : 0, expense: values.expense ? 1 : 0, product_id: values.product_id || null } : null;
+      if (err instanceof PortalError && bm[1] !== 'new' && !bm[2]) return itemPage(bm[1], { error: say(err.message), values: kept });
+      if (err instanceof PortalError) return show({ error: say(err.message), values: bm[1] === 'new' ? kept : null });
+      throw err;
+    }
+  }
+
   // Her checklist and timeline templates.
   const tm = rest.match(/^\/(checklist|timeline)(?:\/(suggested|new|ready|[0-9a-f-]{36})(?:\/(up|down|remove))?)?$/);
   if (tm) {
@@ -688,12 +733,19 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
         return to('saved');
       case 'picked-up': {
         const after = await markPickedUp(env, site.id, needP().id, get('day') ? { day: get('day'), time: get('time') } : {});
+        await fixBag(env, site.id, after, 'breeder');
         try { await sendDueFor(env, site, after, s); } catch (err) { if (!(err instanceof MailError)) throw err; }
         return to('pickedup');
       }
       case 'confirm': await confirmPickup(env, site.id, needP().id); return to('confirmed');
       case 'not-yet': await pickupNotYet(env, site.id, needP().id); return to('notyet');
       case 'accept': await acceptProof(env, site.id, needP().id); return to('accepted');
+      case 'bag':
+        try { await saveBag(env, site.id, needP(), form); } catch (err) {
+          if (err instanceof PortalError && /^bag\./.test(err.message)) throw new PortalError(say(err.message));
+          throw err;
+        }
+        return redirect(`${home}/f/${familyId}?note=bag#bag`);
       case 'life': await setLifeStatus(env, site.id, needP().id, get('life_status'), get('on')); return to('saved');
       case 'record': await addHealthRecord(env, site.id, needP().id, values); return to('record');
       case 'contract': {

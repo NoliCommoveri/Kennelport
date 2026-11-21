@@ -76,6 +76,7 @@ export function setupScreen(site, s, say = defaultSay) {
       ${item(`${b}/checklist`, 'Go-home checklist', 'What every family has ready')}
       ${item(`${b}/timeline`, 'First-weeks timeline', 'Tasks dated from birth or pickup')}
       ${item(`${b}/handbook`, say('handbook.item'), say('handbook.item_note'))}
+      ${item(`${b}/bag`, say('bag.item'), say('bag.item_note'))}
       ${item(`${b}/settings#programs`, 'Programs and where they show', 'Your recommended products, as families see them')}
       ${item(`/s/${esc(site.subdomain)}/lists/extras`, 'Extras', 'The catalog; how the portal delivers each is in Portal settings')}
     </ul>`;

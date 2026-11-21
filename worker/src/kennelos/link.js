@@ -214,6 +214,9 @@ export async function unlinkSite(env, siteId) {
     // 0037, review finding 02-1): nothing could send them back once unlinked.
     db.prepare("UPDATE extras SET show_on_site = CASE WHEN hidden_by_kennelos = 1 THEN 0 ELSE show_on_site END, hidden_by_kennelos = 0, source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
     db.prepare("UPDATE products SET show_on_site = CASE WHEN hidden_by_kennelos = 1 THEN 0 ELSE show_on_site END, hidden_by_kennelos = 0, source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
+    // Her go-home bag's items from KennelOS (portal/bag.js): hers now, one KennelOS
+    // stopped sending off by her own switch.
+    db.prepare("UPDATE portal_bag_items SET shown = CASE WHEN hidden_by_kennelos = 1 THEN 0 ELSE shown END, hidden_by_kennelos = 0, source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
     // A partner kennel KennelOS stopped sending stays hidden (she may have unticked
     // naming it): it waits under Not on your site, with Remove.
     db.prepare("UPDATE partner_kennels SET source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),

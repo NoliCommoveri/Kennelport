@@ -282,6 +282,9 @@ test('two puppy records on one family merge into KennelOS\'s: hers wins, KennelO
   for (const [id, name] of [['hr1', 'DHPP, first round'], ['hr2', 'Pyrantel']]) env.DB.raw.prepare("INSERT INTO portal_health_records (id, site_id, placement_id, type, given_on, name, created_at) VALUES (?, ?, 'typed-1', ?, '2026-11-03', ?, ?)").run(id, site.id, id === 'hr1' ? 'vaccine' : 'deworming', name, t);
   env.DB.raw.prepare("INSERT INTO portal_placement_progress (site_id, placement_id, item_type, item_id, done_at, done_by, updated_at) VALUES (?, 'typed-1', 'checklist', 'item-1', ?, 'family', ?)").run(site.id, t, t);
   env.DB.raw.prepare("INSERT INTO portal_history (site_id, tbl, row_id, field, old_value, new_value, changed_at, changed_by) VALUES (?, 'portal_placements', 'typed-1', 'call_name', NULL, 'Pip', ?, 'breeder')").run(site.id, t);
+  // Her go-home bag, saved on the typed record (portal/bag.js).
+  env.DB.raw.prepare("UPDATE portal_placements SET bag_saved_at = ? WHERE id = 'typed-1'").run(t);
+  env.DB.raw.prepare("INSERT INTO portal_placement_bag (id, site_id, placement_id, name, cost_cents, expense, sort) VALUES ('bag-1', ?, 'typed-1', 'Chew toy', 600, 1, 0)").run(site.id);
   const list = await (await her('/portal')).text();
   assert.equal(list.match(/The Reed family<\/b>/g).length, 1);
   assert.match(list, /Twice: merge/);
@@ -298,6 +301,8 @@ test('two puppy records on one family merge into KennelOS\'s: hers wins, KennelO
   assert.deepEqual(env.DB.raw.prepare('SELECT name FROM portal_health_records WHERE placement_id = ? ORDER BY name').all(k).map((r) => r.name), ['DHPP, first round', 'Pyrantel']);
   assert.equal(row('SELECT COUNT(*) AS n FROM portal_placement_progress WHERE placement_id = ?', k).n, 1);
   assert.equal(row("SELECT COUNT(*) AS n FROM portal_history WHERE row_id = ? AND field = 'call_name'", k).n, 1);
+  assert.ok(p.bag_saved_at);
+  assert.equal(row('SELECT name FROM portal_placement_bag WHERE placement_id = ?', k).name, 'Chew toy', 'her bag moves across');
   assert.doesNotMatch(await (await her(`/portal/f/${fam}`)).text(), /Two puppy records/);
   // KennelOS's next send updates the one record.
   await feed({ families: [REED()] });

@@ -223,6 +223,7 @@ export async function deleteFamily(env, siteId, familyId) {
     env.DB.prepare(`DELETE FROM portal_health_records WHERE placement_id IN (${inPlacements})`).bind(familyId),
     env.DB.prepare(`DELETE FROM portal_placement_progress WHERE placement_id IN (${inPlacements})`).bind(familyId),
     env.DB.prepare(`DELETE FROM portal_placements_programs WHERE placement_id IN (${inPlacements})`).bind(familyId),
+    env.DB.prepare(`DELETE FROM portal_placement_bag WHERE placement_id IN (${inPlacements})`).bind(familyId),
     env.DB.prepare(`DELETE FROM portal_checklist_items WHERE placement_id IN (${inPlacements})`).bind(familyId),
     env.DB.prepare(`DELETE FROM portal_timeline_tasks WHERE placement_id IN (${inPlacements})`).bind(familyId),
     // Their kept puppy (portal/pups.js); its photos' files go with the next cleanup if the website removed them.

@@ -31,6 +31,7 @@ import { messagesOpen, thread, unreadFrom, markRead, familyWrites, isLoss, erase
 import { TYPE_ICON, SPRITE, ic } from './family/icons.js';
 import { skillsList, updateCard, stayContext } from './family/stay.js';
 import { active } from './family/parts.js';
+import { familyBag } from './bag.js';
 import { pupOf, photosOf } from './pups.js';
 import { servePhoto, serveFile, goToProgram } from './family/files.js';
 import { redeemViewLink, currentView, viewCookie } from './view.js';
@@ -594,11 +595,24 @@ async function vetPage(env, site, fam, { error, note } = {}, now = new Date()) {
   return frame(site, 'Vet visit', body, { fam, tab: '/family/vet', status: error ? 400 : 200 });
 }
 
+// What came home in the puppy's bag (portal/bag.js familyBag; the prototype's Records
+// band): each item, its program's line and her button where it's tied to a program.
+function bagBand(items, name, kennel, s) {
+  const row = (x) => {
+    const pr = x.program;
+    return `<li><div><span class="badge">${ic(pr ? TYPE_ICON[pr.portal_type] ?? 'gift' : 'gift')}</span><span><b>${esc(x.name)}</b>${pr?.family_action ? `<span class="small muted">${esc(pr.family_action)}</span>` : ''}</span>
+      ${pr ? `<a class="btn line small" href="/family/go/${esc(pr.id)}?from=bag">${esc(x.button || 'Get more')} ${ic('arrow')}</a>` : '<span></span>'}</div></li>`;
+  };
+  return `<section class="band" id="bag"><div class="between"><h2>What came home in ${esc(name)}'s bag</h2><span class="small muted">From ${esc(kennel)}</span></div>
+    <ul class="hl bag">${items.map(row).join('')}</ul></section>${items.some((x) => x.program) ? disclosure(s) : ''}`;
+}
+
 async function recordsPage(env, site, fam) {
   const { p, s, pup, photos } = await loadContext(env, site, fam);
   if (!p) return noPlacement(site, fam);
   const name = pupName(p);
   const records = await healthRecords(env, site.id, p.id);
+  const bag = active(p) ? await familyBag(env, site.id, p) : [];
   const contract = p.contract_file_id ? await getFile(env, site.id, p.contract_file_id) : null;
   const row = (k, v) => (v ? `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>` : '');
   const reg = pup?.registration ? `${pup.registration === 'full' ? 'Full' : 'Limited'}${pup.registry ? ` (${pup.registry})` : ''}` : null;
@@ -617,6 +631,7 @@ async function recordsPage(env, site, fam) {
     ${contract ? `<li><a href="/family/file/${esc(contract.id)}">${ic('file')} Your contract</a></li>` : '<li class="muted">Your contract will be here once it\'s added.</li>'}
     ${p.proof_file_id ? `<li><a href="/family/file/${esc(p.proof_file_id)}">${ic('stethoscope')} Vet visit record</a></li>` : ''}
   </ul></section>
+  ${bag.length ? bagBand(bag, name, site.kennel_name || site.subdomain, s) : ''}
   ${contactsCard(site, s, p, name)}
   <section class="card" id="photos"><h2>Photos of ${esc(name)}</h2>
     ${photos.length ? `<ul class="gallery">${photos.map((ph) => `<li><a href="/family/photo/${esc(ph.id)}"><img src="/family/photo/${esc(ph.id)}?s=t" alt="${esc(ph.alt ?? '')}" loading="lazy"></a></li>`).join('')}</ul>` : '<p class="muted">Photos will appear here.</p>'}</section>`;

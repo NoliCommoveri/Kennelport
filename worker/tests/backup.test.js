@@ -119,7 +119,7 @@ test('the puppy portal, the KennelOS link and the page builds come back too', as
   const from = await makeEnv(KEYS);
   const { id } = await makeDemoSite(from);
   const before = await everything(from, id);
-  for (const table of ['portal_families', 'portal_emails', 'portal_placements', 'litters', 'puppies']) assert.ok(before.tables[table].length > 0, `${table} has rows to carry`);
+  for (const table of ['portal_families', 'portal_emails', 'portal_placements', 'portal_bag_items', 'litters', 'puppies']) assert.ok(before.tables[table].length > 0, `${table} has rows to carry`);
 
   const doc = await exportBackup(from, id);
   assert.equal(doc.format, BACKUP_FORMAT);

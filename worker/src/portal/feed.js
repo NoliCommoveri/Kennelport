@@ -41,9 +41,13 @@
 // The answer carries the few facts that go back (3.4): each placement's real pickup
 // time once she has marked it (KennelOS moves its placement event and marks the
 // sale Delivered), the microchip she entered or corrected, a death after pickup
-// she recorded, and portal_only once the family is handed over. Applied at
-// KennelOS's next sync, without asking her: she made the change herself. Money
-// never comes back this way. It also carries the key for the one-tap link.
+// she recorded, portal_only once the family is handed over, and what went home in
+// the go-home bag with her cost for each item (bag: { items: [{ bag_item_id?, name,
+// cost, expense }], cost, expensed }; portal-go-home-bag.md 4b). Applied at KennelOS's
+// next sync, without asking her: she made the change herself. No money between her
+// and the family comes back this way (a return, a refund); the bag is her own cost,
+// which KennelOS records as an expense on the sale (the owner's choice, 2026-11-21).
+// It also carries the key for the one-tap link.
 import { ApiError } from '../lib/http.js';
 import { hmacHex, sha256Hex, timingSafeEqual, randomHex } from '../lib/crypto.js';
 import { emailHash, normalizeEmail } from '../auth.js';
@@ -51,6 +55,7 @@ import { encryptEmail, applyChanges, getSettings, PLACEMENT_FIELDS, PUP_VET_FIEL
 import { siteBase } from '../kennelos/link.js';
 import { scheduleDelete } from './account.js';
 import { addExtra } from './stays.js';
+import { bagFact } from './bag.js';
 
 export const FEED_FORMAT = 1;
 export const MAX_FEED_BYTES = 512 * 1024;
@@ -405,11 +410,22 @@ async function markGone(env, siteId, r, at, counts) {
 // ---------- the facts that go back ----------
 
 export async function factsFor(env, siteId) {
-  const { results } = await env.DB.prepare(`SELECT p.kennelos_id, p.picked_up_at, p.pickup_state, p.microchip, p.edited_fields, p.life_status, p.life_status_on, f.kennelos_id AS family_kennelos_id
+  const { results } = await env.DB.prepare(`SELECT p.id, p.kennelos_id, p.picked_up_at, p.pickup_state, p.microchip, p.edited_fields, p.life_status, p.life_status_on, p.bag_saved_at, f.kennelos_id AS family_kennelos_id
     FROM portal_placements p JOIN portal_families f ON f.id = p.family_id
     WHERE p.site_id = ? AND p.kennelos_id IS NOT NULL AND f.status = 'active' AND f.deleted_at IS NULL`).bind(siteId).all();
+  // What went home in the go-home bag, with her costs (portal/bag.js bagFact; plan
+  // portal-go-home-bag.md 4b): once the bag is the placement's own.
+  const saved = results.filter((p) => p.bag_saved_at);
+  const bags = new Map();
+  if (saved.length) {
+    const rows = (await env.DB.prepare(`SELECT b.* FROM portal_placement_bag b JOIN portal_placements p ON p.id = b.placement_id
+      WHERE b.site_id = ? AND p.kennelos_id IS NOT NULL AND p.bag_saved_at IS NOT NULL ORDER BY b.placement_id, b.sort`).bind(siteId).all()).results;
+    const kos = new Map((await env.DB.prepare('SELECT id, kennelos_id FROM portal_bag_items WHERE site_id = ? AND kennelos_id IS NOT NULL').bind(siteId).all()).results.map((x) => [x.id, x.kennelos_id]));
+    for (const p of saved) bags.set(p.id, bagFact(rows.filter((r) => r.placement_id === p.id), kos));
+  }
   return results.map((p) => {
     const out = { id: p.kennelos_id, family_id: p.family_kennelos_id };
+    if (bags.has(p.id)) out.bag = bags.get(p.id);
     const home = p.pickup_state === 'confirmed' && p.picked_up_at;
     if (home) { out.picked_up_at = p.picked_up_at; out.portal_only = true; }
     if (edited(p).includes('microchip') && p.microchip) out.microchip = p.microchip;

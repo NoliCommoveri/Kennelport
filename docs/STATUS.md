@@ -4,7 +4,7 @@ The one place for progress. Keep it short: one line per item, a link to where th
 is. When a step is built, change its line here and add the detail to the build log
 ([`log/BUILD_LOG.md`](log/BUILD_LOG.md)); the plans describe intent, not progress.
 
-Last updated 2026-11-19. Released on `main`: Site Manager (`APP_VERSION`) 18, site
+Last updated 2026-11-21. Released on `main`: Site Manager (`APP_VERSION`) 18, site
 template (`ASSET_VERSION`) 27 (flip cards that grow to fit, 2026-11-17).
 
 ## Platform
@@ -66,11 +66,13 @@ anyone outside the family.
   migration 0040 (`portal_chapters`). Her chapters on the Portal tab; families read it as a flipbook
   with search; chapters she writes with Claude upload as a file, styled, with her photos; Read next and a quick link, shown only once a chapter has words. `PORTAL_VERSION` 4 on this
   branch. Build log, 2026-11-21.
-- Phase 2, next: **the go-home bag**, planned 2026-11-21 in
-  [`plans/portal-go-home-bag.md`](plans/portal-go-home-bag.md) (migration 0041; bag items with
-  their cost and an expense column, pushed from KennelOS in the bundle, and what
-  went home sent back to KennelOS as an expense; every question answered).
-  Ready to build; not started.
+- Phase 2: **the go-home bag built** 2026-11-21, migration 0041
+  ([`plans/done/portal-go-home-bag.md`](plans/done/portal-go-home-bag.md)): her bag on the
+  Portal tab (cost, an expense column, where from, a program and her button words), Sent
+  home with on each family's screen, What came home in their puppy's bag on Records from
+  pickup; KennelOS sends her items (`bag_items` in the bundle) and gets what went home back
+  in the feed's facts. **Needs a `PORTAL_VERSION` bump (4, on `main`): asked the owner.**
+  For KennelOS: plan sections 4a and 4b. Build log, 2026-11-21. Next in phase 2: to choose.
 - Phase 3: not started.
 - The same family twice, and deleted families (2026-11-13): the feed links a family's only
   typed placement; **Merge** for a typed placement or family into KennelOS's; **Delete
@@ -96,6 +98,7 @@ anyone outside the family.
 - Co-owned dogs: KennelPort's half built 2026-11-04 ([`plans/done/co-owned-dogs.md`](plans/done/co-owned-dogs.md)).
 - Linked sample and the demo site: built ([`plans/done/linked-sample.md`](plans/done/linked-sample.md)).
 - Seeing a family's portal as they see it: built 2026-11-13 ([`plans/done/family-view.md`](plans/done/family-view.md)).
+- The go-home bag: built 2026-11-21 ([`plans/done/portal-go-home-bag.md`](plans/done/portal-go-home-bag.md)).
 
 ## Review ([`review/senior-review-2026-11.md`](review/senior-review-2026-11.md), 2026-11-10)
 

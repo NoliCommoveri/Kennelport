@@ -2105,7 +2105,7 @@ nothing shows to families where it's empty, so new sites start with no chapters.
 ## 2026-11-21: the go-home bag, planned
 
 - The owner chose the go-home bag as phase 2's next chunk (not the baby book). Plan:
-  [`plans/portal-go-home-bag.md`](../plans/portal-go-home-bag.md), from family-portal.md
+  [`plans/done/portal-go-home-bag.md`](../plans/done/portal-go-home-bag.md), from family-portal.md
   8.4 and the prototype's three bag screens (her template on the Portal tab, Sent home
   with on the family's screen, What came home in Opal's bag on Records). One migration
   (0041: `portal_bag_items`, `portal_placement_bag`, `portal_placements.bag_saved_at`);
@@ -2124,3 +2124,59 @@ nothing shows to families where it's empty, so new sites start with no chapters.
   marks pickup, then fixed; families see it only from pickup; no quantities; her bag
   starts empty; she sets each item's button words (filled in from the program's type,
   hers to change; a `button` column). Plan ready to build.
+
+## 2026-11-21: the go-home bag, built (phase 2)
+
+Plan: [`plans/done/portal-go-home-bag.md`](../plans/done/portal-go-home-bag.md) (its
+section 9 lists where the build differs). Branch `ccr-00a76f7b-evincp`.
+
+- **Migration 0041** (`go_home_bag`): `portal_bag_items` (her bag: name, cost in cents,
+  expense, origin, program, her button words, on/off, order, and KennelOS's id, source and
+  `hidden_by_kennelos`), `portal_placement_bag` (what one puppy went home with, each item as
+  it was then), and `portal_placements.bag_saved_at`. Additive only; it applies itself on
+  the first request after the merge.
+- `portal/bag.js` (new): the bag, costs (`parseCost`, `money`), `bagFor` (a puppy's own rows,
+  else her bag as it stands), `saveBag` (Sent home with), `fixBag` (at Mark picked up) and
+  `fixDueBags` (the hourly job, for a pickup that came another way), `familyBag` and
+  `bagFact` (for KennelOS).
+- Her screens, `portal/admin/bag.js` (new): **Go-home bag** on the Portal tab (the
+  prototype's admPortal list: the program's icon or a gift, "Costs you $4 · where from ·
+  tied to Program", an Expensed tag beside the name; Change opens the item on its own
+  screen, with Move up, Move down and Remove after a question); **Sent home with** on a
+  family's screen once she has a bag (the prototype's chips, Expensed for this family in a
+  fold, Add something else, Save; "8 items · $24 to you · $22 expensed"). Saving or pickup
+  fixes the puppy's bag; a later change to her bag doesn't touch it. History: "Sent home
+  with: 4 items". Built from the Site Manager's existing `.list`, `.tag`, `.chip` and
+  `label.check`: no change to `app.css`, so no `APP_VERSION` bump.
+- The family's side, `portal/family.js`: **What came home in Opal's bag** on Records from
+  pickup on, while the puppy is with them (the prototype's band of `hl` rows: badge, name,
+  the program's line, her button), with the disclosure when a program shows. No costs,
+  origins or expense for families. Clicks count with place `bag`. Her read-only view shows
+  it as they see it.
+- **KennelOS** (`kennelos/bundle.js`): a new optional section `bag_items` (listed in
+  `SECTIONS`), `[{ id, name, cost, expense?, origin?, product_id? }]`, matched as extras and
+  products are: KennelOS owns name, cost, expense, origin and program (`OWNED.bag_items`);
+  her on/off, order and button words stay hers (filled in from the program's type when it
+  first arrives); one of hers with the same name is taken over the first time; one not sent
+  again is hidden, never deleted; hers made by hand are never touched. Unlink makes them hers
+  (`kennelos/link.js`). The linked sample's bundle 1 has three items, so the demo site has
+  a bag. `kennelos-contract.md` Part C lists the section.
+- **Back to KennelOS** (`portal/feed.js` `factsFor`): `bag: { items: [{ bag_item_id?, name,
+  cost, expense }], cost, expensed }` on a placement once its bag is fixed, whole each
+  time; an empty list when nothing went. The owner's exception to "money never goes back on
+  its own" (her own cost, not a charge), noted in family-portal.md 3.4 and feed.js.
+- Delete now and site close remove a family's bag; an erase keeps it with her sale records;
+  merging a typed puppy record into KennelOS's moves her bag across when KennelOS's has none.
+  Backups carry both tables (`SITE_TABLES`; `backup-format.md`).
+- Wording: new group `bag` in `manage/wording.js`, every line on her two screens. The
+  family's heading, "From {kennel}" and the Get more fallback stay in `family.js`, as on
+  its other pages.
+- `public/_kp/f/portal.css`: the three-column highlight row for the band (`.hl.bag`).
+  **Needs a `PORTAL_VERSION` bump (4, on `main`): asked the owner.** Until then
+  `versions.test.js` fails, as expected.
+- Checked at 390px and 1280px against the prototype (her list, the family card, Records).
+- Tests: `portal-bag.test.js` (new, 7); additions to `portal-feed` (merge), `backup` (the
+  demo site's bag round-trips), `kennelos` and `linked-sample` (the new section).
+  497 pass, 1 expected fail (versions).
+- For KennelOS to build on its side: the plan's sections 4a (send `bag_items`, cost included)
+  and 4b (record what went home as an expense on the sale).

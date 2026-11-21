@@ -1,7 +1,8 @@
 # The go-home bag: plan
 
-Phase 2, second chunk of the family portal ([`family-portal.md`](family-portal.md)
-sections 6, 8.4, 9 and 12.1). Written 2026-11-21. Not started.
+Phase 2, second chunk of the family portal ([`family-portal.md`](../family-portal.md)
+sections 6, 8.4, 9 and 12.1). Written 2026-11-21. **Built 2026-11-21** (build log, 2026-11-21;
+where the build differs from this plan is listed in section 9).
 
 One branch, one migration (0041), usable on its own. The Reports page that compares
 sign-ups with and without a bag item is a later chunk; this one stores what it will need.
@@ -276,3 +277,24 @@ before pickup: decision 3), 3 (no quantities: decision 12), 4 (start empty: deci
 5 (she sets the button words: decision 4), 6 (expense is a yes/no: decision 8), 7 (what
 went home goes back to KennelOS: decision 9, section 4b), 8 (she can still add items by
 hand: decision 10). Ready to build.
+
+## 9. As built (2026-11-21)
+
+Where the build differs from the plan above:
+
+- **The expense column** is an Expensed tag beside the item's name, not at the row's end,
+  so a row stays one line on a phone.
+- **Change** opens an item on a screen of its own (the same form as Add an item, with
+  Move up, Move down and Remove), not a fold in the list: a fold in the middle of each
+  row read badly on a computer.
+- **Sent home with** uses the Photos screen's chips (`.chip` with `label.check`), so the
+  Site Manager's styles don't change; the per-family expense ticks are in a fold under
+  them, Expensed for this family.
+- **A program's button** shows wherever the program is on in the portal with a web link;
+  one KennelOS has hidden from the website still shows, as programs do everywhere else
+  in the portal (bundle finding 01-1).
+- **Pickups that came another way** (the clock started from the booked time, or
+  KennelOS's pickup) get their bag fixed by the hourly job (`fixDueBags`).
+- **Merging** a typed puppy record into KennelOS's moves her bag across when KennelOS's
+  has none of its own.
+- Her own items' `source` is `kennelport`, as on products and extras.
