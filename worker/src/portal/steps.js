@@ -60,6 +60,85 @@ const SUGGESTED_TIMELINE = [
   { title: 'Six months: spay or neuter and adult teeth', body: 'A good time to ask your vet about timing.', count_from: 'birth', offset_days: 182 },
 ];
 
+// Ready-made tasks she picks from on her Timeline screen (and a family's screen):
+// one kind per program type, each with a few wordings to choose from and the usual
+// day. {program} becomes the program's name when it's added; {name} stays, so each
+// family reads their own puppy's name. The registration kind can go in with no
+// program. Her wording, kept here in one place until the portal's screens move into
+// manage/wording.js (site-builder step 2.4).
+export const READY_TASKS = {
+  registration: {
+    label: 'Registration', days: 30, button: 'Register',
+    choices: [
+      { title: 'Register {name}', body: 'Your registration paper is in the go-home folder.' },
+      { title: 'Register {name}', body: 'Use the code in your go-home folder to register {name} online.' },
+      { title: 'Register {name} in your name', body: 'Fill in your part of the registration paper and send it in.' },
+    ],
+  },
+  insurance: {
+    label: 'Insurance', days: 3, button: 'Activate the trial',
+    choices: [
+      { title: 'Activate {name}\'s insurance trial', body: 'The free trial has to be activated within a few days of pickup.' },
+      { title: 'Start {name}\'s free insurance', body: 'Activate it now so {name} is covered from the first week home.' },
+    ],
+  },
+  food: {
+    label: 'Food', days: 14, button: 'Order {name}\'s food',
+    choices: [
+      { title: 'Order {name}\'s food', body: 'Order before the go-home bag runs out, so {name} stays on the same food.' },
+      { title: 'Keep the same food for two weeks', body: 'Change food slowly, if at all, over 7 to 10 days.' },
+    ],
+  },
+  product: {
+    label: 'Product', days: 7, button: 'Have a look',
+    choices: [
+      { title: '{program} for {name}', body: 'What we use and recommend for our puppies.' },
+      { title: 'Sign up for {program}', body: 'Use our link to open your account.' },
+    ],
+  },
+  other: {
+    label: 'Other', days: 7, button: 'Sign up',
+    choices: [
+      { title: 'Sign up for {program}', body: 'Use our link to open your account.' },
+      { title: 'Open your {program} account', body: 'Sign up with our link, and use your code if it asks for one.' },
+    ],
+  },
+};
+
+// The ready-made task a picker value names: "<program id>|<kind>|<choice>", the
+// program id blank for registration with no program. Added like any task she types.
+export async function addReady(env, siteId, value, placementId = null) {
+  const [pid, kind, n] = String(value ?? '').split('|');
+  const ready = READY_TASKS[kind];
+  const choice = ready?.choices[Number(n)];
+  if (!choice || !/^\d+$/.test(n ?? '')) throw new PortalError('Choose a ready-made task.');
+  let program = null;
+  if (pid) {
+    program = await env.DB.prepare('SELECT id, name, portal_type FROM products WHERE id = ? AND site_id = ? AND portal_show = 1').bind(pid, siteId).first();
+    if (!program) throw new PortalError('That program isn\'t shown to families.');
+    if ((program.portal_type ?? 'other') !== kind) throw new PortalError('Choose a ready-made task.');
+  } else if (kind !== 'registration') throw new PortalError('Choose a ready-made task.');
+  const words = (x) => x.replace(/\{program\}/g, program?.name ?? '');
+  return saveItem(env, siteId, 'task', null, {
+    title: words(choice.title), body: words(choice.body), count_from: 'pickup', offset_days: String(ready.days),
+    product_id: program?.id ?? '', button_label: program ? ready.button : '',
+  }, placementId);
+}
+
+// Her puppies' names, for the warning on a template step that names one puppy
+// instead of {name} (every family would read that one puppy's name).
+export async function puppyNames(env, siteId) {
+  const { results } = await env.DB.prepare(`SELECT name FROM puppies WHERE site_id = ?
+    UNION SELECT puppy_name FROM portal_placements WHERE site_id = ? UNION SELECT call_name FROM portal_placements WHERE site_id = ? AND call_name IS NOT NULL`).bind(siteId, siteId, siteId).all();
+  return [...new Set(results.map((r) => String(r.name ?? '').trim()).filter((x) => x.length > 1))];
+}
+
+// The first puppy's name a step's words carry as a whole word, if any.
+export function namedPuppy(item, names) {
+  const words = `${item.title ?? ''} ${item.body ?? ''} ${item.button_label ?? ''}`;
+  return names.find((n) => new RegExp(`(^|[^\\p{L}{])${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=$|[^\\p{L}}])`, 'u').test(words)) ?? null;
+}
+
 export async function addSuggested(env, siteId, kind) {
   const tbl = table(kind);
   const have = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${tbl} WHERE site_id = ? AND placement_id IS NULL`).bind(siteId).first('n');
