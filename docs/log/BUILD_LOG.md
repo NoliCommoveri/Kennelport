@@ -2020,11 +2020,3 @@ timeline template with the puppy's name typed in, so every family reads "Maveric
 - No prototype screen for her templates; built from the existing card, fgrid and hint.
 - Tests: one new in `portal-steps.test.js`. 487 pass. No migration, no version bump (no
   file under `worker/public/` changed).
-- Same day, the owner: she should only have to delete her "Register Maverick" for the
-  suggested task to appear. `steps.suggestedFor`: a template task with one of her puppies'
-  names typed in, whose title with `{name}` in its place is a suggested task's title (and
-  that task isn't already on her list). `steps.removeTemplateTask` removes it and inserts
-  the suggested task in the same spot, linked to her shown program of that kind. Her
-  screen says so on the task ("Remove it and the suggested "Register {name}" takes its
-  place…") and on its button; note `stepreplaced`. Any other remove is as before. One
-  more test; 488 pass.

@@ -133,41 +133,10 @@ export async function puppyNames(env, siteId) {
   return [...new Set(results.map((r) => String(r.name ?? '').trim()).filter((x) => x.length > 1))];
 }
 
-// A puppy's name as a whole word (not inside another word, nor {name}).
-const nameRe = (n, flags = 'u') => new RegExp(`(^|[^\\p{L}{])${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=$|[^\\p{L}}])`, flags);
-
 // The first puppy's name a step's words carry as a whole word, if any.
 export function namedPuppy(item, names) {
   const words = `${item.title ?? ''} ${item.body ?? ''} ${item.button_label ?? ''}`;
-  return names.find((n) => nameRe(n).test(words)) ?? null;
-}
-
-// A template task that is a suggested one with a puppy's name typed in ("Register
-// Maverick" for "Register {name}"): the suggested task it stands for, unless her
-// timeline already has that one. Removing the task puts the suggested one in its place.
-const plain = (x) => String(x ?? '').toLowerCase().replace(/[^\p{L}\p{N}{}]+/gu, ' ').trim();
-export function suggestedFor(item, names, list) {
-  const n = namedPuppy(item, names);
-  if (!n) return null;
-  const title = plain(String(item.title ?? '').replace(nameRe(n, 'gu'), '$1{name}'));
-  const sug = SUGGESTED_TIMELINE.find((x) => plain(x.title) === title);
-  if (!sug || list.some((x) => x.id !== item.id && plain(x.title) === plain(sug.title))) return null;
-  return sug;
-}
-
-// Remove a template task; if it stood for a suggested task, that one takes its place
-// (same spot in her list, linked to her program of that kind). True when replaced.
-export async function removeTemplateTask(env, siteId, id) {
-  const list = await listItems(env, siteId, 'task');
-  const row = list.find((x) => x.id === id);
-  const sug = row ? suggestedFor(row, await puppyNames(env, siteId), list) : null;
-  await removeItem(env, siteId, 'task', id);
-  if (!sug) return false;
-  const pid = sug.type ? await env.DB.prepare('SELECT id FROM products WHERE site_id = ? AND portal_show = 1 AND portal_type = ? ORDER BY sort, name LIMIT 1').bind(siteId, sug.type).first('id') : null;
-  const t = now();
-  await env.DB.prepare('INSERT INTO portal_timeline_tasks (id, site_id, title, body, count_from, offset_days, product_id, button_label, auto, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .bind(crypto.randomUUID(), siteId, sug.title, sug.body ?? null, sug.count_from, sug.offset_days, pid ?? null, pid ? sug.button_label ?? null : null, sug.auto ?? null, row.sort, t, t).run();
-  return true;
+  return names.find((n) => new RegExp(`(^|[^\\p{L}{])${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=$|[^\\p{L}}])`, 'u').test(words)) ?? null;
 }
 
 export async function addSuggested(env, siteId, kind) {
