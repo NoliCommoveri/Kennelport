@@ -2099,3 +2099,5 @@ nothing shows to families where it's empty, so new sites start with no chapters.
   library lists each chapter's photos ("Puppy handbook: Welcome home", `photoPlaces.js`).
 - Wording: new lines in the `handbook` group, and `library.handbook`. No migration beyond
   0040. Tests: `portal-handbook.test.js` (3). 490 pass, 1 expected fail (versions).
+- Same day, the owner said yes: **`PORTAL_VERSION` 4** (`PORTAL_FILES` `ec94d3d9f829dbc7`), for
+  `portal.css` and the new `handbook.js`. 491 pass.
