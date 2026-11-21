@@ -70,6 +70,11 @@ side with the prototype at phone width (390px) and on a computer. Any change fro
 prototype should add pleasing variety, never remove it. If a screen has no prototype,
 build it from the prototype's existing components, and say so.
 
+In the family portal, cards and bands come in three colours, paper, green and sand,
+in light and dark (`portal.css`, "Card colours"). Each card has one fixed colour, and
+no two of the same colour sit one directly above the other: a new card takes a colour
+its neighbours above and below don't have. `tests/portal-colours.test.js` checks it.
+
 ## Breeder-facing wording goes in the owner's list
 
 The owner writes every line the breeder reads in the Site Manager: help lines, hints,

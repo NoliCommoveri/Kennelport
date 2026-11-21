@@ -2239,3 +2239,27 @@ Cash", which reads as if she gave them. Now:
   "Your own code will be here once {kennel} adds it" for a per-family program, as the list did.
 - Server HTML only: no portal file changed, no version bump. Tests: `portal`,
   `portal-steps` updated. 498 pass.
+
+## 2026-11-21: three card colours in the family portal, food band above the contacts
+
+The owner, from her live Home (dark): the food and insurance band goes above the "Questions
+about {pup}? One tap" contacts; every tab but Home was one colour; alternating cards should
+differ, with a third colour in the scheme, light and dark.
+
+- A third colour, **sand** (`--sand` #EFE2C3 light, #352C19 dark; `--sand-brass` for its
+  eyebrows, 4.5:1 or better), beside **paper** (the surface) and **green** (the mint, and the
+  deep green of the food band). The sand page heads (`.band`) and the warm tile use it too.
+  Classes `c-paper`, `c-green`, `c-sand`, `.sec.sand` (`portal.css`, "Card colours").
+- The rule, also in CLAUDE.md ("Look"): each card has one fixed colour; no two cards of the
+  same colour sit one above the other; a new card takes a colour its neighbours don't have.
+- Timeline: sand head, groups taking turns green and paper, Recommended sand. Vet visit:
+  sand, paper, green. Records: My puppy sand, Shots paper, Papers green, the bag sand,
+  Contacts paper, Photos green. Stay: sand head, Skills green, updates paper and green in turn.
+- Home: the vet visit's steps and What's next move from mint to sand (the food band's deep
+  green now follows them), the checklist sand, Recommended sand. Fixed colours can't keep
+  Home's last card clear of every stage's mix, so **Quick links** alone is green unless the
+  piece above it is green, then paper (`toneOf` in `family.js`).
+- `tests/portal-colours.test.js` renders Home, Timeline, Vet visit and Records at four stages,
+  with and without her lists and handbook, and fails on two same-colour neighbours.
+- `portal.css` changed: `PORTAL_VERSION` still 5 (on `main`), the owner asked before a bump;
+  `versions.test.js` fails until then. 500 pass, 1 fail (that one).

@@ -13,6 +13,7 @@
   --head: #1F3A2A; --head-ink: #F5F2EA; --head-muted: #B9C8BC; --tab-on: #CFE3C4; --tab-on-ink: #1F3A2A;
   --ok: #3E7A4B; --warn: #8A5A1E; --warn-soft: #F3E6D3; --bad: #A3261E; --bad-soft: #F6DEDB; --cal: #B5462F;
   --girl: #A8456F; --girl-soft: #F6E1EA; --boy: #2F6690; --boy-soft: #DDEAF5;
+  --sand: #EFE2C3; --sand-line: #DCC79A; --sand-brass: #75591F;
   --shadow: 0 1px 2px rgba(30,29,26,.06), 0 6px 18px rgba(30,29,26,.08);
   --f-display: "Fraunces", Georgia, "Times New Roman", serif;
   --f-body: "Mulish", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -24,6 +25,7 @@
   --accent: #8FB998; --accent-ink: #0F1A12; --accent-soft: #233127; --brass: #CFAE66; --band: #24221E;
   --head: #10201A; --head-ink: #ECE7DC; --head-muted: #8FA596; --tab-on: #2E4A36; --tab-on-ink: #ECE7DC;
   --ok: #86C495; --warn: #E0A65A; --warn-soft: #33281A; --bad: #F08A80; --bad-soft: #3A2220; --cal: #C9583F; --girl: #E79BBB; --girl-soft: #3A2430; --boy: #8DB8DE; --boy-soft: #1F2C3A;
+  --sand: #352C19; --sand-line: #4D4027; --sand-brass: #D9B870;
   --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35); color-scheme: dark; } }
 
 html { font-size: 14px; -webkit-text-size-adjust: 100%; }
@@ -108,7 +110,7 @@ a.tile:hover { box-shadow: var(--shadow); }
 .tile.green.urgent { background: var(--cal); color: #fff; }
 .tile.green .eyebrow, .tile.dark .eyebrow { color: inherit; opacity: .85; }
 .tile.green a:not(.btn) { color: inherit; }
-.tile.warm { background: var(--warn-soft); border-color: transparent; }
+.tile.warm { background: var(--sand); border-color: transparent; }
 .tile.dark { background: var(--head); color: var(--head-ink); border-color: transparent; }
 .tile .btn { justify-self: start; }
 .ico { width: 2.6rem; height: 2.6rem; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex: none; }
@@ -144,14 +146,30 @@ a.tile:hover { box-shadow: var(--shadow); }
 .weeks span.on { background: currentColor; }
 .weeks span.now { background: repeating-linear-gradient(90deg, currentColor 0 5px, transparent 5px 9px); }
 
+/* Card colours (the owner, 2026-11-21): three, paper, green and sand, the same in light
+   and dark. Each card or band has one fixed colour, and no two of the same colour sit one
+   directly above the other: a new card takes a colour its neighbours don't have. Green
+   is the mint (.c-green, .sec.mint), the deep green (.sec.deep, the food band) and the
+   solid green tile; sand is .c-sand, .sec.sand, .band and the warm tile; paper is the
+   plain card (.card, .c-paper, .sec.paper). tests/portal-colours.test.js checks each
+   tab. Repeated cards (the timeline's groups, the stay's updates) take turns. */
+.c-paper { background: var(--surface); border-color: var(--line); }
+.c-green { background: var(--accent-soft); border-color: transparent; }
+.c-sand { background: var(--sand); border-color: transparent; }
+.c-sand .eyebrow, .band .eyebrow, .sec.sand .eyebrow, .tile.warm .eyebrow { color: var(--sand-brass); }
+.c-sand .progress { background: var(--sand-line); }
+.c-sand .contact, .c-green .contact { border-top-color: var(--sand-line); }
+.c-green .ico { background: var(--surface); }
+
 /* Bands: the sand page head (Timeline, Stay), and home's full-width sections. */
-.band { background: var(--band); border-radius: var(--rc); padding: 1.1rem 1rem; }
+.band { background: var(--sand); border-radius: var(--rc); padding: 1.1rem 1rem; }
 .band h2 { font-size: 1.45rem; }
 .sec { padding: 1.3rem var(--gut) 1.4rem; display: grid; gap: .8rem; }
 @media (min-width: 720px) { .sec { padding: 1.6rem 1.6rem 1.7rem; } }
 .sec > * { margin: 0; }
 .sec .big-h { font: 600 1.7rem/1.05 var(--f-display); letter-spacing: -.01em; }
 .sec.mint { background: var(--accent-soft); }
+.sec.sand { background: var(--sand); }
 .sec.deep { background: var(--head); color: var(--head-ink); }
 .sec.deep .eyebrow { color: #E9C77E; }
 .sec.paper { background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }

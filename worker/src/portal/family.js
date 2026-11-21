@@ -181,7 +181,7 @@ function tickForm(kind, x, back, done) {
 function checklistCard(list) {
   if (!list.length) return '';
   const done = list.filter((x) => x.done).length;
-  return `<section class="tile full" id="checklist"><div class="between"><h2>Go-home checklist</h2><span class="small muted">${done} of ${list.length} ready</span></div>
+  return `<section class="tile full c-sand" id="checklist"><div class="between"><h2>Go-home checklist</h2><span class="small muted">${done} of ${list.length} ready</span></div>
     <div class="progress" aria-hidden="true"><i style="width:${Math.round((done / list.length) * 100)}%"></i></div>
     <ul class="checks">${list.map((x) => `<li${x.done ? ' class="done"' : ''}>${x.auto
       ? `<a class="tick${x.done ? ' on' : ''}" href="/family/vet#booked" aria-label="${esc(x.done ? 'Done' : 'Tap I\'ve booked it on the Vet visit page')}">${ic('check')}</a>`
@@ -258,7 +258,7 @@ function taskRow(t, kennel, back) {
 function nextBand(tasks, name, kennel) {
   const next = openTasks(tasks, 3);
   if (!next.length) return '';
-  return `<section class="sec mint bleed"><p class="eyebrow">${esc(name)}'s first months</p><h2 class="big-h">What's next</h2>
+  return `<section class="sec sand bleed"><p class="eyebrow">${esc(name)}'s first months</p><h2 class="big-h">What's next</h2>
     ${numSteps(next.map((t) => ({ h: esc(t.title), p: `${t.due ? `By ${esc(formatDay(t.due))}. ` : ''}${esc(t.body ?? '')}`, act: t.link ? `<span class="acts">${goLink(t.link, 'home', t.button)}</span>` : '' })))}
     <p><a class="go" href="/family/timeline">The whole timeline ${ic('arrow')}</a></p></section>`;
 }
@@ -299,7 +299,7 @@ function contactsCard(site, s, p, name, { lead = false } = {}) {
       <div class="row">${v.phone ? `<a class="btn line" href="tel:${esc(dialable(v.phone))}">${ic('phone')} Call the vet</a>` : ''}
       ${v.address ? `<a class="go" href="https://www.google.com/maps/search/?api=1&amp;query=${encodeURIComponent(v.address)}">${ic('pin')} ${esc(v.address)} ${ic('arrow')}</a>` : ''}</div>
       ${v.phone ? `<p class="small muted">${esc(v.phone)}</p>` : ''}</div>` : '';
-  return `<section class="card contacts" id="contacts">${lead ? `<p class="eyebrow">The first weeks at home</p><h2>Questions about ${esc(name)}? One tap</h2>` : '<h2>Contacts</h2>'}${her}${vetBlock}</section>`;
+  return `<section class="card c-paper contacts" id="contacts">${lead ? `<p class="eyebrow">The first weeks at home</p><h2>Questions about ${esc(name)}? One tap</h2>` : '<h2>Contacts</h2>'}${her}${vetBlock}</section>`;
 }
 
 // From pickup, for her chosen number of weeks, the contacts lead Home.
@@ -323,6 +323,16 @@ function lossPage(site, fam, p, main) {
 }
 
 // ---------- home's pieces (the prototype's tiles and bands, plan 7.2) ----------
+
+// The colour (portal.css, Card colours) of the last section in some html: green, sand,
+// paper, or null for one with none of its own (Read next).
+function toneOf(html) {
+  const c = ` ${[...html.matchAll(/<section class="([^"]*)"/g)].at(-1)?.[1] ?? ''} `;
+  if (/ (readnext|hero|bento) /.test(c)) return null;
+  if (/ (c-green|mint|deep|green) /.test(c)) return 'green';
+  if (/ (c-sand|sand|band|warm) /.test(c)) return 'sand';
+  return 'paper';
+}
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 // A calendar page: the month on red, the day, the weekday.
@@ -391,7 +401,7 @@ async function homePage(env, site, fam, now = new Date()) {
     const dueTime = new Date(p.vet_deadline_at).toLocaleTimeString('en-US', { timeZone: s.time_zone, hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
     calendar = `<div class="tile green${p.proof_uploaded_at ? '' : ' urgent'}"><p class="eyebrow">3-day vet visit</p><div class="calrow">${calPage(dl.ymd)}<div><p class="bigline">${p.proof_uploaded_at ? (p.proof_accepted_at ? 'Done' : 'Uploaded') : `${hoursLeft} h left`}</p><p class="small">Due by ${esc(dueTime)}</p></div></div>
       ${p.proof_uploaded_at ? `<p class="small"><b>${p.proof_accepted_at ? `${ic('check')} Accepted by ${esc(kennel)}` : `${esc(kennel)} will check it`}</b></p>` : `<a class="btn onfill small" href="/family/vet#proof">${ic('upload')}Upload record</a>`}</div>`;
-    band = `<section class="sec mint bleed"><p class="eyebrow">Your contract's 3-day visit</p><h2 class="big-h">${p.proof_uploaded_at ? 'Record uploaded: thank you' : `${esc(name)}'s vet visit`}</h2>
+    band = `<section class="sec sand bleed"><p class="eyebrow">Your contract's 3-day visit</p><h2 class="big-h">${p.proof_uploaded_at ? 'Record uploaded: thank you' : `${esc(name)}'s vet visit`}</h2>
       ${numSteps([
         { done: Boolean(p.vet_booked_at), h: p.vet_booked_at ? `Booked${p.vet_booked_for ? ` for ${esc(p.vet_booked_for.replace('T', ' at '))}` : ''}` : 'Book the visit', act: p.vet_booked_at ? '' : '<a class="btn text small" href="/family/vet">Add the booking</a>' },
         { done: Boolean(p.proof_uploaded_at), h: `See the vet by ${esc(formatAt(p.vet_deadline_at, s.time_zone))}`, p: 'Bring this portal\'s Records page.' },
@@ -399,7 +409,7 @@ async function homePage(env, site, fam, now = new Date()) {
       ])}<p class="small muted">This is a reminder. Your contract sets the requirement and the deadline.</p></section>`;
     if (!p.proof_uploaded_at) action = { icon: 'clock', title: `${esc(timeLeft(p.vet_deadline_at, now))} left`, sub: `Vet visit due ${esc(formatAt(p.vet_deadline_at, s.time_zone))}`, href: '/family/vet#proof', label: 'Upload' };
     const soon = openTasks(steps.tasks.filter((t) => t.auto !== 'vet_visit' && t.auto !== 'vet_booking'), 2);
-    if (soon.length) band += `<section class="card"><div class="between"><h2>Coming up</h2><a class="go" href="/family/timeline">All ${ic('arrow')}</a></div><ul class="tasks">${soon.map((t) => taskRow(t, kennel, 'home')).join('')}</ul></section>`;
+    if (soon.length) band += `<section class="card c-paper"><div class="between"><h2>Coming up</h2><a class="go" href="/family/timeline">All ${ic('arrow')}</a></div><ul class="tasks">${soon.map((t) => taskRow(t, kennel, 'home')).join('')}</ul></section>`;
   } else {
     hello = 'Hello again';
     const weeks = p.picked_up_at ? Math.floor((new Date(now).getTime() - Date.parse(p.picked_up_at)) / (7 * 86400000)) : 0;
@@ -444,6 +454,16 @@ async function homePage(env, site, fam, now = new Date()) {
   const chapters = live ? await shownChapters(env, site.id) : [];
   const quick = [...(chapters.length ? [['/family/handbook', 'book', 'Handbook']] : []), [stay ? '/family/stay' : '/family/timeline', stay ? 'award' : 'calendar', stay ? 'Stay updates' : 'Timeline'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records'],
     ['/family/records#photos', 'paw', 'Photos'], ['/family/messages', 'message', 'Messages'], ...(chapters.length ? [] : [['/family/account', 'user', 'Account']])];
+  // The food band above the contacts (the owner, 2026-11-21). Each piece has its own
+  // colour (portal.css, Card colours); Quick links, last and always there, is green
+  // unless the piece above it is, as the pieces above come and go by stage.
+  const middle = `
+  ${live ? foodBand(s, name, food, ins, extra, kennel) : ''}
+  ${contactsLead(p, s, now) ? contactsCard(site, s, p, name, { lead: true }) : ''}
+  ${checklist}
+  ${st === 'before' && statusUrl && live ? statusBand(p, s, name, kennel) : ''}
+  ${rest.length ? `<section class="sec sand bleed"><h2>Recommended for ${esc(name)}</h2>${programList(rest, 'home', kennel)}</section>` : ''}
+  ${readNext(chapters, photos)}`.trim();
   const body = `
   <section class="hero bleed">${main ? `<img src="${esc(main)}" alt="">` : `<span class="ph" aria-hidden="true">${ic('paw')}</span>`}<div class="cap"><span class="script">${esc(hello)}</span><h1>${esc(greeting)}</h1></div></section>
   <section class="bento">
@@ -454,13 +474,8 @@ async function homePage(env, site, fam, now = new Date()) {
     ${calendar}
   </section>
   ${band}
-  ${contactsLead(p, s, now) ? contactsCard(site, s, p, name, { lead: true }) : ''}
-  ${checklist}
-  ${st === 'before' && statusUrl && live ? statusBand(p, s, name, kennel) : ''}
-  ${live ? foodBand(s, name, food, ins, extra, kennel) : ''}
-  ${rest.length ? `<section class="sec paper bleed"><h2>Recommended for ${esc(name)}</h2>${programList(rest, 'home', kennel)}</section>` : ''}
-  ${readNext(chapters, photos)}
-  <section class="tile quick"><h2>Quick links</h2><div class="qgrid">${quick.map(([href, icon, label]) => `<a class="qtile" href="${href}"><span class="ico">${ic(icon)}</span>${label}</a>`).join('')}</div></section>
+  ${middle}
+  <section class="tile quick ${toneOf(middle || band) === 'green' ? 'c-paper' : 'c-green'}"><h2>Quick links</h2><div class="qgrid">${quick.map(([href, icon, label]) => `<a class="qtile" href="${href}"><span class="ico">${ic(icon)}</span>${label}</a>`).join('')}</div></section>
   ${list.length ? disclosure(s) : ''}`;
   return frame(site, 'Home', body, { fam, tab: '/family', action: action ? actionBar(action) : '' });
 }
@@ -599,10 +614,10 @@ async function timelinePage(env, site, fam, { error } = {}, now = new Date()) {
   const pickup = home ? `${p.picked_up_at ? 'pickup' : 'go-home'} (${esc(formatDay(home))})` : null;
   const body = `${errorBox(error)}<section class="band"><p class="eyebrow">${esc(name)}'s first months</p><h1>Timeline</h1>
     <p class="small muted">${[born, pickup].filter(Boolean).length ? `Dated from ${[born, pickup].filter(Boolean).join(' and ')}. ` : ''}Mark a step done and its reminders stop.</p></section>
-    ${groups.length ? groups.map(([g, l]) => `<section class="card"><h2>${esc(g)}</h2><ul class="tasks">${l.map((t) => taskRow(t, kennel, 'timeline')).join('')}</ul></section>`).join('')
-      : `<section class="card"><p class="muted">${esc(kennel)} hasn't added the timeline yet.</p></section>`}
+    ${groups.length ? groups.map(([g, l], i) => `<section class="card ${i % 2 ? 'c-paper' : 'c-green'}"><h2>${esc(g)}</h2><ul class="tasks">${l.map((t) => taskRow(t, kennel, 'timeline')).join('')}</ul></section>`).join('')
+      : `<section class="card c-paper"><p class="muted">${esc(kennel)} hasn't added the timeline yet.</p></section>`}
     ${stage(p, now) === 'before' && checklist.length ? `<p class="small"><a class="go" href="/family#checklist">The go-home checklist ${ic('arrow')}</a></p>` : ''}
-    ${list.length ? `<section class="card"><h2>Recommended for ${esc(name)}</h2>${programList(list, 'timeline', kennel)}</section>${disclosure(s)}` : ''}`;
+    ${list.length ? `<section class="card c-sand"><h2>Recommended for ${esc(name)}</h2>${programList(list, 'timeline', kennel)}</section>${disclosure(s)}` : ''}`;
   return frame(site, 'Timeline', body, { fam, tab: '/family/timeline', status: error ? 400 : 200 });
 }
 
@@ -614,19 +629,19 @@ async function vetPage(env, site, fam, { error, note } = {}, now = new Date()) {
   const proof = p.proof_file_id ? await getFile(env, site.id, p.proof_file_id) : null;
   const running = stage(p, now) !== 'before';
   const body = `${noteBox(note)}${errorBox(error)}
-  <section class="card"><p class="eyebrow">The vet visit</p>
+  <section class="card c-sand"><p class="eyebrow">The vet visit</p>
     <h1>${running && p.vet_deadline_at ? `Due by ${esc(formatAt(p.vet_deadline_at, s.time_zone))}` : `Book ${esc(name)}'s first vet visit`}</h1>
     <p>${esc(VET_RULES[s.vet_rule])}${running && p.vet_deadline_at ? `: by ${deadlineLine(p.vet_deadline_at, s)}${Date.parse(p.vet_deadline_at) > now.getTime() ? `, ${esc(timeLeft(p.vet_deadline_at, now))} from now` : ''}.` : `. The clock starts when you take ${esc(name)} home.`}</p>
     ${s.proof_note ? `<p class="muted">What counts as proof: ${esc(s.proof_note)}</p>` : ''}
     <p class="muted small">This page is a reminder. Your contract states the vet visit requirement.</p>
   </section>
-  <section class="card" id="booked"><h2>${p.vet_booked_at ? 'Your appointment' : 'I\'ve booked it'}</h2>
+  <section class="card c-paper" id="booked"><h2>${p.vet_booked_at ? 'Your appointment' : 'I\'ve booked it'}</h2>
     <form method="post" action="/family/vet/booked" class="stack">
       <div class="two"><label>Day<input type="date" name="day" value="${esc(bookedDay ?? '')}" required></label><label>Time<input type="time" name="time" value="${esc(bookedTime ?? '')}"></label></div>
       <label>Clinic <span class="muted">(if you like)</span><input name="clinic" value="${esc(p.vet_clinic ?? '')}" maxlength="120"></label>
       <button class="btn ${p.vet_booked_at ? 'line' : 'solid'}">${p.vet_booked_at ? 'Save changes' : 'I\'ve booked it'}</button>
     </form></section>
-  <section class="card" id="proof"><h2>Upload the vet's record</h2>
+  <section class="card c-green" id="proof"><h2>Upload the vet's record</h2>
     ${proof ? `<p class="status ok">${ic('check')} Uploaded ${esc(formatAt(p.proof_uploaded_at, s.time_zone))}${p.proof_accepted_at ? `, accepted by ${esc(site.kennel_name || site.subdomain)}` : ''}. <a href="/family/file/${esc(proof.id)}">View it</a></p>` : ''}
     <form method="post" action="/family/vet/proof" enctype="multipart/form-data" class="stack">
       <label>A photo or PDF, up to 10 MB<input type="file" name="file" accept="image/*,application/pdf" required></label>
@@ -656,7 +671,7 @@ async function recordsPage(env, site, fam) {
   const contract = p.contract_file_id ? await getFile(env, site.id, p.contract_file_id) : null;
   const row = (k, v) => (v ? `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>` : '');
   const reg = pup?.registration ? `${pup.registration === 'full' ? 'Full' : 'Limited'}${pup.registry ? ` (${pup.registry})` : ''}` : null;
-  const body = `<section class="card"><p class="eyebrow">My puppy</p><h1 class="script">${esc(name)}</h1>
+  const body = `<section class="card c-sand"><p class="eyebrow">My puppy</p><h1 class="script">${esc(name)}</h1>
     <dl class="facts">
       ${row('Name', p.call_name && p.call_name !== p.puppy_name ? `${p.call_name} (${p.puppy_name} here)` : p.puppy_name)}
       ${row('Litter', pup?.litter_name)}${row('Born', pup?.born_on ? formatDay(pup.born_on) : null)}
@@ -665,15 +680,15 @@ async function recordsPage(env, site, fam) {
       ${row('Microchip', p.microchip)}${row('Registration', reg)}${row('Registration number', p.registration_no)}
       ${row(p.picked_up_at ? 'Went home' : 'Going home', goHomeWords(p, s))}
     </dl></section>
-  <section class="card"><h2>Shots, deworming and vet visits</h2>
+  <section class="card c-paper"><h2>Shots, deworming and vet visits</h2>
     ${records.length ? `<table class="records"><thead><tr><th>Date</th><th>What</th><th>Kind</th></tr></thead><tbody>${records.map((r) => `<tr><td>${esc(formatDay(r.given_on))}</td><td>${esc(r.name)}${r.notes ? `<br><span class="muted small">${esc(r.notes)}</span>` : ''}</td><td>${esc(RECORD_TYPES[r.type])}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">None recorded yet.</p>'}</section>
-  <section class="card"><h2>Papers</h2><ul class="links">
+  <section class="card c-green"><h2>Papers</h2><ul class="links">
     ${contract ? `<li><a href="/family/file/${esc(contract.id)}">${ic('file')} Your contract</a></li>` : '<li class="muted">Your contract will be here once it\'s added.</li>'}
     ${p.proof_file_id ? `<li><a href="/family/file/${esc(p.proof_file_id)}">${ic('stethoscope')} Vet visit record</a></li>` : ''}
   </ul></section>
   ${bag.length ? bagBand(bag, name, site.kennel_name || site.subdomain, s) : ''}
   ${contactsCard(site, s, p, name)}
-  <section class="card" id="photos"><h2>Photos of ${esc(name)}</h2>
+  <section class="card c-green" id="photos"><h2>Photos of ${esc(name)}</h2>
     ${photos.length ? `<ul class="gallery">${photos.map((ph) => `<li><a href="/family/photo/${esc(ph.id)}"><img src="/family/photo/${esc(ph.id)}?s=t" alt="${esc(ph.alt ?? '')}" loading="lazy"></a></li>`).join('')}</ul>` : '<p class="muted">Photos will appear here.</p>'}</section>`;
   return frame(site, 'Records', body, { fam, tab: '/family/records' });
 }
@@ -688,8 +703,8 @@ async function stayPage(env, site, fam, now = new Date()) {
   const days = daysUntil(p, s, now);
   const body = `<section class="band"><p class="eyebrow">${esc(stay.pe.name)}</p><h1>${esc(name)}'s stay</h1>
     <p>${stay.state === 'staying' ? `Week ${stay.week} of ${stay.total}. ` : stay.state === 'booked' ? `Starts ${esc(formatDay(stay.pe.starts_on))}. ` : ''}${days !== null && days > 0 ? `${esc(name)} comes home in ${days} day${days === 1 ? '' : 's'}${goHomeWords(p, s) ? `, ${esc(goHomeWords(p, s))}` : ''}.` : ''}</p></section>
-    ${stay.progress.length ? `<section class="card"><h2>Skills</h2>${skillsList(stay.progress)}</section>` : ''}
-    ${stay.updates.length ? stay.updates.map((u) => updateCard(u, stay.skills, name)).join('') : `<section class="card"><p class="muted">${esc(kennel)}'s first update will be here${stay.pe.starts_on ? ` in the stay's first week` : ''}.</p></section>`}
+    ${stay.progress.length ? `<section class="card c-green"><h2>Skills</h2>${skillsList(stay.progress)}</section>` : ''}
+    ${stay.updates.length ? stay.updates.map((u, i) => updateCard(u, stay.skills, name, i % 2 ? 'c-green' : 'c-paper')).join('') : `<section class="card c-paper"><p class="muted">${esc(kennel)}'s first update will be here${stay.pe.starts_on ? ` in the stay's first week` : ''}.</p></section>`}
     <p class="small"><a class="go" href="/family/timeline">${esc(name)}'s timeline ${ic('arrow')}</a></p>`;
   return frame(site, 'Stay', body, { fam, tab: '/family/stay' });
 }
