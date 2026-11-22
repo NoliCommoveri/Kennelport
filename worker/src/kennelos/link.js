@@ -177,9 +177,11 @@ export async function isLinked(env, siteId) {
 // for her) are still keyed to it, and wait for the next device she links.
 export async function waitingForDevice(env, siteId) {
   const tables = ['dogs', 'litters', 'puppies', 'health_results', 'extras', 'products', 'partner_kennels', 'steps', 'payment_info'];
-  const sql = [...tables.map((t) => `SELECT 1 FROM ${t} WHERE site_id = ? AND source = 'kennelos'`), 'SELECT 1 FROM link_pending WHERE site_id = ?'].join(' UNION ALL ');
+  // One EXISTS per table, OR'd: D1 refuses a compound SELECT (UNION ALL) of more
+  // than 5 terms, and this is ten.
+  const sql = [...tables.map((t) => `EXISTS (SELECT 1 FROM ${t} WHERE site_id = ? AND source = 'kennelos')`), 'EXISTS (SELECT 1 FROM link_pending WHERE site_id = ?)'].join(' OR ');
   if (await isLinked(env, siteId)) return false;
-  return Boolean(await env.DB.prepare(`SELECT EXISTS (${sql}) AS x`).bind(...Array(tables.length + 1).fill(siteId)).first('x'));
+  return Boolean(await env.DB.prepare(`SELECT ${sql} AS x`).bind(...Array(tables.length + 1).fill(siteId)).first('x'));
 }
 
 // Stop one device. The last one stopping is not an Unlink (review finding 02-2):

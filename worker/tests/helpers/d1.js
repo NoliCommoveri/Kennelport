@@ -10,6 +10,10 @@
 import { DatabaseSync } from 'node:sqlite';
 
 export const D1_MAX_PARAMS = 100;
+// D1 refuses a compound SELECT of more than 5 terms ("too many terms in compound
+// SELECT"); node:sqlite allows 500. Counted over the whole statement, subqueries
+// included, which is stricter than SQLite but never looser.
+export const D1_MAX_COMPOUND = 5;
 
 class Stmt {
   constructor(db, sql, params = []) {
@@ -26,6 +30,8 @@ class Stmt {
   }
 
   #prepared() {
+    const terms = (this.sql.match(/\b(union|intersect|except)\b/gi) ?? []).length + 1;
+    if (terms > D1_MAX_COMPOUND) throw new Error(`D1_ERROR: too many terms in compound SELECT (${terms}, D1 allows ${D1_MAX_COMPOUND}): SQLITE_ERROR`);
     return this.db.prepare(this.sql);
   }
 
