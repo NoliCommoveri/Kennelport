@@ -2425,3 +2425,18 @@ mkVet, mkRecords, mkCard, the waves and the art), so the two could only come clo
 With the owner's yes: `PORTAL_VERSION` 6 → 7 (`PORTAL_FILES` d790fbdbc776259e), for the
 looks drawn as the prototype (`looks/`, the art files gone) and Upload and the checklist
 sending themselves (`portal.js`), so phones pick them up at once. All tests pass (506).
+
+## 2026-11-22: Fix: Link KennelOS answered "Something went wrong" on production
+
+The owner reported the Site Manager's Link KennelOS screen (`/s/<site>/kennelos`) failing
+on `nineacresbostons`. Its Worker log: `D1_ERROR: too many terms in compound SELECT`, from
+`waitingForDevice` (`kennelos/link.js`), which asked ten tables at once as one `UNION ALL`
+of ten SELECTs. D1 allows 5; node:sqlite in the tests allows 500, so the tests never saw
+it. It runs only for a site with no device linked, so every site not yet linked hit it
+(on opening the screen and on Show a link code).
+
+- `waitingForDevice` now ORs one `EXISTS` per table: the same answer, no compound SELECT.
+- The tests' D1 stand-in (`tests/helpers/d1.js`) now refuses a compound SELECT of more
+  than 5 terms, as D1 does (beside its 100-variable limit), so this can't come back
+  unseen. The other two compound SELECTs in the code (2 and 3 terms) are within it.
+- All tests pass (506). No migration, no version bump (Worker code only).
