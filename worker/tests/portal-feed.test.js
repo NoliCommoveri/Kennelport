@@ -459,3 +459,19 @@ test("the sale's registration and a screening test from KennelOS show on the fam
   assert.equal(row("SELECT registration FROM portal_placements WHERE kennelos_id = 'sale-1'").registration, 'limited');
   assert.equal((await feed({ families: [REED({}, { registration: 'champion' })] })).status, 400);
 });
+
+test("the pup's own health tests from KennelOS: Health test on Records, and one she removes stays removed for that family", async () => {
+  const { env, her, feed, row } = await setup();
+  const health = [{ id: 'g1', type: 'health_test', given_on: '2026-11-04', name: 'PRA-prcd: Clear' }, { id: 'g2', type: 'health_test', given_on: '2026-11-05', name: 'BAER: Bilateral' }];
+  const { portal } = await (await feed({ families: [REED({}, { health })] })).json();
+  assert.deepEqual({ ...row("SELECT type, kind FROM portal_health_records WHERE kennelos_id = 'g1'") }, { type: 'other', kind: 'health_test' });
+  const fam = row("SELECT id FROM portal_families WHERE kennelos_id = 'fam-reed'");
+  await her(`/portal/f/${fam.id}/record/${row("SELECT id FROM portal_health_records WHERE kennelos_id = 'g2'").id}/remove`, {});
+  await feed({ families: [REED({}, { health })] });
+  assert.equal(row("SELECT COUNT(*) AS n FROM portal_health_records WHERE kennelos_id = 'g2'").n, 0);
+  const cookie = (await call(env, H, `/family/handoff?t=${await makeHandoffToken(portal.handoff_key, 'fam-reed')}`)).headers.get('set-cookie').split(';')[0];
+  const records = await (await call(env, H, '/family/records', { headers: { cookie } })).text();
+  assert.match(records, /PRA-prcd: Clear/);
+  assert.match(records, /Health test/);
+  assert.doesNotMatch(records, /BAER/);
+});

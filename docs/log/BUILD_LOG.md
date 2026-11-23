@@ -2481,3 +2481,11 @@ family was deleted, and for KennelOS's screening tests to reach families.
 - Linked sample feed-1 uses every registration and a screening test. Tests in
   `portal-feed.test.js` and `kennelos.test.js`. All pass (508). No version bump (Worker
   code only; no file under `public/_kp/`).
+
+## 2026-11-23 — The pup's own health tests in the portal
+
+- Feed: health records of type `health_test` (the pup's genetic, OFA / PennHIP and
+  breed-specific tests from KennelOS, "PRA-prcd: Clear"), kept as type `other` with kind
+  `health_test` (migration 0043, same file), read as "Health test". She removes any one
+  from a family with Remove, as any record; it stays removed for that family only.
+  `portal_takes` now lists `health_tests`. Tests in `portal-feed.test.js`; all pass (509).

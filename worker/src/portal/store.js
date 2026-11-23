@@ -471,9 +471,10 @@ export async function setLifeStatus(env, siteId, id, status, on) {
 // ---------- health records ----------
 
 export const RECORD_TYPES = { vaccine: 'Vaccine', deworming: 'Deworming', vet_visit: 'Vet visit', other: 'Other' };
-// A record's kind as she and the family read it: a screening test from KennelOS
-// (kind 'screening', type 'other') reads as one.
-export const recordKind = (r) => (r?.kind === 'screening' ? 'Screening test' : RECORD_TYPES[r?.type] ?? 'Other');
+// A record's kind as she and the family read it: a screening test or a health test
+// from KennelOS (kind 'screening' / 'health_test', type 'other') reads as one.
+const KIND_LABEL = { screening: 'Screening test', health_test: 'Health test' };
+export const recordKind = (r) => KIND_LABEL[r?.kind] ?? RECORD_TYPES[r?.type] ?? 'Other';
 // A placement's registration as the family reads it: its sale's (from KennelOS), else
 // the puppy's on the website or kept with the placement.
 const REG_LABEL = { limited: 'Limited', full: 'Full', co_own: 'Co-own', none: 'Unregistered' };

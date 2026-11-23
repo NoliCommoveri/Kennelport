@@ -87,7 +87,7 @@ const SHAPES = {
   },
   extra: { id: F.id, extra_id: F.id },
   voided: { reason: F.enumOf(['died', 'failed_health', 'backed_out', 'other'], true), on: F.date(true) },
-  health: { id: F.id, type: F.enumOf(['vaccine', 'deworming', 'vet_visit', 'screening', 'other'], true), given_on: F.date(true), name: F.text(120, true), notes: F.text(400) },
+  health: { id: F.id, type: F.enumOf(['vaccine', 'deworming', 'vet_visit', 'screening', 'health_test', 'other'], true), given_on: F.date(true), name: F.text(120, true), notes: F.text(400) },
   vet: { clinic: F.text(120), doctor: F.text(120), phone: F.text(40), address: F.text(200) },
   removed: { type: F.enumOf(['family', 'placement', 'health'], true), id: F.id },
 };
@@ -379,10 +379,14 @@ async function upsertExtras(env, siteId, p, rows, counts) {
   }
 }
 
-// A screening test is kept as type 'other' with kind 'screening' (migration 0043).
+// A screening test or a health test (genetic, OFA / PennHIP, breed-specific) is kept as
+// type 'other' with its kind (migration 0043), so the table's type check stays as it is.
+// She removes any one from a family like any record (store.removeHealthRecord).
+const KINDS = ['screening', 'health_test'];
 async function upsertHealth(env, siteId, p, rows, at, counts) {
   for (const sent of rows) {
-    const h = { ...sent, type: sent.type === 'screening' ? 'other' : sent.type, kind: sent.type === 'screening' ? 'screening' : null };
+    const kind = KINDS.includes(sent.type) ? sent.type : null;
+    const h = { ...sent, type: kind ? 'other' : sent.type, kind };
     const cur = await env.DB.prepare('SELECT * FROM portal_health_records WHERE site_id = ? AND placement_id = ? AND kennelos_id = ?').bind(siteId, p.id, h.id).first();
     if (!cur) {
       if (await healthTombstoned(env, siteId, p, h.id)) continue;

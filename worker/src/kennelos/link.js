@@ -18,9 +18,10 @@ import { hmacHex, sha256Hex, randomHex } from '../lib/crypto.js';
 import { SECTIONS } from './bundle.js';
 
 // What the family feed (portal/feed.js) takes beyond format 1's first fields: a
-// placement's `registration` and health records of type `screening`. Sent in the
+// placement's `registration`, and health records of type `screening` and
+// `health_test` (the pup's genetic, OFA / PennHIP and breed-specific tests). Sent in the
 // facts as `portal_takes`, so KennelOS sends them only to a Worker that takes them.
-export const PORTAL_TAKES = ['registration', 'screening'];
+export const PORTAL_TAKES = ['registration', 'screening', 'health_tests'];
 import { ApiError } from '../lib/http.js';
 import { isDemoSite, NOT_FOR_DEMO } from '../lib/demo.js';
 import { bump } from '../signin.js';

@@ -73,6 +73,12 @@
        "type": "screening",
        "given_on": "2026-10-28",
        "name": "Fecal: Negative"
+      },
+      {
+       "id": "ev-o3",
+       "type": "health_test",
+       "given_on": "2026-10-27",
+       "name": "PRA-prcd: Clear"
       }
      ],
      "extras": [
