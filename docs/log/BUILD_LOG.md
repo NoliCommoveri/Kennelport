@@ -2457,3 +2457,27 @@ id alone, site-wide, so it kept those records from the pup's next family too.
   nothing for her to do. Giving a family back still lifts all of its tombstones.
 - Test in `tests/portal-feed.test.js` (fails on the old code). All tests pass (507). No
   migration, no version bump (Worker code only).
+
+## 2026-11-23 — The sale's registration and screening tests in the portal
+
+The owner asked for the family's portal to show the registration they bought (the sale's,
+not the puppy's planned one on the website), including for a pup resold after its first
+family was deleted, and for KennelOS's screening tests to reach families.
+
+- **Migration 0043** (`portal_registration_screening`): `portal_placements.registration`
+  and `portal_health_records.kind`, two new columns, additive. Applies by itself on the
+  first request after the deploy.
+- Feed: a placement's `registration` (limited, full, co_own, none); a health record of
+  type `screening`, kept as type `other` with kind `screening` (the table's type check is
+  unchanged) and read as "Screening test" (`store.recordKind`). A feed without a
+  registration (an older KennelOS) leaves the one there.
+- The link facts carry `portal_takes: ['registration', 'screening']` (`kennelos/link.js
+  PORTAL_TAKES`): KennelOS sends these only to a Worker that lists them, so this goes live
+  before KennelOS sends anything new.
+- Records page: Registration is the placement's (`store.registrationWords`: Limited, Full,
+  Co-own, Unregistered, with the registry), else the puppy's on the website or kept, as
+  before. A pup placed after its litter left the website has no puppy there; the
+  placement's own registration still shows. History names it Registration.
+- Linked sample feed-1 uses every registration and a screening test. Tests in
+  `portal-feed.test.js` and `kennelos.test.js`. All pass (508). No version bump (Worker
+  code only; no file under `public/_kp/`).

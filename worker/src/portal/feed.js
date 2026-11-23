@@ -59,6 +59,9 @@ import { bagFact } from './bag.js';
 
 export const FEED_FORMAT = 1;
 export const MAX_FEED_BYTES = 512 * 1024;
+// A placement's registration (its sale's). Sent only by a KennelOS told this Worker
+// takes it (link.js PORTAL_TAKES), as screening health records are.
+export const REGISTRATIONS = ['limited', 'full', 'co_own', 'none'];
 const MAX = { families: 200, placements: 6, emails: 4, health: 40, removed: 400 };
 // When nothing has come for this long and a placement is open, her Today says so.
 export const QUIET_MS = 24 * 3600000;
@@ -79,12 +82,12 @@ const SHAPES = {
   family: { id: F.id, name: F.text(120, true), emails: { list: 'email', max: MAX.emails }, status_url: F.url, placements: { list: 'placement', max: MAX.placements } },
   placement: {
     id: F.id, puppy_id: F.ref, puppy_name: F.text(60, true), contract_signed_on: F.date(), go_home_on: F.date(), pickup_at: F.at,
-    microchip: F.text(40), registration_no: F.text(40), voided: { object: 'voided' }, health: { list: 'health', max: MAX.health },
+    microchip: F.text(40), registration_no: F.text(40), registration: F.enumOf(REGISTRATIONS), voided: { object: 'voided' }, health: { list: 'health', max: MAX.health },
     extras: { list: 'extra', max: 10 }, vet: { object: 'vet' },
   },
   extra: { id: F.id, extra_id: F.id },
   voided: { reason: F.enumOf(['died', 'failed_health', 'backed_out', 'other'], true), on: F.date(true) },
-  health: { id: F.id, type: F.enumOf(['vaccine', 'deworming', 'vet_visit', 'other'], true), given_on: F.date(true), name: F.text(120, true), notes: F.text(400) },
+  health: { id: F.id, type: F.enumOf(['vaccine', 'deworming', 'vet_visit', 'screening', 'other'], true), given_on: F.date(true), name: F.text(120, true), notes: F.text(400) },
   vet: { clinic: F.text(120), doctor: F.text(120), phone: F.text(40), address: F.text(200) },
   removed: { type: F.enumOf(['family', 'placement', 'health'], true), id: F.id },
 };
@@ -278,6 +281,8 @@ async function placementValues(env, siteId, bp) {
   return {
     puppy_id: pup?.id ?? null, puppy_name: bp.puppy_name, go_home_on: bp.go_home_on, pickup_booked_at: bp.pickup_at,
     microchip: bp.microchip, registration_no: bp.registration_no, contract_signed_on: bp.contract_signed_on,
+    // The sale's registration: none sent (an older KennelOS) leaves what's there.
+    ...(bp.registration ? { registration: bp.registration } : {}),
     // The puppy's own vet, only when KennelOS sends one: otherwise it stays as it is.
     ...(bp.vet ? Object.fromEntries(Object.entries(VET_FIELDS).map(([k, col]) => [`pup_${col}`, bp.vet[k]])) : {}),
   };
@@ -374,21 +379,23 @@ async function upsertExtras(env, siteId, p, rows, counts) {
   }
 }
 
+// A screening test is kept as type 'other' with kind 'screening' (migration 0043).
 async function upsertHealth(env, siteId, p, rows, at, counts) {
-  for (const h of rows) {
+  for (const sent of rows) {
+    const h = { ...sent, type: sent.type === 'screening' ? 'other' : sent.type, kind: sent.type === 'screening' ? 'screening' : null };
     const cur = await env.DB.prepare('SELECT * FROM portal_health_records WHERE site_id = ? AND placement_id = ? AND kennelos_id = ?').bind(siteId, p.id, h.id).first();
     if (!cur) {
       if (await healthTombstoned(env, siteId, p, h.id)) continue;
       await env.DB.batch([
-        env.DB.prepare("INSERT INTO portal_health_records (id, site_id, placement_id, type, given_on, name, notes, source, kennelos_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'kennelos', ?, ?)")
-          .bind(crypto.randomUUID(), siteId, p.id, h.type, h.given_on, h.name, h.notes, h.id, at),
+        env.DB.prepare("INSERT INTO portal_health_records (id, site_id, placement_id, type, kind, given_on, name, notes, source, kennelos_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'kennelos', ?, ?)")
+          .bind(crypto.randomUUID(), siteId, p.id, h.type, h.kind, h.given_on, h.name, h.notes, h.id, at),
         historyStmt(env, siteId, 'portal_placements', p.id, 'health_record', null, `${h.name}, ${h.given_on}`, at),
       ]);
       counts.health_new++;
       continue;
     }
-    if (cur.type !== h.type || cur.given_on !== h.given_on || cur.name !== h.name || show(cur.notes) !== show(h.notes) || cur.kennelos_gone_at) {
-      await env.DB.prepare('UPDATE portal_health_records SET type = ?, given_on = ?, name = ?, notes = ?, kennelos_gone_at = NULL WHERE id = ?').bind(h.type, h.given_on, h.name, h.notes, cur.id).run();
+    if (cur.type !== h.type || show(cur.kind) !== show(h.kind) || cur.given_on !== h.given_on || cur.name !== h.name || show(cur.notes) !== show(h.notes) || cur.kennelos_gone_at) {
+      await env.DB.prepare('UPDATE portal_health_records SET type = ?, kind = ?, given_on = ?, name = ?, notes = ?, kennelos_gone_at = NULL WHERE id = ?').bind(h.type, h.kind, h.given_on, h.name, h.notes, cur.id).run();
       counts.health_updated++;
     }
   }

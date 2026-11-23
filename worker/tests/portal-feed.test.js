@@ -440,3 +440,22 @@ test("a pup returned and placed again: its next family gets every shot and dewor
     placements: [{ id: 'sale-2', puppy_id: 'dog-opal', puppy_name: 'Opal', contract_signed_on: '2026-11-12', go_home_on: go, health: shots }] }] });
   assert.equal(row('SELECT COUNT(*) AS n FROM portal_health_records WHERE placement_id = ?', cole.id).n, 1);
 });
+
+test("the sale's registration and a screening test from KennelOS show on the family's Records page", async () => {
+  const { env, feed, row } = await setup();
+  const health = [{ id: 'ev-1', type: 'vaccine', given_on: '2026-11-03', name: 'DHPP, first round' }, { id: 'ev-9', type: 'screening', given_on: '2026-11-05', name: 'Fecal: Negative' }];
+  const out = await (await feed({ families: [REED({}, { registration: 'full', health })] })).json();
+  assert.equal(row("SELECT registration FROM portal_placements WHERE kennelos_id = 'sale-1'").registration, 'full');
+  assert.deepEqual({ ...row("SELECT type, kind FROM portal_health_records WHERE kennelos_id = 'ev-9'") }, { type: 'other', kind: 'screening' });
+  const { portal } = out;
+  const cookie = (await call(env, H, `/family/handoff?t=${await makeHandoffToken(portal.handoff_key, 'fam-reed')}`)).headers.get('set-cookie').split(';')[0];
+  const records = await (await call(env, H, '/family/records', { headers: { cookie } })).text();
+  assert.match(records, /Full/);
+  assert.match(records, /Screening test/);
+  // A feed without it (an older KennelOS) leaves the registration as it was; a new one changes it.
+  await feed({ families: [REED({}, { health })] });
+  assert.equal(row("SELECT registration FROM portal_placements WHERE kennelos_id = 'sale-1'").registration, 'full');
+  await feed({ families: [REED({}, { registration: 'limited', health })] });
+  assert.equal(row("SELECT registration FROM portal_placements WHERE kennelos_id = 'sale-1'").registration, 'limited');
+  assert.equal((await feed({ families: [REED({}, { registration: 'champion' })] })).status, 400);
+});

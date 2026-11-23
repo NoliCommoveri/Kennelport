@@ -15,6 +15,7 @@
    "placements": [
     {
      "id": "sale-ruby",
+     "registration": "limited",
      "puppy_id": "dog-ruby",
      "puppy_name": "Ruby*",
      "contract_signed_on": "2026-10-20",
@@ -45,6 +46,7 @@
    "placements": [
     {
      "id": "sale-onyx",
+     "registration": "full",
      "puppy_id": "dog-onyx",
      "puppy_name": "Onyx*",
      "contract_signed_on": "2026-10-02",
@@ -65,6 +67,12 @@
        "given_on": "2026-10-31",
        "name": "3-day vet visit",
        "notes": "All clear."
+      },
+      {
+       "id": "ev-o2",
+       "type": "screening",
+       "given_on": "2026-10-28",
+       "name": "Fecal: Negative"
       }
      ],
      "extras": [
@@ -85,6 +93,7 @@
    "placements": [
     {
      "id": "sale-jade",
+     "registration": "co_own",
      "puppy_id": "dog-jade",
      "puppy_name": "Jade*",
      "contract_signed_on": "2026-09-01",
@@ -117,6 +126,7 @@
    "placements": [
     {
      "id": "sale-skye",
+     "registration": "none",
      "puppy_id": "dog-skye",
      "puppy_name": "Skye*",
      "contract_signed_on": "2025-08-01",

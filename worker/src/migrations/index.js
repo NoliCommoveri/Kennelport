@@ -50,6 +50,7 @@ import keptPups from './0039_kept_pups.sql';
 import handbook from './0040_handbook.sql';
 import goHomeBag from './0041_go_home_bag.sql';
 import portalLook from './0042_portal_look.sql';
+import portalRegistrationScreening from './0043_portal_registration_screening.sql';
 
 export const MIGRATIONS = [
   { id: '0001', name: 'schema', sql: schema },
@@ -94,4 +95,5 @@ export const MIGRATIONS = [
   { id: '0040', name: 'handbook', sql: handbook },
   { id: '0041', name: 'go_home_bag', sql: goHomeBag },
   { id: '0042', name: 'portal_look', sql: portalLook },
+  { id: '0043', name: 'portal_registration_screening', sql: portalRegistrationScreening },
 ];
