@@ -16,7 +16,7 @@ import {
   saveFile, getFile, fileResponse, emailLog, history, placeablePuppies, PortalError, RECORD_TYPES, recordKind, MAX_FILE_BYTES,
 } from './store.js';
 import { sendInvites, portalBase } from './auth.js';
-import { pupOf } from './pups.js';
+import { pupOf, photosOf, removedPhotosOf, removePhoto, putBackPhoto } from './pups.js';
 import { makeViewLink, VIEW_AS_ADMIN } from './view.js';
 import { defaultSay } from '../manage/wording.js';
 import {
@@ -230,7 +230,8 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
   const base = `/s/${esc(site.subdomain)}/portal/f/${esc(f.id)}`;
   const form = (action, inner, cls = '') => `<form method="post" action="${base}/${action}"${cls ? ` class="${cls}"` : ''}>${inner}</form>`;
   const puppies = await placeablePuppies(env, site.id);
-  const parts = [note(url), errorBox(error)];
+  const photoNote = { photoremoved: 'portalphotos.removed_note', photoback: 'portalphotos.back_note' }[url.searchParams.get('note')];
+  const parts = [photoNote ? `<p class="notice" role="status">${esc(say(photoNote))}</p>` : note(url), errorBox(error)];
 
   // From KennelOS (plan 3.1): when it last sent, anything it no longer has, and
   // newer values waiting beside hers.
@@ -383,6 +384,17 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
       ${records.length ? `<dl class="kv">${records.map((r) => `<dt>${esc(formatDay(r.given_on))}</dt><dd><b>${esc(r.name)}</b> · ${esc(recordKind(r))}${r.notes ? ` · ${esc(r.notes)}` : ''} ${form(`record/${esc(r.id)}/remove`, '<button class="link">Remove</button>')}</dd>`).join('')}</dl>` : '<p class="muted">None yet. The family sees these under Records.</p>'}
       <details><summary>Add a record</summary>${form('record', `<div class="fgrid"><div class="row"><label>Kind<select name="type">${Object.entries(RECORD_TYPES).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join('')}</select></label><label>Date<input type="date" name="given_on" required></label></div>
         <label>What<input name="name" required maxlength="120" placeholder="DHPP, first round"></label><label>Notes<input name="notes" maxlength="400"></label><p><button>Add</button></p></div>`)}</details>
+    </section>`);
+
+    // The photos the family sees of their puppy, each with Remove for this family only
+    // (portal/pups.js removePhoto), and any she removed, to put back.
+    const pics = await photosOf(env, site.id, p);
+    const gone = await removedPhotosOf(env, site.id, p);
+    const thumb = (ph, act, label) => `<div><a class="lib-ph" href="/s/${esc(site.subdomain)}/photos/${esc(ph.id)}/full" target="_blank" rel="noopener"><img src="/s/${esc(site.subdomain)}/photos/${esc(ph.id)}/thumb" alt="${esc(ph.alt || say('portalphotos.photo'))}" loading="lazy"></a>
+      ${form(`photo/${esc(ph.id)}/${act}`, `<button class="link">${esc(say(label))}</button>`)}</div>`;
+    parts.push(`<section class="card" id="photos"><h2>${esc(say('portalphotos.title', { name }))}</h2>
+      ${pics.length ? `<p class="hint">${esc(say('portalphotos.hint', { name }))}</p><div class="lib-grid">${pics.map((ph) => thumb(ph, 'remove', 'portalphotos.remove')).join('')}</div>` : `<p class="muted">${esc(say('portalphotos.none', { name }))}</p>`}
+      ${gone.length ? `<details><summary>${esc(say('portalphotos.removed', { n: gone.length }))}</summary><div class="lib-grid">${gone.map((ph) => thumb(ph, 'back', 'portalphotos.put_back')).join('')}</div></details>` : ''}
     </section>`);
 
     const contract = p.contract_file_id ? await getFile(env, site.id, p.contract_file_id) : null;
@@ -784,6 +796,13 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
       default: {
         const rm = action?.match(/^record\/([0-9a-f-]{36})\/remove$/);
         if (rm) { await removeHealthRecord(env, site.id, needP().id, rm[1]); return to('removed'); }
+        const phm = action?.match(/^photo\/([0-9a-f-]{36})\/(remove|back)$/);
+        if (phm) {
+          const pl = needP();
+          if (phm[2] === 'back') await putBackPhoto(env, site.id, pl.id, phm[1]);
+          else if ((await photosOf(env, site.id, pl)).some((ph) => ph.id === phm[1])) await removePhoto(env, site.id, pl.id, phm[1]);
+          return redirect(`${home}/f/${familyId}?note=${phm[2] === 'back' ? 'photoback' : 'photoremoved'}#photos`);
+        }
         const sm = action?.match(/^step\/(checklist|task)\/([0-9a-f-]{36})\/(done|undo|hide|show|remove|day)$/);
         if (sm) {
           const [, kind, id, what] = sm;

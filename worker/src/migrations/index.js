@@ -51,6 +51,7 @@ import handbook from './0040_handbook.sql';
 import goHomeBag from './0041_go_home_bag.sql';
 import portalLook from './0042_portal_look.sql';
 import portalRegistrationScreening from './0043_portal_registration_screening.sql';
+import portalPhotoRemove from './0044_portal_photo_remove.sql';
 
 export const MIGRATIONS = [
   { id: '0001', name: 'schema', sql: schema },
@@ -96,4 +97,5 @@ export const MIGRATIONS = [
   { id: '0041', name: 'go_home_bag', sql: goHomeBag },
   { id: '0042', name: 'portal_look', sql: portalLook },
   { id: '0043', name: 'portal_registration_screening', sql: portalRegistrationScreening },
+  { id: '0044', name: 'portal_photo_remove', sql: portalPhotoRemove },
 ];

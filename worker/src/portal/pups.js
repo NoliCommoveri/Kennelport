@@ -47,9 +47,29 @@ export function forgetStatements(env, placementIdsSql, ...binds) {
   ];
 }
 
-// The pinned photos: the nightly cleanup leaves their files.
+// The pinned photos: the nightly cleanup leaves their files. One she removed from a
+// family's portal pins nothing for that family.
 export async function keptPhotoIds(env, siteId) {
-  return new Set((await env.DB.prepare('SELECT DISTINCT photo_id FROM portal_pup_photos WHERE site_id = ?').bind(siteId).all()).results.map((r) => r.photo_id));
+  return new Set((await env.DB.prepare('SELECT DISTINCT photo_id FROM portal_pup_photos WHERE site_id = ? AND removed_at IS NULL').bind(siteId).all()).results.map((r) => r.photo_id));
+}
+
+// A photo she removes from one family's portal (a photo of the wrong pup, say): kept
+// as a row with removed_at, so the family stops seeing it whether the website still
+// shows it on their puppy or not, and keepStatements' INSERT OR IGNORE never brings it
+// back. Put back clears it.
+export async function removePhoto(env, siteId, placementId, photoId, at = new Date().toISOString()) {
+  await env.DB.prepare(`INSERT INTO portal_pup_photos (placement_id, site_id, photo_id, kept_at, removed_at) VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT (placement_id, photo_id) DO UPDATE SET removed_at = excluded.removed_at`).bind(placementId, siteId, photoId, at, at).run();
+}
+export async function putBackPhoto(env, siteId, placementId, photoId) {
+  await env.DB.prepare('UPDATE portal_pup_photos SET removed_at = NULL WHERE placement_id = ? AND site_id = ? AND photo_id = ?').bind(placementId, siteId, photoId).run();
+}
+
+// The photos she removed from this placement's portal that can still be put back.
+export async function removedPhotosOf(env, siteId, p) {
+  if (!p) return [];
+  return (await env.DB.prepare(`SELECT ph.id, ph.alt FROM portal_pup_photos k JOIN photos ph ON ph.id = k.photo_id AND ph.site_id = k.site_id
+    WHERE k.placement_id = ? AND k.site_id = ? AND k.removed_at IS NOT NULL AND ph.purged_at IS NULL ORDER BY k.removed_at DESC LIMIT 60`).bind(p.id, siteId).all()).results;
 }
 
 // The placement's puppy, as puppyFor gives it: the website's while it's there,
@@ -67,16 +87,19 @@ export async function pupOf(env, siteId, p) {
 }
 
 // The placement's photos: the website's as they are now, then any kept that the
-// website no longer shows (removed there, or gone with the litter). The main
-// photo first.
+// website no longer shows (removed there, or gone with the litter), less any she
+// removed from this family's portal. The main photo first.
 export async function photosOf(env, siteId, p) {
   if (!p) return [];
   const live = await puppyPhotos(env, siteId, p.puppy_id);
-  const { results: kept } = await env.DB.prepare(`SELECT ph.id, ph.alt FROM portal_pup_photos k JOIN photos ph ON ph.id = k.photo_id AND ph.site_id = k.site_id
+  const { results: rows } = await env.DB.prepare(`SELECT ph.id, ph.alt, k.removed_at FROM portal_pup_photos k JOIN photos ph ON ph.id = k.photo_id AND ph.site_id = k.site_id
     WHERE k.placement_id = ? AND k.site_id = ? AND ph.purged_at IS NULL
-    ORDER BY ph.id = (SELECT photo_id FROM portal_pups WHERE placement_id = k.placement_id) DESC, ph.created_at DESC LIMIT 60`).bind(p.id, siteId).all();
-  const seen = new Set(live.map((x) => x.id));
-  const out = live.length ? [...live] : [];
+    ORDER BY ph.id = (SELECT photo_id FROM portal_pups WHERE placement_id = k.placement_id) DESC, ph.created_at DESC LIMIT 120`).bind(p.id, siteId).all();
+  // Any she removed from this family's portal (removePhoto) stays out, even while the website shows it.
+  const seen = new Set(rows.filter((x) => x.removed_at).map((x) => x.id));
+  const kept = rows.filter((x) => !x.removed_at).map(({ id, alt }) => ({ id, alt }));
+  const out = live.filter((x) => !seen.has(x.id));
+  for (const x of out) seen.add(x.id);
   for (const x of kept) if (!seen.has(x.id)) { seen.add(x.id); out.push(x); }
   return out.slice(0, 60);
 }

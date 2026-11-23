@@ -33,6 +33,9 @@ vets. Built 2026-11-19, migration 0039. KennelOS's half: the last section.
   off the website and out of her library, but the nightly cleanup never deletes its file
   while a family keeps it (`cleanup.js`). The family keeps a photo she removes by hand
   too (the owner, 2026-11-19).
+  **Modified:** she can remove a photo from one family's portal on their screen, and put it
+  back (the owner, 2026-11-23, migration 0044, `portal_pup_photos.removed_at`): it leaves
+  that family's pages even while the website shows it, and pins no file.
 - **Her placement form:** once the puppy's litter has gone, the puppy's choice reads
   "{name} · {litter}", like any other, and saving leaves the puppy as it is. Nothing on
   her screens or the family's says where it's kept or that anything moved.

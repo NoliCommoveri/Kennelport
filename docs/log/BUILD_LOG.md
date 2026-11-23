@@ -2489,3 +2489,29 @@ family was deleted, and for KennelOS's screening tests to reach families.
   `health_test` (migration 0043, same file), read as "Health test". She removes any one
   from a family with Remove, as any record; it stays removed for that family only.
   `portal_takes` now lists `health_tests`. Tests in `portal-feed.test.js`; all pass (509).
+
+## 2026-11-23 — Removing a photo from a family's portal
+
+The owner: a photo of the wrong pup reached a family, and a photo she removes from the
+website stays the family's (2026-11-19), so she had no way to take it off. Now she can,
+for one family at a time.
+
+- Her family screen has a **Photos of {name}** card (`portal/admin.js`): every photo the
+  family sees, each a link to the full photo, with **Remove**; a **Removed (n)** fold-out
+  lists the ones she took off, each with **Put back**. Routes `photo/<id>/remove|back`
+  under the family; Remove only takes a photo that family sees.
+- **Migration 0044** (`portal_pup_photos.removed_at`, one new column, additive; applies by
+  itself on the first request after the merge). `portal/pups.js` `removePhoto` writes the
+  row with `removed_at` (pinned or not), `putBackPhoto` clears it; `photosOf` leaves
+  removed ones out, the website's live photos included, so Home, Photos, Records and the
+  photo files all drop it; `keepStatements`' INSERT OR IGNORE never brings one back.
+  `keptPhotoIds` skips removed rows, so a photo she also removes from the website goes with
+  the nightly cleanup unless another family keeps it.
+- Only that family's portal changes: the photo stays on the website and tagged as it was.
+  If it's tagged with the wrong pup there too, she untags it in her photos.
+- Wording in `manage/wording.js`, group `portalphotos` (title, hint, empty line, Remove,
+  Removed, Put back, and the two notes). Reuses the Site Manager's `.lib-grid` / `.lib-ph`,
+  so no CSS change and no version bump.
+- Tests in `portal-kept-pups.test.js` (remove while the website shows it, another puppy's
+  photo refused, the litter leaving doesn't bring it back, put back, the main photo, and the
+  cleanup). All pass (511).

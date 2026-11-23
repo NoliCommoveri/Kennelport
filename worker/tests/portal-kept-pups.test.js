@@ -150,6 +150,59 @@ test('a photo she removes from the website stays the family\'s', async () => {
   assert.equal((await reed(`/family/photo/${OPAL_TAGGED}`)).status, 200);
 });
 
+test('she removes a photo from one family\'s portal (the wrong pup), and can put it back', async () => {
+  const { env, site, her, signIn, row } = await setup();
+  const id = await addFamily(her, { name: 'The Reed family', emails: 'sam@example.com', puppy_id: 'pup1' });
+  const reed = await signIn('sam@example.com');
+  // Her family screen lists what they see, each with Remove.
+  let screen = await (await her(`/portal/f/${id}`)).text();
+  assert.match(screen, /Photos of Opal/);
+  assert.match(screen, new RegExp(`/portal/f/${id}/photo/${OPAL_TAGGED}/remove`));
+  assert.doesNotMatch(screen, new RegExp(JASPER));
+
+  // Removed while the website still shows it on Opal: gone from their portal only.
+  const res = await her(`/portal/f/${id}/photo/${OPAL_TAGGED}/remove`, {});
+  assert.equal(res.status, 303);
+  assert.match(res.headers.get('location'), /note=photoremoved#photos$/);
+  assert.doesNotMatch(await (await reed('/family/photos')).text(), new RegExp(OPAL_TAGGED));
+  assert.equal((await reed(`/family/photo/${OPAL_TAGGED}`)).status, 404);
+  assert.match(await (await reed('/family/photos')).text(), new RegExp(OPAL_MAIN));
+  assert.equal(row('SELECT COUNT(*) AS n FROM photo_tags').n, 1);
+  screen = await (await her(`/portal/f/${id}?note=photoremoved`)).text();
+  assert.match(screen, /Photo removed from their portal\./);
+  assert.match(screen, /Removed \(1\)/);
+
+  // A photo of another puppy can't be removed through this family.
+  await her(`/portal/f/${id}/photo/${JASPER}/remove`, {});
+  assert.equal(row('SELECT COUNT(*) AS n FROM portal_pup_photos WHERE photo_id = ?', JASPER).n, 0);
+
+  // The litter leaving the website doesn't bring it back, and its file isn't kept for them.
+  await deleteLitter(env, site.id, 'lit1');
+  assert.doesNotMatch(await (await reed('/family/photos')).text(), new RegExp(OPAL_TAGGED));
+  assert.match(await (await reed('/family/photos')).text(), new RegExp(OPAL_MAIN));
+
+  // Put back.
+  assert.equal((await her(`/portal/f/${id}/photo/${OPAL_TAGGED}/back`, {})).status, 303);
+  assert.match(await (await reed('/family/photos')).text(), new RegExp(OPAL_TAGGED));
+
+  // Removing the main photo: Home shows the next one.
+  await her(`/portal/f/${id}/photo/${OPAL_MAIN}/remove`, {});
+  const home = await (await reed('/family')).text();
+  assert.doesNotMatch(home, new RegExp(OPAL_MAIN));
+});
+
+test('a photo removed from the family\'s portal and from the website goes with the cleanup', async () => {
+  const { env, site, her, signIn } = await setup();
+  const id = await addFamily(her, { name: 'The Reed family', emails: 'sam@example.com', puppy_id: 'pup1' });
+  const reed = await signIn('sam@example.com');
+  await her(`/portal/f/${id}/photo/${OPAL_TAGGED}/remove`, {});
+  assert.equal((await her(`/photos/${OPAL_TAGGED}/remove`, {})).status, 303);
+  assert.doesNotMatch(await (await reed('/family/photos')).text(), new RegExp(OPAL_TAGGED));
+  await purgeRemovedPhotos(env, new Date(Date.now() + 86400000).toISOString());
+  assert.equal(await env.FILES.get(`sites/${site.id}/photos/${OPAL_TAGGED}.webp`), null);
+  assert.ok(await env.FILES.get(`sites/${site.id}/photos/${OPAL_MAIN}.webp`));
+});
+
 const VET = { vet_rule: 'hours72', time_zone: 'America/New_York', help_weeks: '8' };
 
 test('each puppy keeps its vet: her vet changing never changes it, and she can correct it', async () => {
