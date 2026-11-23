@@ -16,6 +16,12 @@
 //   from another kennel linking then unlinks first.
 import { hmacHex, sha256Hex, randomHex } from '../lib/crypto.js';
 import { SECTIONS } from './bundle.js';
+
+// What the family feed (portal/feed.js) takes beyond format 1's first fields: a
+// placement's `registration`, and health records of type `screening` and
+// `health_test` (the pup's genetic, OFA / PennHIP and breed-specific tests). Sent in the
+// facts as `portal_takes`, so KennelOS sends them only to a Worker that takes them.
+export const PORTAL_TAKES = ['registration', 'screening', 'health_tests'];
 import { ApiError } from '../lib/http.js';
 import { isDemoSite, NOT_FOR_DEMO } from '../lib/demo.js';
 import { bump } from '../signin.js';
@@ -133,6 +139,9 @@ export async function siteFacts(env, site) {
     settings: ['kennelos_prices'],
     // The puppy portal is on: KennelOS sends the family feed (POST /v1/portal, format 1).
     portal_feed: site.portal_on ? 1 : null,
+    // The placement and health fields this Worker's family feed takes beyond format 1's
+    // first ones (portal/feed.js PORTAL_TAKES): KennelOS sends only these.
+    portal_takes: PORTAL_TAKES,
   };
 }
 

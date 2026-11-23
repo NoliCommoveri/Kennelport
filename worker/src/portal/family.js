@@ -18,7 +18,7 @@ import {
   startFamilySignIn, verifyFamilySignIn, acceptInvite, currentFamily, signOutFamily, familyCookie, startSession, AuthError,
 } from './auth.js';
 import {
-  getSettings, placementFor, healthRecords, vetOf, recordVetBooking, saveFile, getFile, familyEmails, PortalError, RECORD_TYPES, MAX_FILE_BYTES,
+  getSettings, placementFor, healthRecords, vetOf, recordVetBooking, saveFile, getFile, familyEmails, PortalError, recordKind, registrationWords, MAX_FILE_BYTES,
   DEFAULT_DISCLOSURE, dialable,
 } from './store.js';
 import { stage, vetDeadline, formatAt, formatDay, timeLeft, localParts, addDays, VET_RULES } from './vet.js';
@@ -747,14 +747,14 @@ async function recordsPage(env, site, fam) {
   const bag = active(p) ? await familyBag(env, site.id, p) : [];
   const contract = p.contract_file_id ? await getFile(env, site.id, p.contract_file_id) : null;
   const row = (k, v) => (v ? `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>` : '');
-  const reg = pup?.registration ? `${pup.registration === 'full' ? 'Full' : 'Limited'}${pup.registry ? ` (${pup.registry})` : ''}` : null;
+  const reg = registrationWords(p, pup);
   if (isLook(site)) {
     const kennel = site.kennel_name || site.subdomain;
     const facts = [['Name', p.call_name && p.call_name !== p.puppy_name ? `${p.call_name} (${p.puppy_name} here)` : p.puppy_name], ['Litter', pup?.litter_name], ['Born', pup?.born_on ? formatDay(pup.born_on) : null],
       ['Sex', pup ? (pup.sex === 'female' ? 'Female' : 'Male') : null], ['Colour', pup?.color], ['Parents', [pup?.dam_call || pup?.dam_name, pup?.sire_call || pup?.sire_name].filter(Boolean).join(' × ') || null],
       ['Microchip', p.microchip], ['Registration', reg], ['Registration number', p.registration_no], [p.picked_up_at ? 'Came home' : 'Coming home', goHomeWords(p, s)]].filter(([, v]) => v);
     const page = mk.records({
-      name, kennel, facts, records: records.map((r) => [formatDay(r.given_on), r.name, r.notes, RECORD_TYPES[r.type]]), contractId: contract?.id, proofId: p.proof_file_id,
+      name, kennel, facts, records: records.map((r) => [formatDay(r.given_on), r.name, r.notes, recordKind(r)]), contractId: contract?.id, proofId: p.proof_file_id,
       bag: mk.bag(bag, name, kennel, disclosure(s)), photos, phone: s.her_phone || site.contact_phone, email: s.her_email || site.contact_email, v: vetOf(p, s), dialable,
     });
     return frame(site, 'Records', page, { mkp: true, fam, tab: '/family/records' });
@@ -769,7 +769,7 @@ async function recordsPage(env, site, fam) {
       ${row(p.picked_up_at ? 'Came home' : 'Coming home', goHomeWords(p, s))}
     </dl></section>
   <section class="card c-paper"><h2>${hh('syringe')}Shots, deworming and vet visits</h2>
-    ${records.length ? `<table class="records"><thead><tr><th>Date</th><th>What</th><th>Kind</th></tr></thead><tbody>${records.map((r) => `<tr><td>${esc(formatDay(r.given_on))}</td><td>${esc(r.name)}${r.notes ? `<br><span class="muted small">${esc(r.notes)}</span>` : ''}</td><td>${esc(RECORD_TYPES[r.type])}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">None recorded yet.</p>'}</section>
+    ${records.length ? `<table class="records"><thead><tr><th>Date</th><th>What</th><th>Kind</th></tr></thead><tbody>${records.map((r) => `<tr><td>${esc(formatDay(r.given_on))}</td><td>${esc(r.name)}${r.notes ? `<br><span class="muted small">${esc(r.notes)}</span>` : ''}</td><td>${esc(recordKind(r))}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">None recorded yet.</p>'}</section>
   <section class="card c-green"><h2>${hh('file')}Papers</h2><ul class="links">
     ${contract ? `<li><a href="/family/file/${esc(contract.id)}">${ic('file')} Your contract</a></li>` : '<li class="muted">Your contract will be here once it\'s added.</li>'}
     ${p.proof_file_id ? `<li><a href="/family/file/${esc(p.proof_file_id)}">${ic('stethoscope')} Vet visit record</a></li>` : ''}

@@ -57,6 +57,10 @@ anyone outside the family.
 
 - Phase 1: all six build chunks built (2026-11-04), and KennelOS's side of the feed; the
   family Home, Today and Families in the prototype's look (2026-11-05).
+- The feed takes each placement's registration (the sale's), screening tests and the pup's own
+  health tests (migration
+  0043, `portal_takes` in the link facts); health records she removes stay removed for that
+  family only, so a resold pup's next family gets them (2026-11-23).
 - Phase 1's gate (one litter run from signed contract to the vet visit with no fixes by
   hand, plan section 6): **waits for a real litter**; she has none yet (2026-11-12).
 - Still open from "Before building" (plan section 14): her programs list, vet-visit

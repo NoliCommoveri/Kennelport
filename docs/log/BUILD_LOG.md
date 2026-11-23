@@ -2440,3 +2440,52 @@ it. It runs only for a site with no device linked, so every site not yet linked 
   than 5 terms, as D1 does (beside its 100-variable limit), so this can't come back
   unseen. The other two compound SELECTs in the code (2 and 3 terms) are within it.
 - All tests pass (506). No migration, no version bump (Worker code only).
+
+## 2026-11-23 — A returned pup's next family gets its health records
+
+The owner reported a pup returned and placed with a second family whose portal was missing
+the pup's shots and deworming. KennelOS sends each health record by its KennelOS id (one
+event on the dog), so both families' placements carry the same ids. A tombstone (a record
+she removed from a placement, or every record of a family she deleted for good) was by that
+id alone, site-wide, so it kept those records from the pup's next family too.
+
+- Health tombstones are now per placement: `<placement's KennelOS id>|<record id>`
+  (`feed.js healthTombstoneId`), written by `store.removeHealthRecord` and
+  `feed.tombstoneStatements`. `healthTombstoned` reads them, and an older one (the id
+  alone) only for the family it was written with or, with none, a placement that was there
+  when it was written, so the second family's records arrive at KennelOS's next feed with
+  nothing for her to do. Giving a family back still lifts all of its tombstones.
+- Test in `tests/portal-feed.test.js` (fails on the old code). All tests pass (507). No
+  migration, no version bump (Worker code only).
+
+## 2026-11-23 — The sale's registration and screening tests in the portal
+
+The owner asked for the family's portal to show the registration they bought (the sale's,
+not the puppy's planned one on the website), including for a pup resold after its first
+family was deleted, and for KennelOS's screening tests to reach families.
+
+- **Migration 0043** (`portal_registration_screening`): `portal_placements.registration`
+  and `portal_health_records.kind`, two new columns, additive. Applies by itself on the
+  first request after the deploy.
+- Feed: a placement's `registration` (limited, full, co_own, none); a health record of
+  type `screening`, kept as type `other` with kind `screening` (the table's type check is
+  unchanged) and read as "Screening test" (`store.recordKind`). A feed without a
+  registration (an older KennelOS) leaves the one there.
+- The link facts carry `portal_takes: ['registration', 'screening']` (`kennelos/link.js
+  PORTAL_TAKES`): KennelOS sends these only to a Worker that lists them, so this goes live
+  before KennelOS sends anything new.
+- Records page: Registration is the placement's (`store.registrationWords`: Limited, Full,
+  Co-own, Unregistered, with the registry), else the puppy's on the website or kept, as
+  before. A pup placed after its litter left the website has no puppy there; the
+  placement's own registration still shows. History names it Registration.
+- Linked sample feed-1 uses every registration and a screening test. Tests in
+  `portal-feed.test.js` and `kennelos.test.js`. All pass (508). No version bump (Worker
+  code only; no file under `public/_kp/`).
+
+## 2026-11-23 — The pup's own health tests in the portal
+
+- Feed: health records of type `health_test` (the pup's genetic, OFA / PennHIP and
+  breed-specific tests from KennelOS, "PRA-prcd: Clear"), kept as type `other` with kind
+  `health_test` (migration 0043, same file), read as "Health test". She removes any one
+  from a family with Remove, as any record; it stays removed for that family only.
+  `portal_takes` now lists `health_tests`. Tests in `portal-feed.test.js`; all pass (509).

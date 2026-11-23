@@ -471,6 +471,18 @@ export async function setLifeStatus(env, siteId, id, status, on) {
 // ---------- health records ----------
 
 export const RECORD_TYPES = { vaccine: 'Vaccine', deworming: 'Deworming', vet_visit: 'Vet visit', other: 'Other' };
+// A record's kind as she and the family read it: a screening test or a health test
+// from KennelOS (kind 'screening' / 'health_test', type 'other') reads as one.
+const KIND_LABEL = { screening: 'Screening test', health_test: 'Health test' };
+export const recordKind = (r) => KIND_LABEL[r?.kind] ?? RECORD_TYPES[r?.type] ?? 'Other';
+// A placement's registration as the family reads it: its sale's (from KennelOS), else
+// the puppy's on the website or kept with the placement.
+const REG_LABEL = { limited: 'Limited', full: 'Full', co_own: 'Co-own', none: 'Unregistered' };
+export function registrationWords(p, pup) {
+  const reg = p?.registration || pup?.registration;
+  if (!REG_LABEL[reg]) return null;
+  return `${REG_LABEL[reg]}${reg !== 'none' && pup?.registry ? ` (${pup.registry})` : ''}`;
+}
 
 export async function addHealthRecord(env, siteId, placementId, input) {
   const type = String(input.type ?? '');
@@ -489,11 +501,13 @@ export async function addHealthRecord(env, siteId, placementId, input) {
 }
 
 export async function removeHealthRecord(env, siteId, placementId, id) {
-  const r = await env.DB.prepare('SELECT type, name, given_on, kennelos_id FROM portal_health_records WHERE id = ? AND site_id = ? AND placement_id = ?').bind(id, siteId, placementId).first();
+  const r = await env.DB.prepare(`SELECT h.type, h.name, h.given_on, h.kennelos_id, COALESCE(p.kennelos_id, p.id) AS placement_key FROM portal_health_records h
+    JOIN portal_placements p ON p.id = h.placement_id WHERE h.id = ? AND h.site_id = ? AND h.placement_id = ?`).bind(id, siteId, placementId).first();
   if (!r) return;
   await env.DB.batch([
-    // From KennelOS: a tombstone, so the next feed doesn't bring it back.
-    ...(r.kennelos_id ? [env.DB.prepare('INSERT OR IGNORE INTO portal_tombstones (site_id, type, kennelos_id, deleted_at) VALUES (?, \'health\', ?, ?)').bind(siteId, r.kennelos_id, now())] : []),
+    // From KennelOS: a tombstone for this placement (feed.js healthTombstoneId), so the
+    // next feed doesn't bring it back here, and the puppy's next family still gets it.
+    ...(r.kennelos_id ? [env.DB.prepare('INSERT OR IGNORE INTO portal_tombstones (site_id, type, kennelos_id, deleted_at) VALUES (?, \'health\', ?, ?)').bind(siteId, `${r.placement_key}|${r.kennelos_id}`, now())] : []),
     env.DB.prepare('DELETE FROM portal_health_records WHERE id = ?').bind(id),
     ...historyStatements(env, siteId, 'portal_placements', placementId, { health_record: [`${RECORD_TYPES[r.type]}: ${r.name}, ${r.given_on}`, null] }, 'breeder'),
   ]);
