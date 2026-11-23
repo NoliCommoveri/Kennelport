@@ -387,10 +387,11 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
     </section>`);
 
     // The photos the family sees of their puppy, each with Remove for this family only
-    // (portal/pups.js removePhoto), and any she removed, to put back.
+    // (portal/pups.js removePhoto), and any she removed, to put back. The square is a
+    // div (.lib-ph is drawn for a block box), the link inside it.
     const pics = await photosOf(env, site.id, p);
     const gone = await removedPhotosOf(env, site.id, p);
-    const thumb = (ph, act, label) => `<div><a class="lib-ph" href="/s/${esc(site.subdomain)}/photos/${esc(ph.id)}/full" target="_blank" rel="noopener"><img src="/s/${esc(site.subdomain)}/photos/${esc(ph.id)}/thumb" alt="${esc(ph.alt || say('portalphotos.photo'))}" loading="lazy"></a>
+    const thumb = (ph, act, label) => `<div><div class="lib-ph"><a href="/s/${esc(site.subdomain)}/photos/${esc(ph.id)}/full" target="_blank" rel="noopener"><img src="/s/${esc(site.subdomain)}/photos/${esc(ph.id)}/thumb" alt="${esc(ph.alt || say('portalphotos.photo'))}" loading="lazy"></a></div>
       ${form(`photo/${esc(ph.id)}/${act}`, `<button class="link">${esc(say(label))}</button>`)}</div>`;
     parts.push(`<section class="card" id="photos"><h2>${esc(say('portalphotos.title', { name }))}</h2>
       ${pics.length ? `<p class="hint">${esc(say('portalphotos.hint', { name }))}</p><div class="lib-grid">${pics.map((ph) => thumb(ph, 'remove', 'portalphotos.remove')).join('')}</div>` : `<p class="muted">${esc(say('portalphotos.none', { name }))}</p>`}

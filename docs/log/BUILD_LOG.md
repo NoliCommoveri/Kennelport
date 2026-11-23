@@ -2515,3 +2515,6 @@ for one family at a time.
 - Tests in `portal-kept-pups.test.js` (remove while the website shows it, another puppy's
   photo refused, the litter leaving doesn't bring it back, put back, the main photo, and the
   cleanup). All pass (511).
+- Fix, same day: the photos' Remove buttons sat below the card, hidden under the next
+  one, because `.lib-ph` was on the link (inline, so its square didn't hold). The square
+  is now a `div.lib-ph` with the link inside. Checked at 390px. No CSS change, no bump.
