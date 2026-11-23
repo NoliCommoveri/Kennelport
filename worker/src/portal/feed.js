@@ -179,6 +179,22 @@ async function tombstoned(env, siteId, type, id) {
   return Boolean(await env.DB.prepare('SELECT 1 FROM portal_tombstones WHERE site_id = ? AND type = ? AND kennelos_id = ?').bind(siteId, type, id).first());
 }
 
+// A health record she deleted stays deleted for that placement only. KennelOS sends
+// one record (an event on the dog) to every family the puppy goes to, so a pup
+// returned and placed again brings its shots and deworming to the next family too;
+// deleting them from the first family, or deleting that family, mustn't keep them
+// from the next. Its tombstone's id is `<placement's KennelOS id>|<record id>`
+// (healthTombstoneId). An older one, by the record's id alone, counts only for the
+// family it was written with, or, without one, for a placement that was there
+// when it was written: never for a later family's.
+export const healthTombstoneId = (placementKey, healthId) => `${placementKey}|${healthId}`;
+async function healthTombstoned(env, siteId, p, healthId) {
+  const fam = await env.DB.prepare('SELECT kennelos_id FROM portal_families WHERE id = ?').bind(p.family_id).first('kennelos_id');
+  return Boolean(await env.DB.prepare(`SELECT 1 FROM portal_tombstones WHERE site_id = ? AND type = 'health' AND (kennelos_id = ?
+      OR (kennelos_id = ? AND (family_kennelos_id = ? OR (family_kennelos_id IS NULL AND deleted_at >= ?))))`)
+    .bind(siteId, healthTombstoneId(p.kennelos_id || p.id, healthId), healthId, fam ?? '', p.created_at ?? '').first());
+}
+
 // A value KennelOS sent for a field she edited: kept for her, unless it's the one
 // she already has, or one she ignored.
 async function suggest(env, siteId, tbl, rowId, field, val, at) {
@@ -362,7 +378,7 @@ async function upsertHealth(env, siteId, p, rows, at, counts) {
   for (const h of rows) {
     const cur = await env.DB.prepare('SELECT * FROM portal_health_records WHERE site_id = ? AND placement_id = ? AND kennelos_id = ?').bind(siteId, p.id, h.id).first();
     if (!cur) {
-      if (await tombstoned(env, siteId, 'health', h.id)) continue;
+      if (await healthTombstoned(env, siteId, p, h.id)) continue;
       await env.DB.batch([
         env.DB.prepare("INSERT INTO portal_health_records (id, site_id, placement_id, type, given_on, name, notes, source, kennelos_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'kennelos', ?, ?)")
           .bind(crypto.randomUUID(), siteId, p.id, h.type, h.given_on, h.name, h.notes, h.id, at),
@@ -569,14 +585,16 @@ export async function tombstoneStatements(env, siteId, familyId) {
   const at = now();
   const fam = await env.DB.prepare('SELECT kennelos_id, name FROM portal_families WHERE id = ? AND site_id = ?').bind(familyId, siteId).first();
   const { results: ps } = await env.DB.prepare('SELECT id, kennelos_id, COALESCE(call_name, puppy_name) AS pup FROM portal_placements WHERE family_id = ? AND site_id = ? ORDER BY created_at').bind(familyId, siteId).all();
-  const { results: hs } = await env.DB.prepare(`SELECT kennelos_id FROM portal_health_records WHERE site_id = ? AND kennelos_id IS NOT NULL AND placement_id IN (SELECT id FROM portal_placements WHERE family_id = ?)`).bind(siteId, familyId).all();
+  const { results: hs } = await env.DB.prepare(`SELECT h.kennelos_id, COALESCE(p.kennelos_id, p.id) AS placement_key FROM portal_health_records h JOIN portal_placements p ON p.id = h.placement_id
+    WHERE h.site_id = ? AND h.kennelos_id IS NOT NULL AND p.family_id = ?`).bind(siteId, familyId).all();
   const famId = fam?.kennelos_id ?? null;
   const label = fam ? [fam.name, ...new Set(ps.map((p) => p.pup).filter(Boolean))].join(' · ').slice(0, 200) : null;
   const ins = (type, id, lbl = null) => env.DB.prepare('INSERT OR IGNORE INTO portal_tombstones (site_id, type, kennelos_id, deleted_at, label, family_kennelos_id) VALUES (?, ?, ?, ?, ?, ?)').bind(siteId, type, id, at, lbl, famId);
   return [
     ...(famId ? [ins('family', famId, label)] : []),
     ...ps.filter((p) => p.kennelos_id).map((p) => ins('placement', p.kennelos_id)),
-    ...hs.map((h) => ins('health', h.kennelos_id)),
+    // Each for its own placement (healthTombstoneId): the next family the puppy goes to still gets them.
+    ...hs.map((h) => ins('health', healthTombstoneId(h.placement_key, h.kennelos_id))),
     env.DB.prepare(`DELETE FROM portal_suggestions WHERE site_id = ? AND ((tbl = 'portal_families' AND row_id = ?) OR (tbl = 'portal_placements' AND row_id IN (SELECT id FROM portal_placements WHERE family_id = ?)))`).bind(siteId, familyId, familyId),
   ];
 }

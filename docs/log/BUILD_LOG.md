@@ -2440,3 +2440,20 @@ it. It runs only for a site with no device linked, so every site not yet linked 
   than 5 terms, as D1 does (beside its 100-variable limit), so this can't come back
   unseen. The other two compound SELECTs in the code (2 and 3 terms) are within it.
 - All tests pass (506). No migration, no version bump (Worker code only).
+
+## 2026-11-23 — A returned pup's next family gets its health records
+
+The owner reported a pup returned and placed with a second family whose portal was missing
+the pup's shots and deworming. KennelOS sends each health record by its KennelOS id (one
+event on the dog), so both families' placements carry the same ids. A tombstone (a record
+she removed from a placement, or every record of a family she deleted for good) was by that
+id alone, site-wide, so it kept those records from the pup's next family too.
+
+- Health tombstones are now per placement: `<placement's KennelOS id>|<record id>`
+  (`feed.js healthTombstoneId`), written by `store.removeHealthRecord` and
+  `feed.tombstoneStatements`. `healthTombstoned` reads them, and an older one (the id
+  alone) only for the family it was written with or, with none, a placement that was there
+  when it was written, so the second family's records arrive at KennelOS's next feed with
+  nothing for her to do. Giving a family back still lifts all of its tombstones.
+- Test in `tests/portal-feed.test.js` (fails on the old code). All tests pass (507). No
+  migration, no version bump (Worker code only).

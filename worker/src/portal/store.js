@@ -489,11 +489,13 @@ export async function addHealthRecord(env, siteId, placementId, input) {
 }
 
 export async function removeHealthRecord(env, siteId, placementId, id) {
-  const r = await env.DB.prepare('SELECT type, name, given_on, kennelos_id FROM portal_health_records WHERE id = ? AND site_id = ? AND placement_id = ?').bind(id, siteId, placementId).first();
+  const r = await env.DB.prepare(`SELECT h.type, h.name, h.given_on, h.kennelos_id, COALESCE(p.kennelos_id, p.id) AS placement_key FROM portal_health_records h
+    JOIN portal_placements p ON p.id = h.placement_id WHERE h.id = ? AND h.site_id = ? AND h.placement_id = ?`).bind(id, siteId, placementId).first();
   if (!r) return;
   await env.DB.batch([
-    // From KennelOS: a tombstone, so the next feed doesn't bring it back.
-    ...(r.kennelos_id ? [env.DB.prepare('INSERT OR IGNORE INTO portal_tombstones (site_id, type, kennelos_id, deleted_at) VALUES (?, \'health\', ?, ?)').bind(siteId, r.kennelos_id, now())] : []),
+    // From KennelOS: a tombstone for this placement (feed.js healthTombstoneId), so the
+    // next feed doesn't bring it back here, and the puppy's next family still gets it.
+    ...(r.kennelos_id ? [env.DB.prepare('INSERT OR IGNORE INTO portal_tombstones (site_id, type, kennelos_id, deleted_at) VALUES (?, \'health\', ?, ?)').bind(siteId, `${r.placement_key}|${r.kennelos_id}`, now())] : []),
     env.DB.prepare('DELETE FROM portal_health_records WHERE id = ?').bind(id),
     ...historyStatements(env, siteId, 'portal_placements', placementId, { health_record: [`${RECORD_TYPES[r.type]}: ${r.name}, ${r.given_on}`, null] }, 'breeder'),
   ]);
