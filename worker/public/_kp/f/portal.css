@@ -475,6 +475,34 @@ html.hb-js .hb .flip.l { transform-origin: right center; }
 .hb .page details.fold summary::after { content: "+"; color: var(--maroon); font-family: var(--f-body); }
 .hb .page details.fold[open] summary::after { content: "\2013"; }
 .hb .page details.fold .inner { padding: 0 .8em .7em; display: flex; flex-direction: column; gap: .6em; }
+/* An urgent note: the note in a box, in red. */
+.hb .page .note.warn { background: #fbe4df; border-color: #c0473a; color: #8a1f17; box-shadow: inset 4px 0 0 #c0473a; }
+/* Tick boxes: a list with an empty box (or a ticked one) for each line. */
+.hb .page ul.check { list-style: none; padding-left: 0; }
+.hb .page ul.check li { display: flex; gap: .55em; align-items: flex-start; }
+.hb .page ul.check li::before { content: ""; flex: none; width: 1em; height: 1em; margin-top: .18em; border: 1.5px solid var(--maroon); border-radius: 4px; background: #fff; display: grid; place-items: center; font: 700 .8em/1 var(--f-body); color: var(--leaf); }
+.hb .page ul.check li.done::before { content: "\2713"; }
+/* A table: headings on a tan band, the first column as each row's label, rows striped.
+   On a narrow page (a phone, or half a spread) each row stacks as a small card with its
+   column headings beside the words. */
+.hb .page .tbl { container-type: inline-size; }
+.hb .page .tbl table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .92em; line-height: 1.35; border: 1.5px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--paper); }
+.hb .page .tbl th { text-align: left; vertical-align: bottom; padding: .5em .65em; font: 700 .78em/1.2 var(--f-body); letter-spacing: .06em; text-transform: uppercase; color: var(--maroon); background: color-mix(in srgb, var(--paper-edge) 60%, var(--paper)); border-bottom: 1.5px solid var(--tan); }
+.hb .page .tbl td { padding: .5em .65em; vertical-align: top; border-top: 1px solid var(--rule); }
+.hb .page .tbl tbody tr:first-child td { border-top: 0; }
+.hb .page .tbl tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--paper-edge) 25%, var(--paper)); }
+.hb .page .tbl td:first-child { font-weight: 700; color: var(--cocoa); }
+@container (max-width: 25rem) {
+  .hb .page .tbl table, .hb .page .tbl tbody, .hb .page .tbl tr, .hb .page .tbl td { display: block; }
+  .hb .page .tbl thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .hb .page .tbl tr { padding: .55em .7em; border-top: 1px solid var(--rule); }
+  .hb .page .tbl tbody tr:first-child { border-top: 0; }
+  .hb .page .tbl tbody tr:nth-child(even) { background: color-mix(in srgb, var(--paper-edge) 25%, var(--paper)); }
+  .hb .page .tbl td, .hb .page .tbl tbody tr:nth-child(even) td { padding: .1em 0; border: 0; background: none; }
+  .hb .page .tbl td:first-child { font: 700 1.02em/1.25 var(--f-display); padding-bottom: .2em; }
+  .hb .page .tbl td:not(:first-child)[data-h]::before { content: attr(data-h); display: block; font: 700 .72em/1.3 var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--maroon); margin-top: .25em; }
+  .hb .page .tbl td:empty { display: none; }
+}
 .hb .page figure.hbphoto { margin: 0; align-self: center; display: flex; flex-direction: column; align-items: center; gap: .35em; max-width: 100%; }
 .hb .page figure.hbphoto img { display: block; max-width: 100%; max-height: var(--shotmax, 260px); width: auto; height: auto; border-radius: 8px; border: 4px solid #fff; box-shadow: 0 0 0 1.5px var(--tan), 0 6px 14px rgba(46,27,26,.18); }
 .hb .page figcaption { font-size: .86em; font-style: italic; color: var(--book-muted); text-align: center; }
