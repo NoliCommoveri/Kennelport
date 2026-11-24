@@ -2526,7 +2526,7 @@ for one family at a time.
   Logan's and Apollo's pages), zoomed in and blurry, because `.cocard > img` had
   `aspect-ratio` but no `height: auto` (the same thing `.story img` notes). Added it; the
   photo is 4:3 again. Checked on the live page at 390px and 1280px; no other image on the
-  page was stretched. Needs the site template bump (`ASSET_VERSION`), owner to confirm.
+  page was stretched. Site template bumped to `ASSET_VERSION` 30 (owner said yes).
 
 ## 2026-11-24: Health tests' short names on cards
 
@@ -2546,4 +2546,4 @@ for one family at a time.
 - Owner-only screen, so its wording isn't in `manage/wording.js`.
 - Test in `rules.test.js` (rows listed, saved, cards short, the dog's page full, a
   KennelOS resend, too long refused, Back to default). Checked at 390px. Rides on the
-  same `ASSET_VERSION` bump as the light-card fix (asked).
+  same `ASSET_VERSION` 30 bump as the light-card fix.
