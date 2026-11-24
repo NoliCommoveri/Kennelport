@@ -66,6 +66,15 @@ export function testRow(snap, h) {
   const name = short ? `<span title="${attr(h.test)}">${esc(short)}</span>` : `<span>${esc(h.test)}</span>`;
   return `<li>${name}<span>${esc(h.result)}</span></li>`;
 }
+// A registry as a card shows it: its short name where the owner set one
+// (rules.regshort, AKC for American Kennel Club (AKC)), else as written. A Registry
+// row's value, with the full name on a long press or hover.
+export const regShort = (snap, v) => (v ? rulesOf(snap).regshort?.[testKey(v)] || v : '');
+export function registryRow(snap, v) {
+  if (!v) return '';
+  const s = regShort(snap, v);
+  return `<li><span>Registry</span>${s === v ? `<span>${esc(v)}</span>` : `<span title="${attr(v)}">${esc(s)}</span>`}</li>`;
+}
 // A line of the site's fixed wording (rules.words), with its {name} and the like
 // filled in. Escape it like any other text.
 export function word(snap, key, vars = {}) {
@@ -510,7 +519,7 @@ export function parentCards(snap, l) {
     const d = id && snap.dogs.find((x) => x.id === id);
     const name = parentName(snap, l, role);
     if (!name) return '';
-    const line = d ? [d.color, d.registry].filter(Boolean).join(' · ') : '';
+    const line = d ? [d.color, regShort(snap, d.registry)].filter(Boolean).join(' · ') : '';
     const health = d?.health ?? [];
     const tests = health.length
       ? `<ul class="tests">${health.slice(0, 3).map((h) => testRow(snap, h)).join('')}</ul>${health.length > 3 ? `<span class="small muted">and ${health.length - 3} more health result${health.length - 3 === 1 ? '' : 's'}</span>` : ''}`
@@ -575,13 +584,13 @@ export function litterCard(snap, l, ctx, { link = true, show = SHOW_DEFAULT.litt
 // ask } for a dog looking for a home (plan 3.7). link: whether the owner's name may
 // be a link (not inside a card that is itself one).
 function dogItems(snap, d, { sale = null, link = true } = {}) {
-  const registry = d.registry ? `<li><span>Registry</span><span>${esc(d.registry)}</span></li>` : '';
   const weight = d.weight ? `<li><span>Weight</span><span>${esc(d.weight)}</span></li>` : '';
-  // Health results when it has some (its registry and weight above them, where
-  // set), else its details.
-  const tests = d.health.length
-    ? `${registry || weight ? `<ul class="tests">${registry}${weight}</ul>` : ''}<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => testRow(snap, h)).join('')}</ul>`
-    : `<span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sexWord(d.sex)}</span></li>${d.color ? `<li><span>Color</span><span>${esc(d.color)}</span></li>` : ''}${weight}${registry}</ul>`;
+  // Its details always (sex, colour, registry, weight), then its health results
+  // where it has some (the owner, 2026-11-24: a dog with results used to lose its
+  // sex and colour). data-cols: the template's site.js may set either list in two
+  // columns where the card would otherwise grow (site.css "Two-column lists").
+  const tests = `<span class="eyebrow">Details</span><ul class="tests" data-cols><li><span>Sex</span><span>${sexWord(d.sex)}</span></li>${d.color ? `<li><span>Color</span><span>${esc(d.color)}</span></li>` : ''}${registryRow(snap, d.registry)}${weight}</ul>`
+    + (d.health.length ? `<span class="eyebrow">Health testing</span><ul class="tests" data-cols>${d.health.map((h) => testRow(snap, h)).join('')}</ul>` : '');
   const line = [snap.site.breed, d.role].filter(Boolean).join(' · ');
   return {
     call: () => `<span class="call">${esc(d.call_name)}</span>`,
@@ -777,7 +786,7 @@ export function puppyCard(snap, l, p, ctx) {
       <div class="face front">${rule.ribbon && status ? `<span class="ribbon">${esc(status)}</span>` : ''}${photo}<span class="turn" aria-hidden="true">↻</span>
         <div class="cap"><span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span><span class="line1"><span>${esc([sex, p.color].filter(Boolean).join(' · '))}</span><span class="${pillClass(rule.pill)}">${esc(status)}</span></span></div></div>
       <div class="face back">${bg}<span class="call">${esc(p.name)}</span><span class="reg">${esc(reg)}</span>
-        <span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li>${regWord ? `<li><span>Registration</span><span>${esc(regWord)}</span></li>` : ''}${p.registry ? `<li><span>Registry</span><span>${esc(p.registry)}</span></li>` : ''}${price ? `<li><span>${esc(priceLabel)}</span><span>${esc(price)}</span></li>` : ''}</ul>
+        <span class="eyebrow">Details</span><ul class="tests" data-cols><li><span>Sex</span><span>${sex}</span></li>${p.color ? `<li><span>Color</span><span>${esc(p.color)}</span></li>` : ''}<li><span>Status</span><span>${esc(status)}</span></li>${regWord ? `<li><span>Registration</span><span>${esc(regWord)}</span></li>` : ''}${registryRow(snap, p.registry)}${price ? `<li><span>${esc(priceLabel)}</span><span>${esc(price)}</span></li>` : ''}</ul>
         ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}${action}${profile}</div>
     </div></div>`;
 }

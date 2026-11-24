@@ -43,7 +43,7 @@ anyone outside the family.
 
 | Step | State |
 |---|---|
-| 1. Display and timing rules | Built (pup, registration, price, date and timing rules; health tests' short names on cards, 2026-11-24); the dog rules, fixed wording, formats and how KennelOS data lands still to come |
+| 1. Display and timing rules | Built (pup, registration, price, date and timing rules; health tests' short names on cards, 2026-11-24; dog cards' details always, registries' short names and two-column lists, 2026-11-24, template bump to ask); the dog rules, fixed wording, formats and how KennelOS data lands still to come |
 | 2. The breeder's instructions (`manage/wording.js`) | 2.1–2.3 built; **2.4 to do:** the portal's screens for her (`portal/admin.js`) and Today |
 | 3. Pages, blocks, menu | Built: 3.1–3.8 (3.5 page addresses and 3.8 the forms' fields, 2026-11-14, migration 0035) |
 | 4. The owner's own blocks and styling | Banners, buttons, dividers, spacers, photos, collages, photo beside words, text over a photo, text, gallery strip, block backgrounds and spacing built. **Next, the photo system:** albums from photos she has, then the duplicate check. Still to come: videos as blocks, links to a dog/litter/puppy, fonts and the font library, text size on built-in blocks |

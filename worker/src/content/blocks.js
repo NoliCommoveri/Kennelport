@@ -155,7 +155,7 @@ export const COLS_ACROSS = Object.freeze({ 2: 'Two', 3: 'Three' });
 // The defaults draw today's cards exactly.
 export const DOG_ITEMS = Object.freeze({
   photo: 'Photo', call: 'Call name', reg: 'Registered name', role: 'Breed and role', titles: 'Titles',
-  tests: 'Health tests (or details)', bio: 'Bio', ask: '“Ask about” and price (for sale)', profile: 'View profile',
+  tests: 'Details and health tests', bio: 'Bio', ask: '“Ask about” and price (for sale)', profile: 'View profile',
   where: 'Where it lives (co-owned) or its owner (outside dogs)', tags: 'Tags', origin: 'Origin (Import, or Import Ancestry)',
 });
 // A light card's items: its sex and role on one line, as the Co-owned section has it.
@@ -166,7 +166,7 @@ export const LITTER_ROWS = Object.freeze({ born: 'Born', deposits: 'Deposits fro
 export const REVIEW_ITEMS = Object.freeze({ stars: 'Stars', quote: 'The quote', who: 'Who it is from' });
 // A Featured block's items beside its photo, under the name (B5). A dog's are its
 // card's (render/parts.js dogItems); a pup's its own.
-export const FEATURE_DOG_ITEMS = Object.freeze({ reg: 'Registered name', role: 'Breed and role', titles: 'Titles', where: 'Where it lives (co-owned) or its owner (outside dogs)', tests: 'Health tests (or details)', bio: 'Bio', ask: '“Ask about” and price (for sale)', tags: 'Tags', origin: 'Origin (Import, or Import Ancestry)' });
+export const FEATURE_DOG_ITEMS = Object.freeze({ reg: 'Registered name', role: 'Breed and role', titles: 'Titles', where: 'Where it lives (co-owned) or its owner (outside dogs)', tests: 'Details and health tests', bio: 'Bio', ask: '“Ask about” and price (for sale)', tags: 'Tags', origin: 'Origin (Import, or Import Ancestry)' });
 export const FEATURE_PUP_ITEMS = Object.freeze({ line: 'Sex and colour', status: 'Status', litter: 'Its litter and parents', price: 'Price', bio: 'Bio', tags: 'Tags' });
 // Under the big figure. More details folds her details and a package's checklist; in
 // expanders they show open in the fold itself.

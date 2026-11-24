@@ -2547,3 +2547,31 @@ for one family at a time.
 - Test in `rules.test.js` (rows listed, saved, cards short, the dog's page full, a
   KennelOS resend, too long refused, Back to default). Checked at 390px. Rides on the
   same `ASSET_VERSION` 30 bump as the light-card fix.
+
+## 2026-11-24: Dog cards: details always, two columns where a card would grow
+
+- A dog card's back (the `tests` item, now "Details and health tests") dropped the dog's
+  sex and colour once it had health results; registry and weight sat above them unlabelled.
+  It now always shows **Details** (sex, colour, registry, weight), then **Health testing**
+  where it has results. Same item wherever she places it: flip front or back, Photo beside
+  details, Featured dog. Her item settings and each result's shown/hidden still decide
+  what appears.
+- Registries' short names (the owner, 2026-11-24): a second card on the Dogs screen of
+  the site's admin view, a row per registry the site's dogs and puppies have, stored as
+  `rules.regshort` the same way as the tests' `rules.short` (no migration). Cards only:
+  a dog's card, a puppy's card, a parent's card on a litter page (`regShort`,
+  `registryRow` in `render/parts.js`, full name as the row's `title`). Pages keep it as
+  written. Owner-only screen, so its wording isn't in `manage/wording.js`.
+- Two-column lists (site.css "Two-column lists", site.js `fitCols`): each list marked
+  `data-cols` (a dog's two, a puppy card's Details) goes in two columns only where one per
+  line would make the card grow: a flip side taller than its other side and 430px, or the
+  words of Photo beside details / Featured longer than the photo. Longest list first, then
+  the next while it still grows. A row too long for half the width (measured in the
+  browser, so it follows the card's real width) and an odd short one left over take the
+  whole line, after the short ones, within their own list. Fewer than two short rows, or
+  lists filling under 30% of the card: one per line. Runs on load, fonts, a width change
+  and the Show filter. Without the script, one per line as before.
+- Checked in Chromium at 390px and 1280px on the sample with Millie's eight results and
+  "American Kennel Club (AKC)": the card stays 430px on a phone (grew before); a card
+  that fits keeps one per line. Photo beside details and Featured not checked by eye.
+- Test in `rules.test.js`. Site template changed: `ASSET_VERSION` bump to ask the owner.

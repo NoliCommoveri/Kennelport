@@ -37,6 +37,56 @@
     if (f && e.target === f && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); f.classList.toggle('flipped'); }
   });
 
+  // Two-column lists (site.css "Two-column lists"): a big card's details and health
+  // results go in two columns only where one per line would make it grow: a flip card's
+  // side taller than its other side and its least height, or the words beside a photo
+  // (or under it, on a phone) longer than the photo. The longest list first, then the
+  // next, while it still grows. A row too long for half the width takes the whole line,
+  // after the short ones (site.css), and so does an odd short one left over; a list
+  // with fewer than two short rows stays as it is; and if the lists would then
+  // fill under 30% of the card's height, it all goes back to one per line.
+  const oneCol = (ul) => { ul.classList.toggle('cols', false); for (const li of ul.children) li.classList.toggle('wide', false); };
+  const fitCols = () => {
+    for (const card of $$('.flip, .dogrow, .story')) {
+      const lists = $$('ul.tests[data-cols]', card);
+      if (!lists.length) continue;
+      lists.forEach(oneCol);
+      if (!card.offsetParent) continue;
+      let grows;
+      if (card.classList.contains('flip')) {
+        const faces = $$('.face', card);
+        const least = parseFloat(getComputedStyle(card).minHeight) || 0;
+        grows = (face) => {
+          for (const f of faces) f.style.alignSelf = 'start';
+          const own = face.offsetHeight;
+          const other = Math.max(0, ...faces.filter((f) => f !== face).map((f) => f.offsetHeight));
+          for (const f of faces) f.style.alignSelf = '';
+          return own > Math.max(least, other) + 1;
+        };
+      } else {
+        const pic = [...card.querySelectorAll('img, .ph-photo')].find((x) => !x.closest('.dr-info, .dr-under, .story-copy, .feature-acts') && !x.classList.contains('bg'));
+        const ref = pic ? pic.offsetHeight : 430;
+        grows = (box) => box.offsetHeight > ref + 1;
+      }
+      const boxOf = (ul) => ul.closest('.face, .dr-info, .dr-under, .story-copy') ?? card;
+      for (const ul of [...lists].sort((a, b) => b.children.length - a.children.length)) {
+        if (!grows(boxOf(ul))) continue;
+        ul.classList.toggle('cols', true);
+        const short = [...ul.children].filter((li) => !(li.scrollWidth > li.clientWidth + 1 && li.classList.toggle('wide', true)));
+        // An odd one out takes the whole line too, rather than half a line beside nothing.
+        if (short.length % 2) short.pop().classList.toggle('wide', true);
+        if (short.length < 2) oneCol(ul);
+      }
+      const used = lists.filter((ul) => ul.classList.contains('cols'));
+      if (used.length && lists.reduce((n, ul) => n + ul.offsetHeight, 0) < 0.3 * card.offsetHeight) used.forEach(oneCol);
+    }
+  };
+  fitCols();
+  addEventListener('load', fitCols);
+  document.fonts?.ready.then(fitCols);
+  let fitW = innerWidth, fitT;
+  addEventListener('resize', () => { if (innerWidth === fitW) return; fitW = innerWidth; clearTimeout(fitT); fitT = setTimeout(fitCols, 150); });
+
   // How to pay: Copy buttons (hidden until this script runs). Where the clipboard
   // isn't allowed, the details are selected instead, ready to copy by hand.
   for (const b of $$('.copy[hidden]')) b.hidden = false;
@@ -94,7 +144,7 @@
       if (o) dogFilter.value = o.value; else if (h === 'girls') dogFilter.value = 'female'; else if (h === 'boys') dogFilter.value = 'male';
       apply();
     };
-    dogFilter.addEventListener('change', apply);
+    dogFilter.addEventListener('change', () => { apply(); fitCols(); });
     window.addEventListener('hashchange', fromHash);
     fromHash();
   }

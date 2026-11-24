@@ -369,3 +369,29 @@ test('health tests\' short names show on cards only, and survive KennelOS update
   assert.equal(env.DB.raw.prepare('SELECT build FROM site_builds').get().build, '{}');
   assert.match((await page('/litters/the-gem-litter')).html, /<span>BAER hearing<\/span>/);
 });
+
+test('dog cards show their details with their health results, and registries\' short names', async (t) => {
+  const { env, admin, page, post } = await sampleSite(t);
+  // Atlas has health results: his card still says his sex and registry, and both lists
+  // may go in two columns (data-cols, the template's site.js).
+  const card = (await page('/dogs')).html.split('aria-label="Atlas*: turn the card over"')[1].split('class="flip"')[0];
+  assert.match(card, /<span class="eyebrow">Details<\/span><ul class="tests" data-cols><li><span>Sex<\/span><span>Male<\/span><\/li>/);
+  assert.match(card, /<li><span>Registry<\/span><span>AKC<\/span><\/li>/);
+  assert.match(card, /<span class="eyebrow">Health testing<\/span><ul class="tests" data-cols>/);
+
+  // A row for each registry on the owner's Dogs screen; a short name shows on cards.
+  const html = await (await call(env, M, '/admin/tuxedolane/dogs', { headers: { cookie: admin } })).text();
+  const f = {};
+  for (const m of html.matchAll(/<input type="(?:text|hidden)" name="([^"]+)" value="([^"]*)"/g)) f[m[1]] = m[2].replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+  for (const m of html.matchAll(/<input type="radio" name="([^"]+)" value="([^"]+)" checked>/g)) f[m[1]] = m[2];
+  for (const m of html.matchAll(/<select name="([^"]+)"[^>]*>([\s\S]*?)<\/select>/g)) f[m[1]] = m[2].match(/value="([^"]+)" selected/)[1];
+  const row = Object.entries(f).find(([k, v]) => k.startsWith('short_reg.') && v === 'AKC')[0].split('.')[1];
+  assert.ok(Object.values(f).includes('UKC'));
+  assert.equal((await post('/admin/tuxedolane/dogs', { ...f, [`reg_short.${row}`]: 'Kennel Club' })).status, 303);
+  assert.deepEqual(JSON.parse(env.DB.raw.prepare('SELECT build FROM site_builds').get().build).rules.regshort, { akc: 'Kennel Club' });
+  assert.match((await page('/dogs')).html, /<li><span>Registry<\/span><span title="AKC">Kennel Club<\/span><\/li>/);
+  // The dog's own page keeps it as written.
+  assert.doesNotMatch((await page('/dogs/atlas')).html, /Kennel Club/);
+  // Too long is refused.
+  assert.match(await (await post('/admin/tuxedolane/dogs', { ...f, [`reg_short.${row}`]: 'American Kennel Club' })).text(), /at most 16 characters/);
+});
