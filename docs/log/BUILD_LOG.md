@@ -2812,3 +2812,4 @@ the only gate left. No code, no migration, no version bump.
 - Template files changed (`site.js`, a note in `site.css`): **needs `ASSET_VERSION` 32**
   (31 is on `main`); asked the owner. Until then `versions.test.js` fails, as expected.
   No migration.
+- `ASSET_VERSION` 31 → 32 with the owner's yes (`TEMPLATE_FILES` 8a878cad14f459a1). 516 pass.
