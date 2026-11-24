@@ -105,7 +105,7 @@ function page(title, body, { status = 200, back = null, headers = {}, nav: tabs 
 <script src="/_kp/m/photos.js?v=${APP_VERSION}" defer></script>
 </head><body${admin ? ' class="tabbed admin"' : tabs ? ' class="tabbed"' : ''}>
 ${SPRITE}
-${admin ? admin.nav : tabs ? nav(tabs.sub, tabs.tab) : ''}
+${admin ? admin.nav : tabs ? nav(tabs.sub, tabs.tab, tabs.say) : ''}
 ${header}
 <main>${crumb}${head}${body}</main>
 <p class="offline-note" id="offline-note" hidden role="status">You're offline. You can look around, but saving needs a connection.</p>
@@ -199,7 +199,7 @@ async function siteHome(env, user, site, view = 'today', page = plainPage, say =
   // (plan 7.3): Today holds what needs her from both; the website's screens are
   // under Website.
   if (portalOn && view === 'today') {
-    const home = await goingHome(env, site);
+    const home = await goingHome(env, site, new Date(), say);
     const tz = (await getSettings(env, site.id)).time_zone;
     const now = new Date();
     const todayYmd = localParts(now, tz).ymd;
@@ -214,8 +214,8 @@ async function siteHome(env, user, site, view = 'today', page = plainPage, say =
     ].filter(Boolean);
     const kennel = site.kennel_name || site.subdomain;
     return page(say('home.today_2'), `<section class="sec deep bleed todayband"><span class="eyebrow">${esc(kennel)}</span><h1>${esc(say('home.today'))}</h1>
-        <p class="small">${esc(now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: tz }))}${home.count ? ` · ${home.today ? `${home.today} going home today${home.count > home.today ? `, ${home.count - home.today} more this week` : ''}` : `${home.count} going home ${inDays === 1 ? 'tomorrow' : `in ${inDays} days`}`}` : ''}</p>
-        ${await lastFromKennelos(env, site)}</section>
+        <p class="small">${esc(now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: tz }))}${home.count ? ` · ${esc(home.today ? (home.count > home.today ? say('phome.line_today_more', { n: home.today, more: home.count - home.today }) : say('phome.line_today', { n: home.today })) : inDays === 1 ? say('phome.line_tomorrow', { n: home.count }) : say('phome.line_days', { n: home.count, days: inDays }))}` : ''}</p>
+        ${await lastFromKennelos(env, site, new Date(), say)}</section>
       ${demo ? `<section class="card status band"><p><span class="st warn">Demo</span> Step ${esc(site.demo_step)} of the linked sample · never published</p><p class="row"><a class="button" href="/admin/${esc(site.subdomain)}/site/">Open it in your admin view</a><a class="button" href="/ops/sites/${esc(site.id)}">Its steps, in ops</a></p></section>` : ''}
       ${notesHtml}
       ${home.html}
@@ -223,7 +223,7 @@ async function siteHome(env, user, site, view = 'today', page = plainPage, say =
       ${needs.length ? `<section id="needs-you" class="stack"><h2>${esc(say('home.needs_you'))}</h2><div class="needs">${needs.join('')}</div></section>`
         : !changed && !home.count && !notices.length ? `<section class="card band"><p><span class="st ok">${esc(say('home.all_caught_up'))}</span> ${esc(say('home.nothing_needs_you_right'))}</p><p class="muted small">${esc(say('home.pickups_this_week_vet'))}</p></section>` : ''}
       ${await todayLists(env, site, say)}
-      <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}${user.admin ? ` <a href="/admin/${esc(site.subdomain)}/rules">This site's build</a>.` : ''}</p>`, { nav: { sub: site.subdomain, tab: 'today' } });
+      <p class="muted small">${esc(say('home.role', { role: site.role }))}${user.sites.length > 1 ? ` <a href="/">${esc(say('home.other_sites'))}</a>.` : ''}${user.admin ? ` <a href="/admin/${esc(site.subdomain)}/rules">This site's build</a>.` : ''}</p>`, { nav: { sub: site.subdomain, tab: 'today' } });
   }
   return page(portalOn ? say('home.website_2') : site.kennel_name || site.subdomain, `
   ${portalOn ? '' : notesHtml}
@@ -406,12 +406,12 @@ async function manageRoutes(request, env, url, slid) {
     const row = await env.DB.prepare('SELECT portal_on, kennel_name, logo_photo_id, monogram FROM sites WHERE id = ?').bind(site.id).first();
     const portalOn = row?.portal_on;
     const brand = portalOn ? { sub: site.subdomain, name: row.kennel_name || site.subdomain, logo: row.logo_photo_id, monogram: row.monogram } : null;
-    const sitePage = brand ? (t, b, o = {}) => page(t, b, { ...o, brand }) : page;
     // Her wording: the owner's, for this site, else for every site, else today's (wording.js).
     const say = sayer({ every: await everyWording(env), site: siteWording(await loadBuild(env, site.id)) }, { kennel: row?.kennel_name || site.subdomain });
+    const sitePage = brand ? (t, b, o = {}) => page(t, b, { ...o, brand, nav: o.nav ? { ...o.nav, say } : null }) : page;
     if (!m[2] && !post) return siteHome(env, user, site, 'today', sitePage, say);
     if (portalOn && !post && m[2] === '/website') return siteHome(env, user, site, 'website', sitePage, say);
-    if (portalOn && !post && m[2] === '/kennel') return sitePage('Dogs', await dogsTab(env, site), { nav: { sub: site.subdomain, tab: 'dogs' } });
+    if (portalOn && !post && m[2] === '/kennel') return sitePage(say('ptab.dogs'), await dogsTab(env, site, new Date(), say), { nav: { sub: site.subdomain, tab: 'dogs' } });
     if (m[2]?.startsWith('/portal')) {
       const res = await handlePortalAdmin({ env, request, url, site, page: sitePage, user, say });
       if (res) return res;

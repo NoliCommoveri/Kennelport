@@ -24,7 +24,7 @@ import {
   PROGRAM_WORDS,
 } from './steps.js';
 import { sendDueFor } from './reminders.js';
-import { vetStatus, formatAt, formatDay, localParts, timeLeft, clockRunning, VET_RULES } from './vet.js';
+import { vetStatus, formatAt, formatDay, localParts, timeLeft, clockRunning } from './vet.js';
 import { MailError } from '../mail.js';
 import { roundPhoto } from '../manage/hub.js';
 import {
@@ -37,8 +37,8 @@ import {
   deleteNow, deletedForGood, giveBack,
 } from './account.js';
 import { placementDuplicates, familyCandidates, mergePlacement, mergeFamily } from './merge.js';
-import { redirect, note, errorBox, pupName, familyFilters, sayHtml, SUGGEST_LABEL, ZONE_NAMES } from './admin/parts.js';
-import { products, KIND_WORDS, itemFields, whenWords, formOffset, templateScreen, readyForm } from './admin/templates.js';
+import { redirect, note, errorBox, pupName, familyFilters, sayHtml, suggestLabel, ZONE_NAMES } from './admin/parts.js';
+import { products, itemFields, whenWords, formOffset, templateScreen, readyForm } from './admin/templates.js';
 import { settingsScreen } from './admin/settings.js';
 import { waitlistCount, waitlistPart, setupScreen } from './admin/today.js';
 import { handbookScreen, removeScreen, photoScreen } from './admin/handbook.js';
@@ -79,7 +79,7 @@ export async function portalNeedsYou(env, siteId, now = new Date(), say = defaul
     }
     if (f.proof_uploaded_at && !f.proof_accepted_at) out.push({ href, label: say('ptoday.proof', { name }), note: f.name });
     const v = vetStatus(f, now);
-    if (clockRunning(f) && v.trouble) out.push({ href, label: say('ptoday.vet', { name, status: v.word.toLowerCase() }), note: v.word === 'Missed' ? say('ptoday.vet_missed_note', { time: formatAt(f.vet_deadline_at, s.time_zone) }) : say('ptoday.vet_left_note', { left: timeLeft(f.vet_deadline_at, now) }) });
+    if (clockRunning(f) && v.trouble) out.push({ href, label: say('ptoday.vet', { name, status: say(`pvet.${v.key}`).toLowerCase() }), note: v.key === 'missed' ? say('ptoday.vet_missed_note', { time: formatAt(f.vet_deadline_at, s.time_zone) }) : say('ptoday.vet_left_note', { left: timeLeft(f.vet_deadline_at, now) }) });
     // Going home in the next 7 days has its own card on Today (manage/hub.js goingHome);
     // here only what that card doesn't say: not invited yet.
     if (!f.picked_up_at && f.pickup_state !== 'not_yet' && !f.invited_at && !f.kennelos_id) {
@@ -247,7 +247,7 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
     parts.push(`<section class="card"><p class="hint">${site.feedAt ? t('pf.kennelos_sent', { ago: ago(site.feedAt, now, say) }) : t('pf.kennelos')}</p>
       ${f.kennelos_gone_at ? `<p class="error">${t('pf.family_gone', { time: at(f.kennelos_gone_at) })}</p>` : ''}
       ${p?.kennelos_gone_at ? `<p class="error">${t('pf.pup_gone', { name: pupName(p) })}</p>` : ''}
-      ${waiting.map((g) => `<div class="box"><p><b>${t('pf.newer')}</b> ${sayHtml(say, 'pf.newer_for', { field: SUGGEST_LABEL[g.field] ?? g.field }, { value: `<strong>${esc(shown(g))}</strong>` })}</p>
+      ${waiting.map((g) => `<div class="box"><p><b>${t('pf.newer')}</b> ${sayHtml(say, 'pf.newer_for', { field: suggestLabel(g.field, say) }, { value: `<strong>${esc(shown(g))}</strong>` })}</p>
         <div class="row">${form('suggestion', `<input type="hidden" name="tbl" value="${g.tbl}"><input type="hidden" name="field" value="${esc(g.field)}"><input type="hidden" name="act" value="use"><button class="primary">${t('pf.use')}</button>`)}
         ${form('suggestion', `<input type="hidden" name="tbl" value="${g.tbl}"><input type="hidden" name="field" value="${esc(g.field)}"><input type="hidden" name="act" value="ignore"><button>${t('pf.ignore')}</button>`)}</div></div>`).join('')}</section>`);
   }
@@ -302,9 +302,9 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
           <label class="check"><input type="checkbox" name="send" value="1"> <span>${t('pf.loss_email')}</span></label><p><button class="primary">${t('pf.loss_save')}</button></p>`)}</section>`);
     }
     const proof = p.proof_file_id ? await getFile(env, site.id, p.proof_file_id) : null;
-    parts.push(`<section class="card"><h2>${sayHtml(say, 'pf.vet_title', {}, { status: `<span${v.trouble ? ' class="error"' : ''}>${esc(v.word)}</span>` })}</h2>
+    parts.push(`<section class="card"><h2>${sayHtml(say, 'pf.vet_title', {}, { status: `<span${v.trouble ? ' class="error"' : ''}>${t(`pvet.${v.key}`)}</span>` })}</h2>
       <dl class="kv">
-        ${p.vet_deadline_at ? `<dt>${t('pf.deadline')}</dt><dd>${esc(formatAt(p.vet_deadline_at, s.time_zone, { zone: true }))}${Date.parse(p.vet_deadline_at) > now.getTime() ? ` · ${t('pf.left', { left: timeLeft(p.vet_deadline_at, now) })}` : ''}</dd>` : `<dt>${t('pf.deadline')}</dt><dd class="muted">${t('pf.deadline_starts', { rule: VET_RULES[s.vet_rule].toLowerCase() })}</dd>`}
+        ${p.vet_deadline_at ? `<dt>${t('pf.deadline')}</dt><dd>${esc(formatAt(p.vet_deadline_at, s.time_zone, { zone: true }))}${Date.parse(p.vet_deadline_at) > now.getTime() ? ` · ${t('pf.left', { left: timeLeft(p.vet_deadline_at, now) })}` : ''}</dd>` : `<dt>${t('pf.deadline')}</dt><dd class="muted">${t('pf.deadline_starts', { rule: say(`pvet.rule.${s.vet_rule}`).toLowerCase() })}</dd>`}
         <dt>${t('pf.booked_label')}</dt><dd>${p.vet_booked_at ? `${esc((p.vet_booked_for ?? '').replace('T', ' at '))}${p.vet_clinic ? `, ${esc(p.vet_clinic)}` : ''} <span class="muted small">${t('pf.their_entry')}</span>` : t('pf.not_yet')}</dd>
         <dt>${t('pf.record')}</dt><dd>${proof ? `<a href="/s/${esc(site.subdomain)}/portal/file/${esc(proof.id)}">${t('pf.view')}</a> · ${t('pf.uploaded', { time: at(p.proof_uploaded_at) })}${p.proof_accepted_at ? ` · ${t('pf.accepted', { time: at(p.proof_accepted_at) })}` : ''}` : t('pf.not_uploaded')}</dd>
       </dl>
@@ -331,21 +331,21 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
     const overdue = shownTasks.filter((x) => x.overdue).length;
     const timelinePart = steps.tasks.length ? `<details${home ? ' open' : ''}><summary><b>${overdue ? t('pf.timeline_overdue', { n: overdue }) : t('pf.timeline_n', { done: shownTasks.filter((x) => x.done).length, total: shownTasks.length })}</b></summary>
       <dl class="kv">${steps.tasks.map((x) => `<dt>${x.due ? esc(formatDay(x.due)) : t('pf.no_day')}</dt><dd>${x.hidden ? `<span class="muted">${esc(x.title)}</span>` : `<b>${esc(x.title)}</b>`} <span${x.overdue && !x.hidden ? ' class="error"' : ' class="hint"'}>${esc(TWORD(x))}</span>${x.moved ? ` <span class="hint">${t('pf.moved')}</span>` : ''}${x.mine ? theirs : ''}<br>${stepOps('task', x)}
-        <details><summary class="hint">${t('pf.move')}</summary>${form(`step/task/${esc(x.id)}/day`, `<div class="row"><label>${t('pf.day')}<input type="date" name="day" value="${esc(x.moved ?? '')}"></label></div><p><button>${t('pf.save')}</button> <span class="hint">${t('pf.move_hint', { when: whenWords(x.raw).toLowerCase() })}</span></p>`)}</details></dd>`).join('')}</dl></details>`
+        <details><summary class="hint">${t('pf.move')}</summary>${form(`step/task/${esc(x.id)}/day`, `<div class="row"><label>${t('pf.day')}<input type="date" name="day" value="${esc(x.moved ?? '')}"></label></div><p><button>${t('pf.save')}</button> <span class="hint">${t('pf.move_hint', { when: whenWords(x.raw, say).toLowerCase() })}</span></p>`)}</details></dd>`).join('')}</dl></details>`
       : setUp('pf.no_timeline', 'timeline');
     const prods = await products(env, site.id);
     parts.push(`<section class="card" id="steps"><h2>${t('pf.steps_title')}</h2>${checklistPart}
-      <details><summary>${t('pf.add_item', { family: f.name })}</summary>${form('steps/new/checklist', `<div class="fgrid">${itemFields('checklist', null, prods)}<p><button>${t('pf.add')}</button></p></div>`)}</details>
+      <details><summary>${t('pf.add_item', { family: f.name })}</summary>${form('steps/new/checklist', `<div class="fgrid">${itemFields('checklist', null, prods, say)}<p><button>${t('pf.add')}</button></p></div>`)}</details>
       ${timelinePart}
-      <details><summary>${t('pf.add_task', { family: f.name })}</summary>${form('steps/new/task', `<div class="fgrid">${itemFields('task', null, prods)}<p><button>${t('pf.add')}</button></p></div>`)}</details>
-      <details><summary>${t('pf.add_ready', { family: f.name })}</summary>${readyForm(`${base}/steps/ready`, prods)}</details>
+      <details><summary>${t('pf.add_task', { family: f.name })}</summary>${form('steps/new/task', `<div class="fgrid">${itemFields('task', null, prods, say)}<p><button>${t('pf.add')}</button></p></div>`)}</details>
+      <details><summary>${t('pf.add_ready', { family: f.name })}</summary>${readyForm(`${base}/steps/ready`, prods, { say })}</details>
     </section>`);
 
     const progs = await programsFor(env, site.id, p);
     if (progs.length) {
       parts.push(`<section class="card" id="programs"><h2>${t('pf.programs')}</h2><p class="hint">${t('pf.programs_hint')}</p>
-        ${progs.map((x) => form(`program/${esc(x.id)}`, `<div class="box"><b>${esc(x.name)}</b>${x.status_at ? ` <span class="hint">${esc(PROGRAM_WORDS[x.status])} ${esc(at(x.status_at))}${x.status_by === 'family' ? t('pf.by_them') : x.status_by === 'breeder' ? t('pf.by_you') : ''}</span>` : ''}
-          <div class="row"><label>${t('pf.status')}<select name="status">${Object.entries(PROGRAM_WORDS).map(([k, l]) => `<option value="${k}"${x.status === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+        ${progs.map((x) => form(`program/${esc(x.id)}`, `<div class="box"><b>${esc(x.name)}</b>${x.status_at ? ` <span class="hint">${t(`pchoice.program.${x.status}`)} ${esc(at(x.status_at))}${x.status_by === 'family' ? t('pf.by_them') : x.status_by === 'breeder' ? t('pf.by_you') : ''}</span>` : ''}
+          <div class="row"><label>${t('pf.status')}<select name="status">${Object.keys(PROGRAM_WORDS).map((k) => `<option value="${k}"${x.status === k ? ' selected' : ''}>${t(`pchoice.program.${k}`)}</option>`).join('')}</select></label>
           ${x.portal_per_family ? `<label>${t('pf.code')}<input name="code" value="${esc(x.family_code ?? '')}" maxlength="80"></label>` : ''}</div>
           <p><button>${t('pf.save')}</button></p></div>`)).join('')}</section>`);
     }
@@ -379,7 +379,7 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
           <form method="post" action="${base}/extra/${esc(x.id)}/update" enctype="multipart/form-data"><div class="fgrid">
             <label>${t('pstay.note')}<textarea name="note" rows="4" maxlength="3000" placeholder="${t('pstay.note_ph', { name })}"></textarea></label>
             <label>${t('pstay.weight')}<input name="weight" maxlength="30" placeholder="${t('pstay.weight_ph')}"></label>
-            ${skills.map((sk) => `<div class="row"><label>${esc(sk.name)}<select name="level.${esc(sk.id)}">${Object.entries(LEVELS).map(([k, l]) => `<option value="${k}"${(last.get(sk.id)?.level ?? 'not_started') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+            ${skills.map((sk) => `<div class="row"><label>${esc(sk.name)}<select name="level.${esc(sk.id)}">${Object.keys(LEVELS).map((k) => `<option value="${k}"${(last.get(sk.id)?.level ?? 'not_started') === k ? ' selected' : ''}>${t(`pchoice.level.${k}`)}</option>`).join('')}</select></label>
               <label>${t('pstay.skill_note')}<input name="note.${esc(sk.id)}" maxlength="200" value="${esc(last.get(sk.id)?.note ?? '')}"></label></div>`).join('')}
             <label>${t('pstay.photos')}<input type="file" name="photos" accept="image/jpeg,image/png,image/webp" multiple><span class="hint">${t('pstay.photos_hint', { n: MAX_PHOTOS })}</span></label>
             <p><button class="primary">${t('pstay.send')}</button> <span class="hint">${t('pstay.send_hint')}</span></p></div></form></details>
@@ -397,7 +397,7 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
     const records = await healthRecords(env, site.id, p.id);
     parts.push(`<section class="card"><h2>${t('pf.records')}</h2>
       ${records.length ? `<dl class="kv">${records.map((r) => `<dt>${esc(formatDay(r.given_on))}</dt><dd><b>${esc(r.name)}</b> · ${esc(recordKind(r))}${r.notes ? ` · ${esc(r.notes)}` : ''} ${form(`record/${esc(r.id)}/remove`, `<button class="link">${t('pf.remove')}</button>`)}</dd>`).join('')}</dl>` : `<p class="muted">${t('pf.records_none')}</p>`}
-      <details><summary>${t('pf.record_add')}</summary>${form('record', `<div class="fgrid"><div class="row"><label>${t('pf.record_kind')}<select name="type">${Object.entries(RECORD_TYPES).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join('')}</select></label><label>${t('pf.record_date')}<input type="date" name="given_on" required></label></div>
+      <details><summary>${t('pf.record_add')}</summary>${form('record', `<div class="fgrid"><div class="row"><label>${t('pf.record_kind')}<select name="type">${Object.keys(RECORD_TYPES).map((k) => `<option value="${k}">${t(`pchoice.record.${k}`)}</option>`).join('')}</select></label><label>${t('pf.record_date')}<input type="date" name="given_on" required></label></div>
         <label>${t('pf.record_what')}<input name="name" required maxlength="120" placeholder="${t('pf.record_what_ph')}"></label><label>${t('pf.record_notes')}<input name="notes" maxlength="400"></label><p><button>${t('pf.add')}</button></p></div>`)}</details>
     </section>`);
 
@@ -507,7 +507,7 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   const m = url.pathname.match(/^\/s\/[a-z0-9-]+\/portal(\/.*)?$/);
   if (!m) return null;
   const on = await env.DB.prepare('SELECT portal_on FROM sites WHERE id = ?').bind(site.id).first('portal_on');
-  if (!on) return page('Portal', '<section class="card"><p>The puppy portal isn\'t switched on for your site.</p></section>', { status: 404, back: `/s/${site.subdomain}` });
+  if (!on) return page(say('psetup.tab'), `<section class="card"><p>${esc(say('psetup.off'))}</p></section>`, { status: 404, back: `/s/${site.subdomain}` });
   const rest = m[1] ?? '';
   const post = request.method === 'POST';
   // With its own domain, for links in emails and the address shown to her.
@@ -527,7 +527,7 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
     return page(say('pfam.title'), familiesScreen(site, families, s, url, { deleted: await recentlyDeleted(env, site.id), erased: await erasedRecords(env, site.id), gone: await deletedForGood(env, site.id), waitlistCount: w.n, kennel, say }), tabs('families'));
   }
   // The Portal tab (plan 7.3): what families see, in one place.
-  if (rest === '/setup' && !post) return page('Portal', setupScreen(site, s, say), tabs('portal'));
+  if (rest === '/setup' && !post) return page(say('psetup.tab'), setupScreen(site, s, say), tabs('portal'));
   const um = rest.match(/^\/undo\/([0-9a-f-]{36})$/);
   if (um && post) {
     try { await undoDelete(env, site.id, um[1]); } catch (err) { if (!(err instanceof PortalError)) throw err; }
@@ -556,13 +556,13 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   }
   if (rest === '/settings') {
     const waiting = await suggestionsFor(env, site.id, 'portal_settings', site.id);
-    if (!post) return page('Portal settings', settingsScreen(site, s, await products(env, site.id), { waiting, extras: await catalog(env, site.id) }, url), { back: `${home}/setup` });
+    if (!post) return page(say('pset.title'), settingsScreen(site, s, await products(env, site.id), { waiting, extras: await catalog(env, site.id), say }, url), { back: `${home}/setup` });
     const form = await request.formData();
     const input = Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
     try {
       await saveSettings(env, site.id, input);
     } catch (err) {
-      if (err instanceof PortalError) return page('Portal settings', settingsScreen(site, { ...s, ...input }, await products(env, site.id), { error: err.message }), { back: home, status: 400 });
+      if (err instanceof PortalError) return page(say('pset.title'), settingsScreen(site, { ...s, ...input }, await products(env, site.id), { error: err.message, say }), { back: home, status: 400 });
       throw err;
     }
     await saveDelivery(env, site.id, input);
@@ -683,7 +683,7 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   if (tm) {
     const kind = tm[1] === 'checklist' ? 'checklist' : 'task';
     const here = `${home}/${tm[1]}`;
-    const show = async (opts = {}) => page(KIND_WORDS[kind].title, templateScreen(site, kind, await listItems(env, site.id, kind), await products(env, site.id), url, { ...opts, names: await puppyNames(env, site.id) }), { back: `${home}/settings`, status: opts.error ? 400 : 200 });
+    const show = async (opts = {}) => page(say(`ptpl.${kind}.title`), templateScreen(site, kind, await listItems(env, site.id, kind), await products(env, site.id), url, { ...opts, say, names: await puppyNames(env, site.id) }), { back: `${home}/settings`, status: opts.error ? 400 : 200 });
     if (!post) return tm[2] ? null : show();
     try {
       if (tm[2] === 'suggested') { await addSuggested(env, site.id, kind); return redirect(`${here}?note=suggested`); }

@@ -256,4 +256,18 @@ test('the portal\'s screens for her (step 2.4): Today, Families, Add a family, t
   await save('/admin/wording/portallog', { 'w.plog.none': 'No emails yet, {kennel}.' });
   await save('/admin/wording/portalstay', { 'w.pstay.title': 'Add-ons' });
   assert.match(await as(fam), /Invite them .* Picking up Opal .* Add-ons .* No emails yet, AK Boston Terriers\./);
+  // Portal settings, the checklist and timeline, the tabs, the Dogs tab and the shared words.
+  await save('/admin/wording/portalsettings', { 'w.pset.food': 'Food for {kennel} puppies' });
+  await save('/admin/wording/portaltemplates', { 'w.ptpl.checklist.title': 'Bring-home list', 'w.ptpl.when_after.many': '{n} days on' });
+  await save('/admin/wording/portaldogs', { 'w.pdogs.no_litters': 'No litters to show.' });
+  await save('/admin/wording/portaltoday', { 'w.ptab.dogs': 'Kennel' });
+  await save('/admin/wording/portalwords', { 'w.pvet.rule.hours72': 'Three days from pickup', 'w.pvet.not_booked': 'Not yet booked' });
+  assert.match(await as('/s/akbostons/portal/settings'), /Food for AK Boston Terriers puppies .*/);
+  assert.match(await as('/s/akbostons/portal/settings'), /Three days from pickup/);
+  assert.match(await as('/s/akbostons/portal/checklist'), /Bring-home list/);
+  await call(env, M, '/s/akbostons/portal/timeline/new', { method: 'POST', headers: { cookie: breeder, origin: ORIGIN }, body: form({ title: 'Puppy class', days: '9', when: 'after', count_from: 'pickup' }) });
+  assert.match(await as('/s/akbostons/portal/timeline'), /Puppy class 9 days on/);
+  const dogs = await as('/s/akbostons/kennel');
+  assert.match(dogs, /Kennel/);
+  assert.match(await as(fam), /Vet visit: Not yet booked/);
 });

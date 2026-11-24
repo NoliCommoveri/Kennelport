@@ -1,61 +1,65 @@
 // The portal's settings (/s/<sub>/portal/settings, routed by portal/admin.js): her
 // contact details for families, the time zone, the disclosure, what families may
-// suggest changing, and the programs shown.
+// suggest changing, and the programs shown. Its wording is the owner's
+// (manage/wording-portal.js pset.*; the vet rules pvet.rule.*, the looks plook.*).
 import { escapeHtml as esc } from '../../lib/html.js';
 import { DEFAULT_DISCLOSURE } from '../store.js';
 import { VET_RULES } from '../vet.js';
-import { note, errorBox, SUGGEST_LABEL, ZONES, ZONE_NAMES } from './parts.js';
+import { note, errorBox, suggestLabel, ZONES, ZONE_NAMES } from './parts.js';
 import { LOOKS, lookOf } from '../looks.js';
+import { defaultSay } from '../../manage/wording.js';
 
-export function settingsScreen(site, s, products, { error, waiting = [], extras = [] } = {}, url) {
+export const PROGRAM_TYPES = ['', 'food', 'insurance', 'registration', 'product', 'other'];
+
+export function settingsScreen(site, s, products, { error, waiting = [], extras = [], say = defaultSay } = {}, url) {
+  const t = (key, vars) => esc(say(key, vars));
   const zones = ZONES.includes(s.time_zone) ? ZONES : [s.time_zone, ...ZONES];
-  const TYPES = { '': 'Not shown', food: 'Food', insurance: 'Insurance', registration: 'Registration', product: 'Product', other: 'Other' };
-  return `${url ? note(url) : ''}${errorBox(error)}<form method="post" action="/s/${esc(site.subdomain)}/portal/settings" class="card">
-    <h1>Portal settings</h1>
-    <section class="fgroup" id="look"><h2>How the portal looks</h2><div class="fgrid">
-      <fieldset><legend>Your families see</legend>${Object.entries(LOOKS).map(([k, x]) => `<label class="check"><input type="radio" name="look" value="${k}"${lookOf(s) === k ? ' checked' : ''}> <span><b>${esc(x.name)}</b> <span class="hint">${esc(x.about)}</span></span></label>`).join('')}
-        <span class="hint">The same pages and buttons in every look. To see it as a family does, use See their portal on a family\'s screen.</span></fieldset>
+  return `${url ? note(url, say) : ''}${errorBox(error, say)}<form method="post" action="/s/${esc(site.subdomain)}/portal/settings" class="card">
+    <h1>${t('pset.title')}</h1>
+    <section class="fgroup" id="look"><h2>${t('pset.look')}</h2><div class="fgrid">
+      <fieldset><legend>${t('pset.look_legend')}</legend>${Object.keys(LOOKS).map((k) => `<label class="check"><input type="radio" name="look" value="${k}"${lookOf(s) === k ? ' checked' : ''}> <span><b>${t(`plook.${k}`)}</b> <span class="hint">${t(`plook.${k}.about`)}</span></span></label>`).join('')}
+        <span class="hint">${t('pset.look_hint')}</span></fieldset>
     </div></section>
-    <section class="fgroup"><h2>The vet visit</h2><div class="fgrid">
-      <fieldset><legend>How your contract counts it</legend>${Object.entries(VET_RULES).map(([k, l]) => `<label class="check"><input type="radio" name="vet_rule" value="${k}"${s.vet_rule === k ? ' checked' : ''}> <span>${esc(l)}</span></label>`).join('')}
-        <span class="hint">Applies to clocks that start from now on; a clock already running keeps its deadline.</span></fieldset>
-      <label>Your time zone<select name="time_zone">${zones.map((z) => `<option value="${esc(z)}"${z === s.time_zone ? ' selected' : ''}>${esc(ZONE_NAMES[z] ?? z)}</option>`).join('')}</select></label>
-      <label>What counts as proof<input name="proof_note" value="${esc(s.proof_note ?? '')}" maxlength="400" placeholder="The vet's exam record or receipt, showing the date and Opal's microchip"><span class="hint">Shown on the vet page and in reminders.</span></label>
+    <section class="fgroup"><h2>${t('pset.vet')}</h2><div class="fgrid">
+      <fieldset><legend>${t('pset.vet_legend')}</legend>${Object.keys(VET_RULES).map((k) => `<label class="check"><input type="radio" name="vet_rule" value="${k}"${s.vet_rule === k ? ' checked' : ''}> <span>${t(`pvet.rule.${k}`)}</span></label>`).join('')}
+        <span class="hint">${t('pset.vet_hint')}</span></fieldset>
+      <label>${t('pset.zone')}<select name="time_zone">${zones.map((z) => `<option value="${esc(z)}"${z === s.time_zone ? ' selected' : ''}>${esc(ZONE_NAMES[z] ?? z)}</option>`).join('')}</select></label>
+      <label>${t('pset.proof')}<input name="proof_note" value="${esc(s.proof_note ?? '')}" maxlength="400" placeholder="${t('pset.proof_ph')}"><span class="hint">${t('pset.proof_hint')}</span></label>
     </div></section>
-    <section class="fgroup"><h2>Contacts for families, once the puppy is home</h2><div class="fgrid">
-      <p class="hint">From pickup, each family's Home leads with these as one-tap buttons for the first weeks, so a question goes to you or your vet, who already knows the puppy. They stay under Records after that.</p>
-      ${waiting.map((g) => `<div class="box"><p><b>KennelOS has</b> ${esc(SUGGEST_LABEL[g.field] ?? g.field)}: <strong>${esc(g.value ?? '')}</strong></p><div class="row">
-        <button form="sug-use-${esc(g.field)}" class="primary">Use it</button><button form="sug-ignore-${esc(g.field)}">Ignore</button></div></div>`).join('')}
-      <div class="row"><label>Your phone for families<input name="her_phone" type="tel" value="${esc(s.her_phone ?? '')}" maxlength="40" placeholder="${esc(site.contactPhone ?? '')}"><span class="hint">Call and text.${site.contactPhone ? ' Blank: your website\'s number.' : ''}</span></label>
-      <label>Your email for families<input name="her_email" type="email" value="${esc(s.her_email ?? '')}" maxlength="254" placeholder="${esc(site.contactEmail ?? '')}"><span class="hint">${site.contactEmail ? 'Blank: your website\'s address.' : 'Optional.'}</span></label></div>
-      <div class="row"><label>Your vet's clinic<input name="vet_clinic" value="${esc(s.vet_clinic ?? '')}" maxlength="120" placeholder="Maple Street Animal Hospital"></label>
-      <label>Vet's name<input name="vet_doctor" value="${esc(s.vet_doctor ?? '')}" maxlength="120" placeholder="Dr. Lee"></label></div>
-      <div class="row"><label>Vet's phone<input name="vet_phone" type="tel" value="${esc(s.vet_phone ?? '')}" maxlength="40"></label>
-      <label>Vet's address<input name="vet_address" value="${esc(s.vet_address ?? '')}" maxlength="200"><span class="hint">Opens in maps.</span></label></div>
-      <label>A note for families<input name="vet_note" value="${esc(s.vet_note ?? '')}" maxlength="400" placeholder="Dr. Lee has seen every puppy since birth and is happy to take your questions."></label>
-      <label>On Home for this many weeks after pickup<input name="help_weeks" inputmode="numeric" value="${esc(s.help_weeks ?? 8)}" maxlength="2"></label>
+    <section class="fgroup"><h2>${t('pset.contacts')}</h2><div class="fgrid">
+      <p class="hint">${t('pset.contacts_hint')}</p>
+      ${waiting.map((g) => `<div class="box"><p><b>${t('pset.kennelos_has')}</b> ${esc(suggestLabel(g.field, say))}: <strong>${esc(g.value ?? '')}</strong></p><div class="row">
+        <button form="sug-use-${esc(g.field)}" class="primary">${t('pf.use')}</button><button form="sug-ignore-${esc(g.field)}">${t('pf.ignore')}</button></div></div>`).join('')}
+      <div class="row"><label>${t('pset.phone')}<input name="her_phone" type="tel" value="${esc(s.her_phone ?? '')}" maxlength="40" placeholder="${esc(site.contactPhone ?? '')}"><span class="hint">${t(site.contactPhone ? 'pset.phone_hint_site' : 'pset.phone_hint')}</span></label>
+      <label>${t('pset.email')}<input name="her_email" type="email" value="${esc(s.her_email ?? '')}" maxlength="254" placeholder="${esc(site.contactEmail ?? '')}"><span class="hint">${t(site.contactEmail ? 'pset.email_hint_site' : 'pset.email_hint')}</span></label></div>
+      <div class="row"><label>${t('pset.vet_clinic')}<input name="vet_clinic" value="${esc(s.vet_clinic ?? '')}" maxlength="120" placeholder="${t('pset.vet_clinic_ph')}"></label>
+      <label>${t('pset.vet_doctor')}<input name="vet_doctor" value="${esc(s.vet_doctor ?? '')}" maxlength="120" placeholder="${t('pset.vet_doctor_ph')}"></label></div>
+      <div class="row"><label>${t('pset.vet_phone')}<input name="vet_phone" type="tel" value="${esc(s.vet_phone ?? '')}" maxlength="40"></label>
+      <label>${t('pset.vet_address')}<input name="vet_address" value="${esc(s.vet_address ?? '')}" maxlength="200"><span class="hint">${t('pset.vet_address_hint')}</span></label></div>
+      <label>${t('pset.vet_note')}<input name="vet_note" value="${esc(s.vet_note ?? '')}" maxlength="400" placeholder="${t('pset.vet_note_ph')}"></label>
+      <label>${t('pset.help_weeks')}<input name="help_weeks" inputmode="numeric" value="${esc(s.help_weeks ?? 8)}" maxlength="2"></label>
     </div></section>
-    <section class="fgroup"><h2>What the puppies eat now</h2><div class="fgrid">
-      <p class="hint">The food band on each family's Home: the exact food, so they buy the same. Its button opens your food program, if you show one.</p>
-      <label>The food<input name="food_name" value="${esc(s.food_name ?? '')}" maxlength="160" placeholder="Small-breed puppy formula, chicken and rice"><span class="hint">Brand and formula. Blank: no food band.</span></label>
-      <div class="row"><label>Bag<input name="food_bag" value="${esc(s.food_bag ?? '')}" maxlength="80" placeholder="4 lb bag"></label>
-      <label>How much and how often<input name="food_how" value="${esc(s.food_how ?? '')}" maxlength="160" placeholder="⅓ cup, three times a day"></label></div>
-      <label>A note<input name="food_note" value="${esc(s.food_note ?? '')}" maxlength="300" placeholder="Soak it in warm water for the first week."></label>
+    <section class="fgroup"><h2>${t('pset.food')}</h2><div class="fgrid">
+      <p class="hint">${t('pset.food_hint')}</p>
+      <label>${t('pset.food_name')}<input name="food_name" value="${esc(s.food_name ?? '')}" maxlength="160" placeholder="${t('pset.food_name_ph')}"><span class="hint">${t('pset.food_name_hint')}</span></label>
+      <div class="row"><label>${t('pset.food_bag')}<input name="food_bag" value="${esc(s.food_bag ?? '')}" maxlength="80" placeholder="${t('pset.food_bag_ph')}"></label>
+      <label>${t('pset.food_how')}<input name="food_how" value="${esc(s.food_how ?? '')}" maxlength="160" placeholder="${t('pset.food_how_ph')}"></label></div>
+      <label>${t('pset.food_note')}<input name="food_note" value="${esc(s.food_note ?? '')}" maxlength="300" placeholder="${t('pset.food_note_ph')}"></label>
     </div></section>
-    ${extras.length ? `<section class="fgroup"><h2>Extras the portal delivers</h2><div class="fgrid">
-      <p class="hint">An extended stay gets a Stay page for the family, its "What's included" list as skills, and your updates on a rhythm you set.</p>
-      ${extras.map((x) => `<div class="row"><label>${esc(x.name)}<select name="delivery.${esc(x.id)}"><option value="">Listed only</option><option value="stay"${x.portal_delivery === 'stay' ? ' selected' : ''}>An extended stay, with updates</option></select></label>
-        <label>Update every (days)<input name="every.${esc(x.id)}" inputmode="numeric" maxlength="2" value="${esc(x.portal_every_days ?? 7)}"></label></div>`).join('')}
+    ${extras.length ? `<section class="fgroup"><h2>${t('pset.extras')}</h2><div class="fgrid">
+      <p class="hint">${t('pset.extras_hint')}</p>
+      ${extras.map((x) => `<div class="row"><label>${esc(x.name)}<select name="delivery.${esc(x.id)}"><option value="">${t('pset.listed')}</option><option value="stay"${x.portal_delivery === 'stay' ? ' selected' : ''}>${t('pset.stay')}</option></select></label>
+        <label>${t('pset.every')}<input name="every.${esc(x.id)}" inputmode="numeric" maxlength="2" value="${esc(x.portal_every_days ?? 7)}"></label></div>`).join('')}
     </div></section>` : ''}
-    <section class="fgroup" id="programs"><h2>Programs families see</h2><div class="fgrid">
+    <section class="fgroup" id="programs"><h2>${t('pset.programs')}</h2><div class="fgrid">
       ${products.length ? products.map((x) => `<div class="fgrid box"><b>${esc(x.name)}</b>
-        <div class="row"><label>Show as<select name="type.${esc(x.id)}">${Object.entries(TYPES).map(([k, l]) => `<option value="${k}"${(x.portal_show ? x.portal_type ?? 'other' : '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
-        <label>What the family does<input name="action.${esc(x.id)}" value="${esc(x.family_action ?? '')}" maxlength="200" placeholder="${x.portal_type === 'insurance' ? 'Activate the free trial within 5 days of pickup' : 'Use the code at checkout'}"></label></div>
-        <label class="check"><input type="checkbox" name="own.${esc(x.id)}" value="1"${x.portal_per_family ? ' checked' : ''}> <span>Each family gets its own code or certificate <span class="hint">You type it on their screen; they see theirs instead of the program's code.</span></span></label></div>`).join('') : '<p class="muted">Add your programs under Recommended products first; their links and codes are used here too.</p>'}
-      <label>Disclosure line<input name="disclosure" value="${esc(s.disclosure ?? '')}" maxlength="400" placeholder="${esc(DEFAULT_DISCLOSURE)}"><span class="hint">At the foot of every page with program links.</span></label>
+        <div class="row"><label>${t('pset.show_as')}<select name="type.${esc(x.id)}">${PROGRAM_TYPES.map((k) => `<option value="${k}"${(x.portal_show ? x.portal_type ?? 'other' : '') === k ? ' selected' : ''}>${t(`pset.type.${k || 'none'}`)}</option>`).join('')}</select></label>
+        <label>${t('pset.action')}<input name="action.${esc(x.id)}" value="${esc(x.family_action ?? '')}" maxlength="200" placeholder="${t(x.portal_type === 'insurance' ? 'pset.action_ph_insurance' : 'pset.action_ph')}"></label></div>
+        <label class="check"><input type="checkbox" name="own.${esc(x.id)}" value="1"${x.portal_per_family ? ' checked' : ''}> <span>${t('pset.own')} <span class="hint">${t('pset.own_hint')}</span></span></label></div>`).join('') : `<p class="muted">${t('pset.no_programs')}</p>`}
+      <label>${t('pset.disclosure')}<input name="disclosure" value="${esc(s.disclosure ?? '')}" maxlength="400" placeholder="${esc(DEFAULT_DISCLOSURE)}"><span class="hint">${t('pset.disclosure_hint')}</span></label>
     </div></section>
-    <p><button class="primary">Save</button></p></form>
+    <p><button class="primary">${t('pf.save')}</button></p></form>
   ${waiting.map((g) => ['use', 'ignore'].map((a) => `<form id="sug-${a}-${esc(g.field)}" method="post" action="/s/${esc(site.subdomain)}/portal/settings/suggestion"><input type="hidden" name="field" value="${esc(g.field)}"><input type="hidden" name="act" value="${a}"></form>`).join('')).join('')}
-  <ul class="items"><li class="item"><a href="/s/${esc(site.subdomain)}/portal/checklist"><b>Go-home checklist</b><span>Your list for every family</span></a></li>
-    <li class="item"><a href="/s/${esc(site.subdomain)}/portal/timeline"><b>First-weeks timeline</b><span>Tasks dated from birth or pickup</span></a></li></ul>`;
+  <ul class="items"><li class="item"><a href="/s/${esc(site.subdomain)}/portal/checklist"><b>${t('psetup.checklist')}</b><span>${t('pset.checklist_note')}</span></a></li>
+    <li class="item"><a href="/s/${esc(site.subdomain)}/portal/timeline"><b>${t('psetup.timeline')}</b><span>${t('psetup.timeline_note')}</span></a></li></ul>`;
 }

@@ -4,7 +4,7 @@
 // lists are read by manage/index.js too. Their wording is the owner's
 // (manage/wording-portal.js).
 import { escapeHtml as esc } from '../../lib/html.js';
-import { vetStatus, formatAt, timeLeft, clockRunning, formatDay, VET_RULES } from '../vet.js';
+import { vetStatus, formatAt, timeLeft, clockRunning, formatDay } from '../vet.js';
 import { roundPhoto } from '../../manage/hub.js';
 import { pupName, familyFilters, sayHtml } from './parts.js';
 import { getSettings, listFamilies } from '../store.js';
@@ -16,12 +16,12 @@ export function vetVisits(site, families, s, now = new Date(), say = defaultSay)
   if (!rows.length) return `<section class="card" id="vet-visits"><h2>${esc(say('ptoday.visits_title'))}</h2><p class="muted">${esc(say('ptoday.visits_none'))}</p></section>`;
   return `<section class="card" id="vet-visits"><h2>${esc(say('ptoday.visits_title'))}</h2><ul class="list">${rows.map((f) => {
     const v = vetStatus(f, now);
-    const tone = v.trouble ? 'bad' : v.word === 'Accepted' ? 'ok' : v.word === 'Record uploaded' ? 'next' : v.word === 'Not booked' && clockRunning(f) ? 'warn' : '';
+    const tone = v.trouble ? 'bad' : v.key === 'accepted' ? 'ok' : v.key === 'uploaded' ? 'next' : v.key === 'not_booked' && clockRunning(f) ? 'warn' : '';
     const running = f.vet_deadline_at && clockRunning(f);
     const time = running ? formatAt(f.vet_deadline_at, s.time_zone, { weekday: false }) : null;
     const when = running ? (Date.parse(f.vet_deadline_at) > now.getTime() && !f.proof_uploaded_at ? say('ptoday.visit_due_left', { time, left: timeLeft(f.vet_deadline_at, now) }) : say('ptoday.visit_due', { time }))
       : f.pickup_booked_at ? say('ptoday.visit_starts_at', { time: formatAt(f.pickup_booked_at, s.time_zone, { weekday: false }) }) : say('ptoday.visit_starts');
-    return `<li>${roundPhoto(site.subdomain, f.photo_id, pupName(f))}<span class="grow"><a class="rowlink" href="/s/${esc(site.subdomain)}/portal/f/${esc(f.id)}"><b>${esc(pupName(f))}</b></a> · <span class="small">${esc(f.name)}</span><br><span class="small muted">${esc(when)}</span></span><span class="st${tone ? ` ${tone}` : ''}">${esc(v.word)}</span></li>`;
+    return `<li>${roundPhoto(site.subdomain, f.photo_id, pupName(f))}<span class="grow"><a class="rowlink" href="/s/${esc(site.subdomain)}/portal/f/${esc(f.id)}"><b>${esc(pupName(f))}</b></a> · <span class="small">${esc(f.name)}</span><br><span class="small muted">${esc(when)}</span></span><span class="st${tone ? ` ${tone}` : ''}">${esc(say(`pvet.${v.key}`))}</span></li>`;
   }).join('')}</ul></section>`;
 }
 
@@ -75,7 +75,7 @@ export function setupScreen(site, s, say = defaultSay) {
   const item = (href, label, note) => `<li class="item"><a href="${href}"><b>${esc(label)}</b><span>${esc(note)}</span></a></li>`;
   return `<section class="card"><h1>${esc(say('psetup.title'))}</h1><p class="muted small">${sayHtml(say, 'psetup.line', {}, { address: `<strong>${esc(site.portalUrl)}</strong>` })}</p></section>
     <ul class="items">
-      ${item(`${b}/settings`, say('psetup.settings'), say('psetup.settings_note', { rule: VET_RULES[s.vet_rule].toLowerCase() }))}
+      ${item(`${b}/settings`, say('psetup.settings'), say('psetup.settings_note', { rule: say(`pvet.rule.${s.vet_rule}`).toLowerCase() }))}
       ${item(`${b}/checklist`, say('psetup.checklist'), say('psetup.checklist_note'))}
       ${item(`${b}/timeline`, say('psetup.timeline'), say('psetup.timeline_note'))}
       ${item(`${b}/handbook`, say('handbook.item'), say('handbook.item_note'))}

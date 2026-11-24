@@ -1,103 +1,107 @@
 // The checklist and timeline templates, in the portal's admin (/s/<sub>/portal/
 // checklist and /timeline, routed by portal/admin.js): the items every new family's
 // checklist and timeline start from, and the programs (products) they can link to.
+// Its wording is the owner's (manage/wording-portal.js ptpl.*); the ready-made tasks
+// and suggested lists (steps.js) are starting content, not her instructions.
 import { escapeHtml as esc } from '../../lib/html.js';
 import { CHECK_AUTO, TASK_AUTO, READY_TASKS, namedPuppy } from '../steps.js';
 import { note, errorBox } from './parts.js';
+import { defaultSay } from '../../manage/wording.js';
 
 export const products = async (env, siteId) => (await env.DB.prepare('SELECT id, name, portal_show, portal_type, family_action, portal_per_family FROM products WHERE site_id = ? ORDER BY sort, name').bind(siteId).all()).results;
 
-export const KIND_WORDS = {
-  checklist: { title: 'Go-home checklist', one: 'item', hint: 'What to have ready before the puppy comes home. Every family gets this list from two weeks before go-home; you can hide an item or add one for a family on their screen.' },
-  task: { title: 'First-weeks timeline', one: 'task', hint: 'Each task is dated from the puppy\'s birth or from pickup. A task counted from birth that falls by go-home is yours: families see it as done by you. Write {name} for the puppy\'s name.' },
-};
+const t = (say, key, vars) => esc(say(key, vars));
 
-export function programSelect(products, current) {
+export function programSelect(products, current, say = defaultSay) {
   const shown = products.filter((x) => x.portal_show || x.id === current);
-  return `<label>Links to<select name="product_id"><option value="">No program</option>${shown.map((x) => `<option value="${esc(x.id)}"${x.id === current ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select><span class="hint">A program families see (Portal settings). Its link and code go with the step.</span></label>`;
+  return `<label>${t(say, 'ptpl.links_to')}<select name="product_id"><option value="">${t(say, 'ptpl.no_program')}</option>${shown.map((x) => `<option value="${esc(x.id)}"${x.id === current ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select><span class="hint">${t(say, 'ptpl.links_to_hint')}</span></label>`;
 }
 
-export function itemFields(kind, x, products) {
+export function itemFields(kind, x, products, say = defaultSay) {
   const auto = kind === 'checklist' ? CHECK_AUTO : TASK_AUTO;
-  const autoField = `<label>Ticks itself<select name="auto"><option value="">No: the family ticks it</option>${Object.entries(auto).map(([k, l]) => `<option value="${k}"${x?.auto === k ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
+  const autoField = `<label>${t(say, 'ptpl.auto')}<select name="auto"><option value="">${t(say, 'ptpl.auto_no')}</option>${Object.keys(auto).map((k) => `<option value="${k}"${x?.auto === k ? ' selected' : ''}>${t(say, `ptpl.auto.${k}`)}</option>`).join('')}</select></label>`;
   if (kind === 'checklist') {
-    return `<label>Item<input name="title" value="${esc(x?.title ?? '')}" required maxlength="160" placeholder="A crate with a divider"><span class="hint">Write {food} for the food in Portal settings.</span></label>
-      ${programSelect(products, x?.product_id)}${autoField}`;
+    return `<label>${t(say, 'ptpl.item')}<input name="title" value="${esc(x?.title ?? '')}" required maxlength="160" placeholder="${t(say, 'ptpl.item_ph')}"><span class="hint">${t(say, 'ptpl.item_hint')}</span></label>
+      ${programSelect(products, x?.product_id, say)}${autoField}`;
   }
   const days = x ? Math.abs(x.offset_days) : '';
   const when = x ? (x.offset_days < 0 ? 'before' : 'after') : 'after';
-  return `<label>Task<input name="title" value="${esc(x?.title ?? '')}" required maxlength="160" placeholder="Register {name}"></label>
-    <label>What to do<input name="body" value="${esc(x?.body ?? '')}" maxlength="600" placeholder="Your registration paper is in the go-home folder."></label>
-    <div class="row"><label>Days<input name="days" inputmode="numeric" value="${esc(days)}" maxlength="4" required></label>
-      <label>&nbsp;<select name="when"><option value="after"${when === 'after' ? ' selected' : ''}>after</option><option value="before"${when === 'before' ? ' selected' : ''}>before</option></select></label>
-      <label>&nbsp;<select name="count_from"><option value="pickup"${x?.count_from !== 'birth' ? ' selected' : ''}>pickup</option><option value="birth"${x?.count_from === 'birth' ? ' selected' : ''}>birth</option></select></label></div>
-    ${programSelect(products, x?.product_id)}
-    <label>Button words<input name="button_label" value="${esc(x?.button_label ?? '')}" maxlength="60" placeholder="Activate the trial"><span class="hint">On the program's link. Blank: the program's own.</span></label>
+  return `<label>${t(say, 'ptpl.task')}<input name="title" value="${esc(x?.title ?? '')}" required maxlength="160" placeholder="${t(say, 'ptpl.task_ph')}"></label>
+    <label>${t(say, 'ptpl.body')}<input name="body" value="${esc(x?.body ?? '')}" maxlength="600" placeholder="${t(say, 'ptpl.body_ph')}"></label>
+    <div class="row"><label>${t(say, 'ptpl.days')}<input name="days" inputmode="numeric" value="${esc(days)}" maxlength="4" required></label>
+      <label>&nbsp;<select name="when"><option value="after"${when === 'after' ? ' selected' : ''}>${t(say, 'ptpl.after')}</option><option value="before"${when === 'before' ? ' selected' : ''}>${t(say, 'ptpl.before')}</option></select></label>
+      <label>&nbsp;<select name="count_from"><option value="pickup"${x?.count_from !== 'birth' ? ' selected' : ''}>${t(say, 'ptpl.pickup')}</option><option value="birth"${x?.count_from === 'birth' ? ' selected' : ''}>${t(say, 'ptpl.birth')}</option></select></label></div>
+    ${programSelect(products, x?.product_id, say)}
+    <label>${t(say, 'ptpl.button')}<input name="button_label" value="${esc(x?.button_label ?? '')}" maxlength="60" placeholder="${t(say, 'ptpl.button_ph')}"><span class="hint">${t(say, 'ptpl.button_hint')}</span></label>
     ${autoField}`;
 }
 
 // The ready-made tasks, grouped by her shown programs (each with its type's
 // wordings), and registration with no program. {name} is left as she writes it.
-export function readyForm(action, products, { forOne = '' } = {}) {
+export function readyForm(action, products, { forOne = '', say = defaultSay } = {}) {
   const opt = (pid, kind, i, c) => `<option value="${esc(`${pid}|${kind}|${i}`)}">${esc(c.title)}: ${esc(c.body)}</option>`;
   const shown = products.filter((x) => x.portal_show);
   const groups = shown.map((x) => {
     const kind = READY_TASKS[x.portal_type] ? x.portal_type : 'other';
     return `<optgroup label="${esc(x.name)}">${READY_TASKS[kind].choices.map((c, i) => opt(x.id, kind, i, c).replace(/\{program\}/g, esc(x.name))).join('')}</optgroup>`;
   });
-  if (!shown.some((x) => x.portal_type === 'registration')) groups.push(`<optgroup label="Registration, no link">${READY_TASKS.registration.choices.map((c, i) => opt('', 'registration', i, c)).join('')}</optgroup>`);
-  const days = Object.entries(READY_TASKS).map(([, r]) => `${r.label.toLowerCase()} ${r.days}`).join(', ');
-  return `<form method="post" action="${action}" class="card"><h2>Add a ready-made task${forOne}</h2>
-    <p class="hint">Pick one of your programs and the wording you like. Its button opens the program's link, with its code.${shown.length ? '' : ' Show your programs in Portal settings to link them here.'}</p>
-    <div class="fgrid"><label>Task<select name="ready" required><option value="">Choose…</option>${groups.join('')}</select>
-      <span class="hint">Dated in days after pickup: ${esc(days)}. Change the day or the words after.</span></label>
-    <p><button>Add</button></p></div></form>`;
+  if (!shown.some((x) => x.portal_type === 'registration')) groups.push(`<optgroup label="${t(say, 'ptpl.ready_registration')}">${READY_TASKS.registration.choices.map((c, i) => opt('', 'registration', i, c)).join('')}</optgroup>`);
+  const days = Object.entries(READY_TASKS).map(([k, r]) => `${say(`pset.type.${k}`).toLowerCase()} ${r.days}`).join(', ');
+  return `<form method="post" action="${action}" class="card"><h2>${t(say, 'ptpl.ready_title')}${forOne}</h2>
+    <p class="hint">${t(say, shown.length ? 'ptpl.ready_hint' : 'ptpl.ready_hint_none')}</p>
+    <div class="fgrid"><label>${t(say, 'ptpl.task')}<select name="ready" required><option value="">${t(say, 'ppup.choose')}</option>${groups.join('')}</select>
+      <span class="hint">${t(say, 'ptpl.ready_days', { days })}</span></label>
+    <p><button>${t(say, 'pf.add')}</button></p></div></form>`;
 }
 
 // "5 days after pickup", "70 days from birth".
-export const whenWords = (t) => (t.count_from === 'birth' ? `${t.offset_days} days from birth` : t.offset_days === 0 ? 'Pickup day' : `${Math.abs(t.offset_days)} day${Math.abs(t.offset_days) === 1 ? '' : 's'} ${t.offset_days < 0 ? 'before' : 'after'} pickup`);
+export const whenWords = (x, say = defaultSay) => {
+  const n = Math.abs(x.offset_days);
+  if (x.count_from === 'birth') return say('ptpl.when_birth', { n: x.offset_days });
+  if (x.offset_days === 0) return say('ptpl.when_pickup_day');
+  return say(`ptpl.when_${x.offset_days < 0 ? 'before' : 'after'}.${n === 1 ? 'one' : 'many'}`, { n });
+};
 
 // The form's "days" and "when" as one signed number.
 export const formOffset = (values) => ({ ...values, offset_days: values.days === undefined ? values.offset_days : `${values.when === 'before' ? '-' : ''}${String(values.days ?? '').trim().replace(/^-/, '')}` });
 
-export function itemMeta(kind, x, products) {
+export function itemMeta(kind, x, products, say = defaultSay) {
   const bits = [];
-  if (kind === 'task') bits.push(whenWords(x));
+  if (kind === 'task') bits.push(whenWords(x, say));
   const prod = products.find((y) => y.id === x.product_id);
-  if (prod) bits.push(`${prod.name}${prod.portal_show ? '' : ' (not shown)'}`);
-  if (x.auto) bits.push(kind === 'checklist' ? 'ticks itself' : 'done by itself');
+  if (prod) bits.push(prod.portal_show ? prod.name : say('ptpl.not_shown', { program: prod.name }));
+  if (x.auto) bits.push(say(kind === 'checklist' ? 'ptpl.ticks_itself' : 'ptpl.done_itself'));
   return bits.join(' · ');
 }
 
 // A template step naming one puppy: every family would read that name.
-const nameWarning = (x, names) => {
+const nameWarning = (x, names, say) => {
   const n = namedPuppy(x, names);
-  return n ? `<br><span class="error">Every family reads "${esc(n)}" here. Write {name} instead, and each family sees their own puppy's name.</span>` : '';
+  return n ? `<br><span class="error">${t(say, 'ptpl.named', { pup: n })}</span>` : '';
 };
 
 // "Register {name}" stays suggested on her timeline until it's on it: her own wording
 // (a task she adjusted or removed) is hers to keep, and this is one tap to add.
-function registerSuggestion(base, items, products) {
+function registerSuggestion(base, items, products, say) {
   const reg = READY_TASKS.registration;
   const c = reg.choices[0];
   if (items.some((x) => x.title === c.title)) return '';
   const prog = products.find((x) => x.portal_show && x.portal_type === 'registration');
-  return `<form method="post" action="${base}/ready" class="card"><h2>Suggested: ${esc(c.title)}</h2>
-    <p>${esc(c.body)}</p><p class="hint">${reg.days} days after pickup${prog ? `, with a ${esc(reg.button)} button to ${esc(prog.name)}` : ''}. Write {name} and each family sees their own puppy's name. Keep your own task instead if you like it better.</p>
-    <input type="hidden" name="ready" value="${esc(`${prog?.id ?? ''}|registration|0`)}"><p><button class="primary">Add it to the timeline</button></p></form>`;
+  return `<form method="post" action="${base}/ready" class="card"><h2>${t(say, 'ptpl.suggested', { task: c.title })}</h2>
+    <p>${esc(c.body)}</p><p class="hint">${prog ? t(say, 'ptpl.suggested_when_program', { n: reg.days, button: reg.button, program: prog.name }) : t(say, 'ptpl.suggested_when', { n: reg.days })} ${t(say, 'ptpl.suggested_hint')}</p>
+    <input type="hidden" name="ready" value="${esc(`${prog?.id ?? ''}|registration|0`)}"><p><button class="primary">${t(say, 'ptpl.suggested_add')}</button></p></form>`;
 }
 
-export function templateScreen(site, kind, items, products, url, { error, names = [] } = {}) {
-  const w = KIND_WORDS[kind];
+export function templateScreen(site, kind, items, products, url, { error, names = [], say = defaultSay } = {}) {
   const base = `/s/${esc(site.subdomain)}/portal/${kind === 'checklist' ? 'checklist' : 'timeline'}`;
-  const rows = items.map((x, i) => `<details class="card"><summary><b>${esc(x.title)}</b><br><span class="hint">${esc(itemMeta(kind, x, products))}</span>${nameWarning(x, names)}</summary>
-    <form method="post" action="${base}/${esc(x.id)}"><div class="fgrid">${itemFields(kind, x, products)}<p><button class="primary">Save</button></p></div></form>
-    <div class="row">${i ? `<form method="post" action="${base}/${esc(x.id)}/up"><button>Move up</button></form>` : ''}${i < items.length - 1 ? `<form method="post" action="${base}/${esc(x.id)}/down"><button>Move down</button></form>` : ''}
-    <form method="post" action="${base}/${esc(x.id)}/remove"><button class="link">Remove from every family's list</button></form></div></details>`).join('');
-  return `${note(url)}${errorBox(error)}<section class="card"><h1>${esc(w.title)}</h1><p class="hint">${esc(w.hint)}</p>
-    ${items.length ? '' : `<form method="post" action="${base}/suggested"><p><button class="primary">Start with the suggested ${kind === 'checklist' ? 'list' : 'timeline'}</button></p><p class="hint">${kind === 'checklist' ? 'Crate, bed, food, bowls, collar and leash, pads, chews, the vet booking and a carrier.' : 'The vet booking, pickup, the vet visit, insurance, food, registration, deworming and vaccines.'} Each links to your programs of that kind. Change anything after.</p></form>`}</section>
+  const rows = items.map((x, i) => `<details class="card"><summary><b>${esc(x.title)}</b><br><span class="hint">${esc(itemMeta(kind, x, products, say))}</span>${nameWarning(x, names, say)}</summary>
+    <form method="post" action="${base}/${esc(x.id)}"><div class="fgrid">${itemFields(kind, x, products, say)}<p><button class="primary">${t(say, 'pf.save')}</button></p></div></form>
+    <div class="row">${i ? `<form method="post" action="${base}/${esc(x.id)}/up"><button>${t(say, 'ptpl.up')}</button></form>` : ''}${i < items.length - 1 ? `<form method="post" action="${base}/${esc(x.id)}/down"><button>${t(say, 'ptpl.down')}</button></form>` : ''}
+    <form method="post" action="${base}/${esc(x.id)}/remove"><button class="link">${t(say, 'ptpl.remove')}</button></form></div></details>`).join('');
+  return `${note(url, say)}${errorBox(error, say)}<section class="card"><h1>${t(say, `ptpl.${kind}.title`)}</h1><p class="hint">${t(say, `ptpl.${kind}.hint`)}</p>
+    ${items.length ? '' : `<form method="post" action="${base}/suggested"><p><button class="primary">${t(say, `ptpl.${kind}.start`)}</button></p><p class="hint">${t(say, `ptpl.${kind}.start_hint`)}</p></form>`}</section>
     ${rows}
-    ${kind === 'task' && items.length ? registerSuggestion(base, items, products) : ''}
-    ${kind === 'task' ? readyForm(`${base}/ready`, products) : ''}
-    <form method="post" action="${base}/new" class="card"><h2>Add ${kind === 'checklist' ? 'an item' : 'a task'}</h2><div class="fgrid">${itemFields(kind, null, products)}<p><button>Add</button></p></div></form>`;
+    ${kind === 'task' && items.length ? registerSuggestion(base, items, products, say) : ''}
+    ${kind === 'task' ? readyForm(`${base}/ready`, products, { say }) : ''}
+    <form method="post" action="${base}/new" class="card"><h2>${t(say, `ptpl.${kind}.add`)}</h2><div class="fgrid">${itemFields(kind, null, products, say)}<p><button>${t(say, 'pf.add')}</button></p></div></form>`;
 }

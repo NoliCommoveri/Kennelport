@@ -139,15 +139,16 @@ export function stage(p, now = new Date()) {
   return 'after';
 }
 
-// Her words for where a vet visit stands (plan 7.3), and whether it's trouble.
+// Where a vet visit stands (plan 7.3), and whether it's trouble: its key, for the
+// owner's words on her screens (manage/wording-portal.js pvet.*), and today's word.
 export function vetStatus(p, now = new Date()) {
   const t = new Date(now).getTime();
   const end = p.vet_deadline_at ? Date.parse(p.vet_deadline_at) : null;
-  if (p.proof_accepted_at) return { word: 'Accepted', trouble: false };
-  if (p.proof_uploaded_at) return { word: 'Record uploaded', trouble: false };
-  if (end && clockRunning(p) && t >= end) return { word: 'Missed', trouble: true };
-  if (p.vet_booked_at) return { word: 'Booked', trouble: false };
-  return { word: 'Not booked', trouble: Boolean(end && clockRunning(p) && end - t < TROUBLE_MS) };
+  if (p.proof_accepted_at) return { key: 'accepted', word: 'Accepted', trouble: false };
+  if (p.proof_uploaded_at) return { key: 'uploaded', word: 'Record uploaded', trouble: false };
+  if (end && clockRunning(p) && t >= end) return { key: 'missed', word: 'Missed', trouble: true };
+  if (p.vet_booked_at) return { key: 'booked', word: 'Booked', trouble: false };
+  return { key: 'not_booked', word: 'Not booked', trouble: Boolean(end && clockRunning(p) && end - t < TROUBLE_MS) };
 }
 
 // "2 days 5 hours", "5 hours", "40 minutes".

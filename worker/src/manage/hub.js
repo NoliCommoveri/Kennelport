@@ -9,25 +9,28 @@
 //   Website   /s/<sub>/website  publish, inbox, photos, pages (today's screens)
 //   Portal    /s/<sub>/portal/setup  what families see: settings, lists, programs, extras
 //
-// Sites without the portal keep the one home screen they have.
+// Sites without the portal keep the one home screen they have. The wording is the
+// owner's (manage/wording-portal.js ptab.*, phome.*, pdogs.*).
 import { escapeHtml as esc } from '../lib/html.js';
 import { getSettings } from '../portal/store.js';
 import { formatAt, formatDay, localParts, vetStatus } from '../portal/vet.js';
 import { updatesDue } from '../portal/stays.js';
 import { statusText } from '../render/parts.js';
+import { defaultSay } from './wording.js';
 
 const DAY = 86400000;
 
+// Each tab: its key, path and icon; its name is the owner's (ptab.<key>).
 export const TABS = [
-  ['today', '', 'Today', 'home'],
-  ['families', '/portal', 'Families', 'people'],
-  ['dogs', '/kennel', 'Dogs', 'paw'],
-  ['website', '/website', 'Website', 'pages'],
-  ['portal', '/portal/setup', 'Portal', 'list'],
+  ['today', '', 'home'],
+  ['families', '/portal', 'people'],
+  ['dogs', '/kennel', 'paw'],
+  ['website', '/website', 'pages'],
+  ['portal', '/portal/setup', 'list'],
 ];
 
-export function nav(sub, current) {
-  return `<nav class="apptabs" aria-label="Site Manager">${TABS.map(([key, path, label, icon]) => `<a href="/s/${esc(sub)}${path}"${key === current ? ' aria-current="page"' : ''}><svg class="i" aria-hidden="true"><use href="#i-${icon}"/></svg><span>${label}</span></a>`).join('')}</nav>`;
+export function nav(sub, current, say = defaultSay) {
+  return `<nav class="apptabs" aria-label="Site Manager">${TABS.map(([key, path, icon]) => `<a href="/s/${esc(sub)}${path}"${key === current ? ' aria-current="page"' : ''}><svg class="i" aria-hidden="true"><use href="#i-${icon}"/></svg><span>${esc(say(`ptab.${key}`))}</span></a>`).join('')}</nav>`;
 }
 
 // Today: puppies going home in the next 7 days, each as the prototype's pup card: its
@@ -43,7 +46,7 @@ export const roundPhoto = (sub, photoId, alt) => (photoId
   ? `<img class="round" src="/s/${esc(sub)}/photos/${esc(photoId)}/thumb" alt="${esc(alt)}" loading="lazy">`
   : '<span class="round ph" aria-hidden="true"><svg class="i"><use href="#i-paw"/></svg></span>');
 
-export async function goingHome(env, site, now = new Date()) {
+export async function goingHome(env, site, now = new Date(), say = defaultSay) {
   const s = await getSettings(env, site.id);
   const today = localParts(now, s.time_zone).ymd;
   const { results } = await env.DB.prepare(`SELECT p.*, f.name AS family, COALESCE(pu.photo_id, k.photo_id) AS photo_id, COALESCE(pu.sex, k.sex) AS sex FROM portal_placements p JOIN portal_families f ON f.id = p.family_id LEFT JOIN puppies pu ON pu.id = p.puppy_id LEFT JOIN portal_pups k ON k.placement_id = p.id
@@ -63,30 +66,30 @@ export async function goingHome(env, site, now = new Date()) {
     return `<div class="pupcard">${roundPhoto(site.subdomain, p.photo_id, name)}
       <a class="pname" href="${base}/${esc(p.family_id)}">${esc(name)}${sex ? `<span class="sex ${sex[1]}" aria-label="${sex[1]}">${sex[0]}</span>` : ''}</a>
       <span class="small muted"><span class="sr">${esc(name)} · </span>${esc(p.family)}</span>
-      <div class="calrow">${calPage(p.day)}<span class="when">${isToday ? '<b>Today</b>' : ''}${p.pickup_booked_at ? esc(clock(localParts(p.pickup_booked_at, s.time_zone).hm)) : 'No time booked'}</span></div>
-      <span class="st ${p.vet_booked_at ? 'ok' : 'warn'}">Vet ${p.vet_booked_at ? 'booked' : 'not booked'}</span>
-      ${isToday ? `<form method="post" action="${base}/${esc(p.family_id)}/picked-up"><button class="primary small">Mark picked up</button></form>` : `<a class="button small" href="${base}/${esc(p.family_id)}">Their screen</a>`}</div>`;
+      <div class="calrow">${calPage(p.day)}<span class="when">${isToday ? `<b>${esc(say('phome.today'))}</b>` : ''}${p.pickup_booked_at ? esc(clock(localParts(p.pickup_booked_at, s.time_zone).hm)) : esc(say('phome.no_time'))}</span></div>
+      <span class="st ${p.vet_booked_at ? 'ok' : 'warn'}">${esc(say(p.vet_booked_at ? 'phome.vet_booked' : 'phome.vet_not_booked'))}</span>
+      ${isToday ? `<form method="post" action="${base}/${esc(p.family_id)}/picked-up"><button class="primary small">${esc(say('phome.mark'))}</button></form>` : `<a class="button small" href="${base}/${esc(p.family_id)}">${esc(say('phome.their_screen'))}</a>`}</div>`;
   }).join('');
   return {
     count: soon.length,
     today: soon.filter((p) => p.day <= today).length,
     first: soon[0].day,
-    html: `<section id="going-home" class="stack"><h2>Going home this week</h2><div class="bento">${cards}</div>
-      ${anyToday ? '<p class="small muted">Mark picked up starts the vet clock. You can correct the time afterwards.</p>' : ''}</section>`,
+    html: `<section id="going-home" class="stack"><h2>${esc(say('phome.title'))}</h2><div class="bento">${cards}</div>
+      ${anyToday ? `<p class="small muted">${esc(say('phome.mark_hint'))}</p>` : ''}</section>`,
   };
 }
 
-export async function lastFromKennelos(env, site, now = new Date()) {
+export async function lastFromKennelos(env, site, now = new Date(), say = defaultSay) {
   const at = await env.DB.prepare('SELECT portal_feed_at FROM sites WHERE id = ?').bind(site.id).first('portal_feed_at');
   if (!at) return '';
   const m = Math.round((now.getTime() - Date.parse(at)) / 60000);
-  const ago = m < 2 ? 'just now' : m < 60 ? `${m} minutes ago` : m < 36 * 60 ? `${Math.round(m / 60)} hours ago` : `${Math.round(m / 1440)} days ago`;
-  return `<span class="feedline"><svg class="i" aria-hidden="true"><use href="#i-globe"/></svg>Last from KennelOS: ${esc(ago)}</span>`;
+  const ago = m < 2 ? say('pago.now') : m < 60 ? say('pago.minutes', { n: m }) : m < 36 * 60 ? say('pago.hours.many', { n: Math.round(m / 60) }) : say('pago.days', { n: Math.round(m / 1440) });
+  return `<span class="feedline"><svg class="i" aria-hidden="true"><use href="#i-globe"/></svg>${esc(say('pfam.feed', { ago }))}</span>`;
 }
 
 // Dogs: each litter's puppies with their family, go-home, extras and website
 // status; Write this week's update for a stay puppy; and the screens for each.
-export async function dogsTab(env, site, now = new Date()) {
+export async function dogsTab(env, site, now = new Date(), say = defaultSay) {
   const s = await getSettings(env, site.id);
   const sub = esc(site.subdomain);
   const { results: litters } = await env.DB.prepare(`SELECT id, name, born_on, ready_on, stage FROM litters WHERE site_id = ? AND left_site_at IS NULL
@@ -101,25 +104,26 @@ export async function dogsTab(env, site, now = new Date()) {
   const due = new Set((await updatesDue(env, site.id, s.time_zone, now)).map((x) => x.placement_id));
   const stays = new Set((await env.DB.prepare("SELECT placement_id FROM portal_placement_extras WHERE site_id = ? AND delivery = 'stay' AND confirmed_at IS NOT NULL").bind(site.id).all()).results.map((r) => r.placement_id));
   const card = (p) => {
-    const bits = [statusText(p.status) ?? 'Hidden on the website'];
+    const bits = [statusText(p.status) ?? say('pdogs.hidden')];
     if (p.family) {
       bits.push(p.family);
-      if (p.picked_up_at) bits.push(`went home ${formatAt(p.picked_up_at, s.time_zone, { weekday: false })}`, `vet: ${vetStatus(p, now).word.toLowerCase()}`);
-      else if (p.pickup_booked_at) bits.push(`going home ${formatAt(p.pickup_booked_at, s.time_zone, { weekday: false })}`);
-      else if (p.go_home_on) bits.push(`going home ${formatDay(p.go_home_on)}`);
+      if (p.picked_up_at) bits.push(say('pfam.went_home', { time: formatAt(p.picked_up_at, s.time_zone, { weekday: false }) }), say('pdogs.vet', { status: say(`pvet.${vetStatus(p, now).key}`).toLowerCase() }));
+      else if (p.pickup_booked_at) bits.push(say('pfam.going_home', { time: formatAt(p.pickup_booked_at, s.time_zone, { weekday: false }) }));
+      else if (p.go_home_on) bits.push(say('pfam.going_home', { time: formatDay(p.go_home_on) }));
       if (p.extras) bits.push(p.extras);
     }
     const stayLink = p.placement_id && stays.has(p.placement_id) && !p.picked_up_at
-      ? `<a class="button${due.has(p.placement_id) ? ' primary' : ''}" href="/s/${sub}/portal/f/${esc(p.family_id)}#stay">${due.has(p.placement_id) ? 'Write this week\'s update' : 'Stay updates'}</a>` : '';
+      ? `<a class="button${due.has(p.placement_id) ? ' primary' : ''}" href="/s/${sub}/portal/f/${esc(p.family_id)}#stay">${esc(say(due.has(p.placement_id) ? 'pdogs.write_update' : 'pdogs.stay_updates'))}</a>` : '';
     return `<li class="item"><a href="${p.family_id ? `/s/${sub}/portal/f/${esc(p.family_id)}` : `/s/${sub}/puppies`}"><b>${esc(p.call_name && p.call_name !== p.name ? `${p.call_name} (${p.name})` : p.name)}</b><span>${esc(bits.join(' · '))}</span></a>${stayLink}</li>`;
   };
   const sections = litters.map((l) => {
     const list = pups.filter((p) => p.litter_id === l.id);
-    return `<section class="card"><h2>${esc(l.name)}</h2><p class="muted small">${l.born_on ? `Born ${esc(formatDay(l.born_on))}` : 'Not born yet'}${l.ready_on ? ` · ready ${esc(formatDay(l.ready_on))}` : ''}</p>
-      ${list.length ? `<ul class="items">${list.map(card).join('')}</ul>` : '<p class="muted small">No puppies listed yet.</p>'}</section>`;
+    return `<section class="card"><h2>${esc(l.name)}</h2><p class="muted small">${l.born_on ? esc(say('pdogs.born', { day: formatDay(l.born_on) })) : esc(say('pdogs.not_born'))}${l.ready_on ? ` · ${esc(say('pdogs.ready', { day: formatDay(l.ready_on) }))}` : ''}</p>
+      ${list.length ? `<ul class="items">${list.map(card).join('')}</ul>` : `<p class="muted small">${esc(say('pdogs.no_puppies'))}</p>`}</section>`;
   }).join('');
-  return `${sections || '<section class="card"><p class="muted">No litters yet.</p></section>'}
-    <ul class="items"><li class="item"><a href="/s/${sub}/dogs"><b>Your dogs</b><span>Cards, health results</span></a></li>
-      <li class="item"><a href="/s/${sub}/litters"><b>Litters</b><span>Planned, current, past</span></a></li>
-      <li class="item"><a href="/s/${sub}/puppies"><b>Puppies</b><span>Website statuses at a glance</span></a></li></ul>`;
+  const item = (path, key) => `<li class="item"><a href="/s/${sub}/${path}"><b>${esc(say(`pdogs.${key}`))}</b><span>${esc(say(`pdogs.${key}_note`))}</span></a></li>`;
+  return `${sections || `<section class="card"><p class="muted">${esc(say('pdogs.no_litters'))}</p></section>`}
+    <ul class="items">${item('dogs', 'dogs')}
+      ${item('litters', 'litters')}
+      ${item('puppies', 'puppies')}</ul>`;
 }

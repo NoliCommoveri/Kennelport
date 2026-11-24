@@ -96,11 +96,11 @@ test('stages, her status words and time left', () => {
   assert.equal(stage(p, '2026-12-24T00:00:00Z'), 'vet');
   assert.equal(stage({ ...p, proof_accepted_at: 'x' }, '2026-12-24T00:00:00Z'), 'after');
   assert.equal(stage(p, '2026-12-27T00:00:00Z'), 'after');
-  assert.deepEqual(vetStatus(p, '2026-12-24T00:00:00Z'), { word: 'Not booked', trouble: false });
-  assert.deepEqual(vetStatus(p, '2026-12-25T00:00:00Z'), { word: 'Not booked', trouble: true });
-  assert.deepEqual(vetStatus({ ...p, vet_booked_at: 'x' }, '2026-12-25T00:00:00Z'), { word: 'Booked', trouble: false });
-  assert.deepEqual(vetStatus(p, '2026-12-27T00:00:00Z'), { word: 'Missed', trouble: true });
-  assert.deepEqual(vetStatus({ ...p, proof_uploaded_at: 'x' }, '2026-12-27T00:00:00Z'), { word: 'Record uploaded', trouble: false });
+  assert.deepEqual(vetStatus(p, '2026-12-24T00:00:00Z'), { key: 'not_booked', word: 'Not booked', trouble: false });
+  assert.deepEqual(vetStatus(p, '2026-12-25T00:00:00Z'), { key: 'not_booked', word: 'Not booked', trouble: true });
+  assert.deepEqual(vetStatus({ ...p, vet_booked_at: 'x' }, '2026-12-25T00:00:00Z'), { key: 'booked', word: 'Booked', trouble: false });
+  assert.deepEqual(vetStatus(p, '2026-12-27T00:00:00Z'), { key: 'missed', word: 'Missed', trouble: true });
+  assert.deepEqual(vetStatus({ ...p, proof_uploaded_at: 'x' }, '2026-12-27T00:00:00Z'), { key: 'uploaded', word: 'Record uploaded', trouble: false });
   assert.equal(timeLeft('2026-12-26T16:00:00Z', '2026-12-24T11:00:00Z'), '2 days 5 hours');
   assert.equal(timeLeft('2026-12-26T16:00:00Z', '2026-12-26T15:20:00Z'), '40 minutes');
   assert.ok(validTimeZone('America/Chicago'));

@@ -2659,3 +2659,28 @@ the only gate left. No code, no migration, no version bump.
   levels (`stays.js` `LEVELS`), the step fields and ready-made tasks (`admin/templates.js`),
   the suggested-change labels (`admin/parts.js` `SUGGEST_LABEL`), and the loss note's
   starting draft (`account.js` `lossDraft`, words the family reads once she sends them).
+
+## 2026-11-24: Site-builder step 2.4, third slice: Portal settings, the checklist and timeline, Today and the Dogs tab
+
+- In the owner's list (`manage/wording-portal.js`), four more screens: **Portal: Portal
+  settings** (`pset.*`, the looks `plook.*`), **Portal: the go-home checklist and first-weeks
+  timeline** (`ptpl.*`: the screens, the step fields, the ready-made task form, "5 days after
+  pickup", the puppy's-name warning, the suggested registration task), **Portal: the Dogs tab**
+  (`pdogs.*`), and **Portal: words her portal screens share** (where a vet visit stands
+  `pvet.*`, the vet rules `pvet.rule.*`, what a KennelOS value is for `psug.*`, program statuses,
+  skill levels and record kinds as she picks them `pchoice.*`). On **Portal: what needs you,
+  on Today**: the tabs' names (`ptab.*`), the line under Today's date, the going-home cards
+  (`phome.*`), and "Last from KennelOS".
+- `vetStatus` (`portal/vet.js`) now gives a `key` beside its word; her screens say the owner's
+  word for it, and compare keys, not words. The families' pages still read `VET_RULES`, `LEVELS`
+  and `recordKind` as before (their wording isn't in the owner's list). The tabs take her
+  wording through `sitePage` (`manage/index.js`), which now passes `say` to `nav()`.
+- Today's wording by default: rendered before and after (Portal settings, the checklist and
+  timeline with a suggested task and a named-puppy warning, Today with pickups today and in
+  three days, the Dogs tab); the text is the same. One test changed for an encoding only:
+  the named-puppy warning's quotes are now written `&quot;` (`portal-steps.test.js`); the vet
+  test reads the new `key`. Test in `wording.test.js`. No migration, no version bump.
+- Left for the last slice of 2.4: the portal's errors that tell her what to fix (`PortalError`
+  messages across `portal/*.js`, about 120; some are the families' too). The ready-made tasks
+  and suggested lists (`steps.js`) are starting content she edits, not her instructions: they
+  become the template's (site-builder step 6).

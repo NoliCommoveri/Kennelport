@@ -8,6 +8,9 @@ import { UNDO_DAYS } from '../account.js';
 
 export const SUGGEST_LABEL = { name: 'Family name', puppy_id: 'Puppy', puppy_name: 'Puppy', go_home_on: 'Go-home', pickup_booked_at: 'Pickup booked for', microchip: 'Microchip', registration_no: 'Registration number', vet_clinic: 'Vet\'s clinic', vet_doctor: 'Vet\'s name', vet_phone: 'Vet\'s phone', vet_address: 'Vet\'s address', pup_vet_clinic: 'Puppy\'s vet: clinic', pup_vet_doctor: 'Puppy\'s vet: name', pup_vet_phone: 'Puppy\'s vet: phone', pup_vet_address: 'Puppy\'s vet: address' };
 
+// What a newer value from KennelOS is for, in the owner's words (psug.*).
+export const suggestLabel = (field, say = defaultSay) => (Object.hasOwn(SUGGEST_LABEL, field) ? say(`psug.${field}`) : field);
+
 export const redirect = (location) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store' } });
 
 // The notes after a change (wording: pnote.*), by the note= in the address.
