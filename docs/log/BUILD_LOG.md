@@ -2654,4 +2654,4 @@ both in `public/_kp/f/`:
 - Checked with real touch swipes (CDP touch events) on an emulated Galaxy S9+, as a family
   and through her view link: a swipe turns the page, and the arrows sit at the foot of the
   screen in both, at 1280px as well. Before the fix, the same swipe did nothing in either.
-- `PORTAL_VERSION` 8 is on `main`, so this needs 9: asked the owner, not bumped.
+- `PORTAL_VERSION` bumped to 9 (owner said yes), fingerprint updated.
