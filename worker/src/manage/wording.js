@@ -13,6 +13,7 @@
 // of the defaults are below. Not listed: the owner's own admin screens, and
 // messages about KennelPort itself failing (a lost connection).
 import { LABELS, SHARED, ENUM_WORDS } from './forms.js';
+import { PORTAL_SCREENS, PORTAL_LINES } from './wording-portal.js';
 
 export class WordingError extends Error {}
 
@@ -60,6 +61,7 @@ export const SCREENS = Object.freeze({
   portalphotos: 'Puppy families: the photos a family sees',
   handbook: 'Portal: the puppy handbook',
   bag: 'Portal: the go-home bag',
+  ...PORTAL_SCREENS,
 });
 
 // Which screen a form's kind belongs to.
@@ -1134,7 +1136,7 @@ function homeWhere(k, t) {
   return parent === k ? (parts[1] === 'tile' || parts[1] === 'setup' ? what : `The ${name.includes('{') ? 'line' : 'button or line'} ${what}`) : `${what}: ${SUFFIX[last]}`;
 }
 for (const [k, t] of Object.entries(HOME)) add(k, 'home', homeWhere(k, t), t, [...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]));
-for (const [k, [screen, what, t]] of Object.entries(SCREEN_LINES)) add(k, screen, what, t, [...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).filter((v) => v !== 'kennel'));
+for (const [k, [screen, what, t]] of [...Object.entries(SCREEN_LINES), ...Object.entries(PORTAL_LINES)]) add(k, screen, what, t, [...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).filter((v) => v !== 'kennel'));
 for (const [k, [where, t]] of Object.entries(DIFF)) add(k, 'publish', where, t, [...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]));
 for (const [k, , t, where] of ERRORS) add(`error.${k}`, 'errors', where, t, ['path', 'field', ...[...t.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).filter((v) => !['path', 'field'].includes(v))]);
 for (const [group, list] of Object.entries(MESSAGES)) {

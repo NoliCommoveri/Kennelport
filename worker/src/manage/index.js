@@ -184,7 +184,7 @@ async function siteHome(env, user, site, view = 'today', page = plainPage, say =
   const item = (href, label, note) => `<li class="item"><a href="/s/${esc(site.subdomain)}${href}">${ic(ITEM_ICONS[href] ?? (href.startsWith('/portal') ? 'paw' : 'pages'))}<b>${esc(label)}</b><span>${esc(note)}</span></a></li>`;
   // The puppy portal, on sites that have it: what its families need from her.
   const portalOn = await env.DB.prepare('SELECT portal_on FROM sites WHERE id = ?').bind(site.id).first('portal_on');
-  const portal = portalOn ? await portalNeedsYou(env, site.id) : [];
+  const portal = portalOn ? await portalNeedsYou(env, site.id, new Date(), say) : [];
   // Needs you: what came in and is waiting, shown only while something is.
   const waiting = [
     ...portal.map((x) => item(x.href, x.label, x.note)),
@@ -222,7 +222,7 @@ async function siteHome(env, user, site, view = 'today', page = plainPage, say =
       ${changed ? `<section class="card status"><div class="between"><p><span class="st warn">${esc(say('home.website'))}</span> ${esc(say('home.changes_not_published_yet'))}</p><a class="button small" href="/s/${sub}/publish">${esc(say('home.review_and_publish_2'))}</a></div></section>` : ''}
       ${needs.length ? `<section id="needs-you" class="stack"><h2>${esc(say('home.needs_you'))}</h2><div class="needs">${needs.join('')}</div></section>`
         : !changed && !home.count && !notices.length ? `<section class="card band"><p><span class="st ok">${esc(say('home.all_caught_up'))}</span> ${esc(say('home.nothing_needs_you_right'))}</p><p class="muted small">${esc(say('home.pickups_this_week_vet'))}</p></section>` : ''}
-      ${await todayLists(env, site)}
+      ${await todayLists(env, site, say)}
       <p class="muted small">Your role: ${esc(site.role)}.${user.sites.length > 1 ? ' <a href="/">Your other sites</a>.' : ''}${user.admin ? ` <a href="/admin/${esc(site.subdomain)}/rules">This site's build</a>.` : ''}</p>`, { nav: { sub: site.subdomain, tab: 'today' } });
   }
   return page(portalOn ? say('home.website_2') : site.kennel_name || site.subdomain, `

@@ -1,7 +1,8 @@
 # The family portal for more than one breeder: plan
 
 Asked for 2026-11-24 (the owner): what it takes to offer the family portal to breeders
-other than the first one. Written from a read of the code that day. Not started.
+other than the first one. Written from a read of the code that day. Started 2026-11-24: the owner's answers are in
+section 5; the first chunk is site-builder step 2.4.
 
 The portal plan kept this out of scope ([`family-portal.md`](family-portal.md) section 1:
 "written so it could be switched on for another site later, but nothing is built for
@@ -39,6 +40,8 @@ Checked in the code on 2026-11-24:
    [`loose-ends.md`](../loose-ends.md) #16): what a breeder may publish, and what gets a site
    suspended. The portal adds families' uploads (vet records, photos) and messages, so
    these rules cover the portal too. `family.js` already answers 404 for a suspended site.
+   **Parked** (the owner, 2026-11-24): not needed while she approves every breeder by hand
+   (question 4). Written before breeders can sign up themselves.
 
 ### 2.2 The portal's build becomes settings (site-builder steps 5 and 6)
 
@@ -92,8 +95,9 @@ lists and no handbook, bag or programs. To build:
   her look, her programs, her checklist and timeline, then sending the first invite. Wording
   in `manage/wording.js`. There is no prototype screen for this: build it from the
   prototype's numbered steps and tiles, and say so.
-- **Optional starting content:** the owner copies a handbook or bag from one site to
-  another (her own admin screen), so she doesn't start from nothing. Nothing copies by itself.
+- **Optional starting content:** the owner copies a handbook, bag, checklist or timeline from
+  one site to another (her own admin screen), so she doesn't start from nothing. Nothing
+  copies by itself; by default a new breeder starts blank (the owner, 2026-11-24).
 
 ### 2.6 KennelOS's side, for each new kennel
 
@@ -135,11 +139,12 @@ and gives the families' pages a sensible place for "back to the website". If it 
 - Screens under `public/_kp/f/` (families) or `public/_kp/m/` (Site Manager) need a
   `PORTAL_VERSION` or `APP_VERSION` bump: ask the owner first (CLAUDE.md).
 
-## 5. Questions for the owner
+## 5. The owner's answers (2026-11-24)
 
-1. Who is the first breeder after A-K, and what does her contract say about the vet visit?
-2. Should each new breeder start from A-K's handbook, checklist and timeline (copied, then
-   hers to change), or from blank ones with suggestions?
-3. Is a portal-only breeder (no KennelPort website) wanted, or only breeders with a site?
-4. Does the portal stay a switch the owner turns on, or something a breeder can sign up for
-   herself? (Self sign-up needs decision 9 and some way to pay, neither planned.)
+1. **The next breeder:** not named yet. Her vet-visit wording decides 2.4's vet rule when she is.
+2. **Starting content:** blank by default (the suggested lists, no handbook or bag); the owner
+   copies a handbook, checklist, timeline or bag from any site when it fits that breeder
+   (2.5, "Optional starting content", now covers the checklist and timeline too).
+3. **Portal only:** no. Every portal breeder has a KennelPort website; 2.7 is dropped for now.
+4. **Turning it on:** the owner's switch, per breeder. No self sign-up and no payments
+   planned, so decision 9 waits (2.1).

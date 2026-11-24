@@ -214,3 +214,36 @@ test('her waitlist and sign-in errors, in the owner\'s words on her screens', as
   const w = await call(env, M, '/s/akbostons/waitlist/new', { method: 'POST', headers: { cookie: breeder, origin: ORIGIN }, body: form({ name: '' }) });
   assert.match(text(await w.text()), /Add the family's name first, AK Boston Terriers\./);
 });
+
+test('the portal\'s screens for her (step 2.4): Today, Families, Add a family, the Portal tab and the notes, in the owner\'s words', async () => {
+  const { PORTAL_LINES } = await import('../src/manage/wording-portal.js');
+  for (const [k, [, , t]] of Object.entries(PORTAL_LINES)) assert.equal(defaultSay(k, {}), t, k);
+  const env = await makeEnv({ PORTAL_EMAIL_KEY: 'portal-test-key' });
+  const ak = await addSite(env, 'akbostons', { kennel_name: 'AK Boston Terriers' });
+  const login = await call(env, M, '/ops/login', { method: 'POST', body: form({ token: 'ops-token' }) });
+  const cookies = login.headers.getSetCookie().map((c) => c.split(';')[0]);
+  const ops = cookies.find((c) => c.startsWith('ops_session='));
+  const admin = cookies.find((c) => c.startsWith('kp_admin='));
+  await call(env, M, `/ops/sites/${ak.id}/people`, { method: 'POST', headers: { cookie: ops }, body: form({ email: 'b@example.com', role: 'owner' }) });
+  await call(env, M, `/ops/sites/${ak.id}/portal/on`, { method: 'POST', headers: { cookie: ops } });
+  await call(env, M, '/signin', { method: 'POST', body: form({ email: 'b@example.com' }), headers: { origin: ORIGIN } });
+  const code = lastOutbox(env).subject.match(/(\d{6})/)[1];
+  const breeder = (await call(env, M, '/signin/verify', { method: 'POST', body: form({ email: 'b@example.com', code, label: 'Phone' }), headers: { origin: ORIGIN } })).headers.get('set-cookie').split(';')[0];
+  const as = async (p) => text(await (await call(env, M, p, { headers: { cookie: breeder } })).text());
+  const save = (p, body) => call(env, M, p, { method: 'POST', headers: { cookie: admin, origin: ORIGIN }, body: form(body) });
+
+  assert.match(await as('/s/akbostons'), /Vet visits None running\./);
+  await save('/admin/wording/portaltoday', { 'w.ptoday.visits_title': 'Vet checks', 'w.ptoday.visits_none': 'No clocks yet, {kennel}.' });
+  assert.match(await as('/s/akbostons'), /Vet checks No clocks yet, AK Boston Terriers\./);
+  await save('/admin/akbostons/instructions/portalfamilies', { 'w.pfam.add': 'New puppy family', 'w.pfam.line': 'Your families sign in at {address}, {kennel}.' });
+  const families = await call(env, M, '/s/akbostons/portal', { headers: { cookie: breeder } });
+  const html = await families.text();
+  assert.match(html, /Your families sign in at <strong>[^<]+<\/strong>, AK Boston Terriers\./);
+  assert.match(text(html), /New puppy family/);
+  assert.match(await as('/s/akbostons/portal/new'), /New puppy family/);
+  await save('/admin/wording/portalsetup', { 'w.psetup.title': 'Your families\' portal' });
+  assert.match(await as('/s/akbostons/portal/setup'), /Your families' portal/);
+  await save('/admin/wording/portalnotes', { 'w.perror.not_saved': 'Not yet saved: {error}' });
+  const bad = await call(env, M, '/s/akbostons/portal/new', { method: 'POST', headers: { cookie: breeder, origin: ORIGIN }, body: form({ name: '', emails: 'x' }) });
+  assert.match(text(await bad.text()), /Not yet saved: /);
+});

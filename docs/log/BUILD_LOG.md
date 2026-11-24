@@ -2615,3 +2615,27 @@ The owner confirmed phase 1's gate is met: one litter run from signed contract t
 visit with no fixes by hand ([`plans/family-portal.md`](../plans/family-portal.md) section 6).
 Marked in the plan, STATUS and the multi-breeder plan's gates (2.1), where decision 9 is now
 the only gate left. No code, no migration, no version bump.
+
+## 2026-11-24: More than one breeder started; site-builder step 2.4, first slice
+
+- The owner answered the multi-breeder plan's four questions
+  ([`plans/portal-multi-breeder.md`](../plans/portal-multi-breeder.md) section 5): decision 9
+  parked while she approves every breeder by hand; a new breeder starts blank and the owner
+  copies a handbook, bag, checklist or timeline from any site when it fits; no portal-only
+  sites (2.7 dropped for now); the portal stays her switch, no self sign-up.
+- Step 2.4 (the portal's screens for the breeder into the owner's list), first slice: new
+  `manage/wording-portal.js` (`PORTAL_LINES`, four new screens in the owner's editor: Portal:
+  what needs you on Today; Families and adding a family; the Portal tab; the notes after a
+  change), read into `wording.js` with its other screen lines. Moved: every portal item on
+  Today's Needs you, the vet visits and recent activity lists, "Last from KennelOS" and its
+  "how long ago", why a placement closed, the Families tab (filters, list lines, pills, recently
+  deleted, erased), the waitlist side, Add a family, the puppy fields a family's screen shares
+  with it, the Portal tab's list, and the portal's notes after a change and "Not saved:".
+  `sayHtml` (`admin/parts.js`) for a line with a drawn name (the portal's address in bold).
+- Today's wording by default: the moved screens render the same text as before (compared
+  before and after, rendered). Test in `wording.test.js`. No migration, no version bump (no
+  file under `public/_kp/` changed).
+- Still in the code, for the next slices: a family's screen (pickup, vet visit, records,
+  contract, history, messages, loss, stays, extras), Portal settings (with the vet rule's words,
+  `VET_RULES`, and the vet statuses in `portal/vet.js`, which families read too), the checklist
+  and timeline screens (`admin/templates.js`, `portal/steps.js`).

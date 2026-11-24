@@ -44,7 +44,7 @@ anyone outside the family.
 | Step | State |
 |---|---|
 | 1. Display and timing rules | Built (pup, registration, price, date and timing rules; health tests' short names on cards, 2026-11-24; dog cards' details always, registries' short names and two-column lists, 2026-11-24, `ASSET_VERSION` 31); the dog rules, fixed wording, formats and how KennelOS data lands still to come |
-| 2. The breeder's instructions (`manage/wording.js`) | 2.1–2.3 built; **2.4 to do:** the portal's screens for her (`portal/admin.js`) and Today |
+| 2. The breeder's instructions (`manage/wording.js`) | 2.1–2.3 built; **2.4 started** 2026-11-24 (`manage/wording-portal.js`): Today's portal items, Families, Add a family, the Portal tab and the notes moved; still to move: a family's screen, Portal settings, the checklist and timeline, extras and stays, messages |
 | 3. Pages, blocks, menu | Built: 3.1–3.8 (3.5 page addresses and 3.8 the forms' fields, 2026-11-14, migration 0035) |
 | 4. The owner's own blocks and styling | Banners, buttons, dividers, spacers, photos, collages, photo beside words, text over a photo, text, gallery strip, block backgrounds and spacing built. **Next, the photo system:** albums from photos she has, then the duplicate check. Still to come: videos as blocks, links to a dog/litter/puppy, fonts and the font library, text size on built-in blocks |
 | 4a. Extras, Cards, documents | Built 2026-11-18 (migration 0038): the **Extras block** (step cards by default, package cards or expanders; a big figure, More details, a highlighted one, her own description); the **Cards block** (free cards: photo, figure, labels, heading, words, button); **Documents** (a site's PDFs in the admin view; any button can open one). `ASSET_VERSION` 28 (on `main`). The gaps (storage, reordering cards, menu links, the breeder's documents, covers, full-size flyers) are planned in [`plans/documents-cards-gaps.md`](plans/documents-cards-gaps.md); **flyers (step 6) built 2026-11-18**: the whole photo on the Photo block, Opens full size on a tap, Full detail on upload (`ASSET_VERSION` 29, `APP_VERSION` 19 on this branch). Build log, 2026-11-18. |
@@ -93,8 +93,10 @@ anyone outside the family.
   `main` (the owner's yes). Her referral programs are no longer listed under "Included with": Home lists only those not on the band, as "Recommended for {pup}". No migration. Build log, 2026-11-21.
 - Phase 3: not started.
 - **More than one breeder:** planned 2026-11-24 ([`plans/portal-multi-breeder.md`](plans/portal-multi-breeder.md)).
-  The data is already per site; still to do: decision 9 (phase 1's gate passed 2026-11-24), site-builder steps
-  5, 6 and 2.4, a setup flow, KennelOS's side for each kennel. Four questions for the owner. Not started.
+  The data is already per site; still to do: site-builder steps 5, 6 and 2.4, a setup flow,
+  KennelOS's side for each kennel. The owner's answers (2026-11-24): decision 9 parked while she
+  approves every breeder; starting content copied per breeder by her; no portal-only sites; her
+  switch, no sign-up. **Started** with step 2.4.
 - The same family twice, and deleted families (2026-11-13): the feed links a family's only
   typed placement; **Merge** for a typed placement or family into KennelOS's; **Delete
   now**; **Let KennelOS send them again** for a family deleted for good. Migration 0032
