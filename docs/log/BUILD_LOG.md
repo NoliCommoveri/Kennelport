@@ -2518,3 +2518,14 @@ for one family at a time.
 - Fix, same day: the photos' Remove buttons sat below the card, hidden under the next
   one, because `.lib-ph` was on the link (inline, so its square didn't hold). The square
   is now a `div.lib-ph` with the link inside. Checked at 390px. No CSS change, no bump.
+
+## 2026-11-24 — Plan: the family portal for more than one breeder
+
+The owner asked what it takes to offer the portal to other breeders. Written up as
+[`plans/portal-multi-breeder.md`](../plans/portal-multi-breeder.md), from a read of the code:
+every `portal_*` table already carries `site_id`, the switch, settings, jobs, feed and
+sign-in are per site, and the demo site runs a second portal. What's left is product work:
+phase 1's gate and decision 9 first, then site-builder steps 5, 6 and 2.4 (the portal's
+build and wording as settings), a setup flow, the choices that fit only her (vet rules, time
+zones), KennelOS's side for each kennel (to check there), and possibly portal-only sites.
+Four questions for the owner. No code, no migration, no version bump.

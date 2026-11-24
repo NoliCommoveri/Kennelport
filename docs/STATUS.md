@@ -92,6 +92,9 @@ anyone outside the family.
   marked done) and a slim card for one more program with a link. `PORTAL_VERSION` 5 on
   `main` (the owner's yes). Her referral programs are no longer listed under "Included with": Home lists only those not on the band, as "Recommended for {pup}". No migration. Build log, 2026-11-21.
 - Phase 3: not started.
+- **More than one breeder:** planned 2026-11-24 ([`plans/portal-multi-breeder.md`](plans/portal-multi-breeder.md)).
+  The data is already per site; still to do: phase 1's gate and decision 9, site-builder steps
+  5, 6 and 2.4, a setup flow, KennelOS's side for each kennel. Four questions for the owner. Not started.
 - The same family twice, and deleted families (2026-11-13): the feed links a family's only
   typed placement; **Merge** for a typed placement or family into KennelOS's; **Delete
   now**; **Let KennelOS send them again** for a family deleted for good. Migration 0032
