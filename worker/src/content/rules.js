@@ -181,6 +181,12 @@ export const DEFAULT_RULES = {
     // far back a foreign ancestor counts.
     home_country: '', foreign_generations: 3 },
   words: Object.fromEntries(WORD_LIST.map(([k, d]) => [k, d])),
+  // Short names for health tests, on cards only (render/parts.js testName): the test's
+  // name in lower case, to what a card shows (JHC for Juvenile Hereditary Cataract
+  // (DNA)). Keyed by name, not by result, so KennelOS rewriting a result's name at
+  // every update leaves them be; the result itself keeps its full name everywhere
+  // else. Empty: every card shows the full name, as before.
+  short: {},
   format: { date: 'mdy', day: 'md', sex: 'female_male', counts: 'girls_boys', currency: '$', currency_after: false, cents: false },
   // How KennelOS data lands (kennelos/bundle.js), for each new record.
   landing: {
@@ -314,8 +320,18 @@ function over(base, changes) {
 // The site's rules: its changes over the defaults. Unknown keys are dropped.
 export function rulesFor(build) {
   const b = build ?? {};
-  return { rules: over(DEFAULT_RULES, carried(b.rules)), timing: over(DEFAULT_TIMING, b.timing) };
+  const rules = over(DEFAULT_RULES, carried(b.rules));
+  // Short names are an open list (any test name), not fixed keys: over() would drop them.
+  rules.short = shortNames(b.rules?.short);
+  return { rules, timing: over(DEFAULT_TIMING, b.timing) };
 }
+
+// A test's key in rules.short: its name, spaces evened and in lower case, so "BAER
+// hearing" and "BAER Hearing" share one short name.
+export const testKey = (name) => String(name ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+export const SHORT_MAX = 16;
+const shortNames = (o) => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {})
+  .map(([k, v]) => [testKey(k), String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, SHORT_MAX)]).filter(([k, v]) => k && v));
 
 // A rule that moved: the price rules' `before` became the not_open row's words; and a
 // status row's Green or Brass outline is the scheme's ok or held.
@@ -337,6 +353,17 @@ export function partsFromForm(screen, current, get) {
     for (const [f, spec] of Object.entries(PARTS[part])) {
       if (part === 'words' && !wordsHere.has(f)) continue;
       out[part][f] = clean(spec, get(`${part}.${f}`), WORD_LIST.find(([k]) => k === f)?.[2] ?? f);
+    }
+  }
+  // Dogs: each test's short name, from rows of a hidden test name (short_test.N) and
+  // its box (short_name.N); an empty box has none. The whole list comes from the form.
+  if (screen === 'dogs') {
+    out.short = {};
+    for (let i = 0; get(`short_test.${i}`) != null; i++) {
+      const key = testKey(get(`short_test.${i}`));
+      const s = String(get(`short_name.${i}`) ?? '').replace(/\s+/g, ' ').trim();
+      if (s.length > SHORT_MAX) throw new RuleError(`Short name for ${get(`short_test.${i}`)}: at most ${SHORT_MAX} characters.`);
+      if (key && s) out.short[key] = s;
     }
   }
   if (out.dogs && new Set(HEALTH_KIND_PLACES.map((k) => out.dogs[k])).size !== HEALTH_KIND_PLACES.length) {

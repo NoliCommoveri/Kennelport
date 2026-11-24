@@ -2527,3 +2527,23 @@ for one family at a time.
   `aspect-ratio` but no `height: auto` (the same thing `.story img` notes). Added it; the
   photo is 4:3 again. Checked on the live page at 390px and 1280px; no other image on the
   page was stretched. Needs the site template bump (`ASSET_VERSION`), owner to confirm.
+
+## 2026-11-24: Health tests' short names on cards
+
+- Long test names ("Juvenile Hereditary Cataract (DNA)") wrapped on the parent cards
+  and pushed the result onto its own line. The owner sets a short name per test on the
+  Dogs screen of the site's admin view ("Health tests' short names"): one box for each
+  test name the site's dogs have, and Back to default.
+- Stored in the site's rules (`rules.short`, `content/rules.js`), keyed by the test's
+  name in lower case with spaces evened (`testKey`), not on the results: KennelOS
+  rewrites a result's name at every update, and one short name covers every dog with
+  that test. `rulesFor` carries the list as is (`over()` keeps only fixed keys). At most
+  16 characters. No migration.
+- Used on cards only (the owner, 2026-11-24): a parent's card on a litter page and a
+  dog's card (flip and beside), through `testRow()` in `render/parts.js`, with the full
+  name as the row's `title`. The dog's own page, the Site Manager, the portal and
+  KennelOS keep the full name.
+- Owner-only screen, so its wording isn't in `manage/wording.js`.
+- Test in `rules.test.js` (rows listed, saved, cards short, the dog's page full, a
+  KennelOS resend, too long refused, Back to default). Checked at 390px. Rides on the
+  same `ASSET_VERSION` bump as the light-card fix (asked).

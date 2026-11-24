@@ -324,3 +324,48 @@ test('Available soon: born litters before deposits open, with its own menu link,
   assert.match(text(html.split('id="upcoming"')[1]), /The Spice litter\*/);
   assert.doesNotMatch(html, /href="\/litters#soon"/);
 });
+
+test('health tests\' short names show on cards only, and survive KennelOS updates', async (t) => {
+  const { env, admin, page, post, send } = await sampleSite(t);
+  const formOf = async (changes = {}) => {
+    const html = await (await call(env, M, '/admin/tuxedolane/dogs', { headers: { cookie: admin } })).text();
+    const f = {};
+    for (const m of html.matchAll(/<input type="(?:text|hidden)" name="([^"]+)" value="([^"]*)"/g)) f[m[1]] = m[2].replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+    for (const m of html.matchAll(/<input type="radio" name="([^"]+)" value="([^"]+)" checked>/g)) f[m[1]] = m[2];
+    for (const m of html.matchAll(/<select name="([^"]+)"[^>]*>([\s\S]*?)<\/select>/g)) f[m[1]] = m[2].match(/value="([^"]+)" selected/)[1];
+    return { ...f, ...changes, html };
+  };
+  const { html, ...plain } = await formOf();
+  // A row for each test name the site's dogs have, shown or not.
+  for (const name of ['BAER hearing', 'Cardiac (OFA)', 'JHC (HSF4 DNA)', 'Patellas (OFA)']) assert.ok(html.includes(`value="${name}"`), name);
+  // Saved as it stands: nothing set.
+  await post('/admin/tuxedolane/dogs', plain);
+  assert.equal(env.DB.raw.prepare('SELECT build FROM site_builds').get().build, '{}');
+
+  const row = (name) => Object.entries(plain).find(([k, v]) => k.startsWith('short_test.') && v === name)[0].split('.')[1];
+  const f = { ...plain, [`short_name.${row('BAER hearing')}`]: '  BAER ', [`short_name.${row('Cardiac (OFA)')}`]: 'Cardiac' };
+  assert.equal((await post('/admin/tuxedolane/dogs', f)).status, 303);
+  assert.deepEqual(JSON.parse(env.DB.raw.prepare('SELECT build FROM site_builds').get().build).rules.short, { 'baer hearing': 'BAER', 'cardiac (ofa)': 'Cardiac' });
+
+  // A parent's card on its litter's page, and a dog's card: the short name, the full one on hover.
+  const litter = (await page('/litters/the-gem-litter')).html;
+  assert.match(litter, /<span title="BAER hearing">BAER<\/span>/);
+  assert.doesNotMatch(litter, />BAER hearing</);
+  assert.match((await page('/dogs')).html, /<span title="Cardiac \(OFA\)">Cardiac<\/span>/);
+  // The dog's own page keeps the full name.
+  const atlas = text((await page('/dogs/atlas')).html);
+  assert.match(atlas, /BAER hearing/);
+  assert.match(atlas, /Cardiac \(OFA\)/);
+
+  // KennelOS sends the dog again (names are rewritten): the short names hold.
+  assert.equal((await send(load('bundle-1.json'))).status, 200);
+  assert.match((await page('/litters/the-gem-litter')).html, /<span title="BAER hearing">BAER<\/span>/);
+
+  // Too long is refused; Back to default clears them.
+  const long = await post('/admin/tuxedolane/dogs', { ...plain, [`short_name.${row('BAER hearing')}`]: 'Brainstem auditory' });
+  assert.match(await long.text(), /at most 16 characters/);
+  const { html: _, ...now } = await formOf();
+  await post('/admin/tuxedolane/dogs', { ...now, default: 'short' });
+  assert.equal(env.DB.raw.prepare('SELECT build FROM site_builds').get().build, '{}');
+  assert.match((await page('/litters/the-gem-litter')).html, /<span>BAER hearing<\/span>/);
+});

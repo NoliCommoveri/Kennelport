@@ -31,7 +31,7 @@
 import { escapeHtml as esc } from '../lib/html.js';
 import {
   DEFAULT_RULES, DEFAULT_TIMING, RuleError, rulesFor, rulesFromForm, timingFromForm, withPart, loadBuild, saveBuild, partsFromForm, wordsOn,
-  HEALTH_KINDS, HEALTH_KIND_PLACES,
+  HEALTH_KINDS, HEALTH_KIND_PLACES, testKey,
 } from '../content/rules.js';
 import { buildSnapshot } from '../publish.js';
 import {
@@ -216,7 +216,20 @@ function wordCards(screen, rules) {
   }).join('');
 }
 
-function dogsScreen(site, rules, error) {
+// Short names for health tests on cards: a row for each test name the site's dogs
+// have (and any short name set for a test no dog has now), its short name beside it.
+function shortCard(rules, tests) {
+  const names = new Map();
+  for (const t of tests) if (!names.has(testKey(t))) names.set(testKey(t), String(t).replace(/\s+/g, ' ').trim());
+  for (const k of Object.keys(rules.short ?? {})) if (!names.has(k)) names.set(k, k);
+  const rows = [...names].sort(([a], [b]) => a.localeCompare(b));
+  const set = Object.keys(rules.short ?? {}).length;
+  return `<section class="card"><div class="fgroup"><div class="between"><h2>Health tests' short names</h2>${set ? back('short') : ''}</div>
+    ${rows.length ? `<div class="fgrid">${rows.map(([k, name], i) => `<input type="hidden" name="short_test.${i}" value="${esc(name)}">${field(`short_name.${i}`, rules.short?.[k] ?? '', { label: name })}`).join('')}</div>` : '<p class="small muted">No dog on this site has a health result yet.</p>'}
+    <span class="hint">On cards only, where space is short: a parent's card on a litter page and a dog's card. A dog's own page, the breeder's records and KennelOS keep the full name. Empty: the full name.</span></div></section>`;
+}
+
+function dogsScreen(site, rules, error, tests = []) {
   const sale = rules.dogs.sale_price;
   return `<div class="stack">${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
     <section class="card"><div class="fgroup"><div class="between"><h2>An adult looking for a home</h2>${sale === DEFAULT_RULES.dogs.sale_price ? '' : back('dogs.sale_price')}</div>
@@ -239,6 +252,7 @@ function dogsScreen(site, rules, error) {
       <div class="fgrid">${select('dogs.champion_generations', String(rules.dogs.champion_generations), { 1: 'Parents', 2: 'Grandparents', 3: 'Great-grandparents', 4: 'Great-great-grandparents' }, 'A champion ancestor counts as far back as', '')}
       ${field('dogs.champion_titles', rules.dogs.champion_titles, { label: 'Titles that make a champion', cls: '' })}</div>
       <span class="hint">Any one of these titles, separated by spaces. A dog with an ancestor holding one, this close, is champion-descended: a field for blocks and tags (make a Champion-descended tag on Tags). Titles come from KennelOS's pedigree, or from the dog records here. The breeder can leave one dog out on its form.</span></div></section>
+    ${shortCard(rules, tests)}
     ${wordCards('dogs', rules)}
     <section class="card band"><p class="small">Which health results a new dog shows, and where each KennelOS status puts a dog, are under From KennelOS.</p></section></div>`;
 }
@@ -899,7 +913,8 @@ export async function handleBuilder({ env, request, url, user, page }) {
     kennelos: 'How what KennelOS sends lands on this site.',
     timing: null,
   }[screen];
-  const editor = { rules: rulesScreen, dogs: dogsScreen, wording: wordingScreen, formats: formatsScreen, kennelos: kennelosScreen }[screen]?.(site, rules, error) ?? timingScreen(site, timing, error);
+  const tests = screen === 'dogs' ? (await env.DB.prepare('SELECT DISTINCT test FROM health_results WHERE site_id = ?').bind(site.id).all()).results.map((r) => r.test) : [];
+  const editor = { rules: rulesScreen, dogs: dogsScreen, wording: wordingScreen, formats: formatsScreen, kennelos: kennelosScreen }[screen]?.(site, rules, error, tests) ?? timingScreen(site, timing, error);
   const side = screen === 'dogs' ? await dogsPreview(env, site)
     : screen === 'wording' || screen === 'formats' ? await littersPreview(env, site, 'Their litter cards, with these rules')
       : screen === 'kennelos' ? landingPreview(rules) : screen === 'timing' ? '' : await preview(env, site);
