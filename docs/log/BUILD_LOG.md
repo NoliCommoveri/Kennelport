@@ -2634,5 +2634,4 @@ show. Added to `portal/handbook.js` (`bodyHtml`, `plainText`, `htmlToText`):
 - Checked by uploading her 20 chapters (written from the PDF) through the Site Manager and
   opening them as a family, in Chromium at 390px and 1280px with the flipbook running.
   Test in `portal-handbook.test.js`.
-- `PORTAL_VERSION` is 7 on `main` too, so a bump to 8 is needed: asked the owner, not
-  bumped. `versions.test.js` fails until then.
+- `PORTAL_VERSION` bumped to 8 (owner said yes), fingerprint updated.
