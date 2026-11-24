@@ -2567,11 +2567,19 @@ for one family at a time.
   line would make the card grow: a flip side taller than its other side and 430px, or the
   words of Photo beside details / Featured longer than the photo. Longest list first, then
   the next while it still grows. A row too long for half the width (measured in the
-  browser, so it follows the card's real width) and an odd short one left over take the
-  whole line, after the short ones, within their own list. Fewer than two short rows, or
-  lists filling under 30% of the card: one per line. Runs on load, fonts, a width change
+  browser, so it follows the card's real width) and an odd short one left over (the
+  longest of them) take the whole line, before the short ones (the owner: long rows
+  first), within their own list. A dotted line runs between the columns, drawn by the
+  left column's rows (`.l`, down to the last pair `.end`). Fewer than two short rows: one
+  per line. If the words would then fill under 30% of the card's height (the photo's, or
+  the flip card's other side), back to one per line. Runs on load, fonts, a width change
   and the Show filter. Without the script, one per line as before.
-- Checked in Chromium at 390px and 1280px on the sample with Millie's eight results and
-  "American Kennel Club (AKC)": the card stays 430px on a phone (grew before); a card
-  that fits keeps one per line. Photo beside details and Featured not checked by eye.
+- Checked in Chromium at 390px and 1280px: a test page of every card type (flip front
+  and back, Photo beside details, Featured dog, light, puppy flip, parent cards) with five
+  display settings each and six seeded dogs (everything with full test names, the same
+  with short names set, Millie-like, three tests, none, the bare minimum). Fixed on the
+  way: the 30% check first measured the lists against the card, which undid columns on
+  stacked phone cards and on Featured with a long bio. No face is cut off at either
+  width. Cards in one row on a computer can differ in height (as before, when a dog with
+  many results grew its card).
 - Test in `rules.test.js`. Site template changed: `ASSET_VERSION` bump to ask the owner.

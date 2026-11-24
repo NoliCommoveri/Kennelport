@@ -265,12 +265,17 @@ nav.main li.open > .navtop .chev { transform: rotate(225deg) translate(-2px, -1p
 /* Two-column lists: on a big card (flip, photo beside details, Featured) site.js sets a
    list (data-cols) in two columns only where one per line would make the card grow past
    its photo or its other side; a row too long for half the width (.wide) keeps the whole
-   line, after the short ones (each list on its own: details with details, results with
-   results), so the short ones pair up rather than going long, short, long, short.
+   line, before the short ones (each list on its own: details with details, results with
+   results), so the short ones pair up rather than going long, short, long, short. The
+   left column's rows (.l) draw the dotted line between the columns, down to the last
+   pair (.end).
    Without the script, one per line in its own order, as before. */
 .tests.cols { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; }
 .tests.cols li:not(.wide) { white-space: nowrap; }
-.tests.cols li.wide { grid-column: 1 / -1; order: 1; }
+.tests.cols li.wide { grid-column: 1 / -1; order: -1; }
+.tests.cols li.l { position: relative; }
+.tests.cols li.l::after { content: ""; position: absolute; top: 0; bottom: -5px; right: -9px; border-right: 1px dotted var(--line); }
+.tests.cols li.l.end::after { bottom: 0; }
 .back .bio { font-size: .86rem; color: var(--muted); margin: 0; }
 .back .more { margin-top: auto; }
 .status { display: inline-flex; align-items: center; gap: 6px; font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; }

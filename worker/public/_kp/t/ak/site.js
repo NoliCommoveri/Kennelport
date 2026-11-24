@@ -42,43 +42,57 @@
   // side taller than its other side and its least height, or the words beside a photo
   // (or under it, on a phone) longer than the photo. The longest list first, then the
   // next, while it still grows. A row too long for half the width takes the whole line,
-  // after the short ones (site.css), and so does an odd short one left over; a list
-  // with fewer than two short rows stays as it is; and if the lists would then
-  // fill under 30% of the card's height, it all goes back to one per line.
-  const oneCol = (ul) => { ul.classList.toggle('cols', false); for (const li of ul.children) li.classList.toggle('wide', false); };
+  // before the short ones (site.css), and so does an odd short one left over; a list
+  // with fewer than two short rows stays as it is; and if the words would then fill
+  // under 30% of the card's height (the photo's, or the flip card's other side), they go
+  // back to one per line rather than leave it looking empty.
+  const oneCol = (ul) => { ul.classList.toggle('cols', false); for (const li of ul.children) li.classList.remove('wide', 'l', 'end'); };
   const fitCols = () => {
     for (const card of $$('.flip, .dogrow, .story')) {
       const lists = $$('ul.tests[data-cols]', card);
       if (!lists.length) continue;
       lists.forEach(oneCol);
       if (!card.offsetParent) continue;
-      let grows;
+      // size(box): [how tall its words are, how tall the card is without them].
+      let size;
       if (card.classList.contains('flip')) {
         const faces = $$('.face', card);
         const least = parseFloat(getComputedStyle(card).minHeight) || 0;
-        grows = (face) => {
+        size = (face) => {
           for (const f of faces) f.style.alignSelf = 'start';
           const own = face.offsetHeight;
           const other = Math.max(0, ...faces.filter((f) => f !== face).map((f) => f.offsetHeight));
           for (const f of faces) f.style.alignSelf = '';
-          return own > Math.max(least, other) + 1;
+          return [own, Math.max(least, other)];
         };
       } else {
         const pic = [...card.querySelectorAll('img, .ph-photo')].find((x) => !x.closest('.dr-info, .dr-under, .story-copy, .feature-acts') && !x.classList.contains('bg'));
         const ref = pic ? pic.offsetHeight : 430;
-        grows = (box) => box.offsetHeight > ref + 1;
+        size = (box) => [box.offsetHeight, ref];
       }
+      const grows = (box) => { const [own, room] = size(box); return own > room + 1; };
       const boxOf = (ul) => ul.closest('.face, .dr-info, .dr-under, .story-copy') ?? card;
       for (const ul of [...lists].sort((a, b) => b.children.length - a.children.length)) {
         if (!grows(boxOf(ul))) continue;
         ul.classList.toggle('cols', true);
         const short = [...ul.children].filter((li) => !(li.scrollWidth > li.clientWidth + 1 && li.classList.toggle('wide', true)));
-        // An odd one out takes the whole line too, rather than half a line beside nothing.
-        if (short.length % 2) short.pop().classList.toggle('wide', true);
+        // An odd one out takes the whole line too, rather than half a line beside nothing:
+        // the longest of them, which fills a whole line best.
+        if (short.length % 2) {
+          const len = (li) => [...li.children].reduce((n, x) => n + x.offsetWidth, 0);
+          const odd = short.reduce((a, b) => (len(b) > len(a) ? b : a));
+          odd.classList.toggle('wide', true);
+          short.splice(short.indexOf(odd), 1);
+        }
         if (short.length < 2) oneCol(ul);
+        // The left column's rows, for the dotted line between the columns (site.css).
+        else short.forEach((li, i) => { if (i % 2 === 0) li.classList.add('l'); if (i === short.length - 2) li.classList.add('end'); });
       }
-      const used = lists.filter((ul) => ul.classList.contains('cols'));
-      if (used.length && lists.reduce((n, ul) => n + ul.offsetHeight, 0) < 0.3 * card.offsetHeight) used.forEach(oneCol);
+      for (const box of new Set(lists.map(boxOf))) {
+        const here = lists.filter((ul) => boxOf(ul) === box);
+        const [own, room] = size(box);
+        if (here.some((ul) => ul.classList.contains('cols')) && own < 0.3 * room) here.forEach(oneCol);
+      }
     }
   };
   fitCols();
