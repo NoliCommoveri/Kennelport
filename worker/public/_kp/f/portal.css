@@ -439,13 +439,20 @@ body.bare > .note { margin: var(--gut); }
 .hb .happy { font: 700 1.6em/1.1 var(--f-display); color: var(--maroon); }
 
 /* The book, once handbook.js runs: only the cover or the reader, filling the screen. */
+/* The screen is a column: her "seeing their portal" band, when she's previewing, then
+   the book in whatever height is left, so its arrows stay on screen. */
 html.hb-js, html.hb-js body.bare { height: 100%; overflow: hidden; }
-html.hb-js .hb-cover { height: 100vh; height: 100dvh; min-height: 0; }
-html.hb-js .hb-reader { height: 100vh; height: 100dvh; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+html.hb-js body.bare { height: 100dvh; display: flex; flex-direction: column; }
+html.hb-js body.bare > .note { flex: none; margin: 10px 16px 0; padding: 10px 14px; }
+html.hb-js body.bare > .hb { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+html.hb-js .hb-cover { flex: 1; min-height: 0; height: auto; }
+html.hb-js .hb-reader { flex: 1; min-height: 0; height: auto; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
 html.hb-js .hb .stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
 html.hb-js .hb .controls { display: flex; align-items: center; gap: 14px; flex: none; position: relative; z-index: 10; }
 html.hb-js .hb #hb-toc { display: inline-block; }
 html.hb-js .hb .book { position: relative; transition: transform .45s cubic-bezier(.4,.1,.2,1); touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+/* A page's words scroll on their own; a sideways swipe there still turns the page. */
+html.hb-js .hb .book .content { touch-action: pan-y; }
 html.hb-js .hb .slot, html.hb-js .hb .flip { position: absolute; top: 0; height: 100%; background: var(--paper); overflow: hidden; contain: layout paint; }
 html.hb-js .hb .slot .page, html.hb-js .hb .flip .page { position: absolute; inset: 0; width: auto; min-height: 0; border-radius: 0; box-shadow: none; }
 html.hb-js .hb .spread .l { left: 0; width: 50%; border-radius: 10px 2px 2px 10px; box-shadow: inset -18px 0 22px -18px rgba(0,0,0,.28), 0 10px 24px var(--bookshadow); }

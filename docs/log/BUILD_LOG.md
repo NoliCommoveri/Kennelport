@@ -2635,3 +2635,23 @@ show. Added to `portal/handbook.js` (`bodyHtml`, `plainText`, `htmlToText`):
   opening them as a family, in Chromium at 390px and 1280px with the flipbook running.
   Test in `portal-handbook.test.js`.
 - `PORTAL_VERSION` bumped to 8 (owner said yes), fingerprint updated.
+
+## 2026-11-24: Handbook: a swipe turns the page on a phone; the book fits under her preview band
+
+The owner, in "See their portal" on her phone: the handbook wouldn't flip. Two causes,
+both in `public/_kp/f/`:
+
+- **A finger swipe never turned a page, for families too.** A page's words (`.content`)
+  scroll on their own, and a scroll container stops `touch-action: pan-y` on `.book` from
+  reaching it, so the phone took the swipe as a pan and sent `pointercancel` with no
+  `pointerup`. `handbook.js` now reads a finger's swipe from `touchstart`/`touchend`
+  (which still arrive), keeps pointer events for a mouse or pen, and `.content` gets
+  `touch-action: pan-y` too.
+- **In her preview the arrows were off the bottom of the screen.** The reader was a full
+  `100dvh` tall under the read-only band, and the page can't scroll. The handbook's
+  `body.bare` is now a column, band then book, and the cover and reader take the height
+  that's left.
+- Checked with real touch swipes (CDP touch events) on an emulated Galaxy S9+, as a family
+  and through her view link: a swipe turns the page, and the arrows sit at the foot of the
+  screen in both, at 1280px as well. Before the fix, the same swipe did nothing in either.
+- `PORTAL_VERSION` 8 is on `main`, so this needs 9: asked the owner, not bumped.
