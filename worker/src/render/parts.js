@@ -6,7 +6,7 @@ import { applyPicks } from '../content/picks.js';
 import { escapeHtml as esc } from '../lib/html.js';
 import { PAGES, pupStatus, slugify, pillKey } from '../content/model.js';
 import { puppyPrice, litterPriceRange, depositRange } from '../content/prices.js';
-import { DEFAULT_RULES, DEFAULT_TIMING, ruleKey, addDays } from '../content/rules.js';
+import { DEFAULT_RULES, DEFAULT_TIMING, ruleKey, addDays, testKey } from '../content/rules.js';
 
 export { esc };
 export const attr = esc;
@@ -57,6 +57,15 @@ export function priceText(from, to, style = 'range') {
 
 // From the snapshot; one built before rules existed shows today's behaviour.
 export const rulesOf = (snap) => snap.rules ?? DEFAULT_RULES;
+
+// A health result's row on a card, where space is short: the test's short name where
+// the owner set one (rules.short), its full name on a long press or hover; the dog's
+// own page keeps the full name (render/pages.js).
+export function testRow(snap, h) {
+  const short = rulesOf(snap).short?.[testKey(h.test)];
+  const name = short ? `<span title="${attr(h.test)}">${esc(short)}</span>` : `<span>${esc(h.test)}</span>`;
+  return `<li>${name}<span>${esc(h.result)}</span></li>`;
+}
 // A line of the site's fixed wording (rules.words), with its {name} and the like
 // filled in. Escape it like any other text.
 export function word(snap, key, vars = {}) {
@@ -504,7 +513,7 @@ export function parentCards(snap, l) {
     const line = d ? [d.color, d.registry].filter(Boolean).join(' · ') : '';
     const health = d?.health ?? [];
     const tests = health.length
-      ? `<ul class="tests">${health.slice(0, 3).map((h) => `<li><span>${esc(h.test)}</span><span>${esc(h.result)}</span></li>`).join('')}</ul>${health.length > 3 ? `<span class="small muted">and ${health.length - 3} more health result${health.length - 3 === 1 ? '' : 's'}</span>` : ''}`
+      ? `<ul class="tests">${health.slice(0, 3).map((h) => testRow(snap, h)).join('')}</ul>${health.length > 3 ? `<span class="small muted">and ${health.length - 3} more health result${health.length - 3 === 1 ? '' : 's'}</span>` : ''}`
       : '';
     return `<div class="parent"><span class="eyebrow">${role === 'dam' ? 'Dam' : 'Sire'}</span>
       <article class="parent-card">${parentPhoto(snap, l, role)}<b class="call">${esc(name)}</b>${d?.registered_name ? `<span class="reg">${esc(d.registered_name)}</span>` : ''}${d?.titles ? `<span class="small">${esc(d.titles)}</span>` : ''}${line ? `<span class="small muted">${esc(line)}</span>` : ''}${tests}${d ? `<a class="more" href="/dogs/${attr(d.slug)}">View profile</a>` : ''}</article></div>`;
@@ -571,7 +580,7 @@ function dogItems(snap, d, { sale = null, link = true } = {}) {
   // Health results when it has some (its registry and weight above them, where
   // set), else its details.
   const tests = d.health.length
-    ? `${registry || weight ? `<ul class="tests">${registry}${weight}</ul>` : ''}<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => `<li><span>${esc(h.test)}</span><span>${esc(h.result)}</span></li>`).join('')}</ul>`
+    ? `${registry || weight ? `<ul class="tests">${registry}${weight}</ul>` : ''}<span class="eyebrow">Health testing</span><ul class="tests">${d.health.map((h) => testRow(snap, h)).join('')}</ul>`
     : `<span class="eyebrow">Details</span><ul class="tests"><li><span>Sex</span><span>${sexWord(d.sex)}</span></li>${d.color ? `<li><span>Color</span><span>${esc(d.color)}</span></li>` : ''}${weight}${registry}</ul>`;
   const line = [snap.site.breed, d.role].filter(Boolean).join(' · ');
   return {
