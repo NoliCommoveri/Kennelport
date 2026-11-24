@@ -246,4 +246,14 @@ test('the portal\'s screens for her (step 2.4): Today, Families, Add a family, t
   await save('/admin/wording/portalnotes', { 'w.perror.not_saved': 'Not yet saved: {error}' });
   const bad = await call(env, M, '/s/akbostons/portal/new', { method: 'POST', headers: { cookie: breeder, origin: ORIGIN }, body: form({ name: '', emails: 'x' }) });
   assert.match(text(await bad.text()), /Not yet saved: /);
+  // A family's screen, its stays and its log.
+  env.DB.raw.prepare("INSERT INTO litters (id, site_id, slug, name, stage, created_at, updated_at) VALUES ('lit1', ?, 'winter', 'Winter litter', 'current', '2026-11-01', '2026-11-01')").run(ak.id);
+  env.DB.raw.prepare("INSERT INTO puppies (id, site_id, litter_id, slug, name, sex, created_at, updated_at) VALUES ('pup1', ?, 'lit1', 'opal', 'Opal', 'female', '2026-11-01', '2026-11-01')").run(ak.id);
+  const added = await call(env, M, '/s/akbostons/portal/new', { method: 'POST', headers: { cookie: breeder, origin: ORIGIN }, body: form({ name: 'The Reed family', emails: 'sam@example.com', puppy_id: 'pup1' }) });
+  const fam = added.headers.get('location').split('?')[0];
+  assert.match(await as(fam), /Send invite .* Opal · pickup .* Reminder log Nothing sent yet\./);
+  await save('/admin/wording/portalfamily', { 'w.pf.send_invite': 'Invite them', 'w.pf.pickup_title': 'Picking up {name}' });
+  await save('/admin/wording/portallog', { 'w.plog.none': 'No emails yet, {kennel}.' });
+  await save('/admin/wording/portalstay', { 'w.pstay.title': 'Add-ons' });
+  assert.match(await as(fam), /Invite them .* Picking up Opal .* Add-ons .* No emails yet, AK Boston Terriers\./);
 });

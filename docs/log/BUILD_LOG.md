@@ -2639,3 +2639,23 @@ the only gate left. No code, no migration, no version bump.
   contract, history, messages, loss, stays, extras), Portal settings (with the vet rule's words,
   `VET_RULES`, and the vet statuses in `portal/vet.js`, which families read too), the checklist
   and timeline screens (`admin/templates.js`, `portal/steps.js`).
+
+## 2026-11-24: Site-builder step 2.4, second slice: a family's screen
+
+- A family's screen in the owner's list (`manage/wording-portal.js`), as three screens in her
+  editor: **Portal: a family's screen** (`pf.*`: KennelOS's line and newer values, emails and
+  invite, pickup, the loss note, the vet visit, the checklist and timeline as this family has
+  them, programs, health records, contract, the puppy's details, life status, the loss form,
+  change, delete, erase), **Portal: a family's extras and stays** (`pstay.*`), and **Portal: a
+  family's reminder log, history and messages** (`plog.*`, `phist.*`: the reminders' names and
+  results, each History field, who changed it). `familyScreen` in `portal/admin.js` rewritten
+  around a `t(key, vars)` helper; the page's title and Not found too.
+- Today's wording by default: rendered before and after with a family not picked up, one
+  picked up with a record and a message, a stay with an update, a loss and a backed-out family;
+  the text is the same. Test in `wording.test.js`. No migration, no version bump.
+- Still in the code, shared with other screens and moved with them: the vet status words
+  (`portal/vet.js`, families read them too) and `VET_RULES`, the record kinds
+  (`store.js` `RECORD_TYPES`), the program statuses (`steps.js` `PROGRAM_WORDS`), the skill
+  levels (`stays.js` `LEVELS`), the step fields and ready-made tasks (`admin/templates.js`),
+  the suggested-change labels (`admin/parts.js` `SUGGEST_LABEL`), and the loss note's
+  starting draft (`account.js` `lossDraft`, words the family reads once she sends them).
