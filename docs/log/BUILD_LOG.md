@@ -2608,3 +2608,13 @@ Four questions for the owner. No code, no migration, no version bump.
   Already there before the two-column work.
 - Both in the site template; `ASSET_VERSION` 31 isn't on `main` yet, so no second bump:
   fingerprint updated beside 31. Checked on the card test page at 390px and 1280px.
+
+## 2026-11-24: Ready-made insurance task due 1 day after pickup
+
+The owner wants insurance due the day after pickup, not three days. The ready-made
+insurance task (`READY_TASKS.insurance` in `portal/steps.js`) now starts at 1 day after
+pickup. Only new tasks added from the picker change; existing tasks keep the day she set,
+and she changes those on her Timeline screen. The suggested timeline for a new site still
+puts its insurance step at 5 days ("within a few days of pickup"); left for the owner to
+decide. Due dates count whole days from the pickup date, not hours. No migration, no
+version bump.

@@ -112,7 +112,8 @@ anyone outside the family.
   placement) is in the plan's last section. No version bump. Build log, 2026-11-19.
 - Ready-made timeline tasks (registration, and a wording to choose for each program with
   its link), and a warning on a template task that names one puppy: built 2026-11-21. No
-  migration, no version bump. Build log, 2026-11-21.
+  migration, no version bump. Build log, 2026-11-21. Insurance now starts at 1 day after
+  pickup (2026-11-24).
 
 ## Finished feature plans
 
