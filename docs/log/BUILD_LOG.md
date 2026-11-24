@@ -2608,3 +2608,30 @@ Four questions for the owner. No code, no migration, no version bump.
   Already there before the two-column work.
 - Both in the site template; `ASSET_VERSION` 31 isn't on `main` yet, so no second bump:
   fingerprint updated beside 31. Checked on the card test page at 390px and 1280px.
+
+## 2026-11-24: Handbook tables, tick boxes and urgent notes
+
+The breeder's printed handbook (AK Boston Terriers Puppy Parent Handbook, 32 pages) is
+mostly tables, tick-box checklists and red warning boxes, which the chapter format couldn't
+show. Added to `portal/handbook.js` (`bodyHtml`, `plainText`, `htmlToText`):
+
+- **Tables:** lines starting `|`. A `|---|---|` line under the first row makes it the
+  headings. Each cell carries its column heading (`data-h`). A `|` inside a link or photo
+  tag doesn't split a cell. A missing cell is blank, and cells past the headings are dropped.
+- **Tick boxes:** `- [ ] ` (or `- [x] ` ticked), as `ul.check`. They only show a box: ticking
+  isn't saved anywhere, so a family can't tick them on screen.
+- **Urgent notes:** `!> ` lines, the note in a box in red (`.note.warn`).
+- Search reads a table row as its cells joined with " · ", and drops the markers. An HTML
+  file's `<table>` and checkboxes come in as the same format.
+- `portal.css`: a table is a tan heading band, the first column bold, rows striped. On a
+  narrow page it stacks each row as a small card with the column headings over the words,
+  using a container query on `.tbl`, so half of a desktop spread stacks too when it's
+  narrow. The paper stays light in dark mode, so one set of colours. The handbook is
+  `body.bare` with no `data-look`, so the looks don't touch it.
+- Breeder-facing wording: `handbook.body_hint` in `manage/wording.js` and `CLAUDE_PROMPT`
+  (still in `handbook.js`) describe the new styles, and the prompt no longer says "no
+  tables". Both are drafts for the owner to reword.
+- Checked by uploading her 20 chapters (written from the PDF) through the Site Manager and
+  opening them as a family, in Chromium at 390px and 1280px with the flipbook running.
+  Test in `portal-handbook.test.js`.
+- `PORTAL_VERSION` bumped to 8 (owner said yes), fingerprint updated.

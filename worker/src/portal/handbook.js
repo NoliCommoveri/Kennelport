@@ -5,7 +5,10 @@
 //
 // A chapter's body is plain text, so it needs no editor script:
 // - a blank line starts a new paragraph; a line break stays a line break;
-// - lines starting "- " are a list; a line starting "## " is a small heading;
+// - lines starting "- " are a list ("- [ ] " a list of tick boxes); a line starting
+//   "## " is a small heading; "> " a note in a box, "!> " an urgent one (red);
+// - lines starting "|" are a table, its first row the headings when a "|---|---|"
+//   line follows it (on a narrow page each row stacks as a card: family.js, portal.css);
 // - a line of "---" starts a new page of the flipbook (portal/family.js);
 // - "[link: Embark]" is that program's link (one of her programs families see,
 //   matched by name, any case); "[link: Embark | Order the kit]" gives it her words.
@@ -115,7 +118,9 @@ export function brokenLinks(body, programs) {
 // or '' for one that isn't there. Read line by line:
 //   # / ## / ### heading (a big one, a small one, a smaller one); "{center}" at the end
 //   of a heading or a line centers it; **bold** and *italic*; "- " a list, "1. " a
-//   numbered one; "> " a note in a box; "+++ Title" … "+++" a fold that opens on a tap;
+//   numbered one, "- [ ] " a tick box ("- [x] " ticked); "> " a note in a box, "!> " an
+//   urgent one; "| a | b |" lines a table (a "|---|---|" line under the first makes it
+//   the headings); "+++ Title" … "+++" a fold that opens on a tap;
 //   [photo: …] and [link: …] on a line of their own. Everything else is a paragraph
 //   (a blank line between two). Nothing she writes is ever taken as HTML.
 export function bodyHtml(body, programs, vars, link, photo = () => '') {
@@ -143,13 +148,20 @@ export function bodyHtml(body, programs, vars, link, photo = () => '') {
 const CENTER = /\s*\{center\}\s*$/i;
 const NUMBERED = /^\d{1,3}[.)]\s+/;
 const QUOTE = /^>\s?/;
+const WARN = /^!>\s?/;
+const CHECK = /^[-•]\s+\[([ xX]?)\]\s+/;
+const ROW = /^\|/;
+// A table's line under its headings: | --- | :---: |
+const RULE_ROW = /^\|?(\s*:?-{2,}:?\s*\|)+\s*:?-{0,}:?\s*$/;
+// A "|" inside a [link: … | …] or [photo: … | …] tag doesn't end its cell.
+const cellsOf = (l) => l.replace(/^\|/, '').replace(/\|\s*$/, '').split(/\|(?![^[\]]*\])/).map((c) => c.trim());
 const FOLD = /^\+\+\+\s*(.*)$/;
 
 function blocksOf(lines, inline, ownLink, ownPhoto) {
   const out = [];
   let para = [];
   let list = [];
-  let ordered = false;
+  let kind = 'ul'; // 'ul', 'ol' or 'check'
   const flushPara = () => {
     if (!para.length) return;
     const centered = para.some((l) => CENTER.test(l));
@@ -158,8 +170,9 @@ function blocksOf(lines, inline, ownLink, ownPhoto) {
     para = [];
   };
   const flushList = () => {
-    const items = list.map(inline).filter(Boolean);
-    if (items.length) out.push(`<${ordered ? 'ol' : 'ul'}>${items.map((h) => `<li>${h}</li>`).join('')}</${ordered ? 'ol' : 'ul'}>`);
+    const items = list.map((x) => ({ done: x.done, h: inline(x.text) })).filter((x) => x.h);
+    const tag = kind === 'ol' ? 'ol' : 'ul';
+    if (items.length) out.push(`<${tag}${kind === 'check' ? ' class="check"' : ''}>${items.map((x) => `<li${x.done ? ' class="done"' : ''}>${x.h}</li>`).join('')}</${tag}>`);
     list = [];
   };
   const flush = () => { flushPara(); flushList(); };
@@ -190,21 +203,32 @@ function blocksOf(lines, inline, ownLink, ownPhoto) {
       if (h) out.push(`<h3${cls ? ` class="${cls}"` : ''}>${h}</h3>`);
       continue;
     }
-    if (QUOTE.test(l)) {
+    const box = QUOTE.test(l) ? QUOTE : WARN.test(l) ? WARN : null;
+    if (box) {
       flush();
       const q = [];
-      while (i < lines.length && QUOTE.test(lines[i])) q.push(lines[i++].replace(QUOTE, ''));
+      while (i < lines.length && box.test(lines[i])) q.push(lines[i++].replace(box, ''));
       i--;
       const inner = blocksOf(q, inline, ownLink, ownPhoto);
-      if (inner) out.push(`<div class="note">${inner}</div>`);
+      if (inner) out.push(`<div class="note${box === WARN ? ' warn' : ''}">${inner}</div>`);
+      continue;
+    }
+    if (ROW.test(l)) {
+      flush();
+      const rows = [];
+      while (i < lines.length && ROW.test(lines[i])) rows.push(lines[i++]);
+      i--;
+      const h = tableHtml(rows, inline);
+      if (h) out.push(h);
       continue;
     }
     if (BULLET.test(l) || NUMBERED.test(l)) {
-      const num = NUMBERED.test(l);
+      const tick = l.match(CHECK);
+      const k = tick ? 'check' : NUMBERED.test(l) ? 'ol' : 'ul';
       flushPara();
-      if (list.length && num !== ordered) flushList();
-      ordered = num;
-      list.push(l.replace(num ? NUMBERED : BULLET, ''));
+      if (list.length && k !== kind) flushList();
+      kind = k;
+      list.push({ done: Boolean(tick && tick[1].trim()), text: l.replace(tick ? CHECK : k === 'ol' ? NUMBERED : BULLET, '') });
       continue;
     }
     flushList();
@@ -212,6 +236,24 @@ function blocksOf(lines, inline, ownLink, ownPhoto) {
   }
   flush();
   return out.join('');
+}
+
+// A table from its "|" lines. With a rule line under the first, that row is the
+// headings; each cell also carries its column's heading (data-h), which a narrow page
+// shows when it stacks a row as a card. A row's cells beyond the headings are dropped.
+function tableHtml(rows, inline) {
+  const head = rows.length > 1 && RULE_ROW.test(rows[1]) ? cellsOf(rows[0]) : null;
+  const body = rows.slice(head ? 2 : 0).filter((r) => !RULE_ROW.test(r)).map(cellsOf);
+  const cols = head ? head.length : Math.max(0, ...body.map((r) => r.length));
+  if (!cols || !body.length) return '';
+  const hs = head ? head.map(inline) : [];
+  const plain = (h) => h.replace(/<[^>]+>/g, '');
+  const thead = head ? `<thead><tr>${hs.map((h) => `<th scope="col">${h}</th>`).join('')}</tr></thead>` : '';
+  const tbody = body.map((r) => `<tr>${Array.from({ length: cols }, (x, n) => {
+    const h = inline(r[n] ?? '');
+    return `<td${hs[n] ? ` data-h="${plain(hs[n])}"` : ''}>${h}</td>`;
+  }).join('')}</tr>`).join('');
+  return `<div class="tbl${head ? '' : ' nohead'}"><table>${thead}<tbody>${tbody}</tbody></table></div>`;
 }
 
 // The programs a body links to, once each, in its order. Any: the disclosure goes with it.
@@ -235,7 +277,8 @@ export function plainText(body, vars = {}, programs = []) {
     return x ? (words ?? (x.link_label || x.name)) : '';
   })
     .replace(PHOTO, (m, what, caption) => (PHOTO_ID.test(what) ? caption ?? '' : ''))
-    .replace(/^[ \t]*(?:[-•]|#{1,3}|\d{1,3}[.)]|>|\+\+\+)[ \t]*/gm, '')
+    .split(/\n/).filter((l) => !RULE_ROW.test(l.trim())).map((l) => (ROW.test(l.trim()) ? cellsOf(l.trim()).filter(Boolean).join(' · ') : l)).join('\n')
+    .replace(/^[ \t]*(?:[-•][ \t]+\[[ xX]?\]|[-•]|#{1,3}|\d{1,3}[.)]|!?>|\+\+\+)[ \t]*/gm, '')
     .replace(/\{center\}/gi, '').replace(/\*\*|(?<!\w)\*|\*(?!\w)/g, '')
     .replace(/\{(name|kennel)\}/g, (m, k) => vars[k] ?? m)
     .split(/\n/).map((l) => l.trim()).filter(Boolean)
@@ -321,6 +364,16 @@ export function htmlToText(html) {
   h = h.replace(/<(strong|b)\b[^>]*>([\s\S]*?)<\/\1\s*>/gi, (m, t, x) => (x.trim() ? `**${x.trim()}**` : x));
   h = h.replace(/<(em|i)\b[^>]*>([\s\S]*?)<\/\1\s*>/gi, (m, t, x) => (x.trim() ? `*${x.trim()}*` : x));
   h = h.replace(/<blockquote\b[^>]*>([\s\S]*?)<\/blockquote\s*>/gi, (m, t) => `\n\n${t.replace(/<\/?p\b[^>]*>/gi, '\n').split('\n').map((l) => l.trim()).filter(Boolean).map((l) => `> ${l}`).join('\n')}\n\n`);
+  h = h.replace(/<input\b([^>]*)>/gi, (m, attrs) => (/type\s*=\s*["']?checkbox/i.test(attrs) ? (/\bchecked\b/i.test(attrs) ? '[x] ' : '[ ] ') : ''));
+  h = h.replace(/<table\b[^>]*>([\s\S]*?)<\/table\s*>/gi, (m, t) => {
+    const cell = (x) => x.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').replace(/\|/g, '/').replace(/\s+/g, ' ').trim();
+    const rows = [...t.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr\s*>/gi)].map((r) => ({ th: /<th\b/i.test(r[1]) && !/<td\b/i.test(r[1]), cells: [...r[1].matchAll(/<t([hd])\b[^>]*>([\s\S]*?)<\/t\1\s*>/gi)].map((c) => cell(c[2])) })).filter((r) => r.cells.length);
+    if (!rows.length) return '\n';
+    const line = (cs) => `| ${cs.join(' | ')} |`;
+    const out = rows.map((r) => line(r.cells));
+    if (rows[0].th) out.splice(1, 0, line(rows[0].cells.map(() => '---')));
+    return `\n\n${out.join('\n')}\n\n`;
+  });
   h = h.replace(/<ol\b[^>]*>([\s\S]*?)<\/ol\s*>/gi, (m, t) => { let n = 0; return `\n\n${t.replace(/<li\b[^>]*>([\s\S]*?)<\/li\s*>/gi, (x, li) => `\n${++n}. ${li.replace(/\s+/g, ' ').trim()}`)}\n\n`; });
   h = h.replace(/<li\b[^>]*>([\s\S]*?)<\/li\s*>/gi, (m, li) => `\n- ${li.replace(/\s+/g, ' ').trim()}`);
   h = h.replace(/<hr\b[^>]*>/gi, '\n\n---\n\n').replace(/<br\s*\/?>/gi, '\n');
@@ -384,8 +437,9 @@ export const CLAUDE_PROMPT = `Please write chapters for my puppy handbook, which
 # Chapter title  (each chapter starts with one of these)
 ## A heading inside a chapter, ### a smaller one. Add {center} at the end of a heading or a line to center it, like: ## Welcome home {center}
 **bold** and *italic*
-- a list item, or 1. a numbered one
-> a note in a box (start each of its lines with >)
+- a list item, or 1. a numbered one, or - [ ] a tick box
+> a note in a box (start each of its lines with >); !> the same in red, for something urgent
+| A heading | Another |  then  |---|---|  then one line per row, like  | Apples | Remove the seeds |  (a short table, two or three columns)
 +++ A question or title that opens on a tap
 The words inside it
 +++
@@ -393,7 +447,7 @@ The words inside it
 --- on a line of its own starts a new page of the book
 Write {name} wherever the puppy's name goes; each family sees their own puppy's name.
 
-No tables, no links and no other formatting. Keep each chapter short and warm, a page or two. Here is what I'd like:
+No links and no other formatting. Keep each chapter short and warm, a page or two. Here is what I'd like:
 
 `;
 
