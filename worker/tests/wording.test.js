@@ -270,4 +270,20 @@ test('the portal\'s screens for her (step 2.4): Today, Families, Add a family, t
   const dogs = await as('/s/akbostons/kennel');
   assert.match(dogs, /Kennel/);
   assert.match(await as(fam), /Vet visit: Not yet booked/);
+  // Declining a vet record (merged from the vet-tab branch), in the owner's words too.
+  const { saveFile } = await import('../src/portal/store.js');
+  const pid = env.DB.raw.prepare('SELECT id FROM portal_placements WHERE site_id = ?').get(ak.id).id;
+  await saveFile(env, ak.id, pid, { kind: 'proof', bytes: new TextEncoder().encode('%PDF-1.4 a'), name: 'r.pdf', by: 'family' });
+  assert.match(await as(fam), /Accept the vet record Decline it Decline it if it isn't the right record/);
+  const declined = await call(env, M, `${fam}/decline`, { method: 'POST', headers: { cookie: breeder, origin: ORIGIN }, body: form({}) });
+  assert.equal(declined.status, 303);
+  const after = await as(declined.headers.get('location'));
+  assert.match(after, /Vet record declined\. Their Vet visit tab is back/);
+  assert.match(after, /Vet visit: Record declined .* · declined /);
+  assert.doesNotMatch(after, /Decline it/);
+  assert.match(after, /Vet record declined: /);
+  await save('/admin/wording/portalfamily', { 'w.pf.decline': 'Not the right one' });
+  await call(env, M, `${fam}/accept`, { method: 'POST', headers: { cookie: breeder, origin: ORIGIN }, body: form({}) });
+  await saveFile(env, ak.id, pid, { kind: 'proof', bytes: new TextEncoder().encode('%PDF-1.4 b'), name: 'r2.pdf', by: 'family' });
+  assert.match(await as(fam), /Not the right one/);
 });

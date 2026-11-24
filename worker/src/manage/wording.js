@@ -755,7 +755,7 @@ const SCREEN_LINES = {
   "handbook.field_title": ["handbook", "Field label", "Chapter title"],
   "handbook.field_title_ph": ["handbook", "Example in the empty field", "The first night home"],
   "handbook.field_body": ["handbook", "Field label", "What families read"],
-  "handbook.body_hint": ["handbook", "Help under it", "A blank line between paragraphs. # for a big heading, ## a heading, ### a small one; add {center} at the end of a heading or line to center it. **bold**, *italic*. Start lines with - or 1. for a list, > for a note in a box. +++ Title, the words, then +++ makes a fold that opens on a tap. [photo: what it shows] on its own line for a photo. --- starts a new page. Write {name} for the puppy's name."],
+  "handbook.body_hint": ["handbook", "Help under it", "A blank line between paragraphs. # for a big heading, ## a heading, ### a small one; add {center} at the end of a heading or line to center it. **bold**, *italic*. Start lines with - or 1. for a list, - [ ] for tick boxes, > for a note in a box, !> for an urgent one in red. For a table, start each row with | and put |---|---| under the headings. +++ Title, the words, then +++ makes a fold that opens on a tap. [photo: what it shows] on its own line for a photo. --- starts a new page. Write {name} for the puppy's name."],
   "handbook.field_link": ["handbook", "Field label", "Add a program's button at the end"],
   "handbook.no_link": ["handbook", "Choice", "None"],
   "handbook.link_hint": ["handbook", "Help under it", "One of your programs families see. It goes in as [link: …] on the last line: move that line anywhere in the words."],

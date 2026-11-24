@@ -169,13 +169,20 @@
       if (e.key === 'ArrowRight') { next(); e.preventDefault(); }
       if (e.key === 'ArrowLeft') { prev(); e.preventDefault(); }
     });
+    // A swipe: a mouse or pen by pointer events; a finger by touch events, since a phone
+    // can cancel the pointer (pointercancel, no pointerup) once it starts panning a page's
+    // scrolling words, but touchend still comes.
     let sx = null; let sy = null; let swiped = false;
-    book.addEventListener('pointerdown', (e) => { sx = e.clientX; sy = e.clientY; });
-    book.addEventListener('pointerup', (e) => {
+    const swipe = (x, y) => {
       if (sx === null) return;
-      const dx = e.clientX - sx; const dy = e.clientY - sy; sx = null;
+      const dx = x - sx; const dy = y - sy; sx = null;
       if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.3) { swiped = true; setTimeout(() => { swiped = false; }, 350); if (dx < 0) next(); else prev(); }
-    });
+    };
+    book.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'touch') { sx = e.clientX; sy = e.clientY; } });
+    book.addEventListener('pointerup', (e) => { if (e.pointerType !== 'touch') swipe(e.clientX, e.clientY); });
+    book.addEventListener('touchstart', (e) => { if (e.touches.length === 1) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; } else sx = null; }, { passive: true });
+    book.addEventListener('touchend', (e) => { const t = e.changedTouches[0]; if (t) swipe(t.clientX, t.clientY); }, { passive: true });
+    book.addEventListener('touchcancel', () => { sx = null; }, { passive: true });
     book.addEventListener('click', (e) => { if (swiped) { e.stopPropagation(); e.preventDefault(); } }, true);
     document.addEventListener('click', (e) => {
       const g = e.target.closest('[data-go]');

@@ -12,7 +12,7 @@ const outbox = (env) => env.DB.raw.prepare('SELECT kind, subject, body FROM dev_
 const ymd = (d) => d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 const DAY = 86400000;
 
-const { bodyHtml, brokenLinks, plainText, snippet, searchWords } = await import('../src/portal/handbook.js');
+const { bodyHtml, brokenLinks, plainText, snippet, searchWords, htmlToText } = await import('../src/portal/handbook.js');
 
 async function setup() {
   const env = await makeEnv({ PORTAL_EMAIL_KEY: 'portal-test-key' });
@@ -73,6 +73,21 @@ test('a chapter\'s words: paragraphs, lists, headings, {name}, program links on 
   assert.equal(text, 'The crate · a towel for Opal · the trial');
   assert.equal(snippet(`${'a '.repeat(80)}crate here`, searchWords('Crate')).slice(0, 2), '… ');
   assert.equal(snippet('short words', searchWords('nothing')), 'short words');
+});
+
+test('tables, tick boxes and urgent notes: a table with headings stacks by them; tick boxes; !> in red; search reads them as words', () => {
+  const body = '| Food | Serve it |\n|---|:---:|\n| **Apples** | No seeds, {name} |\n| Eggs | Cooked [link: Puppy food program | here] |\n\n- [ ] Crate\n- [x] Bowls\n- a plain one\n\n!> Call now\n!> - or go in\n\n> calm note\n\n| a | b |\n| c |';
+  const html = bodyHtml(body, programs, { name: 'Opal' }, link);
+  assert.equal(html, '<div class="tbl"><table><thead><tr><th scope="col">Food</th><th scope="col">Serve it</th></tr></thead><tbody>'
+    + '<tr><td data-h="Food"><strong>Apples</strong></td><td data-h="Serve it">No seeds, Opal</td></tr>'
+    + '<tr><td data-h="Food">Eggs</td><td data-h="Serve it">Cooked <i:food>here</></td></tr></tbody></table></div>'
+    + '<ul class="check"><li>Crate</li><li class="done">Bowls</li></ul><ul><li>a plain one</li></ul>'
+    + '<div class="note warn"><p>Call now</p><ul><li>or go in</li></ul></div><div class="note"><p>calm note</p></div>'
+    + '<div class="tbl nohead"><table><tbody><tr><td>a</td><td>b</td></tr><tr><td>c</td><td></td></tr></tbody></table></div>');
+  assert.equal(plainText('| Food | Why |\n|---|---|\n| Apples | Fiber |\n- [ ] Crate\n!> Call now'), 'Food · Why · Apples · Fiber · Crate · Call now');
+  // A table, and tick boxes, from an HTML file come in as her format.
+  assert.equal(htmlToText('<table><tr><th>Age</th><th>Meals</th></tr><tr><td>8 weeks</td><td>4 | small</td></tr></table><ul><li><input type="checkbox" checked> Bowls</li></ul>'),
+    '| Age | Meals |\n| --- | --- |\n| 8 weeks | 4 / small |\n\n- [x] Bowls');
 });
 
 test('her handbook: add, edit, order, off, remove after asking; families see it only once a chapter is on with words', async () => {

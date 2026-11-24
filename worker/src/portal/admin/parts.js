@@ -14,7 +14,7 @@ export const suggestLabel = (field, say = defaultSay) => (Object.hasOwn(SUGGEST_
 export const redirect = (location) => new Response(null, { status: 303, headers: { location, 'cache-control': 'no-store' } });
 
 // The notes after a change (wording: pnote.*), by the note= in the address.
-export const NOTE_NAMES = ['added', 'saved', 'invited', 'pickedup', 'confirmed', 'notyet', 'accepted', 'record', 'removed', 'contract', 'deleted', 'undone', 'merged',
+export const NOTE_NAMES = ['added', 'saved', 'invited', 'pickedup', 'confirmed', 'notyet', 'accepted', 'declined', 'record', 'removed', 'contract', 'deleted', 'undone', 'merged',
   'familymerged', 'gonenow', 'givenback', 'erased', 'sent', 'lossnote', 'losssent', 'extra', 'extraremoved', 'update', 'loss', 'suggested', 'stepadded', 'stepremoved', 'step'];
 
 export const note = (url, say = defaultSay) => {

@@ -71,7 +71,11 @@ anyone outside the family.
 - Phase 2 started 2026-11-21 (before phase 1's gate, the owner's call): **the handbook built**,
   migration 0040 (`portal_chapters`). Her chapters on the Portal tab; families read it as a flipbook
   with search; chapters she writes with Claude upload as a file, styled, with her photos; Read next and a quick link, shown only once a chapter has words. `PORTAL_VERSION` 4 on this
-  branch. Build log, 2026-11-21.
+  branch. Build log, 2026-11-21. Tables, tick boxes and urgent (red) notes in chapters,
+  2026-11-24, `PORTAL_VERSION` 8 (on `main`). A swipe turns the page on a phone, and the
+  book fits under her preview band, `PORTAL_VERSION` 9.
+- The Vet visit tab goes 24 hours past the deadline, or as soon as a record is in; she can
+  decline a record, which brings it back (2026-11-24, migration 0045). Build log, 2026-11-24.
 - **Looks** (2026-11-21, migration 0042): each breeder picks Classic, Forest or Cream in
   her portal settings; Forest and Cream are the owner's mockups (`docs/reference/portal-looks.html`).
   `PORTAL_VERSION` 6 on this branch. Forest and Cream drawn as the prototype draws them

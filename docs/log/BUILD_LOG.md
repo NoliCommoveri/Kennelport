@@ -2609,6 +2609,86 @@ Four questions for the owner. No code, no migration, no version bump.
 - Both in the site template; `ASSET_VERSION` 31 isn't on `main` yet, so no second bump:
   fingerprint updated beside 31. Checked on the card test page at 390px and 1280px.
 
+## 2026-11-24: Handbook tables, tick boxes and urgent notes
+
+The breeder's printed handbook (AK Boston Terriers Puppy Parent Handbook, 32 pages) is
+mostly tables, tick-box checklists and red warning boxes, which the chapter format couldn't
+show. Added to `portal/handbook.js` (`bodyHtml`, `plainText`, `htmlToText`):
+
+- **Tables:** lines starting `|`. A `|---|---|` line under the first row makes it the
+  headings. Each cell carries its column heading (`data-h`). A `|` inside a link or photo
+  tag doesn't split a cell. A missing cell is blank, and cells past the headings are dropped.
+- **Tick boxes:** `- [ ] ` (or `- [x] ` ticked), as `ul.check`. They only show a box: ticking
+  isn't saved anywhere, so a family can't tick them on screen.
+- **Urgent notes:** `!> ` lines, the note in a box in red (`.note.warn`).
+- Search reads a table row as its cells joined with " · ", and drops the markers. An HTML
+  file's `<table>` and checkboxes come in as the same format.
+- `portal.css`: a table is a tan heading band, the first column bold, rows striped. On a
+  narrow page it stacks each row as a small card with the column headings over the words,
+  using a container query on `.tbl`, so half of a desktop spread stacks too when it's
+  narrow. The paper stays light in dark mode, so one set of colours. The handbook is
+  `body.bare` with no `data-look`, so the looks don't touch it.
+- Breeder-facing wording: `handbook.body_hint` in `manage/wording.js` and `CLAUDE_PROMPT`
+  (still in `handbook.js`) describe the new styles, and the prompt no longer says "no
+  tables". Both are drafts for the owner to reword.
+- Checked by uploading her 20 chapters (written from the PDF) through the Site Manager and
+  opening them as a family, in Chromium at 390px and 1280px with the flipbook running.
+  Test in `portal-handbook.test.js`.
+- `PORTAL_VERSION` bumped to 8 (owner said yes), fingerprint updated.
+
+## 2026-11-24: Handbook: a swipe turns the page on a phone; the book fits under her preview band
+
+The owner, in "See their portal" on her phone: the handbook wouldn't flip. Two causes,
+both in `public/_kp/f/`:
+
+- **A finger swipe never turned a page, for families too.** A page's words (`.content`)
+  scroll on their own, and a scroll container stops `touch-action: pan-y` on `.book` from
+  reaching it, so the phone took the swipe as a pan and sent `pointercancel` with no
+  `pointerup`. `handbook.js` now reads a finger's swipe from `touchstart`/`touchend`
+  (which still arrive), keeps pointer events for a mouse or pen, and `.content` gets
+  `touch-action: pan-y` too.
+- **In her preview the arrows were off the bottom of the screen.** The reader was a full
+  `100dvh` tall under the read-only band, and the page can't scroll. The handbook's
+  `body.bare` is now a column, band then book, and the cover and reader take the height
+  that's left.
+- Checked with real touch swipes (CDP touch events) on an emulated Galaxy S9+, as a family
+  and through her view link: a swipe turns the page, and the arrows sit at the foot of the
+  screen in both, at 1280px as well. Before the fix, the same swipe did nothing in either.
+- `PORTAL_VERSION` bumped to 9 (owner said yes), fingerprint updated.
+
+## 2026-11-24: The Vet visit tab goes 24 hours past the deadline; she can decline a record
+
+The owner: many families never go to the vet or never upload the record, so the Vet visit
+tab mustn't stay in their tab bar for good. Before, it went only once she accepted the
+record, or a week after pickup with a record in.
+
+- **The rule** (`portal/vet.js` `vetTabShown`): the tab shows until 24 hours past the vet
+  deadline. A record in (uploaded and not declined, or accepted) takes it away at once. One
+  she declines brings it back for 24 hours past the later of the deadline and her
+  declining. Before pickup there's no deadline, so it shows. Its place goes to the
+  Handbook, else Photos, as before (`family.js`, `fam.vetTab`). The Vet visit page still
+  opens from Home's links, with no tab lit.
+- **Home's reminder:** none added. Once the vet days are over, Home's tile already says
+  "Upload the vet's record on the Vet visit page" with a link, in Classic and the looks,
+  whenever no record is in.
+- **Declining** (migration **0045**, `portal_placements.proof_declined_at`, additive): a
+  Decline it button beside Accept on her family screen, with a hint, and a confirmation
+  that tells her to message them about what's missing. Her status word is "Record
+  declined" (in red, as trouble). A declined record leaves her "to review" list. The
+  family's pages read as if no record were in (`asFamilySees` in `family.js`): the vet
+  visit asks for it again, and nothing on their side says it was declined. Their next
+  upload clears it, and so does her accepting it after all. The file is kept and is still
+  in her History ("Vet record declined"). `merge.js` carries the column with the other
+  vet fields.
+- Wording: the family screen isn't in `manage/wording.js` yet, so the button, the hint
+  (`portal/admin.js`) and the confirmation (`admin/parts.js` NOTES, beside "accepted")
+  sit with that screen's other lines, ready to move.
+- Tests: `portal-looks.test.js` now checks the new rule step by step (uploaded: gone at
+  once; nothing uploaded: still there 8 hours past the deadline, gone at 25 hours with
+  Home's line; declined: back, with their pages asking again; a day later, gone) and
+  declining, uploading again and accepting in the store. Her card checked at 390px.
+- No file under `public/` changed, so no version bump. The migration applies itself on
+  the first request after the deploy.
 ## 2026-11-24: Family portal phase 1's gate passed
 
 The owner confirmed phase 1's gate is met: one litter run from signed contract to the vet
@@ -2684,3 +2764,18 @@ the only gate left. No code, no migration, no version bump.
   messages across `portal/*.js`, about 120; some are the families' too). The ready-made tasks
   and suggested lists (`steps.js`) are starting content she edits, not her instructions: they
   become the template's (site-builder step 6).
+
+## 2026-11-24: Merged the Vet visit tab branch into step 2.4's
+
+- Brought in `main` (handbook tables, tick boxes and urgent notes; `PORTAL_VERSION` 8) and
+  `ccr-4b3202a9-amiv4s` (the handbook's swipe, `PORTAL_VERSION` 9; the Vet visit tab's 24 hours
+  and Decline it, migration 0045). This branch adds no migration of its own, so 0045 stays the
+  one migration it carries.
+- That branch was written on the screens before their wording moved. Resolved by keeping its
+  feature in the owner's list: `pf.decline`, `pf.decline_hint`, `pf.declined` (a family's
+  screen), `pnote.declined`, `phist.proof_declined_at`, and `pvet.declined` ("Record declined",
+  with the key `declined` in `vetStatus`); Today's "Vet record to review" skips a declined
+  record, as it wrote. Its `vetTabShown` kept as written. Her screen's side tested in
+  `wording.test.js` (Decline it, its note, the status, History, her wording). 516 tests pass.
+- Its error "No vet record to decline yet." stays with the portal's other errors, the last
+  slice of 2.4.
