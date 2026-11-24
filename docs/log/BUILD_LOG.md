@@ -2518,3 +2518,12 @@ for one family at a time.
 - Fix, same day: the photos' Remove buttons sat below the card, hidden under the next
   one, because `.lib-ph` was on the link (inline, so its square didn't hold). The square
   is now a `div.lib-ph` with the link inside. Checked at 390px. No CSS change, no bump.
+
+## 2026-11-24: Offspring cards drawn at the photo's full height
+
+- The light cards (`.cocard`: a dog's Offspring, the Co-owned section, a dogs block in
+  the Light style) drew their photo as tall as its `height` attribute (1067px for Opal on
+  Logan's and Apollo's pages), zoomed in and blurry, because `.cocard > img` had
+  `aspect-ratio` but no `height: auto` (the same thing `.story img` notes). Added it; the
+  photo is 4:3 again. Checked on the live page at 390px and 1280px; no other image on the
+  page was stretched. Needs the site template bump (`ASSET_VERSION`), owner to confirm.

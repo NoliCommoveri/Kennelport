@@ -197,7 +197,7 @@ nav.main li.open > .navtop .chev { transform: rotate(225deg) translate(-2px, -1p
 .cocard { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; color: var(--ink); text-decoration: none; height: 100%; }
 .cocard:hover { border-color: var(--accent); }
 .cocard > img, .cocard > .ph-photo { width: 100%; aspect-ratio: 4 / 3; flex: none; }
-.cocard > img { object-fit: cover; display: block; }
+.cocard > img { height: auto; object-fit: cover; display: block; } /* height: auto: see .story img */
 .cocard > .ph-photo { font-size: .9rem; }
 .cocard .cobody { display: grid; gap: 2px; padding: 10px 12px 12px; }
 .cocard .call { font-family: var(--f-display); font-weight: var(--display-w); font-size: 1.05rem; }
