@@ -7,4 +7,4 @@
 // ASSET_VERSION, then run `node worker/scripts/fingerprint.mjs` and paste its
 // TEMPLATE_FILES value here. Ask the owner before bumping (CLAUDE.md).
 export const ASSET_VERSION = '31';
-export const TEMPLATE_FILES = 'b72d71987f838d63';
+export const TEMPLATE_FILES = '502b65292286c73b';

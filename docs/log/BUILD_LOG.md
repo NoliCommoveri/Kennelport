@@ -2594,3 +2594,17 @@ phase 1's gate and decision 9 first, then site-builder steps 5, 6 and 2.4 (the p
 build and wording as settings), a setup flow, the choices that fit only her (vet rules, time
 zones), KennelOS's side for each kennel (to check there), and possibly portal-only sites.
 Four questions for the owner. No code, no migration, no version bump.
+
+## 2026-11-24: Flip cards in a row match; spaces in breed, role, titles and tags
+
+- Flip cards in one row are as tall as the tallest (the owner, 2026-11-24). A card straight
+  in a grid already stretched; one inside a wrapper (the Dogs block's Show filter,
+  `<div data-sex>`) didn't, so the Dogs page's rows were uneven on a computer.
+  `.grid > div > .flip { height: 100% }`. Checked on the Dogs page at 1280px: a taller
+  card's row-mates stretch to it.
+- Breed and role beside titles ("Foundation dam" "CH GCH…") and tags ran together with no
+  space on Featured and on a flip card's back: `.line1` had styles only in the front's
+  caption and Photo beside details. A base `.line1` (flex, wrap, a gap) under those.
+  Already there before the two-column work.
+- Both in the site template; `ASSET_VERSION` 31 isn't on `main` yet, so no second bump:
+  fingerprint updated beside 31. Checked on the card test page at 390px and 1280px.
