@@ -2582,4 +2582,15 @@ for one family at a time.
   stacked phone cards and on Featured with a long bio. No face is cut off at either
   width. Cards in one row on a computer can differ in height (as before, when a dog with
   many results grew its card).
-- Test in `rules.test.js`. Site template changed: `ASSET_VERSION` bump to ask the owner.
+- Test in `rules.test.js`. Site template bumped to `ASSET_VERSION` 31 (owner said yes).
+
+## 2026-11-24 — Plan: the family portal for more than one breeder
+
+The owner asked what it takes to offer the portal to other breeders. Written up as
+[`plans/portal-multi-breeder.md`](../plans/portal-multi-breeder.md), from a read of the code:
+every `portal_*` table already carries `site_id`, the switch, settings, jobs, feed and
+sign-in are per site, and the demo site runs a second portal. What's left is product work:
+phase 1's gate and decision 9 first, then site-builder steps 5, 6 and 2.4 (the portal's
+build and wording as settings), a setup flow, the choices that fit only her (vet rules, time
+zones), KennelOS's side for each kennel (to check there), and possibly portal-only sites.
+Four questions for the owner. No code, no migration, no version bump.
