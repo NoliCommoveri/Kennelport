@@ -84,7 +84,7 @@ anyone outside the family.
   Portal tab (cost, an expense column, where from, a program and her button words), Sent
   home with on each family's screen, What came home in their puppy's bag on Records from
   pickup; KennelOS sends her items (`bag_items` in the bundle) and gets what went home back
-  in the feed's facts. **Needs a `PORTAL_VERSION` bump (4, on `main`): asked the owner.**
+  in the feed's facts. Released: on `main` with `PORTAL_VERSION` 7.
   For KennelOS: plan sections 4a and 4b. Build log, 2026-11-21. Next in phase 2: to choose.
 - Home's food band, two across (the owner, 2026-11-21): her bowl picture on the food card;
   beside it, stacked, the insurance card (her shield picture, "Activate {pup}'s pet
