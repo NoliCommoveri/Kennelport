@@ -45,8 +45,39 @@
   // before the short ones (site.css), and so does an odd short one left over; a list
   // with fewer than two short rows stays as it is; and if the words would then fill
   // under 30% of the card's height (the photo's, or the flip card's other side), they go
-  // back to one per line rather than leave it looking empty.
-  const oneCol = (ul) => { ul.classList.toggle('cols', false); for (const li of ul.children) li.classList.remove('wide', 'l', 'end'); };
+  // back to one per line rather than leave it looking empty. Health results keep each
+  // kind together (twoCols), unless that alone would keep the card growing.
+  const oneCol = (ul) => { ul.classList.toggle('cols', false); for (const li of ul.children) { li.classList.remove('wide', 'l', 'end'); li.style.order = ''; } };
+  // Two columns for one list. Health results come grouped by kind (data-kind, no
+  // headings); with `kinds`, each kind keeps to its own rows: its long rows first, then
+  // its short ones in pairs, its odd one out on a whole line, so no pair mixes two kinds.
+  const twoCols = (ul, kinds) => {
+    oneCol(ul);
+    ul.classList.toggle('cols', true);
+    const len = (li) => [...li.children].reduce((n, x) => n + x.offsetWidth, 0);
+    const runs = [];
+    for (const li of ul.children) {
+      const k = kinds ? li.dataset.kind ?? '' : '';
+      if (!runs.length || runs.at(-1).k !== k) runs.push({ k, rows: [] });
+      runs.at(-1).rows.push(li);
+    }
+    const shorts = runs.map((run, g) => {
+      const short = run.rows.filter((li) => !(li.scrollWidth > li.clientWidth + 1 && li.classList.toggle('wide', true)));
+      // An odd one out takes the whole line too, rather than half a line beside nothing:
+      // the longest of them, which fills a whole line best.
+      if (short.length % 2) {
+        const odd = short.reduce((a, b) => (len(b) > len(a) ? b : a));
+        odd.classList.toggle('wide', true);
+        short.splice(short.indexOf(odd), 1);
+      }
+      if (runs.length > 1) for (const li of run.rows) li.style.order = String(2 * g + (li.classList.contains('wide') ? 0 : 1));
+      return short;
+    });
+    if (shorts.flat().length < 2) { oneCol(ul); return; }
+    // The left column's rows, for the dotted line between the columns (site.css), down to
+    // each run's last pair.
+    for (const short of shorts) short.forEach((li, i) => { if (i % 2 === 0) li.classList.add('l'); if (i === short.length - 2) li.classList.add('end'); });
+  };
   const fitCols = () => {
     for (const card of $$('.flip, .dogrow, .story')) {
       const lists = $$('ul.tests[data-cols]', card);
@@ -74,19 +105,15 @@
       const boxOf = (ul) => ul.closest('.face, .dr-info, .dr-under, .story-copy') ?? card;
       for (const ul of [...lists].sort((a, b) => b.children.length - a.children.length)) {
         if (!grows(boxOf(ul))) continue;
-        ul.classList.toggle('cols', true);
-        const short = [...ul.children].filter((li) => !(li.scrollWidth > li.clientWidth + 1 && li.classList.toggle('wide', true)));
-        // An odd one out takes the whole line too, rather than half a line beside nothing:
-        // the longest of them, which fills a whole line best.
-        if (short.length % 2) {
-          const len = (li) => [...li.children].reduce((n, x) => n + x.offsetWidth, 0);
-          const odd = short.reduce((a, b) => (len(b) > len(a) ? b : a));
-          odd.classList.toggle('wide', true);
-          short.splice(short.indexOf(odd), 1);
+        const kinds = new Set([...ul.children].map((li) => li.dataset.kind ?? '')).size > 1;
+        twoCols(ul, kinds);
+        // Each kind together where it fits; where the card would still grow and mixing
+        // the kinds makes it shorter, they mix (the column rules come first).
+        if (kinds && ul.classList.contains('cols') && grows(boxOf(ul))) {
+          const apart = size(boxOf(ul))[0];
+          twoCols(ul, false);
+          if (!ul.classList.contains('cols') || size(boxOf(ul))[0] >= apart) twoCols(ul, true);
         }
-        if (short.length < 2) oneCol(ul);
-        // The left column's rows, for the dotted line between the columns (site.css).
-        else short.forEach((li, i) => { if (i % 2 === 0) li.classList.add('l'); if (i === short.length - 2) li.classList.add('end'); });
       }
       for (const box of new Set(lists.map(boxOf))) {
         const here = lists.filter((ul) => boxOf(ul) === box);

@@ -272,7 +272,8 @@ nav.main li.open > .navtop .chev { transform: rotate(225deg) translate(-2px, -1p
    list (data-cols) in two columns only where one per line would make the card grow past
    its photo or its other side; a row too long for half the width (.wide) keeps the whole
    line, before the short ones (each list on its own: details with details, results with
-   results), so the short ones pair up rather than going long, short, long, short. The
+   results; in health results each kind on its own rows, set by site.js with order), so
+   the short ones pair up rather than going long, short, long, short. The
    left column's rows (.l) draw the dotted line between the columns, down to the last
    pair (.end).
    Without the script, one per line in its own order, as before. */

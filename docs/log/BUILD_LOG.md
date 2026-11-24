@@ -2788,3 +2788,27 @@ the only gate left. No code, no migration, no version bump.
   `wording.test.js` (Decline it, its note, the status, History, her wording). 516 tests pass.
 - Its error "No vet record to decline yet." stays with the portal's other errors, the last
   slice of 2.4.
+
+## 2026-11-24: Health results grouped by kind on cards
+
+- The owner (from the breeder, with screenshots of Abe): on a dog's card, its health
+  results came in her own order (BAER, DM, CMR1, JHC, HUU, Patella) while its page groups
+  them by kind. Now, with Group health results by kind on (her Kennel details switch), a
+  card lists them in the same kind order as the page (the owner's order of kinds, Dogs
+  screen), with **no heading over each kind** (the owner: don't display the kind on the
+  card). One function for both, `healthGroups` (`render/parts.js`); the page's
+  `healthLists` uses it. Parent cards' first three follow the same order. Switch off: as
+  before.
+- Each card row carries its kind (`data-kind`, not shown; the owner said keep it) so the
+  two-column lists keep a kind together (`site.js` `twoCols`): each kind's long rows first,
+  then its short ones in pairs, its odd one out on a whole line, so no pair mixes two
+  kinds. Where that would still leave the card growing and mixing the kinds makes it
+  shorter, they mix (the column rules come first). Details lists, and results with one
+  kind, lay out exactly as before.
+- Checked in Chromium at 390px and 1280px on the AK sample's Dogs page with Abe's six
+  tests entered out of order: DM | CMR1, JHC | HUU, BAER | Patella at both widths; with
+  three genetic tests, CMR1 takes the line and DM | JHC, BAER | Patella follow. Test in
+  `fields.test.js`.
+- Template files changed (`site.js`, a note in `site.css`): **needs `ASSET_VERSION` 32**
+  (31 is on `main`); asked the owner. Until then `versions.test.js` fails, as expected.
+  No migration.
