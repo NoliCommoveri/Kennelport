@@ -4,7 +4,7 @@ The one place for progress. Keep it short: one line per item, a link to where th
 is. When a step is built, change its line here and add the detail to the build log
 ([`log/BUILD_LOG.md`](log/BUILD_LOG.md)); the plans describe intent, not progress.
 
-Last updated 2026-11-21. Released on `main`: Site Manager (`APP_VERSION`) 18, site
+Last updated 2026-11-24. Released on `main`: Site Manager (`APP_VERSION`) 18, site
 template (`ASSET_VERSION`) 27 (flip cards that grow to fit, 2026-11-17).
 
 ## Platform
@@ -64,7 +64,7 @@ anyone outside the family.
 - She removes a photo from one family's portal (a photo of the wrong pup) on their screen,
   and can put it back; the website stays as it is. Migration 0044 (2026-11-23).
 - Phase 1's gate (one litter run from signed contract to the vet visit with no fixes by
-  hand, plan section 6): **waits for a real litter**; she has none yet (2026-11-12).
+  hand, plan section 6): **passed** (the owner, 2026-11-24).
 - Still open from "Before building" (plan section 14): her programs list, vet-visit
   wording, guarantee periods, handbook and food details, baseline sign-up rates,
   application-to-buyer mapping, photo and video package details, R2 and HEVC checks.
@@ -93,7 +93,7 @@ anyone outside the family.
   `main` (the owner's yes). Her referral programs are no longer listed under "Included with": Home lists only those not on the band, as "Recommended for {pup}". No migration. Build log, 2026-11-21.
 - Phase 3: not started.
 - **More than one breeder:** planned 2026-11-24 ([`plans/portal-multi-breeder.md`](plans/portal-multi-breeder.md)).
-  The data is already per site; still to do: phase 1's gate and decision 9, site-builder steps
+  The data is already per site; still to do: decision 9 (phase 1's gate passed 2026-11-24), site-builder steps
   5, 6 and 2.4, a setup flow, KennelOS's side for each kennel. Four questions for the owner. Not started.
 - The same family twice, and deleted families (2026-11-13): the feed links a family's only
   typed placement; **Merge** for a typed placement or family into KennelOS's; **Delete
@@ -126,7 +126,7 @@ anyone outside the family.
 Verdict: keep the code, fix how it reaches production. Done: backup, tests on every
 change, a plain page for unexpected errors, migrations applying themselves (item 1), a
 limit on wrong `/ops` tokens (item 4). Descoped (the owner): required checks before a
-merge. The portal's gate waits for a real litter, so features carry on meanwhile.
+merge. The portal's phase 1 gate passed 2026-11-24.
 
 ## Loose ends ([`loose-ends.md`](loose-ends.md))
 

@@ -2608,3 +2608,10 @@ Four questions for the owner. No code, no migration, no version bump.
   Already there before the two-column work.
 - Both in the site template; `ASSET_VERSION` 31 isn't on `main` yet, so no second bump:
   fingerprint updated beside 31. Checked on the card test page at 390px and 1280px.
+
+## 2026-11-24: Family portal phase 1's gate passed
+
+The owner confirmed phase 1's gate is met: one litter run from signed contract to the vet
+visit with no fixes by hand ([`plans/family-portal.md`](../plans/family-portal.md) section 6).
+Marked in the plan, STATUS and the multi-breeder plan's gates (2.1), where decision 9 is now
+the only gate left. No code, no migration, no version bump.

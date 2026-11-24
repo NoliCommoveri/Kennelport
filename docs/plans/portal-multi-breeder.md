@@ -33,9 +33,8 @@ Checked in the code on 2026-11-24:
 ### 2.1 Before anyone outside the family (gates)
 
 1. **Phase 1's gate** ([`family-portal.md`](family-portal.md) section 6): one real litter run
-   from the signed contract to the vet visit, with no fixes by hand. It waits for a real
-   litter. Going wider before it passes means finding the gaps with more than one breeder
-   at once.
+   from the signed contract to the vet visit, with no fixes by hand. **Passed** (the owner,
+   2026-11-24).
 2. **Open decision 9, content rules and suspension** ([`kennelport.md`](kennelport.md);
    [`loose-ends.md`](../loose-ends.md) #16): what a breeder may publish, and what gets a site
    suspended. The portal adds families' uploads (vet records, photos) and messages, so
