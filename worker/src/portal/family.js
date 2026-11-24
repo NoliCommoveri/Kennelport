@@ -21,7 +21,7 @@ import {
   getSettings, placementFor, healthRecords, vetOf, recordVetBooking, saveFile, getFile, familyEmails, PortalError, recordKind, registrationWords, MAX_FILE_BYTES,
   DEFAULT_DISCLOSURE, dialable,
 } from './store.js';
-import { stage, vetDeadline, formatAt, formatDay, timeLeft, localParts, addDays, VET_RULES } from './vet.js';
+import { stage, vetDeadline, vetTabShown, formatAt, formatDay, timeLeft, localParts, addDays, VET_RULES } from './vet.js';
 import { stepsFor, openTasks, programsFor, setDone, setProgramStatus } from './steps.js';
 import { PORTAL_VERSION } from './version.js';
 import { LOOKS, lookOf } from './looks.js';
@@ -71,7 +71,7 @@ const STAY_TABS = [['/family', 'home', 'Home'], ['/family/stay', 'award', 'Stay'
 
 function frame(site, title, body, { status = 200, fam = null, tab = null, action = '', headers = {}, bare = false, script = null, page = null, mkp = false } = {}) {
   const kennel = site.kennel_name || site.subdomain;
-  const list = fam ? (fam.loss ? LOSS_TABS : fam.stay ? STAY_TABS : TABS).map((t) => (t[0] === '/family/vet' && fam.vetDone ? fam.afterVet : t)) : [];
+  const list = fam ? (fam.loss ? LOSS_TABS : fam.stay ? STAY_TABS : TABS).map((t) => (t[0] === '/family/vet' && !fam.vetTab ? fam.afterVet : t)) : [];
   // In a look other than Classic (portal/looks.js) the tabs and the header are the mockup's
   // (family/mk.js): its icons, the tabs in a row, Messages first in the header.
   const look = !bare && isLook(site);
@@ -281,7 +281,7 @@ function nextBand(tasks, name, kennel) {
 // ---------- signed in ----------
 
 async function loadContext(env, site, fam) {
-  const p = await placementFor(env, site.id, fam.familyId);
+  const p = asFamilySees(await placementFor(env, site.id, fam.familyId));
   const s = await getSettings(env, site.id);
   // The website's puppy while it's there, then the copy kept for them (portal/pups.js).
   const pup = await pupOf(env, site.id, p);
@@ -361,6 +361,9 @@ function clock(hm) {
 const bookedWords = (v) => { const [d, t] = String(v ?? '').split('T'); return d ? `${formatDay(d)}${t ? `, ${clock(t)}` : ''}` : ''; };
 // The vet visit is behind them (the owner, 2026-11-21): the record accepted, or uploaded
 // and pickup a week ago. Then the Vet visit tab gives way and the page shows it done.
+// A record she declined reads to the family as if none were in (store.js declineProof):
+// the vet visit asks for it again, and nothing says it was turned down.
+const asFamilySees = (p) => (p?.proof_declined_at ? { ...p, proof_file_id: null, proof_uploaded_at: null, proof_accepted_at: null } : p);
 const vetDone = (p, now = new Date()) => Boolean(p?.proof_accepted_at || (p?.proof_uploaded_at && p.picked_up_at && new Date(now).getTime() - Date.parse(p.picked_up_at) > 7 * 86400000));
 const inDays = (n) => (n > 1 ? `${n} days` : n === 1 ? 'Tomorrow' : n === 0 ? 'Today' : null);
 // Numbered steps on soft blobs (the vet visit, what's next).
@@ -621,7 +624,7 @@ async function handbookPage(env, site, fam, url) {
 // A photo in her handbook: only one a chapter they can read shows, and only while it's
 // in her photos. The 400px copy: a book page is no wider.
 async function handbookPhoto(env, site, fam, id) {
-  const p = await placementFor(env, site.id, fam.familyId);
+  const p = asFamilySees(await placementFor(env, site.id, fam.familyId));
   const ok = p && active(p) && photoIdsIn(await shownChapters(env, site.id)).includes(id);
   const row = ok ? await env.DB.prepare('SELECT r2_key, thumb_key, type FROM photos WHERE id = ? AND site_id = ? AND removed_at IS NULL').bind(id, site.id).first() : null;
   const obj = row && await env.FILES.get(row.thumb_key || row.r2_key);
@@ -679,7 +682,7 @@ async function vetPage(env, site, fam, { error, note } = {}, now = new Date()) {
     const seen = p.vet_booked_for ? `Seen ${esc(bookedWords(p.vet_booked_for))}${p.vet_clinic ? ` at ${esc(p.vet_clinic)}` : ''}. ` : p.vet_clinic ? `Seen at ${esc(p.vet_clinic)}. ` : '';
     if (isLook(site)) {
       const page = mk.vetDone({ accepted, kennel, name, seen, uploaded: formatAt(p.proof_uploaded_at, s.time_zone), proofId: proof.id });
-      return frame(site, 'Vet visit', `${noteBox(note)}${errorBox(error)}${page}`, { mkp: true, fam, tab: fam.vetDone ? null : '/family/vet', page: 'vet', status: error ? 400 : 200 });
+      return frame(site, 'Vet visit', `${noteBox(note)}${errorBox(error)}${page}`, { mkp: true, fam, tab: fam.vetTab ? '/family/vet' : null, page: 'vet', status: error ? 400 : 200 });
     }
     const done = `${noteBox(note)}${errorBox(error)}
   <section class="card c-sand vethead"><p class="eyebrow">The vet visit</p>
@@ -693,7 +696,7 @@ async function vetPage(env, site, fam, { error, note } = {}, now = new Date()) {
       <label>A photo or PDF, up to 10 MB<input type="file" name="file" accept="image/*,application/pdf" required></label>
       <button class="btn line">${ic('upload')} Upload</button>
     </form></details>`}`;
-    return frame(site, 'Vet visit', done, { fam, tab: fam.vetDone ? null : '/family/vet', page: 'vet', status: error ? 400 : 200 });
+    return frame(site, 'Vet visit', done, { fam, tab: fam.vetTab ? '/family/vet' : null, page: 'vet', status: error ? 400 : 200 });
   }
   if (isLook(site)) {
     const due = running && p.vet_deadline_at;
@@ -958,11 +961,14 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
   }
   if (!fam) return path === '/family' ? signInPage(site) : redirect('/family');
   if (!view) slid.cookie = fam.cookie;
-  const current = await placementFor(env, site.id, fam.familyId);
+  const current = asFamilySees(await placementFor(env, site.id, fam.familyId));
   fam.loss = isLoss(current);
   fam.stay = Boolean(!fam.loss && current && active(current) && !current.picked_up_at && await stayFor(env, site.id, current.id));
   fam.vetDone = Boolean(!fam.loss && current && vetDone(current));
-  if (fam.vetDone) fam.afterVet = (await shownChapters(env, site.id)).length ? ['/family/handbook', 'book', 'Handbook'] : ['/family/photos', 'paw', 'Photos'];
+  // The Vet visit tab: until 24 hours past the deadline, gone early once a record is in
+  // (vet.js vetTabShown). Home keeps a line asking for the record after that.
+  fam.vetTab = !current || vetTabShown(current);
+  if (!fam.vetTab) fam.afterVet = (await shownChapters(env, site.id)).length ? ['/family/handbook', 'book', 'Handbook'] : ['/family/photos', 'paw', 'Photos'];
   // On Messages itself they're read as the page shows them.
   fam.unread = fam.loss || path === '/family/messages' ? 0 : await unreadFrom(env, site.id, fam.familyId, 'breeder');
   if (fam.viewing) fam.band = viewBand(fam, path, url.searchParams.get('viewing') === 'nochange');

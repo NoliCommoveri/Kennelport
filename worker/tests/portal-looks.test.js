@@ -128,7 +128,9 @@ test('every look stylesheet is there, and draws no file that is gone', async () 
 });
 
 // The owner, 2026-11-21: once the vet visit is behind them, the Vet visit page shows it
-// done and its tab gives way (to the handbook, else Photos); nothing uploaded, it stays.
+// done and its tab gives way (to the handbook, else Photos). 2026-11-24: the tab goes as
+// soon as a record is in, and 24 hours past the deadline anyway; one she declines brings
+// it back (and the family's pages ask for the record again).
 test('the vet visit once it is done: the page says so, the tab gives way', async () => {
   const { env, site, fam } = await setup();
   const db = env.DB.raw;
@@ -139,7 +141,7 @@ test('the vet visit once it is done: the page says so, the tab gives way', async
   assert.deepEqual(tabs(await fam('/family')), ['Home', 'Timeline', 'Vet visit', 'Records']);
   assert.match(await fam('/family'), /Booked for Thu, Dec 24, 10:30 am/);
   assert.match(await fam('/family/vet'), /action="\/family\/vet\/booked"/);
-  // Uploaded, not yet accepted, in the first week: done-looking, a new record still possible, the tab stays.
+  // Uploaded, not yet accepted: done-looking, a new record still possible, and the tab gives way at once.
   db.prepare("INSERT INTO portal_files (id, site_id, placement_id, kind, r2_key, type, bytes, name, uploaded_by, uploaded_at) VALUES ('f1', ?, ?, 'proof', 'k', 'application/pdf', 1, 'record.pdf', 'family', ?)").run(site.id, p.id, new Date().toISOString());
   db.prepare("UPDATE portal_placements SET proof_file_id = 'f1', proof_uploaded_at = ? WHERE id = ?").run(new Date().toISOString(), p.id);
   let vet = await fam('/family/vet');
@@ -148,7 +150,7 @@ test('the vet visit once it is done: the page says so, the tab gives way', async
   assert.match(vet, /AK Boston Terriers will check it/);
   assert.match(vet, /Upload a different record/);
   assert.doesNotMatch(vet, /action="\/family\/vet\/booked"/);
-  assert.deepEqual(tabs(vet), ['Home', 'Timeline', 'Vet visit', 'Records']);
+  assert.deepEqual(tabs(vet), ['Home', 'Timeline', 'Photos', 'Records']);
   // Accepted: done, no forms; the tab gives way to Photos (no handbook here).
   db.prepare('UPDATE portal_placements SET proof_accepted_at = ? WHERE id = ?').run(new Date().toISOString(), p.id);
   vet = await fam('/family/vet');
@@ -158,9 +160,57 @@ test('the vet visit once it is done: the page says so, the tab gives way', async
   assert.doesNotMatch(vet, /<form method="post" action="\/family\/vet/);
   assert.match(vet, /<body class="in pg-vet"/);
   assert.deepEqual(tabs(await fam('/family')), ['Home', 'Timeline', 'Photos', 'Records']);
-  // Uploaded but never accepted, a week after pickup: the tab gives way too.
+  // Uploaded but never accepted, a week after pickup: still gone.
   db.prepare('UPDATE portal_placements SET proof_accepted_at = NULL, picked_up_at = ? WHERE id = ?').run(new Date(Date.now() - 8 * DAY).toISOString(), p.id);
   assert.deepEqual(tabs(await fam('/family/records')), ['Home', 'Timeline', 'Photos', 'Records']);
+
+  // Nothing uploaded: the tab stays until 24 hours past the deadline, then goes; Home
+  // still asks for the record.
+  const HOUR = 3600000;
+  const at = (ms) => new Date(Date.now() + ms).toISOString();
+  db.prepare("UPDATE portal_placements SET proof_file_id = NULL, proof_uploaded_at = NULL, pickup_state = 'confirmed', picked_up_at = ?, vet_deadline_at = ? WHERE id = ?").run(at(-80 * HOUR), at(-8 * HOUR), p.id);
+  assert.deepEqual(tabs(await fam('/family')), ['Home', 'Timeline', 'Vet visit', 'Records']);
+  db.prepare('UPDATE portal_placements SET picked_up_at = ?, vet_deadline_at = ? WHERE id = ?').run(at(-100 * HOUR), at(-25 * HOUR), p.id);
+  const home = await fam('/family');
+  assert.deepEqual(tabs(home), ['Home', 'Timeline', 'Photos', 'Records']);
+  assert.match(home, /Upload the vet's record on the <a href="\/family\/vet">Vet visit<\/a> page|upload the record on the <a href="\/family\/vet">Vet visit<\/a> page/);
+  // The page itself still opens from that link, with no tab lit.
+  assert.doesNotMatch(await fam('/family/vet'), /aria-current/);
+
+  // Uploaded, then she declines it: the tab is back for a day, and their pages ask again.
+  db.prepare('UPDATE portal_placements SET proof_file_id = \'f1\', proof_uploaded_at = ?, proof_declined_at = ? WHERE id = ?').run(at(-30 * HOUR), at(-1 * HOUR), p.id);
+  vet = await fam('/family/vet');
+  assert.deepEqual(tabs(vet), ['Home', 'Timeline', 'Vet visit', 'Records']);
+  assert.doesNotMatch(vet, /Record uploaded: thank you|will check it|declined/i);
+  // A day after she declined, with nothing new: gone again.
+  db.prepare('UPDATE portal_placements SET proof_declined_at = ? WHERE id = ?').run(at(-25 * HOUR), p.id);
+  assert.deepEqual(tabs(await fam('/family')), ['Home', 'Timeline', 'Photos', 'Records']);
+});
+
+test('her vet record: decline it, the family uploads again, she accepts', async () => {
+  const { declineProof, acceptProof, saveFile, getPlacement } = await import('../src/portal/store.js');
+  const { vetStatus, vetTabShown } = await import('../src/portal/vet.js');
+  const { env, site } = await setup();
+  const db = env.DB.raw;
+  const p = db.prepare('SELECT id FROM portal_placements WHERE site_id = ?').get(site.id);
+  await assert.rejects(declineProof(env, site.id, p.id), /No vet record to decline yet/);
+  await saveFile(env, site.id, p.id, { kind: 'proof', bytes: new TextEncoder().encode('%PDF-1.4 a'), name: 'r.pdf', by: 'family' });
+  let row = await getPlacement(env, site.id, p.id);
+  assert.equal(vetTabShown(row), false);
+  await declineProof(env, site.id, p.id);
+  row = await getPlacement(env, site.id, p.id);
+  assert.ok(row.proof_declined_at);
+  assert.equal(vetStatus(row).word, 'Record declined');
+  assert.equal(vetTabShown(row), true);
+  // A new upload clears it; accepting does too.
+  await saveFile(env, site.id, p.id, { kind: 'proof', bytes: new TextEncoder().encode('%PDF-1.4 b'), name: 'r2.pdf', by: 'family' });
+  row = await getPlacement(env, site.id, p.id);
+  assert.equal(row.proof_declined_at, null);
+  await declineProof(env, site.id, p.id);
+  await acceptProof(env, site.id, p.id);
+  row = await getPlacement(env, site.id, p.id);
+  assert.equal(row.proof_declined_at, null);
+  assert.equal(vetStatus(row).word, 'Accepted');
 });
 
 // The looks' checklist (family/mk.js): a box that sends its form. Ticked, the form carries

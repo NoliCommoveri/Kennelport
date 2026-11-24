@@ -340,7 +340,7 @@ test('ready-made tasks: she picks a program and a wording; registration goes in 
   // One puppy's name typed into her template is flagged; {name} is not.
   await her('/portal/timeline/new', { title: 'Register Opal', body: 'Papers in the folder.', days: '30', when: 'after', count_from: 'pickup' });
   const flagged = await (await her('/portal/timeline')).text();
-  assert.match(flagged, /Every family reads "Opal" here/);
+  assert.match(flagged, /Every family reads (?:"|&quot;)Opal(?:"|&quot;) here/);
   assert.equal((flagged.match(/Every family reads/g) ?? []).length, 1);
 
   // For one family alone.

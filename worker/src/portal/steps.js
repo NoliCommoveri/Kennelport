@@ -76,7 +76,7 @@ export const READY_TASKS = {
     ],
   },
   insurance: {
-    label: 'Insurance', days: 3, button: 'Activate the trial',
+    label: 'Insurance', days: 1, button: 'Activate the trial',
     choices: [
       { title: 'Activate {name}\'s insurance trial', body: 'The free trial has to be activated within a few days of pickup.' },
       { title: 'Start {name}\'s free insurance', body: 'Activate it now so {name} is covered from the first week home.' },

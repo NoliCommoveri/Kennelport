@@ -43,8 +43,8 @@ anyone outside the family.
 
 | Step | State |
 |---|---|
-| 1. Display and timing rules | Built (pup, registration, price, date and timing rules; health tests' short names on cards, 2026-11-24; dog cards' details always, registries' short names and two-column lists, 2026-11-24, `ASSET_VERSION` 31); the dog rules, fixed wording, formats and how KennelOS data lands still to come |
-| 2. The breeder's instructions (`manage/wording.js`) | 2.1–2.3 built; **2.4 to do:** the portal's screens for her (`portal/admin.js`) and Today |
+| 1. Display and timing rules | Built (pup, registration, price, date and timing rules; health tests' short names on cards, 2026-11-24; dog cards' details always, registries' short names and two-column lists, 2026-11-24, `ASSET_VERSION` 31); health results grouped by kind on cards, no headings, each kind kept together in two columns, 2026-11-24 `ASSET_VERSION` 32 on this branch (the owner's yes); the dog rules, fixed wording, formats and how KennelOS data lands still to come |
+| 2. The breeder's instructions (`manage/wording.js`) | 2.1–2.3 built; **2.4 nearly done** 2026-11-24 (`manage/wording-portal.js`): every portal screen of hers moved (Today, the tabs, Families, a family's screen, Portal settings, the checklist and timeline, the Dogs tab, the notes); still to move: the portal's errors (`PortalError` messages, about 120) |
 | 3. Pages, blocks, menu | Built: 3.1–3.8 (3.5 page addresses and 3.8 the forms' fields, 2026-11-14, migration 0035) |
 | 4. The owner's own blocks and styling | Banners, buttons, dividers, spacers, photos, collages, photo beside words, text over a photo, text, gallery strip, block backgrounds and spacing built. **Next, the photo system:** albums from photos she has, then the duplicate check. Still to come: videos as blocks, links to a dog/litter/puppy, fonts and the font library, text size on built-in blocks |
 | 4a. Extras, Cards, documents | Built 2026-11-18 (migration 0038): the **Extras block** (step cards by default, package cards or expanders; a big figure, More details, a highlighted one, her own description); the **Cards block** (free cards: photo, figure, labels, heading, words, button); **Documents** (a site's PDFs in the admin view; any button can open one). `ASSET_VERSION` 28 (on `main`). The gaps (storage, reordering cards, menu links, the breeder's documents, covers, full-size flyers) are planned in [`plans/documents-cards-gaps.md`](plans/documents-cards-gaps.md); **flyers (step 6) built 2026-11-18**: the whole photo on the Photo block, Opens full size on a tap, Full detail on upload (`ASSET_VERSION` 29, `APP_VERSION` 19 on this branch). Build log, 2026-11-18. |
@@ -64,7 +64,7 @@ anyone outside the family.
 - She removes a photo from one family's portal (a photo of the wrong pup) on their screen,
   and can put it back; the website stays as it is. Migration 0044 (2026-11-23).
 - Phase 1's gate (one litter run from signed contract to the vet visit with no fixes by
-  hand, plan section 6): **waits for a real litter**; she has none yet (2026-11-12).
+  hand, plan section 6): **passed** (the owner, 2026-11-24).
 - Still open from "Before building" (plan section 14): her programs list, vet-visit
   wording, guarantee periods, handbook and food details, baseline sign-up rates,
   application-to-buyer mapping, photo and video package details, R2 and HEVC checks.
@@ -72,7 +72,10 @@ anyone outside the family.
   migration 0040 (`portal_chapters`). Her chapters on the Portal tab; families read it as a flipbook
   with search; chapters she writes with Claude upload as a file, styled, with her photos; Read next and a quick link, shown only once a chapter has words. `PORTAL_VERSION` 4 on this
   branch. Build log, 2026-11-21. Tables, tick boxes and urgent (red) notes in chapters,
-  2026-11-24, `PORTAL_VERSION` 8.
+  2026-11-24, `PORTAL_VERSION` 8 (on `main`). A swipe turns the page on a phone, and the
+  book fits under her preview band, `PORTAL_VERSION` 9.
+- The Vet visit tab goes 24 hours past the deadline, or as soon as a record is in; she can
+  decline a record, which brings it back (2026-11-24, migration 0045). Build log, 2026-11-24.
 - **Looks** (2026-11-21, migration 0042): each breeder picks Classic, Forest or Cream in
   her portal settings; Forest and Cream are the owner's mockups (`docs/reference/portal-looks.html`).
   `PORTAL_VERSION` 6 on this branch. Forest and Cream drawn as the prototype draws them
@@ -85,7 +88,7 @@ anyone outside the family.
   Portal tab (cost, an expense column, where from, a program and her button words), Sent
   home with on each family's screen, What came home in their puppy's bag on Records from
   pickup; KennelOS sends her items (`bag_items` in the bundle) and gets what went home back
-  in the feed's facts. **Needs a `PORTAL_VERSION` bump (4, on `main`): asked the owner.**
+  in the feed's facts. Released: on `main` with `PORTAL_VERSION` 7.
   For KennelOS: plan sections 4a and 4b. Build log, 2026-11-21. Next in phase 2: to choose.
 - Home's food band, two across (the owner, 2026-11-21): her bowl picture on the food card;
   beside it, stacked, the insurance card (her shield picture, "Activate {pup}'s pet
@@ -94,8 +97,10 @@ anyone outside the family.
   `main` (the owner's yes). Her referral programs are no longer listed under "Included with": Home lists only those not on the band, as "Recommended for {pup}". No migration. Build log, 2026-11-21.
 - Phase 3: not started.
 - **More than one breeder:** planned 2026-11-24 ([`plans/portal-multi-breeder.md`](plans/portal-multi-breeder.md)).
-  The data is already per site; still to do: phase 1's gate and decision 9, site-builder steps
-  5, 6 and 2.4, a setup flow, KennelOS's side for each kennel. Four questions for the owner. Not started.
+  The data is already per site; still to do: site-builder steps 5, 6 and 2.4, a setup flow,
+  KennelOS's side for each kennel. The owner's answers (2026-11-24): decision 9 parked while she
+  approves every breeder; starting content copied per breeder by her; no portal-only sites; her
+  switch, no sign-up. **Started** with step 2.4.
 - The same family twice, and deleted families (2026-11-13): the feed links a family's only
   typed placement; **Merge** for a typed placement or family into KennelOS's; **Delete
   now**; **Let KennelOS send them again** for a family deleted for good. Migration 0032
@@ -113,7 +118,8 @@ anyone outside the family.
   placement) is in the plan's last section. No version bump. Build log, 2026-11-19.
 - Ready-made timeline tasks (registration, and a wording to choose for each program with
   its link), and a warning on a template task that names one puppy: built 2026-11-21. No
-  migration, no version bump. Build log, 2026-11-21.
+  migration, no version bump. Build log, 2026-11-21. Insurance now starts at 1 day after
+  pickup (2026-11-24).
 
 ## Finished feature plans
 
@@ -127,7 +133,7 @@ anyone outside the family.
 Verdict: keep the code, fix how it reaches production. Done: backup, tests on every
 change, a plain page for unexpected errors, migrations applying themselves (item 1), a
 limit on wrong `/ops` tokens (item 4). Descoped (the owner): required checks before a
-merge. The portal's gate waits for a real litter, so features carry on meanwhile.
+merge. The portal's phase 1 gate passed 2026-11-24.
 
 ## Loose ends ([`loose-ends.md`](loose-ends.md))
 

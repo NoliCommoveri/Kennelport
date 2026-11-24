@@ -245,6 +245,14 @@ test("display rules over KennelOS's raw values: a litter card's line by its Kenn
   const reordered = [...draw(set, '/dogs/willow').matchAll(/<span class="eyebrow">([^<]+)<\/span><ul class="tests">/g)].map((m) => m[1]);
   assert.deepEqual(reordered, ['OFA / PennHIP', 'Genetic testing', 'Health testing']);
 
+  // On a card: grouped the same way, with no heading over each kind, each row marked
+  // with its kind for the two-column lists (the owner, 2026-11-24).
+  ins.run('h4', s.id, willow.id, 'BAER', 0, 'breed_specific_test');
+  snap = await buildSnapshot(env, s.id);
+  const back = draw(set, '/dogs').match(/<ul class="tests" data-cols><li data-kind[\s\S]*?<\/ul>/)[0];
+  assert.deepEqual([...back.matchAll(/data-kind="(\w+)"><span>([^<]+)/g)].map((m) => `${m[1]}:${m[2]}`), ['ofa:Hips', 'breed:BAER', 'genetic:DM', 'other:Her own note']);
+  assert.doesNotMatch(back, /eyebrow/);
+
   // Saving the Dogs screen with one heading in two places is refused.
   const { partsFromForm, RuleError } = await import('../src/content/rules.js');
   const form = { 'dogs.sale_price': 'site', 'dogs.sale_pill': 'ok', 'dogs.health_kind_1': 'ofa', 'dogs.health_kind_2': 'ofa', 'dogs.health_kind_3': 'genetic', 'dogs.health_kind_4': 'other', 'dogs.import_generations': '3', 'dogs.champion_generations': '3', 'dogs.champion_titles': 'CH GCH', 'dogs.home_country': '', 'dogs.foreign_generations': '3' };

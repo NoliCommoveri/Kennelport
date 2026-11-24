@@ -366,6 +366,7 @@ The revenue placements and the vet countdown, and nothing else:
   both sides, Families with the waitlist, Dogs shared, the Portal tab
 **Gate:** one litter run from signed contract to the vet visit with no fixes by hand,
 including one pickup she forgot to mark (section 5).
+**Passed** (the owner, 2026-11-24).
 
 ### Phase 2: handbook and keepsakes
 

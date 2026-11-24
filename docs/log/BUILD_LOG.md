@@ -2609,6 +2609,15 @@ Four questions for the owner. No code, no migration, no version bump.
 - Both in the site template; `ASSET_VERSION` 31 isn't on `main` yet, so no second bump:
   fingerprint updated beside 31. Checked on the card test page at 390px and 1280px.
 
+## 2026-11-24: Ready-made insurance task due 1 day after pickup
+
+The owner wants insurance due the day after pickup, not three days. The ready-made
+insurance task (`READY_TASKS.insurance` in `portal/steps.js`) now starts at 1 day after
+pickup. Only new tasks added from the picker change; existing tasks keep the day she set,
+and she changes those on her Timeline screen. The suggested timeline for a new site still
+puts its insurance step at 5 days ("within a few days of pickup"); left for the owner to
+decide. Due dates count whole days from the pickup date, not hours. No migration, no
+version bump.
 ## 2026-11-24: Handbook tables, tick boxes and urgent notes
 
 The breeder's printed handbook (AK Boston Terriers Puppy Parent Handbook, 32 pages) is
@@ -2635,3 +2644,172 @@ show. Added to `portal/handbook.js` (`bodyHtml`, `plainText`, `htmlToText`):
   opening them as a family, in Chromium at 390px and 1280px with the flipbook running.
   Test in `portal-handbook.test.js`.
 - `PORTAL_VERSION` bumped to 8 (owner said yes), fingerprint updated.
+
+## 2026-11-24: Handbook: a swipe turns the page on a phone; the book fits under her preview band
+
+The owner, in "See their portal" on her phone: the handbook wouldn't flip. Two causes,
+both in `public/_kp/f/`:
+
+- **A finger swipe never turned a page, for families too.** A page's words (`.content`)
+  scroll on their own, and a scroll container stops `touch-action: pan-y` on `.book` from
+  reaching it, so the phone took the swipe as a pan and sent `pointercancel` with no
+  `pointerup`. `handbook.js` now reads a finger's swipe from `touchstart`/`touchend`
+  (which still arrive), keeps pointer events for a mouse or pen, and `.content` gets
+  `touch-action: pan-y` too.
+- **In her preview the arrows were off the bottom of the screen.** The reader was a full
+  `100dvh` tall under the read-only band, and the page can't scroll. The handbook's
+  `body.bare` is now a column, band then book, and the cover and reader take the height
+  that's left.
+- Checked with real touch swipes (CDP touch events) on an emulated Galaxy S9+, as a family
+  and through her view link: a swipe turns the page, and the arrows sit at the foot of the
+  screen in both, at 1280px as well. Before the fix, the same swipe did nothing in either.
+- `PORTAL_VERSION` bumped to 9 (owner said yes), fingerprint updated.
+
+## 2026-11-24: The Vet visit tab goes 24 hours past the deadline; she can decline a record
+
+The owner: many families never go to the vet or never upload the record, so the Vet visit
+tab mustn't stay in their tab bar for good. Before, it went only once she accepted the
+record, or a week after pickup with a record in.
+
+- **The rule** (`portal/vet.js` `vetTabShown`): the tab shows until 24 hours past the vet
+  deadline. A record in (uploaded and not declined, or accepted) takes it away at once. One
+  she declines brings it back for 24 hours past the later of the deadline and her
+  declining. Before pickup there's no deadline, so it shows. Its place goes to the
+  Handbook, else Photos, as before (`family.js`, `fam.vetTab`). The Vet visit page still
+  opens from Home's links, with no tab lit.
+- **Home's reminder:** none added. Once the vet days are over, Home's tile already says
+  "Upload the vet's record on the Vet visit page" with a link, in Classic and the looks,
+  whenever no record is in.
+- **Declining** (migration **0045**, `portal_placements.proof_declined_at`, additive): a
+  Decline it button beside Accept on her family screen, with a hint, and a confirmation
+  that tells her to message them about what's missing. Her status word is "Record
+  declined" (in red, as trouble). A declined record leaves her "to review" list. The
+  family's pages read as if no record were in (`asFamilySees` in `family.js`): the vet
+  visit asks for it again, and nothing on their side says it was declined. Their next
+  upload clears it, and so does her accepting it after all. The file is kept and is still
+  in her History ("Vet record declined"). `merge.js` carries the column with the other
+  vet fields.
+- Wording: the family screen isn't in `manage/wording.js` yet, so the button, the hint
+  (`portal/admin.js`) and the confirmation (`admin/parts.js` NOTES, beside "accepted")
+  sit with that screen's other lines, ready to move.
+- Tests: `portal-looks.test.js` now checks the new rule step by step (uploaded: gone at
+  once; nothing uploaded: still there 8 hours past the deadline, gone at 25 hours with
+  Home's line; declined: back, with their pages asking again; a day later, gone) and
+  declining, uploading again and accepting in the store. Her card checked at 390px.
+- No file under `public/` changed, so no version bump. The migration applies itself on
+  the first request after the deploy.
+## 2026-11-24: Family portal phase 1's gate passed
+
+The owner confirmed phase 1's gate is met: one litter run from signed contract to the vet
+visit with no fixes by hand ([`plans/family-portal.md`](../plans/family-portal.md) section 6).
+Marked in the plan, STATUS and the multi-breeder plan's gates (2.1), where decision 9 is now
+the only gate left. No code, no migration, no version bump.
+
+## 2026-11-24: More than one breeder started; site-builder step 2.4, first slice
+
+- The owner answered the multi-breeder plan's four questions
+  ([`plans/portal-multi-breeder.md`](../plans/portal-multi-breeder.md) section 5): decision 9
+  parked while she approves every breeder by hand; a new breeder starts blank and the owner
+  copies a handbook, bag, checklist or timeline from any site when it fits; no portal-only
+  sites (2.7 dropped for now); the portal stays her switch, no self sign-up.
+- Step 2.4 (the portal's screens for the breeder into the owner's list), first slice: new
+  `manage/wording-portal.js` (`PORTAL_LINES`, four new screens in the owner's editor: Portal:
+  what needs you on Today; Families and adding a family; the Portal tab; the notes after a
+  change), read into `wording.js` with its other screen lines. Moved: every portal item on
+  Today's Needs you, the vet visits and recent activity lists, "Last from KennelOS" and its
+  "how long ago", why a placement closed, the Families tab (filters, list lines, pills, recently
+  deleted, erased), the waitlist side, Add a family, the puppy fields a family's screen shares
+  with it, the Portal tab's list, and the portal's notes after a change and "Not saved:".
+  `sayHtml` (`admin/parts.js`) for a line with a drawn name (the portal's address in bold).
+- Today's wording by default: the moved screens render the same text as before (compared
+  before and after, rendered). Test in `wording.test.js`. No migration, no version bump (no
+  file under `public/_kp/` changed).
+- Still in the code, for the next slices: a family's screen (pickup, vet visit, records,
+  contract, history, messages, loss, stays, extras), Portal settings (with the vet rule's words,
+  `VET_RULES`, and the vet statuses in `portal/vet.js`, which families read too), the checklist
+  and timeline screens (`admin/templates.js`, `portal/steps.js`).
+
+## 2026-11-24: Site-builder step 2.4, second slice: a family's screen
+
+- A family's screen in the owner's list (`manage/wording-portal.js`), as three screens in her
+  editor: **Portal: a family's screen** (`pf.*`: KennelOS's line and newer values, emails and
+  invite, pickup, the loss note, the vet visit, the checklist and timeline as this family has
+  them, programs, health records, contract, the puppy's details, life status, the loss form,
+  change, delete, erase), **Portal: a family's extras and stays** (`pstay.*`), and **Portal: a
+  family's reminder log, history and messages** (`plog.*`, `phist.*`: the reminders' names and
+  results, each History field, who changed it). `familyScreen` in `portal/admin.js` rewritten
+  around a `t(key, vars)` helper; the page's title and Not found too.
+- Today's wording by default: rendered before and after with a family not picked up, one
+  picked up with a record and a message, a stay with an update, a loss and a backed-out family;
+  the text is the same. Test in `wording.test.js`. No migration, no version bump.
+- Still in the code, shared with other screens and moved with them: the vet status words
+  (`portal/vet.js`, families read them too) and `VET_RULES`, the record kinds
+  (`store.js` `RECORD_TYPES`), the program statuses (`steps.js` `PROGRAM_WORDS`), the skill
+  levels (`stays.js` `LEVELS`), the step fields and ready-made tasks (`admin/templates.js`),
+  the suggested-change labels (`admin/parts.js` `SUGGEST_LABEL`), and the loss note's
+  starting draft (`account.js` `lossDraft`, words the family reads once she sends them).
+
+## 2026-11-24: Site-builder step 2.4, third slice: Portal settings, the checklist and timeline, Today and the Dogs tab
+
+- In the owner's list (`manage/wording-portal.js`), four more screens: **Portal: Portal
+  settings** (`pset.*`, the looks `plook.*`), **Portal: the go-home checklist and first-weeks
+  timeline** (`ptpl.*`: the screens, the step fields, the ready-made task form, "5 days after
+  pickup", the puppy's-name warning, the suggested registration task), **Portal: the Dogs tab**
+  (`pdogs.*`), and **Portal: words her portal screens share** (where a vet visit stands
+  `pvet.*`, the vet rules `pvet.rule.*`, what a KennelOS value is for `psug.*`, program statuses,
+  skill levels and record kinds as she picks them `pchoice.*`). On **Portal: what needs you,
+  on Today**: the tabs' names (`ptab.*`), the line under Today's date, the going-home cards
+  (`phome.*`), and "Last from KennelOS".
+- `vetStatus` (`portal/vet.js`) now gives a `key` beside its word; her screens say the owner's
+  word for it, and compare keys, not words. The families' pages still read `VET_RULES`, `LEVELS`
+  and `recordKind` as before (their wording isn't in the owner's list). The tabs take her
+  wording through `sitePage` (`manage/index.js`), which now passes `say` to `nav()`.
+- Today's wording by default: rendered before and after (Portal settings, the checklist and
+  timeline with a suggested task and a named-puppy warning, Today with pickups today and in
+  three days, the Dogs tab); the text is the same. One test changed for an encoding only:
+  the named-puppy warning's quotes are now written `&quot;` (`portal-steps.test.js`); the vet
+  test reads the new `key`. Test in `wording.test.js`. No migration, no version bump.
+- Left for the last slice of 2.4: the portal's errors that tell her what to fix (`PortalError`
+  messages across `portal/*.js`, about 120; some are the families' too). The ready-made tasks
+  and suggested lists (`steps.js`) are starting content she edits, not her instructions: they
+  become the template's (site-builder step 6).
+
+## 2026-11-24: Merged the Vet visit tab branch into step 2.4's
+
+- Brought in `main` (handbook tables, tick boxes and urgent notes; `PORTAL_VERSION` 8) and
+  `ccr-4b3202a9-amiv4s` (the handbook's swipe, `PORTAL_VERSION` 9; the Vet visit tab's 24 hours
+  and Decline it, migration 0045). This branch adds no migration of its own, so 0045 stays the
+  one migration it carries.
+- That branch was written on the screens before their wording moved. Resolved by keeping its
+  feature in the owner's list: `pf.decline`, `pf.decline_hint`, `pf.declined` (a family's
+  screen), `pnote.declined`, `phist.proof_declined_at`, and `pvet.declined` ("Record declined",
+  with the key `declined` in `vetStatus`); Today's "Vet record to review" skips a declined
+  record, as it wrote. Its `vetTabShown` kept as written. Her screen's side tested in
+  `wording.test.js` (Decline it, its note, the status, History, her wording). 516 tests pass.
+- Its error "No vet record to decline yet." stays with the portal's other errors, the last
+  slice of 2.4.
+
+## 2026-11-24: Health results grouped by kind on cards
+
+- The owner (from the breeder, with screenshots of Abe): on a dog's card, its health
+  results came in her own order (BAER, DM, CMR1, JHC, HUU, Patella) while its page groups
+  them by kind. Now, with Group health results by kind on (her Kennel details switch), a
+  card lists them in the same kind order as the page (the owner's order of kinds, Dogs
+  screen), with **no heading over each kind** (the owner: don't display the kind on the
+  card). One function for both, `healthGroups` (`render/parts.js`); the page's
+  `healthLists` uses it. Parent cards' first three follow the same order. Switch off: as
+  before.
+- Each card row carries its kind (`data-kind`, not shown; the owner said keep it) so the
+  two-column lists keep a kind together (`site.js` `twoCols`): each kind's long rows first,
+  then its short ones in pairs, its odd one out on a whole line, so no pair mixes two
+  kinds. Where that would still leave the card growing and mixing the kinds makes it
+  shorter, they mix (the column rules come first). Details lists, and results with one
+  kind, lay out exactly as before.
+- Checked in Chromium at 390px and 1280px on the AK sample's Dogs page with Abe's six
+  tests entered out of order: DM | CMR1, JHC | HUU, BAER | Patella at both widths; with
+  three genetic tests, CMR1 takes the line and DM | JHC, BAER | Patella follow. Test in
+  `fields.test.js`.
+- Template files changed (`site.js`, a note in `site.css`): **needs `ASSET_VERSION` 32**
+  (31 is on `main`); asked the owner. Until then `versions.test.js` fails, as expected.
+  No migration.
+- `ASSET_VERSION` 31 → 32 with the owner's yes (`TEMPLATE_FILES` 8a878cad14f459a1). 516 pass.

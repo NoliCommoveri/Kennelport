@@ -43,7 +43,7 @@ export async function familyCandidates(env, siteId, fam) {
 // The columns that record what she and the family did (pickup, the vet visit, the
 // contract, a loss): taken from the typed placement where KennelOS's is blank.
 const PICKUP = ['picked_up_at', 'pickup_state', 'vet_deadline_at'];
-const DONE = ['bag_saved_at', 'vet_booked_for', 'vet_clinic', 'vet_booked_at', 'proof_file_id', 'proof_uploaded_at', 'proof_accepted_at', 'contract_file_id', 'contract_signed_on', 'loss_note', 'loss_note_at', 'loss_sent_at'];
+const DONE = ['bag_saved_at', 'vet_booked_for', 'vet_clinic', 'vet_booked_at', 'proof_file_id', 'proof_uploaded_at', 'proof_accepted_at', 'proof_declined_at', 'contract_file_id', 'contract_signed_on', 'loss_note', 'loss_note_at', 'loss_sent_at'];
 
 export async function mergePlacement(env, siteId, familyId, fromId, intoId) {
   const get = (id) => env.DB.prepare("SELECT * FROM portal_placements WHERE id = ? AND site_id = ? AND family_id = ? AND status = 'open'").bind(id, siteId, familyId).first();

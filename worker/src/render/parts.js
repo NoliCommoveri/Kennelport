@@ -6,7 +6,7 @@ import { applyPicks } from '../content/picks.js';
 import { escapeHtml as esc } from '../lib/html.js';
 import { PAGES, pupStatus, slugify, pillKey } from '../content/model.js';
 import { puppyPrice, litterPriceRange, depositRange } from '../content/prices.js';
-import { DEFAULT_RULES, DEFAULT_TIMING, ruleKey, addDays, testKey } from '../content/rules.js';
+import { DEFAULT_RULES, DEFAULT_TIMING, ruleKey, addDays, testKey, HEALTH_KINDS, HEALTH_KIND_PLACES } from '../content/rules.js';
 
 export { esc };
 export const attr = esc;
@@ -61,11 +61,30 @@ export const rulesOf = (snap) => snap.rules ?? DEFAULT_RULES;
 // A health result's row on a card, where space is short: the test's short name where
 // the owner set one (rules.short), its full name on a long press or hover; the dog's
 // own page keeps the full name (render/pages.js).
-export function testRow(snap, h) {
+export function testRow(snap, h, kind = null) {
   const short = rulesOf(snap).short?.[testKey(h.test)];
   const name = short ? `<span title="${attr(h.test)}">${esc(short)}</span>` : `<span>${esc(h.test)}</span>`;
-  return `<li>${name}<span>${esc(h.result)}</span></li>`;
+  return `<li${kind ? ` data-kind="${attr(kind)}"` : ''}>${name}<span>${esc(h.result)}</span></li>`;
 }
+
+// A dog's health results by kind (KennelOS's test type, contract C5), in the owner's
+// order of kinds (rules.dogs health_kind_*), with the breeder's Group health results by
+// kind on (sites.group_health): [[kind, rows]], the empty kinds left out. A type the
+// site doesn't know reads as no type ('other'). Off, one group in her own order.
+export function healthGroups(snap, health) {
+  if (!snap.site.group_health) return health.length ? [['', health]] : [];
+  const known = new Set(Object.values(HEALTH_KINDS).map(([, t]) => t).filter(Boolean));
+  const dogsRule = rulesOf(snap).dogs ?? {};
+  return HEALTH_KIND_PLACES.map((k) => dogsRule[k] ?? DEFAULT_RULES.dogs[k]).map((kind) => {
+    const type = HEALTH_KINDS[kind]?.[1];
+    return [kind, HEALTH_KINDS[kind] ? health.filter((h) => (type ? h.test_type === type : !known.has(h.test_type))) : []];
+  }).filter(([, rows]) => rows.length);
+}
+
+// A card's health rows: grouped by kind with no headings, each row marked with its kind
+// so the template's two-column lists keep a kind together (site.js "Two-column lists").
+export const healthRows = (snap, health, max = Infinity) => healthGroups(snap, health)
+  .flatMap(([kind, rows]) => rows.map((h) => [kind, h])).slice(0, max).map(([kind, h]) => testRow(snap, h, kind)).join('');
 // A registry as a card shows it: its short name where the owner set one
 // (rules.regshort, AKC for American Kennel Club (AKC)), else as written. A Registry
 // row's value, with the full name on a long press or hover.
@@ -522,7 +541,7 @@ export function parentCards(snap, l) {
     const line = d ? [d.color, regShort(snap, d.registry)].filter(Boolean).join(' · ') : '';
     const health = d?.health ?? [];
     const tests = health.length
-      ? `<ul class="tests">${health.slice(0, 3).map((h) => testRow(snap, h)).join('')}</ul>${health.length > 3 ? `<span class="small muted">and ${health.length - 3} more health result${health.length - 3 === 1 ? '' : 's'}</span>` : ''}`
+      ? `<ul class="tests">${healthRows(snap, health, 3)}</ul>${health.length > 3 ? `<span class="small muted">and ${health.length - 3} more health result${health.length - 3 === 1 ? '' : 's'}</span>` : ''}`
       : '';
     return `<div class="parent"><span class="eyebrow">${role === 'dam' ? 'Dam' : 'Sire'}</span>
       <article class="parent-card">${parentPhoto(snap, l, role)}<b class="call">${esc(name)}</b>${d?.registered_name ? `<span class="reg">${esc(d.registered_name)}</span>` : ''}${d?.titles ? `<span class="small">${esc(d.titles)}</span>` : ''}${line ? `<span class="small muted">${esc(line)}</span>` : ''}${tests}${d ? `<a class="more" href="/dogs/${attr(d.slug)}">View profile</a>` : ''}</article></div>`;
@@ -588,9 +607,11 @@ function dogItems(snap, d, { sale = null, link = true } = {}) {
   // Its details always (sex, colour, registry, weight), then its health results
   // where it has some (the owner, 2026-11-24: a dog with results used to lose its
   // sex and colour). data-cols: the template's site.js may set either list in two
-  // columns where the card would otherwise grow (site.css "Two-column lists").
+  // columns where the card would otherwise grow (site.css "Two-column lists"). Its
+  // health results come grouped by kind, as on its page, with no headings (the owner,
+  // 2026-11-24), each row's kind in data-kind so two columns keep a kind together.
   const tests = `<span class="eyebrow">Details</span><ul class="tests" data-cols><li><span>Sex</span><span>${sexWord(d.sex)}</span></li>${d.color ? `<li><span>Color</span><span>${esc(d.color)}</span></li>` : ''}${registryRow(snap, d.registry)}${weight}</ul>`
-    + (d.health.length ? `<span class="eyebrow">Health testing</span><ul class="tests" data-cols>${d.health.map((h) => testRow(snap, h)).join('')}</ul>` : '');
+    + (d.health.length ? `<span class="eyebrow">Health testing</span><ul class="tests" data-cols>${healthRows(snap, d.health)}</ul>` : '');
   const line = [snap.site.breed, d.role].filter(Boolean).join(' · ');
   return {
     call: () => `<span class="call">${esc(d.call_name)}</span>`,

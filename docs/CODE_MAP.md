@@ -86,6 +86,7 @@ read that before the rest. Update this map when you add, move or split a file.
   shows: her ticks and picks); `parts.js` small shared pieces.
 - `src/manage/forms.js`: an input per content field, with `LABELS` (field wording).
 - `src/manage/wording.js`: every other line she reads, as one list (`say('key')`).
+- `src/manage/wording-portal.js`: the family portal's screens for her, in that list (step 2.4, moved screen by screen).
 - `src/manage/hub.js`: Today, Families, Dogs, Website, Portal: the app for sites with the
   portal on.
 - `src/manage/builder.js` and `src/admin.js`: the owner's admin view (pages, blocks, menu,

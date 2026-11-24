@@ -214,3 +214,76 @@ test('her waitlist and sign-in errors, in the owner\'s words on her screens', as
   const w = await call(env, M, '/s/akbostons/waitlist/new', { method: 'POST', headers: { cookie: breeder, origin: ORIGIN }, body: form({ name: '' }) });
   assert.match(text(await w.text()), /Add the family's name first, AK Boston Terriers\./);
 });
+
+test('the portal\'s screens for her (step 2.4): Today, Families, Add a family, the Portal tab and the notes, in the owner\'s words', async () => {
+  const { PORTAL_LINES } = await import('../src/manage/wording-portal.js');
+  for (const [k, [, , t]] of Object.entries(PORTAL_LINES)) assert.equal(defaultSay(k, {}), t, k);
+  const env = await makeEnv({ PORTAL_EMAIL_KEY: 'portal-test-key' });
+  const ak = await addSite(env, 'akbostons', { kennel_name: 'AK Boston Terriers' });
+  const login = await call(env, M, '/ops/login', { method: 'POST', body: form({ token: 'ops-token' }) });
+  const cookies = login.headers.getSetCookie().map((c) => c.split(';')[0]);
+  const ops = cookies.find((c) => c.startsWith('ops_session='));
+  const admin = cookies.find((c) => c.startsWith('kp_admin='));
+  await call(env, M, `/ops/sites/${ak.id}/people`, { method: 'POST', headers: { cookie: ops }, body: form({ email: 'b@example.com', role: 'owner' }) });
+  await call(env, M, `/ops/sites/${ak.id}/portal/on`, { method: 'POST', headers: { cookie: ops } });
+  await call(env, M, '/signin', { method: 'POST', body: form({ email: 'b@example.com' }), headers: { origin: ORIGIN } });
+  const code = lastOutbox(env).subject.match(/(\d{6})/)[1];
+  const breeder = (await call(env, M, '/signin/verify', { method: 'POST', body: form({ email: 'b@example.com', code, label: 'Phone' }), headers: { origin: ORIGIN } })).headers.get('set-cookie').split(';')[0];
+  const as = async (p) => text(await (await call(env, M, p, { headers: { cookie: breeder } })).text());
+  const save = (p, body) => call(env, M, p, { method: 'POST', headers: { cookie: admin, origin: ORIGIN }, body: form(body) });
+
+  assert.match(await as('/s/akbostons'), /Vet visits None running\./);
+  await save('/admin/wording/portaltoday', { 'w.ptoday.visits_title': 'Vet checks', 'w.ptoday.visits_none': 'No clocks yet, {kennel}.' });
+  assert.match(await as('/s/akbostons'), /Vet checks No clocks yet, AK Boston Terriers\./);
+  await save('/admin/akbostons/instructions/portalfamilies', { 'w.pfam.add': 'New puppy family', 'w.pfam.line': 'Your families sign in at {address}, {kennel}.' });
+  const families = await call(env, M, '/s/akbostons/portal', { headers: { cookie: breeder } });
+  const html = await families.text();
+  assert.match(html, /Your families sign in at <strong>[^<]+<\/strong>, AK Boston Terriers\./);
+  assert.match(text(html), /New puppy family/);
+  assert.match(await as('/s/akbostons/portal/new'), /New puppy family/);
+  await save('/admin/wording/portalsetup', { 'w.psetup.title': 'Your families\' portal' });
+  assert.match(await as('/s/akbostons/portal/setup'), /Your families' portal/);
+  await save('/admin/wording/portalnotes', { 'w.perror.not_saved': 'Not yet saved: {error}' });
+  const bad = await call(env, M, '/s/akbostons/portal/new', { method: 'POST', headers: { cookie: breeder, origin: ORIGIN }, body: form({ name: '', emails: 'x' }) });
+  assert.match(text(await bad.text()), /Not yet saved: /);
+  // A family's screen, its stays and its log.
+  env.DB.raw.prepare("INSERT INTO litters (id, site_id, slug, name, stage, created_at, updated_at) VALUES ('lit1', ?, 'winter', 'Winter litter', 'current', '2026-11-01', '2026-11-01')").run(ak.id);
+  env.DB.raw.prepare("INSERT INTO puppies (id, site_id, litter_id, slug, name, sex, created_at, updated_at) VALUES ('pup1', ?, 'lit1', 'opal', 'Opal', 'female', '2026-11-01', '2026-11-01')").run(ak.id);
+  const added = await call(env, M, '/s/akbostons/portal/new', { method: 'POST', headers: { cookie: breeder, origin: ORIGIN }, body: form({ name: 'The Reed family', emails: 'sam@example.com', puppy_id: 'pup1' }) });
+  const fam = added.headers.get('location').split('?')[0];
+  assert.match(await as(fam), /Send invite .* Opal · pickup .* Reminder log Nothing sent yet\./);
+  await save('/admin/wording/portalfamily', { 'w.pf.send_invite': 'Invite them', 'w.pf.pickup_title': 'Picking up {name}' });
+  await save('/admin/wording/portallog', { 'w.plog.none': 'No emails yet, {kennel}.' });
+  await save('/admin/wording/portalstay', { 'w.pstay.title': 'Add-ons' });
+  assert.match(await as(fam), /Invite them .* Picking up Opal .* Add-ons .* No emails yet, AK Boston Terriers\./);
+  // Portal settings, the checklist and timeline, the tabs, the Dogs tab and the shared words.
+  await save('/admin/wording/portalsettings', { 'w.pset.food': 'Food for {kennel} puppies' });
+  await save('/admin/wording/portaltemplates', { 'w.ptpl.checklist.title': 'Bring-home list', 'w.ptpl.when_after.many': '{n} days on' });
+  await save('/admin/wording/portaldogs', { 'w.pdogs.no_litters': 'No litters to show.' });
+  await save('/admin/wording/portaltoday', { 'w.ptab.dogs': 'Kennel' });
+  await save('/admin/wording/portalwords', { 'w.pvet.rule.hours72': 'Three days from pickup', 'w.pvet.not_booked': 'Not yet booked' });
+  assert.match(await as('/s/akbostons/portal/settings'), /Food for AK Boston Terriers puppies .*/);
+  assert.match(await as('/s/akbostons/portal/settings'), /Three days from pickup/);
+  assert.match(await as('/s/akbostons/portal/checklist'), /Bring-home list/);
+  await call(env, M, '/s/akbostons/portal/timeline/new', { method: 'POST', headers: { cookie: breeder, origin: ORIGIN }, body: form({ title: 'Puppy class', days: '9', when: 'after', count_from: 'pickup' }) });
+  assert.match(await as('/s/akbostons/portal/timeline'), /Puppy class 9 days on/);
+  const dogs = await as('/s/akbostons/kennel');
+  assert.match(dogs, /Kennel/);
+  assert.match(await as(fam), /Vet visit: Not yet booked/);
+  // Declining a vet record (merged from the vet-tab branch), in the owner's words too.
+  const { saveFile } = await import('../src/portal/store.js');
+  const pid = env.DB.raw.prepare('SELECT id FROM portal_placements WHERE site_id = ?').get(ak.id).id;
+  await saveFile(env, ak.id, pid, { kind: 'proof', bytes: new TextEncoder().encode('%PDF-1.4 a'), name: 'r.pdf', by: 'family' });
+  assert.match(await as(fam), /Accept the vet record Decline it Decline it if it isn't the right record/);
+  const declined = await call(env, M, `${fam}/decline`, { method: 'POST', headers: { cookie: breeder, origin: ORIGIN }, body: form({}) });
+  assert.equal(declined.status, 303);
+  const after = await as(declined.headers.get('location'));
+  assert.match(after, /Vet record declined\. Their Vet visit tab is back/);
+  assert.match(after, /Vet visit: Record declined .* · declined /);
+  assert.doesNotMatch(after, /Decline it/);
+  assert.match(after, /Vet record declined: /);
+  await save('/admin/wording/portalfamily', { 'w.pf.decline': 'Not the right one' });
+  await call(env, M, `${fam}/accept`, { method: 'POST', headers: { cookie: breeder, origin: ORIGIN }, body: form({}) });
+  await saveFile(env, ak.id, pid, { kind: 'proof', bytes: new TextEncoder().encode('%PDF-1.4 b'), name: 'r2.pdf', by: 'family' });
+  assert.match(await as(fam), /Not the right one/);
+});
