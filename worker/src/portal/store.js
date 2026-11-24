@@ -207,7 +207,7 @@ export async function familyEmails(env, familyId) {
 export async function listFamilies(env, siteId) {
   const { results } = await env.DB.prepare(`SELECT f.id, f.name, f.invited_at, f.first_signed_in_at, f.last_activity_at, f.kennelos_id,
       p.id AS placement_id, p.puppy_name, p.call_name, p.go_home_on, p.pickup_booked_at, p.picked_up_at, p.pickup_state, p.vet_deadline_at,
-      p.vet_booked_at, p.proof_uploaded_at, p.proof_accepted_at, p.status, p.life_status, p.vet_booked_for, p.kennelos_id AS placement_kennelos_id,
+      p.vet_booked_at, p.proof_uploaded_at, p.proof_accepted_at, p.proof_declined_at, p.status, p.life_status, p.vet_booked_for, p.kennelos_id AS placement_kennelos_id,
       COALESCE(pu.photo_id, k.photo_id) AS photo_id, COALESCE(pu.sex, k.sex) AS sex, COALESCE(l.name, k.litter_name) AS litter_name,
       (SELECT GROUP_CONCAT(x.name, '|') FROM portal_placement_extras x WHERE x.placement_id = p.id AND x.confirmed_at IS NOT NULL) AS extras
     FROM portal_families f LEFT JOIN portal_placements p ON p.family_id = f.id AND p.status = 'open'
@@ -457,7 +457,15 @@ export async function recordVetBooking(env, siteId, id, { day, time, clinic }) {
 export async function acceptProof(env, siteId, id) {
   const p = await getPlacement(env, siteId, id);
   if (!p?.proof_file_id) throw new PortalError('No vet record to accept yet.');
-  return applyChanges(env, siteId, p, { proof_accepted_at: now() }, 'breeder');
+  return applyChanges(env, siteId, p, { proof_accepted_at: now(), proof_declined_at: null }, 'breeder');
+}
+
+// She declines the record they uploaded: their pages read as if none were in and their
+// Vet visit tab comes back (vet.js vetTabShown) until they upload again. The file stays.
+export async function declineProof(env, siteId, id) {
+  const p = await getPlacement(env, siteId, id);
+  if (!p?.proof_file_id) throw new PortalError('No vet record to decline yet.');
+  return applyChanges(env, siteId, p, { proof_declined_at: now(), proof_accepted_at: null }, 'breeder');
 }
 
 export async function setLifeStatus(env, siteId, id, status, on) {
@@ -549,7 +557,7 @@ export async function saveFile(env, siteId, placementId, { kind, bytes, name, by
   const t = now();
   await env.DB.prepare('INSERT INTO portal_files (id, site_id, placement_id, kind, r2_key, type, bytes, name, uploaded_by, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
     .bind(id, siteId, placementId, kind, key, type, bytes.length, clean(name, 120), by, t).run();
-  if (kind === 'proof') await applyChanges(env, siteId, p, { proof_file_id: id, proof_uploaded_at: t, proof_accepted_at: null }, by);
+  if (kind === 'proof') await applyChanges(env, siteId, p, { proof_file_id: id, proof_uploaded_at: t, proof_accepted_at: null, proof_declined_at: null }, by);
   if (kind === 'contract') await applyChanges(env, siteId, p, { contract_file_id: id }, by);
   return id;
 }

@@ -12,7 +12,7 @@
 import { escapeHtml as esc } from '../lib/html.js';
 import {
   getSettings, saveSettings, listFamilies, getFamily, familyEmails, createFamily, updateFamily, deleteFamily, placementFor, createPlacement,
-  updatePlacement, markPickedUp, confirmPickup, pickupNotYet, acceptProof, setLifeStatus, addHealthRecord, removeHealthRecord, healthRecords,
+  updatePlacement, markPickedUp, confirmPickup, pickupNotYet, acceptProof, declineProof, setLifeStatus, addHealthRecord, removeHealthRecord, healthRecords,
   saveFile, getFile, fileResponse, emailLog, history, placeablePuppies, PortalError, RECORD_TYPES, recordKind, MAX_FILE_BYTES,
 } from './store.js';
 import { sendInvites, portalBase } from './auth.js';
@@ -77,7 +77,7 @@ export async function portalNeedsYou(env, siteId, now = new Date()) {
       out.push({ href, label: `Did ${name} go home at ${formatAt(f.pickup_booked_at, s.time_zone, { weekday: false })}?`, note: 'The vet clock started from the booked time. Confirm or change it.' });
       continue;
     }
-    if (f.proof_uploaded_at && !f.proof_accepted_at) out.push({ href, label: `Vet record to review: ${name}`, note: f.name });
+    if (f.proof_uploaded_at && !f.proof_accepted_at && !f.proof_declined_at) out.push({ href, label: `Vet record to review: ${name}`, note: f.name });
     const v = vetStatus(f, now);
     if (clockRunning(f) && v.trouble) out.push({ href, label: `${name}: vet visit ${v.word.toLowerCase()}`, note: v.word === 'Missed' ? `Deadline was ${formatAt(f.vet_deadline_at, s.time_zone)}` : `${timeLeft(f.vet_deadline_at, now)} left` });
     // Going home in the next 7 days has its own card on Today (manage/hub.js goingHome);
@@ -302,9 +302,10 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
       <dl class="kv">
         ${p.vet_deadline_at ? `<dt>Deadline</dt><dd>${esc(formatAt(p.vet_deadline_at, s.time_zone, { zone: true }))}${Date.parse(p.vet_deadline_at) > now.getTime() ? ` · ${esc(timeLeft(p.vet_deadline_at, now))} left` : ''}</dd>` : `<dt>Deadline</dt><dd class="muted">Starts at pickup (${esc(VET_RULES[s.vet_rule].toLowerCase())})</dd>`}
         <dt>Booked</dt><dd>${p.vet_booked_at ? `${esc((p.vet_booked_for ?? '').replace('T', ' at '))}${p.vet_clinic ? `, ${esc(p.vet_clinic)}` : ''} <span class="muted small">(the family's entry)</span>` : 'Not yet'}</dd>
-        <dt>Record</dt><dd>${proof ? `<a href="/s/${esc(site.subdomain)}/portal/file/${esc(proof.id)}">View</a> · uploaded ${esc(formatAt(p.proof_uploaded_at, s.time_zone, { weekday: false }))}${p.proof_accepted_at ? ` · accepted ${esc(formatAt(p.proof_accepted_at, s.time_zone, { weekday: false }))}` : ''}` : 'Not uploaded'}</dd>
+        <dt>Record</dt><dd>${proof ? `<a href="/s/${esc(site.subdomain)}/portal/file/${esc(proof.id)}">View</a> · uploaded ${esc(formatAt(p.proof_uploaded_at, s.time_zone, { weekday: false }))}${p.proof_accepted_at ? ` · accepted ${esc(formatAt(p.proof_accepted_at, s.time_zone, { weekday: false }))}` : ''}${p.proof_declined_at ? ` · declined ${esc(formatAt(p.proof_declined_at, s.time_zone, { weekday: false }))}` : ''}` : 'Not uploaded'}</dd>
       </dl>
-      ${proof && !p.proof_accepted_at ? form('accept', '<button class="primary">Accept the vet record</button>') : ''}
+      ${proof && !p.proof_accepted_at ? `<div class="row">${form('accept', '<button class="primary">Accept the vet record</button>')}${p.proof_declined_at ? '' : form('decline', '<button>Decline it</button>')}</div>
+      ${p.proof_declined_at ? '' : '<p class="hint">Decline it if it isn\'t the right record: their Vet visit tab comes back so they can upload another. Tell them what\'s missing in a message.</p>'}` : ''}
     </section>`);
 
     // The checklist, the timeline and the programs, as this family has them.
@@ -435,7 +436,7 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
         return `<dt>${esc(formatAt(r.sent_at, s.time_zone, { weekday: false }))}</dt><dd><b>${esc(KINDS[r.kind] ?? r.kind)}</b>: <span${['failed', 'bounced'].includes(r.result) ? ' class="error"' : ''}>${esc(WORDS[r.result] ?? r.result)}</span> to ${esc(addr)}${r.basis && r.kind !== 'invite' ? `<br><span class="hint">Counted from ${esc(r.basis.includes('T') ? `the deadline ${formatAt(r.basis, s.time_zone, { weekday: false })}` : `go-home ${formatDay(r.basis)}`)}</span>` : ''}</dd>`;
       }).join('')}</dl>` : '<p class="muted">Nothing sent yet.</p>'}</section>`);
 
-    const FIELD = { picked_up_at: 'Picked up', pickup_state: 'Pickup', vet_deadline_at: 'Vet deadline', pickup_booked_at: 'Pickup booked', go_home_on: 'Go-home', puppy_id: 'Puppy', puppy_name: 'Puppy', call_name: 'Name', microchip: 'Microchip', registration_no: 'Registration number', registration: 'Registration', vet_booked_for: 'Vet booked for', vet_clinic: 'Clinic', vet_booked_at: 'Vet booking recorded', proof_file_id: 'Vet record', proof_uploaded_at: 'Vet record uploaded', proof_accepted_at: 'Vet record accepted', contract_file_id: 'Contract', life_status: 'Life status', life_status_on: 'Since', health_record: 'Health record', extra: 'Extra', extra_suggested: 'Extra from KennelOS, to confirm', extra_declined: 'KennelOS extra turned down', stay_update: 'Stay update sent', account_erased: 'Account erased', checklist: 'Checklist ticked', task: 'Task done', step_hidden: 'Step hidden for them', step_shown: 'Step shown again', task_day: 'Task moved', program: 'Program', program_code: 'Their program code', bag: say('bag.history'), merged: 'Merged with the record you typed in' };
+    const FIELD = { picked_up_at: 'Picked up', pickup_state: 'Pickup', vet_deadline_at: 'Vet deadline', pickup_booked_at: 'Pickup booked', go_home_on: 'Go-home', puppy_id: 'Puppy', puppy_name: 'Puppy', call_name: 'Name', microchip: 'Microchip', registration_no: 'Registration number', registration: 'Registration', vet_booked_for: 'Vet booked for', vet_clinic: 'Clinic', vet_booked_at: 'Vet booking recorded', proof_file_id: 'Vet record', proof_uploaded_at: 'Vet record uploaded', proof_accepted_at: 'Vet record accepted', proof_declined_at: 'Vet record declined', contract_file_id: 'Contract', life_status: 'Life status', life_status_on: 'Since', health_record: 'Health record', extra: 'Extra', extra_suggested: 'Extra from KennelOS, to confirm', extra_declined: 'KennelOS extra turned down', stay_update: 'Stay update sent', account_erased: 'Account erased', checklist: 'Checklist ticked', task: 'Task done', step_hidden: 'Step hidden for them', step_shown: 'Step shown again', task_day: 'Task moved', program: 'Program', program_code: 'Their program code', bag: say('bag.history'), merged: 'Merged with the record you typed in' };
     const UNDONE = { checklist: 'Checklist unticked', task: 'Task undone', program_code: 'Their program code removed' };
     const BY = { breeder: 'you', family: 'the family', kennelos: 'KennelOS', portal: 'the portal' };
     const isTime = (v) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(v ?? '');
@@ -753,6 +754,7 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
       case 'confirm': await confirmPickup(env, site.id, needP().id); return to('confirmed');
       case 'not-yet': await pickupNotYet(env, site.id, needP().id); return to('notyet');
       case 'accept': await acceptProof(env, site.id, needP().id); return to('accepted');
+      case 'decline': await declineProof(env, site.id, needP().id); return to('declined');
       case 'bag':
         try { await saveBag(env, site.id, needP(), form); } catch (err) {
           if (err instanceof PortalError && /^bag\./.test(err.message)) throw new PortalError(say(err.message));

@@ -15,6 +15,7 @@ export const NOTES = {
   confirmed: 'Confirmed.',
   notyet: 'Clock stopped. Mark the real pickup when it happens.',
   accepted: 'Vet record accepted.',
+  declined: 'Vet record declined. Their Vet visit tab is back so they can upload another; send them a message saying what\'s missing.',
   record: 'Record added.',
   removed: 'Record removed.',
   contract: 'Contract added. The family can see it under Records.',

@@ -2655,3 +2655,37 @@ both in `public/_kp/f/`:
   and through her view link: a swipe turns the page, and the arrows sit at the foot of the
   screen in both, at 1280px as well. Before the fix, the same swipe did nothing in either.
 - `PORTAL_VERSION` bumped to 9 (owner said yes), fingerprint updated.
+
+## 2026-11-24: The Vet visit tab goes 24 hours past the deadline; she can decline a record
+
+The owner: many families never go to the vet or never upload the record, so the Vet visit
+tab mustn't stay in their tab bar for good. Before, it went only once she accepted the
+record, or a week after pickup with a record in.
+
+- **The rule** (`portal/vet.js` `vetTabShown`): the tab shows until 24 hours past the vet
+  deadline. A record in (uploaded and not declined, or accepted) takes it away at once. One
+  she declines brings it back for 24 hours past the later of the deadline and her
+  declining. Before pickup there's no deadline, so it shows. Its place goes to the
+  Handbook, else Photos, as before (`family.js`, `fam.vetTab`). The Vet visit page still
+  opens from Home's links, with no tab lit.
+- **Home's reminder:** none added. Once the vet days are over, Home's tile already says
+  "Upload the vet's record on the Vet visit page" with a link, in Classic and the looks,
+  whenever no record is in.
+- **Declining** (migration **0045**, `portal_placements.proof_declined_at`, additive): a
+  Decline it button beside Accept on her family screen, with a hint, and a confirmation
+  that tells her to message them about what's missing. Her status word is "Record
+  declined" (in red, as trouble). A declined record leaves her "to review" list. The
+  family's pages read as if no record were in (`asFamilySees` in `family.js`): the vet
+  visit asks for it again, and nothing on their side says it was declined. Their next
+  upload clears it, and so does her accepting it after all. The file is kept and is still
+  in her History ("Vet record declined"). `merge.js` carries the column with the other
+  vet fields.
+- Wording: the family screen isn't in `manage/wording.js` yet, so the button, the hint
+  (`portal/admin.js`) and the confirmation (`admin/parts.js` NOTES, beside "accepted")
+  sit with that screen's other lines, ready to move.
+- Tests: `portal-looks.test.js` now checks the new rule step by step (uploaded: gone at
+  once; nothing uploaded: still there 8 hours past the deadline, gone at 25 hours with
+  Home's line; declined: back, with their pages asking again; a day later, gone) and
+  declining, uploading again and accepting in the store. Her card checked at 390px.
+- No file under `public/` changed, so no version bump. The migration applies itself on
+  the first request after the deploy.

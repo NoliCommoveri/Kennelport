@@ -139,11 +139,27 @@ export function stage(p, now = new Date()) {
   return 'after';
 }
 
+// Whether the family's Vet visit tab shows (the owner, 2026-11-24): until 24 hours after
+// the deadline, since many never go or never upload. A record in (uploaded, not
+// declined, or accepted) takes it away early; one she declines brings it back, for
+// 24 hours past the later of the deadline and her declining. Before the clock starts
+// there's no deadline yet, so it shows.
+export const VET_TAB_GRACE_MS = DAY;
+export function vetTabShown(p, now = new Date()) {
+  if (!p) return true;
+  if (p.proof_accepted_at) return false;
+  if (p.proof_uploaded_at && !p.proof_declined_at) return false;
+  if (!clockRunning(p) || !p.vet_deadline_at) return true;
+  const until = Math.max(Date.parse(p.vet_deadline_at), p.proof_declined_at ? Date.parse(p.proof_declined_at) : 0) + VET_TAB_GRACE_MS;
+  return new Date(now).getTime() < until;
+}
+
 // Her words for where a vet visit stands (plan 7.3), and whether it's trouble.
 export function vetStatus(p, now = new Date()) {
   const t = new Date(now).getTime();
   const end = p.vet_deadline_at ? Date.parse(p.vet_deadline_at) : null;
   if (p.proof_accepted_at) return { word: 'Accepted', trouble: false };
+  if (p.proof_declined_at) return { word: 'Record declined', trouble: true };
   if (p.proof_uploaded_at) return { word: 'Record uploaded', trouble: false };
   if (end && clockRunning(p) && t >= end) return { word: 'Missed', trouble: true };
   if (p.vet_booked_at) return { word: 'Booked', trouble: false };
