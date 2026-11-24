@@ -2547,3 +2547,64 @@ for one family at a time.
 - Test in `rules.test.js` (rows listed, saved, cards short, the dog's page full, a
   KennelOS resend, too long refused, Back to default). Checked at 390px. Rides on the
   same `ASSET_VERSION` 30 bump as the light-card fix.
+
+## 2026-11-24: Dog cards: details always, two columns where a card would grow
+
+- A dog card's back (the `tests` item, now "Details and health tests") dropped the dog's
+  sex and colour once it had health results; registry and weight sat above them unlabelled.
+  It now always shows **Details** (sex, colour, registry, weight), then **Health testing**
+  where it has results. Same item wherever she places it: flip front or back, Photo beside
+  details, Featured dog. Her item settings and each result's shown/hidden still decide
+  what appears.
+- Registries' short names (the owner, 2026-11-24): a second card on the Dogs screen of
+  the site's admin view, a row per registry the site's dogs and puppies have, stored as
+  `rules.regshort` the same way as the tests' `rules.short` (no migration). Cards only:
+  a dog's card, a puppy's card, a parent's card on a litter page (`regShort`,
+  `registryRow` in `render/parts.js`, full name as the row's `title`). Pages keep it as
+  written. Owner-only screen, so its wording isn't in `manage/wording.js`.
+- Two-column lists (site.css "Two-column lists", site.js `fitCols`): each list marked
+  `data-cols` (a dog's two, a puppy card's Details) goes in two columns only where one per
+  line would make the card grow: a flip side taller than its other side and 430px, or the
+  words of Photo beside details / Featured longer than the photo. Longest list first, then
+  the next while it still grows. A row too long for half the width (measured in the
+  browser, so it follows the card's real width) and an odd short one left over (the
+  longest of them) take the whole line, before the short ones (the owner: long rows
+  first), within their own list. A dotted line runs between the columns, drawn by the
+  left column's rows (`.l`, down to the last pair `.end`). Fewer than two short rows: one
+  per line. If the words would then fill under 30% of the card's height (the photo's, or
+  the flip card's other side), back to one per line. Runs on load, fonts, a width change
+  and the Show filter. Without the script, one per line as before.
+- Checked in Chromium at 390px and 1280px: a test page of every card type (flip front
+  and back, Photo beside details, Featured dog, light, puppy flip, parent cards) with five
+  display settings each and six seeded dogs (everything with full test names, the same
+  with short names set, Millie-like, three tests, none, the bare minimum). Fixed on the
+  way: the 30% check first measured the lists against the card, which undid columns on
+  stacked phone cards and on Featured with a long bio. No face is cut off at either
+  width. Cards in one row on a computer can differ in height (as before, when a dog with
+  many results grew its card).
+- Test in `rules.test.js`. Site template bumped to `ASSET_VERSION` 31 (owner said yes).
+
+## 2026-11-24 — Plan: the family portal for more than one breeder
+
+The owner asked what it takes to offer the portal to other breeders. Written up as
+[`plans/portal-multi-breeder.md`](../plans/portal-multi-breeder.md), from a read of the code:
+every `portal_*` table already carries `site_id`, the switch, settings, jobs, feed and
+sign-in are per site, and the demo site runs a second portal. What's left is product work:
+phase 1's gate and decision 9 first, then site-builder steps 5, 6 and 2.4 (the portal's
+build and wording as settings), a setup flow, the choices that fit only her (vet rules, time
+zones), KennelOS's side for each kennel (to check there), and possibly portal-only sites.
+Four questions for the owner. No code, no migration, no version bump.
+
+## 2026-11-24: Flip cards in a row match; spaces in breed, role, titles and tags
+
+- Flip cards in one row are as tall as the tallest (the owner, 2026-11-24). A card straight
+  in a grid already stretched; one inside a wrapper (the Dogs block's Show filter,
+  `<div data-sex>`) didn't, so the Dogs page's rows were uneven on a computer.
+  `.grid > div > .flip { height: 100% }`. Checked on the Dogs page at 1280px: a taller
+  card's row-mates stretch to it.
+- Breed and role beside titles ("Foundation dam" "CH GCH…") and tags ran together with no
+  space on Featured and on a flip card's back: `.line1` had styles only in the front's
+  caption and Photo beside details. A base `.line1` (flex, wrap, a gap) under those.
+  Already there before the two-column work.
+- Both in the site template; `ASSET_VERSION` 31 isn't on `main` yet, so no second bump:
+  fingerprint updated beside 31. Checked on the card test page at 390px and 1280px.

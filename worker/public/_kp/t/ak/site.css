@@ -241,6 +241,12 @@ nav.main li.open > .navtop .chev { transform: rotate(225deg) translate(-2px, -1p
    grid cell, so neither is cut off (a full health panel, a bio on the front). The photo
    keeps one height; the coloured part under it takes whatever is left. */
 .flip { perspective: 1200px; cursor: pointer; min-height: 430px; border-radius: var(--r); display: grid; }
+/* Cards in one row are as tall as the tallest (the owner, 2026-11-24): a card straight in
+   a grid stretches by itself; one inside a wrapper (the Dogs block's Show filter) fills it. */
+.grid > div > .flip { height: 100%; }
+/* Breed and role beside titles, and tags, wherever a card puts them (the front's caption
+   and Photo beside details style theirs further below): a space between the pieces. */
+.line1 { display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .flip-in { position: relative; display: grid; transform-style: preserve-3d; transition: transform .6s cubic-bezier(.3,.7,.3,1); }
 @media (hover: hover) { .flip:hover .flip-in { transform: rotateY(180deg); } }
 .flip.flipped .flip-in { transform: rotateY(180deg); }
@@ -262,6 +268,20 @@ nav.main li.open > .navtop .chev { transform: rotate(225deg) translate(-2px, -1p
 .tests { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; font-size: .84rem; }
 .tests li { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px dotted var(--line); padding-bottom: 4px; }
 .tests li span:last-child { font-weight: 700; text-align: right; }
+/* Two-column lists: on a big card (flip, photo beside details, Featured) site.js sets a
+   list (data-cols) in two columns only where one per line would make the card grow past
+   its photo or its other side; a row too long for half the width (.wide) keeps the whole
+   line, before the short ones (each list on its own: details with details, results with
+   results), so the short ones pair up rather than going long, short, long, short. The
+   left column's rows (.l) draw the dotted line between the columns, down to the last
+   pair (.end).
+   Without the script, one per line in its own order, as before. */
+.tests.cols { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; }
+.tests.cols li:not(.wide) { white-space: nowrap; }
+.tests.cols li.wide { grid-column: 1 / -1; order: -1; }
+.tests.cols li.l { position: relative; }
+.tests.cols li.l::after { content: ""; position: absolute; top: 0; bottom: -5px; right: -9px; border-right: 1px dotted var(--line); }
+.tests.cols li.l.end::after { bottom: 0; }
 .back .bio { font-size: .86rem; color: var(--muted); margin: 0; }
 .back .more { margin-top: auto; }
 .status { display: inline-flex; align-items: center; gap: 6px; font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; }

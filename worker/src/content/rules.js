@@ -187,6 +187,9 @@ export const DEFAULT_RULES = {
   // every update leaves them be; the result itself keeps its full name everywhere
   // else. Empty: every card shows the full name, as before.
   short: {},
+  // Short names for registries, on cards only, the same way (AKC for American Kennel
+  // Club (AKC)): keyed by the registry as written, in lower case (testKey).
+  regshort: {},
   format: { date: 'mdy', day: 'md', sex: 'female_male', counts: 'girls_boys', currency: '$', currency_after: false, cents: false },
   // How KennelOS data lands (kennelos/bundle.js), for each new record.
   landing: {
@@ -323,6 +326,7 @@ export function rulesFor(build) {
   const rules = over(DEFAULT_RULES, carried(b.rules));
   // Short names are an open list (any test name), not fixed keys: over() would drop them.
   rules.short = shortNames(b.rules?.short);
+  rules.regshort = shortNames(b.rules?.regshort);
   return { rules, timing: over(DEFAULT_TIMING, b.timing) };
 }
 
@@ -364,6 +368,14 @@ export function partsFromForm(screen, current, get) {
       const s = String(get(`short_name.${i}`) ?? '').replace(/\s+/g, ' ').trim();
       if (s.length > SHORT_MAX) throw new RuleError(`Short name for ${get(`short_test.${i}`)}: at most ${SHORT_MAX} characters.`);
       if (key && s) out.short[key] = s;
+    }
+    // Registries' short names, the same way (short_reg.N, reg_short.N).
+    out.regshort = {};
+    for (let i = 0; get(`short_reg.${i}`) != null; i++) {
+      const key = testKey(get(`short_reg.${i}`));
+      const s = String(get(`reg_short.${i}`) ?? '').replace(/\s+/g, ' ').trim();
+      if (s.length > SHORT_MAX) throw new RuleError(`Short name for ${get(`short_reg.${i}`)}: at most ${SHORT_MAX} characters.`);
+      if (key && s) out.regshort[key] = s;
     }
   }
   if (out.dogs && new Set(HEALTH_KIND_PLACES.map((k) => out.dogs[k])).size !== HEALTH_KIND_PLACES.length) {

@@ -229,7 +229,20 @@ function shortCard(rules, tests) {
     <span class="hint">On cards only, where space is short: a parent's card on a litter page and a dog's card. A dog's own page, the breeder's records and KennelOS keep the full name. Empty: the full name.</span></div></section>`;
 }
 
-function dogsScreen(site, rules, error, tests = []) {
+// Registries' short names on cards, the same way: a row for each registry the site's
+// dogs and puppies have (and any set for one none has now).
+function regShortCard(rules, registries) {
+  const names = new Map();
+  for (const t of registries) if (!names.has(testKey(t))) names.set(testKey(t), String(t).replace(/\s+/g, ' ').trim());
+  for (const k of Object.keys(rules.regshort ?? {})) if (!names.has(k)) names.set(k, k);
+  const rows = [...names].sort(([a], [b]) => a.localeCompare(b));
+  const set = Object.keys(rules.regshort ?? {}).length;
+  return `<section class="card"><div class="fgroup"><div class="between"><h2>Registries' short names</h2>${set ? back('regshort') : ''}</div>
+    ${rows.length ? `<div class="fgrid">${rows.map(([k, name], i) => `<input type="hidden" name="short_reg.${i}" value="${esc(name)}">${field(`reg_short.${i}`, rules.regshort?.[k] ?? '', { label: name })}`).join('')}</div>` : '<p class="small muted">No dog or puppy on this site has a registry yet.</p>'}
+    <span class="hint">On cards only (AKC for American Kennel Club (AKC)), so the Registry row can sit beside another in two columns. A dog's or puppy's own page keeps the full name. Empty: the full name.</span></div></section>`;
+}
+
+function dogsScreen(site, rules, error, tests = [], registries = []) {
   const sale = rules.dogs.sale_price;
   return `<div class="stack">${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
     <section class="card"><div class="fgroup"><div class="between"><h2>An adult looking for a home</h2>${sale === DEFAULT_RULES.dogs.sale_price ? '' : back('dogs.sale_price')}</div>
@@ -253,6 +266,7 @@ function dogsScreen(site, rules, error, tests = []) {
       ${field('dogs.champion_titles', rules.dogs.champion_titles, { label: 'Titles that make a champion', cls: '' })}</div>
       <span class="hint">Any one of these titles, separated by spaces. A dog with an ancestor holding one, this close, is champion-descended: a field for blocks and tags (make a Champion-descended tag on Tags). Titles come from KennelOS's pedigree, or from the dog records here. The breeder can leave one dog out on its form.</span></div></section>
     ${shortCard(rules, tests)}
+    ${regShortCard(rules, registries)}
     ${wordCards('dogs', rules)}
     <section class="card band"><p class="small">Which health results a new dog shows, and where each KennelOS status puts a dog, are under From KennelOS.</p></section></div>`;
 }
@@ -914,7 +928,8 @@ export async function handleBuilder({ env, request, url, user, page }) {
     timing: null,
   }[screen];
   const tests = screen === 'dogs' ? (await env.DB.prepare('SELECT DISTINCT test FROM health_results WHERE site_id = ?').bind(site.id).all()).results.map((r) => r.test) : [];
-  const editor = { rules: rulesScreen, dogs: dogsScreen, wording: wordingScreen, formats: formatsScreen, kennelos: kennelosScreen }[screen]?.(site, rules, error, tests) ?? timingScreen(site, timing, error);
+  const registries = screen === 'dogs' ? (await env.DB.prepare("SELECT registry FROM dogs WHERE site_id = ? AND registry IS NOT NULL AND registry != '' UNION SELECT registry FROM puppies WHERE site_id = ? AND registry IS NOT NULL AND registry != ''").bind(site.id, site.id).all()).results.map((r) => r.registry) : [];
+  const editor = { rules: rulesScreen, dogs: dogsScreen, wording: wordingScreen, formats: formatsScreen, kennelos: kennelosScreen }[screen]?.(site, rules, error, tests, registries) ?? timingScreen(site, timing, error);
   const side = screen === 'dogs' ? await dogsPreview(env, site)
     : screen === 'wording' || screen === 'formats' ? await littersPreview(env, site, 'Their litter cards, with these rules')
       : screen === 'kennelos' ? landingPreview(rules) : screen === 'timing' ? '' : await preview(env, site);
