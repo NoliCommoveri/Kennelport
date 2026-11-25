@@ -3006,3 +3006,5 @@ the only gate left. No code, no migration, no version bump.
   Portal settings (8 by default); the checklist, two weeks before go-home until pickup
   (fixed); the payments band, until pickup with a status page (fixed). The card's intro
   says these can only shorten or hide, never widen. Owner-only words; families' unchanged.
+- Follow-up, the owner ("Who is her?"): the screen now says "the breeder" where it said "her"
+  (the contacts' name, the stage's band's contract line).

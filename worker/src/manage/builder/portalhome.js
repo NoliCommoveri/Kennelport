@@ -39,7 +39,7 @@ export function portalHomeScreen(home, error = null) {
     const cards = HOME_CARDS.filter((x) => CARD_SECTION[x] === k);
     const moved = k !== HOME_SECTIONS[i];
     return `<li class="mvr item" id="s-${k}">${mvBtns(`mv:${k}`, i, n)}<span class="ttl">${esc(SECTION_NAMES[k])}${moved ? ' <span class="chg">moved</span>' : ''}
-      ${k === 'stage' ? '<small>Always shows: it carries the vet visit, which follows her contract.</small>' : cards.map((x) => cardRow(x, home.cards[x])).join('')}</span><span></span></li>`;
+      ${k === 'stage' ? '<small>Always shows: it carries the vet visit, which follows the breeder's contract.</small>' : cards.map((x) => cardRow(x, home.cards[x])).join('')}</span><span></span></li>`;
   }).join('');
   const same = !home.custom && !HOME_CARDS.some((k) => changed(home.cards[k]));
   return `<div class="stack">${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}

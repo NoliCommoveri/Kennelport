@@ -18,7 +18,7 @@ export const HOME_SECTIONS = Object.freeze(['stage', 'food', 'contacts', 'checkl
 export const SECTION_NAMES = Object.freeze({
   stage: 'The stage\'s band: the vet visit, what\'s next, or the stay',
   food: 'The food and insurance band',
-  contacts: 'Questions? One tap: her and the vet, from pickup for her "help weeks" (her Portal settings, 8 by default)',
+  contacts: 'Questions? One tap: the breeder and the vet, from pickup for as many weeks as the breeder sets in Portal settings ("help weeks", 8 by default)',
   checklist: 'Go-home checklist: from two weeks before go-home until pickup (fixed)',
   status: 'Payments, additional services, and pickups: until pickup, with a status page (fixed)',
   recommended: 'Recommended for the puppy',
