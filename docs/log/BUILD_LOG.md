@@ -3158,4 +3158,4 @@ The two number boxes in "The vet visit" (hours / day) rendered as empty 22px squ
 phones: the manage CSP (`style-src 'self'`) drops the inline `style="width:5em"`, so the
 checkbox rule `label.check input` (22×22) won. They now use `class="num"` with a rule in
 `app.css` (`label.check input.num`), and the two rows centre their radio (`.vetrule`).
-`app.css` changed, so APP_VERSION needs a bump (asked).
+`app.css` changed: APP_VERSION 20 → 21 (owner said yes).
