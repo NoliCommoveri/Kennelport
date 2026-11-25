@@ -2855,3 +2855,4 @@ the only gate left. No code, no migration, no version bump.
   draw. Not too many card items: the card grows to fit them.
 - Template files changed (`site.css`, new `wave.svg`): **needs `ASSET_VERSION` 33** (32 is on
   `main`); asked the owner. Until then `versions.test.js` fails, as expected.
+- `ASSET_VERSION` 32 → 33 with the owner's yes (`TEMPLATE_FILES` 84a3015ba100876f). 517 pass.
