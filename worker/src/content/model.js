@@ -390,6 +390,9 @@ export const HOME_BLOCK_ORDER = Object.keys(HOME_BLOCKS);
 export const PAYMENT_KINDS = ['application_fee', 'deposit'];
 export const PAYMENT_FIELDS = {
   show_on_site: BOOL,
+  // Her KennelOS payment methods for this card's stage (C11) on the card; on unless she
+  // switches it off (records.js getPayment), when the card shows its link and note as before.
+  show_methods: BOOL,
   title: S(60),
   due_note: ML(240),
   methods: { type: 'pairs', max: 6, keyMax: 24, valueMax: 160, placeholders: ['Venmo', '@your-handle'], names: ['way', 'details'] },

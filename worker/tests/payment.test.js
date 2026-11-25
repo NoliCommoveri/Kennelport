@@ -152,7 +152,7 @@ test('her payment methods go out with an export and back in, her own names with 
   await b.post('/publish');
   const w = await b.page('/waitlist');
   assert.match(w, />Pay with Card</);
-  await b.post('/payment/deposit', { show_on_site: '1', title: 'Deposit' });
+  await b.post('/payment/deposit', { show_on_site: '1', show_methods: '1', title: 'Deposit' });
   await b.post('/publish');
   assert.match(await b.page('/waitlist'), /<b>Zelle \(bank transfer\):<\/b> /);
 });

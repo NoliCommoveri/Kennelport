@@ -630,8 +630,10 @@ test('pay_methods: her payment methods, each with its stages; the fee and deposi
   assert.equal(rows()[1].note, 'Zelle to pay@ak.example\nPut your puppy\'s name in the memo.');
   assert.ok(rows().every((r) => r.source === 'kennelos'));
   // The fee card shows with them; the deposit card (her own) shows PayPal and Zelle.
-  assert.equal((await b.post('/payment/application_fee', { show_on_site: '1' })).status, 303);
-  assert.equal((await b.post('/payment/deposit', { show_on_site: '1', title: 'Deposit' })).status, 303, 'methods for the deposit count as a way to pay');
+  // The switch starts on.
+  assert.match(await (await b.get('/payment')).text(), /name="show_methods" value="1" checked/);
+  assert.equal((await b.post('/payment/application_fee', { show_on_site: '1', show_methods: '1' })).status, 303);
+  assert.equal((await b.post('/payment/deposit', { show_on_site: '1', show_methods: '1', title: 'Deposit' })).status, 303, 'methods for the deposit count as a way to pay');
   await b.post('/publish');
   const w = await b.page('/waitlist');
   assert.match(w, /How would you like to pay\?/);
@@ -644,6 +646,18 @@ test('pay_methods: her payment methods, each with its stages; the fee and deposi
   assert.match(w, /Additional Payment Instructions:<\/b> Or a check to AK Bostons\./);
   assert.doesNotMatch(w, /Pay the application fee</, 'pay_url gives way to the methods');
   assert.doesNotMatch(w, /Cash at pickup/, 'final payment methods wait for the Ways to pay block');
+  // Switched off on the fee card: its link and note as before, through a KennelOS update;
+  // the deposit card keeps its methods.
+  assert.equal((await b.post('/payment/application_fee', { show_on_site: '1' })).status, 303);
+  await send(pay([{ label: 'Card', url: 'https://buy.stripe.com/abc', stages: ['application_fee'] }, { label: 'PayPal', url: 'https://paypal.me/AK', stages: ['deposit'] }]));
+  assert.match(await (await b.get('/payment')).text(), /name="show_methods" value="1">/);
+  await b.post('/publish');
+  const off = await b.page('/waitlist');
+  assert.match(off, />Pay the application fee</);
+  assert.match(off, /In the note:<\/b> Or a check to AK Bostons\./);
+  assert.match(off, />Pay with PayPal</);
+  assert.doesNotMatch(off, />Pay with Card</);
+  assert.equal((await b.post('/payment/application_fee', { show_on_site: '1', show_methods: '1' })).status, 303);
   // One method for the fee shows as it is, without a choice.
   await send(pay([{ label: 'Card', url: 'https://buy.stripe.com/abc', stages: ['application_fee'] }]));
   assert.match(await (await b.get('/publish')).text(), /How to pay, ways to pay: edited/);

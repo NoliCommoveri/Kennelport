@@ -599,7 +599,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       const values = parseForm(k[1], await request.formData());
       // Filled from her KennelOS waitlist settings: only the switch is hers here.
       const cur = kind === 'safe_notice' ? null : await getPayment(env, site.id, kind);
-      if (cur?.source === 'kennelos') for (const f of Object.keys(PAYMENT_FIELDS)) if (f !== 'show_on_site') values[f] = cur[f] ?? null;
+      if (cur?.source === 'kennelos') for (const f of Object.keys(PAYMENT_FIELDS)) if (f !== 'show_on_site' && f !== 'show_methods') values[f] = cur[f] ?? null;
       try { await savePayment(env, site.id, kind, values); } catch (err) {
         if (err instanceof ContentError) return render({ [kind]: [err.message, values] });
         throw err;
@@ -619,7 +619,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
           : `<p class="muted small">${k === 'application_fee' ? esc(say('payment.how_a_family_pays_2')) : esc(say('payment.how_a_family_pays'))} This is how to pay, not the price.</p>`;
         cards.push(`<form method="post" action="${base}/payment/${k}" id="${k}" data-save class="card"><h2>${esc(title)}</h2>${intro}${errorBox(err)}
           ${current.source === 'kennelos' ? `<p class="notice">${esc(say('payment.filled_from_your_waitlist'))}</p>` : ''}
-          ${fields(flds, current, { kind: k === 'safe_notice' ? 'safe_notice' : 'payment', say, locked: current.source === 'kennelos' ? new Set(Object.keys(PAYMENT_FIELDS).filter((f) => f !== 'show_on_site')) : null })}<button class="primary">${esc(say('payment.save'))}</button></form>`);
+          ${fields(flds, current, { kind: k === 'safe_notice' ? 'safe_notice' : 'payment', say, locked: current.source === 'kennelos' ? new Set(Object.keys(PAYMENT_FIELDS).filter((f) => f !== 'show_on_site' && f !== 'show_methods')) : null })}<button class="primary">${esc(say('payment.save'))}</button></form>`);
       }
       return { title: say('payment.how_to_pay'), back: base, body: `${note(url)}<p class="muted">${esc(say('payment.shown_on_your_waitlist'))}</p>${cards.join('')}` };
     }

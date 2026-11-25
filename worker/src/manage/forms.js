@@ -175,6 +175,7 @@ export const LABELS = {
   extras_page: { note: ['Note under the packages', null] },
   payment: {
     show_on_site: ['Show on my website', 'Off until you turn it on. It shows on your waitlist page under How to pay.'],
+    show_methods: ['Show my payment methods here', 'The payment methods you take for this in KennelOS, for families to choose from. Off: your payment link and note instead.'],
     title: ['Heading', 'Leave empty for the usual name.'],
     due_note: ['When it\'s due', 'For example "after we approve your application" or "within 48 hours of choosing your puppy".'],
     methods: ['Ways to pay', 'One per row: the way, then what families need to pay that way, like "Venmo" and "@ak-bostons", or "Check" and "Payable to AK Boston Terriers". Amounts appear only if you type them here.'],

@@ -960,7 +960,8 @@ function lines(text) {
 
 // Her KennelOS payment methods (C11) she takes for one stage of a sale, in her order.
 export const payMethodsFor = (snap, stage) => (snap.payment?.methods ?? []).filter((m) => m.stages?.includes(stage));
-const tagged = payMethodsFor;
+// On a built-in card: its stage's methods, unless she switched them off there.
+const tagged = (snap, kind) => (snap.payment?.[kind]?.show_methods === false ? [] : payMethodsFor(snap, kind));
 
 // One of her KennelOS payment methods: a Pay with button for its link, and her
 // instructions.

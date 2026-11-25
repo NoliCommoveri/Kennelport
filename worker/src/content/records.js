@@ -459,7 +459,7 @@ export async function getPayment(env, siteId, kind) {
   const row = await env.DB.prepare('SELECT * FROM payment_info WHERE site_id = ? AND kind = ?').bind(siteId, kind).first();
   const content = row ? JSON.parse(row.content) : {};
   if (kind === 'safe_notice') return { enabled: row ? Boolean(row.show_on_site) : true, ...content };
-  return { show_on_site: Boolean(row?.show_on_site), ...content, source: row?.source ?? 'kennelport' };
+  return { show_on_site: Boolean(row?.show_on_site), ...content, show_methods: content.show_methods !== false, source: row?.source ?? 'kennelport' };
 }
 
 export async function savePayment(env, siteId, kind, input) {
@@ -470,7 +470,7 @@ export async function savePayment(env, siteId, kind, input) {
   const on = notice ? clean.enabled : clean.show_on_site;
   const content = stripNulls(omit(clean, ['enabled', 'show_on_site']));
   // Her KennelOS payment methods for this kind (C11) count as a way to pay.
-  const tagged = notice || !on ? null : await env.DB.prepare('SELECT stages FROM pay_methods WHERE site_id = ?').bind(siteId).all();
+  const tagged = notice || !on || clean.show_methods === false ? null : await env.DB.prepare('SELECT stages FROM pay_methods WHERE site_id = ?').bind(siteId).all();
   const hasTagged = (tagged?.results ?? []).some((r) => JSON.parse(r.stages).includes(kind));
   if (!notice && on && !content.methods?.length && !content.pay_url && !hasTagged) throw new ContentError('methods', 'add at least one way to pay, or a payment page link, before showing it');
   await env.DB.batch([

@@ -253,7 +253,7 @@ export async function buildSnapshot(env, siteId) {
   for (const kind of PAYMENT_KINDS) {
     const row = payRows[kind];
     const c = row && row.show_on_site ? json(row.content, {}) : null;
-    if (c && (c.methods?.length || c.pay_url || methods.some((m) => m.stages.includes(kind)))) payment[kind] = c;
+    if (c && (c.methods?.length || c.pay_url || (c.show_methods !== false && methods.some((m) => m.stages.includes(kind))))) payment[kind] = c;
   }
   const notice = payRows.safe_notice;
   payment.safe_notice = { enabled: notice ? Boolean(notice.show_on_site) : true, text: json(notice?.content, {}).text ?? null };

@@ -3230,6 +3230,12 @@ The owner: a way to see a new breeder's portal before adding anyone, like the pr
   the section's "Put the note shown…" line is left off. "We take payment only by…" lists
   them. Payments and Final payment methods show nowhere yet: they wait for the Ways to pay
   block ([`plans/payment-blocks.md`](../plans/payment-blocks.md)).
+- **Her switch, per card** (the owner): **Show my payment methods here** (`show_methods`,
+  on the card's form, on by default; `records.js` `getPayment` reads a missing one as on).
+  Off: the card ignores the methods and shows its link and note as before (for a site whose
+  Ways to pay block shows them instead). It's hers even on a card from KennelOS (not locked,
+  not in the bundle's shape), and a bundle keeps it (the landing's `ON CONFLICT` puts it back).
+  The label and hint are in `manage/forms.js` LABELS, for the owner to word.
 - Without methods, every card is drawn exactly as before.
 - No stylesheet change, so no `ASSET_VERSION` bump. Checked at 390px and 1200px.
 - Tests: `kennelos.test.js` (the section listed; methods with stages, dropped and kept, the

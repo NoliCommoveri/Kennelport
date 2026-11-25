@@ -158,7 +158,7 @@ const SHAPES = {
   // An item of her go-home bag, for the family portal (bag_items): cost to her in
   // dollars and cents, never shown to families.
   bag_item: { id: ID, name: S(80, true), cost: { type: 'money' }, expense: { type: 'bool' }, origin: S(120), product_id: REF },
-  pay: Object.fromEntries(Object.entries(PAYMENT_FIELDS).filter(([k]) => k !== 'show_on_site')),
+  pay: Object.fromEntries(Object.entries(PAYMENT_FIELDS).filter(([k]) => k !== 'show_on_site' && k !== 'show_methods')),
 };
 
 const bad = (path, message) => new ApiError(400, 'bad_bundle', { path, message: `${path}: ${message}` });
@@ -1015,7 +1015,8 @@ export async function applyBundle(env, device, body) {
     const content = Object.fromEntries(Object.entries(c).filter(([, v]) => v !== null && !(Array.isArray(v) && !v.length)));
     if (!Object.keys(content).length) continue;
     w.s.push(env.DB.prepare(`INSERT INTO payment_info (site_id, kind, show_on_site, content, source) VALUES (?, ?, 0, ?, 'kennelos')
-      ON CONFLICT (site_id, kind) DO UPDATE SET content = excluded.content, source = 'kennelos'`).bind(site.id, kind, JSON.stringify(content)));
+      ON CONFLICT (site_id, kind) DO UPDATE SET source = 'kennelos',
+        content = CASE WHEN json_extract(payment_info.content, '$.show_methods') = 0 THEN json_set(excluded.content, '$.show_methods', json('false')) ELSE excluded.content END`).bind(site.id, kind, JSON.stringify(content)));
   }
 
   // Her payment methods (C11): the bundle's list replaces KennelOS's rows whole, so one

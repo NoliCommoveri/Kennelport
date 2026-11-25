@@ -23,8 +23,9 @@ this branch (build log). This plan builds the block on top of it.
   Instructions". With none tagged, a card is drawn as before.
 - **The built-in cards stay fixed** (the owner, 2026-11-25): the Application fee card shows
   only the methods tagged for the application fee, and the Deposit card only those tagged
-  for the deposit, always in the layout above, with no settings. Every option in this plan
-  belongs to the Ways to pay block only.
+  for the deposit, always in the layout above. Their one setting is her switch, **Show my
+  payment methods here** (built, on by default). Off, a card shows its link and note as
+  before. Every other option in this plan belongs to the Ways to pay block only.
 - Methods for **Payments** and **Final payment** don't show anywhere yet. They wait for this
   block.
 
