@@ -555,7 +555,7 @@ export const PORTAL_LINES = {
   "pset.checklist_note": ["portalsettings", "Row under the form: the checklist's line", "Your list for every family"],
   // The checklist and timeline.
   "ptpl.checklist.title": ["portaltemplates", "The checklist's heading", "Go-home checklist"],
-  "ptpl.checklist.hint": ["portaltemplates", "Line under it", "What to have ready before the puppy comes home. Every family gets this list from two weeks before go-home; you can hide an item or add one for a family on their screen."],
+  "ptpl.checklist.hint": ["portaltemplates", "Line under it ({when}: how long before go-home, as the owner's Timing sets it, two weeks by default)", "What to have ready before the puppy comes home. Every family gets this list from {when} before go-home; you can hide an item or add one for a family on their screen."],
   "ptpl.checklist.start": ["portaltemplates", "Button, while it's empty", "Start with the suggested list"],
   "ptpl.checklist.start_hint": ["portaltemplates", "Line under it", "Crate, bed, food, bowls, collar and leash, pads, chews, the vet booking and a carrier. Each links to your programs of that kind. Change anything after."],
   "ptpl.checklist.add": ["portaltemplates", "Heading of the form to add one", "Add an item"],

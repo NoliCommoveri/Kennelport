@@ -320,8 +320,23 @@ body.admin .adminpill { flex: none; font: 800 .6rem/1 var(--f-body); letter-spac
 body.admin .button.onfill { display: inline-flex; align-items: center; gap: 6px; background: var(--head-ink); color: var(--head); border-color: var(--head-ink); }
 body.admin .button.onfill svg.i { width: 17px; height: 17px; }
 body.admin .apptabs.adm .lbl, body.admin .apptabs.adm .site, body.admin .apptabs.adm .lg { display: none; }
+/* On a phone: Every site, a few screens and the open one on the bar; More opens the rest
+   in a panel over it (builder/frame.js adminNav). On a computer, every screen down the side. */
+body.admin .apptabs.adm .x { display: none; }
+body.admin .apptabs.adm details.more { flex: 1; max-width: 120px; }
+body.admin .apptabs.adm details.more > summary { list-style: none; display: grid; justify-items: center; gap: 2px; padding: 6px 2px; border-radius: var(--r); color: var(--head-muted); font-size: .72rem; font-weight: 700; cursor: pointer; }
+body.admin .apptabs.adm details.more > summary::-webkit-details-marker { display: none; }
+body.admin .apptabs.adm details.more[open] > summary { background: var(--head-ink); color: var(--head); }
+body.admin .apptabs.adm details.more .panel { position: absolute; left: 8px; right: 8px; bottom: calc(100% + 6px); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 8px; background: var(--head); border-radius: 16px; box-shadow: 0 -8px 28px rgba(0, 0, 0, .28); }
+body.admin .apptabs.adm details.more .panel a { max-width: none; padding: 10px 2px; }
+body.admin .apptabs.adm details.more .panel .grp { grid-column: 1 / -1; margin: 6px 4px 0; font-size: .62rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--head-muted); }
+body.admin .apptabs.adm details.more .panel .grp:first-child { margin-top: 0; }
 @media (min-width: 900px) {
   body.admin .apptabs.adm .sm { display: none; }
+  body.admin .apptabs.adm .x { display: grid; }
+  body.admin .apptabs.adm details.more { display: none; }
+  body.admin .apptabs.adm { overflow-y: auto; }
+  body.admin .apptabs.adm .lbl.grp { padding: 12px 12px 2px; }
   body.admin .apptabs.adm .lg { display: inline; }
   body.admin .apptabs.adm .lbl { display: block; font-size: .62rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--head-muted); padding: 14px 12px 4px; }
   body.admin .apptabs.adm .site { display: block; padding: 2px 12px 10px; color: var(--head-ink); font: 500 1rem/1.2 var(--f-display); }

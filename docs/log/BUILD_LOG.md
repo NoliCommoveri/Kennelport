@@ -2954,3 +2954,82 @@ the only gate left. No code, no migration, no version bump.
   the fix. No migration, no version bump.
 - `PORTAL_VERSION` 9 → 10 with the owner's yes, for the five tabs (`looks/mockup.css`)
   (`PORTAL_FILES` bc7532a3b99e6333). 524 pass.
+
+## 2026-11-25: Site-builder step 6: the family Home's order and cards
+
+- The owner: per site, the order of the family portal Home's sections and whether each card
+  shows, so a breeder can, say, show the food card only for the first two weeks after
+  pickup. The rules module (`portal/home.js`, on `main` since this morning) is now wired in.
+- `getSettings` (`portal/store.js`) adds `home: portalHomeFor(build)` beside `timing`.
+- Home (`portal/family.js` `homePage`): `daysHome` is whole days between pickup's local date
+  and today's (null before pickup); `cardShows` hides the food card (the band gets her
+  settings with no food name), insurance and the slim card (null), and gates contacts,
+  the checklist, the payments band, Recommended and Read next on top of their own rules.
+  What goes under "Recommended for" is still worked out from the unhidden band, so a hidden
+  or expired food program doesn't reappear there.
+- Classic: each section's html by key, joined in her order. Today's order joins exactly as
+  before (checked: all 60 snapshot pages, four dates × five pages × three looks, byte-for-byte
+  the same as `main`); a custom order goes through `recolour()`. Quick links' colour comes
+  from the joined html. Forest and Cream: `family/mk.js` `home()` pushes the sections in
+  `c.order`; no recolouring there.
+- The owner's **Family Home** screen (`/admin/<sub>/portalhome`, `manage/builder/portalhome.js`,
+  route in `builder.js`, in the nav only on portal sites: `SCREENS` takes a fifth `'portal'`):
+  the sections in order with move buttons (a move saves the screen and comes back to the
+  section), the stage's band marked always shown, the food band's three cards under it, a
+  Show select per card and "Until, in days after pickup" (blank, no end; left out for the
+  checklist and payments band, which only show before pickup); "changed" and "moved" marks,
+  As today or Back to today's Home. Saves with `draft: false`: nothing to publish. No
+  prototype screen exists for it: built from the builder's cards, movable rows, selects and
+  action bar, as Forms and Timing are. Its words are the owner's own and stay in code. No
+  family-facing words changed.
+- `scripts/portal-current-snapshots.mjs` takes `SNAP_HOME` (a Family Home as JSON).
+- Checked at 390px and 1280px: Home in Classic, Forest and Cream with a custom order
+  (contacts, Recommended, stage, food, Read next…) and the food card at "only once home,
+  until 14" on the snapshot's two-weeks-home date: the food card's gone, insurance takes the
+  band, Classic recoloured the stage's band (paper, or mint in the vet stage) under the sand
+  Recommended band. Her screen at both widths. Already there before this: at 390px the
+  admin's bottom nav is wider than the screen (12 tabs, now 13), so Timing, Home and Help sit
+  off the right edge; fixing that is a manage-app CSS change (`APP_VERSION`), not done.
+- Tests: `portal-home.test.js` (round trips, `cardShows`, `recolour`, the food card at
+  home/14 before pickup and on days 0, 13 and 14 in Classic and Forest, cards switched off,
+  a custom order in all three looks, no two alike in Classic for four orders at four stages,
+  today's order unchanged, her screen's move, cards, a bad until, Back to today's,
+  `draft_changed_at` untouched, 404 for a breeder and for a site without the portal).
+  536 pass. No migration (build JSON); no file under `public/_kp/` changed, no version bump.
+- Follow-up, the owner (phone screenshot): each card's two boxes sat at different heights,
+  because the "Until, in days after pickup" label wrapped. The labels are now one line
+  ("Show", "Until day") and the choices short (Always, Once home, Never), each explained
+  once in the card's intro. Measured at 390px: both boxes on the same line on every card.
+- Follow-up, the owner asked whether the timeframes in the section names are settable now.
+  They aren't, here: this screen only shortens or hides. The names now say where each
+  window comes from (`portal/home.js` `SECTION_NAMES`): the contacts, her "help weeks" in her
+  Portal settings (8 by default); the checklist, two weeks before go-home until pickup
+  (fixed); the payments band, until pickup with a status page (fixed). The card's intro
+  says these can only shorten or hide, never widen. Owner-only words; families' unchanged.
+- Follow-up, the owner ("Who is her?"): the screen now says "the breeder" where it said "her"
+  (the contacts' name, the stage's band's contract line).
+- The owner: the checklist's two weeks settable too. A new portal timing rule,
+  `checklist_days_before` (`portal/timing.js`, 14 by default, 1 to 60), on her Timing
+  screen's Family portal card ("The go-home checklist shows on Home from … days before").
+  Home reads it in every look. The breeder's line on her checklist screen
+  (`ptpl.checklist.hint`) now takes `{when}`, the rule in words (`daysText`: "two weeks" for
+  14, as before; "three weeks", "10 days"), so it reads as today by default. The Family Home
+  screen's checklist name points at Timing. Test in `portal-home.test.js`. 537 pass. No
+  migration, no version bump.
+- The owner: the admin nav on a phone was wider than the screen (13 tabs). Now the bar
+  holds Every site, Pages, Menu, Pups, the screen that's open and **More**; More
+  (a `<details>`, no script) opens the rest as a grid in a panel over the bar
+  (`builder/frame.js` `adminNav`, `PHONE_SCREENS`; a `more` icon in `manage/index.js`).
+  On a computer the side nav is unchanged (More hidden, every screen shown). Checked at
+  390px: the page and the bar are 390 wide; More open and closed; 1280px unchanged.
+  `app.css` changed: **`APP_VERSION` 19 → 20** with the owner's yes ("You can do a bump"),
+  `APP_FILES` bcdf42f9cd572688. 537 pass.
+- The prompt for a KennelOS session to check its side for a second kennel (multi-breeder
+  plan 2.6): `docs/plans/kennelos-second-kennel-check.md`.
+- The owner: group the website's screens and the portal's. The admin nav now runs by
+  group (`builder/frame.js` `SCREENS` with a group each, `GROUPS`): **Website** (Pages to From
+  KennelOS), **Family portal** (Family Home; only on portal sites), **Website and portal**
+  (Timing, which has a card for each, and her instructions). Group names down the side on a
+  computer and as headings in the phone's More panel; a site without the portal has one
+  group and no names. The side nav scrolls if it's taller than the screen. `app.css`
+  changed again under the unreleased `APP_VERSION` 20 (`APP_FILES` ab17944db5aff60d). 537 pass.

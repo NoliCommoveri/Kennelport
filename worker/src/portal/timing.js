@@ -12,6 +12,8 @@
 // Pure: no D1 here, so vet.js, steps.js and stays.js can read it with no imports.
 
 export const PORTAL_TIMING = Object.freeze({
+  // The go-home checklist shows on Home from this many days before go-home.
+  checklist_days_before: 14,
   // The booking reminder: this many days before go-home, at this local hour.
   book_days_before: 5,
   book_hour: 9,
@@ -29,6 +31,7 @@ export const PORTAL_TIMING = Object.freeze({
 
 // Each rule's bounds, for the owner's form.
 export const PORTAL_TIMING_FIELDS = Object.freeze({
+  checklist_days_before: { min: 1, max: 60 },
   book_days_before: { min: 0, max: 30 },
   book_hour: { min: 0, max: 23 },
   morning_hour: { min: 0, max: 23 },
@@ -74,5 +77,11 @@ export function withPortalTiming(build, full) {
 
 const HOUR = 3600000;
 export const hoursMs = (h) => h * HOUR;
+// A count of days in words, as her lines had it: "two weeks" for 14, "10 days" for 10.
+const WEEK_WORDS = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
+export function daysText(n) {
+  if (n % 7 === 0 && WEEK_WORDS[n / 7]) return `${WEEK_WORDS[n / 7]} week${n === 7 ? '' : 's'}`;
+  return `${n} day${n === 1 ? '' : 's'}`;
+}
 // "09:00" from 9.
 export const hourText = (h) => `${String(h).padStart(2, '0')}:00`;

@@ -10,6 +10,7 @@
 // what family.js has already worked out (the stage, the tasks, the programs) and its
 // helpers (h), so the rules stay in one place.
 import { escapeHtml as esc } from '../../lib/html.js';
+import { HOME_SECTIONS } from '../home.js';
 
 // The prototype's icons, as drawn there (its sprite), under their own ids: i-k-<name>.
 const K = {
@@ -147,12 +148,17 @@ export function home(c, h) {
   const pup = `<a class="tile pup" href="/family/records">${photo(c.main ? `${c.main}?s=t` : null, name, 'round')}<span class="pname">${esc(name)}${c.sex ? `<span class="sex ${c.sex[1] === 'girl' ? 'f' : 'm'}" aria-label="${c.sex[1]}">${c.sex[0]}</span>` : ''}</span>${c.breed ? `<span class="small muted">${esc(c.breed)}</span>` : ''}
     ${c.facts.length ? `<ul class="facts">${c.facts.map(([icon, words]) => `<li>${lk(icon)}${esc(words)}</li>`).join('')}</ul>` : ''}</a>`;
   out.push(`<section class="herocard">${hero}<div class="hc-panel"><div class="bento">${pup}${c.tile}</div></div></section>`);
-  out.push(c.band);
-  out.push(c.food);
-  if (c.contactsLead) out.push(contacts(c, true));
-  out.push(c.checklist, c.statusBand);
-  if (c.rest.length) out.push(mkCard('paw', `Recommended for ${esc(name)}`, programRows(c.rest, 'home', kennel), { gold: true }));
-  out.push(c.readNext);
+  // The sections in the owner's order for the site (portal/home.js), today's by default.
+  const sections = {
+    stage: () => c.band,
+    food: () => c.food,
+    contacts: () => (c.contactsLead ? contacts(c, true) : ''),
+    checklist: () => c.checklist,
+    status: () => c.statusBand,
+    recommended: () => (c.rest.length ? mkCard('paw', `Recommended for ${esc(name)}`, programRows(c.rest, 'home', kennel), { gold: true }) : ''),
+    readnext: () => c.readNext,
+  };
+  for (const k of c.order ?? HOME_SECTIONS) out.push(sections[k]?.());
   out.push(mkCard('pin2', 'Quick links', `<div class="qgrid">${c.quick.map(([href, icon, label]) => `<a class="qtile" href="${href}"><span class="ico">${lk(icon)}</span>${label}</a>`).join('')}</div>`));
   if (c.disclosure) out.push(c.disclosure);
   return out.filter(Boolean).join('\n');

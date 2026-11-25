@@ -686,7 +686,13 @@ Each step is its own branch and can be released on its own.
    and what each of its cards shows. **2026-11-25, the owner:** no templates (step 5
    descoped; every breeder builds from the standard), and the portal won't be customized
    much, so step 6 is its **timing rules** only, built (`portal/timing.js`, the Timing
-   screen's Family portal card). The rest of this step is not planned.
+   screen's Family portal card). **Later the same day, the owner:** Home's order and cards,
+   built (`portal/home.js`, her **Family Home** screen, `manage/builder/portalhome.js`): the
+   sections between the tiles and Quick links in her order (the stage's band can move, never
+   hide), and each card (the food band's three, contacts, checklist, payments, Recommended,
+   Read next) shown always, only once home or never, until N days after pickup. In the
+   site's build as `portal_home`, read live; Classic recolours a custom order so no two
+   cards of one colour stack. The tabs and the breeder's components stay as built.
 7. **After the KennelOS review:** the new raw fields, as rule and filter inputs, for the
    website and the portal's feed.
 

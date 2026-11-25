@@ -70,6 +70,8 @@ import { redirect, ic, isDemo, whereIs, SCREENS, adminNav } from './builder/fram
 import { everySite } from './builder/sites.js';
 import { groupChoices, groupItem, groupItemLine, groupItemName } from './builder/menugroups.js';
 import { timingScreen, PORTAL_TIMING_ROWS } from './builder/timing.js';
+import { portalHomeScreen, portalHomeNext } from './builder/portalhome.js';
+import { portalHomeFor, HomeError } from '../portal/home.js';
 import { PORTAL_TIMING, portalTimingFor, portalTimingFromForm, withPortalTiming, PortalTimingError } from '../portal/timing.js';
 import { formatsScreen } from './builder/formats.js';
 import { wordingRoute } from './builder/instructions.js';
@@ -862,7 +864,7 @@ export async function handleBuilder({ env, request, url, user, page }) {
   const wm = path.match(/^\/admin\/wording(?:\/([a-z]+))?$/);
   if (wm) return wordingRoute({ env, request, url, page, site: null, screen: wm[1] ?? null });
   const sv = path.match(/^\/admin\/([a-z0-9-]+)\/site(\/.*)?$/);
-  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z0-9_-]+|menu|rules|dogs|tags|forms|documents|wording|formats|kennelos|timing|instructions|instructions\/[a-z]+)$/);
+  const m = sv ? [null, sv[1], 'site'] : path.match(/^\/admin\/([a-z0-9-]+)\/(pages|pages\/[a-z0-9_-]+|menu|rules|dogs|tags|forms|documents|wording|formats|kennelos|timing|portalhome|instructions|instructions\/[a-z]+)$/);
   if (!m) return null;
   const site = await env.DB.prepare("SELECT id, subdomain, kennel_name, status, portal_on, demo_step, scheme, pill_style FROM sites WHERE subdomain = ? AND status != 'closed'").bind(m[1]).first();
   if (!site) return null;
@@ -878,6 +880,7 @@ export async function handleBuilder({ env, request, url, user, page }) {
   if (screen === 'tags') return tagsRoute({ env, request, url, site, build, page });
   if (screen === 'forms') return formsRoute({ env, request, url, site, build, page });
   if (screen === 'documents') return documentsRoute({ env, request, url, site, page });
+  if (screen === 'portalhome') return site.portal_on ? portalHomeRoute({ env, request, url, site, build, page }) : null;
   let { rules, timing } = rulesFor(build);
   let error = null;
   if (request.method === 'POST') {
@@ -996,6 +999,30 @@ async function tagsRoute({ env, request, url, site, build, page }) {
     <form method="post" id="build" class="build solo"><button class="sr" tabindex="-1" aria-hidden="true">Save</button>${tagsScreen(snap, cleanTags(build.tags), null)}
       <div class="actionbar"><div class="in"><span class="ico">${ic('eye')}</span><p><b>Their website</b>Save, then the preview shows it. Publishing puts it live.</p><button class="primary small">Save</button></div></div></form>`;
   return page(`Tags · ${site.kennel_name || site.subdomain}`, body, { admin: { nav: adminNav(site, 'tags'), site } });
+}
+
+// Family Home (portal/home.js, builder/portalhome.js): the family portal Home's order and
+// cards. The portal reads the build live, so saving leaves nothing to publish.
+async function portalHomeRoute({ env, request, url, site, build, page }) {
+  let error = null;
+  if (request.method === 'POST') {
+    const form = await request.formData();
+    try {
+      const out = portalHomeNext(build, (k) => form.get(k));
+      await saveBuild(env, site.id, out.build, { draft: false });
+      return redirect(`/admin/${site.subdomain}/portalhome?saved=1${out.at}`);
+    } catch (err) {
+      if (!(err instanceof HomeError)) throw err;
+      error = err.message;
+    }
+  }
+  const saved = url.searchParams.get('saved') && !error;
+  const body = `<p class="crumb"><a href="/admin">‹ Every site</a></p><span class="eyebrow">${esc(site.kennel_name || site.subdomain)}</span>${isDemo(site) ? ' <span class="spill brass">Demo</span>' : ''}<h1>Family Home</h1>
+    <p class="muted">The family portal's Home: the order of its sections, and when each card shows. Today's Home is the default.</p>
+    ${saved ? '<p class="notice" role="status">Saved. Families see it the next time they open Home.</p>' : ''}
+    <form method="post" id="build" class="build solo"><button class="sr" tabindex="-1" aria-hidden="true">Save</button>${portalHomeScreen(portalHomeFor(build), error)}
+      <div class="actionbar"><div class="in"><span class="ico">${ic('home')}</span><p><b>Their Home</b>Takes effect as soon as it's saved: the portal has nothing to publish.</p><button class="primary small">Save</button></div></div></form>`;
+  return page(`Family Home · ${site.kennel_name || site.subdomain}`, body, { admin: { nav: adminNav(site, 'portalhome'), site } });
 }
 
 async function pagesRoute({ env, request, url, site, build, page, screen }) {
