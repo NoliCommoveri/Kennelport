@@ -36,6 +36,9 @@ export function settingsScreen(site, s, products, { error, waiting = [], extras 
       <label>${t('pset.zone')}<select name="time_zone">${zones.map((z) => `<option value="${esc(z)}"${z === s.time_zone ? ' selected' : ''}>${esc(ZONE_NAMES[z] ?? z)}</option>`).join('')}</select></label>
       <label>${t('pset.proof')}<input name="proof_note" value="${esc(s.proof_note ?? '')}" maxlength="400" placeholder="${t('pset.proof_ph')}"><span class="hint">${t('pset.proof_hint')}</span></label>
     </div></section>
+    <section class="fgroup" id="invites"><h2>${t('pset.invites')}</h2><div class="fgrid">
+      <input type="hidden" name="auto_invite_shown" value="1"><label class="check"><input type="checkbox" name="auto_invite" value="1"${(s.auto_invite_shown ? s.auto_invite : s.auto_invite_at) ? ' checked' : ''}> <span>${t('pset.auto_invite')}<br><span class="hint">${t('pset.auto_invite_hint')}</span></span></label>
+    </div></section>
     <section class="fgroup"><h2>${t('pset.contacts')}</h2><div class="fgrid">
       <p class="hint">${t('pset.contacts_hint')}</p>
       ${waiting.map((g) => `<div class="box"><p><b>${t('pset.kennelos_has')}</b> ${esc(suggestLabel(g.field, say))}: <strong>${esc(g.value ?? '')}</strong></p><div class="row">

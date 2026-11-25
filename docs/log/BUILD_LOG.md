@@ -3073,3 +3073,28 @@ the only gate left. No code, no migration, no version bump.
   (counts and words), `portal-hub.test.js` (Today and Portal tab before saving),
   `portal-steps.test.js` (the shots, an existing list unchanged). 539 pass. No version bump
   (server-rendered screens only).
+- Follow-up, the owner: reminders wait for the invite; automatic invites; the microchip task;
+  a remove for everything she adds.
+  - `sendDueFor` sends nothing to a family not yet invited (`portal_families.invited_at`);
+    once invited, the latest reminder due goes.
+  - Automatic invites, her choice in Portal settings ("Invites", `pset.invites`,
+    `pset.auto_invite*`): `portal_settings.auto_invite_at`, added to **migration 0046**
+    (still one migration on this branch). `portal/auth.js` `autoInvite`: families added since
+    she switched it on, with an address and an open placement with the family, not invited,
+    not gone from KennelOS, settings saved; on her first save the ones already waiting are
+    included. Runs after a KennelOS feed, after she adds a family, after she saves settings,
+    and hourly (`autoInviteAll`, before the reminders). A send that reached no address leaves
+    them not invited, to try again. Off: Send invite, as before.
+  - The microchip: "Register {name}'s microchip to your name and address", 2 days after
+    pickup, in the suggested timeline and as a ready-made registration wording (index 2,
+    its own `days`, `noProgram`: never linked to her registration program). Her timeline
+    suggests it with one tap, like Register {name}, until it's on it, so a list made before
+    (the first breeder's) gets it at the bottom with nothing else changed.
+  - Remove paths, checked over every portal screen of hers: everything she adds had one
+    except four, now added: her contract file (`removeContract`, the file deleted too), a
+    message she sent (`removeBreederMessage`, hers only; the email has gone), a loss she
+    recorded by mistake (`undoLoss`, not for one KennelOS sent: changed there), and her loss
+    note (`removeLossNote`). Wording: `pf.contract_remove`, `plog.remove`, `pf.loss_undo`,
+    `pf.loss_note_remove`, error `loss_kennelos`.
+  - Tests in `portal.test.js`, `portal-feed.test.js`, `portal-steps.test.js`,
+    `portal-account.test.js`. 541 pass. No version bump.

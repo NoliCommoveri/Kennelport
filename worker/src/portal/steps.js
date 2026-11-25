@@ -57,6 +57,7 @@ const SUGGESTED_TIMELINE = [
   { title: 'Book the vet visit', body: 'Vets fill up fast. Book it before {name} comes home.', count_from: 'pickup', offset_days: -5, auto: 'vet_booking' },
   { title: 'Pickup day', body: 'Bring the carrier and a towel.', count_from: 'pickup', offset_days: 0, auto: 'pickup' },
   { title: 'Activate {name}\'s insurance trial', body: 'The free trial has to be activated within a few days of pickup.', count_from: 'pickup', offset_days: 1, type: 'insurance', button_label: 'Activate the trial' },
+  { title: 'Register {name}\'s microchip to your name and address', body: 'Put your name, address and phone on {name}\'s microchip record, so {name} comes straight home to you if ever lost. The chip number is under Records.', count_from: 'pickup', offset_days: 2 },
   { title: 'The vet visit, and upload the record', body: 'Your contract asks for it. Upload the vet\'s record here afterwards.', count_from: 'pickup', offset_days: 3, auto: 'vet_visit' },
   { title: 'Deworming at 10 weeks', body: 'Your vet gives the dose and when to repeat it.', count_from: 'birth', offset_days: 70 },
   { title: 'Keep the same food for two weeks', body: 'Change food slowly, if at all, over 7 to 10 days.', count_from: 'pickup', offset_days: 14, type: 'food', button_label: 'Order {name}\'s food' },
@@ -80,6 +81,9 @@ export const READY_TASKS = {
     choices: [
       { title: 'Register {name}', body: 'Fill in your part of the registration and send it in.' },
       { title: 'Register {name} online', body: 'Use the code from {name}\'s papers to register online.' },
+      // The microchip's own registry, not the breed's: never linked to her registration
+      // program, and due sooner (`days`).
+      { title: 'Register {name}\'s microchip to your name and address', body: 'Put your name, address and phone on {name}\'s microchip record, so {name} comes straight home to you if ever lost. The chip number is under Records.', days: 2, noProgram: true },
     ],
   },
   insurance: {
@@ -123,9 +127,10 @@ export async function addReady(env, siteId, value, placementId = null) {
     if (!program) throw new PortalError('That program isn\'t shown to families.');
     if ((program.portal_type ?? 'other') !== kind) throw new PortalError('Choose a ready-made task.');
   } else if (kind !== 'registration') throw new PortalError('Choose a ready-made task.');
+  if (program && choice.noProgram) throw new PortalError('Choose a ready-made task.');
   const words = (x) => x.replace(/\{program\}/g, program?.name ?? '');
   return saveItem(env, siteId, 'task', null, {
-    title: words(choice.title), body: words(choice.body), count_from: 'pickup', offset_days: String(ready.days),
+    title: words(choice.title), body: words(choice.body), count_from: 'pickup', offset_days: String(choice.days ?? ready.days),
     product_id: program?.id ?? '', button_label: program ? ready.button : '',
   }, placementId);
 }

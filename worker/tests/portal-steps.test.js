@@ -124,6 +124,7 @@ test('she starts from the suggested lists, linked to her programs, and edits, mo
   const shots = env.DB.raw.prepare("SELECT title, count_from, offset_days FROM portal_timeline_tasks WHERE placement_id IS NULL AND title LIKE '%shots%' ORDER BY sort").all();
   assert.deepEqual(shots.map((x) => [x.count_from, x.offset_days]), [['birth', 77], ['birth', 98], ['birth', 119]]);
   assert.ok(item(env, 'portal_timeline_tasks', 'One-year boosters'));
+  assert.equal(item(env, 'portal_timeline_tasks', 'Register {name}\'s microchip to your name and address').offset_days, 2);
   // A timeline she already has is hers: a second "suggested" is refused and changes nothing.
   const before = env.DB.raw.prepare('SELECT id, title, body FROM portal_timeline_tasks ORDER BY sort').all();
   assert.equal((await her('/portal/timeline/suggested', {})).status, 400);
@@ -371,5 +372,19 @@ test('Register {name} stays suggested on her timeline until it\'s on it', async 
   assert.ok(item(env, 'portal_timeline_tasks', 'Register Opal'));
   assert.equal(item(env, 'portal_timeline_tasks', 'Register {name}').button_label, 'Register');
   page = await (await her('/portal/timeline')).text();
-  assert.doesNotMatch(page, /Suggested: Register/);
+  assert.doesNotMatch(page, /Suggested: Register \{name\}</);
+  // The microchip's registration is suggested too, never linked to her registration
+  // program, and goes to the bottom of a list she already has, nothing else changed.
+  assert.match(page, /Suggested: Register \{name\}&#39;s microchip to your name and address/);
+  assert.match(page, /value="\|registration\|2"/);
+  assert.doesNotMatch(page, /value="crate\|registration\|2"/);
+  assert.equal((await her('/portal/timeline/ready', { ready: 'crate|registration|2' })).status, 400);
+  const before = env.DB.raw.prepare('SELECT id, title, body, sort FROM portal_timeline_tasks ORDER BY sort').all().map((x) => ({ ...x }));
+  assert.equal((await her('/portal/timeline/ready', { ready: '|registration|2' })).status, 303);
+  const after = env.DB.raw.prepare('SELECT id, title, body, sort, offset_days, product_id FROM portal_timeline_tasks ORDER BY sort').all();
+  assert.deepEqual(after.slice(0, -1).map(({ id, title, body, sort }) => ({ id, title, body, sort })), before);
+  assert.equal(after.at(-1).title, 'Register {name}\'s microchip to your name and address');
+  assert.equal(after.at(-1).offset_days, 2);
+  assert.equal(after.at(-1).product_id, null);
+  assert.doesNotMatch(await (await her('/portal/timeline')).text(), /Suggested: Register/);
 });

@@ -56,6 +56,7 @@ import { siteBase } from '../kennelos/link.js';
 import { scheduleDelete } from './account.js';
 import { addExtra } from './stays.js';
 import { bagFact } from './bag.js';
+import { autoInvite } from './auth.js';
 
 export const FEED_FORMAT = 1;
 export const MAX_FEED_BYTES = 512 * 1024;
@@ -542,6 +543,9 @@ export async function applyFeed(env, device, body) {
   }
   for (const r of feed.removed) await markGone(env, site.id, r, at, counts);
   await env.DB.prepare('UPDATE sites SET portal_feed_at = ? WHERE id = ?').bind(at, site.id).run();
+  // Her automatic invites, if she has them on: a family whose contract was just signed
+  // gets their portal now, not at the next hourly run. A failure waits for that run.
+  try { await autoInvite(env, site.id); } catch (err) { console.error(`portal: automatic invites not sent: ${err?.message ?? err}`); }
   return {
     received: feed.feed_id,
     summary: Object.fromEntries(Object.entries(counts).filter(([, n]) => n)),

@@ -13,9 +13,9 @@ import { escapeHtml as esc } from '../lib/html.js';
 import {
   getSettings, saveSettings, listFamilies, getFamily, familyEmails, createFamily, updateFamily, deleteFamily, placementFor, createPlacement,
   updatePlacement, markPickedUp, confirmPickup, pickupNotYet, acceptProof, declineProof, setLifeStatus, addHealthRecord, removeHealthRecord, healthRecords,
-  saveFile, getFile, fileResponse, emailLog, history, placeablePuppies, PortalError, RECORD_TYPES, recordKind, MAX_FILE_BYTES,
+  saveFile, getFile, removeContract, fileResponse, emailLog, history, placeablePuppies, PortalError, RECORD_TYPES, recordKind, MAX_FILE_BYTES,
 } from './store.js';
-import { sendInvites, portalBase } from './auth.js';
+import { sendInvites, portalBase, autoInvite } from './auth.js';
 import { pupOf, photosOf, removedPhotosOf, removePhoto, putBackPhoto } from './pups.js';
 import { makeViewLink, VIEW_AS_ADMIN } from './view.js';
 import { defaultSay } from '../manage/wording.js';
@@ -33,7 +33,7 @@ import {
 } from './stays.js';
 import { suggestionsFor, takeSuggestion, ignoreSuggestion, QUIET_MS } from './feed.js';
 import {
-  thread, markRead, breederWrites, markLoss, isLoss, lossDraft, saveLossNote, scheduleDelete, undoDelete, recentlyDeleted, eraseFamily, erasedRecords, MAX_MESSAGE, UNDO_DAYS,
+  thread, markRead, breederWrites, markLoss, isLoss, lossDraft, saveLossNote, undoLoss, removeLossNote, removeBreederMessage, scheduleDelete, undoDelete, recentlyDeleted, eraseFamily, erasedRecords, MAX_MESSAGE, UNDO_DAYS,
   deleteNow, deletedForGood, giveBack,
 } from './account.js';
 import { placementDuplicates, familyCandidates, mergePlacement, mergeFamily } from './merge.js';
@@ -300,7 +300,8 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
         <p class="hint">${t('pf.loss_line', { name })}</p>
         ${form('loss-note', `<label>${t('pf.loss_note', { family: f.name })}<textarea name="note" rows="9" maxlength="4000" required>${esc(p.loss_note ?? lossDraft(p, site.kennel_name || site.subdomain, f.name))}</textarea>
           <span class="hint">${p.loss_note ? (p.loss_sent_at ? t('pf.loss_saved_sent', { time: at(p.loss_note_at), sent: at(p.loss_sent_at) }) : t('pf.loss_saved', { time: at(p.loss_note_at) })) : t('pf.loss_draft')}</span></label>
-          <label class="check"><input type="checkbox" name="send" value="1"> <span>${t('pf.loss_email')}</span></label><p><button class="primary">${t('pf.loss_save')}</button></p>`)}</section>`);
+          <label class="check"><input type="checkbox" name="send" value="1"> <span>${t('pf.loss_email')}</span></label><p><button class="primary">${t('pf.loss_save')}</button></p>`)}
+        <div class="row">${p.loss_note ? form('loss-note-remove', `<button class="link">${t('pf.loss_note_remove')}</button>`) : ''}${p.kennelos_id ? '' : form('loss-undo', `<button class="link">${t('pf.loss_undo', { name })}</button>`)}</div></section>`);
     }
     const proof = p.proof_file_id ? await getFile(env, site.id, p.proof_file_id) : null;
     parts.push(`<section class="card"><h2>${sayHtml(say, 'pf.vet_title', {}, { status: `<span${v.trouble ? ' class="error"' : ''}>${t(`pvet.${v.key}`)}</span>` })}</h2>
@@ -419,6 +420,7 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
     parts.push(`<section class="card"><h2>${t('pf.contract')}</h2>
       ${contract ? `<p><a href="/s/${esc(site.subdomain)}/portal/file/${esc(contract.id)}">${t('pf.contract_view')}</a> <span class="muted small">${t('pf.contract_added', { time: at(contract.uploaded_at) })}</span></p>` : `<p class="muted">${t('pf.contract_none')}</p>`}
       <form method="post" action="${base}/contract" enctype="multipart/form-data"><label>${t(contract ? 'pf.contract_replace' : 'pf.contract_add')}<input type="file" name="file" accept="application/pdf,image/*" required></label><p><button>${t('pf.upload')}</button></p></form>
+      ${contract ? form('contract-remove', `<button class="link">${t('pf.contract_remove')}</button>`) : ''}
     </section>`);
 
     const kept = p.puppy_id && puppies.some((x) => x.id === p.puppy_id) ? null : await pupOf(env, site.id, p);
@@ -468,7 +470,7 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
   if (msgs.length || (p?.picked_up_at)) {
     await markRead(env, site.id, f.id, 'family');
     parts.push(`<section class="card" id="messages"><h2>${t('plog.messages')}</h2>
-      ${msgs.length ? `<dl class="kv">${msgs.map((m) => `<dt>${m.sender === 'family' ? esc(f.name) : t('plog.you')}<br><span class="hint">${esc(at(m.sent_at))}</span></dt><dd>${esc(m.body).replace(/\n/g, '<br>')}</dd>`).join('')}</dl>` : `<p class="muted">${t('plog.messages_none')}</p>`}
+      ${msgs.length ? `<dl class="kv">${msgs.map((m) => `<dt>${m.sender === 'family' ? esc(f.name) : t('plog.you')}<br><span class="hint">${esc(at(m.sent_at))}</span></dt><dd>${esc(m.body).replace(/\n/g, '<br>')}${m.sender === 'breeder' ? form(`message/${esc(m.id)}/remove`, `<button class="link small">${t('plog.remove')}</button>`) : ''}</dd>`).join('')}</dl>` : `<p class="muted">${t('plog.messages_none')}</p>`}
       ${form('message', `<label>${t('plog.reply')}<textarea name="body" rows="4" maxlength="${MAX_MESSAGE}" required></textarea><span class="hint">${t('plog.reply_hint')}</span></label><p><button class="primary">${t('plog.send')}</button></p>`)}</section>`);
   }
 
@@ -568,6 +570,7 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
       throw err;
     }
     await saveDelivery(env, site.id, input);
+    try { await autoInvite(env, site.id); } catch (err) { if (!(err instanceof MailError)) throw err; }
     const TYPES = ['food', 'insurance', 'registration', 'product', 'other'];
     const list = await products(env, site.id);
     if (list.length) {
@@ -727,6 +730,8 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
       if (familyId) await deleteFamily(env, site.id, familyId);
       return page(say('pfam.add'), newScreen(site, puppies, s, { error: err.message, values, say }), { back: home, status: 400 });
     }
+    // With her automatic invites on, they're invited as she adds them.
+    try { await autoInvite(env, site.id); } catch (err) { if (!(err instanceof MailError)) throw err; }
     return redirect(`${home}/f/${familyId}?note=added`);
   }
 
@@ -809,6 +814,9 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
         return to('saved');
       }
       case 'message': await breederWrites(env, site, familyId, get('body')); return redirect(`${home}/f/${familyId}?note=sent#messages`);
+      case 'contract-remove': await removeContract(env, site.id, needP().id); return to('removed');
+      case 'loss-undo': await undoLoss(env, site.id, needP().id); return to('saved');
+      case 'loss-note-remove': await removeLossNote(env, site.id, needP().id); return redirect(`${home}/f/${familyId}?note=removed#loss`);
       case 'loss': await markLoss(env, site.id, needP().id, get('reason'), get('on')); return redirect(`${home}/f/${familyId}?note=loss#loss`);
       case 'loss-note': {
         const r = await saveLossNote(env, site, needP().id, get('note'), { send: get('send') === '1' });
@@ -828,6 +836,8 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
         await scheduleDelete(env, site.id, familyId, 'breeder');
         return redirect(`${home}?note=deleted`);
       default: {
+        const mm = action?.match(/^message\/([0-9a-f-]{36})\/remove$/);
+        if (mm) { await removeBreederMessage(env, site.id, familyId, mm[1]); return redirect(`${home}/f/${familyId}?note=removed#messages`); }
         const rm = action?.match(/^record\/([0-9a-f-]{36})\/remove$/);
         if (rm) { await removeHealthRecord(env, site.id, needP().id, rm[1]); return to('removed'); }
         const phm = action?.match(/^photo\/([0-9a-f-]{36})\/(remove|back)$/);

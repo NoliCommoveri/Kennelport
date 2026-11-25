@@ -255,6 +255,8 @@ export const PORTAL_LINES = {
   "pf.loss_saved_sent": ["portalfamily", "The same, once emailed ({sent})", "Saved {time}, emailed {sent}."],
   "pf.loss_email": ["portalfamily", "Tick box", "Also email it to them"],
   "pf.loss_save": ["portalfamily", "Button", "Save note"],
+  "pf.loss_note_remove": ["portalfamily", "Button under her loss note: takes it off their page", "Take the note off their page"],
+  "pf.loss_undo": ["portalfamily", "Button: the loss was marked by mistake ({name})", "Marked by mistake: {name} is still theirs"],
   "pf.vet_title": ["portalfamily", "Heading of the vet visit card ({status}: like \"Not booked\")", "Vet visit: {status}"],
   "pf.deadline": ["portalfamily", "Label", "Deadline"],
   "pf.left": ["portalfamily", "After the deadline ({left}: like \"20 hours\")", "{left} left"],
@@ -319,6 +321,7 @@ export const PORTAL_LINES = {
   "pf.contract_none": ["portalfamily", "With none", "Not added yet."],
   "pf.contract_add": ["portalfamily", "Field label", "Add a PDF or photo, up to 10 MB"],
   "pf.contract_replace": ["portalfamily", "Field label, with one added", "Replace with a PDF or photo, up to 10 MB"],
+  "pf.contract_remove": ["portalfamily", "Button: takes the contract off", "Remove the contract"],
   "pf.upload": ["portalfamily", "Button", "Upload"],
   "pf.details": ["portalfamily", "Heading", "{name}'s details"],
   "pf.microchip": ["portalfamily", "Field label", "Microchip"],
@@ -457,6 +460,7 @@ export const PORTAL_LINES = {
   "plog.reply": ["portallog", "Field label", "Reply"],
   "plog.reply_hint": ["portallog", "Help under it", "They see it in their portal and get it by email."],
   "plog.send": ["portallog", "Button", "Send"],
+  "plog.remove": ["portallog", "Button beside a message she sent: takes it out of their portal", "Remove"],
 
   // The tabs, and the rest of Today.
   "ptab.today": ["portaltoday", "The tabs: the first", "Today"],
@@ -505,6 +509,9 @@ export const PORTAL_LINES = {
   "pset.vet_days_before": ["portalsettings", "The rule in days, before the box for the number", "By the end of day"],
   "pset.vet_days_after": ["portalsettings", "The rule in days, after the box for the number", "after the pickup day"],
   "pset.vet_hint": ["portalsettings", "Line under them", "Applies to clocks that start from now on; a clock already running keeps its deadline."],
+  "pset.invites": ["portalsettings", "Heading", "Invites"],
+  "pset.auto_invite": ["portalsettings", "The switch", "Send each family their invite as soon as they're added"],
+  "pset.auto_invite_hint": ["portalsettings", "Help under it", "From a signed contract in KennelOS, or a family you add here. Off: they wait for you to tap Send invite."],
   "pset.zone": ["portalsettings", "Field label", "Your time zone"],
   "pset.proof": ["portalsettings", "Field label", "What counts as proof"],
   "pset.proof_ph": ["portalsettings", "Example in the empty field", "The vet's exam record or receipt, showing the date and Opal's microchip"],
@@ -610,7 +617,7 @@ export const PORTAL_LINES = {
   "ptpl.ticks_itself": ["portaltemplates", "A checklist item that ticks itself", "ticks itself"],
   "ptpl.done_itself": ["portaltemplates", "A task that's done by itself", "done by itself"],
   "ptpl.named": ["portaltemplates", "Warning on a step that names one puppy ({pup})", "Every family reads \"{pup}\" here. Write {name} instead, and each family sees their own puppy's name."],
-  "ptpl.suggested": ["portaltemplates", "Heading of the suggested registration task ({task})", "Suggested: {task}"],
+  "ptpl.suggested": ["portaltemplates", "Heading of a suggested task: registration, or the microchip ({task})", "Suggested: {task}"],
   "ptpl.suggested_when": ["portaltemplates", "Line under it ({n}: days)", "{n} days after pickup."],
   "ptpl.suggested_when_program": ["portaltemplates", "The same, with a registration program ({button}, {program})", "{n} days after pickup, with a {button} button to {program}."],
   "ptpl.suggested_hint": ["portaltemplates", "The rest of the line", "Write {name} and each family sees their own puppy's name. Keep your own task instead if you like it better."],
@@ -687,6 +694,7 @@ const ERROR_LIST = [
   ['vet_phone', 'Portal settings: her vet\'s phone isn\'t a phone number', 'Your vet\'s phone doesn\'t look like a phone number.'],
   // A family's screen: an invite before her settings are saved.
   ['invite_settings', 'A family\'s screen: Send invite before Portal settings are saved', 'Save your portal settings first: your vet visit rule and time zone.'],
+  ['loss_kennelos', 'A family\'s screen: undoing a loss KennelOS sent', 'This puppy came from KennelOS. Change it there.'],
   // A family and its emails.
   ['family_name', 'Add a family: no family name', 'Give the family a name, for example "the Reed family".'],
   ['family_name_keep', 'A family\'s screen: the family name emptied', 'Give the family a name.'],

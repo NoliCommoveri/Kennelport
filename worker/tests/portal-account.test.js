@@ -79,6 +79,16 @@ test('messages open at pickup: the family writes, she sees it on Today and repli
   const d = fam(await familySignIn(env, 'lee@example.com'));
   assert.doesNotMatch(await (await d('/family/messages')).text(), /slept/);
   assert.equal(pushText([{ kind: 'notice', site_id: 's', name: 'Reed', ref: `portal-message:${id}` }], [{ id: 's', subdomain: 'akbostons' }]).path, `/s/akbostons/portal/f/${id}#messages`);
+  // A message she sent can come out of their portal; theirs can't be removed by her.
+  {
+    const mine = row("SELECT id FROM portal_messages WHERE sender = 'breeder'");
+    const theirs = row("SELECT id FROM portal_messages WHERE sender = 'family'");
+    assert.match(await (await her(`/portal/f/${id}`)).text(), new RegExp(`message/${mine.id}/remove`));
+    assert.equal((await her(`/portal/f/${id}/message/${theirs.id}/remove`, {})).status, 303);
+    assert.ok(row('SELECT id FROM portal_messages WHERE id = ?', theirs.id));
+    assert.equal((await her(`/portal/f/${id}/message/${mine.id}/remove`, {})).status, 303);
+    assert.equal(row('SELECT id FROM portal_messages WHERE id = ?', mine.id), undefined);
+  }
 });
 
 test('lost before pickup: one quiet page, her note in her words, tabs down to Home and Photos', async () => {
@@ -114,6 +124,13 @@ test('lost before pickup: one quiet page, her note in her words, tabs down to Ho
   const n = outbox(env).length;
   await runPortalHourly(env, new Date(Date.now() + 5 * DAY));
   assert.equal(outbox(env).length, n);
+  // Her note comes off their page; marked by mistake, the puppy is theirs again.
+  assert.equal((await her(`/portal/f/${id}/loss-note-remove`, {})).status, 303);
+  assert.doesNotMatch(await (await r('/family')).text(), /Opal passed away this morning/);
+  assert.match(await (await her(`/portal/f/${id}`)).text(), /Marked by mistake: Opal is still theirs/);
+  assert.equal((await her(`/portal/f/${id}/loss-undo`, {})).status, 303);
+  const back = row('SELECT status, closed_reason, life_status, loss_note FROM portal_placements WHERE family_id = ?', id);
+  assert.deepEqual({ ...back }, { status: 'open', closed_reason: null, life_status: 'with_family', loss_note: null });
 });
 
 test('Resend\'s webhook: signed events mark the log delivered or bounced; unsigned ones are refused', async () => {

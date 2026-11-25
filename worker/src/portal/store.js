@@ -31,7 +31,7 @@ export async function portalOn(env, siteId) {
 const SETTINGS_DEFAULTS = {
   time_zone: 'America/New_York', vet_rule: 'hours72', proof_note: null, disclosure: null,
   her_phone: null, her_email: null, vet_clinic: null, vet_doctor: null, vet_phone: null, vet_address: null, vet_note: null, help_weeks: 8,
-  food_name: null, food_bag: null, food_how: null, food_note: null, look: null, vet_count: null, saved_at: null,
+  food_name: null, food_bag: null, food_how: null, food_note: null, look: null, vet_count: null, saved_at: null, auto_invite_at: null,
 };
 
 // Her portal settings, with the owner's timing rules for the site beside them
@@ -96,8 +96,14 @@ export async function saveSettings(env, siteId, input) {
     if (look && !Object.hasOwn(LOOKS, look)) throw new PortalError('Choose a look from the list.');
     v.look = look && look !== 'classic' ? look : null;
   }
-  const first = !(await env.DB.prepare('SELECT saved_at FROM portal_settings WHERE site_id = ?').bind(siteId).first('saved_at'));
+  const had = await env.DB.prepare('SELECT saved_at, auto_invite_at FROM portal_settings WHERE site_id = ?').bind(siteId).first();
+  const first = !had?.saved_at;
   if (first) v.saved_at = now();
+  // Automatic invites: when she switched them on, kept while they stay on (only families
+  // added from then are invited by themselves). Left as they are when the form doesn't say.
+  // On her first save, families that arrived while no invite could go are included:
+  // she couldn't have chosen to hold them.
+  if ('auto_invite' in input || 'auto_invite_shown' in input) v.auto_invite_at = input.auto_invite ? (had?.auto_invite_at ?? (first ? '2000-01-01T00:00:00.000Z' : now())) : null;
   const cols = Object.keys(v);
   await env.DB.batch([
     freezeSiteVetStatement(env, siteId),
@@ -604,6 +610,18 @@ export async function saveFile(env, siteId, placementId, { kind, bytes, name, by
   if (kind === 'proof') await applyChanges(env, siteId, p, { proof_file_id: id, proof_uploaded_at: t, proof_accepted_at: null, proof_declined_at: null }, by);
   if (kind === 'contract') await applyChanges(env, siteId, p, { contract_file_id: id }, by);
   return id;
+}
+
+// Her contract file taken off the family's screen and their Records, and deleted.
+export async function removeContract(env, siteId, placementId) {
+  const p = await getPlacement(env, siteId, placementId);
+  if (!p?.contract_file_id) return;
+  const f = await getFile(env, siteId, p.contract_file_id);
+  await applyChanges(env, siteId, p, { contract_file_id: null }, 'breeder');
+  if (f && f.kind === 'contract') {
+    await env.DB.prepare('DELETE FROM portal_files WHERE id = ? AND site_id = ?').bind(f.id, siteId).run();
+    await env.FILES.delete(f.r2_key);
+  }
 }
 
 export async function getFile(env, siteId, id) {

@@ -141,6 +141,26 @@ export async function saveLossNote(env, site, placementId, note, { send = false 
   return r;
 }
 
+// Her loss recorded by mistake: the puppy is theirs again, as before she marked it, and
+// her note goes with it. A loss KennelOS sent is changed there (it would send it again).
+export async function undoLoss(env, siteId, placementId) {
+  const p = await getPlacement(env, siteId, placementId);
+  if (!isLoss(p)) throw new PortalError('There\'s no loss recorded for this puppy.');
+  if (p.kennelos_id) throw new PortalError('This puppy came from KennelOS. Change it there.');
+  await applyChanges(env, siteId, p, { status: 'open', closed_reason: null, life_status: 'with_family', life_status_on: null }, 'breeder');
+  await env.DB.prepare('UPDATE portal_placements SET loss_note = NULL, loss_note_at = NULL WHERE id = ? AND site_id = ?').bind(p.id, siteId).run();
+}
+
+// Her note taken off their page (an email already sent stays sent).
+export async function removeLossNote(env, siteId, placementId) {
+  await env.DB.prepare('UPDATE portal_placements SET loss_note = NULL, loss_note_at = NULL, updated_at = ? WHERE id = ? AND site_id = ?').bind(now(), placementId, siteId).run();
+}
+
+// A message she sent, taken out of the portal (the email has gone). Only hers.
+export async function removeBreederMessage(env, siteId, familyId, messageId) {
+  await env.DB.prepare("DELETE FROM portal_messages WHERE id = ? AND site_id = ? AND family_id = ? AND sender = 'breeder'").bind(messageId, siteId, familyId).run();
+}
+
 // ---------- delete (undoable) and erase ----------
 
 // Her delete, or a back-out from KennelOS: the family can't sign in from now, and

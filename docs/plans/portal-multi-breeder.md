@@ -101,7 +101,10 @@ lists and no handbook, bag or programs.
 defaults, Eastern and 72 hours, may not be her contract's), her Today says "Set up your
 puppy portal" and her Portal tab starts with it. Her first save counts any vet clock
 already running on her rule. Families from KennelOS still arrive and wait for her Send
-invite, as they always have. Still to build:
+invite, as they always have, unless she switches on **automatic invites** in Portal
+settings (`auto_invite_at`, same migration): then each family added from then (from
+KennelOS or by her) is invited as it arrives; on her first save, the families already
+waiting are included. Vet reminders wait for a family's invite. Still to build:
 
 - **Turning it on:** the owner applies the **Website and family portal** template (2.2) to
   the site in her admin view. `/ops` keeps the on/off switch.

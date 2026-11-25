@@ -7,11 +7,16 @@ import { dueReminders } from './vet.js';
 import { vetMessage } from './messages.js';
 import { portalBase } from './auth.js';
 import { fixDueBags } from './bag.js';
+import { autoInviteAll } from './auth.js';
 
 export async function sendDueFor(env, site, p, settings, now = new Date()) {
   // Nothing until she has saved her portal settings: the defaults' vet rule and time
   // zone may not be her contract's (portal/store.js getSettings, `saved`).
   if (!settings.saved) return 0;
+  // Nor before the family is invited (the owner, 2026-11-25): a family she hasn't sent
+  // the portal to hears nothing from it. Once invited, the latest reminder due goes.
+  const fam = await env.DB.prepare('SELECT invited_at FROM portal_families WHERE id = ?').bind(p.family_id).first();
+  if (!fam?.invited_at) return 0;
   const { results: log } = await env.DB.prepare("SELECT kind, basis, MIN(sent_at) AS at FROM portal_email_log WHERE placement_id = ? AND result != 'failed' GROUP BY kind, basis").bind(p.id).all();
   const sent = new Map(log.map((r) => [`${r.kind}|${r.basis}`, Date.parse(r.at)]));
   const due = dueReminders(p, settings, now, sent);
@@ -45,6 +50,8 @@ export async function runPortalHourly(env, now = new Date()) {
   const started = await startAssumedClocks(env, now);
   // A puppy home by its booked time, or by KennelOS, gets its go-home bag fixed (portal/bag.js).
   try { await fixDueBags(env); } catch (err) { console.error(`portal: go-home bags not fixed: ${err?.message ?? err}`); }
+  // Her automatic invites first, so a family invited now gets what's due this hour.
+  try { await autoInviteAll(env); } catch (err) { console.error(`portal: automatic invites not sent: ${err?.message ?? err}`); }
   const { results } = await env.DB.prepare(`SELECT p.*, s.subdomain, s.kennel_name, d.hostname AS domain FROM portal_placements p
     JOIN sites s ON s.id = p.site_id JOIN portal_families f ON f.id = p.family_id
     LEFT JOIN custom_domains d ON d.site_id = s.id AND d.status = 'active'
