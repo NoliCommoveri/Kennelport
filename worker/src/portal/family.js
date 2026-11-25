@@ -42,6 +42,7 @@ import { familyBag } from './bag.js';
 import { pupOf, photosOf } from './pups.js';
 import { servePhoto, serveFile, goToProgram } from './family/files.js';
 import { redeemViewLink, currentView, viewCookie } from './view.js';
+import { sampleDay, sampleDayOf, sampleCookie, sampleRows, sampleDb, SAMPLE_PRESETS, SAMPLE_DAYS } from './sample.js';
 import { sayer, everyWording, siteWording } from '../manage/wording.js';
 import { loadBuild } from '../content/rules.js';
 import {
@@ -988,6 +989,27 @@ function viewBand(fam, path, refused) {
   <form method="post" action="/family/view/exit" class="two"><a class="btn line" href="${esc(path)}">${esc(say('familyview.refresh'))}</a><button class="btn line">${esc(say('familyview.stop'))}</button></form></div>`;
 }
 
+// Her portal with the sample family (portal/sample.js): the band says so, and moves
+// the day she's seeing it from, after the prototype's "Today is" bar: three days in
+// one tap, then a day or a week either way. Plain links (her view refuses every
+// post), to /family/sample.
+function sampleBand(fam, path, refused) {
+  const say = fam.say;
+  const { day, born } = fam.sampleRows;
+  const days = say.n('familyview.sample_count', Math.abs(day));
+  const when = day < 0 ? say('familyview.sample_before', { days }) : day === 0 ? say('familyview.sample_goday') : say('familyview.sample_after', { days });
+  const back = encodeURIComponent(path);
+  const to = (d) => `/family/sample?d=${d}&amp;back=${back}`;
+  const nudge = (n, key) => { const d = Math.min(SAMPLE_DAYS.max, Math.max(SAMPLE_DAYS.min, day + n)); return `<a class="btn line" href="${to(d)}">${esc(say(key))}</a>`; };
+  const preset = (d, key) => `<a class="btn ${d === day ? 'solid' : 'line'}" href="${to(d)}"${d === day ? ' aria-current="true"' : ''}>${esc(say(key))}</a>`;
+  return `<div class="note" role="status"><p><b>${esc(say('familyview.sample_band'))}</b></p>
+  ${refused ? `<p>${esc(say('familyview.sample_nochange'))}</p>` : ''}<p>${esc(say('familyview.sample_now', { when, born: formatDay(born) }))}</p>
+  <p>${preset(SAMPLE_PRESETS[0], 'familyview.sample_week_before')} ${preset(SAMPLE_PRESETS[1], 'familyview.sample_day_after')} ${preset(SAMPLE_PRESETS[2], 'familyview.sample_month_after')}</p>
+  <p class="two">${nudge(-1, 'familyview.sample_day_earlier')}${nudge(1, 'familyview.sample_day_later')}</p>
+  <p class="two">${nudge(-7, 'familyview.sample_week_earlier')}${nudge(7, 'familyview.sample_week_later')}</p>
+  <form method="post" action="/family/view/exit"><button class="btn line">${esc(say('familyview.stop'))}</button></form></div>`;
+}
+
 // Where a refused tap goes back to: the portal page it was sent from.
 function viewBack(request, url) {
   try {
@@ -1001,10 +1023,12 @@ function viewBack(request, url) {
 // cleared, and the way back to her Site Manager.
 async function viewEnded(env, site, why, familyId = null) {
   const say = sayer({ every: await everyWording(env), site: siteWording(await loadBuild(env, site.id)) }, { kennel: site.kennel_name || site.subdomain });
-  const back = `https://manage.${env.ROOT_DOMAIN}/s/${encodeURIComponent(site.subdomain)}/portal${familyId ? `/f/${encodeURIComponent(familyId)}` : ''}`;
-  const res = frame(site, say('familyview.ended_title'), `<section class="card narrow"><h1>${esc(say('familyview.ended_title'))}</h1>
+  const tail = familyId?.startsWith('/') ? familyId : familyId ? `/f/${encodeURIComponent(familyId)}` : '';
+  const back = `https://manage.${env.ROOT_DOMAIN}/s/${encodeURIComponent(site.subdomain)}/portal${tail}`;
+  const title = why === 'sample_stopped' ? 'familyview.sample_ended_title' : 'familyview.ended_title';
+  const res = frame(site, say(title), `<section class="card narrow"><h1>${esc(say(title))}</h1>
   <p>${esc(say(`familyview.${why}`))}</p>
-  <p><a class="btn line" href="${esc(back)}">${esc(say('familyview.back'))}</a></p></section>`, { status: why === 'stopped' ? 200 : 403 });
+  <p><a class="btn line" href="${esc(back)}">${esc(say('familyview.back'))}</a></p></section>`, { status: why.endsWith('stopped') ? 200 : 403 });
   res.headers.append('set-cookie', viewCookie('', 0));
   return res;
 }
@@ -1051,10 +1075,26 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
     return viewEnded(env, site, 'used');
   }
   const view = await currentView(env, request, site);
-  if (path === '/family/view/exit' && post) return viewEnded(env, site, 'stopped', view?.familyId);
+  if (path === '/family/view/exit' && post) {
+    // The preview goes back to the Portal tab, and its day goes with it.
+    if (view?.sample) {
+      const res = await viewEnded(env, site, 'sample_stopped', '/setup');
+      res.headers.append('set-cookie', sampleCookie('', 0));
+      return res;
+    }
+    return viewEnded(env, site, 'stopped', view?.familyId);
+  }
   if (view?.stale) return viewEnded(env, site, 'expired');
   // Read-only: no write of any kind (sign-in too), back to the page she was on, with a note.
   if (view && post) return redirect(`${viewBack(request, url)}?viewing=nochange`);
+  // The sample preview's day (portal/sample.js), then back to the page she was on.
+  if (path === '/family/sample' && !post) {
+    if (!view?.sample) return redirect('/family');
+    const day = sampleDayOf(url.searchParams.get('d')) ?? SAMPLE_DAYS.start;
+    const back = url.searchParams.get('back') ?? '';
+    const to = /^\/family(\/[a-z0-9/-]*)?$/.test(back) && !back.startsWith('/family/view') && !back.startsWith('/family/sample') ? back : '/family';
+    return redirect(to, { 'set-cookie': sampleCookie(day) });
+  }
 
   try {
     if (path === '/family/signin' && post) {
@@ -1088,6 +1128,13 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
   }
 
   if (view) view.say = sayer({ every: await everyWording(env), site: siteWording(await loadBuild(env, site.id)) }, { kennel: site.kennel_name || site.subdomain });
+  // Her sample preview: the made-up family stands in from here on, on this request only.
+  if (view?.sample) {
+    const names = { family: view.say('familyview.sample_family'), pup: view.say('familyview.sample_pup'), litter: view.say('familyview.sample_litter') };
+    view.sampleRows = await sampleRows(env.DB, site, await getSettings(env, site.id), sampleDay(request), { names });
+    view.name = names.family;
+    env = { ...env, DB: sampleDb(env.DB, view.sampleRows) };
+  }
   const fam = view ?? await currentFamily(env, request, site);
   if (path === '/family/signout' && post) {
     if (fam) await signOutFamily(env, fam);
@@ -1106,7 +1153,7 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
   fam.handbook = !fam.loss && (await shownChapters(env, site.id)).length > 0;
   // On Messages itself they're read as the page shows them.
   fam.unread = fam.loss || path === '/family/messages' ? 0 : await unreadFrom(env, site.id, fam.familyId, 'breeder');
-  if (fam.viewing) fam.band = viewBand(fam, path, url.searchParams.get('viewing') === 'nochange');
+  if (fam.viewing) fam.band = fam.sample ? sampleBand(fam, path, url.searchParams.get('viewing') === 'nochange') : viewBand(fam, path, url.searchParams.get('viewing') === 'nochange');
 
   if (!post) {
     // Her view never signs anyone in as the family: their plain link instead.

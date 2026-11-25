@@ -8,6 +8,7 @@ import { parseVetRule, VET_HOURS, VET_DAYS } from '../vet.js';
 import { note, errorBox, suggestLabel, ZONES, ZONE_NAMES } from './parts.js';
 import { LOOKS, lookOf } from '../looks.js';
 import { defaultSay } from '../../manage/wording.js';
+import { previewButton } from './today.js';
 
 export const PROGRAM_TYPES = ['', 'food', 'insurance', 'registration', 'product', 'other'];
 
@@ -29,7 +30,7 @@ export function settingsScreen(site, s, products, { error, waiting = [], extras 
     <section class="fgroup" id="look"><h2>${t('pset.look')}</h2><div class="fgrid">
       <fieldset><legend>${t('pset.look_legend')}</legend>${Object.keys(LOOKS).map((k) => `<label class="check"><input type="radio" name="look" value="${k}"${lookOf(s) === k ? ' checked' : ''}> <span><b>${t(`plook.${k}`)}</b> <span class="hint">${t(`plook.${k}.about`)}</span></span></label>`).join('')}
         <span class="hint">${t('pset.look_hint')}</span></fieldset>
-    </div></section>
+    </div>${previewButton(site, say)}</section>
     <section class="fgroup"><h2>${t('pset.vet')}</h2><div class="fgrid">
       <fieldset><legend>${t('pset.vet_legend')}</legend>${vetRuleFields(s, t)}
         <span class="hint">${t('pset.vet_hint')}</span></fieldset>

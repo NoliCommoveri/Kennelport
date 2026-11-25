@@ -3159,3 +3159,33 @@ phones: the manage CSP (`style-src 'self'`) drops the inline `style="width:5em"`
 checkbox rule `label.check input` (22×22) won. They now use `class="num"` with a rule in
 `app.css` (`label.check input.num`), and the two rows centre their radio (`.vetrule`).
 `app.css` changed: APP_VERSION 20 → 21 (owner said yes).
+
+## 2026-11-25: Preview your portal, with a sample family
+
+The owner: a way to see a new breeder's portal before adding anyone, like the prototype's
+"Today is" bar (before go-home, the day after, a month on), or a puppy whose dates move.
+
+- **Preview your portal**, a button on the Portal tab and in Portal settings (under the looks),
+  opens her portal in a new tab through the same view link as See their portal
+  (`/s/<site>/portal/sample`), for a made-up family, "The Sample family", and puppy, "Biscuit"
+  (her wording, `familyview.sample_*` in `manage/wording.js`).
+- **Nothing is stored.** `portal/sample.js`: for any statement that binds a sample id, `sampleDb`
+  prefixes a `WITH portal_families(...) AS (SELECT ...), portal_placements ..., puppies ...,
+  litters ...` holding the sample's one row each, which SQLite reads before its own tables. So
+  every page (Home, Timeline, Vet visit, Records, Photos, Messages, Handbook, Resources, Potty,
+  Training, Stay, Account) runs its real queries, on her real settings, checklist, timeline,
+  handbook and programs; the family's own things (records, messages, ticks, stays) come back
+  empty. A write with a sample id does nothing; her view refuses posts anyway. Column lists come
+  from `PRAGMA table_info`, so a later migration's column is picked up by itself.
+- **The day moves the dates.** The band offers A week before, The day after, A month after,
+  then a day or a week either way (links to `/family/sample?d=`, a cookie, back to the same
+  page; −30 to 400). Go-home is that many days before today, pickup 10 am, the vet deadline
+  from her rule, born eight weeks before go-home; once the deadline has passed, a vet record
+  is in and accepted. The puppy's photo is one of hers (a puppy's, else a dog's) when she has one.
+- Stop viewing goes back to the Portal tab and clears both cookies.
+- A number box for the day was tried first: in Forest and Cream the band's input draws dark on
+  dark, so it's buttons instead (no stylesheet change).
+- Tests: `worker/tests/portal-sample.test.js` (6): the buttons, the band and its days, every
+  page at seven days in all three looks with no row changed and nothing sent, her checklist and
+  timeline dated from the sample, Stop viewing. 552 pass. Checked at 390px in Classic, Forest
+  and Cream, and at 1280px. No migration, no version bump.

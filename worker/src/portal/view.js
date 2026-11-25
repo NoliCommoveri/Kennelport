@@ -10,6 +10,7 @@
 import { hmacHex, sha256Hex, randomHex, timingSafeEqual } from '../lib/crypto.js';
 import { readCookie } from '../lib/http.js';
 import { getFamily } from './store.js';
+import { SAMPLE_FAMILY } from './sample.js';
 
 export const VIEW_COOKIE = 'kp_family_view';
 export const VIEW_LINK_MS = 2 * 60000;
@@ -47,6 +48,8 @@ async function allowed(env, siteId, familyId, emailHash) {
     const member = await env.DB.prepare('SELECT 1 FROM site_users WHERE site_id = ? AND email_hash = ?').bind(siteId, emailHash).first();
     if (!member) return null;
   }
+  // Her portal with the sample family (portal/sample.js): no family to check.
+  if (familyId === SAMPLE_FAMILY) return { id: SAMPLE_FAMILY, name: '', status_url: null, sample: true };
   return getFamily(env, siteId, familyId);
 }
 
@@ -79,5 +82,5 @@ export async function currentView(env, request, site) {
   const body = await open(env, site.id, 'view', token);
   const f = body && typeof body.x === 'number' && body.x > Date.now() ? await allowed(env, site.id, body.f, body.u) : null;
   if (!f) return { stale: true };
-  return { familyId: f.id, name: f.name, statusUrl: f.status_url, viewing: true };
+  return { familyId: f.id, name: f.name, statusUrl: f.status_url, viewing: true, sample: Boolean(f.sample) };
 }

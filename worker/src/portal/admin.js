@@ -18,6 +18,7 @@ import {
 import { sendInvites, portalBase, autoInvite } from './auth.js';
 import { pupOf, photosOf, removedPhotosOf, removePhoto, putBackPhoto } from './pups.js';
 import { makeViewLink, VIEW_AS_ADMIN } from './view.js';
+import { SAMPLE_FAMILY } from './sample.js';
 import { defaultSay } from '../manage/wording.js';
 import {
   listItems, saveItem, removeItem, moveItem, addSuggested, addReady, puppyNames, stepsFor, programsFor, setDone, setHidden, setDueOn, setProgramStatus, setProgramCode,
@@ -536,6 +537,12 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   }
   // The Portal tab (plan 7.3): what families see, in one place.
   if (rest === '/setup' && !post) return page(say('psetup.tab'), setupScreen(site, s, say), tabs('portal'));
+  // Preview your portal (portal/sample.js): her view link, for the made-up family.
+  if (rest === '/sample' && !post && user) {
+    const member = user.sites?.some((x) => x.id === site.id && x.role !== 'admin');
+    const link = await makeViewLink(env, site.id, SAMPLE_FAMILY, user.admin && !member ? VIEW_AS_ADMIN : user.emailHash);
+    return new Response(null, { status: 303, headers: { location: `${portalBase(env, site)}/family/view?t=${link}`, 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' } });
+  }
   const um = rest.match(/^\/undo\/([0-9a-f-]{36})$/);
   if (um && post) {
     try { await undoDelete(env, site.id, um[1]); } catch (err) { if (!(err instanceof PortalError)) throw err; }

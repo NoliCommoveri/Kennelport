@@ -141,6 +141,10 @@ read that before the rest. Update this map when you add, move or split a file.
   `photosOf` read the website's puppy, else the copy.
 - `view.js` her read-only view of a family's portal (`plans/done/family-view.md`): the view
   link and the view cookie; `family.js` refuses every write under one.
+- `sample.js` Preview your portal: her view of a made-up family and puppy, never stored. For
+  a statement naming a sample id, `sampleDb` puts the sample's rows in for the family,
+  placement, puppy and litter tables (a WITH of the same names); `sampleRows` dates them from
+  the day she picks in the band (`kp_family_sample` cookie). Writes with a sample id do nothing.
 - `looks.js` the portal's looks (Classic, Forest, Cream; migration 0042), chosen on her
   settings screen; each look but Classic is stylesheets in `public/_kp/f/looks/` (`mockup.css`,
   then the look's own): a port of the prototype's CSS for the four pages `family/mk.js` draws
