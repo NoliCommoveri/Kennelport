@@ -11,7 +11,7 @@ import { json } from '../lib/http.js';
 import { ALBUM_PHOTOS_MAX, SITE_FIELDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, ContentError, brandImageOk, pupStatus } from '../content/model.js';
 import {
   KINDS, listRecords, getRecord, saveRecord, setField, removeRecord, moveRecord, makeParentRecord, makeAncestorRecord,
-  saveSite, getPage, getPayment, savePayment, } from '../content/records.js';
+  saveSite, getPage, getPayment, savePayment, getPayMethods, savePayMethodNames, } from '../content/records.js';
 import { fields, field, parseForm, LABELS, labelFor, placeChoices } from './forms.js';
 import { savePhoto, PhotoError } from '../photos.js';
 import { subjects, isSubject, tagPhotos, untagPhoto, tagsByPhoto } from '../photoTags.js';
@@ -34,7 +34,7 @@ import { pendingMatches, matchChanges, confirmMatch, declineMatch, MatchError } 
 import { leavingLitters, keepLitter, deleteLitter } from '../kennelos/clock.js';
 import { keepStatements } from '../portal/pups.js';
 import { NOT_FOR_DEMO } from '../lib/demo.js';
-import { litterDaysFor, loadBuild } from '../content/rules.js';
+import { litterDaysFor, loadBuild, rulesFor } from '../content/rules.js';
 import { cleanTags, shownTags } from '../content/tags.js';
 import { shareScreens } from './screens/share.js';
 import { when, redirect, day } from './screens/parts.js';
@@ -593,6 +593,16 @@ export function createScreens({ env, request, url, site, user, page, say = defau
   async function payment() {
     const kind = url.pathname.split('/')[4] ?? '';
     const KINDS_HERE = { application_fee: [say('payment.application_fee'), PAYMENT_FIELDS], deposit: [say('payment.puppy_deposit'), PAYMENT_FIELDS], safe_notice: [say('payment.safe_payment_notice'), SAFE_NOTICE_FIELDS] };
+    if (request.method === 'POST' && kind === 'names') {
+      // Her own names for her payment methods: name.<id> → the name, empty for KennelOS's.
+      const form = await request.formData();
+      const names = Object.fromEntries([...form.keys()].filter((n) => n.startsWith('name.')).map((n) => [n.slice(5), String(form.get(n) ?? '')]));
+      try { await savePayMethodNames(env, site.id, names); } catch (err) {
+        if (err instanceof ContentError) return render({ names: [err.message, names] });
+        throw err;
+      }
+      return redirect(`${base}/payment?note=saved#methods`);
+    }
     if (request.method === 'POST') {
       const k = KINDS_HERE[kind];
       if (!k) return null;
@@ -621,7 +631,30 @@ export function createScreens({ env, request, url, site, user, page, say = defau
           ${current.source === 'kennelos' ? `<p class="notice">${esc(say('payment.filled_from_your_waitlist'))}</p>` : ''}
           ${fields(flds, current, { kind: k === 'safe_notice' ? 'safe_notice' : 'payment', say, locked: current.source === 'kennelos' ? new Set(Object.keys(PAYMENT_FIELDS).filter((f) => f !== 'show_on_site' && f !== 'show_methods')) : null })}<button class="primary">${esc(say('payment.save'))}</button></form>`);
       }
+      const methods = await methodsCard(problems.names);
+      if (methods) cards.splice(cards.length - 1, 0, methods);
       return { title: say('payment.how_to_pay'), back: base, body: `${note(url)}<p class="muted">${esc(say('payment.shown_on_your_waitlist'))}</p>${cards.join('')}` };
+    }
+
+    // Her payment methods from KennelOS, each with what it's for, its link and her
+    // instructions as families see them, and a box for her own name for it.
+    async function methodsCard([err, typed] = []) {
+      const ms = await getPayMethods(env, site.id);
+      if (!ms.length) return '';
+      const words = rulesFor(await loadBuild(env, site.id)).rules.words;
+      const STAGE_WORD = { application_fee: 'pay_fee', deposit: 'pay_deposit', payments: 'pay_payments', final_payment: 'pay_final' };
+      const lines = (t) => String(t).split('\n').map(esc).join('<br>');
+      const rows = ms.map((m) => {
+        const v = typed ? typed[m.id] ?? '' : m.own_label ?? '';
+        return `<section class="fgroup"><h2>${esc(m.label)}</h2>
+          <p class="muted small">${esc(say('payment.method_for', { stages: m.stages.map((st) => words[STAGE_WORD[st]]).join(', ') }))}</p>
+          ${m.url ? `<p class="muted small">${esc(say('payment.method_link'))} <a href="${esc(m.url)}" target="_blank" rel="noopener noreferrer">${esc(m.url)}</a></p>` : ''}
+          ${m.note ? `<p class="muted small">${lines(m.note)}</p>` : ''}
+          <div class="fgrid"><div class="f"><label for="pm-${esc(m.id)}">${esc(say('payment.your_name_for_it'))}<span class="hint">${esc(say('payment.your_name_for_it_hint', { label: m.label }))}</span><input id="pm-${esc(m.id)}" name="name.${esc(m.id)}" value="${esc(v)}" maxlength="60" placeholder="${esc(m.label)}"></label></div></div></section>`;
+      }).join('\n');
+      return `<form method="post" action="${base}/payment/names" id="methods" data-save class="card"><h2>${esc(say('payment.your_payment_methods'))}</h2>
+        <p class="muted small">${esc(say('payment.your_payment_methods_intro'))}</p>${errorBox(err)}
+        ${rows}<button class="primary">${esc(say('payment.save_names'))}</button></form>`;
     }
   }
 
@@ -932,7 +965,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     else if (isPicksPath(p)) view = await picksScreen();
     else if (p.startsWith('/blocks/')) view = await addedAction();
     else if (p.startsWith('/photos')) view = await photosScreen();
-    else if (p === '/payment' || /^\/payment\/(application_fee|deposit|safe_notice)$/.test(p)) view = await payment();
+    else if (p === '/payment' || /^\/payment\/(application_fee|deposit|safe_notice|names)$/.test(p)) view = await payment();
     else if (p.startsWith('/publish')) view = await publishScreen();
     else if (p.startsWith('/inbox')) view = await inbox();
     else if (p.startsWith('/embeds/')) view = await embedsAction();

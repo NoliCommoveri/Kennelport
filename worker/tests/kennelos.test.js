@@ -688,6 +688,41 @@ test('pay_methods: her payment methods, each with its stages; the fee and deposi
   }
 });
 
+test('her own names for her payment methods: on How to pay, kept through KennelOS updates, shown to families', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (methods) => api(b.env, '/v1/bundle', { body: bundle({ payment: { application_fee: { title: 'Application fee' }, methods } }), token });
+  const SENT = [
+    { label: 'Card', url: 'https://buy.stripe.com/abc', stages: ['application_fee'] },
+    { label: 'Zelle', note: 'pay@ak.example\nYour name in the memo.', stages: ['deposit', 'final_payment'] },
+  ];
+  await send(SENT);
+  const html = await (await b.get('/payment')).text();
+  assert.match(html, /Your payment methods/);
+  assert.match(html, /For: Puppy deposit, Final payment/);
+  assert.match(html, /pay@ak\.example<br>Your name in the memo\./);
+  assert.match(html, /Pay link: <a href="https:\/\/buy\.stripe\.com\/abc"/);
+  assert.match(html, /Leave empty for &quot;Card&quot;\./);
+  const id = (label) => b.row('SELECT id FROM pay_methods WHERE label = ?', label).id;
+  const res = await b.post('/payment/names', { [`name.${id('Card')}`]: 'Credit or debit card', [`name.${id('Zelle')}`]: '', 'name.someone-else': 'x' });
+  assert.equal(res.status, 303);
+  assert.equal(b.row("SELECT own_label FROM pay_methods WHERE label = 'Card'").own_label, 'Credit or debit card');
+  assert.equal(b.row("SELECT own_label FROM pay_methods WHERE label = 'Zelle'").own_label, null);
+  assert.match(await (await b.get('/payment')).text(), /value="Credit or debit card"/);
+  // Too long: not saved, and what she typed stays in the box.
+  const long = await b.post('/payment/names', { [`name.${id('Card')}`]: 'x'.repeat(61) });
+  assert.equal(long.status, 200);
+  assert.match(await long.text(), new RegExp(`value="${'x'.repeat(61)}"`));
+  // A KennelOS update keeps it (by the method's name); families see hers.
+  await send([...SENT, { label: 'Cash', note: 'At pickup', stages: ['final_payment'] }]);
+  assert.equal(b.row("SELECT own_label FROM pay_methods WHERE label = 'Card'").own_label, 'Credit or debit card');
+  await b.post('/payment/application_fee', { show_on_site: '1', show_methods: '1' });
+  await b.post('/publish');
+  const w = await b.page('/waitlist');
+  assert.match(w, />Pay with Credit or debit card</);
+  assert.doesNotMatch(w, />Pay with Card</);
+});
+
 test('steps: KennelOS only starts them; her wording, her own steps and her order stay through every update', async () => {
   const b = await breeder();
   const token = await linked(b);

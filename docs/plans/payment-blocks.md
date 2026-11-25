@@ -36,7 +36,7 @@ methods, so it gets the machinery that already exists: conditions, order, group 
 display style, what each item shows, and the breeder's unticks. Grouping by **fee** or by
 **method** is just a choice of **Group by**.
 
-## Step 1. Her own names (no migration)
+## Step 1. Her own names (no migration). **Built 2026-11-25** (the breeder's boxes, the owner's call; build log)
 
 - **Method names.** The Site Manager's How to pay screen lists her methods as KennelOS sends
   them: each one's name, its fees, its link and note (read-only: KennelOS's). Beside each
@@ -148,8 +148,8 @@ Each step ships on its own. None needs a migration: 0047, on the C11 branch, alr
 
 ## Open questions (the owner's)
 
-1. **Who gets the name boxes?** My recommendation: the breeder, on her How to pay screen,
-   because they're her methods; the owner sees the same screen. Or the owner only.
+1. ~~Who gets the name boxes?~~ **The breeder** (the owner, 2026-11-25), on her How to pay
+   screen. Built.
 2. **Payments and Final payment have no When line or note** (KennelOS sends those only for
    the application fee and the deposit). Wait for KennelOS, or give her boxes for them now?
    Boxes would need a place to keep them (a new table, so a migration).

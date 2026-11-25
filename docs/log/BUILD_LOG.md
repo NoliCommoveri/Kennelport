@@ -3242,3 +3242,28 @@ The owner: a way to see a new breeder's portal before adding anyone, like the pr
   fee and deposit cards, a single method, methods with no fee, none sent clears them, five
   refusals) and `payment.test.js` (export and import with her own name). 554 pass.
 - **Migration 0047 applies by itself on the first request after the merge.**
+
+## 2026-11-25: Her own names for her payment methods (payment-blocks plan, step 1)
+
+- **The owner's call: the breeder gets the name boxes.** Her How to pay screen
+  (`manage/screens.js` `methodsCard`) has a **Your payment methods** card, between the
+  Deposit card and the safe-payment notice, shown once KennelOS has sent any. Each method
+  shows, read-only as KennelOS sends it: its name, "For:" its fees (in the site's fee words),
+  its pay link and her instructions with their line breaks. Under each is a **Your name for
+  it** box (60 at most; empty shows KennelOS's name, which is also the placeholder). **Save
+  names** posts to `/payment/names`.
+- Stored in `pay_methods.own_label` (migration 0047, on this branch) by `records.js`
+  `savePayMethodNames`, only for this site's methods. A bundle keeps a name by the method's
+  label. The snapshot already uses her name, so families see it on the cards, in "Pay with…"
+  and in "We take payment only by…".
+- **Fee words:** `pay_payments` "Payments" and `pay_final` "Final payment" join `pay_fee`
+  and `pay_deposit` in the site's fixed wording (`content/rules.js`), for the owner to reword
+  per site. Her screen's "For:" line uses all four.
+- Her wording is in `manage/wording.js` (`payment.your_payment_methods*`,
+  `payment.method_for`, `payment.method_link`, `payment.your_name_for_it*`,
+  `payment.save_names`), for the owner to word.
+- No prototype screen for it: built from the Site Manager's own form pieces (card,
+  `fgroup`, `fgrid` label and hint), so no stylesheet change and no `APP_VERSION` bump.
+  Checked at 390px and 1100px.
+- Tests: `kennelos.test.js`, her names (the card, saving, an empty name, another site's id
+  ignored, too long, kept through an update, families see hers). 555 pass.

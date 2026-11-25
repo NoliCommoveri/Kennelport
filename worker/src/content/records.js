@@ -462,6 +462,27 @@ export async function getPayment(env, siteId, kind) {
   return { show_on_site: Boolean(row?.show_on_site), ...content, show_methods: content.show_methods !== false, source: row?.source ?? 'kennelport' };
 }
 
+// Her payment methods (C11), in her order, for her How to pay screen: KennelOS's
+// label, link, note and stages, and her own name for each.
+export async function getPayMethods(env, siteId) {
+  const rows = (await env.DB.prepare('SELECT * FROM pay_methods WHERE site_id = ? ORDER BY sort').bind(siteId).all()).results ?? [];
+  return rows.map((r) => ({ id: r.id, label: r.label, url: r.url, note: r.note, stages: JSON.parse(r.stages), own_label: r.own_label ?? null }));
+}
+
+// Her own names for her payment methods ({ id: name }): an empty one shows KennelOS's.
+// Only methods of this site; a name is at most 60 characters.
+export async function savePayMethodNames(env, siteId, names) {
+  const ids = new Set((await getPayMethods(env, siteId)).map((m) => m.id));
+  const s = [];
+  for (const [id, v] of Object.entries(names)) {
+    if (!ids.has(id)) continue;
+    const name = cleanValue({ type: 'text', max: 60 }, v, 'own_label');
+    s.push(env.DB.prepare('UPDATE pay_methods SET own_label = ? WHERE id = ? AND site_id = ?').bind(name, id, siteId));
+  }
+  if (!s.length) return;
+  await env.DB.batch([...s, touch(env, siteId)]);
+}
+
 export async function savePayment(env, siteId, kind, input) {
   const notice = kind === 'safe_notice';
   if (!notice && !PAYMENT_KINDS.includes(kind)) throw new ContentError(kind, 'not a kind of payment');
