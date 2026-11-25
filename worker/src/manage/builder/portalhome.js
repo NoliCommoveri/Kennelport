@@ -44,7 +44,7 @@ export function portalHomeScreen(home, error = null) {
   const same = !home.custom && !HOME_CARDS.some((k) => changed(home.cards[k]));
   return `<div class="stack">${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
     <section class="card"><div class="fgroup"><div class="between"><h2>Home's sections</h2>${same ? '<span class="spill plain">As today</span>' : '<button class="link small" name="act" value="today">Back to today\'s Home</button>'}</div>
-      <p class="small muted">Top to bottom, between the photo and tiles (always first) and Quick links (always last). Each section still follows its own rules first; these only narrow them. Always: whenever it has something to show. Once home: from the day the puppy is picked up. Until day counts from pickup: 14 shows on pickup day and the 13 days after; blank has no end, and it doesn't hide a card before pickup.</p>
+      <p class="small muted">Top to bottom, between the photo and tiles (always first) and Quick links (always last). Each section still keeps its own window, named beside it; these can only shorten or hide it, never widen it. Always: whenever it has something to show. Once home: from the day the puppy is picked up. Until day counts from pickup: 14 shows on pickup day and the 13 days after; blank has no end, and it doesn't hide a card before pickup.</p>
       <input type="hidden" name="home.order" value="${esc(home.order.join(','))}">
       <ul class="mvl">${rows}</ul></div></section></div>`;
 }

@@ -3000,3 +3000,9 @@ the only gate left. No code, no migration, no version bump.
   because the "Until, in days after pickup" label wrapped. The labels are now one line
   ("Show", "Until day") and the choices short (Always, Once home, Never), each explained
   once in the card's intro. Measured at 390px: both boxes on the same line on every card.
+- Follow-up, the owner asked whether the timeframes in the section names are settable now.
+  They aren't, here: this screen only shortens or hides. The names now say where each
+  window comes from (`portal/home.js` `SECTION_NAMES`): the contacts, her "help weeks" in her
+  Portal settings (8 by default); the checklist, two weeks before go-home until pickup
+  (fixed); the payments band, until pickup with a status page (fixed). The card's intro
+  says these can only shorten or hide, never widen. Owner-only words; families' unchanged.
