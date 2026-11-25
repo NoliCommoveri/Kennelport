@@ -2954,3 +2954,45 @@ the only gate left. No code, no migration, no version bump.
   the fix. No migration, no version bump.
 - `PORTAL_VERSION` 9 → 10 with the owner's yes, for the five tabs (`looks/mockup.css`)
   (`PORTAL_FILES` bc7532a3b99e6333). 524 pass.
+
+## 2026-11-25: Site-builder step 6: the family Home's order and cards
+
+- The owner: per site, the order of the family portal Home's sections and whether each card
+  shows, so a breeder can, say, show the food card only for the first two weeks after
+  pickup. The rules module (`portal/home.js`, on `main` since this morning) is now wired in.
+- `getSettings` (`portal/store.js`) adds `home: portalHomeFor(build)` beside `timing`.
+- Home (`portal/family.js` `homePage`): `daysHome` is whole days between pickup's local date
+  and today's (null before pickup); `cardShows` hides the food card (the band gets her
+  settings with no food name), insurance and the slim card (null), and gates contacts,
+  the checklist, the payments band, Recommended and Read next on top of their own rules.
+  What goes under "Recommended for" is still worked out from the unhidden band, so a hidden
+  or expired food program doesn't reappear there.
+- Classic: each section's html by key, joined in her order. Today's order joins exactly as
+  before (checked: all 60 snapshot pages, four dates × five pages × three looks, byte-for-byte
+  the same as `main`); a custom order goes through `recolour()`. Quick links' colour comes
+  from the joined html. Forest and Cream: `family/mk.js` `home()` pushes the sections in
+  `c.order`; no recolouring there.
+- The owner's **Family Home** screen (`/admin/<sub>/portalhome`, `manage/builder/portalhome.js`,
+  route in `builder.js`, in the nav only on portal sites: `SCREENS` takes a fifth `'portal'`):
+  the sections in order with move buttons (a move saves the screen and comes back to the
+  section), the stage's band marked always shown, the food band's three cards under it, a
+  Show select per card and "Until, in days after pickup" (blank, no end; left out for the
+  checklist and payments band, which only show before pickup); "changed" and "moved" marks,
+  As today or Back to today's Home. Saves with `draft: false`: nothing to publish. No
+  prototype screen exists for it: built from the builder's cards, movable rows, selects and
+  action bar, as Forms and Timing are. Its words are the owner's own and stay in code. No
+  family-facing words changed.
+- `scripts/portal-current-snapshots.mjs` takes `SNAP_HOME` (a Family Home as JSON).
+- Checked at 390px and 1280px: Home in Classic, Forest and Cream with a custom order
+  (contacts, Recommended, stage, food, Read next…) and the food card at "only once home,
+  until 14" on the snapshot's two-weeks-home date: the food card's gone, insurance takes the
+  band, Classic recoloured the stage's band (paper, or mint in the vet stage) under the sand
+  Recommended band. Her screen at both widths. Already there before this: at 390px the
+  admin's bottom nav is wider than the screen (12 tabs, now 13), so Timing, Home and Help sit
+  off the right edge; fixing that is a manage-app CSS change (`APP_VERSION`), not done.
+- Tests: `portal-home.test.js` (round trips, `cardShows`, `recolour`, the food card at
+  home/14 before pickup and on days 0, 13 and 14 in Classic and Forest, cards switched off,
+  a custom order in all three looks, no two alike in Classic for four orders at four stages,
+  today's order unchanged, her screen's move, cards, a bad until, Back to today's,
+  `draft_changed_at` untouched, 404 for a breeder and for a site without the portal).
+  536 pass. No migration (build JSON); no file under `public/_kp/` changed, no version bump.

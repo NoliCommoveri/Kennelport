@@ -91,7 +91,7 @@ read that before the rest. Update this map when you add, move or split a file.
   portal on.
 - `src/manage/builder.js` and `src/admin.js`: the owner's admin view (pages, blocks, menu,
   rules, timing, wording). Screens split out of `builder.js` are in `src/manage/builder/`:
-  `sites.js` (Every site), `rules.js` (Pups), `kennelos.js` (From KennelOS), `timing.js`,
+  `sites.js` (Every site), `rules.js` (Pups), `kennelos.js` (From KennelOS), `timing.js`, `portalhome.js` (Family Home, portal sites only),
   `formats.js`, `instructions.js` (her instructions), `records.js` (a data block's
   conditions, order and groups), `blocks.js` (a data block's settings and a Featured
   block's schedule), `menugroups.js` (menu links to a group of a block), `tags.js` (Tags), `forms.js` (Forms), `cards.js` (a Cards block's settings), `documents.js` (Documents); `frame.js` the nav and redirect,
@@ -114,7 +114,9 @@ read that before the rest. Update this map when you add, move or split a file.
 - `store.js` the records; `steps.js` checklist, timeline, programs; `stays.js` extended
   stays; `vet.js` the 3-day vet visit; `timing.js` the owner's timing rules per site (the
   vet reminders, red, the Vet visit tab, stays, Overdue; on her Timing screen,
-  `manage/builder/timing.js`); `reminders.js` the hourly job; `messages.js` emails;
+  `manage/builder/timing.js`); `home.js` the owner's family Home per site (its sections'
+  order, each card's show and until, Classic's recolouring of a custom order; on her Family
+  Home screen, `manage/builder/portalhome.js`); `reminders.js` the hourly job; `messages.js` emails;
   `bounces.js` Resend's delivery results; `account.js` the account over time (loss, delete,
   Delete now, giving a deleted family back); `merge.js` the same family twice (merging a
   typed placement or family into KennelOS's).

@@ -5,7 +5,8 @@
 // SNAP_DIR=/path also writes each page as <dir>/<stage>-<page>.html, viewable on its own: /_kp/
 // points at worker/public/_kp/ on disk, and Opal's photo at SNAP_PHOTO (the prototype's
 // img/opal.jpg; her logo and Opal's other photos at the prototype's ak-logo.jpg, contessa.jpg
-// and willow.jpg beside it). worker/scripts/portal-looks-check.mjs measures these against the prototype.
+// and willow.jpg beside it). SNAP_HOME='{"order":[...],"cards":{...}}' sets the owner's Family Home
+// for the site (portal/home.js). worker/scripts/portal-looks-check.mjs measures these against the prototype.
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -56,6 +57,11 @@ async function render(stage) {
       look: LOOK, 'type.akc': 'registration', 'action.akc': 'Register with the papers in your go-home folder', 'type.crate': 'product',
     });
     assert.equal(saved.status, 303, await saved.text());
+    if (process.env.SNAP_HOME) {
+      const { withPortalHome } = await import('../src/portal/home.js');
+      const { loadBuild, saveBuild } = await import('../src/content/rules.js');
+      await saveBuild(env, site.id, withPortalHome(await loadBuild(env, site.id), JSON.parse(process.env.SNAP_HOME)), { draft: false });
+    }
     await her('/portal/checklist/suggested', {});
     await her('/portal/timeline/suggested', {});
     // The sample handbook: four chapters, with a list, a page break and a program link.

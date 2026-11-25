@@ -17,17 +17,18 @@ export const isDemo = (site) => site.demo_step != null;
 // Where a site is, in words: its address, or Demo (it has none).
 export const whereIs = (site, path = '') => (isDemo(site) ? `Demo${path ? ` · ${path}` : ''}` : `${site.subdomain}.kennelport.com${path}`);
 
-// A site's screens: [path, title, icon, short name for the phone's tabs].
+// A site's screens: [path, title, icon, short name for the phone's tabs], and 'portal'
+// for one shown only on a site with the family portal.
 export const SCREENS = [
   ['pages', 'Pages', 'pages', 'Pages'], ['menu', 'Menu', 'list', 'Menu'], ['rules', 'Pups', 'paw', 'Pups'], ['dogs', 'Dogs', 'star', 'Dogs'], ['tags', 'Tags', 'tag', 'Tags'], ['forms', 'Forms', 'mail', 'Forms'], ['documents', 'Documents', 'draft', 'Docs'], ['wording', 'Wording', 'pages', 'Words'],
-  ['formats', 'Formats', 'cal', 'Formats'], ['kennelos', 'From KennelOS', 'link', 'KennelOS'], ['timing', 'Timing', 'clock', 'Timing'],
+  ['formats', 'Formats', 'cal', 'Formats'], ['kennelos', 'From KennelOS', 'link', 'KennelOS'], ['timing', 'Timing', 'clock', 'Timing'], ['portalhome', 'Family Home', 'home', 'Home', 'portal'],
   ['instructions', 'Her instructions', 'book', 'Help'],
 ];
 
 // The admin nav: Every site, then this site's screens (bottom on a phone, down the
 // side on a computer, as the breeder's tabs are).
 export function adminNav(site, cur) {
-  const items = site ? SCREENS.map(([k, l, i, short]) => [k, l, i, short]) : [];
+  const items = site ? SCREENS.filter(([, , , , only]) => only !== 'portal' || site.portal_on) : [];
   const link = (href, label, icon, on, short = label) => `<a href="${href}"${on ? ' aria-current="page"' : ''}>${svg(icon)}<span class="lg">${esc(label)}</span><span class="sm">${esc(short)}</span></a>`;
   return `<nav class="apptabs adm" aria-label="Site builder">${link('/admin', 'Every site', 'globe', !site && cur !== 'wording', 'Sites')}${site ? '' : link('/admin/wording', 'Site Manager wording', 'book', cur === 'wording', 'Wording')}
     ${site ? `<span class="lbl">Building</span><span class="site">${esc(site.kennel_name || site.subdomain)}<small>${isDemo(site) ? '<span class="spill brass">Demo</span> ' : ''}${esc(startingTemplate(site))}</small></span>` : ''}

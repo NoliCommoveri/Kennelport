@@ -34,6 +34,7 @@ import { TYPE_ICON, SPRITE, ic } from './family/icons.js';
 import { skillsList, updateCard, stayContext } from './family/stay.js';
 import { active } from './family/parts.js';
 import * as mk from './family/mk.js';
+import { HOME_SECTIONS, portalHomeFor, cardShows, recolour } from './home.js';
 import { familyBag } from './bag.js';
 import { pupOf, photosOf } from './pups.js';
 import { servePhoto, serveFile, goToProgram } from './family/files.js';
@@ -477,6 +478,19 @@ async function homePage(env, site, fam, now = new Date()) {
   // 2026-11-21: listed twice, and under "Included with", read as gifts from her).
   const inBand = live && (s.food_name || ins) ? [s.food_name ? food : null, ins, extra] : [];
   const rest = list.filter((x) => !inBand.includes(x));
+  // The owner's Home for this site (portal/home.js): each card shows always, only once
+  // home, or never, and until some days after pickup. A hidden card is left out; the
+  // programs below the band stay as worked out above, so a hidden one doesn't move there.
+  const home = s.home ?? portalHomeFor(null);
+  const daysHome = p.picked_up_at ? Math.round((Date.parse(localParts(now, s.time_zone).ymd) - Date.parse(localParts(p.picked_up_at, s.time_zone).ymd)) / 86400000) : null;
+  const shows = (k) => cardShows(home, k, daysHome);
+  const bandS = shows('food') ? s : { ...s, food_name: null };
+  const bandIns = shows('insurance') ? ins : null;
+  const bandExtra = shows('extra') ? extra : null;
+  const lead = contactsLead(p, s, now) && shows('contacts');
+  const statusOn = st === 'before' && statusUrl && live && shows('status');
+  const recommended = shows('recommended') ? rest : [];
+  const readOn = shows('readnext');
   if (p.life_status !== 'with_family' || p.status !== 'open') action = null;
 
   const born = pup?.born_on ? new Date(`${pup.born_on}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : null;
@@ -489,29 +503,37 @@ async function homePage(env, site, fam, now = new Date()) {
   // The food band above the contacts (the owner, 2026-11-21). Each piece has its own
   // colour (portal.css, Card colours); Quick links, last and always there, is green
   // unless the piece above it is, as the pieces above come and go by stage.
-  const middle = `
-  ${live ? foodBand(s, name, food, ins, extra, kennel) : ''}
-  ${contactsLead(p, s, now) ? contactsCard(site, s, p, name, { lead: true }) : ''}
-  ${checklist}
-  ${st === 'before' && statusUrl && live ? statusBand(p, s, name, kennel) : ''}
-  ${rest.length ? `<section class="sec sand bleed"><h2>${hh('paw')}Recommended for ${esc(name)}</h2>${programList(rest, 'home', kennel)}</section>` : ''}
-  ${readNext(chapters, photos)}`.trim();
+  // Each section's html, by its key (portal/home.js HOME_SECTIONS), in the order she set.
+  const parts = {
+    stage: band,
+    food: live ? foodBand(bandS, name, food, bandIns, bandExtra, kennel) : '',
+    contacts: lead ? contactsCard(site, s, p, name, { lead: true }) : '',
+    checklist: shows('checklist') ? checklist : '',
+    status: statusOn ? statusBand(p, s, name, kennel) : '',
+    recommended: recommended.length ? `<section class="sec sand bleed"><h2>${hh('paw')}Recommended for ${esc(name)}</h2>${programList(recommended, 'home', kennel)}</section>` : '',
+    readnext: readOn ? readNext(chapters, photos) : '',
+  };
+  // Today's order renders exactly as it always has; an order she chose is recoloured so
+  // no two cards of one colour stack (CLAUDE.md, tests/portal-colours.test.js).
+  const sectionsHtml = home.custom
+    ? recolour(home.order.map((k) => parts[k]).filter(Boolean).join('\n  '))
+    : `${band}\n  ${HOME_SECTIONS.slice(1).map((k) => parts[k]).join('\n  ').trim()}`;
   if (isLook(site)) {
     const h = H();
     const c = {
       p, s, st, name, kennel, now, days, goYmd, statusUrl, main, sex, hello, greeting, tasks: steps.tasks, next: openTasks(steps.tasks, 1)[0],
       breed: site.breed || pup?.litter_name, expected: st === 'before' && p.pickup_booked_at ? vetDeadline(p.pickup_booked_at, s.vet_rule, s.time_zone) : null,
       facts: [born ? ['cal', `Born ${born}`] : null, goYmd ? ['home', `${p.picked_up_at ? 'Came home' : 'Home'} ${formatDay(goYmd).replace(/^\w+, /, '')}`] : null].filter(Boolean),
-      contactsLead: contactsLead(p, s, now), rest, food, ins, extra, phone: s.her_phone || site.contact_phone, email: s.her_email || site.contact_email, v: vetOf(p, s), dialable,
+      contactsLead: lead, rest: recommended, food, ins, extra, order: home.order, phone: s.her_phone || site.contact_phone, email: s.her_email || site.contact_email, v: vetOf(p, s), dialable,
       quick: quick.map(([href, icon, label]) => [href, icon === 'paw' ? 'image' : icon, label]),
       disclosure: list.length ? disclosure(s) : '',
     };
     c.tile = stay ? calendar : mk.homeTile(c, h);
     c.band = stay ? mk.mkCard('star', `How ${esc(name)} is doing`, `${skillsList(stay.progress, { compact: true })}${stay.updates[0] ? `<p class="small">${esc((stay.updates[0].note ?? '').slice(0, 220))}${(stay.updates[0].note ?? '').length > 220 ? '…' : ''}</p>` : ''}`, { aside: `<a class="go" href="/family/stay">All ${mk.lk('chev')}</a>` }) : mk.homeBand(c, h);
-    c.food = live ? mk.foodDuo({ s, name, food, ins, extra, kennel }) : '';
-    c.checklist = st === 'before' && (days === null || days <= 14) ? mk.checklist(steps.checklist) : '';
-    c.statusBand = st === 'before' && statusUrl && live ? `<section class="mk"><div class="mk-b pt">${statusBand(p, s, name, kennel).replace(/^<section class="sec paper bleed">/, '<div class="stack sb">').replace(/<\/section>$/, '</div>')}</div></section>` : '';
-    c.readNext = mk.readNext(chapters.length ? readRows(chapters, photos) : []);
+    c.food = live ? mk.foodDuo({ s: bandS, name, food, ins: bandIns, extra: bandExtra, kennel }) : '';
+    c.checklist = st === 'before' && (days === null || days <= 14) && shows('checklist') ? mk.checklist(steps.checklist) : '';
+    c.statusBand = statusOn ? `<section class="mk"><div class="mk-b pt">${statusBand(p, s, name, kennel).replace(/^<section class="sec paper bleed">/, '<div class="stack sb">').replace(/<\/section>$/, '</div>')}</div></section>` : '';
+    c.readNext = readOn ? mk.readNext(chapters.length ? readRows(chapters, photos) : []) : '';
     return frame(site, 'Home', mk.home(c, h), { mkp: true, fam, tab: '/family', action: action ? actionBar(action, true) : '' });
   }
   const body = `
@@ -523,9 +545,8 @@ async function homePage(env, site, fam, now = new Date()) {
       ${facts ? `<ul class="pfacts">${facts}</ul>` : ''}</a>
     ${calendar}
   </section>
-  ${band}
-  ${middle}
-  <section class="tile quick ${toneOf(middle || band) === 'green' ? 'c-paper' : 'c-green'}"><h2>${hh('link')}Quick links</h2><div class="qgrid">${quick.map(([href, icon, label]) => `<a class="qtile" href="${href}"><span class="ico">${ic(icon)}</span>${label}</a>`).join('')}</div></section>
+  ${sectionsHtml}
+  <section class="tile quick ${toneOf(sectionsHtml) === 'green' ? 'c-paper' : 'c-green'}"><h2>${hh('link')}Quick links</h2><div class="qgrid">${quick.map(([href, icon, label]) => `<a class="qtile" href="${href}"><span class="ico">${ic(icon)}</span>${label}</a>`).join('')}</div></section>
   ${list.length ? disclosure(s) : ''}`;
   return frame(site, 'Home', body, { fam, tab: '/family', action: action ? actionBar(action) : '' });
 }
