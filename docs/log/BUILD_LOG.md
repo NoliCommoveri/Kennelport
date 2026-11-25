@@ -2813,3 +2813,27 @@ the only gate left. No code, no migration, no version bump.
   (31 is on `main`); asked the owner. Until then `versions.test.js` fails, as expected.
   No migration.
 - `ASSET_VERSION` 31 → 32 with the owner's yes (`TEMPLATE_FILES` 8a878cad14f459a1). 516 pass.
+
+## 2026-11-25: A tag as a dog card's ribbon; tags and Origin on a dog's page
+
+- The breeder (screenshots of Abe, an import): wanted Import on his card as the ribbon
+  across the photo, and on his page. A dog's tag (by rule, or one she can choose) now has
+  a switch on the owner's Tags screen, **Ribbon across its card's photo**: the first such
+  tag a dog has runs across the front photo of its flip card, in the pup card's `.ribbon`,
+  whether or not the card shows the Tags item (`render/parts.js` `dogCard`). Stored as
+  `ribbon: true` on the tag in `build.tags` only where on, so stored tags are unchanged
+  (`content/tags.js`); the checkbox is read only where the tag's words were posted too.
+  Pups' tags have no switch (a pup card's ribbon is its status). Light cards and photo
+  beside details have no ribbon, as before.
+- A dog's page: **Tags** is now a page part (`PROFILE_ITEMS.dog.tags`, beside the photo
+  when switched on, `PROFILE_HOME`), and **Origin** a fact (`PROFILE_FACTS.dog.origin`,
+  "Import • Romania", the cards' words). Both off by default, so live pages read as before;
+  the owner turns them on in a dog page's settings.
+- Origin is a detail (the breeder): on a card face with both Details and Origin, it's the
+  last Details row, not a row of its own after View profile (`faceOf`). On a face without
+  Details it stays its own row.
+- She said Tags was on but showed nothing: rebuilt her case (an imported dog, an Import
+  tag with Import = yes) and the pill draws; her screenshot's card had Tags on neither
+  face, so it's likely ticked on another block or card style. Said so.
+- No template CSS or JS changed (the ribbon's style is already there), so no version bump;
+  no migration. Test in `tags.test.js`. 517 pass.

@@ -12,11 +12,14 @@ import { TAG_KINDS, TAG_WORDS_MAX, TAGS_MAX } from '../../content/tags.js';
 import { BLOCK_KIND, matches } from '../../content/fields.js';
 import { recordCtx } from '../../render/parts.js';
 import { conditionRows } from './records.js';
-import { svg, pillChip, pillSelect } from './controls.js';
+import { svg, pillChip, pillSelect, toggle } from './controls.js';
 
 const option = (v, l, cur) => `<option value="${esc(v)}"${String(v) === String(cur) ? ' selected' : ''}>${esc(l)}</option>`;
 const select = (name, cur, opts, label) => `<label class="half">${esc(label)}<select name="${name}">${Object.entries(opts).map(([v, l]) => option(v, l, cur)).join('')}</select></label>`;
 const words = (name, value, label) => `<label class="half">${esc(label)}<input type="text" name="${name}" value="${esc(value)}" maxlength="${TAG_WORDS_MAX}" placeholder="Champion"></label>`;
+// A dog's tag can run as the ribbon across its card's photo (content/tags.js).
+const RIBBON = 'Ribbon across its card\'s photo (the first such tag a dog has)';
+const ribbonSwitch = (name, t) => `<div class="switches">${toggle(name, t.ribbon, RIBBON)}</div>`;
 const pillOf = (snap, t) => pillChip(snap.site.scheme, t.pill, t.words || 'No words yet');
 // A tag rule as a pretend block, so the block screen's condition rows serve it.
 const asBlock = (t) => ({ id: t.id, type: t.kind === 'puppy' ? 'pups' : 'dogs', where: t.where });
@@ -30,6 +33,7 @@ function ruleCard(snap, t, rc) {
   return `<li class="mvr item"><span class="ttl">
     <div class="between">${pillOf(snap, t)}<button class="link small danger" name="act" value="del:${esc(t.id)}">${svg('trash')} Remove this tag</button></div>
     <div class="fgrid">${words(`t.${t.id}.words`, t.words, 'Its words')}${pillSelect(`t.${t.id}.pill`, snap.site.scheme, t.pill, 'Its colour')}${select(`t.${t.id}.kind`, t.kind, TAG_KINDS, 'On')}</div>
+    ${t.kind === 'dog' ? ribbonSwitch(`t.${t.id}.ribbon`, t) : ''}
     ${conditionRows(snap, b, k, rc, { without: ['tags'], intro: 'Every one must hold. For one thing or another, add a second tag with the same words.' })}
     <span class="hint">${hits.length ? `On ${hits.length} now: ${esc(hits.slice(0, 8).map(nameOf).join(', '))}${hits.length > 8 ? '…' : ''}` : `On no ${t.kind === 'dog' ? 'dog' : 'pup'} on the site now`}${t.where.length ? '' : ' (with no conditions, it is on every one)'}.</span>
   </span></li>`;
@@ -38,11 +42,11 @@ function ruleCard(snap, t, rc) {
 export function tagsScreen(snap, tags, error, today = null) {
   const rc = recordCtx(snap, today);
   const rules = tags.rules.map((t) => ruleCard(snap, t, rc)).join('');
-  const own = tags.own.map((t) => `<li class="mvr item"><span class="ttl"><div class="fgrid">${words(`own.${t.id}.words`, t.words, 'Its words')}${pillSelect(`own.${t.id}.pill`, snap.site.scheme, t.pill, 'Its colour')}</div>
+  const own = tags.own.map((t) => `<li class="mvr item"><span class="ttl"><div class="fgrid">${words(`own.${t.id}.words`, t.words, 'Its words')}${pillSelect(`own.${t.id}.pill`, snap.site.scheme, t.pill, 'Its colour')}</div>${ribbonSwitch(`own.${t.id}.ribbon`, t)}
     <span class="row">${pillOf(snap, t)}<button class="link small danger" name="act" value="del:${esc(t.id)}">${svg('trash')} Remove</button></span></span></li>`).join('');
   return `<div class="stack">${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
     <section class="card"><div class="fgroup"><h2>Tags by rule</h2>
-      <p class="small muted">Each is on every dog (or pup) its conditions hold for, like "Champion" for a title that includes CH. A tag is then a field like any other, for a block's conditions and groups, and a card item (Tags) to show its pills.</p>
+      <p class="small muted">Each is on every dog (or pup) its conditions hold for, like "Champion" for a title that includes CH. A tag is then a field like any other, for a block's conditions and groups, and a card item (Tags) to show its pills, on a card or a dog's page.</p>
       ${rules ? `<ul class="mvl">${rules}</ul>` : ''}
       ${tags.rules.length < TAGS_MAX ? `<div class="fgrid">${select('addkind', 'dog', TAG_KINDS, 'A new tag on')}<div class="half"><button class="button small" name="act" value="rule+">${svg('plus')} Add a tag by rule</button></div></div>` : ''}</div></section>
     <section class="card"><div class="fgroup"><h2>Tags the breeder can choose</h2>

@@ -91,7 +91,7 @@ export function tagsOf(kind, rec, rc) {
   cache.set(rec, []); // a rule can't reach this record's tags while they're worked out
   const own = kind === 'dog' ? (rec.tags ?? []).map((id) => T.own.find((t) => t.id === id)).filter(Boolean) : [];
   const ruled = T.rules.filter((t) => t.kind === kind && matches(kind, rec, t.where, rc));
-  const out = [...own, ...ruled].filter((t) => t.words).map(({ id, words, pill }) => ({ id, words, pill }));
+  const out = [...own, ...ruled].filter((t) => t.words).map(({ id, words, pill, ribbon }) => ({ id, words, pill, ...(ribbon ? { ribbon } : {}) }));
   cache.set(rec, out);
   return out;
 }

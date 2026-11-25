@@ -11,7 +11,7 @@ import {
   partnerOf, coOwnedWith, partnerLogo, partnerLink, puppyCard, slider, expanders, pagehead, head, ICONS, paySection,
   payShown, litterChoices, ANY_LITTER, ABOUT_LABEL, dogGroups, descendantsOf, depositsAhead, soonSection, pricesOff, sitePrice, word, sexWord, fullRegLink,
   fullRegSurchargeRow, galleryHtml, faqBlock, addedOn, addedWords, addedRow, customPage, rulesOf, pillClass, snapCtx, healthGroups,
-  pagePath, zoomed,
+  pagePath, zoomed, tagPills, originText,
 } from './parts.js';
 import { pedigreeOf } from '../content/fields.js';
 import { HEALTH_KINDS } from '../content/rules.js';
@@ -517,6 +517,9 @@ export function dog(snap, ctx, slug) {
     if (v) fact[role] = [word(snap, `${role}_fact`), v];
   }
   if (d.outside && d.owner_name) fact.owner = [word(snap, 'outside_fact'), d.owner_url ? `<a href="${attr(d.owner_url)}" rel="noopener">${esc(d.owner_name)}</a>` : esc(d.owner_name)];
+  // Its Origin, in the words its cards use ("Import • Romania"); off unless ticked.
+  const origin = originText(snap, d);
+  if (origin) fact.origin = [word(snap, 'origin_label'), esc(origin)];
   const facts = pr.facts.map((k) => fact[k]).filter(Boolean);
   const tests = healthLists(snap, d.health);
   const litters = snap.litters.filter((l) => l.dam_id === d.id || l.sire_id === d.id);
@@ -530,6 +533,8 @@ export function dog(snap, ctx, slug) {
       role: `<span class="eyebrow">${esc([snap.site.breed, d.role].filter(Boolean).join(' · '))}</span>`,
       name: `<h1>${esc(d.call_name)}</h1>`,
       reg: d.registered_name ? `<p class="reg">${esc(d.registered_name)}</p>` : '',
+      // Its tags as pills, in the site's pill style, as on its cards; off unless placed.
+      tags: tagPills(snap, 'dog', d),
       facts: `<dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>`,
       bio: d.bio ? `<p class="bio">${esc(d.bio)}</p>` : '',
       sale: sale ? `<p class="${pillClass(rulesOf(snap).dogs?.sale_pill ?? 'ok')}">${esc(word(snap, 'for_sale_status'))}${sale.price ? ` · ${esc(sale.price)}` : ''}</p><p><a class="btn solid" href="${attr(sale.ask)}">${esc(word(snap, 'ask_dog', { name: d.call_name }))}</a></p>` : '',

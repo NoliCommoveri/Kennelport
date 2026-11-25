@@ -1096,7 +1096,7 @@ export const PROFILE_ITEMS = Object.freeze({
     bio: 'Bio', sale: 'Looking for a home: price and “Ask about”', tests: 'Health testing (with verify links)', share: 'Share button',
     badges: 'Badge row: the badges she ticks for every dog', embeds: 'Videos and posts', litters: "The dog's litters",
     albums: 'Albums with a photo tagged as the dog', offspring: 'Offspring on the site, then grand offspring and on (four generations)',
-    pedigree: 'Pedigree: parents, grandparents and on (four generations)',
+    pedigree: 'Pedigree: parents, grandparents and on (four generations)', tags: 'Tags',
   },
   puppy: {
     faq: 'FAQ spot: the questions she ticks for every puppy', status: 'Status', name: 'Name', facts: 'Facts', bio: 'Bio',
@@ -1113,21 +1113,24 @@ export const PROFILE_FIXED = Object.freeze({ dog: ['name'], puppy: ['name'], lit
 export const PROFILE_ONLY = Object.freeze({ dog: {}, puppy: {}, litter: { pair: 'head', summary: 'head', faq: 'body', parents: 'body', facts: 'body', note: 'body', fullreg: 'body', share: 'body', pups: 'body', badges: 'body', embeds: 'body', albums: 'body' } });
 // The facts on a dog's and a puppy's page, today's order.
 export const PROFILE_FACTS = Object.freeze({
-  dog: { sex: 'Sex', color: 'Color', born: 'Born', weight: 'Weight', registry: 'Registry', titles: 'Titles', sire: 'Sire', dam: 'Dam', co_owned: 'Co-owned with', lives_with: 'Lives with', owner: 'Owned by (outside dogs)' },
+  dog: { sex: 'Sex', color: 'Color', born: 'Born', weight: 'Weight', registry: 'Registry', titles: 'Titles', sire: 'Sire', dam: 'Dam', co_owned: 'Co-owned with', lives_with: 'Lives with', owner: 'Owned by (outside dogs)', origin: 'Origin (Import, or Import Ancestry)' },
   puppy: { sex: 'Sex', color: 'Color', collar: 'Collar', status: 'Status', price: 'Price', registration: 'Registration', registry: 'Registry', parents: 'Parents', born: 'Born' },
 });
 // Today's pages: each part's items in order. What isn't listed is off (a dog's
-// badge row: today's dog pages have none).
+// badge row and tags: today's dog pages have none). A dog's Origin fact is off too,
+// so today's pages read as they did (2026-11-25).
 export const PROFILE_DEFAULT = Object.freeze({
-  dog: { parts: { above: ['faq'], side: ['role', 'name', 'reg', 'facts', 'bio', 'sale', 'tests', 'share'], below: ['embeds', 'litters', 'offspring', 'albums'] }, facts: Object.keys(PROFILE_FACTS.dog) },
+  dog: { parts: { above: ['faq'], side: ['role', 'name', 'reg', 'facts', 'bio', 'sale', 'tests', 'share'], below: ['embeds', 'litters', 'offspring', 'albums'] }, facts: Object.keys(PROFILE_FACTS.dog).filter((k) => k !== 'origin') },
   puppy: { parts: { above: ['faq'], side: ['status', 'name', 'facts', 'bio', 'ask', 'surcharge', 'notice', 'share'], below: ['badges', 'photos', 'albums'] }, facts: Object.keys(PROFILE_FACTS.puppy) },
   litter: { parts: { head: ['pair', 'summary'], body: ['faq', 'parents', 'facts', 'note', 'fullreg', 'share', 'pups', 'badges', 'embeds', 'albums'] } },
 });
-// The part an item sits in when switched on: where today's page has it, else the
-// last part (a dog's badge row goes under the photo).
+// The part an item sits in when switched on: where today's page has it, else its
+// own (a dog's tags go beside the photo), else the last part (a dog's badge row goes
+// under the photo).
+const PROFILE_HOME = Object.freeze({ dog: { tags: 'side' }, puppy: {}, litter: {} });
 export function homePart(kind, item) {
   const parts = PROFILE_DEFAULT[kind].parts;
-  return Object.keys(parts).find((p) => parts[p].includes(item)) ?? PROFILE_ONLY[kind][item] ?? Object.keys(parts).at(-1);
+  return Object.keys(parts).find((p) => parts[p].includes(item)) ?? PROFILE_HOME[kind][item] ?? PROFILE_ONLY[kind][item] ?? Object.keys(parts).at(-1);
 }
 
 // A kind's setting, every part present and every item where it may be: the
