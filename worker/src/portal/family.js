@@ -4,7 +4,7 @@
 // Timeline holds the first-weeks tasks, each with its day and program link; Vet
 // visit holds "I've booked it" and the proof upload; Records holds the puppy's
 // details, shots and deworming, the contract and her photos. Home carries the
-// go-home checklist (from two weeks before go-home), the food band and what's next.
+// go-home checklist (from two weeks before go-home by default), the food band and what's next.
 //
 // Nothing here is cached, and nothing a family sees comes from another family:
 // every photo and file is checked against the signed-in family's own placement.
@@ -468,8 +468,10 @@ async function homePage(env, site, fam, now = new Date()) {
       ${latest ? `<p class="small">${esc((latest.note ?? '').slice(0, 220))}${(latest.note ?? '').length > 220 ? '…' : ''}</p>` : `<p class="small">${esc(kennel)} writes an update every ${stay.pe.every_days === 7 ? 'week' : `${stay.pe.every_days} days`}: photos, and how each skill is coming along.</p>`}
       <p><a class="go" href="/family/stay">${latest ? `All ${stay.updates.length} update${stay.updates.length === 1 ? '' : 's'}` : 'The stay'} ${ic('arrow')}</a></p></section>` + band;
   }
-  // The checklist from two weeks before go-home (or while there's no date yet).
-  const checklist = st === 'before' && (days === null || days <= 14) ? checklistCard(steps.checklist) : '';
+  // The checklist from two weeks before go-home by default (the owner's Timing rule,
+  // portal/timing.js), or while there's no date yet.
+  const checklistFrom = s.timing?.checklist_days_before ?? 14;
+  const checklist = st === 'before' && (days === null || days <= checklistFrom) ? checklistCard(steps.checklist) : '';
   const food = list.find((x) => x.portal_type === 'food' && x.link_url);
   const ins = list.find((x) => x.portal_type === 'insurance' && (x.link_url || x.status === 'done'));
   // A third, slim card in the food band: the next program with a link that isn't the food or insurance.
@@ -531,7 +533,7 @@ async function homePage(env, site, fam, now = new Date()) {
     c.tile = stay ? calendar : mk.homeTile(c, h);
     c.band = stay ? mk.mkCard('star', `How ${esc(name)} is doing`, `${skillsList(stay.progress, { compact: true })}${stay.updates[0] ? `<p class="small">${esc((stay.updates[0].note ?? '').slice(0, 220))}${(stay.updates[0].note ?? '').length > 220 ? '…' : ''}</p>` : ''}`, { aside: `<a class="go" href="/family/stay">All ${mk.lk('chev')}</a>` }) : mk.homeBand(c, h);
     c.food = live ? mk.foodDuo({ s: bandS, name, food, ins: bandIns, extra: bandExtra, kennel }) : '';
-    c.checklist = st === 'before' && (days === null || days <= 14) && shows('checklist') ? mk.checklist(steps.checklist) : '';
+    c.checklist = st === 'before' && (days === null || days <= checklistFrom) && shows('checklist') ? mk.checklist(steps.checklist) : '';
     c.statusBand = statusOn ? `<section class="mk"><div class="mk-b pt">${statusBand(p, s, name, kennel).replace(/^<section class="sec paper bleed">/, '<div class="stack sb">').replace(/<\/section>$/, '</div>')}</div></section>` : '';
     c.readNext = readOn ? mk.readNext(chapters.length ? readRows(chapters, photos) : []) : '';
     return frame(site, 'Home', mk.home(c, h), { mkp: true, fam, tab: '/family', action: action ? actionBar(action, true) : '' });

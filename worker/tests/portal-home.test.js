@@ -286,3 +286,27 @@ test('the owner\'s Family Home screen: moves, sets cards, back to today\'s, noth
   assert.equal((await call(env, M, url, { headers: { cookie: admin } })).status, 404);
   assert.doesNotMatch(await (await call(env, M, '/admin/akbostons/timing', { headers: { cookie: admin } })).text(), /portalhome/);
 });
+
+test('the checklist\'s days before go-home: the owner\'s Timing rule, 14 by default', async () => {
+  const { daysText, PORTAL_TIMING, withPortalTiming } = await import('../src/portal/timing.js');
+  assert.equal(daysText(14), 'two weeks');
+  assert.equal(daysText(7), 'one week');
+  assert.equal(daysText(10), '10 days');
+  const { env, site, her } = await setup();
+  const at20 = await familyAt(env, her, 'at20@example.com', { puppy_id: 'pup1', go_home_on: ymd(new Date(Date.now() + 20 * DAY)) });
+  const at10 = await familyAt(env, her, 'at10@example.com', { puppy_id: 'pup2', go_home_on: ymd(new Date(Date.now() + 10 * DAY)) });
+  const list = /Go-home checklist/;
+  assert.doesNotMatch(await at20.get('/family'), list);
+  assert.match(await at10.get('/family'), list);
+  assert.match(await (await her('/portal/checklist')).text(), /gets this list from two weeks before go-home/);
+  // The owner's Timing screen: three weeks.
+  const login = await call(env, M, '/ops/login', { method: 'POST', body: form({ token: 'ops-token' }) });
+  const admin = login.headers.getSetCookie().map((c) => c.split(';')[0]).find((c) => c.startsWith('kp_admin='));
+  assert.match(await (await call(env, M, '/admin/akbostons/timing', { headers: { cookie: admin } })).text(), /The go-home checklist shows on Home from[\s\S]*days before · default 14/);
+  const fields = { 'timing.litter_days': '30', 'timing.older_after': '1', 'timing.deposits_after': '0', ...Object.fromEntries(Object.entries(PORTAL_TIMING).map(([k, v]) => [`portal_timing.${k}`, String(v)])), 'portal_timing.checklist_days_before': '21' };
+  assert.equal((await call(env, M, '/admin/akbostons/timing', { method: 'POST', headers: { cookie: admin, origin: `https://${M}` }, body: form(fields) })).status, 303);
+  assert.deepEqual((await loadBuild(env, site.id)).portal_timing, { checklist_days_before: 21 });
+  assert.match(await at20.get('/family'), list);
+  assert.match(await (await her('/portal/checklist')).text(), /gets this list from three weeks before go-home/);
+  assert.deepEqual(withPortalTiming({ portal_timing: { checklist_days_before: 21 } }, { ...PORTAL_TIMING }), {});
+});

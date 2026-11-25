@@ -15,6 +15,7 @@ export const TIMING_ROWS = [
 
 // The family portal's, in the order a placement meets them.
 export const PORTAL_TIMING_ROWS = [
+  ['checklist_days_before', 'The go-home checklist shows on Home from', 'Until pickup; with no go-home date, it shows all along', 'days before'],
   ['book_days_before', 'The vet booking reminder goes out', 'Before go-home, while no visit is booked', 'days before'],
   ['book_hour', 'The booking reminder goes out at', 'Her time zone, 0 to 23', 'o\'clock'],
   ['morning_hour', 'The deadline day\'s reminder goes out at', 'The morning of the vet deadline, her time', 'o\'clock'],

@@ -684,7 +684,7 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   if (tm) {
     const kind = tm[1] === 'checklist' ? 'checklist' : 'task';
     const here = `${home}/${tm[1]}`;
-    const show = async (opts = {}) => page(say(`ptpl.${kind}.title`), templateScreen(site, kind, await listItems(env, site.id, kind), await products(env, site.id), url, { ...opts, say, names: await puppyNames(env, site.id) }), { back: `${home}/settings`, status: opts.error ? 400 : 200 });
+    const show = async (opts = {}) => page(say(`ptpl.${kind}.title`), templateScreen(site, kind, await listItems(env, site.id, kind), await products(env, site.id), url, { ...opts, say, names: await puppyNames(env, site.id), timing: (await getSettings(env, site.id)).timing }), { back: `${home}/settings`, status: opts.error ? 400 : 200 });
     if (!post) return tm[2] ? null : show();
     try {
       if (tm[2] === 'suggested') { await addSuggested(env, site.id, kind); return redirect(`${here}?note=suggested`); }

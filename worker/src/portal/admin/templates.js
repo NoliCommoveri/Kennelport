@@ -7,6 +7,7 @@ import { escapeHtml as esc } from '../../lib/html.js';
 import { CHECK_AUTO, TASK_AUTO, READY_TASKS, namedPuppy } from '../steps.js';
 import { note, errorBox } from './parts.js';
 import { defaultSay } from '../../manage/wording.js';
+import { PORTAL_TIMING, daysText } from '../timing.js';
 
 export const products = async (env, siteId) => (await env.DB.prepare('SELECT id, name, portal_show, portal_type, family_action, portal_per_family FROM products WHERE site_id = ? ORDER BY sort, name').bind(siteId).all()).results;
 
@@ -92,13 +93,13 @@ function registerSuggestion(base, items, products, say) {
     <input type="hidden" name="ready" value="${esc(`${prog?.id ?? ''}|registration|0`)}"><p><button class="primary">${t(say, 'ptpl.suggested_add')}</button></p></form>`;
 }
 
-export function templateScreen(site, kind, items, products, url, { error, names = [], say = defaultSay } = {}) {
+export function templateScreen(site, kind, items, products, url, { error, names = [], say = defaultSay, timing = PORTAL_TIMING } = {}) {
   const base = `/s/${esc(site.subdomain)}/portal/${kind === 'checklist' ? 'checklist' : 'timeline'}`;
   const rows = items.map((x, i) => `<details class="card"><summary><b>${esc(x.title)}</b><br><span class="hint">${esc(itemMeta(kind, x, products, say))}</span>${nameWarning(x, names, say)}</summary>
     <form method="post" action="${base}/${esc(x.id)}"><div class="fgrid">${itemFields(kind, x, products, say)}<p><button class="primary">${t(say, 'pf.save')}</button></p></div></form>
     <div class="row">${i ? `<form method="post" action="${base}/${esc(x.id)}/up"><button>${t(say, 'ptpl.up')}</button></form>` : ''}${i < items.length - 1 ? `<form method="post" action="${base}/${esc(x.id)}/down"><button>${t(say, 'ptpl.down')}</button></form>` : ''}
     <form method="post" action="${base}/${esc(x.id)}/remove"><button class="link">${t(say, 'ptpl.remove')}</button></form></div></details>`).join('');
-  return `${note(url, say)}${errorBox(error, say)}<section class="card"><h1>${t(say, `ptpl.${kind}.title`)}</h1><p class="hint">${t(say, `ptpl.${kind}.hint`)}</p>
+  return `${note(url, say)}${errorBox(error, say)}<section class="card"><h1>${t(say, `ptpl.${kind}.title`)}</h1><p class="hint">${t(say, `ptpl.${kind}.hint`, { when: daysText(timing.checklist_days_before) })}</p>
     ${items.length ? '' : `<form method="post" action="${base}/suggested"><p><button class="primary">${t(say, `ptpl.${kind}.start`)}</button></p><p class="hint">${t(say, `ptpl.${kind}.start_hint`)}</p></form>`}</section>
     ${rows}
     ${kind === 'task' && items.length ? registerSuggestion(base, items, products, say) : ''}

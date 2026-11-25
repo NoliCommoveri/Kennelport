@@ -8,7 +8,7 @@
 // Fixed, around them: the photo and the tiles at the top, Quick links and the
 // disclosure at the foot. The stage's band (the vet visit, what's next, the stay) can
 // move but not be hidden: the vet visit follows her contract (plan, "What can't move").
-// Each section's own rules still hold first (the checklist from two weeks before
+// Each section's own rules still hold first (the checklist from its days before
 // go-home, the contacts in the first weeks, and so on); these only narrow them.
 //
 // Pure: no D1, so the tests and both looks share it.
@@ -19,7 +19,7 @@ export const SECTION_NAMES = Object.freeze({
   stage: 'The stage\'s band: the vet visit, what\'s next, or the stay',
   food: 'The food and insurance band',
   contacts: 'Questions? One tap: the breeder and the vet, from pickup for as many weeks as the breeder sets in Portal settings ("help weeks", 8 by default)',
-  checklist: 'Go-home checklist: from two weeks before go-home until pickup (fixed)',
+  checklist: 'Go-home checklist: until pickup, from the days before go-home set on Timing (14 by default)',
   status: 'Payments, additional services, and pickups: until pickup, with a status page (fixed)',
   recommended: 'Recommended for the puppy',
   readnext: 'Read next (the handbook\'s first chapters)',

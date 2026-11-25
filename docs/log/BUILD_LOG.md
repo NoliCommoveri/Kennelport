@@ -3008,3 +3008,11 @@ the only gate left. No code, no migration, no version bump.
   says these can only shorten or hide, never widen. Owner-only words; families' unchanged.
 - Follow-up, the owner ("Who is her?"): the screen now says "the breeder" where it said "her"
   (the contacts' name, the stage's band's contract line).
+- The owner: the checklist's two weeks settable too. A new portal timing rule,
+  `checklist_days_before` (`portal/timing.js`, 14 by default, 1 to 60), on her Timing
+  screen's Family portal card ("The go-home checklist shows on Home from … days before").
+  Home reads it in every look. The breeder's line on her checklist screen
+  (`ptpl.checklist.hint`) now takes `{when}`, the rule in words (`daysText`: "two weeks" for
+  14, as before; "three weeks", "10 days"), so it reads as today by default. The Family Home
+  screen's checklist name points at Timing. Test in `portal-home.test.js`. 537 pass. No
+  migration, no version bump.
