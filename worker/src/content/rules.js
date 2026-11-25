@@ -432,13 +432,15 @@ export async function loadBuild(env, siteId) {
   try { return JSON.parse(row.build); } catch { return {}; }
 }
 
-export async function saveBuild(env, siteId, build) {
+// draft: false for a change only the family portal reads (it reads the build live,
+// portal/timing.js), so the website shows no change waiting to be published.
+export async function saveBuild(env, siteId, build, { draft = true } = {}) {
   const t = new Date().toISOString();
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO site_builds (site_id, build, updated_at) VALUES (?, ?, ?)
       ON CONFLICT (site_id) DO UPDATE SET build = excluded.build, updated_at = excluded.updated_at`).bind(siteId, JSON.stringify(build), t),
     // A rule changes what the site shows: Publish carries it.
-    env.DB.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(t, siteId),
+    ...(draft ? [env.DB.prepare('UPDATE sites SET draft_changed_at = ? WHERE id = ?').bind(t, siteId)] : []),
   ]);
 }
 

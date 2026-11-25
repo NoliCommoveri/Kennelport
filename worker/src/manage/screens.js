@@ -463,8 +463,10 @@ export function createScreens({ env, request, url, site, user, page, say = defau
     }
     const fd = await request.formData();
     const values = parsed(fd);
-    // KennelOS's fields keep what's stored, whatever the form sent.
-    for (const f of await lockedFor(kind, rec) ?? []) values[f] = rec[f];
+    // KennelOS's fields keep what's stored, whatever the form sent. Only the form's own:
+    // KennelOS's raw values (a pup's disposition, a litter's status there, a test type,
+    // an account type) aren't the form's, and saving leaves them as they are.
+    for (const f of await lockedFor(kind, rec) ?? []) if (Object.hasOwn(KINDS[kind].fields, f)) values[f] = rec[f];
     try {
       if (kind === 'products' || kind === 'partners') await fromBadgeCode(fd, values, kind);
       await saveRecord(env, site.id, kind, rec.id, values, scopeId); } catch (err) {

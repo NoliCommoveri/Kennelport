@@ -12,7 +12,7 @@
 //   emails the family. Today lists the stays whose update is due.
 // - The stay's tasks need no copy: birth-dated tasks before go-home are already hers
 //   (steps.js), and pickup-dated ones move with the later go-home.
-import { PortalError, getPlacement, applyChanges, familyEmails, sniff } from './store.js';
+import { PortalError, getPlacement, applyChanges, familyEmails, sniff, getSettings } from './store.js';
 import { localParts, addDays } from './vet.js';
 import { pupOf } from './pups.js';
 import { sendMail, MailError } from '../mail.js';
@@ -28,7 +28,8 @@ const DAY = 86400000;
 
 export const LEVELS = { not_started: 'Not started', introduced: 'Introduced', practicing: 'Practicing', reliable: 'Reliable' };
 export const LEVEL_ORDER = Object.keys(LEVELS);
-export const STAY_STARTS_DAYS = 56; // 8 weeks old
+// Today 8 weeks old: the site's timing rule (portal/timing.js stay_starts_weeks).
+export const STAY_STARTS_DAYS = 56;
 export const MAX_PHOTOS = 6;
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 
@@ -89,11 +90,11 @@ export async function stayFor(env, siteId, placementId) {
   return env.DB.prepare("SELECT * FROM portal_placement_extras WHERE site_id = ? AND placement_id = ? AND delivery = 'stay' AND confirmed_at IS NOT NULL ORDER BY created_at DESC LIMIT 1").bind(siteId, placementId).first();
 }
 
-// A stay sets go-home to birth + its weeks, and starts at 8 weeks old.
+// A stay sets go-home to birth + its weeks, and starts at 8 weeks old (the site's rule).
 async function startStay(env, siteId, p, pe) {
   const pup = await pupOf(env, siteId, p);
   if (!pup?.born_on) return;
-  const starts = pe.starts_on ?? addDays(pup.born_on, STAY_STARTS_DAYS);
+  const starts = pe.starts_on ?? addDays(pup.born_on, (await getSettings(env, siteId)).timing.stay_starts_weeks * 7);
   if (!pe.starts_on) await env.DB.prepare('UPDATE portal_placement_extras SET starts_on = ? WHERE id = ?').bind(starts, pe.id).run();
   if (pe.weeks && !p.picked_up_at) await applyChanges(env, siteId, p, { go_home_on: addDays(pup.born_on, pe.weeks * 7) }, 'portal');
 }

@@ -683,7 +683,10 @@ Each step is its own branch and can be released on its own.
 5. **Templates.** Save as template, Apply, Reset to template.
 6. **The family portal's build:** the **Website and family portal** template; the
    portal's timing and display rules; then moving its family and breeder components,
-   and what each of its cards shows.
+   and what each of its cards shows. **2026-11-25, the owner:** no templates (step 5
+   descoped; every breeder builds from the standard), and the portal won't be customized
+   much, so step 6 is its **timing rules** only, built (`portal/timing.js`, the Timing
+   screen's Family portal card). The rest of this step is not planned.
 7. **After the KennelOS review:** the new raw fields, as rule and filter inputs, for the
    website and the portal's feed.
 

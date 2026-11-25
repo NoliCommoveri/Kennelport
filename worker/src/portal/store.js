@@ -7,6 +7,8 @@ import { LOOKS } from './looks.js';
 import { emailHash, normalizeEmail } from '../auth.js';
 import { randomHex } from '../lib/crypto.js';
 import { vetDeadline, validTimeZone, zonedToUtc, VET_RULES } from './vet.js';
+import { portalTimingFor } from './timing.js';
+import { loadBuild } from '../content/rules.js';
 
 export class PortalError extends Error {}
 
@@ -31,9 +33,14 @@ const SETTINGS_DEFAULTS = {
   food_name: null, food_bag: null, food_how: null, food_note: null, look: null,
 };
 
+// Her portal settings, with the owner's timing rules for the site beside them
+// (`timing`, portal/timing.js), so whatever reads the settings has the rules too.
 export async function getSettings(env, siteId) {
-  const row = await env.DB.prepare('SELECT * FROM portal_settings WHERE site_id = ?').bind(siteId).first();
-  return row ?? { site_id: siteId, ...SETTINGS_DEFAULTS };
+  const [row, build] = await Promise.all([
+    env.DB.prepare('SELECT * FROM portal_settings WHERE site_id = ?').bind(siteId).first(),
+    loadBuild(env, siteId),
+  ]);
+  return { ...(row ?? { site_id: siteId, ...SETTINGS_DEFAULTS }), timing: portalTimingFor(build) };
 }
 
 // A phone number as typed, kept if it has 7 to 15 digits (an optional leading +).

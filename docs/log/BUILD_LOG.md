@@ -2856,3 +2856,101 @@ the only gate left. No code, no migration, no version bump.
 - Template files changed (`site.css`, new `wave.svg`): **needs `ASSET_VERSION` 33** (32 is on
   `main`); asked the owner. Until then `versions.test.js` fails, as expected.
 - `ASSET_VERSION` 32 → 33 with the owner's yes (`TEMPLATE_FILES` 84a3015ba100876f). 517 pass.
+
+## 2026-11-25: Site-builder step 2.4, last slice: the portal's errors
+
+- The errors her portal screens show after "Not saved:" are in the owner's list: a new
+  screen in her editor, **Portal: what to fix when a portal form isn't saved**
+  (`error.portal.*`, 76 lines: Portal settings, a family and its emails, the puppy and
+  pickup, the vet visit, health records, life status and files, messages, a loss, erase,
+  delete and merge, the checklist, timeline and programs, extras and stays).
+- How: as her other screens' errors (`manage/wording.js` `MESSAGES`, `sayMessage`), the code
+  that finds the problem keeps today's words, since the families' pages say some of the
+  same ones and the tests read them. The list is `PORTAL_ERRORS` in
+  `manage/wording-portal.js`, each line's pattern made from today's words (a name in
+  braces matches the part that changes: `{address}`, `{addresses}`, `{extra}`, `{skill}`,
+  `{max}`, `{example}`). Her screens say them through one place, `errorBox`
+  (`portal/admin/parts.js`), so Portal settings, Add a family, a family's screen and the
+  checklist and timeline all take them. The handbook's and bag's errors were already keys
+  and pass through as they are.
+- Left out, as on her other screens: KennelPort itself failing (the portal not set up,
+  invites that couldn't be sent), the families' own errors (their vet booking, messages
+  before pickup; the families' wording isn't in the owner's list), the two the Families tab
+  swallows (Undo, Let KennelOS send them again), and the ones only a changed form could
+  cause ("Unknown list.", "Unknown value.", "Unknown address format.").
+- Today's wording by default: tests throw real errors from the portal's code and check
+  each says itself by default and the owner's line when she has one; her screens checked
+  through the routes (Add a family, a family's emails, Erase, Portal settings). 518 pass.
+- With this, **step 2.4 is done**: every portal screen of hers and its errors are in the
+  owner's list. The ready-made tasks and suggested lists (`steps.js`) are starting content,
+  for step 6. No migration, no version bump (no file under `public/_kp/` changed).
+
+## 2026-11-25: The family portal's tabs: five, the handbook always there
+
+- The owner: the families' bottom bar can take five tabs (her Site Manager has five), and
+  the handbook should be second from last and always there, not waiting for the Vet visit
+  tab to go. One function, `tabsFor` (`portal/family.js`), by stage:
+  - with her handbook (a chapter families see): Home, Timeline, Vet visit, **Handbook**,
+    Records; once the Vet visit tab goes, **Photos** takes its place;
+  - during an extended stay, Stay in Timeline's place, as before;
+  - with no handbook: Home, Timeline, Vet visit, **Photos**, Records, then four once the
+    vet tab goes (Photos in its place);
+  - after a loss before pickup: Home and Photos, as before.
+  Photos was already a page (`/family/photos`) and in the plan's five tabs (section 7.2).
+  The handbook still opens full screen with its own "Back to the portal".
+- Forest and Cream drew the tabs as a grid of four, so a fifth wrapped to a second row; now
+  one row of equal columns, as many as there are (`looks/mockup.css`). Classic's tabs
+  already shared the row. Checked at 390px in all three looks, before pickup and later:
+  five tabs, no label cut (76px each in Classic, 72px in the others).
+- Tests: `tabsFor` by stage; the vet tab's test reads Photos as the fifth. No migration.
+- `looks/mockup.css` changed: **needs `PORTAL_VERSION` 10** (9 is on `main`); asked the
+  owner. Until then `versions.test.js` fails, as expected.
+
+## 2026-11-25: Site-builder step 6: the family portal's timing rules
+
+- The owner: no templates (step 5 descoped; every breeder builds from the standard), and
+  the portal won't be customized much. So step 6 is the portal's timing rules, as the
+  owner's per-site settings; Home's sections, the tabs and the cards stay as built.
+- `portal/timing.js` (new): `PORTAL_TIMING`, today's values: the vet booking reminder 5
+  days before go-home at 9, the deadline morning's at 8, red under 48 hours left, the
+  families' Vet visit tab 24 hours past the deadline, a stay from 8 weeks old, a task
+  Overdue for 14 days. Stored in the site's build as `portal_timing`, only what differs
+  (as the website's `timing`); `portalTimingFor(build)` reads it, an out-of-bounds value
+  falling back to today's.
+- `getSettings` (`portal/store.js`) now adds the site's rules as `s.timing` (one more read of
+  `site_builds`), so everything that has the settings has them: `vet.js` (`bookReminderAt`,
+  `reminderTimes`, `dueReminders`, `vetStatus`, `vetTabShown`, each today's by default),
+  `steps.js` (`taskState`'s overdue days, from `stepsFor`), `stays.js` (a stay's first day),
+  her screens' vet statuses (Today, Families, a family's screen, the Dogs tab) and the
+  families' Vet visit tab. The constants they replace are gone from `vet.js`.
+- The owner's Timing screen: the "comes with the portal's build" card is now **Family
+  portal**, a row per rule with its default, changed and Back to default, bounds on each.
+  Only on a site with the portal. The portal reads the build live, so a change to its rules
+  alone doesn't mark the website as having changes to publish (`saveBuild`'s `draft: false`).
+- Left fixed, as the plan says for rules that keep KennelPort running: invite links' 30 days,
+  Undo's 30 days, the retention table. The vet deadline stays her contract's count in her
+  Portal settings.
+- Her stay line "Starts at 8 weeks…" (`pstay.starts`) now takes `{weeks}`, the site's rule;
+  today's words by default.
+- Checked the screen at 390px and 1280px. Tests: `portal-timing.test.js` (the rules, each
+  function by a site's rules, the owner's screen saving them with nothing to publish, Back
+  to default, a bad value refused). No migration (the build is JSON). No file under
+  `public/_kp/` changed; `PORTAL_VERSION` 10 is still pending for the tabs (asked).
+
+## 2026-11-25: Fix: a KennelOS puppy, litter, health result or product wouldn't save
+
+- The owner (screenshot of Layla Grace): saving a puppy from KennelOS in the Site Manager
+  said "Not saved: puppies.disposition: not a known field". Since KennelOS contract step 4
+  (2026-11-13, migration 0033), KennelOS's raw values are on its owned-fields list
+  (`kennelos/bundle.js` `OWNED`): a pup's `disposition`, a litter's `kennelos_status`, a
+  health result's `test_type`, a product's `account_type`. The record form's save copies
+  every owned field back from the stored record so the form can't change them
+  (`manage/screens.js`), which put those four into values the form's fields don't have,
+  and the check refused them. So every KennelOS litter, puppy, health result and product
+  failed to save from her screens.
+- Now only the owned fields the form has are copied back; the raw ones aren't the form's,
+  and the save leaves them as stored. Test in `dog-parents.test.js` (each of the four
+  saved through her screen, unchanged, and its raw value still there); it fails without
+  the fix. No migration, no version bump.
+- `PORTAL_VERSION` 9 → 10 with the owner's yes, for the five tabs (`looks/mockup.css`)
+  (`PORTAL_FILES` bc7532a3b99e6333). 524 pass.

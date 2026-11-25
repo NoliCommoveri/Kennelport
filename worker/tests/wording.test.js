@@ -286,4 +286,49 @@ test('the portal\'s screens for her (step 2.4): Today, Families, Add a family, t
   await call(env, M, `${fam}/accept`, { method: 'POST', headers: { cookie: breeder, origin: ORIGIN }, body: form({}) });
   await saveFile(env, ak.id, pid, { kind: 'proof', bytes: new TextEncoder().encode('%PDF-1.4 b'), name: 'r2.pdf', by: 'family' });
   assert.match(await as(fam), /Not the right one/);
+  // The portal's errors (the last slice of 2.4): today's words, then the owner's.
+  const post = (path, body) => call(env, M, path, { method: 'POST', headers: { cookie: breeder, origin: ORIGIN }, body: form(body) }).then((r) => r.text()).then(text);
+  assert.match(await post('/s/akbostons/portal/new', { name: '', emails: 'x@example.com', puppy_id: 'pup1' }), /Not yet saved: Give the family a name, for example "the Reed family"\./);
+  assert.match(await post(`${fam}/family`, { name: 'The Reed family', emails: 'nope' }), /Not yet saved: nope isn't an email address\./);
+  assert.match(await post(`${fam}/erase`, { confirm: 'no' }), /Not yet saved: Type erase to confirm\./);
+  await save('/admin/wording/portalerrors', {
+    'w.error.portal.family_name': 'Name the family, {kennel}.', 'w.error.portal.email': '"{address}" is not an email.', 'w.error.portal.erase': 'Type the word erase.',
+  });
+  assert.match(await post('/s/akbostons/portal/new', { name: '', emails: 'x@example.com', puppy_id: 'pup1' }), /Not yet saved: Name the family, AK Boston Terriers\./);
+  assert.match(await post(`${fam}/family`, { name: 'The Reed family', emails: 'nope' }), /Not yet saved: "nope" is not an email\./);
+  assert.match(await post(`${fam}/erase`, { confirm: 'no' }), /Not yet saved: Type the word erase\./);
+  assert.match(await post('/s/akbostons/portal/settings', { time_zone: 'Nowhere/Here' }), /Not yet saved: Choose a time zone from the list\./);
+});
+
+test('the portal\'s errors (step 2.4): every one her screens show is in the owner\'s list, today\'s words by default', async () => {
+  const { sayMessage } = await import('../src/manage/wording.js');
+  const { saveSettings, createFamily, cleanPhone } = await import('../src/portal/store.js');
+  const { saveItem } = await import('../src/portal/steps.js');
+  const caught = async (fn) => { try { await fn(); } catch (e) { return e.message; } return null; };
+  const env = await makeEnv();
+  const ak = await addSite(env, 'akbostons', { kennel_name: 'AK Boston Terriers' });
+  const zone = { time_zone: 'America/New_York', vet_rule: 'hours72' };
+  const said = [
+    await caught(() => saveSettings(env, ak.id, { time_zone: 'x' })),
+    await caught(() => saveSettings(env, ak.id, { ...zone, her_phone: '12' })),
+    await caught(() => saveSettings(env, ak.id, { ...zone, vet_phone: 'call me' })),
+    await caught(() => cleanPhone('12', 'The vet\'s phone')),
+    await caught(() => saveSettings(env, ak.id, { ...zone, her_email: 'nope' })),
+    await caught(() => saveSettings(env, ak.id, { ...zone, help_weeks: '60' })),
+    await caught(() => createFamily(env, ak.id, { name: 'The Reeds', emails: 'nope' })),
+    await caught(() => createFamily(env, ak.id, { name: 'The Reeds', emails: '' })),
+    await caught(() => saveItem(env, ak.id, 'task', null, { title: '' })),
+    await caught(() => saveItem(env, ak.id, 'checklist', null, { title: '' })),
+  ];
+  for (const m of said) {
+    assert.ok(m, 'a message');
+    assert.equal(sayMessage('portal', m, defaultSay), m);
+    assert.notEqual(sayMessage('portal', m, () => 'OWNER'), m, `"${m}" is in the list`);
+  }
+  // Her own email isn't read as a family's address; the task's example keeps its {name}.
+  assert.equal(sayMessage('portal', said[4], (k) => k), 'error.portal.her_email');
+  assert.equal(sayMessage('portal', said[8], sayer({ site: { 'error.portal.task_title': 'A title, like {example}' } })), 'A title, like Register {name}');
+  // KennelPort failing, and the families' own, aren't hers to word.
+  assert.equal(sayMessage('portal', 'Messages open once your puppy is home.', () => 'OWNER'), 'Messages open once your puppy is home.');
+  assert.equal(CATALOG.get('error.portal.family_name').screen, 'portalerrors');
 });

@@ -7,8 +7,8 @@
 // (puppy families and the waitlist), Add a family, the puppy fields a family's screen
 // shares with it, the Portal tab's list, the notes after a change, and a family's own
 // screen (with its extras and stays, reminder log, history and messages), Portal settings,
-// the checklist and timeline, the tabs, the rest of Today, the Dogs tab, and the words
-// these screens share.
+// the checklist and timeline, the tabs, the rest of Today, the Dogs tab, the words
+// these screens share, and the errors that tell her what to fix (PORTAL_ERRORS).
 
 export const PORTAL_SCREENS = Object.freeze({
   portaltoday: 'Portal: what needs you, on Today',
@@ -22,6 +22,7 @@ export const PORTAL_SCREENS = Object.freeze({
   portaltemplates: 'Portal: the go-home checklist and first-weeks timeline',
   portaldogs: 'Portal: the Dogs tab',
   portalwords: 'Portal: words her portal screens share (the vet visit, choices)',
+  portalerrors: 'Portal: what to fix when a portal form isn\'t saved',
 });
 
 export const PORTAL_LINES = {
@@ -349,7 +350,7 @@ export const PORTAL_LINES = {
   "pstay.not_right": ["portalstay", "Button", "Not right"],
   "pstay.home_at": ["portalstay", "Beside a stay ({n}: weeks)", "home at {n} weeks"],
   "pstay.from": ["portalstay", "A stay's line: its first day ({day})", "From {day}"],
-  "pstay.starts": ["portalstay", "A stay's line, with no first day", "Starts at 8 weeks (add the litter's birthday to set it)"],
+  "pstay.starts": ["portalstay", "A stay's line, with no first day ({weeks}: the age it starts at)", "Starts at {weeks} weeks (add the litter's birthday to set it)"],
   "pstay.to": ["portalstay", "A stay's line: its last day ({day})", "to go-home {day}"],
   "pstay.week": ["portalstay", "A stay's line: which week ({week} of {total})", "week {week} of {total}"],
   "pstay.every": ["portalstay", "A stay's line: how often ({n}: days)", "an update every {n} days"],
@@ -654,3 +655,107 @@ export const PORTAL_LINES = {
 
   "perror.not_saved": ["portalnotes", "Before what was wrong, when a portal form isn't saved ({error})", "Not saved: {error}"],
 };
+
+// The errors her portal screens show when a form isn't saved, after "Not saved:". The
+// code that finds the problem keeps today's words (its tests, and the families' pages,
+// which say some of the same ones, use them); her screens say them in the owner's
+// (portal/admin/parts.js errorBox, through sayMessage('portal')). Each:
+// [key, where, today's words]; a name in braces is a part of the words that changes.
+// Left out: messages about KennelPort itself failing (not set up, invites not sent),
+// the families' own (their vet booking, messages before pickup), ones no screen shows
+// (Undo and Let KennelOS send them again on the Families tab), and ones only a changed
+// form could cause ("Unknown list.", "Unknown value.", "Unknown address format.").
+// Order matters where one could match another: the first that fits is used.
+const ERROR_LIST = [
+  // Portal settings.
+  ['zone', 'Portal settings: no time zone from the list', 'Choose a time zone from the list.'],
+  ['vet_rule', 'Portal settings: no vet rule chosen', 'Choose how your contract counts the vet visit.'],
+  ['her_email', 'Portal settings: her email for families isn\'t one', 'Your email for families isn\'t an email address.'],
+  ['help_weeks', 'Portal settings: weeks on Home not from 1 to 52', 'Weeks on Home is a number from 1 to 52.'],
+  ['look', 'Portal settings: a look not on the list', 'Choose a look from the list.'],
+  ['her_phone', 'Portal settings: her phone for families isn\'t a phone number', 'Your phone for families doesn\'t look like a phone number.'],
+  ['vet_phone', 'Portal settings: her vet\'s phone isn\'t a phone number', 'Your vet\'s phone doesn\'t look like a phone number.'],
+  // A family and its emails.
+  ['family_name', 'Add a family: no family name', 'Give the family a name, for example "the Reed family".'],
+  ['family_name_keep', 'A family\'s screen: the family name emptied', 'Give the family a name.'],
+  ['email_none', 'Add a family: no email address', 'Add at least one email address, so they can sign in.'],
+  ['email_keep', 'A family\'s screen: every email address taken out', 'Keep at least one email address, so they can sign in.'],
+  ['email', 'A family\'s email address that isn\'t one ({address}: as typed)', '{address} isn\'t an email address.'],
+  ['emails_max', 'More than four email addresses for a family', 'Up to four addresses for a family.'],
+  ['email_taken', 'An email address another family has ({addresses}: which)', '{addresses} already belongs to another family here.'],
+  ['no_family', 'A family deleted meanwhile (on another device, say)', 'No such family.'],
+  // The puppy and its pickup.
+  ['puppy', 'Add a family: no puppy chosen', 'Choose the puppy.'],
+  ['add_puppy', 'A family\'s screen: something that needs their puppy, before one is added', 'Add their puppy first.'],
+  ['puppy_gone', 'A puppy no longer on her site', 'That puppy isn\'t on your site.'],
+  ['puppy_taken', 'A puppy that already has a family', 'That puppy already has a family here.'],
+  ['no_placement', 'A family\'s puppy removed meanwhile', 'No such placement.'],
+  ['go_home', 'Go-home that isn\'t a date', 'Go-home is a date.'],
+  ['pickup_day', 'A pickup day that isn\'t a date', 'The pickup day is a date.'],
+  ['pickup_time', 'A pickup time that isn\'t a time', 'The pickup time is a time, like 11:00.'],
+  ['pickup_both', 'A pickup time with no day', 'Give the pickup a day as well as a time.'],
+  ['pup_vet_phone', 'The puppy\'s vet: a phone that isn\'t a phone number', 'The vet\'s phone doesn\'t look like a phone number.'],
+  ['went_home', 'Picked up: no day or time they went home', 'Give the day and time they went home.'],
+  ['future', 'Picked up: a time still to come', 'That time hasn\'t happened yet.'],
+  ['nothing_confirm', 'Confirm a pickup: nothing waiting to be confirmed', 'Nothing to confirm.'],
+  ['nothing_stop', 'Not yet: nothing to stop', 'Nothing to stop.'],
+  // The vet visit, health records, life status and files.
+  ['no_proof', 'Accept a vet record: none uploaded yet', 'No vet record to accept yet.'],
+  ['no_proof_decline', 'Decline a vet record: none uploaded yet', 'No vet record to decline yet.'],
+  ['status', 'A life status or program status not chosen', 'Choose a status.'],
+  ['date', 'A date that isn\'t one (life status, a loss)', 'The date is a date.'],
+  ['record_kind', 'A health record: no kind chosen', 'Choose what kind of record it is.'],
+  ['record_date', 'A health record: no date', 'Give the date.'],
+  ['record_what', 'A health record: nothing said about what was given', 'Say what was given, for example "DHPP, first round".'],
+  ['file', 'A contract: no file chosen', 'Choose a file.'],
+  ['file_big', 'A file over 10 MB (the contract, after it\'s read)', 'That file is over 10 MB. Try a photo of the page instead.'],
+  ['file_big_short', 'A file over 10 MB (the contract, before it\'s read)', 'That file is over 10 MB.'],
+  ['file_kind', 'A file that isn\'t a photo or a PDF', 'That file isn\'t a photo or a PDF.'],
+  ['photos_big', 'An update\'s photos too large together', 'Those photos are too large together.'],
+  // Messages, a loss, deleting and merging.
+  ['message_empty', 'A message with nothing written', 'Write a message first.'],
+  ['message_long', 'A message too long ({max}: how many characters)', 'A message is up to {max} characters.'],
+  ['loss_reason', 'A loss: what happened not chosen', 'Choose what happened.'],
+  ['loss_after', 'A loss after pickup', 'After pickup, record it as the life status instead.'],
+  ['loss_none', 'The loss note, with no loss recorded', 'There\'s no loss recorded for this puppy.'],
+  ['loss_note', 'The loss note: nothing written', 'Write your note first.'],
+  ['loss_bracket', 'The loss note: a [bracket] from the draft left in', 'Your note still has a [bracket] from the draft. Put your own words there.'],
+  ['erase', 'Erase: "erase" not typed', 'Type erase to confirm.'],
+  ['delete', 'Delete: "delete" not typed', 'Type delete to confirm.'],
+  ['merge', 'Merge: the two records can\'t be merged', 'Those two records can\'t be merged. Open the family again and try once more.'],
+  ['merge_which', 'Merge: not a typed family with one from KennelOS', 'Merge a family you typed in with one from KennelOS.'],
+  // The checklist, timeline and programs.
+  ['ready', 'A ready-made task: none chosen', 'Choose a ready-made task.'],
+  ['program_hidden', 'A program families don\'t see', 'That program isn\'t shown to families.'],
+  ['program_gone', 'A program no longer on her site', 'That program isn\'t on your site.'],
+  ['suggested', 'Add the suggested list: her list already has steps', 'Your list already has steps. Add more one at a time.'],
+  ['checklist_title', 'A checklist step with nothing to have ready', 'Say what to have ready, for example "A crate with a divider".'],
+  ['task_title', 'A timeline task with no title ({example}: the example)', 'Give the task a title, for example "{example}".'],
+  ['counts_from', 'A task: neither birth nor pickup chosen', 'Choose whether the task counts from birth or from pickup.'],
+  ['days', 'A task: days not a whole number', 'Days is a whole number, like 5, or -3 for before.'],
+  ['step_gone', 'A step removed meanwhile', 'That step has gone.'],
+  ['step_not_here', 'A step not on this list', 'That step isn\'t on this list.'],
+  ['step_not_yours', 'A step not on her list', 'That step isn\'t on your list.'],
+  ['self_ticks', 'Ticking a step that ticks itself', 'This one ticks itself when it happens.'],
+  ['day', 'A task\'s day that isn\'t a date', 'The day is a date.'],
+  // Extras and stays.
+  ['extra', 'An extra: none chosen from her list', 'Choose an extra from your list.'],
+  ['extra_twice', 'An extra added twice ({extra}: its name)', '{extra} is already on this placement.'],
+  ['stay_twice', 'A second stay', 'This puppy already has a stay. Remove it first.'],
+  ['stay_start', 'A stay\'s first day that isn\'t a date', 'The stay\'s first day is a date.'],
+  ['skill', 'A stay: a skill with no name', 'Name the skill, for example "Recall".'],
+  ['no_stay', 'An update with no stay', 'No stay to write about.'],
+  ['level', 'An update: a skill with no level ({skill}: its name)', 'Choose a level for {skill}.'],
+  ['update_empty', 'An update with no note or photo', 'Write a note or add a photo.'],
+  ['update_photos', 'An update with too many photos ({max}: how many)', 'Up to {max} photos an update.'],
+  ['update_photo_big', 'An update\'s photo over 10 MB', 'A photo is over 10 MB.'],
+  ['update_photo_kind', 'An update\'s photo that isn\'t JPEG, PNG or WebP', 'Photos are JPEG, PNG or WebP. On an iPhone, choose "Most Compatible" in Camera settings, or share the photo as a JPEG.'],
+];
+
+// As manage/wording.js's MESSAGES has them: [key, screen, words, default, where], the
+// words matched from today's, a name in braces matching any part.
+const asPattern = (t) => new RegExp(`^${t.split(/(\{\w+\})/).map((part) => {
+  const m = part.match(/^\{(\w+)\}$/);
+  return m ? `(?<${m[1]}>.+)` : part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}).join('')}$`);
+export const PORTAL_ERRORS = ERROR_LIST.map(([k, where, t]) => [k, 'portalerrors', asPattern(t), t, where]);

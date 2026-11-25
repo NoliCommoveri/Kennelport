@@ -191,3 +191,45 @@ test('the pedigree card: her records four generations back; a name made a dog re
   // A dog with no parents says so.
   assert.match(card(await get(`/dogs/${dog('boone').id}`)), /No sire or dam yet/);
 });
+
+// The owner's defect (2026-11-25): saving a KennelOS puppy said "puppies.disposition: not
+// a known field". KennelOS's raw values (contract step 4) are on its list of owned fields,
+// so the save put them back into the form's values, which don't have them.
+test('a KennelOS litter, puppy, health result and product save, their raw KennelOS values kept', async () => {
+  const { env, s, get, post } = await signedIn();
+  const db = env.DB.raw;
+  const one = (sql) => db.prepare(sql).get(s.id);
+  const litter = one('SELECT id FROM litters WHERE site_id = ? LIMIT 1');
+  const pup = one('SELECT id, litter_id FROM puppies WHERE site_id = ? LIMIT 1');
+  const result = one('SELECT id, dog_id FROM health_results WHERE site_id = ? LIMIT 1');
+  db.prepare("INSERT INTO products (id, site_id, name, link_url, sort) VALUES ('0000000a-0000-4000-8000-00000000f00d', ?, 'Puppy food', 'https://food.example', 9)").run(s.id);
+  db.prepare("UPDATE litters SET source = 'kennelos', kennelos_status = 'whelped' WHERE id = ?").run(litter.id);
+  db.prepare("UPDATE puppies SET source = 'kennelos', disposition = 'placed' WHERE id = ?").run(pup.id);
+  db.prepare("UPDATE health_results SET source = 'kennelos', test_type = 'genetic' WHERE id = ?").run(result.id);
+  db.prepare("UPDATE products SET source = 'kennelos', account_type = 'affiliate' WHERE id = '0000000a-0000-4000-8000-00000000f00d'").run();
+  // The form as drawn, posted back unchanged.
+  const formAt = async (p) => {
+    const html = await get(p);
+    const start = html.indexOf(`<form method="post" action="/s/akparents${p}"`);
+    assert.ok(start >= 0, `${p}: its form`);
+    const f = html.slice(start, html.indexOf('</form>', start));
+    const body = {};
+    for (const m of f.matchAll(/<input([^>]*)>/g)) {
+      const name = m[1].match(/name="([^"]+)"/)?.[1];
+      const type = m[1].match(/type="([^"]+)"/)?.[1];
+      if (!name || type === 'file' || ((type === 'checkbox' || type === 'radio') && !/ checked/.test(m[1]))) continue;
+      body[name] = (m[1].match(/value="([^"]*)"/)?.[1] ?? '').replace(/&amp;/g, '&').replace(/&#39;/g, "'");
+    }
+    for (const m of f.matchAll(/<select[^>]*name="([^"]+)"[^>]*>([\s\S]*?)<\/select>/g)) body[m[1]] = m[2].match(/<option value="([^"]*)" selected/)?.[1] ?? '';
+    for (const m of f.matchAll(/<textarea[^>]*name="([^"]+)"[^>]*>([\s\S]*?)<\/textarea>/g)) body[m[1]] = m[2];
+    return body;
+  };
+  for (const p of [`/litters/${litter.id}`, `/litters/${pup.litter_id}/puppies/${pup.id}`, `/dogs/${result.dog_id}/health/${result.id}`, '/lists/products/0000000a-0000-4000-8000-00000000f00d']) {
+    const res = await post(p, await formAt(p));
+    assert.equal(res.status, 303, `${p}: ${res.status === 200 ? (await res.text()).match(/Not saved:[^<]*/)?.[0] : res.status}`);
+  }
+  assert.equal(one('SELECT kennelos_status AS v FROM litters WHERE site_id = ? AND source = \'kennelos\'').v, 'whelped');
+  assert.equal(db.prepare('SELECT disposition AS v FROM puppies WHERE id = ?').get(pup.id).v, 'placed');
+  assert.equal(db.prepare('SELECT test_type AS v FROM health_results WHERE id = ?').get(result.id).v, 'genetic');
+  assert.equal(db.prepare("SELECT account_type AS v FROM products WHERE id = '0000000a-0000-4000-8000-00000000f00d'").get().v, 'affiliate');
+});

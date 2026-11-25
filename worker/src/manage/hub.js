@@ -107,7 +107,7 @@ export async function dogsTab(env, site, now = new Date(), say = defaultSay) {
     const bits = [statusText(p.status) ?? say('pdogs.hidden')];
     if (p.family) {
       bits.push(p.family);
-      if (p.picked_up_at) bits.push(say('pfam.went_home', { time: formatAt(p.picked_up_at, s.time_zone, { weekday: false }) }), say('pdogs.vet', { status: say(`pvet.${vetStatus(p, now).key}`).toLowerCase() }));
+      if (p.picked_up_at) bits.push(say('pfam.went_home', { time: formatAt(p.picked_up_at, s.time_zone, { weekday: false }) }), say('pdogs.vet', { status: say(`pvet.${vetStatus(p, now, s.timing).key}`).toLowerCase() }));
       else if (p.pickup_booked_at) bits.push(say('pfam.going_home', { time: formatAt(p.pickup_booked_at, s.time_zone, { weekday: false }) }));
       else if (p.go_home_on) bits.push(say('pfam.going_home', { time: formatDay(p.go_home_on) }));
       if (p.extras) bits.push(p.extras);
