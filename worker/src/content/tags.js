@@ -23,6 +23,9 @@ export const TAG_ID = /^t[a-z0-9]{6,20}$/;
 export const newTagId = () => `t${crypto.randomUUID().replace(/-/g, '').slice(0, 10)}`;
 const words = (v) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, TAG_WORDS_MAX);
 const pill = (v) => pillKey(v);
+// A dog's tag can also run as the ribbon across its card's photo (render/parts.js
+// dogCard), as a pup's status can; kept only where it's on, so stored tags read as before.
+const ribbon = (kind, t) => (kind === 'dog' && t?.ribbon === true ? { ribbon: true } : {});
 
 // A stored or posted list, cleaned: unknown keys dropped, ids kept (a new one made
 // where missing), at most TAGS_MAX of each.
@@ -37,9 +40,9 @@ export function cleanTags(raw) {
   };
   const rules = (Array.isArray(src.rules) ? src.rules : []).slice(0, TAGS_MAX).map((t) => {
     const kind = Object.hasOwn(TAG_KINDS, t?.kind) ? t.kind : 'dog';
-    return { id: id(t?.id), kind, words: words(t?.words), pill: pill(t?.pill), where: cleanWhere(kind, t?.where).filter((c) => c.field !== 'tags') };
+    return { id: id(t?.id), kind, words: words(t?.words), pill: pill(t?.pill), ...ribbon(kind, t), where: cleanWhere(kind, t?.where).filter((c) => c.field !== 'tags') };
   });
-  const own = (Array.isArray(src.own) ? src.own : []).slice(0, TAGS_MAX).map((t) => ({ id: id(t?.id), words: words(t?.words), pill: pill(t?.pill) }));
+  const own = (Array.isArray(src.own) ? src.own : []).slice(0, TAGS_MAX).map((t) => ({ id: id(t?.id), words: words(t?.words), pill: pill(t?.pill), ...ribbon('dog', t) }));
   return { rules, own };
 }
 
@@ -47,12 +50,14 @@ export const noTags = () => ({ rules: [], own: [] });
 
 // ---------- the owner's Tags screen, from its form ----------
 
-// Names: t.<id>.kind | .words | .pill, and its conditions as a data block's
+// Names: t.<id>.kind | .words | .pill | .ribbon (a dog's tag: a checkbox, so read only
+// where its words came too, i.e. the tag was on the screen), and its conditions as a data block's
 // (b.<id>.where.<i>.field | .op | .value, content/blocks.js recordsFromForm); own.<id>.words |
-// .pill. What was pressed (`act`): rule+ (a new tag by rule, of kind .addkind), own+ (a
+// .pill | .ribbon. What was pressed (`act`): rule+ (a new tag by rule, of kind .addkind), own+ (a
 // new tag of hers), del:<id>, cond+:<id> (with b.<id>.addcond), cond-:<id>:<i>.
 export function tagsFromForm(current, get, getAll) {
   const cur = cleanTags(current);
+  const ticked = (k, t) => (get(`${k}.words`) == null ? t.ribbon === true : get(`${k}.ribbon`) != null);
   const rules = cur.rules.map((t) => {
     const k = (f) => `b.${t.id}.${f}`;
     const kind = Object.hasOwn(TAG_KINDS, get(`t.${t.id}.kind`)) ? String(get(`t.${t.id}.kind`)) : t.kind;
@@ -65,9 +70,9 @@ export function tagsFromForm(current, get, getAll) {
       const changed = !was || was.field !== field || kind !== t.kind;
       where.push({ field: String(field), op, value: changed ? '' : TICK_OPS.includes(op) ? getAll(k(`where.${i}.value`)) : get(k(`where.${i}.value`)) });
     }
-    return { ...t, kind, words: get(`t.${t.id}.words`) ?? t.words, pill: get(`t.${t.id}.pill`) ?? t.pill, where: kind === t.kind ? where : [] };
+    return { ...t, kind, words: get(`t.${t.id}.words`) ?? t.words, pill: get(`t.${t.id}.pill`) ?? t.pill, ribbon: ticked(`t.${t.id}`, t), where: kind === t.kind ? where : [] };
   });
-  const own = cur.own.map((t) => ({ ...t, words: get(`own.${t.id}.words`) ?? t.words, pill: get(`own.${t.id}.pill`) ?? t.pill }));
+  const own = cur.own.map((t) => ({ ...t, words: get(`own.${t.id}.words`) ?? t.words, pill: get(`own.${t.id}.pill`) ?? t.pill, ribbon: ticked(`own.${t.id}`, t) }));
   let next = { rules, own };
   const [verb, id, i] = String(get('act') ?? '').split(':');
   if (verb === 'rule+' && rules.length < TAGS_MAX) {

@@ -610,7 +610,9 @@ function dogItems(snap, d, { sale = null, link = true } = {}) {
   // columns where the card would otherwise grow (site.css "Two-column lists"). Its
   // health results come grouped by kind, as on its page, with no headings (the owner,
   // 2026-11-24), each row's kind in data-kind so two columns keep a kind together.
-  const tests = `<span class="eyebrow">Details</span><ul class="tests" data-cols><li><span>Sex</span><span>${sexWord(d.sex)}</span></li>${d.color ? `<li><span>Color</span><span>${esc(d.color)}</span></li>` : ''}${registryRow(snap, d.registry)}${weight}</ul>`
+  // Its Origin is a detail (the owner, 2026-11-25): with the Origin item on the same
+  // face, it's the last Details row (faceOf), not a row of its own.
+  const tests = (withOrigin = false) => `<span class="eyebrow">Details</span><ul class="tests" data-cols><li><span>Sex</span><span>${sexWord(d.sex)}</span></li>${d.color ? `<li><span>Color</span><span>${esc(d.color)}</span></li>` : ''}${registryRow(snap, d.registry)}${weight}${withOrigin ? originLi(snap, d) : ''}</ul>`
     + (d.health.length ? `<span class="eyebrow">Health testing</span><ul class="tests" data-cols>${healthRows(snap, d.health)}</ul>` : '');
   const line = [snap.site.breed, d.role].filter(Boolean).join(' · ');
   return {
@@ -619,7 +621,7 @@ function dogItems(snap, d, { sale = null, link = true } = {}) {
     role: () => `<span>${esc(line)}</span>`,
     line: () => `<span class="small muted">${esc([sexWord(d.sex), d.role].filter(Boolean).join(' · '))}</span>`,
     titles: () => (d.titles ? `<span>${esc(d.titles)}</span>` : ''),
-    tests: () => tests,
+    tests,
     bio: () => (d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''),
     ask: () => (sale ? `${sale.price ? `<p class="small">${esc(sale.price)}</p>` : ''}<a class="more" href="${attr(sale.ask)}">${esc(word(snap, 'ask_dog', { name: d.call_name }))}</a>` : ''),
     profile: () => `<a class="more" href="/dogs/${attr(d.slug)}">View profile</a>`,
@@ -640,9 +642,13 @@ export function originText(snap, d, rc = null) {
   const w = word(snap, o.kind === 'import' ? 'origin_import' : 'origin_ancestry');
   return o.countries.length ? `${w} • ${o.countries.join(', ')}` : w;
 }
-function originRow(snap, d) {
+function originLi(snap, d) {
   const t = originText(snap, d);
-  return t ? `<ul class="tests"><li><span>${esc(word(snap, 'origin_label'))}</span><span>${esc(t)}</span></li></ul>` : '';
+  return t ? `<li><span>${esc(word(snap, 'origin_label'))}</span><span>${esc(t)}</span></li>` : '';
+}
+function originRow(snap, d) {
+  const li = originLi(snap, d);
+  return li ? `<ul class="tests">${li}</ul>` : '';
 }
 
 // Where a dog lives or whose it is, only where that says something: a co-owned dog
@@ -662,10 +668,14 @@ export function whereLine(snap, d, link = true) {
 }
 
 // A face's items in order; breed and role, and titles, next to each other share a line.
+// A dog's Origin on a face with its Details goes in among them (dogItems).
 function faceOf(item, items) {
   let out = '';
+  const inDetails = items.includes('tests') && items.includes('origin');
   for (let i = 0; i < items.length; i++) {
-    if (items[i] === 'role' || items[i] === 'titles') {
+    if (inDetails && items[i] === 'origin') continue;
+    if (inDetails && items[i] === 'tests') out += item.tests(true);
+    else if (items[i] === 'role' || items[i] === 'titles') {
       let run = '';
       while (items[i] === 'role' || items[i] === 'titles') run += item[items[i++]]();
       i--;
@@ -689,9 +699,12 @@ export function dogCard(snap, d, { sale = null, show = SHOW_DEFAULT.dogs } = {})
   // On the back, the name heads it; the rest starts on its own line.
   const head = back.findIndex((k) => k !== 'call' && k !== 'reg');
   const backHtml = head < 0 ? face(back) : `${face(back.slice(0, head))}\n        ${face(back.slice(head))}`;
+  // The first of its tags the owner set as a ribbon runs across its photo, as a pup's
+  // status does (content/tags.js), whether or not the card shows its tags.
+  const rib = show.front.includes('photo') ? tagsOf('dog', d, snapCtx(snap)).find((t) => t.ribbon) : null;
   return `<div class="flip" tabindex="0" role="button" aria-label="${attr(d.call_name)}: turn the card over">
     <div class="flip-in">
-      <div class="face front">${show.front.includes('photo') ? photo : ''}<span class="turn" aria-hidden="true">↻</span>
+      <div class="face front">${rib ? `<span class="ribbon">${esc(rib.words)}</span>` : ''}${show.front.includes('photo') ? photo : ''}<span class="turn" aria-hidden="true">↻</span>
         <div class="cap">${face(front)}</div></div>
       <div class="face back">${show.back.includes('photo') || show.front.includes('photo') ? bg : ''}${backHtml}</div>
     </div></div>`;

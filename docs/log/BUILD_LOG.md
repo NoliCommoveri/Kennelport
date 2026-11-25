@@ -2813,3 +2813,46 @@ the only gate left. No code, no migration, no version bump.
   (31 is on `main`); asked the owner. Until then `versions.test.js` fails, as expected.
   No migration.
 - `ASSET_VERSION` 31 → 32 with the owner's yes (`TEMPLATE_FILES` 8a878cad14f459a1). 516 pass.
+
+## 2026-11-25: A tag as a dog card's ribbon; tags and Origin on a dog's page
+
+- The breeder (screenshots of Abe, an import): wanted Import on his card as the ribbon
+  across the photo, and on his page. A dog's tag (by rule, or one she can choose) now has
+  a switch on the owner's Tags screen, **Ribbon across its card's photo**: the first such
+  tag a dog has runs across the front photo of its flip card, in the pup card's `.ribbon`,
+  whether or not the card shows the Tags item (`render/parts.js` `dogCard`). Stored as
+  `ribbon: true` on the tag in `build.tags` only where on, so stored tags are unchanged
+  (`content/tags.js`); the checkbox is read only where the tag's words were posted too.
+  Pups' tags have no switch (a pup card's ribbon is its status). Light cards and photo
+  beside details have no ribbon, as before.
+- A dog's page: **Tags** is now a page part (`PROFILE_ITEMS.dog.tags`, beside the photo
+  when switched on, `PROFILE_HOME`), and **Origin** a fact (`PROFILE_FACTS.dog.origin`,
+  "Import • Romania", the cards' words). Both off by default, so live pages read as before;
+  the owner turns them on in a dog page's settings.
+- Origin is a detail (the breeder): on a card face with both Details and Origin, it's the
+  last Details row, not a row of its own after View profile (`faceOf`). On a face without
+  Details it stays its own row.
+- She said Tags was on but showed nothing: rebuilt her case (an imported dog, an Import
+  tag with Import = yes) and the pill draws; her screenshot's card had Tags on neither
+  face, so it's likely ticked on another block or card style. Said so.
+- No template CSS or JS changed (the ribbon's style is already there), so no version bump;
+  no migration. Test in `tags.test.js`. 517 pass.
+- Follow-up: tags still not showing for the breeder. Traced rule → snapshot (`publish.js`
+  `tags: cleanTags(build.tags)`) → `tagsOf` (`content/fields.js`) → `tagPills` → the card
+  item; the preview renders the same `buildSnapshot` the Tags screen counts from. The one
+  gate that differs: `tagsOf` drops a tag with no words, while the screen's "On 1 now"
+  line doesn't, and the empty words box showed a grey "Champion" placeholder that reads as
+  filled in. The screen now says, in red on the tag, that a tag with no words shows
+  nowhere; the placeholder is "Type its words". Rebuilt with words "Import" on an imported
+  dog, the pill and the ribbon draw.
+- Then the real cause, from her screenshots (Tags on the front, the tag with words "Import",
+  an empty gap where the pill should be): her site's pill style is a wavy one. The Wavy
+  ribbon and satin styles masked each pill with a `data:` SVG, and the site's CSP
+  (`SITE_CSP`, `img-src 'self'`) blocks `data:` images, so every pill in those styles (tags,
+  pup statuses, looking for a home) took its space and drew nothing. Reproduced in Chromium
+  with the site's CSP; the other three styles were fine. The wave is now a file beside
+  site.css (`public/_kp/t/ak/wave.svg`, as the vine's are); with the CSP, both wavy styles
+  draw. Not too many card items: the card grows to fit them.
+- Template files changed (`site.css`, new `wave.svg`): **needs `ASSET_VERSION` 33** (32 is on
+  `main`); asked the owner. Until then `versions.test.js` fails, as expected.
+- `ASSET_VERSION` 32 → 33 with the owner's yes (`TEMPLATE_FILES` 84a3015ba100876f). 517 pass.

@@ -111,7 +111,47 @@ test('tags by rule on pups; a tag with no words never shows', async () => {
   const snap0 = await buildSnapshot(env, site.id);
   const pups = (s, where) => blockRows(s, cleanBlock({ id: 'p', type: 'pups', where }), TODAY).length;
   assert.equal(pups(snap0, [{ field: 'tags', op: 'has_any' }]), 0, 'no words: no tag');
+  assert.match(await (await owner('/tags')).text(), /No words yet, so it shows nowhere/, 'the screen says so');
   await owner('/tags', await formOf(owner, { [`t.${t.id}.words`]: 'Show prospect' }));
   const snap = await buildSnapshot(env, site.id);
   assert.equal(pups(snap, [{ field: 'tags', op: 'includes', value: 'show prospect' }]), pups(snap, []), 'no conditions: on every pup');
+});
+
+test("a dog's tag as the ribbon across its card's photo; tags and Origin on its page; Origin among a card's Details", async () => {
+  const { env, site, owner, tags } = await setUp();
+  env.DB.raw.prepare("UPDATE dogs SET imported = 1, import_country = 'Romania' WHERE slug = 'boone'").run();
+  await owner('/tags', await formOf(owner, { act: 'rule+', addkind: 'dog' }));
+  const [rule] = (await tags()).rules;
+  await owner('/tags', await formOf(owner, { act: `cond+:${rule.id}`, [`b.${rule.id}.addcond`]: 'import', [`t.${rule.id}.words`]: 'Import' }));
+  await owner('/tags', await formOf(owner, { [`b.${rule.id}.where.0.op`]: 'yes' }));
+  assert.equal((await tags()).rules[0].ribbon, undefined, 'off by default');
+  assert.match(await (await owner('/tags')).text(), new RegExp(`name="t\\.${rule.id}\\.ribbon"`));
+
+  const block = cleanBlock({ id: 'dogs', type: 'dogs', f: {}, where: [], show: { front: ['photo', 'call'], back: ['tests', 'profile', 'origin'] } });
+  const draw = (snap, path = '/') => renderPage({ ...snap, layout: { ...snap.layout, home: [block] } }, { path, origin: 'https://x', today: TODAY, preview: true }).html;
+  let snap = await buildSnapshot(env, site.id);
+  assert.doesNotMatch(draw(snap), /class="ribbon"/);
+  // Origin on the same face as the Details: their last row, not one of its own.
+  assert.match(draw(snap), /<li><span>Origin<\/span><span>Import • Romania<\/span><\/li><\/ul>/);
+  assert.doesNotMatch(draw(snap), /<ul class="tests"><li><span>Origin/);
+
+  // Ticked: on Boone's card, the ribbon, even without the Tags item; a checkbox left out is off again.
+  await owner('/tags', await formOf(owner, { [`t.${rule.id}.ribbon`]: 'on' }));
+  assert.equal((await tags()).rules[0].ribbon, true);
+  snap = await buildSnapshot(env, site.id);
+  assert.equal(draw(snap).match(/<span class="ribbon">Import<\/span>/g).length, 1);
+  await owner('/tags', await formOf(owner, { [`t.${rule.id}.ribbon`]: 'on', act: 'own+' }));
+  assert.equal((await tags()).rules[0].ribbon, true, 'kept through another button');
+  await owner('/tags', await formOf(owner));
+  assert.equal((await tags()).rules[0].ribbon, undefined);
+
+  // His page: neither, as today, until the owner places Tags and ticks Origin.
+  const page = (s) => renderPage(s, { path: '/dogs/boone', origin: 'https://x', today: TODAY, preview: true }).html;
+  assert.doesNotMatch(page(snap), /line1 tags|<dt>Origin/);
+  const { cleanProfile, PROFILE_DEFAULT } = await import('../src/content/blocks.js');
+  const D = PROFILE_DEFAULT.dog;
+  const profiles = { dog: cleanProfile('dog', { parts: { ...D.parts, side: [...D.parts.side, 'tags'] }, facts: [...D.facts, 'origin'] }) };
+  const html = page({ ...snap, layout: { ...snap.layout, profiles } });
+  assert.match(html, /<span class="line1 tags"><span class="status c-held">Import<\/span><\/span>/);
+  assert.match(html, /<dt>Origin<\/dt><dd>Import • Romania<\/dd>/);
 });
