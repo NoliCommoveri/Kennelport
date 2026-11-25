@@ -2845,3 +2845,13 @@ the only gate left. No code, no migration, no version bump.
   filled in. The screen now says, in red on the tag, that a tag with no words shows
   nowhere; the placeholder is "Type its words". Rebuilt with words "Import" on an imported
   dog, the pill and the ribbon draw.
+- Then the real cause, from her screenshots (Tags on the front, the tag with words "Import",
+  an empty gap where the pill should be): her site's pill style is a wavy one. The Wavy
+  ribbon and satin styles masked each pill with a `data:` SVG, and the site's CSP
+  (`SITE_CSP`, `img-src 'self'`) blocks `data:` images, so every pill in those styles (tags,
+  pup statuses, looking for a home) took its space and drew nothing. Reproduced in Chromium
+  with the site's CSP; the other three styles were fine. The wave is now a file beside
+  site.css (`public/_kp/t/ak/wave.svg`, as the vine's are); with the CSP, both wavy styles
+  draw. Not too many card items: the card grows to fit them.
+- Template files changed (`site.css`, new `wave.svg`): **needs `ASSET_VERSION` 33** (32 is on
+  `main`); asked the owner. Until then `versions.test.js` fails, as expected.
