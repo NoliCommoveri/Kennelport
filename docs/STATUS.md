@@ -32,7 +32,7 @@ template (`ASSET_VERSION`) 27 (flip cards that grow to fit, 2026-11-17).
 | 1. Renderer + ops | Built |
 | 2. Breeder login, the Site Manager | Built; photo upload tried on a real Android and iPhone |
 | 3. The first site's pages | Built |
-| 4. The KennelOS link | Done: built on both sides and working with KennelOS on production |
+| 4. The KennelOS link | Done: built on both sides and working with KennelOS on production. The application fee's payment methods (contract C11, section `pay_methods`) built 2026-11-25 on its branch: a choice per method on the waitlist |
 | 5. Albums, embeds, sharing | Built, apart from KennelOS shares carrying album links |
 | 6. Customisation and schemes | Built, and now carried further by the site builder (below) |
 

@@ -599,7 +599,7 @@ export function createScreens({ env, request, url, site, user, page, say = defau
       const values = parseForm(k[1], await request.formData());
       // Filled from her KennelOS waitlist settings: only the switch is hers here.
       const cur = kind === 'safe_notice' ? null : await getPayment(env, site.id, kind);
-      if (cur?.source === 'kennelos') for (const f of Object.keys(PAYMENT_FIELDS)) if (f !== 'show_on_site') values[f] = cur[f] ?? null;
+      if (cur?.source === 'kennelos') for (const f of [...Object.keys(PAYMENT_FIELDS), 'choices']) if (f !== 'show_on_site') values[f] = cur[f] ?? null;
       try { await savePayment(env, site.id, kind, values); } catch (err) {
         if (err instanceof ContentError) return render({ [kind]: [err.message, values] });
         throw err;

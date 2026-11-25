@@ -607,6 +607,69 @@ test('steps, How to pay, extras and her public list come with a bundle; whether 
   assert.equal(b.row("SELECT hidden_by_kennelos FROM extras WHERE kennelos_id = 'x1'").hidden_by_kennelos, 1);
 });
 
+test('pay_methods: the application fee offers her payment methods, a choice each, her note under them', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (body) => api(b.env, '/v1/bundle', { body, token });
+  const fee = (methods, more = {}) => bundle({ payment: { application_fee: {
+    title: 'Application fee', due_note: 'Within 7 days of approval.', note: 'Or a check to AK Bostons.',
+    pay_url: 'https://buy.stripe.com/abc', pay_label: 'Pay the application fee', methods, ...more } } });
+  const res = await send(fee([
+    { label: 'Card', url: 'https://buy.stripe.com/abc' },
+    { label: 'PayPal', url: 'https://paypal.me/AK/50' },
+    { label: 'Zelle', note: 'Zelle to pay@ak.example\nPut your name in the memo.' },
+    { label: 'Venmo', url: 'javascript:alert(1)' },
+    { label: 'Cash', note: 'Cash at pickup', url: 'not a link' },
+  ]));
+  assert.equal(res.status, 200);
+  const content = () => JSON.parse(b.row("SELECT content FROM payment_info WHERE kind = 'application_fee'").content);
+  // A bad link is dropped, and a method left with nothing is dropped with it.
+  assert.deepEqual(content().choices, [
+    { label: 'Card', url: 'https://buy.stripe.com/abc' },
+    { label: 'PayPal', url: 'https://paypal.me/AK/50' },
+    { label: 'Zelle', note: 'Zelle to pay@ak.example\nPut your name in the memo.' },
+    { label: 'Cash', note: 'Cash at pickup' },
+  ]);
+  assert.equal(content().methods, undefined);
+  // Switching it on in the Site Manager keeps them.
+  assert.equal((await b.post('/payment/application_fee', { show_on_site: '1' })).status, 303);
+  assert.equal(content().choices.length, 4);
+  await b.post('/publish');
+  const w = await b.page('/waitlist');
+  assert.match(w, /How would you like to pay\?/);
+  assert.equal((w.match(/<details class="x" name="pay-application_fee">/g) ?? []).length, 4);
+  assert.match(w, /href="https:\/\/paypal\.me\/AK\/50" rel="noopener noreferrer" target="_blank">Pay with PayPal</);
+  assert.match(w, /Zelle to pay@ak\.example<br>Put your name in the memo\./);
+  assert.match(w, /data-copy="pay@ak\.example"/);
+  assert.match(w, /Additional Payment Instructions:<\/b> Or a check to AK Bostons\./);
+  // pay_url isn't drawn beside the methods.
+  assert.doesNotMatch(w, /Pay the application fee</);
+  assert.doesNotMatch(w, /Pay online/);
+  // One method shows as it is, without a choice.
+  await send(fee([{ label: 'Card', url: 'https://buy.stripe.com/abc' }]));
+  await b.post('/publish');
+  const one = await b.page('/waitlist');
+  assert.doesNotMatch(one, /How would you like to pay/);
+  assert.match(one, />Pay with Card</);
+  // None usable: the box as before, with its pay link.
+  await send(fee([{ label: 'Venmo', url: 'ftp://x' }]));
+  assert.equal(content().choices, undefined);
+  await b.post('/publish');
+  assert.match(await b.page('/waitlist'), />Pay the application fee</);
+  // Refused: an unknown key, too many, too long a label, or on the deposit.
+  for (const [body, path] of [
+    [fee([{ label: 'Card', url: 'https://x.example', id: 'acct_1' }]), 'payment.application_fee.methods[0].id'],
+    [fee(Array.from({ length: 9 }, (_, i) => ({ label: `M${i}`, note: 'x' }))), 'payment.application_fee.methods'],
+    [fee([{ label: 'x'.repeat(61), note: 'x' }]), 'payment.application_fee.methods[0].label'],
+    [fee([{ label: 'Zelle', note: 'x'.repeat(1001) }]), 'payment.application_fee.methods[0].note'],
+    [bundle({ payment: { deposit: { methods: [{ label: 'Card', url: 'https://x.example' }] } } }), 'payment.deposit.methods'],
+  ]) {
+    const r = await send(body);
+    assert.equal(r.status, 400, path);
+    assert.equal((await r.json()).path, path);
+  }
+});
+
 test('steps: KennelOS only starts them; her wording, her own steps and her order stay through every update', async () => {
   const b = await breeder();
   const token = await linked(b);
@@ -720,7 +783,7 @@ test('Recommended products from KennelOS: name, link, code and note are KennelOS
   const token = await linked(b);
   const send = async (body) => (await api(b.env, '/v1/bundle', { body, token })).json();
   // Answers say which optional sections this Worker takes.
-  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail', 'origin', 'lineage', 'origin_country', 'bag_items']);
+  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail', 'origin', 'lineage', 'origin_country', 'bag_items', 'pay_methods']);
   assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.portal_takes, ['registration', 'screening', 'health_tests']);
   // One she made by hand, with a picture and a Home badge.
   const site = b.site.id;

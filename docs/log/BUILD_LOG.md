@@ -3189,3 +3189,33 @@ The owner: a way to see a new breeder's portal before adding anyone, like the pr
   page at seven days in all three looks with no row changed and nothing sent, her checklist and
   timeline dated from the sample, Stop viewing. 552 pass. Checked at 390px in Classic, Forest
   and Cream, and at 1280px. No migration, no version bump.
+
+## 2026-11-25: The application fee's payment methods from KennelOS (Website Contract C11)
+
+- **New bundle section `pay_methods`** (`kennelos/bundle.js` SECTIONS), so KennelOS now sends
+  `payment.application_fee.methods` as her payment methods in her order: `{ label, url?, note? }`.
+  `cleanPay` tells them from the older `[way, details]` pairs by their items (objects), as titles
+  are told apart; pairs work as before. Checked in `content/model.js` `cleanPayChoices`: at most 8,
+  label ≤60 (required), note ≤1000 with line breaks, a link that fails the link check dropped, a
+  method left with neither link nor note dropped, an unknown key refused (so no account ids get
+  in). Only the application fee takes them; on the deposit they're refused.
+- **Kept as `choices`** in the card's `payment_info.content`, apart from her hand-typed `methods`
+  pairs, so the Site Manager's form (locked for a KennelOS card) never sees them. Kept through her
+  Show switch (`manage/screens.js`, `savePayment`), the content export and import (`content/io.js`),
+  and they count as a way to pay for showing and publishing (`publish.js`). No migration.
+- **On the waitlist** (`render/parts.js` `choicesCard`): the fee's title and When line, then "How
+  would you like to pay?" with one expander per method (the template's `details.x`, sharing a
+  `name` so one opens at a time); a method opens to a "Pay with <label>" button (new tab) and/or
+  her instructions with their line breaks (and a Copy button for an address in them). A single
+  method shows directly, no choice. Her top-level note follows as "Additional Payment
+  Instructions" (the owner's wording, in place of KennelOS's suggested "Other ways to pay").
+  `pay_url` beside them isn't drawn (it's the first link). Where every card shown has methods,
+  the section's "Put the note shown…" line is left off. The safe notice's "We take payment only
+  by…" lists their labels. The fee amount isn't headlined: the card carries no amount (KennelPort
+  works none out). Family-facing wording, in `parts.js` beside the card's other fixed words.
+- **Without `methods`** (or none usable) the card is drawn exactly as before.
+- No stylesheet change, so no `ASSET_VERSION` bump. Checked at 390px and 1200px beside a
+  pairs-style deposit card.
+- Tests: `kennelos.test.js` (the section listed; a bundle with methods: drops, storage, the Show
+  switch keeps them, the waitlist, one method, none usable, five refusals) and `payment.test.js`
+  (export and import). 554 pass.

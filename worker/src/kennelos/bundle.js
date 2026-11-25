@@ -28,7 +28,7 @@
 //     bag_items?: [{ id, name, cost, expense?, origin?, product_id? }] (bag_items),
 //     steps?: [{ id, heading, body }],
 //     partner_kennels?: [{ id, name, website }],
-//     payment?: { application_fee?: {…}, deposit?: {…} } }
+//     payment?: { application_fee?: {…, methods?: [{ label, url?, note? }] (pay_methods)}, deposit?: {…} } }
 //
 // Only records she marked Show on website are in it (dogs, litters, pairings; a
 // heat only for a dam with heats_online), with the statuses she set: KennelOS maps
@@ -48,7 +48,7 @@
 // its kind would be: the name, its web address and the planned-litter label follow
 // the new kind, unless she has changed them on the website.
 import { ApiError } from '../lib/http.js';
-import { cleanValue, ContentError, slugify, PAYMENT_FIELDS, LITTER_PRICE_FIELDS } from '../content/model.js';
+import { cleanValue, cleanPayChoices, ContentError, slugify, PAYMENT_FIELDS, LITTER_PRICE_FIELDS } from '../content/model.js';
 import { PUBLIC_ID } from '../feed.js';
 import { loadSnapshot } from '../publish.js';
 import { siteBase, siteFacts } from './link.js';
@@ -95,7 +95,9 @@ export const MAX = { ancestors: 30, dogs: 200, litters: 100, puppies: 30, pairin
 // 'bag_items': her go-home bag's items (docs/plans/portal-go-home-bag.md 4a): name,
 // cost in dollars (12.5), expense (default yes with a cost), where it comes from and
 // the product (a KennelOS Account id from products) it's tied to.
-export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail', 'origin', 'lineage', 'origin_country', 'bag_items'];
+// 'pay_methods': the application fee's methods as { label, url?, note? }, her
+// payment methods in her order (Website Contract C11); without them, as before.
+export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail', 'origin', 'lineage', 'origin_country', 'bag_items', 'pay_methods'];
 
 // ---------- checking ----------
 
@@ -290,11 +292,29 @@ export function cleanBundle(body) {
     out.payment = {};
     for (const [k, v] of Object.entries(body.payment)) {
       if (!['application_fee', 'deposit'].includes(k)) throw bad(`payment.${k}`, 'not a kind of payment');
-      if (v != null) out.payment[k] = cleanShape('pay', v, `payment.${k}`);
+      if (v != null) out.payment[k] = cleanPay(k, v, `payment.${k}`);
     }
   }
   for (const x of out.extras ?? []) if (x.price_from != null && x.price_to != null && x.price_to < x.price_from) throw bad('extras', `${x.name}: highest price below the lowest`);
   return out;
+}
+
+// A kind of payment. Its methods are her typed [way, details] pairs, or, from a
+// KennelOS that sends pay_methods (the application fee only), her payment methods as
+// { label, url?, note? }, kept as `choices` (content/model.js cleanPayChoices).
+function cleanPay(kind, v, path) {
+  const list = v && typeof v === 'object' && !Array.isArray(v) ? v.methods : undefined;
+  if (!Array.isArray(list) || !list.some((m) => m && typeof m === 'object' && !Array.isArray(m))) {
+    return { ...cleanShape('pay', v, path), choices: null };
+  }
+  if (kind !== 'application_fee') throw bad(`${path}.methods`, 'only the application fee takes payment methods');
+  let choices;
+  try { choices = cleanPayChoices(list, `${path}.methods`); } catch (err) {
+    if (err instanceof ContentError) throw bad(err.path ?? `${path}.methods`, err.message.replace(/^[^:]*: /, ''));
+    throw err;
+  }
+  const { methods, ...rest } = v;
+  return { ...cleanShape('pay', rest, path), choices };
 }
 
 // ---------- what KennelOS owns (plan 5.3, "Who owns which field") ----------

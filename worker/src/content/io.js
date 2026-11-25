@@ -19,7 +19,7 @@
 // writes go in one batch, so an import lands whole or not at all.
 import {
   SITE_FIELDS, DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS,
-  STEP_FIELDS, EXPANDER_FIELDS, EXPANDER_PAGES, EXTRA_FIELDS, PRODUCT_FIELDS, PARTNER_FIELDS, PARTNERS_MAX, HOME_BADGES_MAX, brandImageOk, HOME_BLOCKS, PAGES, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS,
+  STEP_FIELDS, EXPANDER_FIELDS, EXPANDER_PAGES, EXTRA_FIELDS, PRODUCT_FIELDS, PARTNER_FIELDS, PARTNERS_MAX, HOME_BADGES_MAX, brandImageOk, HOME_BLOCKS, PAGES, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, cleanPayChoices,
   QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue, FAQ_FIELDS,
   CUSTOM_KEY, CUSTOM_PAGE, ADDED_BLOCK_FIELDS,
 } from './model.js';
@@ -217,7 +217,11 @@ export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = ne
     out.payment = {};
     for (const [kind, v] of Object.entries(doc.payment)) {
       if (kind !== 'safe_notice' && !PAYMENT_KINDS.includes(kind)) throw new ContentError(`payment.${kind}`, `not a kind (${[...PAYMENT_KINDS, 'safe_notice'].join(', ')})`);
-      out.payment[kind] = cleanRecord(kind === 'safe_notice' ? SAFE_NOTICE_FIELDS : PAYMENT_FIELDS, v, `payment.${kind}`);
+      if (kind === 'safe_notice') { out.payment[kind] = cleanRecord(SAFE_NOTICE_FIELDS, v, `payment.${kind}`); continue; }
+      // Her KennelOS payment methods (choices) come back as they were exported.
+      const isObj = v && typeof v === 'object' && !Array.isArray(v);
+      const choices = isObj ? cleanPayChoices(v.choices, `payment.${kind}.choices`) : null;
+      out.payment[kind] = { ...cleanRecord(PAYMENT_FIELDS, isObj ? omit(v, ['choices']) : v, `payment.${kind}`), ...(choices ? { choices } : {}) };
     }
   }
   if ('albums' in doc) {

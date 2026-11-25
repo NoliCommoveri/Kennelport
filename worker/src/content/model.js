@@ -397,6 +397,33 @@ export const PAYMENT_FIELDS = {
   pay_url: URL_,
   pay_label: S(40),
 };
+// The application fee's payment methods from KennelOS (Website Contract C11, section
+// pay_methods): her Payment service accounts in her order, each a label with a link
+// and/or her instructions. Kept in the card's content as `choices`, apart from her
+// hand-typed `methods` pairs above; not a form field (KennelOS fills it, the card is
+// locked then). The site draws a choice per method and ignores pay_url beside them.
+export const PAY_CHOICES_MAX = 8;
+export const PAY_CHOICE_KEYS = ['label', 'url', 'note'];
+// → the list as kept, or null for none. A link that fails the link check is dropped,
+// and so is a method left with neither link nor note; anything else wrong refuses.
+export function cleanPayChoices(v, path) {
+  if (v === undefined || v === null) return null;
+  if (!Array.isArray(v)) throw new ContentError(path, 'must be a list');
+  if (v.length > PAY_CHOICES_MAX) throw new ContentError(path, `at most ${PAY_CHOICES_MAX}`);
+  const out = [];
+  v.forEach((m, i) => {
+    const at = `${path}[${i}]`;
+    if (!m || typeof m !== 'object' || Array.isArray(m)) throw new ContentError(at, 'must be an object');
+    for (const k of Object.keys(m)) if (!PAY_CHOICE_KEYS.includes(k)) throw new ContentError(`${at}.${k}`, 'not a known field');
+    const label = cleanValue({ type: 'text', max: 60, required: true }, m.label, `${at}.label`);
+    let url = null;
+    try { url = cleanValue(URL_, m.url, `${at}.url`); } catch (err) { if (!(err instanceof ContentError)) throw err; }
+    const note = cleanValue({ type: 'text', max: 1000, multiline: true }, m.note, `${at}.note`);
+    if (url || note) out.push({ label, ...(url ? { url } : {}), ...(note ? { note } : {}) });
+  });
+  return out.length ? out : null;
+}
+
 // The safe-payment notice: on by default (plan 3.12), in the breeder's words or
 // the default (render/parts.js SAFE_NOTICE_TEXT).
 export const SAFE_NOTICE_FIELDS = { enabled: BOOL, text: ML(400) };

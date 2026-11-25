@@ -941,7 +941,7 @@ const noticeText = (snap) => snap.payment?.safe_notice?.text || word(snap, 'safe
 
 // "Venmo, Zelle or PayPal": every method on the cards shown.
 function methodList(snap) {
-  const names = [...new Set(payCards(snap).flatMap(([, c]) => (c.methods ?? []).map(([m]) => m).filter(Boolean)))];
+  const names = [...new Set(payCards(snap).flatMap(([, c]) => (c.choices?.length ? c.choices.map((m) => m.label) : (c.methods ?? []).map(([m]) => m)).filter(Boolean)))];
   return names.length > 1 ? `${names.slice(0, -1).join(', ')} or ${names.at(-1)}` : names[0] ?? '';
 }
 
@@ -952,7 +952,36 @@ function copyable(detail) {
   return m ? m[0] : null;
 }
 
+// Her words with their line breaks kept, and a Copy button for what's in them.
+function lines(text) {
+  const copy = copyable(text);
+  return `<span class="d">${String(text).split('\n').map(esc).join('<br>')}</span>${copy ? ` <button type="button" class="copy" data-copy="${attr(copy)}" hidden>Copy</button>` : ''}`;
+}
+
+// One of her KennelOS payment methods (choices): a Pay with button for its link,
+// and her instructions.
+function choiceBody(m, named) {
+  return `${m.url ? `<p><a class="btn solid" href="${attr(m.url)}" rel="noopener noreferrer" target="_blank">Pay with ${esc(m.label)}</a></p>` : ''}
+      ${m.note ? `<p>${named && !m.url ? `<b>${esc(m.label)}:</b> ` : ''}${lines(m.note)}</p>` : ''}`;
+}
+
+// The fee with her payment methods (choices): one to pick from, each opening its
+// button and instructions (one open at a time), or a single one shown as it is.
+// Then her own note; the pay_url beside them is the first link, so it isn't drawn.
+function choicesCard(snap, [kind, c]) {
+  const ms = c.choices;
+  const pick = ms.length === 1 ? choiceBody(ms[0], true) : `<p><b>How would you like to pay?</b></p>
+    ${ms.map((m) => `<details class="x" name="pay-${attr(kind)}"><summary>${esc(m.label)}</summary><div class="body">${choiceBody(m, false)}</div></details>`).join('\n    ')}`;
+  return `<article class="pay-card">
+    <h3>${esc(c.title || word(snap, PAY_WORDS[kind]))}</h3>
+    ${c.due_note ? `<p class="pay-when"><b>When:</b> ${esc(c.due_note)}</p>` : ''}
+    ${pick}
+    ${c.note ? `<p class="pay-note"><b>Additional Payment Instructions:</b> ${esc(c.note)}</p>` : ''}
+  </article>`;
+}
+
 function payCard(snap, [kind, c]) {
+  if (c.choices?.length) return choicesCard(snap, [kind, c]);
   const methods = (c.methods ?? []).map(([m, d]) => {
     const copy = copyable(d);
     return `<li><span class="m">${esc(m)}</span><span class="d">${esc(d)}</span>${copy ? `<button type="button" class="copy" data-copy="${attr(copy)}" hidden>Copy</button>` : '<span></span>'}</li>`;
@@ -973,7 +1002,7 @@ export function paySection(snap) {
   if (!cards.length && !notice) return '';
   const heading = cards.length === 2 ? 'Paying your fee and deposit' : cards.length ? `Paying your ${(cards[0][1].title || word(snap, PAY_WORDS[cards[0][0]])).toLowerCase()}` : 'Paying safely';
   return `<section class="pay" id="how-to-pay" aria-labelledby="pay-h">
-    <header class="center"><span class="eyebrow">How to pay</span><h2 id="pay-h">${esc(heading)}</h2>${cards.length ? '<p class="muted">Use any of the ways below. Put the note shown in your payment so we can match it to you.</p>' : ''}</header>
+    <header class="center"><span class="eyebrow">How to pay</span><h2 id="pay-h">${esc(heading)}</h2>${cards.some(([, c]) => !c.choices?.length) ? '<p class="muted">Use any of the ways below. Put the note shown in your payment so we can match it to you.</p>' : ''}</header>
     ${cards.length ? `<div class="pay-grid${cards.length === 1 ? ' one' : ''}">${cards.map((c) => payCard(snap, c)).join('')}</div>` : ''}
     ${notice ? `<p class="pay-safe" role="note">${cards.length ? 'These are our only payment details. ' : ''}${esc(notice)}</p>` : ''}
   </section>`;

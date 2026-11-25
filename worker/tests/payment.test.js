@@ -135,3 +135,17 @@ test('closing a site deletes its payment details', async () => {
 test('the default notice text is plain about scams', () => {
   assert.match(SAFE_NOTICE_TEXT, /gift card/);
 });
+
+test('her KennelOS payment methods (choices) go out with an export and back in; a bad one is refused', async () => {
+  const b = await breeder();
+  const choices = [{ label: 'Card', url: 'https://buy.stripe.com/abc' }, { label: 'Zelle', note: 'pay@ak.example\nYour name in the memo.' }];
+  await importContent(b.env, b.site.id, { payment: { application_fee: { show_on_site: true, title: 'Application fee', choices } } });
+  const doc = await exportContent(b.env, b.site.id);
+  assert.deepEqual(doc.payment.application_fee.choices, choices);
+  await importContent(b.env, b.site.id, { payment: doc.payment });
+  assert.deepEqual((await exportContent(b.env, b.site.id)).payment.application_fee.choices, choices);
+  await assert.rejects(importContent(b.env, b.site.id, { payment: { application_fee: { choices: [{ label: 'Card', id: 'acct_1' }] } } }), /choices\[0\]\.id: not a known field/);
+  // Shown with only choices: the waitlist has them.
+  await b.post('/publish');
+  assert.match(await b.page('/waitlist'), />Pay with Card</);
+});
