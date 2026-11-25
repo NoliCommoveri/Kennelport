@@ -135,6 +135,9 @@ anyone outside the family.
 - Co-owned dogs: KennelPort's half built 2026-11-04 ([`plans/done/co-owned-dogs.md`](plans/done/co-owned-dogs.md)).
 - Linked sample and the demo site: built ([`plans/done/linked-sample.md`](plans/done/linked-sample.md)).
 - Seeing a family's portal as they see it: built 2026-11-13 ([`plans/done/family-view.md`](plans/done/family-view.md)).
+- **Preview your portal** (2026-11-25): her portal with a made-up family and puppy before she adds
+  anyone, from the Portal tab and Portal settings; a band moves the day (a week before, the day
+  after, a month after, a day or week either way). Nothing stored. No migration, no version bump.
 - The go-home bag: built 2026-11-21 ([`plans/done/portal-go-home-bag.md`](plans/done/portal-go-home-bag.md)).
 
 ## Review ([`review/senior-review-2026-11.md`](review/senior-review-2026-11.md), 2026-11-10)
