@@ -2884,3 +2884,24 @@ the only gate left. No code, no migration, no version bump.
 - With this, **step 2.4 is done**: every portal screen of hers and its errors are in the
   owner's list. The ready-made tasks and suggested lists (`steps.js`) are starting content,
   for step 6. No migration, no version bump (no file under `public/_kp/` changed).
+
+## 2026-11-25: The family portal's tabs: five, the handbook always there
+
+- The owner: the families' bottom bar can take five tabs (her Site Manager has five), and
+  the handbook should be second from last and always there, not waiting for the Vet visit
+  tab to go. One function, `tabsFor` (`portal/family.js`), by stage:
+  - with her handbook (a chapter families see): Home, Timeline, Vet visit, **Handbook**,
+    Records; once the Vet visit tab goes, **Photos** takes its place;
+  - during an extended stay, Stay in Timeline's place, as before;
+  - with no handbook: Home, Timeline, Vet visit, **Photos**, Records, then four once the
+    vet tab goes (Photos in its place);
+  - after a loss before pickup: Home and Photos, as before.
+  Photos was already a page (`/family/photos`) and in the plan's five tabs (section 7.2).
+  The handbook still opens full screen with its own "Back to the portal".
+- Forest and Cream drew the tabs as a grid of four, so a fifth wrapped to a second row; now
+  one row of equal columns, as many as there are (`looks/mockup.css`). Classic's tabs
+  already shared the row. Checked at 390px in all three looks, before pickup and later:
+  five tabs, no label cut (76px each in Classic, 72px in the others).
+- Tests: `tabsFor` by stage; the vet tab's test reads Photos as the fifth. No migration.
+- `looks/mockup.css` changed: **needs `PORTAL_VERSION` 10** (9 is on `main`); asked the
+  owner. Until then `versions.test.js` fails, as expected.

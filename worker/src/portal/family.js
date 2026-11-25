@@ -63,15 +63,24 @@ function brandMark(site) {
   return `<span class="logo">${site.logo_photo_id ? `<img src="/_kp/p/${encodeURIComponent(site.logo_photo_id)}?s=t" alt="">` : ''}${mono}</span>`;
 }
 
+// The tabs, five at most (the owner, 2026-11-25): Home, Timeline (Stay during an
+// extended stay, plan 8.5), Vet visit until its tab goes (vet.js vetTabShown) and
+// Photos after, the Handbook second from last whenever she has a chapter families see,
+// and Records. With no handbook, Photos fills its place while the Vet visit tab is up.
 // After a loss before pickup the tabs shrink to Home and Photos (plan 7.4).
-const TABS = [['/family', 'home', 'Home'], ['/family/timeline', 'calendar', 'Timeline'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records']];
-const LOSS_TABS = [['/family', 'home', 'Home'], ['/family/photos', 'paw', 'Photos']];
-// During an extended stay, Stay takes Timeline's place (plan 8.5).
-const STAY_TABS = [['/family', 'home', 'Home'], ['/family/stay', 'award', 'Stay'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records']];
+const TAB = {
+  home: ['/family', 'home', 'Home'], timeline: ['/family/timeline', 'calendar', 'Timeline'], stay: ['/family/stay', 'award', 'Stay'],
+  vet: ['/family/vet', 'stethoscope', 'Vet visit'], photos: ['/family/photos', 'paw', 'Photos'], handbook: ['/family/handbook', 'book', 'Handbook'], records: ['/family/records', 'file', 'Records'],
+};
+export function tabsFor({ loss = false, stay = false, vetTab = true, handbook = false } = {}) {
+  if (loss) return [TAB.home, TAB.photos];
+  const fourth = handbook ? TAB.handbook : vetTab ? TAB.photos : null;
+  return [TAB.home, stay ? TAB.stay : TAB.timeline, vetTab ? TAB.vet : TAB.photos, fourth, TAB.records].filter(Boolean);
+}
 
 function frame(site, title, body, { status = 200, fam = null, tab = null, action = '', headers = {}, bare = false, script = null, page = null, mkp = false } = {}) {
   const kennel = site.kennel_name || site.subdomain;
-  const list = fam ? (fam.loss ? LOSS_TABS : fam.stay ? STAY_TABS : TABS).map((t) => (t[0] === '/family/vet' && !fam.vetTab ? fam.afterVet : t)) : [];
+  const list = fam ? tabsFor(fam) : [];
   // In a look other than Classic (portal/looks.js) the tabs and the header are the mockup's
   // (family/mk.js): its icons, the tabs in a row, Messages first in the header.
   const look = !bare && isLook(site);
@@ -968,7 +977,7 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
   // The Vet visit tab: until 24 hours past the deadline, gone early once a record is in
   // (vet.js vetTabShown). Home keeps a line asking for the record after that.
   fam.vetTab = !current || vetTabShown(current);
-  if (!fam.vetTab) fam.afterVet = (await shownChapters(env, site.id)).length ? ['/family/handbook', 'book', 'Handbook'] : ['/family/photos', 'paw', 'Photos'];
+  fam.handbook = !fam.loss && (await shownChapters(env, site.id)).length > 0;
   // On Messages itself they're read as the page shows them.
   fam.unread = fam.loss || path === '/family/messages' ? 0 : await unreadFrom(env, site.id, fam.familyId, 'breeder');
   if (fam.viewing) fam.band = viewBand(fam, path, url.searchParams.get('viewing') === 'nochange');

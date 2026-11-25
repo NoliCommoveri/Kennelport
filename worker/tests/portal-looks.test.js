@@ -138,7 +138,7 @@ test('the vet visit once it is done: the page says so, the tab gives way', async
   const tabs = (html) => [...html.match(/<nav class="tabs"[^]*?<\/nav>/)[0].matchAll(/<span>([^<]+)<\/span>/g)].map((m) => m[1]);
   // Booked, nothing uploaded: the tab and the forms stay; the booking reads as a day.
   db.prepare("UPDATE portal_placements SET vet_booked_at = ?, vet_booked_for = '2026-12-24T10:30', vet_clinic = 'Parkway Animal Clinic' WHERE id = ?").run(new Date().toISOString(), p.id);
-  assert.deepEqual(tabs(await fam('/family')), ['Home', 'Timeline', 'Vet visit', 'Records']);
+  assert.deepEqual(tabs(await fam('/family')), ['Home', 'Timeline', 'Vet visit', 'Photos', 'Records']);
   assert.match(await fam('/family'), /Booked for Thu, Dec 24, 10:30 am/);
   assert.match(await fam('/family/vet'), /action="\/family\/vet\/booked"/);
   // Uploaded, not yet accepted: done-looking, a new record still possible, and the tab gives way at once.
@@ -169,7 +169,7 @@ test('the vet visit once it is done: the page says so, the tab gives way', async
   const HOUR = 3600000;
   const at = (ms) => new Date(Date.now() + ms).toISOString();
   db.prepare("UPDATE portal_placements SET proof_file_id = NULL, proof_uploaded_at = NULL, pickup_state = 'confirmed', picked_up_at = ?, vet_deadline_at = ? WHERE id = ?").run(at(-80 * HOUR), at(-8 * HOUR), p.id);
-  assert.deepEqual(tabs(await fam('/family')), ['Home', 'Timeline', 'Vet visit', 'Records']);
+  assert.deepEqual(tabs(await fam('/family')), ['Home', 'Timeline', 'Vet visit', 'Photos', 'Records']);
   db.prepare('UPDATE portal_placements SET picked_up_at = ?, vet_deadline_at = ? WHERE id = ?').run(at(-100 * HOUR), at(-25 * HOUR), p.id);
   const home = await fam('/family');
   assert.deepEqual(tabs(home), ['Home', 'Timeline', 'Photos', 'Records']);
@@ -180,7 +180,7 @@ test('the vet visit once it is done: the page says so, the tab gives way', async
   // Uploaded, then she declines it: the tab is back for a day, and their pages ask again.
   db.prepare('UPDATE portal_placements SET proof_file_id = \'f1\', proof_uploaded_at = ?, proof_declined_at = ? WHERE id = ?').run(at(-30 * HOUR), at(-1 * HOUR), p.id);
   vet = await fam('/family/vet');
-  assert.deepEqual(tabs(vet), ['Home', 'Timeline', 'Vet visit', 'Records']);
+  assert.deepEqual(tabs(vet), ['Home', 'Timeline', 'Vet visit', 'Photos', 'Records']);
   assert.doesNotMatch(vet, /Record uploaded: thank you|will check it|declined/i);
   // A day after she declined, with nothing new: gone again.
   db.prepare('UPDATE portal_placements SET proof_declined_at = ? WHERE id = ?').run(at(-25 * HOUR), p.id);
@@ -224,4 +224,15 @@ test('the looks\' checklist ticks and unticks', async () => {
   const sent = (checked) => { const f = new URLSearchParams({ kind: 'checklist', id: 'c1', back: 'home' }); if (checked) f.append('done', '1'); f.append('done', '0'); return f.get('done'); };
   assert.equal(sent(true), '1');
   assert.equal(sent(false), '0');
+});
+
+test('the tabs by stage: five at most, the handbook second from last whenever she has one', async () => {
+  const { tabsFor } = await import('../src/portal/family.js');
+  const names = (o) => tabsFor(o).map((t) => t[2]);
+  assert.deepEqual(names({ handbook: true }), ['Home', 'Timeline', 'Vet visit', 'Handbook', 'Records']);
+  assert.deepEqual(names({ handbook: true, vetTab: false }), ['Home', 'Timeline', 'Photos', 'Handbook', 'Records']);
+  assert.deepEqual(names({}), ['Home', 'Timeline', 'Vet visit', 'Photos', 'Records']);
+  assert.deepEqual(names({ vetTab: false }), ['Home', 'Timeline', 'Photos', 'Records']);
+  assert.deepEqual(names({ stay: true, handbook: true }), ['Home', 'Stay', 'Vet visit', 'Handbook', 'Records']);
+  assert.deepEqual(names({ loss: true, handbook: true }), ['Home', 'Photos']);
 });
