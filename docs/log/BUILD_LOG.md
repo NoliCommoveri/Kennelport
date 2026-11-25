@@ -2837,3 +2837,11 @@ the only gate left. No code, no migration, no version bump.
   face, so it's likely ticked on another block or card style. Said so.
 - No template CSS or JS changed (the ribbon's style is already there), so no version bump;
   no migration. Test in `tags.test.js`. 517 pass.
+- Follow-up: tags still not showing for the breeder. Traced rule → snapshot (`publish.js`
+  `tags: cleanTags(build.tags)`) → `tagsOf` (`content/fields.js`) → `tagPills` → the card
+  item; the preview renders the same `buildSnapshot` the Tags screen counts from. The one
+  gate that differs: `tagsOf` drops a tag with no words, while the screen's "On 1 now"
+  line doesn't, and the empty words box showed a grey "Champion" placeholder that reads as
+  filled in. The screen now says, in red on the tag, that a tag with no words shows
+  nowhere; the placeholder is "Type its words". Rebuilt with words "Import" on an imported
+  dog, the pill and the ribbon draw.

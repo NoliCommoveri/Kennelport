@@ -111,6 +111,7 @@ test('tags by rule on pups; a tag with no words never shows', async () => {
   const snap0 = await buildSnapshot(env, site.id);
   const pups = (s, where) => blockRows(s, cleanBlock({ id: 'p', type: 'pups', where }), TODAY).length;
   assert.equal(pups(snap0, [{ field: 'tags', op: 'has_any' }]), 0, 'no words: no tag');
+  assert.match(await (await owner('/tags')).text(), /No words yet, so it shows nowhere/, 'the screen says so');
   await owner('/tags', await formOf(owner, { [`t.${t.id}.words`]: 'Show prospect' }));
   const snap = await buildSnapshot(env, site.id);
   assert.equal(pups(snap, [{ field: 'tags', op: 'includes', value: 'show prospect' }]), pups(snap, []), 'no conditions: on every pup');

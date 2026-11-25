@@ -16,7 +16,7 @@ import { svg, pillChip, pillSelect, toggle } from './controls.js';
 
 const option = (v, l, cur) => `<option value="${esc(v)}"${String(v) === String(cur) ? ' selected' : ''}>${esc(l)}</option>`;
 const select = (name, cur, opts, label) => `<label class="half">${esc(label)}<select name="${name}">${Object.entries(opts).map(([v, l]) => option(v, l, cur)).join('')}</select></label>`;
-const words = (name, value, label) => `<label class="half">${esc(label)}<input type="text" name="${name}" value="${esc(value)}" maxlength="${TAG_WORDS_MAX}" placeholder="Champion"></label>`;
+const words = (name, value, label) => `<label class="half">${esc(label)}<input type="text" name="${name}" value="${esc(value)}" maxlength="${TAG_WORDS_MAX}" placeholder="Type its words"></label>`;
 // A dog's tag can run as the ribbon across its card's photo (content/tags.js).
 const RIBBON = 'Ribbon across its card\'s photo (the first such tag a dog has)';
 const ribbonSwitch = (name, t) => `<div class="switches">${toggle(name, t.ribbon, RIBBON)}</div>`;
@@ -35,6 +35,7 @@ function ruleCard(snap, t, rc) {
     <div class="fgrid">${words(`t.${t.id}.words`, t.words, 'Its words')}${pillSelect(`t.${t.id}.pill`, snap.site.scheme, t.pill, 'Its colour')}${select(`t.${t.id}.kind`, t.kind, TAG_KINDS, 'On')}</div>
     ${t.kind === 'dog' ? ribbonSwitch(`t.${t.id}.ribbon`, t) : ''}
     ${conditionRows(snap, b, k, rc, { without: ['tags'], intro: 'Every one must hold. For one thing or another, add a second tag with the same words.' })}
+    ${t.words ? '' : '<p class="error small">No words yet, so it shows nowhere on the site, whatever it\'s on. Type them in Its words.</p>'}
     <span class="hint">${hits.length ? `On ${hits.length} now: ${esc(hits.slice(0, 8).map(nameOf).join(', '))}${hits.length > 8 ? '…' : ''}` : `On no ${t.kind === 'dog' ? 'dog' : 'pup'} on the site now`}${t.where.length ? '' : ' (with no conditions, it is on every one)'}.</span>
   </span></li>`;
 }
