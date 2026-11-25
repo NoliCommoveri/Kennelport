@@ -130,6 +130,10 @@ export function changes(live, draft, say = defaultSay) {
     if (same(pa[kind], pb[kind])) continue;
     lines.push({ text: line(part('pay', { fee: say(`publish.diff.fee.${kind}`) }), w(!pa[kind] ? 'shown' : !pb[kind] ? 'no_longer_shown' : 'edited')), path: pb[kind] ? '/waitlist' : null });
   }
+  // Her payment methods (C11), which the fee and deposit cards draw.
+  if (!same(pa.methods ?? [], pb.methods ?? [])) {
+    lines.push({ text: line(part('pay', { fee: say('publish.diff.fee.methods') }), w(!pa.methods ? 'shown' : !pb.methods ? 'no_longer_shown' : 'edited')), path: '/waitlist' });
+  }
   if (!same(pa.safe_notice, pb.safe_notice)) {
     lines.push({ text: line(part('safe_notice'), pa.safe_notice?.enabled !== pb.safe_notice?.enabled ? onOrOff(pb.safe_notice?.enabled) : w('wording_edited')), path: '/waitlist' });
   }

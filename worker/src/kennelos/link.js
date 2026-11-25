@@ -185,7 +185,7 @@ export async function isLinked(env, siteId) {
 // Still linked with no device: records that came from KennelOS (or matches waiting
 // for her) are still keyed to it, and wait for the next device she links.
 export async function waitingForDevice(env, siteId) {
-  const tables = ['dogs', 'litters', 'puppies', 'health_results', 'extras', 'products', 'partner_kennels', 'steps', 'payment_info'];
+  const tables = ['dogs', 'litters', 'puppies', 'health_results', 'extras', 'products', 'partner_kennels', 'steps', 'payment_info', 'pay_methods'];
   // One EXISTS per table, OR'd: D1 refuses a compound SELECT (UNION ALL) of more
   // than 5 terms, and this is ten.
   const sql = [...tables.map((t) => `EXISTS (SELECT 1 FROM ${t} WHERE site_id = ? AND source = 'kennelos')`), 'EXISTS (SELECT 1 FROM link_pending WHERE site_id = ?)'].join(' OR ');
@@ -233,6 +233,7 @@ export async function unlinkSite(env, siteId) {
     db.prepare("UPDATE partner_kennels SET source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
     db.prepare("UPDATE steps SET source = 'kennelport', kennelos_id = NULL WHERE site_id = ?").bind(siteId),
     db.prepare("UPDATE payment_info SET source = 'kennelport' WHERE site_id = ?").bind(siteId),
+    db.prepare("UPDATE pay_methods SET source = 'kennelport' WHERE site_id = ?").bind(siteId),
     db.prepare('UPDATE sites SET use_kennelos_prices = 0, draft_changed_at = ? WHERE id = ?').bind(t, siteId),
   ]);
 }

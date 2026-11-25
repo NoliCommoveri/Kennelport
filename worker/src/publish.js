@@ -244,10 +244,16 @@ export async function buildSnapshot(env, siteId) {
   // How to pay: only cards switched on; the notice is on unless switched off.
   const payRows = Object.fromEntries((await all('SELECT * FROM payment_info WHERE site_id = ?')).map((p) => [p.kind, p]));
   const payment = {};
+  // Her payment methods (C11), each with the stages she takes it for, under her own
+  // name for it when she has given one. A card shows with any of them for its kind.
+  const methods = (await all('SELECT * FROM pay_methods WHERE site_id = ? ORDER BY sort')).map((m) => ({
+    label: m.own_label || m.label, url: m.url ?? null, note: m.note ?? null, stages: json(m.stages, []),
+  }));
+  if (methods.length) payment.methods = methods;
   for (const kind of PAYMENT_KINDS) {
     const row = payRows[kind];
     const c = row && row.show_on_site ? json(row.content, {}) : null;
-    if (c && (c.methods?.length || c.choices?.length || c.pay_url)) payment[kind] = c;
+    if (c && (c.methods?.length || c.pay_url || methods.some((m) => m.stages.includes(kind)))) payment[kind] = c;
   }
   const notice = payRows.safe_notice;
   payment.safe_notice = { enabled: notice ? Boolean(notice.show_on_site) : true, text: json(notice?.content, {}).text ?? null };

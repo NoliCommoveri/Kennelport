@@ -28,7 +28,8 @@
 //     bag_items?: [{ id, name, cost, expense?, origin?, product_id? }] (bag_items),
 //     steps?: [{ id, heading, body }],
 //     partner_kennels?: [{ id, name, website }],
-//     payment?: { application_fee?: {…, methods?: [{ label, url?, note? }] (pay_methods)}, deposit?: {…} } }
+//     payment?: { application_fee?: {…}, deposit?: {…},
+//                 methods?: [{ label, url?, note?, stages: [application_fee | deposit | payments | final_payment] }] (pay_methods) } }
 //
 // Only records she marked Show on website are in it (dogs, litters, pairings; a
 // heat only for a dam with heats_online), with the statuses she set: KennelOS maps
@@ -48,7 +49,7 @@
 // its kind would be: the name, its web address and the planned-litter label follow
 // the new kind, unless she has changed them on the website.
 import { ApiError } from '../lib/http.js';
-import { cleanValue, cleanPayChoices, ContentError, slugify, PAYMENT_FIELDS, LITTER_PRICE_FIELDS } from '../content/model.js';
+import { cleanValue, cleanPayMethods, ContentError, slugify, PAYMENT_FIELDS, LITTER_PRICE_FIELDS } from '../content/model.js';
 import { PUBLIC_ID } from '../feed.js';
 import { loadSnapshot } from '../publish.js';
 import { siteBase, siteFacts } from './link.js';
@@ -95,8 +96,8 @@ export const MAX = { ancestors: 30, dogs: 200, litters: 100, puppies: 30, pairin
 // 'bag_items': her go-home bag's items (docs/plans/portal-go-home-bag.md 4a): name,
 // cost in dollars (12.5), expense (default yes with a cost), where it comes from and
 // the product (a KennelOS Account id from products) it's tied to.
-// 'pay_methods': a payment kind's methods as { label, url?, note? } (the fee's today), her
-// payment methods in her order (Website Contract C11); without them, as before.
+// 'pay_methods': payment.methods, her payment methods in her order, each once with the
+// stages of a sale she takes it for (Website Contract C11); kept in pay_methods.
 export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail', 'origin', 'lineage', 'origin_country', 'bag_items', 'pay_methods'];
 
 // ---------- checking ----------
@@ -273,6 +274,9 @@ export function cleanBundle(body) {
     steps: 'steps' in body ? cleanList('step', body.steps, 'steps', MAX.steps) : null,
     partner_kennels: 'partner_kennels' in body ? cleanList('partner_kennel', body.partner_kennels, 'partner_kennels', MAX.partner_kennels) : null,
     payment: null,
+    // Her payment methods (pay_methods); [] when none came, which a bundle from a
+    // KennelOS that sends them means she has none (or none usable).
+    pay_methods: [],
   };
   // Titles as rows: a bundle with any dog's titles as { abbr, … } is from a KennelOS
   // that sends them so, and there a dog's empty list means none (its rows cleared).
@@ -291,29 +295,18 @@ export function cleanBundle(body) {
     if (typeof body.payment !== 'object' || Array.isArray(body.payment)) throw bad('payment', 'must be an object');
     out.payment = {};
     for (const [k, v] of Object.entries(body.payment)) {
+      if (k === 'methods') continue;
       if (!['application_fee', 'deposit'].includes(k)) throw bad(`payment.${k}`, 'not a kind of payment');
-      if (v != null) out.payment[k] = cleanPay(k, v, `payment.${k}`);
+      if (v != null) out.payment[k] = cleanShape('pay', v, `payment.${k}`);
+    }
+    // Her payment methods (pay_methods), apart from the kinds: each once, with its stages.
+    try { out.pay_methods = cleanPayMethods(body.payment.methods, 'payment.methods'); } catch (err) {
+      if (err instanceof ContentError) throw bad(err.path, err.message.replace(/^[^:]*: /, ''));
+      throw err;
     }
   }
   for (const x of out.extras ?? []) if (x.price_from != null && x.price_to != null && x.price_to < x.price_from) throw bad('extras', `${x.name}: highest price below the lowest`);
   return out;
-}
-
-// A kind of payment. Its methods are her typed [way, details] pairs, or, from a
-// KennelOS that sends pay_methods (any kind: the fee today, the deposit when it comes), her payment methods as
-// { label, url?, note? }, kept as `choices` (content/model.js cleanPayChoices).
-function cleanPay(kind, v, path) {
-  const list = v && typeof v === 'object' && !Array.isArray(v) ? v.methods : undefined;
-  if (!Array.isArray(list) || !list.some((m) => m && typeof m === 'object' && !Array.isArray(m))) {
-    return { ...cleanShape('pay', v, path), choices: null };
-  }
-  let choices;
-  try { choices = cleanPayChoices(list, `${path}.methods`); } catch (err) {
-    if (err instanceof ContentError) throw bad(err.path ?? `${path}.methods`, err.message.replace(/^[^:]*: /, ''));
-    throw err;
-  }
-  const { methods, ...rest } = v;
-  return { ...cleanShape('pay', rest, path), choices };
 }
 
 // ---------- what KennelOS owns (plan 5.3, "Who owns which field") ----------
@@ -1023,6 +1016,16 @@ export async function applyBundle(env, device, body) {
     if (!Object.keys(content).length) continue;
     w.s.push(env.DB.prepare(`INSERT INTO payment_info (site_id, kind, show_on_site, content, source) VALUES (?, ?, 0, ?, 'kennelos')
       ON CONFLICT (site_id, kind) DO UPDATE SET content = excluded.content, source = 'kennelos'`).bind(site.id, kind, JSON.stringify(content)));
+  }
+
+  // Her payment methods (C11): the bundle's list replaces KennelOS's rows whole, so one
+  // she stops offering drops out. Her own name for one (own_label) follows its label.
+  {
+    const old = await env.DB.prepare("SELECT label, own_label FROM pay_methods WHERE site_id = ? AND source = 'kennelos'").bind(site.id).all();
+    const own = new Map((old.results ?? []).filter((r) => r.own_label).map((r) => [r.label.toLowerCase(), r.own_label]));
+    w.s.push(env.DB.prepare("DELETE FROM pay_methods WHERE site_id = ? AND source = 'kennelos'").bind(site.id));
+    clean.pay_methods.forEach((m, i) => w.s.push(env.DB.prepare(`INSERT INTO pay_methods (id, site_id, sort, label, url, note, stages, own_label, source)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'kennelos')`).bind(crypto.randomUUID(), site.id, i, m.label, m.url, m.note, JSON.stringify(m.stages), own.get(m.label.toLowerCase()) ?? null)));
   }
 
   // Her public list (3.8): Connect website sets the feed up, so she never pastes it.

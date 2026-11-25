@@ -938,6 +938,7 @@ const DIFF = {
   'publish.diff.block.reviews': ['Home\'s block {block}: reviews', 'reviews'],
   'publish.diff.block.waitlist': ['Home\'s block {block}: the waitlist band', 'waitlist band'],
   'publish.diff.fee.application_fee': ['The fee {fee}: the application fee', 'application fee'],
+  'publish.diff.fee.methods': ['The fee {fee}: her payment methods from KennelOS', 'ways to pay'],
   'publish.diff.fee.deposit': ['The fee {fee}: the deposit', 'deposit'],
   'publish.diff.site.kennel_name': ['A kennel detail in {fields}: the kennel\'s name', 'name'],
   'publish.diff.site.tagline': ['A kennel detail in {fields}: the line under the name', 'line under the name'],

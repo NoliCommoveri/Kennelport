@@ -397,31 +397,35 @@ export const PAYMENT_FIELDS = {
   pay_url: URL_,
   pay_label: S(40),
 };
-// The application fee's payment methods from KennelOS (Website Contract C11, section
-// pay_methods): her Payment service accounts in her order, each a label with a link
-// and/or her instructions. Kept in the card's content as `choices`, apart from her
-// hand-typed `methods` pairs above; not a form field (KennelOS fills it, the card is
-// locked then). The site draws a choice per method and ignores pay_url beside them.
-export const PAY_CHOICES_MAX = 8;
-export const PAY_CHOICE_KEYS = ['label', 'url', 'note'];
-// → the list as kept, or null for none. A link that fails the link check is dropped,
-// and so is a method left with neither link nor note; anything else wrong refuses.
-export function cleanPayChoices(v, path) {
-  if (v === undefined || v === null) return null;
+// Her payment methods from KennelOS (Website Contract C11, section pay_methods): each
+// method she accepts, once, in her order, with the stages of a sale she takes it for.
+// Kept in pay_methods (migration 0047), not in a payment card's content; the site
+// draws them on the fee and deposit cards (and the Ways to pay block, planned in
+// docs/plans/payment-blocks.md).
+export const PAY_STAGES = ['application_fee', 'deposit', 'payments', 'final_payment'];
+export const PAY_METHODS_MAX = 12;
+export const PAY_METHOD_KEYS = ['label', 'url', 'note', 'stages'];
+// → the list as kept ([] for none). A link that fails the link check is dropped, a
+// stage KennelPort doesn't know is dropped, and a method left with no stage, or with
+// neither link nor note, is dropped; anything else wrong refuses.
+export function cleanPayMethods(v, path) {
+  if (v === undefined || v === null) return [];
   if (!Array.isArray(v)) throw new ContentError(path, 'must be a list');
-  if (v.length > PAY_CHOICES_MAX) throw new ContentError(path, `at most ${PAY_CHOICES_MAX}`);
+  if (v.length > PAY_METHODS_MAX) throw new ContentError(path, `at most ${PAY_METHODS_MAX}`);
   const out = [];
   v.forEach((m, i) => {
     const at = `${path}[${i}]`;
     if (!m || typeof m !== 'object' || Array.isArray(m)) throw new ContentError(at, 'must be an object');
-    for (const k of Object.keys(m)) if (!PAY_CHOICE_KEYS.includes(k)) throw new ContentError(`${at}.${k}`, 'not a known field');
+    for (const k of Object.keys(m)) if (!PAY_METHOD_KEYS.includes(k)) throw new ContentError(`${at}.${k}`, 'not a known field');
     const label = cleanValue({ type: 'text', max: 60, required: true }, m.label, `${at}.label`);
     let url = null;
     try { url = cleanValue(URL_, m.url, `${at}.url`); } catch (err) { if (!(err instanceof ContentError)) throw err; }
     const note = cleanValue({ type: 'text', max: 1000, multiline: true }, m.note, `${at}.note`);
-    if (url || note) out.push({ label, ...(url ? { url } : {}), ...(note ? { note } : {}) });
+    if (m.stages != null && !Array.isArray(m.stages)) throw new ContentError(`${at}.stages`, 'must be a list');
+    const stages = PAY_STAGES.filter((st) => (m.stages ?? []).includes(st));
+    if (stages.length && (url || note)) out.push({ label, url, note, stages });
   });
-  return out.length ? out : null;
+  return out;
 }
 
 // The safe-payment notice: on by default (plan 3.12), in the breeder's words or

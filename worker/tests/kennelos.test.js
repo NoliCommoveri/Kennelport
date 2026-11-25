@@ -607,64 +607,66 @@ test('steps, How to pay, extras and her public list come with a bundle; whether 
   assert.equal(b.row("SELECT hidden_by_kennelos FROM extras WHERE kennelos_id = 'x1'").hidden_by_kennelos, 1);
 });
 
-test('pay_methods: the application fee offers her payment methods, a choice each, her note under them', async () => {
+test('pay_methods: her payment methods, each with its stages; the fee and deposit cards show theirs', async () => {
   const b = await breeder();
   const token = await linked(b);
   const send = (body) => api(b.env, '/v1/bundle', { body, token });
-  const fee = (methods, more = {}) => bundle({ payment: { application_fee: {
-    title: 'Application fee', due_note: 'Within 7 days of approval.', note: 'Or a check to AK Bostons.',
-    pay_url: 'https://buy.stripe.com/abc', pay_label: 'Pay the application fee', methods, ...more } } });
-  const res = await send(fee([
-    { label: 'Card', url: 'https://buy.stripe.com/abc' },
-    { label: 'PayPal', url: 'https://paypal.me/AK/50' },
-    { label: 'Zelle', note: 'Zelle to pay@ak.example\nPut your name in the memo.' },
-    { label: 'Venmo', url: 'javascript:alert(1)' },
-    { label: 'Cash', note: 'Cash at pickup', url: 'not a link' },
+  const FEE = { title: 'Application fee', due_note: 'Within 7 days of approval.', note: 'Or a check to AK Bostons.', pay_url: 'https://buy.stripe.com/abc', pay_label: 'Pay the application fee' };
+  const pay = (methods, more = { application_fee: FEE }) => bundle({ payment: { ...more, methods } });
+  const res = await send(pay([
+    { label: 'Card', url: 'https://buy.stripe.com/abc', stages: ['application_fee'] },
+    { label: 'Zelle', note: 'Zelle to pay@ak.example\nPut your puppy\'s name in the memo.', stages: ['application_fee', 'deposit', 'payments', 'final_payment'] },
+    { label: 'PayPal', url: 'https://paypal.me/AK', stages: ['deposit', 'layaway'] },
+    { label: 'Venmo', url: 'javascript:alert(1)', stages: ['deposit'] },
+    { label: 'Cash', note: 'Cash at pickup', stages: ['final_payment'] },
+    { label: 'Check', note: 'Mail a check', stages: ['someday'] },
   ]));
   assert.equal(res.status, 200);
-  const content = () => JSON.parse(b.row("SELECT content FROM payment_info WHERE kind = 'application_fee'").content);
-  // A bad link is dropped, and a method left with nothing is dropped with it.
-  assert.deepEqual(content().choices, [
-    { label: 'Card', url: 'https://buy.stripe.com/abc' },
-    { label: 'PayPal', url: 'https://paypal.me/AK/50' },
-    { label: 'Zelle', note: 'Zelle to pay@ak.example\nPut your name in the memo.' },
-    { label: 'Cash', note: 'Cash at pickup' },
+  const rows = () => b.rows("SELECT label, url, note, stages, source FROM pay_methods WHERE site_id = ? ORDER BY sort", b.site.id).map((r) => ({ ...r, stages: JSON.parse(r.stages) }));
+  // A bad link, an unknown stage, and a method left with nothing are dropped.
+  assert.deepEqual(rows().map((r) => [r.label, r.stages]), [
+    ['Card', ['application_fee']], ['Zelle', ['application_fee', 'deposit', 'payments', 'final_payment']], ['PayPal', ['deposit']], ['Cash', ['final_payment']],
   ]);
-  assert.equal(content().methods, undefined);
-  // Switching it on in the Site Manager keeps them.
+  assert.equal(rows()[1].note, 'Zelle to pay@ak.example\nPut your puppy\'s name in the memo.');
+  assert.ok(rows().every((r) => r.source === 'kennelos'));
+  // The fee card shows with them; the deposit card (her own) shows PayPal and Zelle.
   assert.equal((await b.post('/payment/application_fee', { show_on_site: '1' })).status, 303);
-  assert.equal(content().choices.length, 4);
+  assert.equal((await b.post('/payment/deposit', { show_on_site: '1', title: 'Deposit' })).status, 303, 'methods for the deposit count as a way to pay');
   await b.post('/publish');
   const w = await b.page('/waitlist');
   assert.match(w, /How would you like to pay\?/);
-  assert.equal((w.match(/<details class="x" name="pay-application_fee">/g) ?? []).length, 4);
-  assert.match(w, /href="https:\/\/paypal\.me\/AK\/50" rel="noopener noreferrer" target="_blank">Pay with PayPal</);
-  assert.match(w, /Zelle to pay@ak\.example<br>Put your name in the memo\./);
+  assert.equal((w.match(/<details class="x" name="pay-application_fee">/g) ?? []).length, 2);
+  assert.equal((w.match(/<details class="x" name="pay-deposit">/g) ?? []).length, 2);
+  assert.match(w, /href="https:\/\/paypal\.me\/AK" rel="noopener noreferrer" target="_blank">Pay with PayPal</);
+  assert.match(w, />Pay with Card</);
+  assert.match(w, /Zelle to pay@ak\.example<br>Put your puppy&#39;s name in the memo\./);
   assert.match(w, /data-copy="pay@ak\.example"/);
   assert.match(w, /Additional Payment Instructions:<\/b> Or a check to AK Bostons\./);
-  // pay_url isn't drawn beside the methods.
-  assert.doesNotMatch(w, /Pay the application fee</);
-  assert.doesNotMatch(w, /Pay online/);
-  // One method shows as it is, without a choice.
-  await send(fee([{ label: 'Card', url: 'https://buy.stripe.com/abc' }]));
+  assert.doesNotMatch(w, /Pay the application fee</, 'pay_url gives way to the methods');
+  assert.doesNotMatch(w, /Cash at pickup/, 'final payment methods wait for the Ways to pay block');
+  // One method for the fee shows as it is, without a choice.
+  await send(pay([{ label: 'Card', url: 'https://buy.stripe.com/abc', stages: ['application_fee'] }]));
+  assert.match(await (await b.get('/publish')).text(), /How to pay, ways to pay: edited/);
   await b.post('/publish');
   const one = await b.page('/waitlist');
-  assert.doesNotMatch(one, /How would you like to pay/);
+  assert.doesNotMatch(one, /pay-application_fee/);
   assert.match(one, />Pay with Card</);
-  // None usable: the box as before, with its pay link.
-  await send(fee([{ label: 'Venmo', url: 'ftp://x' }]));
-  assert.equal(content().choices, undefined);
+  // Methods with no application fee: the payment section takes them alone.
+  assert.equal((await send(pay([{ label: 'Cash', note: 'Cash at pickup', stages: ['final_payment'] }], {}))).status, 200);
+  assert.deepEqual(rows().map((r) => r.label), ['Cash']);
+  // None sent: they drop out, and the fee card is as before, with its pay link.
+  await send(bundle({ payment: { application_fee: FEE } }));
+  assert.deepEqual(rows(), []);
   await b.post('/publish');
   assert.match(await b.page('/waitlist'), />Pay the application fee</);
-  // Refused: an unknown key, too many, too long a label or note.
-  // The deposit takes them as well.
-  assert.equal((await send(bundle({ payment: { deposit: { title: 'Deposit', methods: [{ label: 'Zelle', note: 'pay@ak.example' }] } } }))).status, 200);
-  assert.deepEqual(JSON.parse(b.row("SELECT content FROM payment_info WHERE kind = 'deposit'").content).choices, [{ label: 'Zelle', note: 'pay@ak.example' }]);
+  // Refused: an unknown key (no account ids), too many, too long a label or note, stages not a list.
+  const M = (m) => pay([{ label: 'Card', url: 'https://x.example', stages: ['deposit'], ...m }]);
   for (const [body, path] of [
-    [fee([{ label: 'Card', url: 'https://x.example', id: 'acct_1' }]), 'payment.application_fee.methods[0].id'],
-    [fee(Array.from({ length: 9 }, (_, i) => ({ label: `M${i}`, note: 'x' }))), 'payment.application_fee.methods'],
-    [fee([{ label: 'x'.repeat(61), note: 'x' }]), 'payment.application_fee.methods[0].label'],
-    [fee([{ label: 'Zelle', note: 'x'.repeat(1001) }]), 'payment.application_fee.methods[0].note'],
+    [M({ id: 'acct_1' }), 'payment.methods[0].id'],
+    [pay(Array.from({ length: 13 }, (_, i) => ({ label: `M${i}`, note: 'x', stages: ['deposit'] }))), 'payment.methods'],
+    [M({ label: 'x'.repeat(61) }), 'payment.methods[0].label'],
+    [M({ note: 'x'.repeat(1001) }), 'payment.methods[0].note'],
+    [M({ stages: 'deposit' }), 'payment.methods[0].stages'],
   ]) {
     const r = await send(body);
     assert.equal(r.status, 400, path);

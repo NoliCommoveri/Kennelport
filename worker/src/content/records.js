@@ -4,7 +4,7 @@
 // changed; nothing is live until Publish.
 import {
   DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS, STEP_FIELDS, EXPANDER_FIELDS, FAQ_FIELDS, EXTRA_FIELDS, PRODUCT_FIELDS, PARTNER_FIELDS, PARTNERS_PER_DOG, PARTNERS_MAX, HOME_BADGES_MAX, BADGE_PLACES, FAQ_PLACES, brandImageOk,
-  EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, cleanPayChoices, QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue, slugify,
+  EXPANDER_PAGES, SITE_FIELDS, PAGES, HOME_BLOCKS, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue, slugify,
   CUSTOM_KEY, CUSTOM_PAGE, ADDED_BLOCK_FIELDS,
 } from './model.js';
 import { untagStatements } from '../photoTags.js';
@@ -466,12 +466,13 @@ export async function savePayment(env, siteId, kind, input) {
   const notice = kind === 'safe_notice';
   if (!notice && !PAYMENT_KINDS.includes(kind)) throw new ContentError(kind, 'not a kind of payment');
   const fields = notice ? SAFE_NOTICE_FIELDS : PAYMENT_FIELDS;
-  const clean = cleanRecord(fields, omit(input, ['source', 'choices']), kind);
+  const clean = cleanRecord(fields, omit(input, ['source']), kind);
   const on = notice ? clean.enabled : clean.show_on_site;
-  // Her KennelOS payment methods (application fee) stay as they came.
-  const choices = notice ? null : cleanPayChoices(input.choices, `${kind}.choices`);
-  const content = stripNulls({ ...omit(clean, ['enabled', 'show_on_site']), ...(choices ? { choices } : {}) });
-  if (!notice && on && !content.methods?.length && !content.choices?.length && !content.pay_url) throw new ContentError('methods', 'add at least one way to pay, or a payment page link, before showing it');
+  const content = stripNulls(omit(clean, ['enabled', 'show_on_site']));
+  // Her KennelOS payment methods for this kind (C11) count as a way to pay.
+  const tagged = notice || !on ? null : await env.DB.prepare('SELECT stages FROM pay_methods WHERE site_id = ?').bind(siteId).all();
+  const hasTagged = (tagged?.results ?? []).some((r) => JSON.parse(r.stages).includes(kind));
+  if (!notice && on && !content.methods?.length && !content.pay_url && !hasTagged) throw new ContentError('methods', 'add at least one way to pay, or a payment page link, before showing it');
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO payment_info (site_id, kind, show_on_site, content) VALUES (?, ?, ?, ?)
       ON CONFLICT (site_id, kind) DO UPDATE SET show_on_site = excluded.show_on_site, content = excluded.content`)

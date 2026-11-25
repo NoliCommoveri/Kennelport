@@ -136,16 +136,23 @@ test('the default notice text is plain about scams', () => {
   assert.match(SAFE_NOTICE_TEXT, /gift card/);
 });
 
-test('her KennelOS payment methods (choices) go out with an export and back in; a bad one is refused', async () => {
+test('her payment methods go out with an export and back in, her own names with them', async () => {
   const b = await breeder();
-  const choices = [{ label: 'Card', url: 'https://buy.stripe.com/abc' }, { label: 'Zelle', note: 'pay@ak.example\nYour name in the memo.' }];
-  await importContent(b.env, b.site.id, { payment: { application_fee: { show_on_site: true, title: 'Application fee', choices } } });
+  const pay_methods = [
+    { label: 'Card', url: 'https://buy.stripe.com/abc', stages: ['application_fee'], source: 'kennelos' },
+    { label: 'Zelle', note: 'pay@ak.example\nYour name in the memo.', stages: ['deposit', 'final_payment'], own_label: 'Zelle (bank transfer)', source: 'kennelos' },
+  ];
+  await importContent(b.env, b.site.id, { payment: { application_fee: { show_on_site: true, title: 'Application fee' } }, pay_methods });
   const doc = await exportContent(b.env, b.site.id);
-  assert.deepEqual(doc.payment.application_fee.choices, choices);
-  await importContent(b.env, b.site.id, { payment: doc.payment });
-  assert.deepEqual((await exportContent(b.env, b.site.id)).payment.application_fee.choices, choices);
-  await assert.rejects(importContent(b.env, b.site.id, { payment: { application_fee: { choices: [{ label: 'Card', id: 'acct_1' }] } } }), /choices\[0\]\.id: not a known field/);
-  // Shown with only choices: the waitlist has them.
+  assert.deepEqual(doc.pay_methods, pay_methods);
+  await importContent(b.env, b.site.id, { pay_methods: doc.pay_methods });
+  assert.deepEqual((await exportContent(b.env, b.site.id)).pay_methods, pay_methods);
+  await assert.rejects(importContent(b.env, b.site.id, { pay_methods: [{ label: 'Card', note: 'x', stages: ['deposit'], id: 'acct_1' }] }), /pay_methods\[0\]\.id: not a known field/);
+  // Shown with only the methods; her own name is the one buyers see.
   await b.post('/publish');
-  assert.match(await b.page('/waitlist'), />Pay with Card</);
+  const w = await b.page('/waitlist');
+  assert.match(w, />Pay with Card</);
+  await b.post('/payment/deposit', { show_on_site: '1', title: 'Deposit' });
+  await b.post('/publish');
+  assert.match(await b.page('/waitlist'), /<b>Zelle \(bank transfer\):<\/b> /);
 });

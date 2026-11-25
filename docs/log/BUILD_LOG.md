@@ -3190,34 +3190,49 @@ The owner: a way to see a new breeder's portal before adding anyone, like the pr
   timeline dated from the sample, Stop viewing. 552 pass. Checked at 390px in Classic, Forest
   and Cream, and at 1280px. No migration, no version bump.
 
-## 2026-11-25: The application fee's payment methods from KennelOS (Website Contract C11)
+## 2026-11-25: Her payment methods from KennelOS, for every stage of a sale (Website Contract C11)
 
-- **New bundle section `pay_methods`** (`kennelos/bundle.js` SECTIONS), so KennelOS now sends
-  `payment.application_fee.methods` as her payment methods in her order: `{ label, url?, note? }`.
-  `cleanPay` tells them from the older `[way, details]` pairs by their items (objects), as titles
-  are told apart; pairs work as before. Checked in `content/model.js` `cleanPayChoices`: at most 8,
-  label ≤60 (required), note ≤1000 with line breaks, a link that fails the link check dropped, a
-  method left with neither link nor note dropped, an unknown key refused (so no account ids get
-  in). Any kind takes them: KennelOS sends the fee's today, and the deposit's are accepted and
-  drawn the same way when they come (at first only the fee's were accepted; the owner wants every
-  kind's methods for her own How to pay page).
-- **Kept as `choices`** in the card's `payment_info.content`, apart from her hand-typed `methods`
-  pairs, so the Site Manager's form (locked for a KennelOS card) never sees them. Kept through her
-  Show switch (`manage/screens.js`, `savePayment`), the content export and import (`content/io.js`),
-  and they count as a way to pay for showing and publishing (`publish.js`). No migration.
-- **On the waitlist** (`render/parts.js` `choicesCard`): the fee's title and When line, then "How
-  would you like to pay?" with one expander per method (the template's `details.x`, sharing a
-  `name` so one opens at a time); a method opens to a "Pay with <label>" button (new tab) and/or
-  her instructions with their line breaks (and a Copy button for an address in them). A single
-  method shows directly, no choice. Her top-level note follows as "Additional Payment
-  Instructions" (the owner's wording, in place of KennelOS's suggested "Other ways to pay").
-  `pay_url` beside them isn't drawn (it's the first link). Where every card shown has methods,
-  the section's "Put the note shown…" line is left off. The safe notice's "We take payment only
-  by…" lists their labels. The fee amount isn't headlined: the card carries no amount (KennelPort
-  works none out). Family-facing wording, in `parts.js` beside the card's other fixed words.
-- **Without `methods`** (or none usable) the card is drawn exactly as before.
-- No stylesheet change, so no `ASSET_VERSION` bump. Checked at 390px and 1200px beside a
-  pairs-style deposit card.
-- Tests: `kennelos.test.js` (the section listed; a bundle with methods: drops, storage, the Show
-  switch keeps them, the waitlist, one method, none usable, the deposit's, four refusals) and `payment.test.js`
-  (export and import). 554 pass.
+- **Built twice.** First to KennelOS's first message (methods inside `application_fee`).
+  KennelOS then revised C11: one list of methods at `payment.methods`, each with the stages
+  it's taken for. That's what's built now; the first version is gone.
+- **New bundle section `pay_methods`** (`kennelos/bundle.js` SECTIONS). `payment.methods`:
+  `[{ label, url?, note?, stages }]`, checked in `content/model.js` `cleanPayMethods`:
+  - at most 12;
+  - label ≤60 (required); note ≤1000, line breaks kept;
+  - a link that fails the link check is dropped;
+  - stages keep only `application_fee`, `deposit`, `payments`, `final_payment`, and one left
+    with no stage is dropped, as is one with neither link nor note;
+  - an unknown key, a stages that isn't a list, or too many refuses the bundle.
+
+  `payment` may now come with only `methods`; `application_fee` was already optional. The
+  typed `[way, details]` pairs on a card are unchanged.
+- **Kept in a new table `pay_methods`** (migration 0047, additive). `payment_info`'s kind
+  CHECK allows only three kinds, and widening it would mean rebuilding the table. Each bundle
+  replaces KennelOS's rows whole (a method she stops offering drops out; a bundle without
+  `methods` clears them). `own_label` (her name for it, plan step 1) is carried over by
+  label. In `sites.js` SITE_TABLES (backup), the link's waiting check, and unlinking
+  (source back to `kennelport`). Content export and import carry it (`pay_methods`).
+- **Snapshot:** `payment.methods` (`publish.js`), each `{ label (her own name if set), url,
+  note, stages }`. A fee or deposit card switched on shows with any method tagged for its
+  stage; Show in the Site Manager counts them as a way to pay (`records.js` `savePayment`).
+  Publish's list says "How to pay, ways to pay: …" (`publish.diff.fee.methods`).
+- **On the waitlist** (`render/parts.js` `choicesCard`, `payMethodsFor`): the Application fee
+  and Deposit cards show their stage's methods:
+  - "How would you like to pay?", with one expander per method (the template's `details.x`,
+    sharing a `name`, so one opens at a time);
+  - each opens to a "Pay with <label>" button (new tab) and/or her note with its line
+    breaks, and a Copy button for an address;
+  - a single method shows directly;
+  - then the card's note as "Additional Payment Instructions" (the owner's wording, in place
+    of KennelOS's "Other ways to pay").
+
+  The card's `pay_url` and typed methods give way to them. Where every card shown has methods,
+  the section's "Put the note shown…" line is left off. "We take payment only by…" lists
+  them. Payments and Final payment methods show nowhere yet: they wait for the Ways to pay
+  block ([`plans/payment-blocks.md`](../plans/payment-blocks.md)).
+- Without methods, every card is drawn exactly as before.
+- No stylesheet change, so no `ASSET_VERSION` bump. Checked at 390px and 1200px.
+- Tests: `kennelos.test.js` (the section listed; methods with stages, dropped and kept, the
+  fee and deposit cards, a single method, methods with no fee, none sent clears them, five
+  refusals) and `payment.test.js` (export and import with her own name). 554 pass.
+- **Migration 0047 applies by itself on the first request after the merge.**
