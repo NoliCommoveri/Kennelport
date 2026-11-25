@@ -3026,3 +3026,10 @@ the only gate left. No code, no migration, no version bump.
   `APP_FILES` bcdf42f9cd572688. 537 pass.
 - The prompt for a KennelOS session to check its side for a second kennel (multi-breeder
   plan 2.6): `docs/plans/kennelos-second-kennel-check.md`.
+- The owner: group the website's screens and the portal's. The admin nav now runs by
+  group (`builder/frame.js` `SCREENS` with a group each, `GROUPS`): **Website** (Pages to From
+  KennelOS), **Family portal** (Family Home; only on portal sites), **Website and portal**
+  (Timing, which has a card for each, and her instructions). Group names down the side on a
+  computer and as headings in the phone's More panel; a site without the portal has one
+  group and no names. The side nav scrolls if it's taller than the screen. `app.css`
+  changed again under the unreleased `APP_VERSION` 20 (`APP_FILES` ab17944db5aff60d). 537 pass.

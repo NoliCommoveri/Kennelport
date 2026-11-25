@@ -17,28 +17,38 @@ export const isDemo = (site) => site.demo_step != null;
 // Where a site is, in words: its address, or Demo (it has none).
 export const whereIs = (site, path = '') => (isDemo(site) ? `Demo${path ? ` · ${path}` : ''}` : `${site.subdomain}.kennelport.com${path}`);
 
-// A site's screens: [path, title, icon, short name for the phone's tabs], and 'portal'
-// for one shown only on a site with the family portal.
+// A site's screens: [path, title, icon, short name for the phone's tabs, group].
+// Grouped as the owner works: the website's screens, the family portal's (only on a
+// site with the portal), and those that cover both (Timing has a card for each; her
+// instructions are her wording on both).
 export const SCREENS = [
-  ['pages', 'Pages', 'pages', 'Pages'], ['menu', 'Menu', 'list', 'Menu'], ['rules', 'Pups', 'paw', 'Pups'], ['dogs', 'Dogs', 'star', 'Dogs'], ['tags', 'Tags', 'tag', 'Tags'], ['forms', 'Forms', 'mail', 'Forms'], ['documents', 'Documents', 'draft', 'Docs'], ['wording', 'Wording', 'pages', 'Words'],
-  ['formats', 'Formats', 'cal', 'Formats'], ['kennelos', 'From KennelOS', 'link', 'KennelOS'], ['timing', 'Timing', 'clock', 'Timing'], ['portalhome', 'Family Home', 'home', 'Home', 'portal'],
-  ['instructions', 'Her instructions', 'book', 'Help'],
+  ['pages', 'Pages', 'pages', 'Pages', 'website'], ['menu', 'Menu', 'list', 'Menu', 'website'], ['rules', 'Pups', 'paw', 'Pups', 'website'], ['dogs', 'Dogs', 'star', 'Dogs', 'website'],
+  ['tags', 'Tags', 'tag', 'Tags', 'website'], ['forms', 'Forms', 'mail', 'Forms', 'website'], ['documents', 'Documents', 'draft', 'Docs', 'website'], ['wording', 'Wording', 'pages', 'Words', 'website'],
+  ['formats', 'Formats', 'cal', 'Formats', 'website'], ['kennelos', 'From KennelOS', 'link', 'KennelOS', 'website'],
+  ['portalhome', 'Family Home', 'home', 'Home', 'portal'],
+  ['timing', 'Timing', 'clock', 'Timing', 'both'], ['instructions', 'Her instructions', 'book', 'Help', 'both'],
 ];
+export const GROUPS = [['website', 'Website'], ['portal', 'Family portal'], ['both', 'Website and portal']];
 
-// The admin nav: Every site, then this site's screens (bottom on a phone, down the
-// side on a computer, as the breeder's tabs are).
-// On a phone the bar keeps Every site, these screens and the one open, and More holds
-// the rest (a panel over the bar); on a computer every screen is down the side.
+// The admin nav: Every site, then this site's screens by group (bottom on a phone, down
+// the side on a computer, as the breeder's tabs are). On a phone the bar keeps Every
+// site, these screens and the one open, and More holds the rest by group (a panel over
+// the bar); on a computer every screen is down the side under its group's name.
 export const PHONE_SCREENS = ['pages', 'menu', 'rules'];
 
 export function adminNav(site, cur) {
-  const items = site ? SCREENS.filter(([, , , , only]) => only !== 'portal' || site.portal_on) : [];
+  const items = site ? SCREENS.filter(([, , , , g]) => g !== 'portal' || site.portal_on) : [];
+  // With no portal there's one group: no names needed.
+  const groups = GROUPS.map(([g, name]) => [g, site?.portal_on ? name : null, items.filter((x) => x[4] === g)]).filter(([, , l]) => l.length);
   const link = (href, label, icon, on, short = label, cls = '') => `<a href="${href}"${cls ? ` class="${cls}"` : ''}${on ? ' aria-current="page"' : ''}>${svg(icon)}<span class="lg">${esc(label)}</span><span class="sm">${esc(short)}</span></a>`;
   const onBar = (k) => PHONE_SCREENS.includes(k) || k === cur;
   const href = (k) => `/admin/${esc(site.subdomain)}/${k}`;
   const more = items.filter(([k]) => !onBar(k));
   return `<nav class="apptabs adm" aria-label="Site builder">${link('/admin', 'Every site', 'globe', !site && cur !== 'wording', 'Sites')}${site ? '' : link('/admin/wording', 'Site Manager wording', 'book', cur === 'wording', 'Wording')}
     ${site ? `<span class="lbl">Building</span><span class="site">${esc(site.kennel_name || site.subdomain)}<small>${isDemo(site) ? '<span class="spill brass">Demo</span> ' : ''}${esc(startingTemplate(site))}</small></span>` : ''}
-    ${items.map(([k, l, i, short]) => link(href(k), l, i, cur === k, short, onBar(k) ? '' : 'x')).join('')}
-    ${more.length ? `<details class="more"><summary>${svg('more')}<span class="sm">More</span></summary><div class="panel">${more.map(([k, l, i, short]) => link(href(k), l, i, false, short)).join('')}</div></details>` : ''}</nav>`;
+    ${groups.map(([, name, list]) => `${name ? `<span class="lbl grp">${esc(name)}</span>` : ''}${list.map(([k, l, i, short]) => link(href(k), l, i, cur === k, short, onBar(k) ? '' : 'x')).join('')}`).join('')}
+    ${more.length ? `<details class="more"><summary>${svg('more')}<span class="sm">More</span></summary><div class="panel">${groups.map(([, name, list]) => {
+    const rest = list.filter(([k]) => !onBar(k));
+    return rest.length ? `${name ? `<p class="grp">${esc(name)}</p>` : ''}${rest.map(([k, l, i, short]) => link(href(k), l, i, false, short)).join('')}` : '';
+  }).join('')}</div></details>` : ''}</nav>`;
 }
