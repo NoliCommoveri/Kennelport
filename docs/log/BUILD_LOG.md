@@ -3198,7 +3198,9 @@ The owner: a way to see a new breeder's portal before adding anyone, like the pr
   are told apart; pairs work as before. Checked in `content/model.js` `cleanPayChoices`: at most 8,
   label ≤60 (required), note ≤1000 with line breaks, a link that fails the link check dropped, a
   method left with neither link nor note dropped, an unknown key refused (so no account ids get
-  in). Only the application fee takes them; on the deposit they're refused.
+  in). Any kind takes them: KennelOS sends the fee's today, and the deposit's are accepted and
+  drawn the same way when they come (at first only the fee's were accepted; the owner wants every
+  kind's methods for her own How to pay page).
 - **Kept as `choices`** in the card's `payment_info.content`, apart from her hand-typed `methods`
   pairs, so the Site Manager's form (locked for a KennelOS card) never sees them. Kept through her
   Show switch (`manage/screens.js`, `savePayment`), the content export and import (`content/io.js`),
@@ -3217,5 +3219,5 @@ The owner: a way to see a new breeder's portal before adding anyone, like the pr
 - No stylesheet change, so no `ASSET_VERSION` bump. Checked at 390px and 1200px beside a
   pairs-style deposit card.
 - Tests: `kennelos.test.js` (the section listed; a bundle with methods: drops, storage, the Show
-  switch keeps them, the waitlist, one method, none usable, five refusals) and `payment.test.js`
+  switch keeps them, the waitlist, one method, none usable, the deposit's, four refusals) and `payment.test.js`
   (export and import). 554 pass.

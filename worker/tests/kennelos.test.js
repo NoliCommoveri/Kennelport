@@ -656,13 +656,15 @@ test('pay_methods: the application fee offers her payment methods, a choice each
   assert.equal(content().choices, undefined);
   await b.post('/publish');
   assert.match(await b.page('/waitlist'), />Pay the application fee</);
-  // Refused: an unknown key, too many, too long a label, or on the deposit.
+  // Refused: an unknown key, too many, too long a label or note.
+  // The deposit takes them as well.
+  assert.equal((await send(bundle({ payment: { deposit: { title: 'Deposit', methods: [{ label: 'Zelle', note: 'pay@ak.example' }] } } }))).status, 200);
+  assert.deepEqual(JSON.parse(b.row("SELECT content FROM payment_info WHERE kind = 'deposit'").content).choices, [{ label: 'Zelle', note: 'pay@ak.example' }]);
   for (const [body, path] of [
     [fee([{ label: 'Card', url: 'https://x.example', id: 'acct_1' }]), 'payment.application_fee.methods[0].id'],
     [fee(Array.from({ length: 9 }, (_, i) => ({ label: `M${i}`, note: 'x' }))), 'payment.application_fee.methods'],
     [fee([{ label: 'x'.repeat(61), note: 'x' }]), 'payment.application_fee.methods[0].label'],
     [fee([{ label: 'Zelle', note: 'x'.repeat(1001) }]), 'payment.application_fee.methods[0].note'],
-    [bundle({ payment: { deposit: { methods: [{ label: 'Card', url: 'https://x.example' }] } } }), 'payment.deposit.methods'],
   ]) {
     const r = await send(body);
     assert.equal(r.status, 400, path);

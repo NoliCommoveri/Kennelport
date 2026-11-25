@@ -95,7 +95,7 @@ export const MAX = { ancestors: 30, dogs: 200, litters: 100, puppies: 30, pairin
 // 'bag_items': her go-home bag's items (docs/plans/portal-go-home-bag.md 4a): name,
 // cost in dollars (12.5), expense (default yes with a cost), where it comes from and
 // the product (a KennelOS Account id from products) it's tied to.
-// 'pay_methods': the application fee's methods as { label, url?, note? }, her
+// 'pay_methods': a payment kind's methods as { label, url?, note? } (the fee's today), her
 // payment methods in her order (Website Contract C11); without them, as before.
 export const SECTIONS = ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail', 'origin', 'lineage', 'origin_country', 'bag_items', 'pay_methods'];
 
@@ -300,14 +300,13 @@ export function cleanBundle(body) {
 }
 
 // A kind of payment. Its methods are her typed [way, details] pairs, or, from a
-// KennelOS that sends pay_methods (the application fee only), her payment methods as
+// KennelOS that sends pay_methods (any kind: the fee today, the deposit when it comes), her payment methods as
 // { label, url?, note? }, kept as `choices` (content/model.js cleanPayChoices).
 function cleanPay(kind, v, path) {
   const list = v && typeof v === 'object' && !Array.isArray(v) ? v.methods : undefined;
   if (!Array.isArray(list) || !list.some((m) => m && typeof m === 'object' && !Array.isArray(m))) {
     return { ...cleanShape('pay', v, path), choices: null };
   }
-  if (kind !== 'application_fee') throw bad(`${path}.methods`, 'only the application fee takes payment methods');
   let choices;
   try { choices = cleanPayChoices(list, `${path}.methods`); } catch (err) {
     if (err instanceof ContentError) throw bad(err.path ?? `${path}.methods`, err.message.replace(/^[^:]*: /, ''));
