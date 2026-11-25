@@ -2936,3 +2936,19 @@ the only gate left. No code, no migration, no version bump.
   function by a site's rules, the owner's screen saving them with nothing to publish, Back
   to default, a bad value refused). No migration (the build is JSON). No file under
   `public/_kp/` changed; `PORTAL_VERSION` 10 is still pending for the tabs (asked).
+
+## 2026-11-25: Fix: a KennelOS puppy, litter, health result or product wouldn't save
+
+- The owner (screenshot of Layla Grace): saving a puppy from KennelOS in the Site Manager
+  said "Not saved: puppies.disposition: not a known field". Since KennelOS contract step 4
+  (2026-11-13, migration 0033), KennelOS's raw values are on its owned-fields list
+  (`kennelos/bundle.js` `OWNED`): a pup's `disposition`, a litter's `kennelos_status`, a
+  health result's `test_type`, a product's `account_type`. The record form's save copies
+  every owned field back from the stored record so the form can't change them
+  (`manage/screens.js`), which put those four into values the form's fields don't have,
+  and the check refused them. So every KennelOS litter, puppy, health result and product
+  failed to save from her screens.
+- Now only the owned fields the form has are copied back; the raw ones aren't the form's,
+  and the save leaves them as stored. Test in `dog-parents.test.js` (each of the four
+  saved through her screen, unchanged, and its raw value still there); it fails without
+  the fix. No migration, no version bump.
