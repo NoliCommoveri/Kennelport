@@ -3016,3 +3016,13 @@ the only gate left. No code, no migration, no version bump.
   14, as before; "three weeks", "10 days"), so it reads as today by default. The Family Home
   screen's checklist name points at Timing. Test in `portal-home.test.js`. 537 pass. No
   migration, no version bump.
+- The owner: the admin nav on a phone was wider than the screen (13 tabs). Now the bar
+  holds Every site, Pages, Menu, Pups, the screen that's open and **More**; More
+  (a `<details>`, no script) opens the rest as a grid in a panel over the bar
+  (`builder/frame.js` `adminNav`, `PHONE_SCREENS`; a `more` icon in `manage/index.js`).
+  On a computer the side nav is unchanged (More hidden, every screen shown). Checked at
+  390px: the page and the bar are 390 wide; More open and closed; 1280px unchanged.
+  `app.css` changed: **`APP_VERSION` 19 → 20** with the owner's yes ("You can do a bump"),
+  `APP_FILES` bcdf42f9cd572688. 537 pass.
+- The prompt for a KennelOS session to check its side for a second kennel (multi-breeder
+  plan 2.6): `docs/plans/kennelos-second-kennel-check.md`.

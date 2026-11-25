@@ -115,7 +115,8 @@ Companion and Furever switched off for her families. KennelPort tells KennelOS w
 have the portal (`portal_feed` in the link facts, `kennelos/link.js`).
 
 - **To check, in the KennelOS repository:** that KennelOS turns these on by that flag for any
-  linked kennel, not by her kennel's id. If it's her kennel's id, KennelOS needs the change,
+  linked kennel, not by her kennel's id. The prompt for that session:
+  [`kennelos-second-kennel-check.md`](kennelos-second-kennel-check.md) (2026-11-25). If it's her kennel's id, KennelOS needs the change,
   as a reply in this plan's style ([`done/kennelos-origin-country-reply.md`](done/kennelos-origin-country-reply.md)).
 - **A breeder not on KennelOS:** the portal works without it (rule 1 of the portal plan);
   she types her families in. Check that every screen reads right with no link.

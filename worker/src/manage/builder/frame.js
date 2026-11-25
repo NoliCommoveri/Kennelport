@@ -27,10 +27,18 @@ export const SCREENS = [
 
 // The admin nav: Every site, then this site's screens (bottom on a phone, down the
 // side on a computer, as the breeder's tabs are).
+// On a phone the bar keeps Every site, these screens and the one open, and More holds
+// the rest (a panel over the bar); on a computer every screen is down the side.
+export const PHONE_SCREENS = ['pages', 'menu', 'rules'];
+
 export function adminNav(site, cur) {
   const items = site ? SCREENS.filter(([, , , , only]) => only !== 'portal' || site.portal_on) : [];
-  const link = (href, label, icon, on, short = label) => `<a href="${href}"${on ? ' aria-current="page"' : ''}>${svg(icon)}<span class="lg">${esc(label)}</span><span class="sm">${esc(short)}</span></a>`;
+  const link = (href, label, icon, on, short = label, cls = '') => `<a href="${href}"${cls ? ` class="${cls}"` : ''}${on ? ' aria-current="page"' : ''}>${svg(icon)}<span class="lg">${esc(label)}</span><span class="sm">${esc(short)}</span></a>`;
+  const onBar = (k) => PHONE_SCREENS.includes(k) || k === cur;
+  const href = (k) => `/admin/${esc(site.subdomain)}/${k}`;
+  const more = items.filter(([k]) => !onBar(k));
   return `<nav class="apptabs adm" aria-label="Site builder">${link('/admin', 'Every site', 'globe', !site && cur !== 'wording', 'Sites')}${site ? '' : link('/admin/wording', 'Site Manager wording', 'book', cur === 'wording', 'Wording')}
     ${site ? `<span class="lbl">Building</span><span class="site">${esc(site.kennel_name || site.subdomain)}<small>${isDemo(site) ? '<span class="spill brass">Demo</span> ' : ''}${esc(startingTemplate(site))}</small></span>` : ''}
-    ${items.map(([k, l, i, short]) => link(`/admin/${esc(site.subdomain)}/${k}`, l, i, cur === k, short)).join('')}</nav>`;
+    ${items.map(([k, l, i, short]) => link(href(k), l, i, cur === k, short, onBar(k) ? '' : 'x')).join('')}
+    ${more.length ? `<details class="more"><summary>${svg('more')}<span class="sm">More</span></summary><div class="panel">${more.map(([k, l, i, short]) => link(href(k), l, i, false, short)).join('')}</div></details>` : ''}</nav>`;
 }
