@@ -3033,3 +3033,43 @@ the only gate left. No code, no migration, no version bump.
   computer and as headings in the phone's More panel; a site without the portal has one
   group and no names. The side nav scrolls if it's taller than the screen. `app.css`
   changed again under the unreleased `APP_VERSION` 20 (`APP_FILES` ab17944db5aff60d). 537 pass.
+
+## 2026-11-25: Ready for a second portal breeder: the vet rule as a setting, the settings guard, the suggested timeline
+
+- The owner: a second breeder (Central time, KennelOS Pro, a 72-hour contract) and a third
+  with 48 hours, so the vet count isn't fixed in code. `portal/vet.js` `parseVetRule`: a rule
+  is `hours<N>` (12 to 240, exactly N hours from pickup) or `days<N>` (1 to 14, the end of day
+  N after the pickup day, local). `vetRuleText`, `vetRuleClause` and `vetRuleShort` give the
+  families' words ("48 hours from pickup", "within 48 hours of pickup", "2-day vet visit")
+  on Home, the Vet visit tab, the invite and the reminders, in every look; 72 and 3 read as
+  before. Portal settings: two choices, each with its number box (`pset.vet_hours`,
+  `pset.vet_days_before`, `pset.vet_days_after`); her screens' rule line is
+  `pvet.rule.hours` / `pvet.rule.days` (with `{n}`, `{nth}`), replacing `pvet.rule.hours72`
+  and `pvet.rule.days3` (an override the owner wrote for those needs writing again).
+- **Migration 0046** (`portal_vet_count`), additive: `portal_settings.vet_count` (the number;
+  `vet_rule`'s CHECK still allows only 'hours72'/'days3', so it now says only hours or days;
+  `store.js` `ruleOf` joins them) and `portal_settings.saved_at`. Every existing row is set
+  saved from its `updated_at` (those portals are running). A backup from before 0046 restores
+  as saved (`backup.js` `restoreRows`).
+- The settings guard: until she saves Portal settings once, `sendDueFor` sends no vet reminder
+  and Send invite answers "Save your portal settings first: your vet visit rule and time
+  zone." (`invite_settings` in the owner's errors). Her Today shows "Set up your puppy
+  portal" and her Portal tab starts with "Start here: your portal settings" (`ptoday.settings*`,
+  `psetup.first*`). Her first save recounts any vet clock already running on her rule, with
+  history; later saves leave running clocks as they are. A row KennelOS's vet fills in
+  doesn't count as saved. Invites were never automatic: families from KennelOS wait for her
+  Send invite.
+- The suggested timeline (`portal/steps.js`), only for a list added from now on (her rows are
+  hers): in date order; no go-home folder (registration, deworming); insurance at day 1 as
+  the ready-made one; the US puppy shots after the breeder's 8-week one (AAHA): 11 weeks
+  DHPP (ask about lepto and Bordetella), 14 weeks DHPP and rabies, 17 weeks the last DHPP,
+  one-year boosters; the old 12- and 16-week lines replaced. Ready-made wordings that said
+  the same thing dropped: registration 3 → 2, insurance 2 → 1, other 2 → 1. The ready-made
+  picker lists its groups by their usual day, so tasks added one after another land in
+  date order (a new task always goes to the bottom). `ptpl.body_ph` example updated.
+- KennelOS's side for a second kennel: checked on the KennelOS side 2026-11-25, nothing to
+  change (multi-breeder plan 2.6 updated).
+- Tests: `portal.test.js` (the guard, 48 hours in Central, recount, range), `portal-vet.test.js`
+  (counts and words), `portal-hub.test.js` (Today and Portal tab before saving),
+  `portal-steps.test.js` (the shots, an existing list unchanged). 539 pass. No version bump
+  (server-rendered screens only).

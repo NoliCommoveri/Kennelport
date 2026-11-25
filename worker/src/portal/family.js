@@ -21,7 +21,7 @@ import {
   getSettings, placementFor, healthRecords, vetOf, recordVetBooking, saveFile, getFile, familyEmails, PortalError, recordKind, registrationWords, MAX_FILE_BYTES,
   DEFAULT_DISCLOSURE, dialable,
 } from './store.js';
-import { stage, vetDeadline, vetTabShown, formatAt, formatDay, timeLeft, localParts, addDays, VET_RULES } from './vet.js';
+import { stage, vetDeadline, vetTabShown, formatAt, formatDay, timeLeft, localParts, addDays, vetRuleText, vetRuleClause, vetRuleShort } from './vet.js';
 import { stepsFor, openTasks, programsFor, setDone, setProgramStatus } from './steps.js';
 import { PORTAL_VERSION } from './version.js';
 import { LOOKS, lookOf } from './looks.js';
@@ -423,7 +423,7 @@ async function homePage(env, site, fam, now = new Date()) {
       : `<p>${statusUrl ? `<a href="${STATUS_PATH}">Book your pickup on your status page ${ic('arrow')}</a>` : `Not booked yet. ${esc(kennel)} will confirm the day and time with you.`}</p>`}
       <a class="btn onfill small" href="/family/timeline">What to do first</a></div>`;
     band = `<section class="tile warm"><div class="calrow"><span class="ico big">${ic('stethoscope')}</span><div><p class="eyebrow">Before ${esc(name)} comes home</p><h2>Book the vet visit now</h2></div></div>
-      <p class="small">Your contract asks for a vet visit ${s.vet_rule === 'days3' ? `by the end of the third day after the day you take ${esc(name)} home` : 'within 72 hours of pickup'}.${expected ? ` With pickup ${esc(formatAt(p.pickup_booked_at, s.time_zone))}, that's by <b>${deadlineLine(expected, s)}</b>.` : ''} Vets are often booked days ahead.</p>
+      <p class="small">Your contract asks for a vet visit ${vetRuleClause(s.vet_rule, esc(name))}.${expected ? ` With pickup ${esc(formatAt(p.pickup_booked_at, s.time_zone))}, that's by <b>${deadlineLine(expected, s)}</b>.` : ''} Vets are often booked days ahead.</p>
       ${p.vet_booked_at ? `<p class="status ok">${ic('check')} Booked${p.vet_booked_for ? ` for ${esc(bookedWords(p.vet_booked_for))}` : ''}${p.vet_clinic ? `, ${esc(p.vet_clinic)}` : ''}</p>` : `<p><a class="btn line small" href="/family/vet">${ic('check')}I've booked it</a></p>`}</section>`;
     if (!p.vet_booked_at) action = { icon: 'calendar', title: 'Book the vet visit', sub: expected ? `Needed by ${esc(formatAt(expected, s.time_zone))}` : `Book ${esc(name)}'s visit, then tell us`, href: '/family/vet', label: 'I\'ve booked it' };
   } else if (st === 'vet') {
@@ -432,9 +432,9 @@ async function homePage(env, site, fam, now = new Date()) {
     const dl = localParts(p.vet_deadline_at, s.time_zone);
     const hoursLeft = Math.max(0, Math.round((Date.parse(p.vet_deadline_at) - new Date(now).getTime()) / 3600000));
     const dueTime = new Date(p.vet_deadline_at).toLocaleTimeString('en-US', { timeZone: s.time_zone, hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
-    calendar = `<div class="tile green${p.proof_uploaded_at ? '' : ' urgent'}"><p class="eyebrow">3-day vet visit</p><div class="calrow">${calPage(dl.ymd)}<div><p class="bigline">${p.proof_uploaded_at ? (p.proof_accepted_at ? 'Done' : 'Uploaded') : `${hoursLeft} h left`}</p><p class="small">Due by ${esc(dueTime)}</p></div></div>
+    calendar = `<div class="tile green${p.proof_uploaded_at ? '' : ' urgent'}"><p class="eyebrow">${vetRuleShort(s.vet_rule)} vet visit</p><div class="calrow">${calPage(dl.ymd)}<div><p class="bigline">${p.proof_uploaded_at ? (p.proof_accepted_at ? 'Done' : 'Uploaded') : `${hoursLeft} h left`}</p><p class="small">Due by ${esc(dueTime)}</p></div></div>
       ${p.proof_uploaded_at ? `<p class="small"><b>${p.proof_accepted_at ? `${ic('check')} Accepted by ${esc(kennel)}` : `${esc(kennel)} will check it`}</b></p>` : `<a class="btn onfill small" href="/family/vet#proof">${ic('upload')}Upload record</a>`}</div>`;
-    band = `<section class="sec sand bleed"><p class="eyebrow">Your contract's 3-day visit</p><h2 class="big-h">${p.proof_uploaded_at ? 'Record uploaded: thank you' : `${esc(name)}'s vet visit`}</h2>
+    band = `<section class="sec sand bleed"><p class="eyebrow">Your contract's ${vetRuleShort(s.vet_rule)} visit</p><h2 class="big-h">${p.proof_uploaded_at ? 'Record uploaded: thank you' : `${esc(name)}'s vet visit`}</h2>
       ${numSteps([
         { done: Boolean(p.vet_booked_at), h: p.vet_booked_at ? `Booked${p.vet_booked_for ? ` for ${esc(bookedWords(p.vet_booked_for))}` : ''}` : 'Book the visit', act: p.vet_booked_at ? '' : '<a class="btn text small" href="/family/vet">Add the booking</a>' },
         { done: Boolean(p.proof_uploaded_at), h: `See the vet by ${esc(formatAt(p.vet_deadline_at, s.time_zone))}`, p: 'Bring this portal\'s Records page.' },
@@ -736,14 +736,14 @@ async function vetPage(env, site, fam, { error, note } = {}, now = new Date()) {
       p, name, kennel: site.kennel_name || site.subdomain, proof, day: bookedDay ?? '', time: bookedTime ?? '', proofNote: s.proof_note,
       uploaded: proof ? formatAt(p.proof_uploaded_at, s.time_zone) : '',
       h1: due ? `Due by ${esc(formatAt(p.vet_deadline_at, s.time_zone))}` : `Book ${esc(name)}'s first vet visit`,
-      rule: `${esc(VET_RULES[s.vet_rule])}${due ? `: by ${deadlineLine(p.vet_deadline_at, s)}${Date.parse(p.vet_deadline_at) > now.getTime() ? `, ${esc(timeLeft(p.vet_deadline_at, now))} from now` : ''}.` : `. The clock starts when you take ${esc(name)} home.`}`,
+      rule: `${esc(vetRuleText(s.vet_rule))}${due ? `: by ${deadlineLine(p.vet_deadline_at, s)}${Date.parse(p.vet_deadline_at) > now.getTime() ? `, ${esc(timeLeft(p.vet_deadline_at, now))} from now` : ''}.` : `. The clock starts when you take ${esc(name)} home.`}`,
     });
     return frame(site, 'Vet visit', `${noteBox(note)}${errorBox(error)}${page}`, { mkp: true, fam, tab: '/family/vet', status: error ? 400 : 200 });
   }
   const body = `${noteBox(note)}${errorBox(error)}
   <section class="card c-sand vethead"><p class="eyebrow">The vet visit</p>
     <h1>${running && p.vet_deadline_at ? `Due by ${esc(formatAt(p.vet_deadline_at, s.time_zone))}` : `Book ${esc(name)}'s first vet visit`}</h1>
-    <p>${esc(VET_RULES[s.vet_rule])}${running && p.vet_deadline_at ? `: by ${deadlineLine(p.vet_deadline_at, s)}${Date.parse(p.vet_deadline_at) > now.getTime() ? `, ${esc(timeLeft(p.vet_deadline_at, now))} from now` : ''}.` : `. The clock starts when you take ${esc(name)} home.`}</p>
+    <p>${esc(vetRuleText(s.vet_rule))}${running && p.vet_deadline_at ? `: by ${deadlineLine(p.vet_deadline_at, s)}${Date.parse(p.vet_deadline_at) > now.getTime() ? `, ${esc(timeLeft(p.vet_deadline_at, now))} from now` : ''}.` : `. The clock starts when you take ${esc(name)} home.`}</p>
     ${s.proof_note ? `<p class="muted">What counts as proof: ${esc(s.proof_note)}</p>` : ''}
     <p class="muted small remind">${hh('info')}This page is a reminder. Your contract states the vet visit requirement.</p>
   </section>

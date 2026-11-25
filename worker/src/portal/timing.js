@@ -7,7 +7,7 @@
 // Left fixed, as the plan says for rules that keep KennelPort running: how long invite
 // links last (portal/auth.js), the Undo window (portal/account.js UNDO_DAYS) and the
 // retention table (family-portal.md 10.1). The vet deadline itself is her contract's
-// count, chosen in her Portal settings (portal/vet.js VET_RULES).
+// count, chosen in her Portal settings (portal/vet.js parseVetRule).
 //
 // Pure: no D1 here, so vet.js, steps.js and stays.js can read it with no imports.
 

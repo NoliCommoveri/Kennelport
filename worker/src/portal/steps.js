@@ -47,17 +47,25 @@ const SUGGESTED_CHECKLIST = [
   { title: 'The vet visit booked for the first days home', auto: 'vet_booked' },
   { title: 'A carrier or car crate for the ride home' },
 ];
+// The puppy shots follow the usual US schedule after the breeder's 8-week shot
+// (AAHA's canine guidelines): distemper-parvo (DHPP) every 3 to 4 weeks to 16 weeks,
+// rabies by state law at 12 to 16 weeks, leptospirosis and Bordetella by lifestyle,
+// boosters at a year. Each is dated from birth, so a puppy that goes home later still
+// sees the ones ahead. A list she has already added is rows of her own; changing
+// these changes only a new list (addSuggested fills an empty one).
 const SUGGESTED_TIMELINE = [
   { title: 'Book the vet visit', body: 'Vets fill up fast. Book it before {name} comes home.', count_from: 'pickup', offset_days: -5, auto: 'vet_booking' },
   { title: 'Pickup day', body: 'Bring the carrier and a towel.', count_from: 'pickup', offset_days: 0, auto: 'pickup' },
+  { title: 'Activate {name}\'s insurance trial', body: 'The free trial has to be activated within a few days of pickup.', count_from: 'pickup', offset_days: 1, type: 'insurance', button_label: 'Activate the trial' },
   { title: 'The vet visit, and upload the record', body: 'Your contract asks for it. Upload the vet\'s record here afterwards.', count_from: 'pickup', offset_days: 3, auto: 'vet_visit' },
-  { title: 'Activate {name}\'s insurance trial', body: 'The free trial has to be activated within a few days of pickup.', count_from: 'pickup', offset_days: 5, type: 'insurance', button_label: 'Activate the trial' },
+  { title: 'Deworming at 10 weeks', body: 'Your vet gives the dose and when to repeat it.', count_from: 'birth', offset_days: 70 },
   { title: 'Keep the same food for two weeks', body: 'Change food slowly, if at all, over 7 to 10 days.', count_from: 'pickup', offset_days: 14, type: 'food', button_label: 'Order {name}\'s food' },
-  { title: 'Register {name}', body: 'Your registration paper is in the go-home folder.', count_from: 'pickup', offset_days: 30, type: 'registration', button_label: 'Register' },
-  { title: 'Deworming at 10 weeks', body: 'The dose is in your go-home folder.', count_from: 'birth', offset_days: 70 },
-  { title: '12-week vaccines', body: 'Your vet sets the schedule from here.', count_from: 'birth', offset_days: 84 },
-  { title: '16-week vaccines and rabies', body: 'Ask your vet about the rabies date for your county.', count_from: 'birth', offset_days: 112 },
+  { title: '11-week shots: distemper-parvo (DHPP)', body: 'The second of {name}\'s puppy series. Ask your vet about leptospirosis, and Bordetella (kennel cough) before puppy class.', count_from: 'birth', offset_days: 77 },
+  { title: 'Register {name}', body: 'Fill in your part of the registration and send it in.', count_from: 'pickup', offset_days: 30, type: 'registration', button_label: 'Register' },
+  { title: '14-week shots: distemper-parvo (DHPP) and rabies', body: 'The third of the puppy series. Rabies goes in from 12 to 16 weeks, as your state requires. Lepto\'s second dose, if {name} started it.', count_from: 'birth', offset_days: 98 },
+  { title: '17-week shots: the last distemper-parvo (DHPP)', body: 'The last of the puppy series, at 16 weeks or later, so it counts. Rabies now if it wasn\'t given at 14 weeks.', count_from: 'birth', offset_days: 119 },
   { title: 'Six months: spay or neuter and adult teeth', body: 'A good time to ask your vet about timing.', count_from: 'birth', offset_days: 182 },
+  { title: 'One-year boosters', body: 'Distemper-parvo (DHPP) and rabies boosters, and lepto if {name} has it. Your vet sets the schedule from here.', count_from: 'birth', offset_days: 365 },
 ];
 
 // Ready-made tasks she picks from on her Timeline screen (and a family's screen):
@@ -70,16 +78,14 @@ export const READY_TASKS = {
   registration: {
     label: 'Registration', days: 30, button: 'Register',
     choices: [
-      { title: 'Register {name}', body: 'Your registration paper is in the go-home folder.' },
-      { title: 'Register {name}', body: 'Use the code in your go-home folder to register {name} online.' },
-      { title: 'Register {name} in your name', body: 'Fill in your part of the registration paper and send it in.' },
+      { title: 'Register {name}', body: 'Fill in your part of the registration and send it in.' },
+      { title: 'Register {name} online', body: 'Use the code from {name}\'s papers to register online.' },
     ],
   },
   insurance: {
     label: 'Insurance', days: 1, button: 'Activate the trial',
     choices: [
-      { title: 'Activate {name}\'s insurance trial', body: 'The free trial has to be activated within a few days of pickup.' },
-      { title: 'Start {name}\'s free insurance', body: 'Activate it now so {name} is covered from the first week home.' },
+      { title: 'Activate {name}\'s insurance trial', body: 'Activate it now so {name} is covered from the first week home.' },
     ],
   },
   food: {
@@ -99,8 +105,7 @@ export const READY_TASKS = {
   other: {
     label: 'Other', days: 7, button: 'Sign up',
     choices: [
-      { title: 'Sign up for {program}', body: 'Use our link to open your account.' },
-      { title: 'Open your {program} account', body: 'Sign up with our link, and use your code if it asks for one.' },
+      { title: 'Sign up for {program}', body: 'Sign up with our link, and use your code if it asks for one.' },
     ],
   },
 };

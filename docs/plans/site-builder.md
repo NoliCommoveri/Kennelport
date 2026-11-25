@@ -549,7 +549,7 @@ website:
 | **Tabs and quick links** | the five tabs (Home, Timeline or Stay, Photos, Baby book, Records), and the quick links and their names ("A-K's picks") |
 | **Display rules** | how what the portal's KennelOS feed carries (`portal/feed.js`) reads to families, like the website's rules above |
 | **Timing rules** | the vet booking reminder 5 days before go-home at 09:00, the deadline morning reminder at 08:00, red under 48 hours left (`portal/vet.js`); when a stay starts, 8 weeks old (`portal/stays.js`); overdue after 14 days (`portal/steps.js`); invite links last 30 days (`portal/auth.js`); undo for 30 days (`portal/account.js`); the retention table (portal plan 10.1) |
-| **The vet deadline rule** | which of the two counts her contract uses (`VET_RULES`: 72 hours from pickup, or the end of the third day after pickup day) |
+| **The vet deadline rule** | her contract's count: a number of hours from pickup (12 to 240), or the end of a day after the pickup day (1 to 14) (`portal/vet.js` `parseVetRule`; Portal settings; migration 0046) |
 
 **What stays fixed for the breeder,** as the portal plan says: the vet countdown follows
 her contract, and its reminders always send. The owner sets those rules for her site to

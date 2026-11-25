@@ -41,6 +41,12 @@ test('without the portal, the Site Manager keeps its one home screen and no tabs
 
 test('with the portal: five tabs; Today holds what needs her, Website holds the website', async () => {
   const { her } = await setup();
+  // Until her portal settings are saved, Today and the Portal tab start her there.
+  const unsaved = await (await her('')).text();
+  assert.match(unsaved, /Set up your puppy portal/);
+  assert.match(await (await her('/portal/setup')).text(), /Start here: your portal settings/);
+  assert.equal((await her('/portal/settings', { vet_kind: 'hours', vet_hours: '72', time_zone: 'America/Chicago', help_weeks: '8' })).status, 303);
+  assert.doesNotMatch(await (await her('/portal/setup')).text(), /Start here/);
   const today = await (await her('')).text();
   for (const [path, label] of [['', 'Today'], ['/portal', 'Families'], ['/kennel', 'Dogs'], ['/website', 'Website'], ['/portal/setup', 'Portal']]) {
     assert.match(today, new RegExp(`<a href="/s/akbostons${path.replace(/\//g, '\\/')}"[^>]*><svg[^>]*>.*?</svg><span>${label}</span>`));

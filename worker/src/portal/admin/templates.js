@@ -42,11 +42,14 @@ export function itemFields(kind, x, products, say = defaultSay) {
 export function readyForm(action, products, { forOne = '', say = defaultSay } = {}) {
   const opt = (pid, kind, i, c) => `<option value="${esc(`${pid}|${kind}|${i}`)}">${esc(c.title)}: ${esc(c.body)}</option>`;
   const shown = products.filter((x) => x.portal_show);
-  const groups = shown.map((x) => {
+  // In the order the tasks fall after pickup (each kind's usual day), so adding them
+  // one after another lands them in date order: a new task goes to the bottom.
+  const entries = shown.map((x) => {
     const kind = READY_TASKS[x.portal_type] ? x.portal_type : 'other';
-    return `<optgroup label="${esc(x.name)}">${READY_TASKS[kind].choices.map((c, i) => opt(x.id, kind, i, c).replace(/\{program\}/g, esc(x.name))).join('')}</optgroup>`;
+    return { days: READY_TASKS[kind].days, html: `<optgroup label="${esc(x.name)}">${READY_TASKS[kind].choices.map((c, i) => opt(x.id, kind, i, c).replace(/\{program\}/g, esc(x.name))).join('')}</optgroup>` };
   });
-  if (!shown.some((x) => x.portal_type === 'registration')) groups.push(`<optgroup label="${t(say, 'ptpl.ready_registration')}">${READY_TASKS.registration.choices.map((c, i) => opt('', 'registration', i, c)).join('')}</optgroup>`);
+  if (!shown.some((x) => x.portal_type === 'registration')) entries.push({ days: READY_TASKS.registration.days, html: `<optgroup label="${t(say, 'ptpl.ready_registration')}">${READY_TASKS.registration.choices.map((c, i) => opt('', 'registration', i, c)).join('')}</optgroup>` });
+  const groups = entries.map((e, i) => ({ ...e, i })).sort((a, b) => a.days - b.days || a.i - b.i).map((e) => e.html);
   const days = Object.entries(READY_TASKS).map(([k, r]) => `${say(`pset.type.${k}`).toLowerCase()} ${r.days}`).join(', ');
   return `<form method="post" action="${action}" class="card"><h2>${t(say, 'ptpl.ready_title')}${forOne}</h2>
     <p class="hint">${t(say, shown.length ? 'ptpl.ready_hint' : 'ptpl.ready_hint_none')}</p>

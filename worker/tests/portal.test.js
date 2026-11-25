@@ -17,7 +17,7 @@ const { runPortalHourly } = await import('../src/portal/reminders.js');
 const { expireLitters } = await import('../src/kennelos/clock.js');
 const { closeSite } = await import('../src/sites.js');
 
-async function setup({ on = true } = {}) {
+async function setup({ on = true, saved = true } = {}) {
   const env = await makeEnv({ PORTAL_EMAIL_KEY: 'portal-test-key' });
   const site = await addSite(env, 'akbostons', { kennel_name: 'AK Boston Terriers' });
   const ops = (await call(env, M, '/ops/login', { method: 'POST', body: form({ token: 'ops-token' }) })).headers.get('set-cookie').split(';')[0];
@@ -34,6 +34,8 @@ async function setup({ on = true } = {}) {
   }
   const her = (path, body) => call(env, M, `/s/akbostons${path}`, body ? { method: 'POST', body: body instanceof FormData ? body : form(body), headers: { cookie: breeder, origin: `https://${M}` } } : { headers: { cookie: breeder } });
   const fam = (cookie) => (path, body) => call(env, H, path, body ? { method: 'POST', body: body instanceof FormData ? body : form(body), headers: { cookie, origin: `https://${H}` } } : { headers: { cookie } });
+  // Her portal settings saved once, as a breeder does first (invites and reminders wait for it).
+  if (on && saved) assert.equal((await her('/portal/settings', { vet_kind: 'hours', vet_hours: '72', time_zone: 'America/New_York', help_weeks: '8' })).status, 303);
   return { env, site, ops, her, fam };
 }
 
@@ -177,6 +179,39 @@ test('picked up: the clock starts, every address gets the deadline, Home turns t
   // A time in the future is refused.
   const future = await her(`/portal/f/${id}/picked-up`, { day: ymd(new Date(Date.now() + 3 * DAY)), time: '09:00' });
   assert.match(await future.text(), /hasn&#39;t happened yet/);
+});
+
+test('until her portal settings are saved: no invites, no reminders, and her first save counts running clocks on her rule', async () => {
+  const { env, her, fam } = await setup({ saved: false });
+  const id = await addFamily(her, { name: 'The Reed family', emails: 'sam@example.com', puppy_id: 'pup1' });
+  const refused = await her(`/portal/f/${id}/invite`, {});
+  assert.equal(refused.status, 400);
+  assert.match(await refused.text(), /Save your portal settings first/);
+  assert.equal(outbox(env).filter((m) => m.kind === 'family_invite').length, 0);
+  // Picked up on the defaults: the clock runs, but nothing is emailed.
+  assert.equal((await her(`/portal/f/${id}/picked-up`, {})).status, 303);
+  await runPortalHourly(env);
+  assert.equal(outbox(env).filter((m) => String(m.kind).startsWith('vet_')).length, 0);
+  const before = env.DB.raw.prepare('SELECT * FROM portal_placements').get();
+  assert.equal(Date.parse(before.vet_deadline_at) - Date.parse(before.picked_up_at), 72 * 3600000);
+  // Her contract is 48 hours, in Central time: the running clock is counted on it.
+  assert.equal((await her('/portal/settings', { vet_kind: 'hours', vet_hours: '48', time_zone: 'America/Chicago', help_weeks: '8' })).status, 303);
+  const after = env.DB.raw.prepare('SELECT * FROM portal_placements').get();
+  assert.equal(Date.parse(after.vet_deadline_at) - Date.parse(after.picked_up_at), 48 * 3600000);
+  // Now invites and reminders go, in her rule's words.
+  assert.equal((await her(`/portal/f/${id}/invite`, {})).status, 303);
+  assert.match(outbox(env).find((m) => m.kind === 'family_invite').body, /the 2-day vet visit/);
+  await runPortalHourly(env);
+  const pickup = outbox(env).filter((m) => m.kind === 'vet_pickup');
+  assert.equal(pickup.length, 1);
+  const reed = fam(await familySignIn(env, 'sam@example.com'));
+  assert.match(await (await reed('/family/vet')).text(), /48 hours from pickup/);
+  // A later save leaves a running clock as it is.
+  await her('/portal/settings', { vet_kind: 'days', vet_days: '5', time_zone: 'America/Chicago', help_weeks: '8' });
+  assert.equal(env.DB.raw.prepare('SELECT vet_deadline_at FROM portal_placements').get().vet_deadline_at, after.vet_deadline_at);
+  // Counts out of range are refused, in her words.
+  const bad = await her('/portal/settings', { vet_kind: 'hours', vet_hours: '4', time_zone: 'America/Chicago', help_weeks: '8' });
+  assert.match(await bad.text(), /from 12 to 240/);
 });
 
 test('the clock never waits on a tap: a passed booked time starts it, and she confirms or stops it', async () => {

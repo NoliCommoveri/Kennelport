@@ -37,7 +37,7 @@ import {
   deleteNow, deletedForGood, giveBack,
 } from './account.js';
 import { placementDuplicates, familyCandidates, mergePlacement, mergeFamily } from './merge.js';
-import { redirect, note, errorBox, pupName, familyFilters, sayHtml, suggestLabel, ZONE_NAMES } from './admin/parts.js';
+import { redirect, note, errorBox, pupName, familyFilters, sayHtml, suggestLabel, ZONE_NAMES, vetRuleSay } from './admin/parts.js';
 import { products, itemFields, whenWords, formOffset, templateScreen, readyForm } from './admin/templates.js';
 import { settingsScreen } from './admin/settings.js';
 import { waitlistCount, waitlistPart, setupScreen } from './admin/today.js';
@@ -69,6 +69,7 @@ export async function portalNeedsYou(env, siteId, now = new Date(), say = defaul
   const s = await getSettings(env, siteId);
   const t = now.getTime();
   const out = [];
+  if (!s.saved) out.push({ href: '/portal/settings', label: say('ptoday.settings'), note: say('ptoday.settings_note') });
   for (const f of await listFamilies(env, siteId)) {
     if (!f.placement_id || f.life_status !== 'with_family') continue;
     const href = `/portal/f/${f.id}`;
@@ -304,7 +305,7 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
     const proof = p.proof_file_id ? await getFile(env, site.id, p.proof_file_id) : null;
     parts.push(`<section class="card"><h2>${sayHtml(say, 'pf.vet_title', {}, { status: `<span${v.trouble ? ' class="error"' : ''}>${t(`pvet.${v.key}`)}</span>` })}</h2>
       <dl class="kv">
-        ${p.vet_deadline_at ? `<dt>${t('pf.deadline')}</dt><dd>${esc(formatAt(p.vet_deadline_at, s.time_zone, { zone: true }))}${Date.parse(p.vet_deadline_at) > now.getTime() ? ` · ${t('pf.left', { left: timeLeft(p.vet_deadline_at, now) })}` : ''}</dd>` : `<dt>${t('pf.deadline')}</dt><dd class="muted">${t('pf.deadline_starts', { rule: say(`pvet.rule.${s.vet_rule}`).toLowerCase() })}</dd>`}
+        ${p.vet_deadline_at ? `<dt>${t('pf.deadline')}</dt><dd>${esc(formatAt(p.vet_deadline_at, s.time_zone, { zone: true }))}${Date.parse(p.vet_deadline_at) > now.getTime() ? ` · ${t('pf.left', { left: timeLeft(p.vet_deadline_at, now) })}` : ''}</dd>` : `<dt>${t('pf.deadline')}</dt><dd class="muted">${t('pf.deadline_starts', { rule: vetRuleSay(s.vet_rule, say).toLowerCase() })}</dd>`}
         <dt>${t('pf.booked_label')}</dt><dd>${p.vet_booked_at ? `${esc((p.vet_booked_for ?? '').replace('T', ' at '))}${p.vet_clinic ? `, ${esc(p.vet_clinic)}` : ''} <span class="muted small">${t('pf.their_entry')}</span>` : t('pf.not_yet')}</dd>
         <dt>${t('pf.record')}</dt><dd>${proof ? `<a href="/s/${esc(site.subdomain)}/portal/file/${esc(proof.id)}">${t('pf.view')}</a> · ${t('pf.uploaded', { time: at(p.proof_uploaded_at) })}${p.proof_accepted_at ? ` · ${t('pf.accepted', { time: at(p.proof_accepted_at) })}` : ''}${p.proof_declined_at ? ` · ${t('pf.declined', { time: at(p.proof_declined_at) })}` : ''}` : t('pf.not_uploaded')}</dd>
       </dl>
@@ -761,6 +762,9 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
     const needP = () => { if (!p) throw new PortalError('Add their puppy first.'); return p; };
     switch (action) {
       case 'invite': {
+        // Not before her portal settings are saved: the invite opens a portal that
+        // states her vet rule and counts it in her time zone.
+        if (!s.saved) throw new PortalError('Save your portal settings first: your vet visit rule and time zone.');
         const r = await sendInvites(env, site, familyId);
         if (r.failed) throw new PortalError(`${r.failed} invite${r.failed === 1 ? '' : 's'} could not be sent. Try again in a minute.`);
         return to('invited');

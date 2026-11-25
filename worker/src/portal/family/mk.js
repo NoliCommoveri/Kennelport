@@ -11,6 +11,7 @@
 // helpers (h), so the rules stay in one place.
 import { escapeHtml as esc } from '../../lib/html.js';
 import { HOME_SECTIONS } from '../home.js';
+import { vetRuleClause, vetRuleShort } from '../vet.js';
 
 // The prototype's icons, as drawn there (its sprite), under their own ids: i-k-<name>.
 const K = {
@@ -174,7 +175,7 @@ export function homeTile(c, h) {
   if (st === 'vet') {
     const dl = h.localParts(p.vet_deadline_at, s.time_zone);
     const hoursLeft = Math.max(0, Math.round((Date.parse(p.vet_deadline_at) - new Date(c.now).getTime()) / 3600000));
-    return `<div class="tile peach"><span class="eyebrow">3-day vet visit</span><div class="calrow">${cal(h, dl.ymd)}<div><p class="bigline">${p.proof_uploaded_at ? (p.proof_accepted_at ? 'Done' : 'Uploaded') : `${hoursLeft} h left`}</p><p class="small">Due by ${esc(h.clock(dl.hm))}</p></div></div>
+    return `<div class="tile peach"><span class="eyebrow">${vetRuleShort(s.vet_rule)} vet visit</span><div class="calrow">${cal(h, dl.ymd)}<div><p class="bigline">${p.proof_uploaded_at ? (p.proof_accepted_at ? 'Done' : 'Uploaded') : `${hoursLeft} h left`}</p><p class="small">Due by ${esc(h.clock(dl.hm))}</p></div></div>
       ${p.proof_uploaded_at ? `<span class="small"><b>${p.proof_accepted_at ? `Accepted by ${esc(kennel)}` : `${esc(kennel)} will check it`}</b></span>` : uploadForm('solid small', 'Upload record')}</div>`;
   }
   const next = c.next;
@@ -195,13 +196,13 @@ export function homeBand(c, h) {
   };
   if (st === 'vet') {
     const left = p.proof_uploaded_at ? (p.proof_accepted_at ? `Accepted by ${esc(kennel)}` : 'Record uploaded') : `${esc(h.timeLeft(p.vet_deadline_at, now))} left`;
-    return `${mkCard('', 'Your contract\'s 3-day visit', `<h2 class="vet-h">${esc(name)}'s vet visit</h2>
+    return `${mkCard('', `Your contract's ${vetRuleShort(s.vet_rule)} visit`, `<h2 class="vet-h">${esc(name)}'s vet visit</h2>
       ${p.proof_uploaded_at ? `<p class="small">${lk('check')} ${left}</p>` : `<div class="timer"><span class="ico clockdot">${lk('clock')}</span><p><b>${left}</b>Vet visit due ${esc(h.formatAt(p.vet_deadline_at, s.time_zone))}</p>${uploadForm('solid small', 'Upload', false)}</div>`}`, { eyebrow: true, cls: 'only-cream vetcard' })}
       <a class="vetrow only-forest" href="/family/vet"><span class="vr-i">${lk('steth')}</span><span class="vr-t"><b>${esc(name)}'s vet visit</b><span>${left}</span></span><span class="vr-c">${lk('chev')}</span></a>
       ${coming(2)}`;
   }
   if (st === 'before') {
-    const rule = s.vet_rule === 'days3' ? `by the end of the third day after the day you take ${esc(name)} home` : 'within 72 hours of pickup';
+    const rule = vetRuleClause(s.vet_rule, esc(name));
     return mkCard('steth', `Book ${esc(name)}'s vet visit`, `<p class="small">Your contract asks for a vet visit ${rule}${c.expected ? `: by <b>${h.deadlineLine(c.expected, s)}</b>` : ''}. Vets are often booked days ahead.</p>
       ${p.vet_booked_at ? `<p class="small"><span class="st ok">Booked</span> ${p.vet_booked_for ? esc(h.bookedWords(p.vet_booked_for)) : ''}${p.vet_clinic ? `, ${esc(p.vet_clinic)}` : ''}</p>` : `<a class="btn solid small self-start" href="/family/vet">${lk('check')}I've booked it</a>`}`);
   }

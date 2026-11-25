@@ -32,6 +32,7 @@ async function setup() {
   const her = (path, body) => call(env, M, `/s/akbostons${path}`, body ? { method: 'POST', body: form(body), headers: { cookie: breeder, origin: `https://${M}` } } : { headers: { cookie: breeder } });
   const fam = (cookie) => (path, body) => call(env, H, path, body ? { method: 'POST', body: form(body), headers: { cookie, origin: `https://${H}` } } : { headers: { cookie } });
   const row = (sql, ...a) => env.DB.raw.prepare(sql).get(...a);
+  await her('/portal/settings', { vet_kind: 'hours', vet_hours: '72', time_zone: 'America/New_York', help_weeks: '8' });
   return { env, site, her, fam, row };
 }
 

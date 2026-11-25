@@ -11,7 +11,7 @@ import {
   newSession, sessionCookie, sessionTokenHash, sessionLive, slideSession, slidCookie, revokeSession,
 } from '../signin.js';
 import { codeMessage, inviteMessage } from './messages.js';
-import { familyEmails, placementFor, getFamily } from './store.js';
+import { familyEmails, placementFor, getFamily, getSettings } from './store.js';
 
 export const FAMILY_COOKIE = 'kp_family';
 export const FAMILY_SESSION_MS = 365 * 24 * 60 * 60 * 1000;
@@ -87,6 +87,7 @@ export async function sendInvites(env, site, familyId) {
   const p = await placementFor(env, site.id, familyId);
   const kennel = site.kennel_name || site.subdomain;
   const base = portalBase(env, site);
+  const { vet_rule: vetRule } = await getSettings(env, site.id);
   const t = new Date();
   let sent = 0;
   let failed = 0;
@@ -94,7 +95,7 @@ export async function sendInvites(env, site, familyId) {
     const token = randomHex(32);
     await env.DB.prepare('UPDATE portal_emails SET invite_hash = ?, invite_expires_at = ?, invited_at = ? WHERE id = ?')
       .bind(await sha256Hex(token), new Date(t.getTime() + INVITE_DAYS * DAY).toISOString(), t.toISOString(), e.id).run();
-    const msg = inviteMessage({ kennel, family: fam.name, pup: p?.call_name || p?.puppy_name, link: `${base}/family/welcome?t=${token}`, base, days: INVITE_DAYS });
+    const msg = inviteMessage({ kennel, family: fam.name, pup: p?.call_name || p?.puppy_name, link: `${base}/family/welcome?t=${token}`, base, days: INVITE_DAYS, vetRule });
     let result = 'failed';
     let providerId = null;
     try {

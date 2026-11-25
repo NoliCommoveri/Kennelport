@@ -120,6 +120,14 @@ test('she starts from the suggested lists, linked to her programs, and edits, mo
   assert.equal(reg.button_label, null);
   // A second "suggested" doesn't double the list.
   assert.equal((await her('/portal/checklist/suggested', {})).status, 400);
+  // The puppy shots after the 8-week one, dated from birth, in order on her list.
+  const shots = env.DB.raw.prepare("SELECT title, count_from, offset_days FROM portal_timeline_tasks WHERE placement_id IS NULL AND title LIKE '%shots%' ORDER BY sort").all();
+  assert.deepEqual(shots.map((x) => [x.count_from, x.offset_days]), [['birth', 77], ['birth', 98], ['birth', 119]]);
+  assert.ok(item(env, 'portal_timeline_tasks', 'One-year boosters'));
+  // A timeline she already has is hers: a second "suggested" is refused and changes nothing.
+  const before = env.DB.raw.prepare('SELECT id, title, body FROM portal_timeline_tasks ORDER BY sort').all();
+  assert.equal((await her('/portal/timeline/suggested', {})).status, 400);
+  assert.deepEqual(env.DB.raw.prepare('SELECT id, title, body FROM portal_timeline_tasks ORDER BY sort').all(), before);
 
   const add = await her('/portal/timeline/new', { title: 'Puppy class', body: 'Sign up by 12 weeks.', days: '3', when: 'before', count_from: 'birth' });
   assert.equal(add.status, 303);
@@ -318,7 +326,7 @@ test('ready-made tasks: she picks a program and a wording; registration goes in 
 
   assert.equal((await her('/portal/timeline/ready', { ready: '|registration|0' })).status, 303);
   const reg = item(env, 'portal_timeline_tasks', 'Register {name}');
-  assert.equal(reg.body, 'Your registration paper is in the go-home folder.');
+  assert.equal(reg.body, 'Fill in your part of the registration and send it in.');
   assert.equal(reg.offset_days, 30);
   assert.equal(reg.count_from, 'pickup');
   assert.equal(reg.product_id, null);

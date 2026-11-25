@@ -6,7 +6,7 @@
 import { LOOKS } from './looks.js';
 import { emailHash, normalizeEmail } from '../auth.js';
 import { randomHex } from '../lib/crypto.js';
-import { vetDeadline, validTimeZone, zonedToUtc, VET_RULES } from './vet.js';
+import { vetDeadline, validTimeZone, zonedToUtc, parseVetRule } from './vet.js';
 import { portalTimingFor } from './timing.js';
 import { portalHomeFor } from './home.js';
 import { loadBuild } from '../content/rules.js';
@@ -31,18 +31,28 @@ export async function portalOn(env, siteId) {
 const SETTINGS_DEFAULTS = {
   time_zone: 'America/New_York', vet_rule: 'hours72', proof_note: null, disclosure: null,
   her_phone: null, her_email: null, vet_clinic: null, vet_doctor: null, vet_phone: null, vet_address: null, vet_note: null, help_weeks: 8,
-  food_name: null, food_bag: null, food_how: null, food_note: null, look: null,
+  food_name: null, food_bag: null, food_how: null, food_note: null, look: null, vet_count: null, saved_at: null,
 };
 
 // Her portal settings, with the owner's timing rules for the site beside them
 // (`timing`, portal/timing.js) and her Home's order and cards (`home`, portal/home.js),
-// so whatever reads the settings has the rules too.
+// so whatever reads the settings has the rules too. `saved` says whether she has saved
+// them at least once: until then the defaults are only a starting point (Eastern, 72
+// hours), so no invite or vet reminder goes out (portal/admin.js, portal/reminders.js).
 export async function getSettings(env, siteId) {
   const [row, build] = await Promise.all([
     env.DB.prepare('SELECT * FROM portal_settings WHERE site_id = ?').bind(siteId).first(),
     loadBuild(env, siteId),
   ]);
-  return { ...(row ?? { site_id: siteId, ...SETTINGS_DEFAULTS }), timing: portalTimingFor(build), home: portalHomeFor(build) };
+  const s = row ?? { site_id: siteId, ...SETTINGS_DEFAULTS };
+  return { ...s, vet_rule: ruleOf(s), saved: Boolean(s.saved_at), timing: portalTimingFor(build), home: portalHomeFor(build) };
+}
+
+// Her vet rule as one word ("hours48"): vet_rule says hours or days (its stored values
+// are only 'hours72' and 'days3'), vet_count the number (migration 0046; empty: 72 or 3).
+export function ruleOf(row) {
+  const kind = String(row.vet_rule ?? '').startsWith('days') ? 'days' : 'hours';
+  return row.vet_count ? `${kind}${row.vet_count}` : (kind === 'days' ? 'days3' : 'hours72');
 }
 
 // A phone number as typed, kept if it has 7 to 15 digits (an optional leading +).
@@ -60,13 +70,21 @@ export const dialable = (phone) => (String(phone).trim().startsWith('+') ? '+' :
 export async function saveSettings(env, siteId, input) {
   const tz = String(input.time_zone ?? '').trim();
   if (!validTimeZone(tz)) throw new PortalError('Choose a time zone from the list.');
-  if (!VET_RULES[input.vet_rule]) throw new PortalError('Choose how your contract counts the vet visit.');
+  // The vet rule: her screen sends the kind and its count (vet_kind, vet_hours or
+  // vet_days); a whole rule (vet_rule, "hours72") is taken too.
+  const kind = String(input.vet_kind ?? '');
+  const vetRule = kind === 'hours' || kind === 'days' ? `${kind}${String(input[`vet_${kind}`] ?? '').trim()}` : String(input.vet_rule ?? '');
+  if (!parseVetRule(vetRule)) {
+    if (kind === 'hours') throw new PortalError('Type the hours your contract gives, from 12 to 240.');
+    if (kind === 'days') throw new PortalError('Type the days your contract gives, from 1 to 14.');
+    throw new PortalError('Choose how your contract counts the vet visit.');
+  }
   const herEmail = clean(input.her_email, 254);
   if (herEmail && !normalizeEmail(herEmail)) throw new PortalError('Your email for families isn\'t an email address.');
   const weeks = clean(input.help_weeks, 3) ?? '8';
   if (!/^\d{1,2}$/.test(weeks) || Number(weeks) < 1 || Number(weeks) > 52) throw new PortalError('Weeks on Home is a number from 1 to 52.');
   const v = {
-    time_zone: tz, vet_rule: input.vet_rule, proof_note: clean(input.proof_note, 400), disclosure: clean(input.disclosure, 400),
+    time_zone: tz, vet_rule: parseVetRule(vetRule).kind === 'days' ? 'days3' : 'hours72', vet_count: parseVetRule(vetRule).n, proof_note: clean(input.proof_note, 400), disclosure: clean(input.disclosure, 400),
     her_phone: cleanPhone(input.her_phone, 'Your phone for families'), her_email: herEmail,
     vet_clinic: clean(input.vet_clinic, 120), vet_doctor: clean(input.vet_doctor, 120), vet_phone: cleanPhone(input.vet_phone, 'Your vet\'s phone'),
     vet_address: clean(input.vet_address, 200), vet_note: clean(input.vet_note, 400), help_weeks: Number(weeks),
@@ -78,6 +96,8 @@ export async function saveSettings(env, siteId, input) {
     if (look && !Object.hasOwn(LOOKS, look)) throw new PortalError('Choose a look from the list.');
     v.look = look && look !== 'classic' ? look : null;
   }
+  const first = !(await env.DB.prepare('SELECT saved_at FROM portal_settings WHERE site_id = ?').bind(siteId).first('saved_at'));
+  if (first) v.saved_at = now();
   const cols = Object.keys(v);
   await env.DB.batch([
     freezeSiteVetStatement(env, siteId),
@@ -85,6 +105,21 @@ export async function saveSettings(env, siteId, input) {
       ON CONFLICT (site_id) DO UPDATE SET ${cols.map((c) => `${c} = excluded.${c}`).join(', ')}, updated_at = excluded.updated_at`)
       .bind(siteId, ...Object.values(v), now()),
   ]);
+  // Her first save: a clock that started before it was counted on the defaults, not
+  // her contract, so it's counted again on what she chose. Later saves leave running
+  // clocks as they are (pset.vet_hint).
+  if (first) await recountClocks(env, siteId, vetRule, tz);
+}
+
+async function recountClocks(env, siteId, rule, tz) {
+  const { results } = await env.DB.prepare("SELECT id, picked_up_at, vet_deadline_at FROM portal_placements WHERE site_id = ? AND status = 'open' AND picked_up_at IS NOT NULL AND pickup_state IN ('confirmed', 'assumed')").bind(siteId).all();
+  const t = now();
+  const changed = results.map((p) => ({ p, deadline: vetDeadline(p.picked_up_at, rule, tz) })).filter(({ p, deadline }) => deadline !== p.vet_deadline_at);
+  if (!changed.length) return;
+  await env.DB.batch(changed.flatMap(({ p, deadline }) => [
+    env.DB.prepare('UPDATE portal_placements SET vet_deadline_at = ?, updated_at = ? WHERE id = ? AND site_id = ?').bind(deadline, t, p.id, siteId),
+    ...historyStatements(env, siteId, 'portal_placements', p.id, { vet_deadline_at: [p.vet_deadline_at, deadline] }, 'portal', t),
+  ]));
 }
 
 // Her site vet, as a placement's own vet columns (blank ones left out).

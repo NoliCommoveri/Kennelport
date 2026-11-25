@@ -5,6 +5,7 @@
 import { escapeHtml as esc } from '../../lib/html.js';
 import { defaultSay, sayMessage } from '../../manage/wording.js';
 import { UNDO_DAYS } from '../account.js';
+import { parseVetRule, ordinal } from '../vet.js';
 
 export const SUGGEST_LABEL = { name: 'Family name', puppy_id: 'Puppy', puppy_name: 'Puppy', go_home_on: 'Go-home', pickup_booked_at: 'Pickup booked for', microchip: 'Microchip', registration_no: 'Registration number', vet_clinic: 'Vet\'s clinic', vet_doctor: 'Vet\'s name', vet_phone: 'Vet\'s phone', vet_address: 'Vet\'s address', pup_vet_clinic: 'Puppy\'s vet: clinic', pup_vet_doctor: 'Puppy\'s vet: name', pup_vet_phone: 'Puppy\'s vet: phone', pup_vet_address: 'Puppy\'s vet: address' };
 
@@ -35,6 +36,12 @@ export function sayHtml(say, key, vars = {}, html = {}) {
 }
 
 export const pupName = (p) => p.call_name || p.puppy_name;
+
+// Her vet rule in the owner's words (pvet.rule.hours or pvet.rule.days).
+export function vetRuleSay(rule, say = defaultSay) {
+  const r = parseVetRule(rule) ?? { kind: 'hours', n: 72 };
+  return r.kind === 'hours' ? say('pvet.rule.hours', { n: r.n }) : say('pvet.rule.days', { n: r.n, nth: ordinal(r.n) });
+}
 
 export const ZONES = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Phoenix', 'America/Los_Angeles', 'America/Anchorage', 'Pacific/Honolulu', 'America/Halifax', 'America/Toronto', 'America/Winnipeg', 'America/Edmonton', 'America/Vancouver'];
 

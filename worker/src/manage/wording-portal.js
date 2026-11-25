@@ -27,6 +27,8 @@ export const PORTAL_SCREENS = Object.freeze({
 
 export const PORTAL_LINES = {
   // Today: Needs you.
+  "ptoday.settings": ["portaltoday", "Needs you: Portal settings not saved yet", "Set up your puppy portal"],
+  "ptoday.settings_note": ["portaltoday", "The line under it", "Your vet visit rule and time zone. Invites and vet reminders go out once you save."],
   "ptoday.assumed": ["portaltoday", "Needs you: a pickup time passed without pickup marked ({time}: the booked time)", "Did {name} go home at {time}?"],
   "ptoday.assumed_note": ["portaltoday", "The line under it", "The vet clock started from the booked time. Confirm or change it."],
   "ptoday.proof": ["portaltoday", "Needs you: a vet record to review (the family's name goes under it)", "Vet record to review: {name}"],
@@ -154,6 +156,9 @@ export const PORTAL_LINES = {
 
   // The Portal tab.
   "psetup.title": ["portalsetup", "Heading", "What families see"],
+  "psetup.first": ["portalsetup", "Until she saves Portal settings: the heading at the top", "Start here: your portal settings"],
+  "psetup.first_note": ["portalsetup", "The line under it", "Set your contract's vet visit and your time zone. Invites and vet reminders go out once you save."],
+  "psetup.first_button": ["portalsetup", "Its button", "Set up the portal"],
   "psetup.line": ["portalsetup", "Line under it ({address}: the portal's address, in bold)", "Families sign in at {address}."],
   "psetup.settings": ["portalsetup", "Row", "Portal settings"],
   "psetup.settings_note": ["portalsetup", "Line under it ({rule}: her vet rule, like \"72 hours from pickup\")", "Vet visit ({rule}), contacts, the food, programs, extras"],
@@ -496,6 +501,9 @@ export const PORTAL_LINES = {
   "pset.look_hint": ["portalsettings", "Line under them", "The same pages and buttons in every look. To see it as a family does, use See their portal on a family's screen."],
   "pset.vet": ["portalsettings", "Heading", "The vet visit"],
   "pset.vet_legend": ["portalsettings", "Above the vet rules", "How your contract counts it"],
+  "pset.vet_hours": ["portalsettings", "The rule in hours, after the box for the number", "hours from pickup"],
+  "pset.vet_days_before": ["portalsettings", "The rule in days, before the box for the number", "By the end of day"],
+  "pset.vet_days_after": ["portalsettings", "The rule in days, after the box for the number", "after the pickup day"],
   "pset.vet_hint": ["portalsettings", "Line under them", "Applies to clocks that start from now on; a clock already running keeps its deadline."],
   "pset.zone": ["portalsettings", "Field label", "Your time zone"],
   "pset.proof": ["portalsettings", "Field label", "What counts as proof"],
@@ -578,7 +586,7 @@ export const PORTAL_LINES = {
   "ptpl.task": ["portaltemplates", "Field label", "Task"],
   "ptpl.task_ph": ["portaltemplates", "Example in the empty field", "Register {name}"],
   "ptpl.body": ["portaltemplates", "Field label", "What to do"],
-  "ptpl.body_ph": ["portaltemplates", "Example in the empty field", "Your registration paper is in the go-home folder."],
+  "ptpl.body_ph": ["portaltemplates", "Example in the empty field", "Fill in your part of the registration and send it in."],
   "ptpl.days": ["portaltemplates", "Field label", "Days"],
   "ptpl.after": ["portaltemplates", "Choice", "after"],
   "ptpl.before": ["portaltemplates", "Choice", "before"],
@@ -614,8 +622,8 @@ export const PORTAL_LINES = {
   "pvet.missed": ["portalwords", "Where a vet visit stands, on her screens (lower case inside a line)", "Missed"],
   "pvet.booked": ["portalwords", "Where a vet visit stands, on her screens (lower case inside a line)", "Booked"],
   "pvet.not_booked": ["portalwords", "Where a vet visit stands, on her screens (lower case inside a line)", "Not booked"],
-  "pvet.rule.hours72": ["portalwords", "A vet rule, on her screens (Portal settings, and in lines that name it, lower case)", "72 hours from pickup"],
-  "pvet.rule.days3": ["portalwords", "A vet rule, on her screens (Portal settings, and in lines that name it, lower case)", "By the end of the third day after the pickup day"],
+  "pvet.rule.hours": ["portalwords", "A vet rule counted in hours, in lines that name it, lower case ({n}: her contract's hours)", "{n} hours from pickup"],
+  "pvet.rule.days": ["portalwords", "A vet rule counted in days, in lines that name it, lower case ({nth}: her contract's day, like \"third\")", "By the end of the {nth} day after the pickup day"],
   "psug.name": ["portalwords", "What a newer value from KennelOS is for", "Family name"],
   "psug.puppy_id": ["portalwords", "What a newer value from KennelOS is for", "Puppy"],
   "psug.puppy_name": ["portalwords", "What a newer value from KennelOS is for", "Puppy"],
@@ -670,11 +678,15 @@ const ERROR_LIST = [
   // Portal settings.
   ['zone', 'Portal settings: no time zone from the list', 'Choose a time zone from the list.'],
   ['vet_rule', 'Portal settings: no vet rule chosen', 'Choose how your contract counts the vet visit.'],
+  ['vet_hours', 'Portal settings: the vet rule\'s hours not from 12 to 240', 'Type the hours your contract gives, from 12 to 240.'],
+  ['vet_days', 'Portal settings: the vet rule\'s days not from 1 to 14', 'Type the days your contract gives, from 1 to 14.'],
   ['her_email', 'Portal settings: her email for families isn\'t one', 'Your email for families isn\'t an email address.'],
   ['help_weeks', 'Portal settings: weeks on Home not from 1 to 52', 'Weeks on Home is a number from 1 to 52.'],
   ['look', 'Portal settings: a look not on the list', 'Choose a look from the list.'],
   ['her_phone', 'Portal settings: her phone for families isn\'t a phone number', 'Your phone for families doesn\'t look like a phone number.'],
   ['vet_phone', 'Portal settings: her vet\'s phone isn\'t a phone number', 'Your vet\'s phone doesn\'t look like a phone number.'],
+  // A family's screen: an invite before her settings are saved.
+  ['invite_settings', 'A family\'s screen: Send invite before Portal settings are saved', 'Save your portal settings first: your vet visit rule and time zone.'],
   // A family and its emails.
   ['family_name', 'Add a family: no family name', 'Give the family a name, for example "the Reed family".'],
   ['family_name_keep', 'A family\'s screen: the family name emptied', 'Give the family a name.'],

@@ -9,6 +9,9 @@ import { portalBase } from './auth.js';
 import { fixDueBags } from './bag.js';
 
 export async function sendDueFor(env, site, p, settings, now = new Date()) {
+  // Nothing until she has saved her portal settings: the defaults' vet rule and time
+  // zone may not be her contract's (portal/store.js getSettings, `saved`).
+  if (!settings.saved) return 0;
   const { results: log } = await env.DB.prepare("SELECT kind, basis, MIN(sent_at) AS at FROM portal_email_log WHERE placement_id = ? AND result != 'failed' GROUP BY kind, basis").bind(p.id).all();
   const sent = new Map(log.map((r) => [`${r.kind}|${r.basis}`, Date.parse(r.at)]));
   const due = dueReminders(p, settings, now, sent);

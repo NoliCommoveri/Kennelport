@@ -98,10 +98,14 @@ anyone outside the family.
 - The families' tabs (2026-11-25): five; the handbook second from last whenever she has one, Photos in the Vet visit tab's place once it goes, or fifth with no handbook. `PORTAL_VERSION` 10 on this branch (the owner's yes).
 - Phase 3: not started.
 - **More than one breeder:** planned 2026-11-24 ([`plans/portal-multi-breeder.md`](plans/portal-multi-breeder.md)).
-  The data is already per site; still to do: site-builder steps 5, 6 and 2.4, a setup flow,
-  KennelOS's side for each kennel. The owner's answers (2026-11-24): decision 9 parked while she
-  approves every breeder; starting content copied per breeder by her; no portal-only sites; her
-  switch, no sign-up. Step 2.4 done (2026-11-25); step 5 descoped, step 6's timing rules built (2026-11-25). **Next:** the setup flow (plan 2.5).
+  The data is already per site, and KennelOS's side works for any linked kennel (checked
+  2026-11-25). Built 2026-11-25 (migration 0046): the vet rule as any count (hours or days)
+  in Portal settings; no invite or vet reminder until she has saved them once; the suggested
+  timeline in date order with the US puppy shots. The owner's answers (2026-11-24): decision 9
+  parked while she approves every breeder; starting content copied per breeder by her; no
+  portal-only sites; her switch, no sign-up. Step 5 descoped; step 6's timing rules and 2.4 done.
+  **Next:** the second breeder (Central time, KennelOS Pro, 72 hours) once this is released; the
+  rest of the setup flow (plan 2.5) and copying content between sites when wanted.
 - The same family twice, and deleted families (2026-11-13): the feed links a family's only
   typed placement; **Merge** for a typed placement or family into KennelOS's; **Delete
   now**; **Let KennelOS send them again** for a family deleted for good. Migration 0032

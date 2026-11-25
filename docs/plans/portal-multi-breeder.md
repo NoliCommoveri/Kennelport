@@ -85,16 +85,23 @@ Each new breeder's contract and location may need more than these:
 
 | Choice | Today | For more breeders |
 |---|---|---|
-| Vet deadline (`portal/vet.js` `VET_RULES`) | 72 hours from pickup, or the end of the third day | more counts (5 days, 7 days, business days) as contracts need them, or none |
-| Time zones (`portal/admin/parts.js` `ZONES`) | 12, US and Canada | the full list, or by country |
+| Vet deadline (`portal/vet.js` `parseVetRule`) | **Built 2026-11-25** (migration 0046): any count, her Portal settings' choice: N hours from pickup (12 to 240) or the end of day N after the pickup day (1 to 14). The second breeder's is 72 hours, a third's 48 | business days, or none, only if a contract needs it |
+| Time zones (`portal/admin/parts.js` `ZONES`) | 12, US and Canada (the second breeder is Central, the first Eastern: both listed) | the full list, or by country |
 | Registrations (`portal/feed.js` `REGISTRATIONS`) | limited, full, co-own, none | check against KennelOS's types for other registries |
 | Retention ([`family-portal.md`](family-portal.md) 10.1) | fixed numbers | the owner's per-site timing (2.2) |
-| Suggested checklist and timeline (`portal/steps.js`) | written for her breed and contract | starting lists from the template (2.2) |
+| Suggested checklist and timeline (`portal/steps.js`) | **Timeline rewritten 2026-11-25**: in date order, no go-home folder, the US puppy shots after 8 weeks (11, 14 and 17 weeks, rabies, one-year boosters); near-duplicate ready-made wordings dropped. A list she has already added is her own rows and doesn't change | the checklist, if a breeder's differs |
 
 ### 2.5 A setup flow
 
 Today the owner switches the portal on in `/ops`, and the breeder starts with the suggested
-lists and no handbook, bag or programs. To build:
+lists and no handbook, bag or programs.
+
+**Built 2026-11-25, the first step:** until she saves Portal settings once
+(`portal_settings.saved_at`, migration 0046), no invite and no vet reminder goes out (the
+defaults, Eastern and 72 hours, may not be her contract's), her Today says "Set up your
+puppy portal" and her Portal tab starts with it. Her first save counts any vet clock
+already running on her rule. Families from KennelOS still arrive and wait for her Send
+invite, as they always have. Still to build:
 
 - **Turning it on:** the owner applies the **Website and family portal** template (2.2) to
   the site in her admin view. `/ops` keeps the on/off switch.
@@ -114,10 +121,11 @@ Some of this was done for the first breeder's kennel alone ([`family-portal.md`]
 Companion and Furever switched off for her families. KennelPort tells KennelOS which sites
 have the portal (`portal_feed` in the link facts, `kennelos/link.js`).
 
-- **To check, in the KennelOS repository:** that KennelOS turns these on by that flag for any
-  linked kennel, not by her kennel's id. The prompt for that session:
-  [`kennelos-second-kennel-check.md`](kennelos-second-kennel-check.md) (2026-11-25). If it's her kennel's id, KennelOS needs the change,
-  as a reply in this plan's style ([`done/kennelos-origin-country-reply.md`](done/kennelos-origin-country-reply.md)).
+- **Checked, in the KennelOS repository (2026-11-25):** nothing names the first kennel. Every
+  piece turns on per kennel from that site's `portal_feed: 1` and the feed reply's `portal`;
+  KennelOS's tests cover two portal kennels at once and one switched off later (its build log,
+  2026-11-25, "Tests for a second puppy-portal kennel"). The prompt that asked:
+  [`kennelos-second-kennel-check.md`](kennelos-second-kennel-check.md). No change needed.
 - **A breeder not on KennelOS:** the portal works without it (rule 1 of the portal plan);
   she types her families in. Check that every screen reads right with no link.
 

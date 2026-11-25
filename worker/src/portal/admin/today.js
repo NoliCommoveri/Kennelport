@@ -6,7 +6,7 @@
 import { escapeHtml as esc } from '../../lib/html.js';
 import { vetStatus, formatAt, timeLeft, clockRunning, formatDay } from '../vet.js';
 import { roundPhoto } from '../../manage/hub.js';
-import { pupName, familyFilters, sayHtml } from './parts.js';
+import { pupName, familyFilters, sayHtml, vetRuleSay } from './parts.js';
 import { getSettings, listFamilies } from '../store.js';
 import { defaultSay } from '../../manage/wording.js';
 
@@ -73,9 +73,10 @@ export async function waitlistPart(env, site, kennel, w, say = defaultSay) {
 export function setupScreen(site, s, say = defaultSay) {
   const b = `/s/${esc(site.subdomain)}/portal`;
   const item = (href, label, note) => `<li class="item"><a href="${href}"><b>${esc(label)}</b><span>${esc(note)}</span></a></li>`;
+  const first = s.saved ? '' : `<section class="card band"><h2>${esc(say('psetup.first'))}</h2><p>${esc(say('psetup.first_note'))}</p><p><a class="button primary" href="${b}/settings">${esc(say('psetup.first_button'))}</a></p></section>`;
   return `<section class="card"><h1>${esc(say('psetup.title'))}</h1><p class="muted small">${sayHtml(say, 'psetup.line', {}, { address: `<strong>${esc(site.portalUrl)}</strong>` })}</p></section>
-    <ul class="items">
-      ${item(`${b}/settings`, say('psetup.settings'), say('psetup.settings_note', { rule: say(`pvet.rule.${s.vet_rule}`).toLowerCase() }))}
+    ${first}<ul class="items">
+      ${item(`${b}/settings`, say('psetup.settings'), say('psetup.settings_note', { rule: vetRuleSay(s.vet_rule, say).toLowerCase() }))}
       ${item(`${b}/checklist`, say('psetup.checklist'), say('psetup.checklist_note'))}
       ${item(`${b}/timeline`, say('psetup.timeline'), say('psetup.timeline_note'))}
       ${item(`${b}/handbook`, say('handbook.item'), say('handbook.item_note'))}
