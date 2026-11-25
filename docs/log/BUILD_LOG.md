@@ -3033,3 +3033,121 @@ the only gate left. No code, no migration, no version bump.
   computer and as headings in the phone's More panel; a site without the portal has one
   group and no names. The side nav scrolls if it's taller than the screen. `app.css`
   changed again under the unreleased `APP_VERSION` 20 (`APP_FILES` ab17944db5aff60d). 537 pass.
+
+## 2026-11-25: Ready for a second portal breeder: the vet rule as a setting, the settings guard, the suggested timeline
+
+- The owner: a second breeder (Central time, KennelOS Pro, a 72-hour contract) and a third
+  with 48 hours, so the vet count isn't fixed in code. `portal/vet.js` `parseVetRule`: a rule
+  is `hours<N>` (12 to 240, exactly N hours from pickup) or `days<N>` (1 to 14, the end of day
+  N after the pickup day, local). `vetRuleText`, `vetRuleClause` and `vetRuleShort` give the
+  families' words ("48 hours from pickup", "within 48 hours of pickup", "2-day vet visit")
+  on Home, the Vet visit tab, the invite and the reminders, in every look; 72 and 3 read as
+  before. Portal settings: two choices, each with its number box (`pset.vet_hours`,
+  `pset.vet_days_before`, `pset.vet_days_after`); her screens' rule line is
+  `pvet.rule.hours` / `pvet.rule.days` (with `{n}`, `{nth}`), replacing `pvet.rule.hours72`
+  and `pvet.rule.days3` (an override the owner wrote for those needs writing again).
+- **Migration 0046** (`portal_second_breeder`, first named `portal_vet_count`), additive: `portal_settings.vet_count` (the number;
+  `vet_rule`'s CHECK still allows only 'hours72'/'days3', so it now says only hours or days;
+  `store.js` `ruleOf` joins them) and `portal_settings.saved_at`. Every existing row is set
+  saved from its `updated_at` (those portals are running). A backup from before 0046 restores
+  as saved (`backup.js` `restoreRows`).
+- The settings guard: until she saves Portal settings once, `sendDueFor` sends no vet reminder
+  and Send invite answers "Save your portal settings first: your vet visit rule and time
+  zone." (`invite_settings` in the owner's errors). Her Today shows "Set up your puppy
+  portal" and her Portal tab starts with "Start here: your portal settings" (`ptoday.settings*`,
+  `psetup.first*`). Her first save recounts any vet clock already running on her rule, with
+  history; later saves leave running clocks as they are. A row KennelOS's vet fills in
+  doesn't count as saved. Invites were never automatic: families from KennelOS wait for her
+  Send invite.
+- The suggested timeline (`portal/steps.js`), only for a list added from now on (her rows are
+  hers): in date order; no go-home folder (registration, deworming); insurance at day 1 as
+  the ready-made one; the US puppy shots after the breeder's 8-week one (AAHA): 11 weeks
+  DHPP (ask about lepto and Bordetella), 14 weeks DHPP and rabies, 17 weeks the last DHPP,
+  one-year boosters; the old 12- and 16-week lines replaced. Ready-made wordings that said
+  the same thing dropped: registration 3 → 2, insurance 2 → 1, other 2 → 1. The ready-made
+  picker lists its groups by their usual day, so tasks added one after another land in
+  date order (a new task always goes to the bottom). `ptpl.body_ph` example updated.
+- KennelOS's side for a second kennel: checked on the KennelOS side 2026-11-25, nothing to
+  change (multi-breeder plan 2.6 updated).
+- Tests: `portal.test.js` (the guard, 48 hours in Central, recount, range), `portal-vet.test.js`
+  (counts and words), `portal-hub.test.js` (Today and Portal tab before saving),
+  `portal-steps.test.js` (the shots, an existing list unchanged). 539 pass. No version bump
+  (server-rendered screens only).
+- Follow-up, the owner: reminders wait for the invite; automatic invites; the microchip task;
+  a remove for everything she adds.
+  - `sendDueFor` sends nothing to a family not yet invited (`portal_families.invited_at`);
+    once invited, the latest reminder due goes.
+  - Automatic invites, her choice in Portal settings ("Invites", `pset.invites`,
+    `pset.auto_invite*`): `portal_settings.auto_invite_at`, added to **migration 0046**
+    (still one migration on this branch). `portal/auth.js` `autoInvite`: families added since
+    she switched it on, with an address and an open placement with the family, not invited,
+    not gone from KennelOS, settings saved; on her first save the ones already waiting are
+    included. Runs after a KennelOS feed, after she adds a family, after she saves settings,
+    and hourly (`autoInviteAll`, before the reminders). A send that reached no address leaves
+    them not invited, to try again. Off: Send invite, as before.
+  - The microchip: "Register {name}'s microchip to your name and address", 2 days after
+    pickup, in the suggested timeline and as a ready-made registration wording (index 2,
+    its own `days`, `noProgram`: never linked to her registration program). Her timeline
+    suggests it with one tap, like Register {name}, until it's on it, so a list made before
+    (the first breeder's) gets it at the bottom with nothing else changed.
+  - Remove paths, checked over every portal screen of hers: everything she adds had one
+    except four, now added: her contract file (`removeContract`, the file deleted too), a
+    message she sent (`removeBreederMessage`, hers only; the email has gone), a loss she
+    recorded by mistake (`undoLoss`, not for one KennelOS sent: changed there), and her loss
+    note (`removeLossNote`). Wording: `pf.contract_remove`, `plog.remove`, `pf.loss_undo`,
+    `pf.loss_note_remove`, error `loss_kennelos`.
+  - Tests in `portal.test.js`, `portal-feed.test.js`, `portal-steps.test.js`,
+    `portal-account.test.js`. 541 pass. No version bump.
+
+## 2026-11-25: Resources and the potty schedule
+
+Plan: `docs/plans/portal-resources-potty.md` (the owner's answers and what changed, section 4).
+
+- **Resources:** `portal/resources.js` (data), `portal/admin/resources.js` (her screen, on her
+  Portal tab), `/family/resources` in `family.js`. Links (an address, or one of her shown
+  programs through `/family/go`, counted as `resources`) and PDFs or photos (10 MB,
+  `sites/<site>/portal/resources/`), under her own headings, in her order; each changed,
+  moved, switched off or removed (the file deleted too). A Quick link on Home once one is on.
+  Table `portal_resources`.
+- **The potty schedule:** `portal/potty.js` (the maths, her guide), `/family/potty` in
+  `family.js`, `portal/admin/potty.js` (her Potty guide screen: the page on or off for her
+  site, the guide on or off, her words or the suggested ones). Three answers (first person up,
+  2 to 4 meals, bedtime) make the day's trips for the puppy's age, worked out on every visit:
+  first thing, 15 minutes after each meal, breaks within the age's daytime limit (a run of them
+  one row), last thing at bed, and night trips while the night is longer than the age's
+  overnight limit (`POTTY_LIMITS`: 1 hour and 3 at 8 to 10 weeks … 5 hours and the whole night
+  from 6 months). Changed or started over by the family. The guide drawn as the portal's other
+  pages (paragraphs, tips as highlight rows), not the handbook's (the owner). A Quick link until
+  the owner's timing rule `potty_until_weeks` (26 by default, her Timing screen); always a link
+  under Records (Classic and the looks). Table `portal_potty` (removed with a family, their
+  erase, and moved on a merge); `portal_settings.potty_guide`, `potty_guide_off`, `potty_off`.
+- **The potty task** (the owner): Set up {name}'s potty schedule, 3 days before pickup, in the
+  suggested timeline, suggested with one tap on her timeline until one is on it (`addReady`
+  'potty', to the bottom), and a kind of task that ticks itself in her task editor
+  (`ptpl.auto.potty`). Its button opens their schedule (Make the schedule / See the schedule);
+  it ticks itself once they make one; hidden from families while her potty page is off.
+  Stored in `portal_timeline_tasks.opens` (`steps.js` `autoOf` reads it as `auto`).
+- Both family pages use the looks' own frame (`mkp`), so Forest and Cream draw their header and
+  tab bar. Found while checking: on the looks' other plain pages (Account, Messages, Photos,
+  Stay, the handbook) the tab bar stacked and the header wrapped at 390px.
+- **Migration 0046** renamed `portal_second_breeder` (unreleased) and now also holds
+  `portal_resources`, `portal_potty`, the three potty columns and `portal_timeline_tasks.opens`.
+  New wording in the owner's list: screens `portalresources` (`pres.*`) and `portalpotty`
+  (`ppotty.*`), Portal tab rows `psetup.resources*`, `psetup.potty*`, errors `res_*`.
+- Tests: `worker/tests/portal-resources-potty.test.js` (4). 545 pass. Checked at 390px in
+  Classic and Forest (no stylesheet change, no version bump).
+- Follow-up, the owner ("fix the tab bar and bump"): `looks/mockup.css` part 2 lays out the
+  header (one line: brand, then Messages, Aa, Account) and the tab bar (one row of five) on the
+  looks' plain pages as Home's are. Checked in Forest and Cream at 390px and 1280px; Classic
+  unchanged. **`PORTAL_VERSION` 10 → 11** (the owner's yes), `PORTAL_FILES` 7b3099a49f5bb52c.
+  545 pass.
+- Follow-up, the owner ("bring over the training content too"): **Training**, `/family/training`.
+  `portal/training-content.js` is KennelOS Furever's `furever/data/trainingContent.js` (version
+  1) copied unchanged; `portal/training.js` picks the AKC's two tracks: **By age** (the timeline,
+  the puppy's stage first with "Where Opal is now", our own plain line under 8–16 weeks in place
+  of the content's research note) and **S.T.A.R. Puppy** (by category). Each skill opens to its
+  summary and steps, "the puppy" becoming the puppy's name. A Quick link until 52 weeks, always
+  under Records (Classic and the looks); her switch on her Resources screen ("Training guides",
+  `pres.training*`), `portal_settings.training_off` in migration 0046. Drawn in the looks' frame.
+  Read-only: no progress stored. Test in `portal-resources-potty.test.js`. 546 pass. Checked at
+  390px in Classic, Forest and Cream. No further version bump (no stylesheet change).

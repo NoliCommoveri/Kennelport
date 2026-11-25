@@ -24,7 +24,7 @@ export async function serveFile(env, site, fam, id) {
 }
 
 // Where a click came from, for her report of which placements work (plan 12.1).
-export const PLACES = new Set(['home', 'records', 'vet', 'timeline', 'checklist', 'food', 'insurance', 'handbook', 'bag']);
+export const PLACES = new Set(['home', 'records', 'vet', 'timeline', 'checklist', 'food', 'insurance', 'handbook', 'bag', 'resources']);
 
 export async function goToProgram(env, site, fam, id, from) {
   const x = await env.DB.prepare('SELECT id, link_url FROM products WHERE id = ? AND site_id = ? AND portal_show = 1').bind(id, site.id).first();

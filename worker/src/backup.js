@@ -188,6 +188,9 @@ export async function restoreRows(env, siteId, table, rows) {
   if (!Array.isArray(rows) || rows.length > 500) throw new BackupError('Send up to 500 rows at a time.');
   if (!rows.length) return { table, rows: 0 };
   for (const r of rows) if (r?.site_id !== siteId) throw new BackupError(`A row of ${table} belongs to another site.`);
+  // A backup from before migration 0046 has no portal_settings.saved_at: its portal was
+  // running, so it counts as saved, as the migration counted every row then.
+  if (table === 'portal_settings') for (const r of rows) if (!('saved_at' in r)) r.saved_at = r.updated_at ?? new Date().toISOString();
   const cols = await insertPlan(env, table, rows);
   await env.DB.batch(rows.map((r) => insertRow(env, table, cols, r)));
   return { table, rows: rows.length };

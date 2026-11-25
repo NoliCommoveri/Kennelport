@@ -67,6 +67,17 @@ test('the feed is refused unless the portal is on, and refuses fields it doesn\'
   assert.equal((await call((await setup()).env, API, '/v1/portal', { method: 'POST', body: '{}', headers: { 'content-type': 'application/json' } })).status, 401);
 });
 
+test('with her automatic invites on, a signed contract from KennelOS is invited as it arrives', async () => {
+  const { env, her, feed, row } = await setup();
+  assert.equal((await her('/portal/settings', { vet_kind: 'hours', vet_hours: '72', time_zone: 'America/Chicago', help_weeks: '8', auto_invite_shown: '1', auto_invite: '1' })).status, 303);
+  assert.equal((await feed({ families: [REED()] })).status, 200);
+  assert.ok(row("SELECT invited_at FROM portal_families WHERE kennelos_id = 'fam-reed'").invited_at);
+  assert.equal(outbox(env).filter((m) => m.kind === 'family_invite').length, 2);
+  // The same family again: no second invite.
+  assert.equal((await feed({ families: [REED()] })).status, 200);
+  assert.equal(outbox(env).filter((m) => m.kind === 'family_invite').length, 2);
+});
+
 test('a signed contract arrives as a family to invite, with the puppy, the pickup and the shots', async () => {
   const { env, her, feed, row } = await setup();
   const res = await feed({ families: [REED({}, { pickup_at: `${go}T16:00:00Z` })] });

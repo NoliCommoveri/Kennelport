@@ -13,9 +13,9 @@ import { escapeHtml as esc } from '../lib/html.js';
 import {
   getSettings, saveSettings, listFamilies, getFamily, familyEmails, createFamily, updateFamily, deleteFamily, placementFor, createPlacement,
   updatePlacement, markPickedUp, confirmPickup, pickupNotYet, acceptProof, declineProof, setLifeStatus, addHealthRecord, removeHealthRecord, healthRecords,
-  saveFile, getFile, fileResponse, emailLog, history, placeablePuppies, PortalError, RECORD_TYPES, recordKind, MAX_FILE_BYTES,
+  saveFile, getFile, removeContract, fileResponse, emailLog, history, placeablePuppies, PortalError, RECORD_TYPES, recordKind, MAX_FILE_BYTES,
 } from './store.js';
-import { sendInvites, portalBase } from './auth.js';
+import { sendInvites, portalBase, autoInvite } from './auth.js';
 import { pupOf, photosOf, removedPhotosOf, removePhoto, putBackPhoto } from './pups.js';
 import { makeViewLink, VIEW_AS_ADMIN } from './view.js';
 import { defaultSay } from '../manage/wording.js';
@@ -33,13 +33,17 @@ import {
 } from './stays.js';
 import { suggestionsFor, takeSuggestion, ignoreSuggestion, QUIET_MS } from './feed.js';
 import {
-  thread, markRead, breederWrites, markLoss, isLoss, lossDraft, saveLossNote, scheduleDelete, undoDelete, recentlyDeleted, eraseFamily, erasedRecords, MAX_MESSAGE, UNDO_DAYS,
+  thread, markRead, breederWrites, markLoss, isLoss, lossDraft, saveLossNote, undoLoss, removeLossNote, removeBreederMessage, scheduleDelete, undoDelete, recentlyDeleted, eraseFamily, erasedRecords, MAX_MESSAGE, UNDO_DAYS,
   deleteNow, deletedForGood, giveBack,
 } from './account.js';
 import { placementDuplicates, familyCandidates, mergePlacement, mergeFamily } from './merge.js';
-import { redirect, note, errorBox, pupName, familyFilters, sayHtml, suggestLabel, ZONE_NAMES } from './admin/parts.js';
+import { redirect, note, errorBox, pupName, familyFilters, sayHtml, suggestLabel, ZONE_NAMES, vetRuleSay } from './admin/parts.js';
 import { products, itemFields, whenWords, formOffset, templateScreen, readyForm } from './admin/templates.js';
 import { settingsScreen } from './admin/settings.js';
+import { pottyScreen } from './admin/potty.js';
+import { savePottySettings } from './potty.js';
+import { resourcesScreen, resourceScreen } from './admin/resources.js';
+import { listResources, saveResource, removeResource, moveResource, resourceFile, headingsOf } from './resources.js';
 import { waitlistCount, waitlistPart, setupScreen } from './admin/today.js';
 import { handbookScreen, removeScreen, photoScreen } from './admin/handbook.js';
 import { bagScreen, bagItemScreen, removeBagScreen, sentHomeCard } from './admin/bag.js';
@@ -69,6 +73,7 @@ export async function portalNeedsYou(env, siteId, now = new Date(), say = defaul
   const s = await getSettings(env, siteId);
   const t = now.getTime();
   const out = [];
+  if (!s.saved) out.push({ href: '/portal/settings', label: say('ptoday.settings'), note: say('ptoday.settings_note') });
   for (const f of await listFamilies(env, siteId)) {
     if (!f.placement_id || f.life_status !== 'with_family') continue;
     const href = `/portal/f/${f.id}`;
@@ -299,12 +304,13 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
         <p class="hint">${t('pf.loss_line', { name })}</p>
         ${form('loss-note', `<label>${t('pf.loss_note', { family: f.name })}<textarea name="note" rows="9" maxlength="4000" required>${esc(p.loss_note ?? lossDraft(p, site.kennel_name || site.subdomain, f.name))}</textarea>
           <span class="hint">${p.loss_note ? (p.loss_sent_at ? t('pf.loss_saved_sent', { time: at(p.loss_note_at), sent: at(p.loss_sent_at) }) : t('pf.loss_saved', { time: at(p.loss_note_at) })) : t('pf.loss_draft')}</span></label>
-          <label class="check"><input type="checkbox" name="send" value="1"> <span>${t('pf.loss_email')}</span></label><p><button class="primary">${t('pf.loss_save')}</button></p>`)}</section>`);
+          <label class="check"><input type="checkbox" name="send" value="1"> <span>${t('pf.loss_email')}</span></label><p><button class="primary">${t('pf.loss_save')}</button></p>`)}
+        <div class="row">${p.loss_note ? form('loss-note-remove', `<button class="link">${t('pf.loss_note_remove')}</button>`) : ''}${p.kennelos_id ? '' : form('loss-undo', `<button class="link">${t('pf.loss_undo', { name })}</button>`)}</div></section>`);
     }
     const proof = p.proof_file_id ? await getFile(env, site.id, p.proof_file_id) : null;
     parts.push(`<section class="card"><h2>${sayHtml(say, 'pf.vet_title', {}, { status: `<span${v.trouble ? ' class="error"' : ''}>${t(`pvet.${v.key}`)}</span>` })}</h2>
       <dl class="kv">
-        ${p.vet_deadline_at ? `<dt>${t('pf.deadline')}</dt><dd>${esc(formatAt(p.vet_deadline_at, s.time_zone, { zone: true }))}${Date.parse(p.vet_deadline_at) > now.getTime() ? ` · ${t('pf.left', { left: timeLeft(p.vet_deadline_at, now) })}` : ''}</dd>` : `<dt>${t('pf.deadline')}</dt><dd class="muted">${t('pf.deadline_starts', { rule: say(`pvet.rule.${s.vet_rule}`).toLowerCase() })}</dd>`}
+        ${p.vet_deadline_at ? `<dt>${t('pf.deadline')}</dt><dd>${esc(formatAt(p.vet_deadline_at, s.time_zone, { zone: true }))}${Date.parse(p.vet_deadline_at) > now.getTime() ? ` · ${t('pf.left', { left: timeLeft(p.vet_deadline_at, now) })}` : ''}</dd>` : `<dt>${t('pf.deadline')}</dt><dd class="muted">${t('pf.deadline_starts', { rule: vetRuleSay(s.vet_rule, say).toLowerCase() })}</dd>`}
         <dt>${t('pf.booked_label')}</dt><dd>${p.vet_booked_at ? `${esc((p.vet_booked_for ?? '').replace('T', ' at '))}${p.vet_clinic ? `, ${esc(p.vet_clinic)}` : ''} <span class="muted small">${t('pf.their_entry')}</span>` : t('pf.not_yet')}</dd>
         <dt>${t('pf.record')}</dt><dd>${proof ? `<a href="/s/${esc(site.subdomain)}/portal/file/${esc(proof.id)}">${t('pf.view')}</a> · ${t('pf.uploaded', { time: at(p.proof_uploaded_at) })}${p.proof_accepted_at ? ` · ${t('pf.accepted', { time: at(p.proof_accepted_at) })}` : ''}${p.proof_declined_at ? ` · ${t('pf.declined', { time: at(p.proof_declined_at) })}` : ''}` : t('pf.not_uploaded')}</dd>
       </dl>
@@ -418,6 +424,7 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
     parts.push(`<section class="card"><h2>${t('pf.contract')}</h2>
       ${contract ? `<p><a href="/s/${esc(site.subdomain)}/portal/file/${esc(contract.id)}">${t('pf.contract_view')}</a> <span class="muted small">${t('pf.contract_added', { time: at(contract.uploaded_at) })}</span></p>` : `<p class="muted">${t('pf.contract_none')}</p>`}
       <form method="post" action="${base}/contract" enctype="multipart/form-data"><label>${t(contract ? 'pf.contract_replace' : 'pf.contract_add')}<input type="file" name="file" accept="application/pdf,image/*" required></label><p><button>${t('pf.upload')}</button></p></form>
+      ${contract ? form('contract-remove', `<button class="link">${t('pf.contract_remove')}</button>`) : ''}
     </section>`);
 
     const kept = p.puppy_id && puppies.some((x) => x.id === p.puppy_id) ? null : await pupOf(env, site.id, p);
@@ -467,7 +474,7 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
   if (msgs.length || (p?.picked_up_at)) {
     await markRead(env, site.id, f.id, 'family');
     parts.push(`<section class="card" id="messages"><h2>${t('plog.messages')}</h2>
-      ${msgs.length ? `<dl class="kv">${msgs.map((m) => `<dt>${m.sender === 'family' ? esc(f.name) : t('plog.you')}<br><span class="hint">${esc(at(m.sent_at))}</span></dt><dd>${esc(m.body).replace(/\n/g, '<br>')}</dd>`).join('')}</dl>` : `<p class="muted">${t('plog.messages_none')}</p>`}
+      ${msgs.length ? `<dl class="kv">${msgs.map((m) => `<dt>${m.sender === 'family' ? esc(f.name) : t('plog.you')}<br><span class="hint">${esc(at(m.sent_at))}</span></dt><dd>${esc(m.body).replace(/\n/g, '<br>')}${m.sender === 'breeder' ? form(`message/${esc(m.id)}/remove`, `<button class="link small">${t('plog.remove')}</button>`) : ''}</dd>`).join('')}</dl>` : `<p class="muted">${t('plog.messages_none')}</p>`}
       ${form('message', `<label>${t('plog.reply')}<textarea name="body" rows="4" maxlength="${MAX_MESSAGE}" required></textarea><span class="hint">${t('plog.reply_hint')}</span></label><p><button class="primary">${t('plog.send')}</button></p>`)}</section>`);
   }
 
@@ -567,6 +574,7 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
       throw err;
     }
     await saveDelivery(env, site.id, input);
+    try { await autoInvite(env, site.id); } catch (err) { if (!(err instanceof MailError)) throw err; }
     const TYPES = ['food', 'insurance', 'registration', 'product', 'other'];
     const list = await products(env, site.id);
     if (list.length) {
@@ -641,6 +649,62 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
     }
   }
 
+  // Her potty guide, and the families' potty schedule on or off (portal/admin/potty.js).
+  if (rest === '/potty') {
+    if (!post) return page(say('ppotty.title'), pottyScreen(site, s, url, { say }), { back: `${home}/setup` });
+    const form = await request.formData();
+    await savePottySettings(env, site.id, {
+      potty_guide: String(form.get('potty_guide') ?? ''), reset: form.get('reset') === '1',
+      potty_guide_off: !form.get('guide_on'), potty_off: !form.get('potty_on'),
+    });
+    return redirect(`${home}/potty?note=saved`);
+  }
+
+  // Her Resources (portal/admin/resources.js): links and PDFs for families.
+  if (rest === '/resources/training' && post) {
+    const form = await request.formData();
+    await env.DB.prepare(`INSERT INTO portal_settings (site_id, training_off, updated_at) VALUES (?, ?, ?)
+      ON CONFLICT (site_id) DO UPDATE SET training_off = excluded.training_off, updated_at = excluded.updated_at`).bind(site.id, form.get('on') ? 0 : 1, new Date().toISOString()).run();
+    return redirect(`${home}/resources?note=saved#training`);
+  }
+  const rsm = rest.match(/^\/resources(?:\/(new|[0-9a-f-]{36})(?:\/(up|down|remove|file))?)?$/);
+  if (rsm) {
+    const here = `${home}/resources`;
+    const programs = await linkablePrograms(env, site.id);
+    const show = async (opts = {}) => page(say('pres.title'), resourcesScreen(site, await listResources(env, site.id), programs, url, { ...opts, say, trainingOff: Boolean(s.training_off) }), { back: `${home}/setup`, status: opts.error ? 400 : 200 });
+    const itemPage = async (id, opts = {}) => {
+      const list = await listResources(env, site.id);
+      const i = list.findIndex((x) => x.id === id);
+      if (i < 0) return redirect(here);
+      return page(say('pres.title'), resourceScreen(site, list[i], i, list.length, programs, headingsOf(list), { ...opts, say }), { back: `${here}#r-${id}`, status: opts.error ? 400 : 200 });
+    };
+    if (!post) {
+      if (!rsm[1]) return show();
+      if (rsm[1] === 'new') return null;
+      if (rsm[2] === 'file') return resourceFile(env, site.id, rsm[1]);
+      if (!rsm[2]) return itemPage(rsm[1]);
+      return null;
+    }
+    if (!rsm[1] || rsm[2] === 'file') return null;
+    let values = null;
+    try {
+      if (rsm[2] === 'remove') { await removeResource(env, site.id, rsm[1]); return redirect(`${here}?note=removed`); }
+      if (rsm[2]) { await moveResource(env, site.id, rsm[1], rsm[2]); return redirect(`${here}/${rsm[1]}`); }
+      if (Number(request.headers.get('content-length') ?? 0) > MAX_FILE_BYTES + 64 * 1024) throw new PortalError('That file is over 10 MB.');
+      const form = await request.formData();
+      values = Object.fromEntries([...form.entries()].filter(([, v]) => typeof v === 'string'));
+      const f = form.get('file');
+      const file = f && typeof f !== 'string' && f.size ? { bytes: new Uint8Array(await f.arrayBuffer()), name: f.name } : null;
+      const id = await saveResource(env, site.id, rsm[1] === 'new' ? null : rsm[1], values, file);
+      return redirect(`${here}?note=${rsm[1] === 'new' ? 'added' : 'saved'}#r-${id}`);
+    } catch (err) {
+      if (!(err instanceof PortalError)) throw err;
+      const kept = values ? { ...values, shown: values.shown ? 1 : 0 } : null;
+      if (rsm[1] !== 'new' && !rsm[2]) return itemPage(rsm[1], { error: err.message, values: kept });
+      return show({ error: err.message, values: rsm[1] === 'new' ? kept : null });
+    }
+  }
+
   // Her go-home bag (portal/admin/bag.js).
   const bm = rest.match(/^\/bag(?:\/(new|[0-9a-f-]{36})(?:\/(up|down|remove))?)?$/);
   if (bm) {
@@ -684,7 +748,7 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   if (tm) {
     const kind = tm[1] === 'checklist' ? 'checklist' : 'task';
     const here = `${home}/${tm[1]}`;
-    const show = async (opts = {}) => page(say(`ptpl.${kind}.title`), templateScreen(site, kind, await listItems(env, site.id, kind), await products(env, site.id), url, { ...opts, say, names: await puppyNames(env, site.id), timing: (await getSettings(env, site.id)).timing }), { back: `${home}/settings`, status: opts.error ? 400 : 200 });
+    const show = async (opts = {}) => page(say(`ptpl.${kind}.title`), templateScreen(site, kind, await listItems(env, site.id, kind), await products(env, site.id), url, { ...opts, say, names: await puppyNames(env, site.id), timing: s.timing, pottyOff: Boolean(s.potty_off) }), { back: `${home}/settings`, status: opts.error ? 400 : 200 });
     if (!post) return tm[2] ? null : show();
     try {
       if (tm[2] === 'suggested') { await addSuggested(env, site.id, kind); return redirect(`${here}?note=suggested`); }
@@ -726,6 +790,8 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
       if (familyId) await deleteFamily(env, site.id, familyId);
       return page(say('pfam.add'), newScreen(site, puppies, s, { error: err.message, values, say }), { back: home, status: 400 });
     }
+    // With her automatic invites on, they're invited as she adds them.
+    try { await autoInvite(env, site.id); } catch (err) { if (!(err instanceof MailError)) throw err; }
     return redirect(`${home}/f/${familyId}?note=added`);
   }
 
@@ -761,6 +827,9 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
     const needP = () => { if (!p) throw new PortalError('Add their puppy first.'); return p; };
     switch (action) {
       case 'invite': {
+        // Not before her portal settings are saved: the invite opens a portal that
+        // states her vet rule and counts it in her time zone.
+        if (!s.saved) throw new PortalError('Save your portal settings first: your vet visit rule and time zone.');
         const r = await sendInvites(env, site, familyId);
         if (r.failed) throw new PortalError(`${r.failed} invite${r.failed === 1 ? '' : 's'} could not be sent. Try again in a minute.`);
         return to('invited');
@@ -805,6 +874,9 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
         return to('saved');
       }
       case 'message': await breederWrites(env, site, familyId, get('body')); return redirect(`${home}/f/${familyId}?note=sent#messages`);
+      case 'contract-remove': await removeContract(env, site.id, needP().id); return to('removed');
+      case 'loss-undo': await undoLoss(env, site.id, needP().id); return to('saved');
+      case 'loss-note-remove': await removeLossNote(env, site.id, needP().id); return redirect(`${home}/f/${familyId}?note=removed#loss`);
       case 'loss': await markLoss(env, site.id, needP().id, get('reason'), get('on')); return redirect(`${home}/f/${familyId}?note=loss#loss`);
       case 'loss-note': {
         const r = await saveLossNote(env, site, needP().id, get('note'), { send: get('send') === '1' });
@@ -824,6 +896,8 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
         await scheduleDelete(env, site.id, familyId, 'breeder');
         return redirect(`${home}?note=deleted`);
       default: {
+        const mm = action?.match(/^message\/([0-9a-f-]{36})\/remove$/);
+        if (mm) { await removeBreederMessage(env, site.id, familyId, mm[1]); return redirect(`${home}/f/${familyId}?note=removed#messages`); }
         const rm = action?.match(/^record\/([0-9a-f-]{36})\/remove$/);
         if (rm) { await removeHealthRecord(env, site.id, needP().id, rm[1]); return to('removed'); }
         const phm = action?.match(/^photo\/([0-9a-f-]{36})\/(remove|back)$/);

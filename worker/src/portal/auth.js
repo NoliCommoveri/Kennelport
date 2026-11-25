@@ -11,7 +11,7 @@ import {
   newSession, sessionCookie, sessionTokenHash, sessionLive, slideSession, slidCookie, revokeSession,
 } from '../signin.js';
 import { codeMessage, inviteMessage } from './messages.js';
-import { familyEmails, placementFor, getFamily } from './store.js';
+import { familyEmails, placementFor, getFamily, getSettings } from './store.js';
 
 export const FAMILY_COOKIE = 'kp_family';
 export const FAMILY_SESSION_MS = 365 * 24 * 60 * 60 * 1000;
@@ -87,6 +87,7 @@ export async function sendInvites(env, site, familyId) {
   const p = await placementFor(env, site.id, familyId);
   const kennel = site.kennel_name || site.subdomain;
   const base = portalBase(env, site);
+  const { vet_rule: vetRule } = await getSettings(env, site.id);
   const t = new Date();
   let sent = 0;
   let failed = 0;
@@ -94,7 +95,7 @@ export async function sendInvites(env, site, familyId) {
     const token = randomHex(32);
     await env.DB.prepare('UPDATE portal_emails SET invite_hash = ?, invite_expires_at = ?, invited_at = ? WHERE id = ?')
       .bind(await sha256Hex(token), new Date(t.getTime() + INVITE_DAYS * DAY).toISOString(), t.toISOString(), e.id).run();
-    const msg = inviteMessage({ kennel, family: fam.name, pup: p?.call_name || p?.puppy_name, link: `${base}/family/welcome?t=${token}`, base, days: INVITE_DAYS });
+    const msg = inviteMessage({ kennel, family: fam.name, pup: p?.call_name || p?.puppy_name, link: `${base}/family/welcome?t=${token}`, base, days: INVITE_DAYS, vetRule });
     let result = 'failed';
     let providerId = null;
     try {
@@ -111,6 +112,42 @@ export async function sendInvites(env, site, familyId) {
   }
   await env.DB.prepare('UPDATE portal_families SET invited_at = ? WHERE id = ?').bind(t.toISOString(), familyId).run();
   return { sent, failed };
+}
+
+// Automatic invites (her Portal settings, "Send invites by themselves"; the owner,
+// 2026-11-25): each family added since she switched it on (portal_settings
+// auto_invite_at), with an address and a puppy coming to them, not invited yet. Only
+// once her settings are saved. A send that reached no address leaves them not invited,
+// so the next run tries again. Called after a KennelOS feed, after she adds a family,
+// and hourly (autoInviteAll).
+export async function autoInvite(env, siteId, { limit = 20 } = {}) {
+  const set = await env.DB.prepare('SELECT auto_invite_at, saved_at FROM portal_settings WHERE site_id = ?').bind(siteId).first();
+  if (!set?.auto_invite_at || !set.saved_at) return 0;
+  const site = await env.DB.prepare(`SELECT s.id, s.subdomain, s.kennel_name, s.portal_on, s.status, d.hostname AS domain FROM sites s
+    LEFT JOIN custom_domains d ON d.site_id = s.id AND d.status = 'active' WHERE s.id = ?`).bind(siteId).first();
+  if (!site?.portal_on || site.status === 'closed' || site.status === 'suspended') return 0;
+  const { results } = await env.DB.prepare(`SELECT f.id FROM portal_families f WHERE f.site_id = ? AND f.status = 'active' AND f.deleted_at IS NULL
+      AND f.invited_at IS NULL AND f.kennelos_gone_at IS NULL AND f.created_at >= ?
+      AND EXISTS (SELECT 1 FROM portal_emails e WHERE e.family_id = f.id)
+      AND EXISTS (SELECT 1 FROM portal_placements p WHERE p.family_id = f.id AND p.status = 'open' AND p.life_status = 'with_family')
+    ORDER BY f.created_at LIMIT ?`).bind(siteId, set.auto_invite_at, limit).all();
+  let n = 0;
+  for (const { id } of results) {
+    const r = await sendInvites(env, site, id);
+    if (r.sent) n++;
+    else await env.DB.prepare('UPDATE portal_families SET invited_at = NULL WHERE id = ?').bind(id).run();
+  }
+  return n;
+}
+
+export async function autoInviteAll(env) {
+  const { results } = await env.DB.prepare(`SELECT ps.site_id FROM portal_settings ps JOIN sites s ON s.id = ps.site_id
+    WHERE ps.auto_invite_at IS NOT NULL AND ps.saved_at IS NOT NULL AND s.portal_on = 1 AND s.status NOT IN ('closed', 'suspended')`).all();
+  let n = 0;
+  for (const { site_id: id } of results) {
+    try { n += await autoInvite(env, id, { limit: 100 }); } catch (err) { console.error(`portal: automatic invites for one site failed: ${err?.message ?? err}`); }
+  }
+  return n;
 }
 
 // The signed-in family on this site, or null. Sliding expiry (with `cookie` to

@@ -4,12 +4,22 @@
 // (manage/wording-portal.js pset.*; the vet rules pvet.rule.*, the looks plook.*).
 import { escapeHtml as esc } from '../../lib/html.js';
 import { DEFAULT_DISCLOSURE } from '../store.js';
-import { VET_RULES } from '../vet.js';
+import { parseVetRule, VET_HOURS, VET_DAYS } from '../vet.js';
 import { note, errorBox, suggestLabel, ZONES, ZONE_NAMES } from './parts.js';
 import { LOOKS, lookOf } from '../looks.js';
 import { defaultSay } from '../../manage/wording.js';
 
 export const PROGRAM_TYPES = ['', 'food', 'insurance', 'registration', 'product', 'other'];
+
+// Her contract's vet rule: hours from pickup, or the end of a day after the pickup day,
+// each with its number. A form sent back with an error keeps what she typed.
+function vetRuleFields(s, t) {
+  const r = parseVetRule(s.vet_rule) ?? { kind: 'hours', n: 72 };
+  const kind = s.vet_kind === 'hours' || s.vet_kind === 'days' ? s.vet_kind : r.kind;
+  const num = (k, lim, dflt) => `<input name="vet_${k}" type="number" inputmode="numeric" min="${lim.min}" max="${lim.max}" style="width:5em" value="${esc(s[`vet_${k}`] ?? (r.kind === k ? r.n : dflt))}">`;
+  return `<label class="check"><input type="radio" name="vet_kind" value="hours"${kind === 'hours' ? ' checked' : ''}> <span>${num('hours', VET_HOURS, 72)} ${t('pset.vet_hours')}</span></label>
+    <label class="check"><input type="radio" name="vet_kind" value="days"${kind === 'days' ? ' checked' : ''}> <span>${t('pset.vet_days_before')} ${num('days', VET_DAYS, 3)} ${t('pset.vet_days_after')}</span></label>`;
+}
 
 export function settingsScreen(site, s, products, { error, waiting = [], extras = [], say = defaultSay } = {}, url) {
   const t = (key, vars) => esc(say(key, vars));
@@ -21,10 +31,13 @@ export function settingsScreen(site, s, products, { error, waiting = [], extras 
         <span class="hint">${t('pset.look_hint')}</span></fieldset>
     </div></section>
     <section class="fgroup"><h2>${t('pset.vet')}</h2><div class="fgrid">
-      <fieldset><legend>${t('pset.vet_legend')}</legend>${Object.keys(VET_RULES).map((k) => `<label class="check"><input type="radio" name="vet_rule" value="${k}"${s.vet_rule === k ? ' checked' : ''}> <span>${t(`pvet.rule.${k}`)}</span></label>`).join('')}
+      <fieldset><legend>${t('pset.vet_legend')}</legend>${vetRuleFields(s, t)}
         <span class="hint">${t('pset.vet_hint')}</span></fieldset>
       <label>${t('pset.zone')}<select name="time_zone">${zones.map((z) => `<option value="${esc(z)}"${z === s.time_zone ? ' selected' : ''}>${esc(ZONE_NAMES[z] ?? z)}</option>`).join('')}</select></label>
       <label>${t('pset.proof')}<input name="proof_note" value="${esc(s.proof_note ?? '')}" maxlength="400" placeholder="${t('pset.proof_ph')}"><span class="hint">${t('pset.proof_hint')}</span></label>
+    </div></section>
+    <section class="fgroup" id="invites"><h2>${t('pset.invites')}</h2><div class="fgrid">
+      <input type="hidden" name="auto_invite_shown" value="1"><label class="check"><input type="checkbox" name="auto_invite" value="1"${(s.auto_invite_shown ? s.auto_invite : s.auto_invite_at) ? ' checked' : ''}> <span>${t('pset.auto_invite')}<br><span class="hint">${t('pset.auto_invite_hint')}</span></span></label>
     </div></section>
     <section class="fgroup"><h2>${t('pset.contacts')}</h2><div class="fgrid">
       <p class="hint">${t('pset.contacts_hint')}</p>

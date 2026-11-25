@@ -7,7 +7,7 @@
 // Left fixed, as the plan says for rules that keep KennelPort running: how long invite
 // links last (portal/auth.js), the Undo window (portal/account.js UNDO_DAYS) and the
 // retention table (family-portal.md 10.1). The vet deadline itself is her contract's
-// count, chosen in her Portal settings (portal/vet.js VET_RULES).
+// count, chosen in her Portal settings (portal/vet.js parseVetRule).
 //
 // Pure: no D1 here, so vet.js, steps.js and stays.js can read it with no imports.
 
@@ -27,6 +27,9 @@ export const PORTAL_TIMING = Object.freeze({
   stay_starts_weeks: 8,
   // An unticked timeline task reads Overdue for this many days after its day, then Past.
   overdue_days: 14,
+  // The potty schedule is in Home's Quick links until the puppy is this many weeks old
+  // (about 6 months); after that it's under Records (the owner, 2026-11-25).
+  potty_until_weeks: 26,
 });
 
 // Each rule's bounds, for the owner's form.
@@ -39,6 +42,7 @@ export const PORTAL_TIMING_FIELDS = Object.freeze({
   vet_tab_hours: { min: 0, max: 336 },
   stay_starts_weeks: { min: 6, max: 26 },
   overdue_days: { min: 1, max: 90 },
+  potty_until_weeks: { min: 8, max: 104 },
 });
 
 // A site's rules from its build: the defaults with what she changed over them (a value

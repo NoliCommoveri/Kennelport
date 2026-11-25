@@ -453,6 +453,16 @@ body[data-look="forest"].mkp .only-cream, body:not([data-look="forest"]).mkp .on
 /* ---------- 2. The other pages ---------- */
 body[data-look]:not(.mkp) main { gap: .7rem; }
 body[data-look]:not(.mkp) .top { box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+/* The header and tabs come in the looks' markup (a .in row inside each, family.js frame):
+   laid out as on Home, so the tab bar is one row and the header one line at 390px. */
+body[data-look]:not(.mkp) header.top { display: block; padding: 0; padding-top: env(safe-area-inset-top); }
+body[data-look]:not(.mkp) header.top .in { max-width: 1080px; margin: 0 auto; display: flex; align-items: center; gap: .6rem; padding: .5rem max(var(--gut), env(safe-area-inset-right, 0px)) .5rem max(var(--gut), env(safe-area-inset-left, 0px)); }
+body[data-look]:not(.mkp) header.top .brand { margin-right: auto; min-width: 0; }
+body[data-look]:not(.mkp) header.top .top-end { display: contents; }
+body[data-look]:not(.mkp) header.top :is(.aa, .acct) { flex: none; min-width: 2.6rem; height: 2.6rem; display: grid; place-items: center; }
+body[data-look]:not(.mkp) nav.tabs { display: block; padding: 0 0 env(safe-area-inset-bottom, 0px); }
+body[data-look]:not(.mkp) nav.tabs .in { max-width: 1080px; margin: 0 auto; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 3px; padding: .35rem max(var(--gut), env(safe-area-inset-right, 0px)) .35rem max(var(--gut), env(safe-area-inset-left, 0px)); }
+body[data-look]:not(.mkp) nav.tabs a { max-width: none; padding: .4rem 2px .45rem; gap: 2px; font-size: .68rem; }
 body[data-look]:not(.mkp) .disclose { color: #CFE0CF; opacity: .85; }
 
 /* Heading icons, and the look-only pieces (portal.css hides them for Classic). */

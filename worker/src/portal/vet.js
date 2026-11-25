@@ -1,4 +1,4 @@
-// The 3-day vet visit (docs/plans/family-portal.md section 5): the deadline,
+// The vet visit (docs/plans/family-portal.md section 5): the deadline,
 // counted exactly as her contract words it, and the reminders, counted back from
 // it so none lands after it. Pure functions of times and settings, so every rule
 // here has a test (tests/portal-vet.test.js).
@@ -12,10 +12,48 @@ import { PORTAL_TIMING, hoursMs, hourText } from './timing.js';
 const HOUR = 3600000;
 const DAY = 24 * HOUR;
 
-export const VET_RULES = {
-  hours72: '72 hours from pickup',
-  days3: 'By the end of the third day after the pickup day',
-};
+// Her contract's count, her Portal settings' choice, as one word: `hours<N>` (exactly
+// N hours from pickup) or `days<N>` (the pickup day is day 0; by the end of day N,
+// local). The first breeder's is hours72; any count in range works, so a contract
+// with 48 hours or 5 days needs no code. Stored as how it's counted
+// (portal_settings.vet_rule) and the number (vet_count, migration 0046); getSettings
+// (portal/store.js ruleOf) joins them.
+export const VET_HOURS = { min: 12, max: 240 };
+export const VET_DAYS = { min: 1, max: 14 };
+
+export function parseVetRule(rule) {
+  const m = /^(hours|days)(\d{1,3})$/.exec(String(rule ?? ''));
+  if (!m) return null;
+  const kind = m[1];
+  const n = Number(m[2]);
+  const r = kind === 'hours' ? VET_HOURS : VET_DAYS;
+  return n >= r.min && n <= r.max ? { kind, n } : null;
+}
+
+const ORDINALS = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth'];
+export const ordinal = (n) => ORDINALS[n] ?? `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'}`;
+
+// Today's words for a rule, as a heading line ("72 hours from pickup").
+export function vetRuleText(rule) {
+  const r = parseVetRule(rule) ?? { kind: 'hours', n: 72 };
+  return r.kind === 'hours' ? `${r.n} hours from pickup` : `By the end of the ${ordinal(r.n)} day after the pickup day`;
+}
+
+// The rule inside a sentence about a puppy (`who`: its name, or "them"): "within 72
+// hours of pickup" (or "of taking them home", with `taking`), or "by the end of the
+// third day after the day you take them home".
+export function vetRuleClause(rule, who, { taking = false } = {}) {
+  const r = parseVetRule(rule) ?? { kind: 'hours', n: 72 };
+  if (r.kind === 'hours') return `within ${r.n} hours of ${taking ? `taking ${who} home` : 'pickup'}`;
+  return `by the end of the ${ordinal(r.n)} day after the day you take ${who} home`;
+}
+
+// Its short name on the families' tiles: "3-day", "2-day", "36-hour".
+export function vetRuleShort(rule) {
+  const r = parseVetRule(rule) ?? { kind: 'hours', n: 72 };
+  if (r.kind === 'days') return `${r.n}-day`;
+  return r.n % 24 === 0 ? `${r.n / 24}-day` : `${r.n}-hour`;
+}
 
 // The reminders' days and hours, the red under 48 hours left and the Vet visit tab's
 // 24 hours are the site's timing rules (portal/timing.js): each function here takes
@@ -73,12 +111,13 @@ export function addDays(ymd, n) {
   return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
 }
 
-// The deadline for a pickup. days3: the pickup day is day 0, and the visit must
-// happen by the end (23:59) of day 3, local. hours72: exactly 72 hours later.
+// The deadline for a pickup. days<N>: the pickup day is day 0, and the visit must
+// happen by the end (23:59) of day N, local. hours<N>: exactly N hours later.
 export function vetDeadline(pickedUpAt, rule, tz) {
   const t = new Date(pickedUpAt);
-  if (rule === 'days3') return zonedToUtc(addDays(localParts(t, tz).ymd, 3), '23:59', tz).toISOString();
-  return new Date(t.getTime() + 72 * HOUR).toISOString();
+  const r = parseVetRule(rule) ?? { kind: 'hours', n: 72 };
+  if (r.kind === 'days') return zonedToUtc(addDays(localParts(t, tz).ymd, r.n), '23:59', tz).toISOString();
+  return new Date(t.getTime() + r.n * HOUR).toISOString();
 }
 
 // The reminders after pickup, before the deadline: about a day before, and the

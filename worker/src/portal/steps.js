@@ -30,7 +30,12 @@ export const TASK_AUTO = {
   vet_booking: 'Done when they tap "I\'ve booked it"',
   pickup: 'Done when you mark the pickup',
   vet_visit: 'Dated by the vet deadline; done when they upload the record',
+  potty: 'Opens their potty schedule; done when they make it',
 };
+
+// The potty schedule's task (the owner, 2026-11-25): in the suggested timeline, and
+// suggested on her timeline with one tap until one is on it (portal/admin/templates.js).
+export const POTTY_TASK = Object.freeze({ title: 'Set up {name}\'s potty schedule', body: 'Three answers: when you\'re up, meal times and bedtime. You\'ll get a schedule made for {name}\'s age.', count_from: 'pickup', offset_days: -3, auto: 'potty' });
 
 // ---------- suggested lists ----------
 
@@ -47,17 +52,27 @@ const SUGGESTED_CHECKLIST = [
   { title: 'The vet visit booked for the first days home', auto: 'vet_booked' },
   { title: 'A carrier or car crate for the ride home' },
 ];
+// The puppy shots follow the usual US schedule after the breeder's 8-week shot
+// (AAHA's canine guidelines): distemper-parvo (DHPP) every 3 to 4 weeks to 16 weeks,
+// rabies by state law at 12 to 16 weeks, leptospirosis and Bordetella by lifestyle,
+// boosters at a year. Each is dated from birth, so a puppy that goes home later still
+// sees the ones ahead. A list she has already added is rows of her own; changing
+// these changes only a new list (addSuggested fills an empty one).
 const SUGGESTED_TIMELINE = [
   { title: 'Book the vet visit', body: 'Vets fill up fast. Book it before {name} comes home.', count_from: 'pickup', offset_days: -5, auto: 'vet_booking' },
+  { ...POTTY_TASK },
   { title: 'Pickup day', body: 'Bring the carrier and a towel.', count_from: 'pickup', offset_days: 0, auto: 'pickup' },
+  { title: 'Activate {name}\'s insurance trial', body: 'The free trial has to be activated within a few days of pickup.', count_from: 'pickup', offset_days: 1, type: 'insurance', button_label: 'Activate the trial' },
+  { title: 'Register {name}\'s microchip to your name and address', body: 'Put your name, address and phone on {name}\'s microchip record, so {name} comes straight home to you if ever lost. The chip number is under Records.', count_from: 'pickup', offset_days: 2 },
   { title: 'The vet visit, and upload the record', body: 'Your contract asks for it. Upload the vet\'s record here afterwards.', count_from: 'pickup', offset_days: 3, auto: 'vet_visit' },
-  { title: 'Activate {name}\'s insurance trial', body: 'The free trial has to be activated within a few days of pickup.', count_from: 'pickup', offset_days: 5, type: 'insurance', button_label: 'Activate the trial' },
+  { title: 'Deworming at 10 weeks', body: 'Your vet gives the dose and when to repeat it.', count_from: 'birth', offset_days: 70 },
   { title: 'Keep the same food for two weeks', body: 'Change food slowly, if at all, over 7 to 10 days.', count_from: 'pickup', offset_days: 14, type: 'food', button_label: 'Order {name}\'s food' },
-  { title: 'Register {name}', body: 'Your registration paper is in the go-home folder.', count_from: 'pickup', offset_days: 30, type: 'registration', button_label: 'Register' },
-  { title: 'Deworming at 10 weeks', body: 'The dose is in your go-home folder.', count_from: 'birth', offset_days: 70 },
-  { title: '12-week vaccines', body: 'Your vet sets the schedule from here.', count_from: 'birth', offset_days: 84 },
-  { title: '16-week vaccines and rabies', body: 'Ask your vet about the rabies date for your county.', count_from: 'birth', offset_days: 112 },
+  { title: '11-week shots: distemper-parvo (DHPP)', body: 'The second of {name}\'s puppy series. Ask your vet about leptospirosis, and Bordetella (kennel cough) before puppy class.', count_from: 'birth', offset_days: 77 },
+  { title: 'Register {name}', body: 'Fill in your part of the registration and send it in.', count_from: 'pickup', offset_days: 30, type: 'registration', button_label: 'Register' },
+  { title: '14-week shots: distemper-parvo (DHPP) and rabies', body: 'The third of the puppy series. Rabies goes in from 12 to 16 weeks, as your state requires. Lepto\'s second dose, if {name} started it.', count_from: 'birth', offset_days: 98 },
+  { title: '17-week shots: the last distemper-parvo (DHPP)', body: 'The last of the puppy series, at 16 weeks or later, so it counts. Rabies now if it wasn\'t given at 14 weeks.', count_from: 'birth', offset_days: 119 },
   { title: 'Six months: spay or neuter and adult teeth', body: 'A good time to ask your vet about timing.', count_from: 'birth', offset_days: 182 },
+  { title: 'One-year boosters', body: 'Distemper-parvo (DHPP) and rabies boosters, and lepto if {name} has it. Your vet sets the schedule from here.', count_from: 'birth', offset_days: 365 },
 ];
 
 // Ready-made tasks she picks from on her Timeline screen (and a family's screen):
@@ -70,16 +85,17 @@ export const READY_TASKS = {
   registration: {
     label: 'Registration', days: 30, button: 'Register',
     choices: [
-      { title: 'Register {name}', body: 'Your registration paper is in the go-home folder.' },
-      { title: 'Register {name}', body: 'Use the code in your go-home folder to register {name} online.' },
-      { title: 'Register {name} in your name', body: 'Fill in your part of the registration paper and send it in.' },
+      { title: 'Register {name}', body: 'Fill in your part of the registration and send it in.' },
+      { title: 'Register {name} online', body: 'Use the code from {name}\'s papers to register online.' },
+      // The microchip's own registry, not the breed's: never linked to her registration
+      // program, and due sooner (`days`).
+      { title: 'Register {name}\'s microchip to your name and address', body: 'Put your name, address and phone on {name}\'s microchip record, so {name} comes straight home to you if ever lost. The chip number is under Records.', days: 2, noProgram: true },
     ],
   },
   insurance: {
     label: 'Insurance', days: 1, button: 'Activate the trial',
     choices: [
-      { title: 'Activate {name}\'s insurance trial', body: 'The free trial has to be activated within a few days of pickup.' },
-      { title: 'Start {name}\'s free insurance', body: 'Activate it now so {name} is covered from the first week home.' },
+      { title: 'Activate {name}\'s insurance trial', body: 'Activate it now so {name} is covered from the first week home.' },
     ],
   },
   food: {
@@ -99,8 +115,7 @@ export const READY_TASKS = {
   other: {
     label: 'Other', days: 7, button: 'Sign up',
     choices: [
-      { title: 'Sign up for {program}', body: 'Use our link to open your account.' },
-      { title: 'Open your {program} account', body: 'Sign up with our link, and use your code if it asks for one.' },
+      { title: 'Sign up for {program}', body: 'Sign up with our link, and use your code if it asks for one.' },
     ],
   },
 };
@@ -108,6 +123,7 @@ export const READY_TASKS = {
 // The ready-made task a picker value names: "<program id>|<kind>|<choice>", the
 // program id blank for registration with no program. Added like any task she types.
 export async function addReady(env, siteId, value, placementId = null) {
+  if (value === 'potty') return saveItem(env, siteId, 'task', null, { ...POTTY_TASK, offset_days: String(POTTY_TASK.offset_days) }, placementId);
   const [pid, kind, n] = String(value ?? '').split('|');
   const ready = READY_TASKS[kind];
   const choice = ready?.choices[Number(n)];
@@ -118,9 +134,10 @@ export async function addReady(env, siteId, value, placementId = null) {
     if (!program) throw new PortalError('That program isn\'t shown to families.');
     if ((program.portal_type ?? 'other') !== kind) throw new PortalError('Choose a ready-made task.');
   } else if (kind !== 'registration') throw new PortalError('Choose a ready-made task.');
+  if (program && choice.noProgram) throw new PortalError('Choose a ready-made task.');
   const words = (x) => x.replace(/\{program\}/g, program?.name ?? '');
   return saveItem(env, siteId, 'task', null, {
-    title: words(choice.title), body: words(choice.body), count_from: 'pickup', offset_days: String(ready.days),
+    title: words(choice.title), body: words(choice.body), count_from: 'pickup', offset_days: String(choice.days ?? ready.days),
     product_id: program?.id ?? '', button_label: program ? ready.button : '',
   }, placementId);
 }
@@ -150,8 +167,8 @@ export async function addSuggested(env, siteId, kind) {
   await env.DB.batch(list.map((x, i) => (kind === 'checklist'
     ? env.DB.prepare('INSERT INTO portal_checklist_items (id, site_id, title, product_id, auto, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
       .bind(crypto.randomUUID(), siteId, x.title, productFor(x.type), x.auto ?? null, i, t, t)
-    : env.DB.prepare('INSERT INTO portal_timeline_tasks (id, site_id, title, body, count_from, offset_days, product_id, button_label, auto, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(crypto.randomUUID(), siteId, x.title, x.body ?? null, x.count_from, x.offset_days, productFor(x.type), productFor(x.type) ? x.button_label ?? null : null, x.auto ?? null, i, t, t))));
+    : env.DB.prepare('INSERT INTO portal_timeline_tasks (id, site_id, title, body, count_from, offset_days, product_id, button_label, auto, opens, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(crypto.randomUUID(), siteId, x.title, x.body ?? null, x.count_from, x.offset_days, productFor(x.type), productFor(x.type) ? x.button_label ?? null : null, autoCols(x.auto ?? null).auto, autoCols(x.auto ?? null).opens, i, t, t))));
 }
 
 // ---------- her lists ----------
@@ -159,8 +176,13 @@ export async function addSuggested(env, siteId, kind) {
 // Her template (placementId null), or the steps she added for one family.
 export async function listItems(env, siteId, kind, placementId = null) {
   const tbl = table(kind);
-  return (await env.DB.prepare(`SELECT * FROM ${tbl} WHERE site_id = ? AND placement_id IS ? ORDER BY sort, created_at`).bind(siteId, placementId).all()).results;
+  return (await env.DB.prepare(`SELECT * FROM ${tbl} WHERE site_id = ? AND placement_id IS ? ORDER BY sort, created_at`).bind(siteId, placementId).all()).results.map(autoOf);
 }
+
+// A task's self-ticking kind: auto (the vet and pickup kinds) or opens (a page of theirs,
+// 'potty'; migration 0046), read as one `auto`.
+export const autoOf = (x) => (x.opens && !x.auto ? { ...x, auto: x.opens } : x);
+const autoCols = (auto) => (auto === 'potty' ? { auto: null, opens: 'potty' } : { auto, opens: null });
 
 async function shownProduct(env, siteId, id) {
   const pid = clean(id, 64);
@@ -185,7 +207,7 @@ async function itemValues(env, siteId, kind, input) {
   const auto = clean(input.auto, 20);
   return {
     title, body: clean(input.body, 600), count_from: from, offset_days: Number(days), product_id,
-    button_label: product_id ? clean(input.button_label, 60) : null, auto: auto && TASK_AUTO[auto] ? auto : null,
+    button_label: product_id ? clean(input.button_label, 60) : null, ...autoCols(auto && TASK_AUTO[auto] ? auto : null),
   };
 }
 
@@ -259,6 +281,7 @@ export function taskState(task, p, bases, prog, today, overdueDays = OVERDUE_DAY
   if (task.auto === 'vet_booking') { done = Boolean(p.vet_booked_at); by = 'family'; }
   if (task.auto === 'pickup') { done = clockRunning(p); by = 'breeder'; }
   if (task.auto === 'vet_visit') { done = Boolean(p.proof_uploaded_at); by = 'family'; }
+  if (task.auto === 'potty') { done = Boolean(p.potty_made); by = 'family'; }
   if (hers && !done && due && due <= today) { done = true; by = 'breeder'; }
   const late = !done && !hers && due && due < today;
   // Never booked, but the puppy is home: the vet visit task carries it from here.
@@ -294,9 +317,12 @@ export async function stepsFor(env, siteId, p, pup, s, { now: at = new Date(), a
     return { id: x.id, kind: 'checklist', title: fill(x.title, words), raw: x, link: link(x), auto: x.auto, mine: Boolean(x.placement_id), hidden: Boolean(prog?.hidden), done, by: x.auto ? 'family' : prog?.done_by ?? null, done_at: prog?.done_at ?? null };
   }).filter((x) => all || !x.hidden);
 
-  const tasks = (await q('portal_timeline_tasks')).results.map((x) => {
+  // The potty task ticks itself once they've made their schedule; with her potty page
+  // off, it isn't shown to them.
+  const pp = { ...p, potty_made: Boolean(await env.DB.prepare('SELECT 1 FROM portal_potty WHERE placement_id = ?').bind(p.id).first()) };
+  const tasks = (await q('portal_timeline_tasks')).results.map(autoOf).filter((x) => all || !(x.auto === 'potty' && s.potty_off)).map((x) => {
     const prog = progress.get(`task:${x.id}`);
-    const st = taskState(x, p, bases, prog, today, s.timing?.overdue_days);
+    const st = taskState(x, pp, bases, prog, today, s.timing?.overdue_days);
     return { id: x.id, kind: 'task', title: fill(x.title, words), body: x.body ? fill(x.body, words) : null, button: x.button_label ? fill(x.button_label, words) : null, raw: x, link: link(x), auto: x.auto, mine: Boolean(x.placement_id), hidden: Boolean(prog?.hidden), moved: prog?.due_on ?? null, done_at: prog?.done_at ?? null, ...st };
   }).filter((x) => all || !x.hidden)
     .sort((a, b) => (a.due ?? '9999').localeCompare(b.due ?? '9999') || a.raw.sort - b.raw.sort);
@@ -317,7 +343,7 @@ async function itemFor(env, siteId, p, kind, itemId) {
   const row = await env.DB.prepare(`SELECT * FROM ${table(kind)} WHERE id = ? AND site_id = ? AND (placement_id IS NULL OR placement_id = ?)`).bind(itemId, siteId, p.id).first();
   if (!row) throw new PortalError('That step isn\'t on this list.');
   const food = row.title.includes('{food}') ? (await env.DB.prepare('SELECT food_name FROM portal_settings WHERE site_id = ?').bind(siteId).first('food_name')) : null;
-  return { ...row, title: fill(row.title, { name: p.call_name || p.puppy_name, food }) };
+  return { ...autoOf(row), title: fill(row.title, { name: p.call_name || p.puppy_name, food }) };
 }
 
 async function progressRow(env, p, kind, itemId) {

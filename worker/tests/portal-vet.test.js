@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  vetDeadline, zonedToUtc, localParts, reminderTimes, dueReminders, bookReminderAt, stage, vetStatus, timeLeft, validTimeZone,
+  vetDeadline, parseVetRule, vetRuleText, vetRuleShort, vetRuleClause, zonedToUtc, localParts, reminderTimes, dueReminders, bookReminderAt, stage, vetStatus, timeLeft, validTimeZone,
 } from '../src/portal/vet.js';
 
 const NY = 'America/New_York';
@@ -33,6 +33,20 @@ test('3 calendar days: the end of the third day after the pickup day, in her zon
   assert.equal(vetDeadline('2026-12-23T14:00:00Z', 'days3', NY), iso('2026-12-27T04:59:00Z'));
   // In another zone the same instant is a different day.
   assert.equal(vetDeadline('2026-12-24T04:00:00Z', 'days3', 'America/Los_Angeles'), zonedToUtc('2026-12-26', '23:59', 'America/Los_Angeles').toISOString());
+});
+
+test('any count her contract gives: 48 hours, 5 days; out of range is no rule', () => {
+  assert.equal(vetDeadline('2026-12-23T16:00:00Z', 'hours48', NY), '2026-12-25T16:00:00.000Z');
+  assert.equal(vetDeadline('2026-12-24T04:00:00Z', 'days5', NY), iso('2026-12-29T04:59:00Z'));
+  assert.deepEqual(parseVetRule('hours48'), { kind: 'hours', n: 48 });
+  for (const bad of ['hours4', 'hours999', 'days0', 'days15', 'weeks2', '', null]) assert.equal(parseVetRule(bad), null);
+  assert.equal(vetRuleText('hours48'), '48 hours from pickup');
+  assert.equal(vetRuleText('days3'), 'By the end of the third day after the pickup day');
+  assert.equal(vetRuleShort('hours48'), '2-day');
+  assert.equal(vetRuleShort('hours36'), '36-hour');
+  assert.equal(vetRuleShort('days5'), '5-day');
+  assert.equal(vetRuleClause('hours48', 'them', { taking: true }), 'within 48 hours of taking them home');
+  assert.equal(vetRuleClause('days12', 'Opal'), 'by the end of the 12th day after the day you take Opal home');
 });
 
 test('a late-evening pickup on the 72-hour rule: no reminder after the deadline', () => {

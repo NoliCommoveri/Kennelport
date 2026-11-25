@@ -17,7 +17,7 @@ const { runPortalHourly } = await import('../src/portal/reminders.js');
 const { expireLitters } = await import('../src/kennelos/clock.js');
 const { closeSite } = await import('../src/sites.js');
 
-async function setup({ on = true } = {}) {
+async function setup({ on = true, saved = true } = {}) {
   const env = await makeEnv({ PORTAL_EMAIL_KEY: 'portal-test-key' });
   const site = await addSite(env, 'akbostons', { kennel_name: 'AK Boston Terriers' });
   const ops = (await call(env, M, '/ops/login', { method: 'POST', body: form({ token: 'ops-token' }) })).headers.get('set-cookie').split(';')[0];
@@ -34,6 +34,8 @@ async function setup({ on = true } = {}) {
   }
   const her = (path, body) => call(env, M, `/s/akbostons${path}`, body ? { method: 'POST', body: body instanceof FormData ? body : form(body), headers: { cookie: breeder, origin: `https://${M}` } } : { headers: { cookie: breeder } });
   const fam = (cookie) => (path, body) => call(env, H, path, body ? { method: 'POST', body: body instanceof FormData ? body : form(body), headers: { cookie, origin: `https://${H}` } } : { headers: { cookie } });
+  // Her portal settings saved once, as a breeder does first (invites and reminders wait for it).
+  if (on && saved) assert.equal((await her('/portal/settings', { vet_kind: 'hours', vet_hours: '72', time_zone: 'America/New_York', help_weeks: '8' })).status, 303);
   return { env, site, ops, her, fam };
 }
 
@@ -152,6 +154,7 @@ test('the family books the vet, uploads proof; she sees it and accepts it', asyn
 test('picked up: the clock starts, every address gets the deadline, Home turns to the vet visit', async () => {
   const { env, her, fam } = await setup();
   const id = await addFamily(her, { name: 'The Reed family', emails: 'sam@example.com, alex@example.com', puppy_id: 'pup1' });
+  assert.equal((await her(`/portal/f/${id}/invite`, {})).status, 303);
   assert.equal((await her(`/portal/f/${id}/picked-up`, {})).status, 303);
   const p = env.DB.raw.prepare('SELECT * FROM portal_placements').get();
   assert.equal(p.pickup_state, 'confirmed');
@@ -179,9 +182,74 @@ test('picked up: the clock starts, every address gets the deadline, Home turns t
   assert.match(await future.text(), /hasn&#39;t happened yet/);
 });
 
+test('until her portal settings are saved: no invites, no reminders, and her first save counts running clocks on her rule', async () => {
+  const { env, her, fam } = await setup({ saved: false });
+  const id = await addFamily(her, { name: 'The Reed family', emails: 'sam@example.com', puppy_id: 'pup1' });
+  const refused = await her(`/portal/f/${id}/invite`, {});
+  assert.equal(refused.status, 400);
+  assert.match(await refused.text(), /Save your portal settings first/);
+  assert.equal(outbox(env).filter((m) => m.kind === 'family_invite').length, 0);
+  // Picked up on the defaults: the clock runs, but nothing is emailed.
+  assert.equal((await her(`/portal/f/${id}/picked-up`, {})).status, 303);
+  await runPortalHourly(env);
+  assert.equal(outbox(env).filter((m) => String(m.kind).startsWith('vet_')).length, 0);
+  const before = env.DB.raw.prepare('SELECT * FROM portal_placements').get();
+  assert.equal(Date.parse(before.vet_deadline_at) - Date.parse(before.picked_up_at), 72 * 3600000);
+  // Her contract is 48 hours, in Central time: the running clock is counted on it.
+  assert.equal((await her('/portal/settings', { vet_kind: 'hours', vet_hours: '48', time_zone: 'America/Chicago', help_weeks: '8' })).status, 303);
+  const after = env.DB.raw.prepare('SELECT * FROM portal_placements').get();
+  assert.equal(Date.parse(after.vet_deadline_at) - Date.parse(after.picked_up_at), 48 * 3600000);
+  // Now invites and reminders go, in her rule's words.
+  assert.equal((await her(`/portal/f/${id}/invite`, {})).status, 303);
+  assert.match(outbox(env).find((m) => m.kind === 'family_invite').body, /the 2-day vet visit/);
+  await runPortalHourly(env);
+  const pickup = outbox(env).filter((m) => m.kind === 'vet_pickup');
+  assert.equal(pickup.length, 1);
+  const reed = fam(await familySignIn(env, 'sam@example.com'));
+  assert.match(await (await reed('/family/vet')).text(), /48 hours from pickup/);
+  // A later save leaves a running clock as it is.
+  await her('/portal/settings', { vet_kind: 'days', vet_days: '5', time_zone: 'America/Chicago', help_weeks: '8' });
+  assert.equal(env.DB.raw.prepare('SELECT vet_deadline_at FROM portal_placements').get().vet_deadline_at, after.vet_deadline_at);
+  // Counts out of range are refused, in her words.
+  const bad = await her('/portal/settings', { vet_kind: 'hours', vet_hours: '4', time_zone: 'America/Chicago', help_weeks: '8' });
+  assert.match(await bad.text(), /from 12 to 240/);
+});
+
+test('reminders wait for the invite; automatic invites go to families added after she switches them on', async () => {
+  const { env, her } = await setup();
+  const SET = { vet_kind: 'hours', vet_hours: '72', time_zone: 'America/New_York', help_weeks: '8', auto_invite_shown: '1' };
+  const held = await addFamily(her, { name: 'The Reed family', emails: 'sam@example.com', puppy_id: 'pup1' });
+  assert.equal((await her(`/portal/f/${held}/picked-up`, {})).status, 303);
+  await runPortalHourly(env);
+  assert.equal(outbox(env).filter((m) => String(m.kind).startsWith('vet_')).length, 0);
+  // She switches automatic invites on: the family already here is still hers to invite.
+  assert.equal((await her('/portal/settings', { ...SET, auto_invite: '1' })).status, 303);
+  assert.match(await (await her('/portal/settings')).text(), /name="auto_invite" value="1" checked/);
+  await runPortalHourly(env);
+  assert.equal(outbox(env).filter((m) => m.kind === 'family_invite').length, 0);
+  // A family she adds now is invited as she adds them, and only once.
+  const added = await addFamily(her, { name: 'The Lane family', emails: 'jo@example.com', puppy_id: 'pup2' });
+  assert.deepEqual(outbox(env).filter((m) => m.kind === 'family_invite').map((m) => m.subject), ['Ruby\'s puppy portal from AK Boston Terriers']);
+  await runPortalHourly(env);
+  assert.equal(outbox(env).filter((m) => m.kind === 'family_invite').length, 1);
+  assert.ok(env.DB.raw.prepare('SELECT invited_at FROM portal_families WHERE id = ?').get(added).invited_at);
+  // Inviting the first family lets its reminders go.
+  assert.equal((await her(`/portal/f/${held}/invite`, {})).status, 303);
+  await runPortalHourly(env);
+  const pickups = outbox(env).filter((m) => m.kind === 'vet_pickup');
+  assert.equal(pickups.length, 1);
+  assert.match(pickups[0].subject, /^Opal's vet visit/);
+  // Off: a new family waits for Send invite.
+  assert.equal((await her('/portal/settings', SET)).status, 303);
+  await addFamily(her, { name: 'The Park family', emails: 'lee@example.com', puppy_id: 'pup3' });
+  await runPortalHourly(env);
+  assert.equal(outbox(env).filter((m) => m.kind === 'family_invite').length, 2);
+});
+
 test('the clock never waits on a tap: a passed booked time starts it, and she confirms or stops it', async () => {
   const { env, her } = await setup();
   const id = await addFamily(her, { name: 'The Reed family', emails: 'sam@example.com', puppy_id: 'pup1', pickup_day: ymd(new Date(Date.now() - DAY / 4)), pickup_time: '00:00' });
+  assert.equal((await her(`/portal/f/${id}/invite`, {})).status, 303);
   const r = await runPortalHourly(env);
   assert.equal(r.started, 1);
   let p = env.DB.raw.prepare('SELECT * FROM portal_placements').get();
@@ -206,6 +274,7 @@ test('the clock never waits on a tap: a passed booked time starts it, and she co
 test('a lost or rehomed puppy stops every reminder at once', async () => {
   const { env, her } = await setup();
   const id = await addFamily(her, { name: 'The Reed family', emails: 'sam@example.com', puppy_id: 'pup1', go_home_on: ymd(new Date(Date.now() + 2 * DAY)) });
+  assert.equal((await her(`/portal/f/${id}/invite`, {})).status, 303);
   await her(`/portal/f/${id}/life`, { life_status: 'deceased', on: ymd(new Date()) });
   await runPortalHourly(env);
   assert.equal(outbox(env).filter((m) => m.kind.startsWith('vet_')).length, 0);
@@ -251,6 +320,13 @@ test('records: her health records and contract show on the family\'s Records pag
   assert.match(page, /985112003456789/);
   assert.match(page, /Your contract/);
   assert.match(page, /Winter litter/);
+  // She removes the contract: gone from their Records and from storage.
+  const file = env.DB.raw.prepare("SELECT * FROM portal_files WHERE kind = 'contract'").get();
+  assert.equal((await her(`/portal/f/${id}/contract-remove`, {})).status, 303);
+  assert.doesNotMatch(await (await reed('/family/records')).text(), /Your contract</);
+  assert.equal(env.DB.raw.prepare("SELECT COUNT(*) AS n FROM portal_files WHERE kind = 'contract'").get().n, 0);
+  assert.equal(await env.FILES.get(file.r2_key), null);
+  assert.doesNotMatch(await (await her(`/portal/f/${id}`)).text(), /Remove the contract/);
 });
 
 test('closing the site removes the portal, kept puppies too', async () => {

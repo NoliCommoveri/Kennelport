@@ -2,7 +2,7 @@
 // sections 5 and 11). Vet reminders are transactional: no unsubscribe, no
 // program links. Her own wording for them comes with a later chunk (plan section 4);
 // until then these are the words, with her proof note added where she wrote one.
-import { formatAt, formatDay, timeLeft } from './vet.js';
+import { formatAt, formatDay, timeLeft, vetRuleClause, vetRuleShort } from './vet.js';
 
 const FOOT = (base) => `\nYour puppy portal: ${base}/family\n`;
 const NOT_NOTICE = 'This is a reminder from your puppy portal. Your contract states the vet visit requirement; this email doesn\'t replace it.\n';
@@ -14,10 +14,10 @@ export function codeMessage({ kennel, code, minutes }) {
   };
 }
 
-export function inviteMessage({ kennel, family, pup, link, base, days }) {
+export function inviteMessage({ kennel, family, pup, link, base, days, vetRule = 'hours72' }) {
   return {
     subject: `${pup ? `${pup}'s` : 'Your'} puppy portal from ${kennel}`,
-    text: `Hello ${family},\n\n${kennel} has opened a puppy portal for you${pup ? ` and ${pup}` : ''}: the countdown to go-home, the 3-day vet visit, ${pup ? `${pup}'s` : 'your puppy\'s'} records and the programs that come with your puppy.\n\n`
+    text: `Hello ${family},\n\n${kennel} has opened a puppy portal for you${pup ? ` and ${pup}` : ''}: the countdown to go-home, the ${vetRuleShort(vetRule)} vet visit, ${pup ? `${pup}'s` : 'your puppy\'s'} records and the programs that come with your puppy.\n\n`
       + `Tap to sign in (this link works once, for ${days} days):\n${link}\n\n`
       + `After that, sign in any time at ${base}/family with this email address. We'll send you a 6-digit code; there's no password.\n\n`
       + "If you weren't expecting this, you can ignore it.\n",
@@ -29,7 +29,7 @@ export function vetMessage(kind, { kennel, pup, p, s, base, now = new Date() }) 
   const tz = s.time_zone;
   const deadline = p.vet_deadline_at ? formatAt(p.vet_deadline_at, tz, { zone: true }) : null;
   const proof = s.proof_note ? `\nWhat counts as proof: ${s.proof_note}\n` : '';
-  const rule = s.vet_rule === 'days3' ? 'by the end of the third day after the day you take them home' : 'within 72 hours of taking them home';
+  const rule = vetRuleClause(s.vet_rule, 'them', { taking: true });
   switch (kind) {
     case 'vet_book': {
       const day = p.pickup_booked_at ? formatAt(p.pickup_booked_at, tz) : formatDay(p.go_home_on);
