@@ -3129,11 +3129,15 @@ Plan: `docs/plans/portal-resources-potty.md` (the owner's answers and what chang
   Stored in `portal_timeline_tasks.opens` (`steps.js` `autoOf` reads it as `auto`).
 - Both family pages use the looks' own frame (`mkp`), so Forest and Cream draw their header and
   tab bar. Found while checking: on the looks' other plain pages (Account, Messages, Photos,
-  Stay, the handbook) the tab bar stacks and the header wraps at 390px; fixing it is a CSS
-  change, waiting on the owner's yes for a `PORTAL_VERSION` bump.
+  Stay, the handbook) the tab bar stacked and the header wrapped at 390px.
 - **Migration 0046** renamed `portal_second_breeder` (unreleased) and now also holds
   `portal_resources`, `portal_potty`, the three potty columns and `portal_timeline_tasks.opens`.
   New wording in the owner's list: screens `portalresources` (`pres.*`) and `portalpotty`
   (`ppotty.*`), Portal tab rows `psetup.resources*`, `psetup.potty*`, errors `res_*`.
 - Tests: `worker/tests/portal-resources-potty.test.js` (4). 545 pass. Checked at 390px in
   Classic and Forest (no stylesheet change, no version bump).
+- Follow-up, the owner ("fix the tab bar and bump"): `looks/mockup.css` part 2 lays out the
+  header (one line: brand, then Messages, Aa, Account) and the tab bar (one row of five) on the
+  looks' plain pages as Home's are. Checked in Forest and Cream at 390px and 1280px; Classic
+  unchanged. **`PORTAL_VERSION` 10 → 11** (the owner's yes), `PORTAL_FILES` 7b3099a49f5bb52c.
+  545 pass.

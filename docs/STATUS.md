@@ -95,6 +95,7 @@ anyone outside the family.
   insurance" and a button to the program shown as Insurance; "{pup} is protected!" once
   marked done) and a slim card for one more program with a link. `PORTAL_VERSION` 5 on
   `main` (the owner's yes). Her referral programs are no longer listed under "Included with": Home lists only those not on the band, as "Recommended for {pup}". No migration. Build log, 2026-11-21.
+- The looks' plain pages (Account, Messages, Photos, Stay, the handbook): header and tab bar laid out as on Home (2026-11-25), `PORTAL_VERSION` 11 on this branch (the owner's yes).
 - The families' tabs (2026-11-25): five; the handbook second from last whenever she has one, Photos in the Vet visit tab's place once it goes, or fifth with no handbook. `PORTAL_VERSION` 10 on this branch (the owner's yes).
 - Phase 3: not started.
 - **Resources and the potty schedule:** built 2026-11-25 ([`plans/portal-resources-potty.md`](plans/portal-resources-potty.md)): two Quick-link pages, her Resources and Potty guide screens, the potty task; in migration 0046. Next after them: training guides (a later plan).
