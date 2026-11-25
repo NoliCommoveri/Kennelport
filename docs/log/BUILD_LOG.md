@@ -2952,3 +2952,5 @@ the only gate left. No code, no migration, no version bump.
   and the save leaves them as stored. Test in `dog-parents.test.js` (each of the four
   saved through her screen, unchanged, and its raw value still there); it fails without
   the fix. No migration, no version bump.
+- `PORTAL_VERSION` 9 → 10 with the owner's yes, for the five tabs (`looks/mockup.css`)
+  (`PORTAL_FILES` bc7532a3b99e6333). 524 pass.

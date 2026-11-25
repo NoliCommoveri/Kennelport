@@ -3,5 +3,5 @@
 // portal.js with ?v=<it>. PORTAL_FILES is their fingerprint at this version
 // (tests/versions.test.js; `node worker/scripts/fingerprint.mjs` prints it).
 // Ask the owner before bumping once a version has gone out (CLAUDE.md).
-export const PORTAL_VERSION = '9';
-export const PORTAL_FILES = '10063b5f5393c819';
+export const PORTAL_VERSION = '10';
+export const PORTAL_FILES = 'bc7532a3b99e6333';

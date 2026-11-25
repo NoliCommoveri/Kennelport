@@ -95,7 +95,7 @@ anyone outside the family.
   insurance" and a button to the program shown as Insurance; "{pup} is protected!" once
   marked done) and a slim card for one more program with a link. `PORTAL_VERSION` 5 on
   `main` (the owner's yes). Her referral programs are no longer listed under "Included with": Home lists only those not on the band, as "Recommended for {pup}". No migration. Build log, 2026-11-21.
-- The families' tabs (2026-11-25): five; the handbook second from last whenever she has one, Photos in the Vet visit tab's place once it goes, or fifth with no handbook. Needs `PORTAL_VERSION` 10 (asked).
+- The families' tabs (2026-11-25): five; the handbook second from last whenever she has one, Photos in the Vet visit tab's place once it goes, or fifth with no handbook. `PORTAL_VERSION` 10 on this branch (the owner's yes).
 - Phase 3: not started.
 - **More than one breeder:** planned 2026-11-24 ([`plans/portal-multi-breeder.md`](plans/portal-multi-breeder.md)).
   The data is already per site; still to do: site-builder steps 5, 6 and 2.4, a setup flow,
