@@ -66,6 +66,8 @@ button[disabled] { opacity: .5; }
 .hint { display: block; font-weight: 400; font-size: .76rem; line-height: 1.35; color: var(--muted); }
 label.check { display: flex; gap: 10px; align-items: flex-start; font-weight: 600; }
 label.check input { width: 22px; height: 22px; min-height: 0; margin-top: 1px; flex: none; accent-color: var(--accent); }
+label.check.vetrule { align-items: center; font-weight: 400; }
+label.check input.num { width: 5em; height: auto; min-height: 42px; margin: 0 4px; text-align: center; accent-color: auto; }
 fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; min-width: 0; }
 legend { font-weight: 700; font-size: .9rem; padding: 0; margin-bottom: 6px; }
 .pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 8px; }
