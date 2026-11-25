@@ -2996,3 +2996,7 @@ the only gate left. No code, no migration, no version bump.
   today's order unchanged, her screen's move, cards, a bad until, Back to today's,
   `draft_changed_at` untouched, 404 for a breeder and for a site without the portal).
   536 pass. No migration (build JSON); no file under `public/_kp/` changed, no version bump.
+- Follow-up, the owner (phone screenshot): each card's two boxes sat at different heights,
+  because the "Until, in days after pickup" label wrapped. The labels are now one line
+  ("Show", "Until day") and the choices short (Always, Once home, Never), each explained
+  once in the card's intro. Measured at 390px: both boxes on the same line on every card.

@@ -12,10 +12,14 @@
 // stay here, not in manage/wording.js.
 import { escapeHtml as esc } from '../../lib/html.js';
 import {
-  HOME_SECTIONS, SECTION_NAMES, HOME_CARDS, CARD_NAMES, CARD_SECTION, SHOW, UNTIL_MAX,
+  HOME_SECTIONS, SECTION_NAMES, HOME_CARDS, CARD_NAMES, CARD_SECTION, UNTIL_MAX,
   portalHomeFor, portalHomeFromForm, withPortalHome, moveSection,
 } from '../../portal/home.js';
 import { mvBtns, select } from './controls.js';
+
+// The Show choices, short enough for a phone's half column (portal/home.js SHOW in full
+// in the intro), and one-line labels, so each card's two boxes sit side by side, level.
+const SHOW_SHORT = { always: 'Always', home: 'Once home', off: 'Never' };
 
 const changed = (c) => c.show !== 'always' || c.until !== null;
 
@@ -25,8 +29,8 @@ const NO_UNTIL = new Set(['checklist', 'status']);
 
 function cardRow(k, c) {
   return `<div class="fgrid" id="c-${k}">${HOME_CARDS.filter((x) => CARD_SECTION[x] === CARD_SECTION[k]).length > 1 ? `<p class="small"><b>${esc(CARD_NAMES[k])}</b>${changed(c) ? ' <span class="chg">changed</span>' : ''}</p>` : changed(c) ? '<p class="small"><span class="chg">changed</span></p>' : ''}
-    ${select(`card.${k}.show`, c.show, SHOW, 'Show')}
-    ${NO_UNTIL.has(k) ? `<input type="hidden" name="card.${k}.until" value="${c.until ?? ''}">` : `<label class="half">Until, in days after pickup<input type="number" inputmode="numeric" min="1" max="${UNTIL_MAX}" name="card.${k}.until" value="${c.until ?? ''}" placeholder="No end"></label>`}</div>`;
+    ${select(`card.${k}.show`, c.show, SHOW_SHORT, 'Show')}
+    ${NO_UNTIL.has(k) ? `<input type="hidden" name="card.${k}.until" value="${c.until ?? ''}">` : `<label class="half">Until day<input type="number" inputmode="numeric" min="1" max="${UNTIL_MAX}" name="card.${k}.until" value="${c.until ?? ''}" placeholder="No end"></label>`}</div>`;
 }
 
 export function portalHomeScreen(home, error = null) {
@@ -40,7 +44,7 @@ export function portalHomeScreen(home, error = null) {
   const same = !home.custom && !HOME_CARDS.some((k) => changed(home.cards[k]));
   return `<div class="stack">${error ? `<p class="error" role="alert">${esc(error)}</p>` : ''}
     <section class="card"><div class="fgroup"><div class="between"><h2>Home's sections</h2>${same ? '<span class="spill plain">As today</span>' : '<button class="link small" name="act" value="today">Back to today\'s Home</button>'}</div>
-      <p class="small muted">Top to bottom, between the photo and tiles (always first) and Quick links (always last). Each section still follows its own rules first; these only narrow them. A card set to only once home, or with an end, shows from the day the puppy is picked up. Until 14 shows on pickup day and the 13 days after; blank has no end.</p>
+      <p class="small muted">Top to bottom, between the photo and tiles (always first) and Quick links (always last). Each section still follows its own rules first; these only narrow them. Always: whenever it has something to show. Once home: from the day the puppy is picked up. Until day counts from pickup: 14 shows on pickup day and the 13 days after; blank has no end, and it doesn't hide a card before pickup.</p>
       <input type="hidden" name="home.order" value="${esc(home.order.join(','))}">
       <ul class="mvl">${rows}</ul></div></section></div>`;
 }
