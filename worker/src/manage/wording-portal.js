@@ -350,7 +350,7 @@ export const PORTAL_LINES = {
   "pstay.not_right": ["portalstay", "Button", "Not right"],
   "pstay.home_at": ["portalstay", "Beside a stay ({n}: weeks)", "home at {n} weeks"],
   "pstay.from": ["portalstay", "A stay's line: its first day ({day})", "From {day}"],
-  "pstay.starts": ["portalstay", "A stay's line, with no first day", "Starts at 8 weeks (add the litter's birthday to set it)"],
+  "pstay.starts": ["portalstay", "A stay's line, with no first day ({weeks}: the age it starts at)", "Starts at {weeks} weeks (add the litter's birthday to set it)"],
   "pstay.to": ["portalstay", "A stay's line: its last day ({day})", "to go-home {day}"],
   "pstay.week": ["portalstay", "A stay's line: which week ({week} of {total})", "week {week} of {total}"],
   "pstay.every": ["portalstay", "A stay's line: how often ({n}: days)", "an update every {n} days"],

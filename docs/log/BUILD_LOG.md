@@ -2905,3 +2905,34 @@ the only gate left. No code, no migration, no version bump.
 - Tests: `tabsFor` by stage; the vet tab's test reads Photos as the fifth. No migration.
 - `looks/mockup.css` changed: **needs `PORTAL_VERSION` 10** (9 is on `main`); asked the
   owner. Until then `versions.test.js` fails, as expected.
+
+## 2026-11-25: Site-builder step 6: the family portal's timing rules
+
+- The owner: no templates (step 5 descoped; every breeder builds from the standard), and
+  the portal won't be customized much. So step 6 is the portal's timing rules, as the
+  owner's per-site settings; Home's sections, the tabs and the cards stay as built.
+- `portal/timing.js` (new): `PORTAL_TIMING`, today's values: the vet booking reminder 5
+  days before go-home at 9, the deadline morning's at 8, red under 48 hours left, the
+  families' Vet visit tab 24 hours past the deadline, a stay from 8 weeks old, a task
+  Overdue for 14 days. Stored in the site's build as `portal_timing`, only what differs
+  (as the website's `timing`); `portalTimingFor(build)` reads it, an out-of-bounds value
+  falling back to today's.
+- `getSettings` (`portal/store.js`) now adds the site's rules as `s.timing` (one more read of
+  `site_builds`), so everything that has the settings has them: `vet.js` (`bookReminderAt`,
+  `reminderTimes`, `dueReminders`, `vetStatus`, `vetTabShown`, each today's by default),
+  `steps.js` (`taskState`'s overdue days, from `stepsFor`), `stays.js` (a stay's first day),
+  her screens' vet statuses (Today, Families, a family's screen, the Dogs tab) and the
+  families' Vet visit tab. The constants they replace are gone from `vet.js`.
+- The owner's Timing screen: the "comes with the portal's build" card is now **Family
+  portal**, a row per rule with its default, changed and Back to default, bounds on each.
+  Only on a site with the portal. The portal reads the build live, so a change to its rules
+  alone doesn't mark the website as having changes to publish (`saveBuild`'s `draft: false`).
+- Left fixed, as the plan says for rules that keep KennelPort running: invite links' 30 days,
+  Undo's 30 days, the retention table. The vet deadline stays her contract's count in her
+  Portal settings.
+- Her stay line "Starts at 8 weeks…" (`pstay.starts`) now takes `{weeks}`, the site's rule;
+  today's words by default.
+- Checked the screen at 390px and 1280px. Tests: `portal-timing.test.js` (the rules, each
+  function by a site's rules, the owner's screen saving them with nothing to publish, Back
+  to default, a bad value refused). No migration (the build is JSON). No file under
+  `public/_kp/` changed; `PORTAL_VERSION` 10 is still pending for the tabs (asked).

@@ -69,7 +69,8 @@ import { defaultSay } from './wording.js';
 import { redirect, ic, isDemo, whereIs, SCREENS, adminNav } from './builder/frame.js';
 import { everySite } from './builder/sites.js';
 import { groupChoices, groupItem, groupItemLine, groupItemName } from './builder/menugroups.js';
-import { timingScreen } from './builder/timing.js';
+import { timingScreen, PORTAL_TIMING_ROWS } from './builder/timing.js';
+import { PORTAL_TIMING, portalTimingFor, portalTimingFromForm, withPortalTiming, PortalTimingError } from '../portal/timing.js';
 import { formatsScreen } from './builder/formats.js';
 import { wordingRoute } from './builder/instructions.js';
 import { recordsSummary } from './builder/records.js';
@@ -907,13 +908,26 @@ export async function handleBuilder({ env, request, url, user, page }) {
         const next = timingFromForm(get);
         for (const r of resets) {
           const key = r.replace(/^timing\./, '');
-          if (key in DEFAULT_TIMING) next[key] = DEFAULT_TIMING[key];
+          if (r.startsWith('timing.') && key in DEFAULT_TIMING) next[key] = DEFAULT_TIMING[key];
         }
-        await saveBuild(env, site.id, withPart(build, 'timing', next));
+        let out = withPart(build, 'timing', next);
+        // The family portal's rules (portal/timing.js), when it's on: read live by the
+        // portal, so they change nothing to publish.
+        if (site.portal_on) {
+          const label = (k) => PORTAL_TIMING_ROWS.find(([x]) => x === k)?.[1] ?? k;
+          const own = portalTimingFromForm(get, label);
+          for (const r of resets) {
+            const key = r.replace(/^portal_timing\./, '');
+            if (r.startsWith('portal_timing.') && key in PORTAL_TIMING) own[key] = PORTAL_TIMING[key];
+          }
+          out = withPortalTiming(out, own);
+        }
+        const websiteChanged = JSON.stringify(out.timing ?? null) !== JSON.stringify(build.timing ?? null);
+        await saveBuild(env, site.id, out, { draft: websiteChanged });
       }
       return redirect(`/admin/${site.subdomain}/${screen}?saved=1`);
     } catch (err) {
-      if (!(err instanceof RuleError)) throw err;
+      if (!(err instanceof RuleError) && !(err instanceof PortalTimingError)) throw err;
       error = err.message;
     }
   }
@@ -929,7 +943,7 @@ export async function handleBuilder({ env, request, url, user, page }) {
   }[screen];
   const tests = screen === 'dogs' ? (await env.DB.prepare('SELECT DISTINCT test FROM health_results WHERE site_id = ?').bind(site.id).all()).results.map((r) => r.test) : [];
   const registries = screen === 'dogs' ? (await env.DB.prepare("SELECT registry FROM dogs WHERE site_id = ? AND registry IS NOT NULL AND registry != '' UNION SELECT registry FROM puppies WHERE site_id = ? AND registry IS NOT NULL AND registry != ''").bind(site.id, site.id).all()).results.map((r) => r.registry) : [];
-  const editor = { rules: rulesScreen, dogs: dogsScreen, wording: wordingScreen, formats: formatsScreen, kennelos: kennelosScreen }[screen]?.(site, rules, error, tests, registries) ?? timingScreen(site, timing, error);
+  const editor = { rules: rulesScreen, dogs: dogsScreen, wording: wordingScreen, formats: formatsScreen, kennelos: kennelosScreen }[screen]?.(site, rules, error, tests, registries) ?? timingScreen(site, timing, error, portalTimingFor(build));
   const side = screen === 'dogs' ? await dogsPreview(env, site)
     : screen === 'wording' || screen === 'formats' ? await littersPreview(env, site, 'Their litter cards, with these rules')
       : screen === 'kennelos' ? landingPreview(rules) : screen === 'timing' ? '' : await preview(env, site);

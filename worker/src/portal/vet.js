@@ -7,6 +7,8 @@
 // name, portal_settings.time_zone), worked out with Intl, so daylight saving is
 // the platform's, not ours.
 
+import { PORTAL_TIMING, hoursMs, hourText } from './timing.js';
+
 const HOUR = 3600000;
 const DAY = 24 * HOUR;
 
@@ -15,14 +17,11 @@ export const VET_RULES = {
   days3: 'By the end of the third day after the pickup day',
 };
 
-// When the reminder before pickup goes out: this many days before go-home, at
-// this local hour. Vets are often booked days out.
-export const BOOK_DAYS_BEFORE = 5;
-export const BOOK_HOUR = '09:00';
-// The deadline day's morning reminder, local.
-export const MORNING_HOUR = '08:00';
-// Under this much time left with no booking, her screens show it in red.
-export const TROUBLE_MS = 48 * HOUR;
+// The reminders' days and hours, the red under 48 hours left and the Vet visit tab's
+// 24 hours are the site's timing rules (portal/timing.js): each function here takes
+// them, today's by default. The reminder before pickup goes out days before go-home,
+// at a local hour (vets are often booked days out); the deadline day's morning
+// reminder at a local hour.
 
 export function validTimeZone(tz) {
   try {
@@ -84,9 +83,9 @@ export function vetDeadline(pickedUpAt, rule, tz) {
 
 // The reminders after pickup, before the deadline: about a day before, and the
 // deadline day's morning. One sent "at pickup" is separate (always sent).
-export function reminderTimes(deadline, tz) {
+export function reminderTimes(deadline, tz, timing = PORTAL_TIMING) {
   const end = new Date(deadline).getTime();
-  const morning = zonedToUtc(localParts(end, tz).ymd, MORNING_HOUR, tz).getTime();
+  const morning = zonedToUtc(localParts(end, tz).ymd, hourText(timing.morning_hour), tz).getTime();
   return [
     { kind: 'vet_day_before', at: end - DAY },
     { kind: 'vet_morning', at: morning },
@@ -95,10 +94,10 @@ export function reminderTimes(deadline, tz) {
 
 // The booking reminder's time, from the planned go-home date (or the booked
 // pickup's local date).
-export function bookReminderAt(placement, tz) {
+export function bookReminderAt(placement, tz, timing = PORTAL_TIMING) {
   const ymd = placement.pickup_booked_at ? localParts(placement.pickup_booked_at, tz).ymd : placement.go_home_on;
   if (!ymd) return null;
-  return zonedToUtc(addDays(ymd, -BOOK_DAYS_BEFORE), BOOK_HOUR, tz);
+  return zonedToUtc(addDays(ymd, -timing.book_days_before), hourText(timing.book_hour), tz);
 }
 
 // Is the clock running? Started by her marking pickup (confirmed) or by the booked
@@ -107,18 +106,19 @@ export const clockRunning = (p) => Boolean(p.picked_up_at && p.vet_deadline_at &
 
 // What should go out now for one placement. `sent` maps "kind|basis" to when it
 // went (ms), from the log. Returns [{ kind, basis }].
-// - vet_book: before pickup, from 5 days before go-home, until they record a booking.
+// - vet_book: before pickup, from 5 days (the site's rule) before go-home, until they record a booking.
 // - vet_pickup: once the clock starts, always (it states the deadline).
 // - of the later ones, only the latest that's due, none once a record is uploaded,
 //   and none the pickup email already covered (sent after its time), so a pickup
 //   marked late doesn't send a burst.
 export function dueReminders(p, settings, now = new Date(), sent = new Map()) {
   const t = new Date(now).getTime();
+  const timing = settings.timing ?? PORTAL_TIMING;
   if (p.status !== 'open' || p.life_status !== 'with_family') return [];
   const key = (kind, basis) => `${kind}|${basis}`;
   if (!clockRunning(p)) {
     if (p.vet_booked_at || p.pickup_state === 'not_yet') return [];
-    const at = bookReminderAt(p, settings.time_zone);
+    const at = bookReminderAt(p, settings.time_zone, timing);
     const basis = p.pickup_booked_at ? localParts(p.pickup_booked_at, settings.time_zone).ymd : p.go_home_on;
     return at && t >= at.getTime() && !sent.has(key('vet_book', basis)) ? [{ kind: 'vet_book', basis }] : [];
   }
@@ -127,7 +127,7 @@ export function dueReminders(p, settings, now = new Date(), sent = new Map()) {
   const pickupSent = sent.get(key('vet_pickup', basis));
   if (pickupSent === undefined) return [{ kind: 'vet_pickup', basis }];
   if (p.proof_uploaded_at) return [];
-  const last = reminderTimes(basis, settings.time_zone).filter((r) => r.at <= t).at(-1);
+  const last = reminderTimes(basis, settings.time_zone, timing).filter((r) => r.at <= t).at(-1);
   if (!last || sent.has(key(last.kind, basis)) || pickupSent >= last.at) return [];
   return [{ kind: last.kind, basis }];
 }
@@ -144,19 +144,18 @@ export function stage(p, now = new Date()) {
 // declined, or accepted) takes it away early; one she declines brings it back, for
 // 24 hours past the later of the deadline and her declining. Before the clock starts
 // there's no deadline yet, so it shows.
-export const VET_TAB_GRACE_MS = DAY;
-export function vetTabShown(p, now = new Date()) {
+export function vetTabShown(p, now = new Date(), timing = PORTAL_TIMING) {
   if (!p) return true;
   if (p.proof_accepted_at) return false;
   if (p.proof_uploaded_at && !p.proof_declined_at) return false;
   if (!clockRunning(p) || !p.vet_deadline_at) return true;
-  const until = Math.max(Date.parse(p.vet_deadline_at), p.proof_declined_at ? Date.parse(p.proof_declined_at) : 0) + VET_TAB_GRACE_MS;
+  const until = Math.max(Date.parse(p.vet_deadline_at), p.proof_declined_at ? Date.parse(p.proof_declined_at) : 0) + hoursMs(timing.vet_tab_hours);
   return new Date(now).getTime() < until;
 }
 
 // Where a vet visit stands (plan 7.3), and whether it's trouble: its key, for the
 // owner's words on her screens (manage/wording-portal.js pvet.*), and today's word.
-export function vetStatus(p, now = new Date()) {
+export function vetStatus(p, now = new Date(), timing = PORTAL_TIMING) {
   const t = new Date(now).getTime();
   const end = p.vet_deadline_at ? Date.parse(p.vet_deadline_at) : null;
   if (p.proof_accepted_at) return { key: 'accepted', word: 'Accepted', trouble: false };
@@ -164,7 +163,7 @@ export function vetStatus(p, now = new Date()) {
   if (p.proof_uploaded_at) return { key: 'uploaded', word: 'Record uploaded', trouble: false };
   if (end && clockRunning(p) && t >= end) return { key: 'missed', word: 'Missed', trouble: true };
   if (p.vet_booked_at) return { key: 'booked', word: 'Booked', trouble: false };
-  return { key: 'not_booked', word: 'Not booked', trouble: Boolean(end && clockRunning(p) && end - t < TROUBLE_MS) };
+  return { key: 'not_booked', word: 'Not booked', trouble: Boolean(end && clockRunning(p) && end - t < hoursMs(timing.trouble_hours)) };
 }
 
 // "2 days 5 hours", "5 hours", "40 minutes".

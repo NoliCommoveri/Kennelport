@@ -54,7 +54,12 @@ Much of the portal is still written into the code around the first breeder
   overdue, how long invite links last, how long Undo lasts, the retention table.
 - The vet deadline rule.
 
-Site-builder **step 6** moves these into the owner's settings for each site, and **step
+**2026-11-25, the owner:** no templates; every breeder builds from the standard, and the
+portal won't be customized much. Built: the timing rules, per site, on her Timing screen
+(`portal/timing.js`). The vet deadline stays her Portal settings' choice. Home's sections,
+the tabs and the cards stay as built for everyone.
+
+As first planned: site-builder **step 6** moves these into the owner's settings for each site, and **step
 5** (templates: save, apply, reset) lets a new breeder start from **Website and family
 portal** and then be adjusted. Both are not started. Without them, each new breeder gets
 exactly the first breeder's portal.

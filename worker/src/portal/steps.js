@@ -247,11 +247,12 @@ export function taskDue(task, bases, dueOn = null) {
 
 // Within this many days after a task's day, an unticked one reads Overdue (red);
 // after that, Past, so an old list isn't a wall of red.
+// Today 14 days: the site's timing rule (portal/timing.js overdue_days).
 export const OVERDUE_DAYS = 14;
 
 // A task's state for the family: done (and by whom), hers, overdue, past, next.
 // p: the placement; today: her local YYYY-MM-DD.
-export function taskState(task, p, bases, prog, today) {
+export function taskState(task, p, bases, prog, today, overdueDays = OVERDUE_DAYS) {
   const { due, hers } = taskDue(task, bases, prog?.due_on ?? null);
   let done = Boolean(prog?.done_at);
   let by = prog?.done_by ?? null;
@@ -264,8 +265,8 @@ export function taskState(task, p, bases, prog, today) {
   const overtaken = task.auto === 'vet_booking' && !done && clockRunning(p);
   return {
     due, hers, done, by,
-    overdue: Boolean(late && !overtaken && addDays(due, OVERDUE_DAYS) >= today),
-    past: Boolean(overtaken || (late && addDays(due, OVERDUE_DAYS) < today)),
+    overdue: Boolean(late && !overtaken && addDays(due, overdueDays) >= today),
+    past: Boolean(overtaken || (late && addDays(due, overdueDays) < today)),
   };
 }
 
@@ -295,7 +296,7 @@ export async function stepsFor(env, siteId, p, pup, s, { now: at = new Date(), a
 
   const tasks = (await q('portal_timeline_tasks')).results.map((x) => {
     const prog = progress.get(`task:${x.id}`);
-    const st = taskState(x, p, bases, prog, today);
+    const st = taskState(x, p, bases, prog, today, s.timing?.overdue_days);
     return { id: x.id, kind: 'task', title: fill(x.title, words), body: x.body ? fill(x.body, words) : null, button: x.button_label ? fill(x.button_label, words) : null, raw: x, link: link(x), auto: x.auto, mine: Boolean(x.placement_id), hidden: Boolean(prog?.hidden), moved: prog?.due_on ?? null, done_at: prog?.done_at ?? null, ...st };
   }).filter((x) => all || !x.hidden)
     .sort((a, b) => (a.due ?? '9999').localeCompare(b.due ?? '9999') || a.raw.sort - b.raw.sort);

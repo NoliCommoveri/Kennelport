@@ -112,7 +112,9 @@ read that before the rest. Update this map when you add, move or split a file.
   `templates.js` (checklist and timeline), `handbook.js` (the handbook's chapters), `bag.js` (the go-home bag), `settings.js`, `today.js` (the Families and
   Portal tabs' lists, Today's portal part), `parts.js`.
 - `store.js` the records; `steps.js` checklist, timeline, programs; `stays.js` extended
-  stays; `vet.js` the 3-day vet visit; `reminders.js` the hourly job; `messages.js` emails;
+  stays; `vet.js` the 3-day vet visit; `timing.js` the owner's timing rules per site (the
+  vet reminders, red, the Vet visit tab, stays, Overdue; on her Timing screen,
+  `manage/builder/timing.js`); `reminders.js` the hourly job; `messages.js` emails;
   `bounces.js` Resend's delivery results; `account.js` the account over time (loss, delete,
   Delete now, giving a deleted family back); `merge.js` the same family twice (merging a
   typed placement or family into KennelOS's).

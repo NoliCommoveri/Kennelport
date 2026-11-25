@@ -15,7 +15,7 @@ export function vetVisits(site, families, s, now = new Date(), say = defaultSay)
   const rows = families.filter((f) => f.placement_id && f.status === 'open' && f.life_status === 'with_family');
   if (!rows.length) return `<section class="card" id="vet-visits"><h2>${esc(say('ptoday.visits_title'))}</h2><p class="muted">${esc(say('ptoday.visits_none'))}</p></section>`;
   return `<section class="card" id="vet-visits"><h2>${esc(say('ptoday.visits_title'))}</h2><ul class="list">${rows.map((f) => {
-    const v = vetStatus(f, now);
+    const v = vetStatus(f, now, s.timing);
     const tone = v.trouble ? 'bad' : v.key === 'accepted' ? 'ok' : v.key === 'uploaded' ? 'next' : v.key === 'not_booked' && clockRunning(f) ? 'warn' : '';
     const running = f.vet_deadline_at && clockRunning(f);
     const time = running ? formatAt(f.vet_deadline_at, s.time_zone, { weekday: false }) : null;

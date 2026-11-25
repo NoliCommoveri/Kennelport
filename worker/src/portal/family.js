@@ -974,9 +974,10 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
   fam.loss = isLoss(current);
   fam.stay = Boolean(!fam.loss && current && active(current) && !current.picked_up_at && await stayFor(env, site.id, current.id));
   fam.vetDone = Boolean(!fam.loss && current && vetDone(current));
-  // The Vet visit tab: until 24 hours past the deadline, gone early once a record is in
-  // (vet.js vetTabShown). Home keeps a line asking for the record after that.
-  fam.vetTab = !current || vetTabShown(current);
+  // The Vet visit tab: until 24 hours (the site's timing rule) past the deadline, gone
+  // early once a record is in (vet.js vetTabShown). Home keeps a line asking for the
+  // record after that.
+  fam.vetTab = !current || vetTabShown(current, new Date(), current.vet_deadline_at ? (await getSettings(env, site.id)).timing : undefined);
   fam.handbook = !fam.loss && (await shownChapters(env, site.id)).length > 0;
   // On Messages itself they're read as the page shows them.
   fam.unread = fam.loss || path === '/family/messages' ? 0 : await unreadFrom(env, site.id, fam.familyId, 'breeder');

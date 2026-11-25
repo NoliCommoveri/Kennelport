@@ -78,7 +78,7 @@ export async function portalNeedsYou(env, siteId, now = new Date(), say = defaul
       continue;
     }
     if (f.proof_uploaded_at && !f.proof_accepted_at && !f.proof_declined_at) out.push({ href, label: say('ptoday.proof', { name }), note: f.name });
-    const v = vetStatus(f, now);
+    const v = vetStatus(f, now, s.timing);
     if (clockRunning(f) && v.trouble) out.push({ href, label: say('ptoday.vet', { name, status: say(`pvet.${v.key}`).toLowerCase() }), note: v.key === 'missed' ? say('ptoday.vet_missed_note', { time: formatAt(f.vet_deadline_at, s.time_zone) }) : say('ptoday.vet_left_note', { left: timeLeft(f.vet_deadline_at, now) }) });
     // Going home in the next 7 days has its own card on Today (manage/hub.js goingHome);
     // here only what that card doesn't say: not invited yet.
@@ -275,7 +275,7 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
     parts.push(form('placement', `<section class="card"><h2>${esc(say('pnew.puppy'))}</h2>${placementFields(null, puppies, s, { say })}<p><button class="primary">${t('pf.save')}</button></p></section>`));
   } else {
     const name = pupName(p);
-    const v = vetStatus(p, now);
+    const v = vetStatus(p, now, s.timing);
     // Pickup: the clock's state, and the one action that fits.
     let pickup;
     if (p.pickup_state === 'assumed') {
@@ -369,7 +369,7 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
       const due = !p.picked_up_at && updateDue(x.starts_on, ups[0]?.written_on ?? null, x.every_days, today);
       const last = new Map((ups[0]?.levels ?? []).map((l) => [l.skill_id, l]));
       const when = [
-        `${x.starts_on ? t('pstay.from', { day: formatDay(x.starts_on) }) : t('pstay.starts')}${p.go_home_on ? ` ${t('pstay.to', { day: formatDay(p.go_home_on) })}` : ''}`,
+        `${x.starts_on ? t('pstay.from', { day: formatDay(x.starts_on) }) : t('pstay.starts', { weeks: s.timing.stay_starts_weeks })}${p.go_home_on ? ` ${t('pstay.to', { day: formatDay(p.go_home_on) })}` : ''}`,
         w.state === 'staying' ? t('pstay.week', { week: w.week, total: w.total }) : '',
         t('pstay.every', { n: x.every_days }),
         due ? `<b>${t('pstay.due')}</b>` : '',
