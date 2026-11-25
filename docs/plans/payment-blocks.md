@@ -21,6 +21,10 @@ this branch (build log). This plan builds the block on top of it.
   stage. There's a choice per method ("How would you like to pay?", one expander open at a
   time), a "Pay with <method>" button and/or the note, then her note as "Additional Payment
   Instructions". With none tagged, a card is drawn as before.
+- **The built-in cards stay fixed** (the owner, 2026-11-25): the Application fee card shows
+  only the methods tagged for the application fee, and the Deposit card only those tagged
+  for the deposit, always in the layout above, with no settings. Every option in this plan
+  belongs to the Ways to pay block only.
 - Methods for **Payments** and **Final payment** don't show anywhere yet. They wait for this
   block.
 
