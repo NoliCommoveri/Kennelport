@@ -2856,3 +2856,31 @@ the only gate left. No code, no migration, no version bump.
 - Template files changed (`site.css`, new `wave.svg`): **needs `ASSET_VERSION` 33** (32 is on
   `main`); asked the owner. Until then `versions.test.js` fails, as expected.
 - `ASSET_VERSION` 32 → 33 with the owner's yes (`TEMPLATE_FILES` 84a3015ba100876f). 517 pass.
+
+## 2026-11-25: Site-builder step 2.4, last slice: the portal's errors
+
+- The errors her portal screens show after "Not saved:" are in the owner's list: a new
+  screen in her editor, **Portal: what to fix when a portal form isn't saved**
+  (`error.portal.*`, 76 lines: Portal settings, a family and its emails, the puppy and
+  pickup, the vet visit, health records, life status and files, messages, a loss, erase,
+  delete and merge, the checklist, timeline and programs, extras and stays).
+- How: as her other screens' errors (`manage/wording.js` `MESSAGES`, `sayMessage`), the code
+  that finds the problem keeps today's words, since the families' pages say some of the
+  same ones and the tests read them. The list is `PORTAL_ERRORS` in
+  `manage/wording-portal.js`, each line's pattern made from today's words (a name in
+  braces matches the part that changes: `{address}`, `{addresses}`, `{extra}`, `{skill}`,
+  `{max}`, `{example}`). Her screens say them through one place, `errorBox`
+  (`portal/admin/parts.js`), so Portal settings, Add a family, a family's screen and the
+  checklist and timeline all take them. The handbook's and bag's errors were already keys
+  and pass through as they are.
+- Left out, as on her other screens: KennelPort itself failing (the portal not set up,
+  invites that couldn't be sent), the families' own errors (their vet booking, messages
+  before pickup; the families' wording isn't in the owner's list), the two the Families tab
+  swallows (Undo, Let KennelOS send them again), and the ones only a changed form could
+  cause ("Unknown list.", "Unknown value.", "Unknown address format.").
+- Today's wording by default: tests throw real errors from the portal's code and check
+  each says itself by default and the owner's line when she has one; her screens checked
+  through the routes (Add a family, a family's emails, Erase, Portal settings). 518 pass.
+- With this, **step 2.4 is done**: every portal screen of hers and its errors are in the
+  owner's list. The ready-made tasks and suggested lists (`steps.js`) are starting content,
+  for step 6. No migration, no version bump (no file under `public/_kp/` changed).

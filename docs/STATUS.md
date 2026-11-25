@@ -4,7 +4,7 @@ The one place for progress. Keep it short: one line per item, a link to where th
 is. When a step is built, change its line here and add the detail to the build log
 ([`log/BUILD_LOG.md`](log/BUILD_LOG.md)); the plans describe intent, not progress.
 
-Last updated 2026-11-24. Released on `main`: Site Manager (`APP_VERSION`) 18, site
+Last updated 2026-11-25. Released on `main`: Site Manager (`APP_VERSION`) 18, site
 template (`ASSET_VERSION`) 27 (flip cards that grow to fit, 2026-11-17).
 
 ## Platform
@@ -44,7 +44,7 @@ anyone outside the family.
 | Step | State |
 |---|---|
 | 1. Display and timing rules | Built (pup, registration, price, date and timing rules; health tests' short names on cards, 2026-11-24; dog cards' details always, registries' short names and two-column lists, 2026-11-24, `ASSET_VERSION` 31); health results grouped by kind on cards, no headings, each kind kept together in two columns, 2026-11-24 `ASSET_VERSION` 32 on this branch (the owner's yes); the dog rules, fixed wording, formats and how KennelOS data lands still to come |
-| 2. The breeder's instructions (`manage/wording.js`) | 2.1–2.3 built; **2.4 nearly done** 2026-11-24 (`manage/wording-portal.js`): every portal screen of hers moved (Today, the tabs, Families, a family's screen, Portal settings, the checklist and timeline, the Dogs tab, the notes); still to move: the portal's errors (`PortalError` messages, about 120) |
+| 2. The breeder's instructions (`manage/wording.js`) | 2.1–2.4 built: **2.4 done** 2026-11-25 (`manage/wording-portal.js`): every portal screen of hers (Today, the tabs, Families, a family's screen, Portal settings, the checklist and timeline, the Dogs tab, the notes) and the errors they show (`error.portal.*`) |
 | 3. Pages, blocks, menu | Built: 3.1–3.8 (3.5 page addresses and 3.8 the forms' fields, 2026-11-14, migration 0035) |
 | 4. The owner's own blocks and styling | Banners, buttons, dividers, spacers, photos, collages, photo beside words, text over a photo, text, gallery strip, block backgrounds and spacing built. **Next, the photo system:** albums from photos she has, then the duplicate check. Still to come: videos as blocks, links to a dog/litter/puppy, fonts and the font library, text size on built-in blocks |
 | 4a. Extras, Cards, documents | Built 2026-11-18 (migration 0038): the **Extras block** (step cards by default, package cards or expanders; a big figure, More details, a highlighted one, her own description); the **Cards block** (free cards: photo, figure, labels, heading, words, button); **Documents** (a site's PDFs in the admin view; any button can open one). `ASSET_VERSION` 28 (on `main`). The gaps (storage, reordering cards, menu links, the breeder's documents, covers, full-size flyers) are planned in [`plans/documents-cards-gaps.md`](plans/documents-cards-gaps.md); **flyers (step 6) built 2026-11-18**: the whole photo on the Photo block, Opens full size on a tap, Full detail on upload (`ASSET_VERSION` 29, `APP_VERSION` 19 on this branch). Build log, 2026-11-18. |
@@ -100,7 +100,7 @@ anyone outside the family.
   The data is already per site; still to do: site-builder steps 5, 6 and 2.4, a setup flow,
   KennelOS's side for each kennel. The owner's answers (2026-11-24): decision 9 parked while she
   approves every breeder; starting content copied per breeder by her; no portal-only sites; her
-  switch, no sign-up. **Started** with step 2.4.
+  switch, no sign-up. Step 2.4 done (2026-11-25). **Next:** site-builder steps 5 and 6 (the portal's build as settings), then the setup flow.
 - The same family twice, and deleted families (2026-11-13): the feed links a family's only
   typed placement; **Merge** for a typed placement or family into KennelOS's; **Delete
   now**; **Let KennelOS send them again** for a family deleted for good. Migration 0032

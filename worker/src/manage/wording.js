@@ -13,7 +13,7 @@
 // of the defaults are below. Not listed: the owner's own admin screens, and
 // messages about KennelPort itself failing (a lost connection).
 import { LABELS, SHARED, ENUM_WORDS } from './forms.js';
-import { PORTAL_SCREENS, PORTAL_LINES } from './wording-portal.js';
+import { PORTAL_SCREENS, PORTAL_LINES, PORTAL_ERRORS } from './wording-portal.js';
 
 export class WordingError extends Error {}
 
@@ -1081,6 +1081,8 @@ const MESSAGES = {
     ['tries', 'signin', /^Too many tries\. Ask for a new code\.$/, 'Too many tries. Ask for a new code.', 'Error: too many wrong codes'],
     ['used', 'signin', /^That code has already been used\.$/, 'That code has already been used.', 'Error: a code used already'],
   ],
+  // The family portal's screens for her (manage/wording-portal.js).
+  portal: PORTAL_ERRORS,
 };
 
 // How the waitlist's errors name a family's detail ({what} in them).

@@ -61,6 +61,9 @@ exactly the first breeder's portal.
 
 ### 2.3 The wording moves to the owner's list (site-builder step 2.4)
 
+**Done 2026-11-25:** her screens and their errors are in the owner's list (build log,
+2026-11-24 and 2026-11-25). The suggested lists stay for 2.2.
+
 The portal's screens still hold their own wording: about 60 longer lines on her screens
 (`portal/admin.js`, `portal/admin/*.js`) and some on the families' pages (`family.js`),
 plus the ready-made tasks and suggested lists in `portal/steps.js`. Step 2.4 moves them

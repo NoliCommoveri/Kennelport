@@ -3,7 +3,7 @@
 // Families filters, the suggested-change labels and the time zones. Their wording is
 // the owner's (manage/wording-portal.js).
 import { escapeHtml as esc } from '../../lib/html.js';
-import { defaultSay } from '../../manage/wording.js';
+import { defaultSay, sayMessage } from '../../manage/wording.js';
 import { UNDO_DAYS } from '../account.js';
 
 export const SUGGEST_LABEL = { name: 'Family name', puppy_id: 'Puppy', puppy_name: 'Puppy', go_home_on: 'Go-home', pickup_booked_at: 'Pickup booked for', microchip: 'Microchip', registration_no: 'Registration number', vet_clinic: 'Vet\'s clinic', vet_doctor: 'Vet\'s name', vet_phone: 'Vet\'s phone', vet_address: 'Vet\'s address', pup_vet_clinic: 'Puppy\'s vet: clinic', pup_vet_doctor: 'Puppy\'s vet: name', pup_vet_phone: 'Puppy\'s vet: phone', pup_vet_address: 'Puppy\'s vet: address' };
@@ -22,7 +22,9 @@ export const note = (url, say = defaultSay) => {
   return NOTE_NAMES.includes(n) ? `<p class="notice" role="status">${esc(say(`pnote.${n}`, { n: UNDO_DAYS }))}</p>` : '';
 };
 
-export const errorBox = (err, say = defaultSay) => (err ? `<p class="error" role="alert">${esc(say('perror.not_saved', { error: err }))}</p>` : '');
+// What was wrong in the owner's words (manage/wording-portal.js PORTAL_ERRORS), or as
+// it is: the handbook's and bag's come already said.
+export const errorBox = (err, say = defaultSay) => (err ? `<p class="error" role="alert">${esc(say('perror.not_saved', { error: sayMessage('portal', err, say) }))}</p>` : '');
 
 // A line of the owner's with a name that's drawn, not just written (an address in
 // bold): her words escaped, then the drawn piece put in where the name was.
