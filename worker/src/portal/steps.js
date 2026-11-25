@@ -30,7 +30,12 @@ export const TASK_AUTO = {
   vet_booking: 'Done when they tap "I\'ve booked it"',
   pickup: 'Done when you mark the pickup',
   vet_visit: 'Dated by the vet deadline; done when they upload the record',
+  potty: 'Opens their potty schedule; done when they make it',
 };
+
+// The potty schedule's task (the owner, 2026-11-25): in the suggested timeline, and
+// suggested on her timeline with one tap until one is on it (portal/admin/templates.js).
+export const POTTY_TASK = Object.freeze({ title: 'Set up {name}\'s potty schedule', body: 'Three answers: when you\'re up, meal times and bedtime. You\'ll get a schedule made for {name}\'s age.', count_from: 'pickup', offset_days: -3, auto: 'potty' });
 
 // ---------- suggested lists ----------
 
@@ -55,6 +60,7 @@ const SUGGESTED_CHECKLIST = [
 // these changes only a new list (addSuggested fills an empty one).
 const SUGGESTED_TIMELINE = [
   { title: 'Book the vet visit', body: 'Vets fill up fast. Book it before {name} comes home.', count_from: 'pickup', offset_days: -5, auto: 'vet_booking' },
+  { ...POTTY_TASK },
   { title: 'Pickup day', body: 'Bring the carrier and a towel.', count_from: 'pickup', offset_days: 0, auto: 'pickup' },
   { title: 'Activate {name}\'s insurance trial', body: 'The free trial has to be activated within a few days of pickup.', count_from: 'pickup', offset_days: 1, type: 'insurance', button_label: 'Activate the trial' },
   { title: 'Register {name}\'s microchip to your name and address', body: 'Put your name, address and phone on {name}\'s microchip record, so {name} comes straight home to you if ever lost. The chip number is under Records.', count_from: 'pickup', offset_days: 2 },
@@ -117,6 +123,7 @@ export const READY_TASKS = {
 // The ready-made task a picker value names: "<program id>|<kind>|<choice>", the
 // program id blank for registration with no program. Added like any task she types.
 export async function addReady(env, siteId, value, placementId = null) {
+  if (value === 'potty') return saveItem(env, siteId, 'task', null, { ...POTTY_TASK, offset_days: String(POTTY_TASK.offset_days) }, placementId);
   const [pid, kind, n] = String(value ?? '').split('|');
   const ready = READY_TASKS[kind];
   const choice = ready?.choices[Number(n)];
@@ -160,8 +167,8 @@ export async function addSuggested(env, siteId, kind) {
   await env.DB.batch(list.map((x, i) => (kind === 'checklist'
     ? env.DB.prepare('INSERT INTO portal_checklist_items (id, site_id, title, product_id, auto, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
       .bind(crypto.randomUUID(), siteId, x.title, productFor(x.type), x.auto ?? null, i, t, t)
-    : env.DB.prepare('INSERT INTO portal_timeline_tasks (id, site_id, title, body, count_from, offset_days, product_id, button_label, auto, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(crypto.randomUUID(), siteId, x.title, x.body ?? null, x.count_from, x.offset_days, productFor(x.type), productFor(x.type) ? x.button_label ?? null : null, x.auto ?? null, i, t, t))));
+    : env.DB.prepare('INSERT INTO portal_timeline_tasks (id, site_id, title, body, count_from, offset_days, product_id, button_label, auto, opens, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(crypto.randomUUID(), siteId, x.title, x.body ?? null, x.count_from, x.offset_days, productFor(x.type), productFor(x.type) ? x.button_label ?? null : null, autoCols(x.auto ?? null).auto, autoCols(x.auto ?? null).opens, i, t, t))));
 }
 
 // ---------- her lists ----------
@@ -169,8 +176,13 @@ export async function addSuggested(env, siteId, kind) {
 // Her template (placementId null), or the steps she added for one family.
 export async function listItems(env, siteId, kind, placementId = null) {
   const tbl = table(kind);
-  return (await env.DB.prepare(`SELECT * FROM ${tbl} WHERE site_id = ? AND placement_id IS ? ORDER BY sort, created_at`).bind(siteId, placementId).all()).results;
+  return (await env.DB.prepare(`SELECT * FROM ${tbl} WHERE site_id = ? AND placement_id IS ? ORDER BY sort, created_at`).bind(siteId, placementId).all()).results.map(autoOf);
 }
+
+// A task's self-ticking kind: auto (the vet and pickup kinds) or opens (a page of theirs,
+// 'potty'; migration 0046), read as one `auto`.
+export const autoOf = (x) => (x.opens && !x.auto ? { ...x, auto: x.opens } : x);
+const autoCols = (auto) => (auto === 'potty' ? { auto: null, opens: 'potty' } : { auto, opens: null });
 
 async function shownProduct(env, siteId, id) {
   const pid = clean(id, 64);
@@ -195,7 +207,7 @@ async function itemValues(env, siteId, kind, input) {
   const auto = clean(input.auto, 20);
   return {
     title, body: clean(input.body, 600), count_from: from, offset_days: Number(days), product_id,
-    button_label: product_id ? clean(input.button_label, 60) : null, auto: auto && TASK_AUTO[auto] ? auto : null,
+    button_label: product_id ? clean(input.button_label, 60) : null, ...autoCols(auto && TASK_AUTO[auto] ? auto : null),
   };
 }
 
@@ -269,6 +281,7 @@ export function taskState(task, p, bases, prog, today, overdueDays = OVERDUE_DAY
   if (task.auto === 'vet_booking') { done = Boolean(p.vet_booked_at); by = 'family'; }
   if (task.auto === 'pickup') { done = clockRunning(p); by = 'breeder'; }
   if (task.auto === 'vet_visit') { done = Boolean(p.proof_uploaded_at); by = 'family'; }
+  if (task.auto === 'potty') { done = Boolean(p.potty_made); by = 'family'; }
   if (hers && !done && due && due <= today) { done = true; by = 'breeder'; }
   const late = !done && !hers && due && due < today;
   // Never booked, but the puppy is home: the vet visit task carries it from here.
@@ -304,9 +317,12 @@ export async function stepsFor(env, siteId, p, pup, s, { now: at = new Date(), a
     return { id: x.id, kind: 'checklist', title: fill(x.title, words), raw: x, link: link(x), auto: x.auto, mine: Boolean(x.placement_id), hidden: Boolean(prog?.hidden), done, by: x.auto ? 'family' : prog?.done_by ?? null, done_at: prog?.done_at ?? null };
   }).filter((x) => all || !x.hidden);
 
-  const tasks = (await q('portal_timeline_tasks')).results.map((x) => {
+  // The potty task ticks itself once they've made their schedule; with her potty page
+  // off, it isn't shown to them.
+  const pp = { ...p, potty_made: Boolean(await env.DB.prepare('SELECT 1 FROM portal_potty WHERE placement_id = ?').bind(p.id).first()) };
+  const tasks = (await q('portal_timeline_tasks')).results.map(autoOf).filter((x) => all || !(x.auto === 'potty' && s.potty_off)).map((x) => {
     const prog = progress.get(`task:${x.id}`);
-    const st = taskState(x, p, bases, prog, today, s.timing?.overdue_days);
+    const st = taskState(x, pp, bases, prog, today, s.timing?.overdue_days);
     return { id: x.id, kind: 'task', title: fill(x.title, words), body: x.body ? fill(x.body, words) : null, button: x.button_label ? fill(x.button_label, words) : null, raw: x, link: link(x), auto: x.auto, mine: Boolean(x.placement_id), hidden: Boolean(prog?.hidden), moved: prog?.due_on ?? null, done_at: prog?.done_at ?? null, ...st };
   }).filter((x) => all || !x.hidden)
     .sort((a, b) => (a.due ?? '9999').localeCompare(b.due ?? '9999') || a.raw.sort - b.raw.sort);
@@ -327,7 +343,7 @@ async function itemFor(env, siteId, p, kind, itemId) {
   const row = await env.DB.prepare(`SELECT * FROM ${table(kind)} WHERE id = ? AND site_id = ? AND (placement_id IS NULL OR placement_id = ?)`).bind(itemId, siteId, p.id).first();
   if (!row) throw new PortalError('That step isn\'t on this list.');
   const food = row.title.includes('{food}') ? (await env.DB.prepare('SELECT food_name FROM portal_settings WHERE site_id = ?').bind(siteId).first('food_name')) : null;
-  return { ...row, title: fill(row.title, { name: p.call_name || p.puppy_name, food }) };
+  return { ...autoOf(row), title: fill(row.title, { name: p.call_name || p.puppy_name, food }) };
 }
 
 async function progressRow(env, p, kind, itemId) {

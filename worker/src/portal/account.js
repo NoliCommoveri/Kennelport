@@ -248,6 +248,7 @@ export async function eraseFamily(env, siteId, familyId, by) {
     env.DB.prepare('DELETE FROM portal_sessions WHERE family_id = ?').bind(familyId),
     env.DB.prepare('DELETE FROM portal_emails WHERE family_id = ?').bind(familyId),
     env.DB.prepare('DELETE FROM portal_messages WHERE family_id = ?').bind(familyId),
+    env.DB.prepare(`DELETE FROM portal_potty WHERE placement_id IN (${inPlacements})`).bind(familyId),
     env.DB.prepare(`DELETE FROM portal_placement_progress WHERE placement_id IN (${inPlacements})`).bind(familyId),
     // No portal, so no kept puppy (portal/pups.js); her sale records keep the puppy's name.
     env.DB.prepare(`DELETE FROM portal_pup_photos WHERE placement_id IN (${inPlacements})`).bind(familyId),

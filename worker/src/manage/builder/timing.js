@@ -23,6 +23,7 @@ export const PORTAL_TIMING_ROWS = [
   ['vet_tab_hours', 'The families\' Vet visit tab stays', 'After the deadline, with no record in', 'hours after'],
   ['stay_starts_weeks', 'An extended stay starts at', 'The puppy\'s age, unless she sets the first day', 'weeks old'],
   ['overdue_days', 'An unticked timeline task reads Overdue for', 'After its day; then it reads Past', 'days'],
+  ['potty_until_weeks', 'The potty schedule is in Quick links until', 'The puppy\'s age; after that it\'s under Records', 'weeks old'],
 ];
 
 const rowOf = (part, values, defaults, bounds = {}) => ([k, lab, sub, unit]) => `<div class="inl"><label class="lab" for="t-${part}-${k}">${esc(lab)}<small>${esc(sub)}</small></label><input type="number" inputmode="numeric" min="${bounds[k]?.min ?? 0}"${bounds[k] ? ` max="${bounds[k].max}"` : ''} name="${part}.${k}" id="t-${part}-${k}" value="${esc(values[k])}">

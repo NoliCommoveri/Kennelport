@@ -97,7 +97,7 @@ anyone outside the family.
   `main` (the owner's yes). Her referral programs are no longer listed under "Included with": Home lists only those not on the band, as "Recommended for {pup}". No migration. Build log, 2026-11-21.
 - The families' tabs (2026-11-25): five; the handbook second from last whenever she has one, Photos in the Vet visit tab's place once it goes, or fifth with no handbook. `PORTAL_VERSION` 10 on this branch (the owner's yes).
 - Phase 3: not started.
-- **Resources and the potty schedule:** planned 2026-11-25 ([`plans/portal-resources-potty.md`](plans/portal-resources-potty.md)): two Quick-link pages; four questions for the owner. Not started.
+- **Resources and the potty schedule:** built 2026-11-25 ([`plans/portal-resources-potty.md`](plans/portal-resources-potty.md)): two Quick-link pages, her Resources and Potty guide screens, the potty task; in migration 0046. Next after them: training guides (a later plan).
 - **More than one breeder:** planned 2026-11-24 ([`plans/portal-multi-breeder.md`](plans/portal-multi-breeder.md)).
   The data is already per site, and KennelOS's side works for any linked kennel (checked
   2026-11-25). Built 2026-11-25 (migration 0046): the vet rule as any count (hours or days)

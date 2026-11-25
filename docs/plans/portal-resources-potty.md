@@ -7,7 +7,7 @@ puppy's age, with the breeder's **potty guide** under it. Brought over in spirit
 KennelOS Furever (which has a potty log and training), but not as a tap-per-accident log:
 a schedule to follow, which suits the first weeks home better.
 
-Not started. Training guides (Furever's `trainingContent.js`) are a later, separate plan.
+**Built 2026-11-25** (build log, that day), with the owner's answers (section 4). Training guides (Furever's `trainingContent.js`) are a later, separate plan.
 
 ## 1. Resources
 
@@ -123,7 +123,26 @@ Her screens are server-rendered too (no `APP_VERSION` change expected).
 Wording: her screens' lines in the owner's list (`manage/wording-portal.js`); the guide's
 seed text is starting content in `portal/potty.js`.
 
-## 4. Questions for the owner
+## 4. The owner's answers (2026-11-25)
+
+1. Resources headings: her own. 2. A new breeder's potty guide: the suggested one. 3. She can
+switch the potty page off for her site. 4. Until when: a timing rule of the owner's,
+`potty_until_weeks`, 26 weeks (6 months) by default, on her Timing screen.
+
+**Modified in the build:**
+- The guide is drawn as the portal's other pages are (paragraphs, and the tips as highlight
+  rows), not in the handbook's format (the owner). Her writing rules: a blank line, and "- "
+  for a tip.
+- A timeline task, **Set up {name}'s potty schedule** (the owner), 3 days before pickup: in
+  the suggested timeline, suggested with one tap on a timeline she already has, and a kind of
+  task that ticks itself (Opens their potty schedule; done when they make it). Stored in
+  `portal_timeline_tasks.opens`, as `auto`'s CHECK allows only the vet and pickup kinds.
+- 6 months on: no night trip (the table said 7 to 8 hours; a normal night is longer).
+- A run of breaks between two fixed trips is one row ("Potty breaks: 8:15, 9:15 …").
+- Both pages are drawn in the looks' own frame (header and tabs), as Home and Timeline are.
+- All of it in migration 0046 (this branch's one).
+
+### The questions, as asked
 
 1. **Resources headings:** her own free headings (as above), or a fixed few (Learning,
    Training, Health, Products)?

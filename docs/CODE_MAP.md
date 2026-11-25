@@ -109,7 +109,7 @@ read that before the rest. Update this map when you add, move or split a file.
   program links), `parts.js`, `mk.js` (Home, Timeline, Vet visit and Records in the
   Forest and Cream looks: the prototype's markup, its waves, art and icons, fed by `family.js`).
 - `admin.js` her side (Puppy families, each family's screen). Split out into `admin/`:
-  `templates.js` (checklist and timeline), `handbook.js` (the handbook's chapters), `bag.js` (the go-home bag), `settings.js`, `today.js` (the Families and
+  `templates.js` (checklist and timeline), `handbook.js` (the handbook's chapters), `bag.js` (the go-home bag), `resources.js` (Resources), `potty.js` (the potty guide), `settings.js`, `today.js` (the Families and
   Portal tabs' lists, Today's portal part), `parts.js`.
 - `store.js` the records; `steps.js` checklist, timeline, programs; `stays.js` extended
   stays; `vet.js` the vet visit (her contract's count, `hours<N>` or `days<N>`); `timing.js` the owner's timing rules per site (the
@@ -124,6 +124,11 @@ read that before the rest. Update this map when you add, move or split a file.
   `[link: Program]`, `---` pages, her styles and photos), its search, and chapters from a
   file (`chaptersFrom`, `htmlToText`); her screen is `admin/handbook.js`; the family's flipbook
   and Read next are in `family.js`, turned by `public/_kp/f/handbook.js`.
+- `resources.js` Resources (`plans/portal-resources-potty.md`): her links and PDFs for families,
+  under her headings; the family's page and its Quick link are in `family.js`.
+- `potty.js` the potty schedule: the trips by age from a family's day (`pottySchedule`,
+  `POTTY_LIMITS`), their answers (`portal_potty`), her guide (`SUGGESTED_GUIDE`, `guideHtml`);
+  the family's page is in `family.js`, the self-ticking task (`opens = 'potty'`) in `steps.js`.
 - `bag.js` the go-home bag (`plans/done/portal-go-home-bag.md`): her bag's items, what each puppy
   went home with (fixed at her Save or at pickup), the family's list, and what goes back to
   KennelOS (`bagFact`); her screen and the Sent home with card are `admin/bag.js`; KennelOS's

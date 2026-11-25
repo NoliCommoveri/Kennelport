@@ -3046,7 +3046,7 @@ the only gate left. No code, no migration, no version bump.
   `pset.vet_days_before`, `pset.vet_days_after`); her screens' rule line is
   `pvet.rule.hours` / `pvet.rule.days` (with `{n}`, `{nth}`), replacing `pvet.rule.hours72`
   and `pvet.rule.days3` (an override the owner wrote for those needs writing again).
-- **Migration 0046** (`portal_vet_count`), additive: `portal_settings.vet_count` (the number;
+- **Migration 0046** (`portal_second_breeder`, first named `portal_vet_count`), additive: `portal_settings.vet_count` (the number;
   `vet_rule`'s CHECK still allows only 'hours72'/'days3', so it now says only hours or days;
   `store.js` `ruleOf` joins them) and `portal_settings.saved_at`. Every existing row is set
   saved from its `updated_at` (those portals are running). A backup from before 0046 restores
@@ -3098,3 +3098,42 @@ the only gate left. No code, no migration, no version bump.
     `pf.loss_note_remove`, error `loss_kennelos`.
   - Tests in `portal.test.js`, `portal-feed.test.js`, `portal-steps.test.js`,
     `portal-account.test.js`. 541 pass. No version bump.
+
+## 2026-11-25: Resources and the potty schedule
+
+Plan: `docs/plans/portal-resources-potty.md` (the owner's answers and what changed, section 4).
+
+- **Resources:** `portal/resources.js` (data), `portal/admin/resources.js` (her screen, on her
+  Portal tab), `/family/resources` in `family.js`. Links (an address, or one of her shown
+  programs through `/family/go`, counted as `resources`) and PDFs or photos (10 MB,
+  `sites/<site>/portal/resources/`), under her own headings, in her order; each changed,
+  moved, switched off or removed (the file deleted too). A Quick link on Home once one is on.
+  Table `portal_resources`.
+- **The potty schedule:** `portal/potty.js` (the maths, her guide), `/family/potty` in
+  `family.js`, `portal/admin/potty.js` (her Potty guide screen: the page on or off for her
+  site, the guide on or off, her words or the suggested ones). Three answers (first person up,
+  2 to 4 meals, bedtime) make the day's trips for the puppy's age, worked out on every visit:
+  first thing, 15 minutes after each meal, breaks within the age's daytime limit (a run of them
+  one row), last thing at bed, and night trips while the night is longer than the age's
+  overnight limit (`POTTY_LIMITS`: 1 hour and 3 at 8 to 10 weeks … 5 hours and the whole night
+  from 6 months). Changed or started over by the family. The guide drawn as the portal's other
+  pages (paragraphs, tips as highlight rows), not the handbook's (the owner). A Quick link until
+  the owner's timing rule `potty_until_weeks` (26 by default, her Timing screen); always a link
+  under Records (Classic and the looks). Table `portal_potty` (removed with a family, their
+  erase, and moved on a merge); `portal_settings.potty_guide`, `potty_guide_off`, `potty_off`.
+- **The potty task** (the owner): Set up {name}'s potty schedule, 3 days before pickup, in the
+  suggested timeline, suggested with one tap on her timeline until one is on it (`addReady`
+  'potty', to the bottom), and a kind of task that ticks itself in her task editor
+  (`ptpl.auto.potty`). Its button opens their schedule (Make the schedule / See the schedule);
+  it ticks itself once they make one; hidden from families while her potty page is off.
+  Stored in `portal_timeline_tasks.opens` (`steps.js` `autoOf` reads it as `auto`).
+- Both family pages use the looks' own frame (`mkp`), so Forest and Cream draw their header and
+  tab bar. Found while checking: on the looks' other plain pages (Account, Messages, Photos,
+  Stay, the handbook) the tab bar stacks and the header wraps at 390px; fixing it is a CSS
+  change, waiting on the owner's yes for a `PORTAL_VERSION` bump.
+- **Migration 0046** renamed `portal_second_breeder` (unreleased) and now also holds
+  `portal_resources`, `portal_potty`, the three potty columns and `portal_timeline_tasks.opens`.
+  New wording in the owner's list: screens `portalresources` (`pres.*`) and `portalpotty`
+  (`ppotty.*`), Portal tab rows `psetup.resources*`, `psetup.potty*`, errors `res_*`.
+- Tests: `worker/tests/portal-resources-potty.test.js` (4). 545 pass. Checked at 390px in
+  Classic and Forest (no stylesheet change, no version bump).

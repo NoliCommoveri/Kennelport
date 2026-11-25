@@ -81,6 +81,8 @@ export function setupScreen(site, s, say = defaultSay) {
       ${item(`${b}/timeline`, say('psetup.timeline'), say('psetup.timeline_note'))}
       ${item(`${b}/handbook`, say('handbook.item'), say('handbook.item_note'))}
       ${item(`${b}/bag`, say('bag.item'), say('bag.item_note'))}
+      ${item(`${b}/resources`, say('psetup.resources'), say('psetup.resources_note'))}
+      ${item(`${b}/potty`, say('psetup.potty'), say('psetup.potty_note'))}
       ${item(`${b}/settings#programs`, say('psetup.programs'), say('psetup.programs_note'))}
       ${item(`/s/${esc(site.subdomain)}/lists/extras`, say('psetup.extras'), say('psetup.extras_note'))}
     </ul>`;

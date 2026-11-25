@@ -276,6 +276,7 @@ export async function deleteFamily(env, siteId, familyId) {
   const inPlacements = 'SELECT id FROM portal_placements WHERE family_id = ?';
   await env.DB.batch([
     ...stayDeletes(env, familyId, { keepExtras: false }),
+    env.DB.prepare(`DELETE FROM portal_potty WHERE placement_id IN (${inPlacements})`).bind(familyId),
     env.DB.prepare(`DELETE FROM portal_files WHERE placement_id IN (${inPlacements})`).bind(familyId),
     env.DB.prepare(`DELETE FROM portal_health_records WHERE placement_id IN (${inPlacements})`).bind(familyId),
     env.DB.prepare(`DELETE FROM portal_placement_progress WHERE placement_id IN (${inPlacements})`).bind(familyId),

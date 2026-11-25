@@ -33,6 +33,8 @@ import { messagesOpen, thread, unreadFrom, markRead, familyWrites, isLoss, erase
 import { TYPE_ICON, SPRITE, ic } from './family/icons.js';
 import { skillsList, updateCard, stayContext } from './family/stay.js';
 import { active } from './family/parts.js';
+import { shownResources, grouped, resourceFile } from './resources.js';
+import { pottySchedule, limitsLine, weeksOld, guideText, guideHtml, getPotty, savePotty, removePotty, POTTY_DEFAULTS } from './potty.js';
 import * as mk from './family/mk.js';
 import { HOME_SECTIONS, portalHomeFor, cardShows, recolour } from './home.js';
 import { familyBag } from './bag.js';
@@ -274,6 +276,8 @@ function taskRow(t, kennel, back) {
     if (t.link) acts.push(goLink(t.link, 'timeline', t.button));
     if (vetLink && !(t.auto === 'vet_booking' && t.past)) acts.push(`<a class="btn line small" href="${vetLink}">${t.auto === 'vet_booking' ? 'I\'ve booked it' : 'Upload the record'}</a>`);
   }
+  // The potty task opens their schedule, made or not.
+  if (t.auto === 'potty') acts.push(`<a class="btn line small" href="/family/potty${t.done ? '#schedule' : ''}">${t.done ? 'See the schedule' : 'Make the schedule'}</a>`);
   if (!t.auto && !t.hers) acts.push(tickForm('task', t, back, t.done).replace('class="tick"', 'class="btn text small"').replace(`>${ic('check')}</button>`, `>${t.done ? 'Undo' : 'Mark done'}</button>`));
   return `<li class="task${t.done ? ' done' : ''}" id="t-${esc(t.id)}">${dayBlock(t.due)}<div><div class="between"><h3>${esc(t.title)}</h3>${taskWord(t, kennel)}</div>
     ${t.body ? `<p class="small">${esc(t.body)}</p>` : ''}${acts.length ? `<div class="acts">${acts.join('')}</div>` : ''}</div></li>`;
@@ -500,7 +504,11 @@ async function homePage(env, site, fam, now = new Date()) {
   // The handbook, once she has a chapter families see: first in Quick links (as the
   // prototype has it, in Account's place: Account is in the header), and Read next.
   const chapters = live ? await shownChapters(env, site.id) : [];
-  const quick = [...(chapters.length ? [['/family/handbook', 'book', 'Handbook']] : []), [stay ? '/family/stay' : '/family/timeline', stay ? 'award' : 'calendar', stay ? 'Stay updates' : 'Timeline'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records'],
+  const resources = live ? (await shownResources(env, site.id)).length > 0 : false;
+  // The potty schedule, until the age the owner's timing rule says (about 6 months).
+  const pottyAge = weeksOld(pup?.born_on, localParts(now, s.time_zone).ymd);
+  const potty = live && !s.potty_off && (pottyAge === null || pottyAge < (s.timing?.potty_until_weeks ?? 26));
+  const quick = [...(chapters.length ? [['/family/handbook', 'book', 'Handbook']] : []), ...(resources ? [['/family/resources', 'link', 'Resources']] : []), ...(potty ? [['/family/potty', 'clock', 'Potty schedule']] : []), [stay ? '/family/stay' : '/family/timeline', stay ? 'award' : 'calendar', stay ? 'Stay updates' : 'Timeline'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records'],
     ['/family/records#photos', 'paw', 'Photos'], ['/family/messages', 'message', 'Messages'], ...(chapters.length ? [] : [['/family/account', 'user', 'Account']])];
   // The food band above the contacts (the owner, 2026-11-21). Each piece has its own
   // colour (portal.css, Card colours); Quick links, last and always there, is green
@@ -789,7 +797,7 @@ async function recordsPage(env, site, fam) {
       ['Sex', pup ? (pup.sex === 'female' ? 'Female' : 'Male') : null], ['Colour', pup?.color], ['Parents', [pup?.dam_call || pup?.dam_name, pup?.sire_call || pup?.sire_name].filter(Boolean).join(' × ') || null],
       ['Microchip', p.microchip], ['Registration', reg], ['Registration number', p.registration_no], [p.picked_up_at ? 'Came home' : 'Coming home', goHomeWords(p, s)]].filter(([, v]) => v);
     const page = mk.records({
-      name, kennel, facts, records: records.map((r) => [formatDay(r.given_on), r.name, r.notes, recordKind(r)]), contractId: contract?.id, proofId: p.proof_file_id,
+      name, kennel, facts, records: records.map((r) => [formatDay(r.given_on), r.name, r.notes, recordKind(r)]), contractId: contract?.id, proofId: p.proof_file_id, potty: !s.potty_off,
       bag: mk.bag(bag, name, kennel, disclosure(s)), photos, phone: s.her_phone || site.contact_phone, email: s.her_email || site.contact_email, v: vetOf(p, s), dialable,
     });
     return frame(site, 'Records', page, { mkp: true, fam, tab: '/family/records' });
@@ -808,6 +816,7 @@ async function recordsPage(env, site, fam) {
   <section class="card c-green"><h2>${hh('file')}Papers</h2><ul class="links">
     ${contract ? `<li><a href="/family/file/${esc(contract.id)}">${ic('file')} Your contract</a></li>` : '<li class="muted">Your contract will be here once it\'s added.</li>'}
     ${p.proof_file_id ? `<li><a href="/family/file/${esc(p.proof_file_id)}">${ic('stethoscope')} Vet visit record</a></li>` : ''}
+    ${s.potty_off ? '' : `<li><a href="/family/potty">${ic('clock')} ${esc(name)}'s potty schedule</a></li>`}
   </ul></section>
   ${bag.length ? bagBand(bag, name, site.kennel_name || site.subdomain, s) : ''}
   ${contactsCard(site, s, p, name)}
@@ -841,6 +850,73 @@ async function photosPage(env, site, fam) {
     parts.push(`<section class="card"><h2>Photos of ${esc(pupName(p))}</h2>${photos.length ? `<ul class="gallery">${photos.map((ph) => `<li><a href="/family/photo/${esc(ph.id)}"><img src="/family/photo/${esc(ph.id)}?s=t" alt="${esc(ph.alt ?? '')}" loading="lazy"></a></li>`).join('')}</ul>` : '<p class="muted">No photos yet.</p>'}</section>`);
   }
   return frame(site, 'Photos', parts.join('') || '<section class="card"><p class="muted">Photos will appear here.</p></section>', { fam, tab: '/family/photos' });
+}
+
+// Resources (docs/plans/portal-resources-potty.md section 1): her links and PDFs, under
+// her headings, a card each, colours taking turns (portal.css, Card colours). Built from
+// the prototype's highlight rows (.hl): a ringed icon, the title, her note, Open.
+async function resourcesPage(env, site, fam) {
+  const kennel = site.kennel_name || site.subdomain;
+  const groups = grouped(await shownResources(env, site.id));
+  const row = (r) => {
+    const href = r.kind === 'file' ? `/family/resource/${esc(r.id)}` : r.product_id ? `/family/go/${esc(r.product_id)}?from=resources` : esc(r.url);
+    const ext = r.kind === 'link' && !r.product_id ? ' target="_blank" rel="noopener noreferrer"' : '';
+    return `<li><div><span class="badge">${ic(r.kind === 'file' ? 'file' : 'link')}</span><div><b>${esc(r.title)}</b>${r.note ? `<span class="small muted">${esc(r.note)}</span><br>` : ''}
+      <a class="go" href="${href}"${ext}${r.kind === 'file' ? ' target="_blank" rel="noopener"' : ''}>${r.kind === 'file' ? 'Open the PDF' : 'Open'} ${ic('arrow')}</a></div></div></li>`;
+  };
+  const body = groups.length
+    ? `<section class="card c-paper"><h1>Resources</h1><p class="muted">From ${esc(kennel)}, for you and your puppy.</p></section>${groups.map(([h, list], i) => `<section class="card ${i % 2 ? 'c-paper' : 'c-green'}">${h ? `<h2>${hh('link')}${esc(h)}</h2>` : ''}<ul class="hl">${list.map(row).join('')}</ul></section>`).join('')}`
+    : `<section class="card"><h1>Resources</h1><p class="muted">${esc(kennel)} hasn't added any yet.</p></section>`;
+  return frame(site, 'Resources', body, { fam, page: 'resources', mkp: true });
+}
+
+// The potty schedule (plan portal-resources-potty.md section 2): three answers make it,
+// then the day's trips for the puppy's age (portal/potty.js), worked out on every visit,
+// and her guide under it. Built from the prototype's numbered steps (the answers) and the
+// timeline's dated rows (.task, the time in the day block). Hers to switch off.
+async function pottyPage(env, site, fam, { error, values } = {}, now = new Date()) {
+  const s = await getSettings(env, site.id);
+  const p = await placementFor(env, site.id, fam.familyId);
+  if (s.potty_off || !p) return redirect('/family');
+  const pup = await pupOf(env, site.id, p);
+  const name = pupName(p);
+  const kennel = site.kennel_name || site.subdomain;
+  const weeks = Math.max(8, weeksOld(pup?.born_on, localParts(now, s.time_zone).ymd) ?? 8);
+  const lim = limitsLine(weeks);
+  const mine = values ?? await getPotty(env, site.id, p.id);
+  const made = !values && mine;
+  const v = mine ?? POTTY_DEFAULTS;
+  const meals = [...v.meals, '', '', '', ''].slice(0, 4);
+  const time = (n, val, label, req = true) => `<input type="time" name="${n}" value="${esc(val ?? '')}" aria-label="${esc(label)}"${req ? ' required' : ''}>`;
+  const answers = `<form method="post" action="/family/potty" class="stack"><ol class="numsteps">
+      <li><span class="num">1</span><div><h3>When is the first person up?</h3>${time('wake', v.wake, 'First person up')}</div></li>
+      <li><span class="num">2</span><div><h3>When does ${esc(name)} eat?</h3><p>Two to four meals.</p><div class="two">${meals.map((m, i) => time('meals', m, `Meal ${i + 1}`, i < 2)).join('')}</div></div></li>
+      <li><span class="num">3</span><div><h3>Bedtime</h3>${time('bed', v.bed, 'Bedtime')}</div></li>
+    </ol><button class="btn solid">${made ? 'Save the times' : `Make ${esc(name)}'s schedule`}</button></form>`;
+  const parts = [`${errorBox(error)}<section class="card c-green"><h1>${esc(name)}'s potty schedule</h1>
+    <p>At ${weeks} weeks, ${esc(name)} needs to go out at least every <b>${lim.day}</b> while awake, and can hold it about <b>${lim.night}</b> at night. This schedule grows with ${esc(name)}.</p></section>`];
+  if (made) {
+    // A run of breaks between two fixed trips reads as one row: "Potty breaks", its times.
+    const rows = [];
+    for (const x of pottySchedule(mine, weeks)) {
+      const last = rows.at(-1);
+      if (x.kind === 'between' && last?.kind === 'between') last.times.push(x.at);
+      else rows.push({ ...x, times: [x.at] });
+    }
+    const list = (ts) => (ts.length > 1 ? `${ts.slice(0, -1).join(', ')} and ${ts.at(-1)}` : ts[0]);
+    parts.push(`<section class="card c-paper" id="schedule"><h2>${hh('clock')}Today's trips outside</h2><ul class="tasks">${rows.map((x) => {
+      const [t, ap] = clock(x.at).split(' ');
+      const many = x.times.length > 1;
+      return `<li class="task"><span class="d"><b>${esc(t)}</b>${esc(ap)}</span><div><h3>${many ? 'Potty breaks' : esc(x.what)}</h3><p class="small muted">${many ? `${esc(list(x.times.map((y) => clock(y))))}. ` : ''}${esc(x.why)}</p></div></li>`;
+    }).join('')}</ul>
+      <p class="small"><b>Also:</b> after every nap, after play, and after a big drink.</p></section>
+      <section class="card c-green"><details><summary>Change the times</summary>${answers}</details>
+      <form method="post" action="/family/potty/remove"><button class="btn text small">Start over</button></form></section>`);
+  } else {
+    parts.push(`<section class="card c-paper"><h2>${hh('clock')}Make ${esc(name)}'s schedule</h2><p>Three answers, and you'll have a schedule made for ${esc(name)}'s age.</p>${answers}</section>`);
+  }
+  if (!s.potty_guide_off) parts.push(`<section class="card ${made ? 'c-paper' : 'c-green'}" id="guide"><h2>${hh('book')}The potty guide</h2>${guideHtml(guideText(s), { name, kennel }, ic('paw'))}</section>`);
+  return frame(site, 'Potty schedule', parts.join(''), { fam, page: 'potty', mkp: true, status: error ? 400 : 200 });
 }
 
 // Messages with her, from pickup on (plan 2); before that, the status page.
@@ -1016,7 +1092,7 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
     if (path === '/family') return homePage(env, site, fam);
     if (path === '/family/vet') return vetPage(env, site, fam, { note: url.searchParams.get('note') === 'booked' ? 'Saved. Thank you!' : url.searchParams.get('note') === 'uploaded' ? 'Uploaded. Thank you!' : null });
     if (path === '/family/records') return recordsPage(env, site, fam);
-    if (fam.loss && ['/family/timeline', '/family/vet', '/family/records', '/family/messages', '/family/handbook'].includes(path)) return redirect('/family');
+    if (fam.loss && ['/family/timeline', '/family/vet', '/family/records', '/family/messages', '/family/handbook', '/family/resources', '/family/potty'].includes(path)) return redirect('/family');
     if (path === '/family/timeline') return timelinePage(env, site, fam);
     if (path === '/family/handbook') return handbookPage(env, site, fam, url);
     const hp = path.match(/^\/family\/handbook\/photo\/([0-9a-f-]{36})$/);
@@ -1026,6 +1102,10 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
     const mm = path.match(/^\/family\/media\/([0-9a-f-]{36})$/);
     if (mm) return mediaResponse(env, await mediaFor(env, site.id, fam.familyId, mm[1]));
     if (path === '/family/messages') return messagesPage(env, site, fam);
+    if (path === '/family/resources') return resourcesPage(env, site, fam);
+    if (path === '/family/potty') return pottyPage(env, site, fam);
+    const rf = path.match(/^\/family\/resource\/([0-9a-f-]{36})$/);
+    if (rf) return resourceFile(env, site.id, rf[1], { family: true });
     if (path === '/family/account') return accountPage(env, site, fam);
     let m = path.match(/^\/family\/photo\/([0-9a-f-]{36})$/);
     if (m) return servePhoto(env, site, fam, m[1], url.searchParams.get('s') === 't');
@@ -1054,6 +1134,20 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
   }
   const p = current;
   if (!p) return redirect('/family');
+  // Their potty schedule's answers, changed or removed.
+  if (path === '/family/potty' || path === '/family/potty/remove') {
+    if (fam.loss) return redirect('/family');
+    const form = await request.formData();
+    const values = { wake: String(form.get('wake') ?? ''), bed: String(form.get('bed') ?? ''), meals: form.getAll('meals').map(String) };
+    try {
+      if (path === '/family/potty/remove') await removePotty(env, site.id, p.id);
+      else await savePotty(env, site.id, p.id, values);
+    } catch (err) {
+      if (err instanceof PortalError) return pottyPage(env, site, fam, { error: err.message, values: { ...values, meals: values.meals.filter(Boolean) } });
+      throw err;
+    }
+    return redirect(path === '/family/potty' ? '/family/potty#schedule' : '/family/potty');
+  }
   // Ticks and "I've done this": back to the page they came from.
   if (path === '/family/step' || path === '/family/program') {
     const form = await request.formData();

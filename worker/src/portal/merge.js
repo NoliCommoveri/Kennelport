@@ -91,6 +91,9 @@ export async function mergePlacement(env, siteId, familyId, fromId, intoId) {
       AND x.product_id = portal_placements_programs.product_id AND x.updated_at >= portal_placements_programs.updated_at)`).bind(K, H),
     env.DB.prepare('UPDATE OR IGNORE portal_placements_programs SET placement_id = ? WHERE placement_id = ?').bind(K, H),
     env.DB.prepare('DELETE FROM portal_placements_programs WHERE placement_id = ?').bind(H),
+    // Their potty schedule's times: kept on the merged placement unless it has its own.
+    env.DB.prepare('UPDATE OR IGNORE portal_potty SET placement_id = ? WHERE placement_id = ?').bind(K, H),
+    env.DB.prepare('DELETE FROM portal_potty WHERE placement_id = ?').bind(H),
     env.DB.prepare("UPDATE portal_history SET row_id = ? WHERE site_id = ? AND tbl = 'portal_placements' AND row_id = ?").bind(K, siteId, H),
     env.DB.prepare("DELETE FROM portal_suggestions WHERE tbl = 'portal_placements' AND row_id = ?").bind(H),
     // The kept puppy (portal/pups.js) follows the puppy: hers if she chose it, else KennelOS's.

@@ -46,7 +46,7 @@ const K = {
 // The kinds of program, as the prototype draws them.
 const TYPE_K = { food: 'bowl', insurance: 'shield', registration: 'award', product: 'tag', other: 'tag' };
 // A live icon name, as the looks draw it (the tabs, Quick links).
-export const K_OF = { calendar: 'cal', stethoscope: 'steth', message: 'msg', upload: 'up', list: 'cal', arrow: 'ext', clock: 'vet' };
+export const K_OF = { link: 'ext', calendar: 'cal', stethoscope: 'steth', message: 'msg', upload: 'up', list: 'cal', arrow: 'ext', clock: 'vet' };
 
 export const lk = (n) => `<svg class="i" aria-hidden="true"><use href="#i-k-${K[n] ? n : K_OF[n] ?? 'paw'}"/></svg>`;
 
@@ -108,6 +108,8 @@ export function taskRow(t, kennel, back, h) {
     if (t.link) acts.push(`<a class="btn line small ext" href="${goHref(t.link.id, 'timeline')}">${esc(t.button || t.link.label || 'Open')}</a>`);
     if (vetLink && !(t.auto === 'vet_booking' && t.past)) acts.push(`<a class="btn line small" href="${vetLink}">${t.auto === 'vet_booking' ? 'I\'ve booked it' : 'Upload the record'}</a>`);
   }
+  // The potty task opens their schedule, made or not.
+  if (t.auto === 'potty') acts.push(`<a class="btn line small" href="/family/potty${t.done ? '#schedule' : ''}">${t.done ? 'See the schedule' : 'Make the schedule'}</a>`);
   if (!t.auto && !t.hers) acts.push(`<form method="post" action="/family/step" class="tickf"><input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="${esc(t.id)}"><input type="hidden" name="done" value="${t.done ? 0 : 1}"><input type="hidden" name="back" value="${back}"><button class="btn text small">${t.done ? 'Undo' : 'Mark done'}</button></form>`);
   const day = t.due ? `${h.MON[Number(t.due.slice(5, 7)) - 1]}<b>${Number(t.due.slice(8, 10))}</b>` : lk('cal');
   return `<div class="task${t.done ? ' done' : ''}" id="t-${esc(t.id)}"><div class="d">${day}</div><div class="stack tk"><div class="between"><h3>${esc(t.title)}</h3>${h.taskWord(t, kennel)}</div>${t.body ? `<p class="small">${esc(t.body)}</p>` : ''}${acts.length ? `<div class="row">${acts.join('')}</div>` : ''}</div></div>`;
@@ -294,7 +296,7 @@ export function records(c) {
   return `<section class="mk mypup"><span class="paw only-cream">${lk('paw')}</span>${BOSTON}<div class="mk-b"><p class="eyebrow mp">${lk('paw')}My puppy</p><h1 class="script">${esc(name)}</h1>
       <dl>${c.facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></div></section>
     ${mkCard('syringe', 'Shots, deworming and vet visits', c.records.length ? `<div class="tablewrap"><table><thead><tr><th>Date</th><th>What</th><th>Kind</th></tr></thead><tbody>${c.records.map(([d, what, note, kind]) => `<tr><td>${esc(d)}</td><td>${esc(what)}${note ? `<br><span class="small muted">${esc(note)}</span>` : ''}</td><td>${esc(kind)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">None recorded yet.</p>')}
-    ${mkCard('file', 'Papers', `${c.contractId ? `<a class="pinline" href="/family/file/${esc(c.contractId)}">${lk('file')}<u>Your contract</u></a>` : '<p class="muted">Your contract will be here once it\'s added.</p>'}${c.proofId ? `<a class="pinline" href="/family/file/${esc(c.proofId)}">${lk('steth')}<u>Vet visit record</u></a>` : ''}`)}
+    ${mkCard('file', 'Papers', `${c.contractId ? `<a class="pinline" href="/family/file/${esc(c.contractId)}">${lk('file')}<u>Your contract</u></a>` : '<p class="muted">Your contract will be here once it\'s added.</p>'}${c.proofId ? `<a class="pinline" href="/family/file/${esc(c.proofId)}">${lk('steth')}<u>Vet visit record</u></a>` : ''}${c.potty ? `<a class="pinline" href="/family/potty">${lk('clock')}<u>Potty schedule</u></a>` : ''}`)}
     ${c.bag}
     ${contacts(c, false)}
     ${mkCard('image', `Photos of ${esc(name)}`, c.photos.length ? `<div class="gallery">${c.photos.map((ph) => `<a class="ph" href="/family/photo/${esc(ph.id)}"><img src="/family/photo/${esc(ph.id)}?s=t" alt="${esc(ph.alt ?? '')}" loading="lazy"></a>`).join('')}</div>` : '<p class="muted">Photos will appear here.</p>', { id: 'photos' })}`;

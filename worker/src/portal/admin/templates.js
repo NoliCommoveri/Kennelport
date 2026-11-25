@@ -4,7 +4,7 @@
 // Its wording is the owner's (manage/wording-portal.js ptpl.*); the ready-made tasks
 // and suggested lists (steps.js) are starting content, not her instructions.
 import { escapeHtml as esc } from '../../lib/html.js';
-import { CHECK_AUTO, TASK_AUTO, READY_TASKS, namedPuppy } from '../steps.js';
+import { CHECK_AUTO, TASK_AUTO, READY_TASKS, POTTY_TASK, namedPuppy } from '../steps.js';
 import { note, errorBox } from './parts.js';
 import { defaultSay } from '../../manage/wording.js';
 import { PORTAL_TIMING, daysText } from '../timing.js';
@@ -92,7 +92,7 @@ const nameWarning = (x, names, say) => {
 // until each is on it: her own wording (a task she adjusted or removed) is hers to keep,
 // and this is one tap to add (to the bottom, as every new task). A list she had before
 // the microchip task existed gets it this way, with nothing else changed.
-function registerSuggestion(base, items, products, say) {
+function registerSuggestion(base, items, products, say, pottyOff = false) {
   const reg = READY_TASKS.registration;
   const has = (c) => items.some((x) => x.title === c.title);
   const card = (i) => {
@@ -104,12 +104,16 @@ function registerSuggestion(base, items, products, say) {
     <p>${esc(c.body)}</p><p class="hint">${prog ? t(say, 'ptpl.suggested_when_program', { n, button: reg.button, program: prog.name }) : t(say, 'ptpl.suggested_when', { n })} ${t(say, 'ptpl.suggested_hint')}</p>
     <input type="hidden" name="ready" value="${esc(`${prog?.id ?? ''}|registration|${i}`)}"><p><button class="primary">${t(say, 'ptpl.suggested_add')}</button></p></form>`;
   };
+  // Their potty schedule's task, first (3 days before pickup), unless her potty page is off.
+  const potty = pottyOff || items.some((x) => x.auto === 'potty') ? '' : `<form method="post" action="${base}/ready" class="card"><h2>${t(say, 'ptpl.suggested', { task: POTTY_TASK.title })}</h2>
+    <p>${esc(POTTY_TASK.body)}</p><p class="hint">${t(say, 'ptpl.suggested_potty_when')} ${t(say, 'ptpl.suggested_hint')}</p>
+    <input type="hidden" name="ready" value="potty"><p><button class="primary">${t(say, 'ptpl.suggested_add')}</button></p></form>`;
   // Earliest first, as they fall after pickup.
-  return reg.choices.map((c, i) => ({ c, i })).filter(({ c, i }) => i === 0 || c.noProgram)
+  return potty + reg.choices.map((c, i) => ({ c, i })).filter(({ c, i }) => i === 0 || c.noProgram)
     .sort((a, b) => (a.c.days ?? reg.days) - (b.c.days ?? reg.days)).map(({ i }) => card(i)).join('');
 }
 
-export function templateScreen(site, kind, items, products, url, { error, names = [], say = defaultSay, timing = PORTAL_TIMING } = {}) {
+export function templateScreen(site, kind, items, products, url, { error, names = [], say = defaultSay, timing = PORTAL_TIMING, pottyOff = false } = {}) {
   const base = `/s/${esc(site.subdomain)}/portal/${kind === 'checklist' ? 'checklist' : 'timeline'}`;
   const rows = items.map((x, i) => `<details class="card"><summary><b>${esc(x.title)}</b><br><span class="hint">${esc(itemMeta(kind, x, products, say))}</span>${nameWarning(x, names, say)}</summary>
     <form method="post" action="${base}/${esc(x.id)}"><div class="fgrid">${itemFields(kind, x, products, say)}<p><button class="primary">${t(say, 'pf.save')}</button></p></div></form>
@@ -118,7 +122,7 @@ export function templateScreen(site, kind, items, products, url, { error, names 
   return `${note(url, say)}${errorBox(error, say)}<section class="card"><h1>${t(say, `ptpl.${kind}.title`)}</h1><p class="hint">${t(say, `ptpl.${kind}.hint`, { when: daysText(timing.checklist_days_before) })}</p>
     ${items.length ? '' : `<form method="post" action="${base}/suggested"><p><button class="primary">${t(say, `ptpl.${kind}.start`)}</button></p><p class="hint">${t(say, `ptpl.${kind}.start_hint`)}</p></form>`}</section>
     ${rows}
-    ${kind === 'task' && items.length ? registerSuggestion(base, items, products, say) : ''}
+    ${kind === 'task' && items.length ? registerSuggestion(base, items, products, say, pottyOff) : ''}
     ${kind === 'task' ? readyForm(`${base}/ready`, products, { say }) : ''}
     <form method="post" action="${base}/new" class="card"><h2>${t(say, `ptpl.${kind}.add`)}</h2><div class="fgrid">${itemFields(kind, null, products, say)}<p><button>${t(say, 'pf.add')}</button></p></div></form>`;
 }

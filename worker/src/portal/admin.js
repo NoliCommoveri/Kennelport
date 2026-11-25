@@ -40,6 +40,10 @@ import { placementDuplicates, familyCandidates, mergePlacement, mergeFamily } fr
 import { redirect, note, errorBox, pupName, familyFilters, sayHtml, suggestLabel, ZONE_NAMES, vetRuleSay } from './admin/parts.js';
 import { products, itemFields, whenWords, formOffset, templateScreen, readyForm } from './admin/templates.js';
 import { settingsScreen } from './admin/settings.js';
+import { pottyScreen } from './admin/potty.js';
+import { savePottySettings } from './potty.js';
+import { resourcesScreen, resourceScreen } from './admin/resources.js';
+import { listResources, saveResource, removeResource, moveResource, resourceFile, headingsOf } from './resources.js';
 import { waitlistCount, waitlistPart, setupScreen } from './admin/today.js';
 import { handbookScreen, removeScreen, photoScreen } from './admin/handbook.js';
 import { bagScreen, bagItemScreen, removeBagScreen, sentHomeCard } from './admin/bag.js';
@@ -645,6 +649,56 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
     }
   }
 
+  // Her potty guide, and the families' potty schedule on or off (portal/admin/potty.js).
+  if (rest === '/potty') {
+    if (!post) return page(say('ppotty.title'), pottyScreen(site, s, url, { say }), { back: `${home}/setup` });
+    const form = await request.formData();
+    await savePottySettings(env, site.id, {
+      potty_guide: String(form.get('potty_guide') ?? ''), reset: form.get('reset') === '1',
+      potty_guide_off: !form.get('guide_on'), potty_off: !form.get('potty_on'),
+    });
+    return redirect(`${home}/potty?note=saved`);
+  }
+
+  // Her Resources (portal/admin/resources.js): links and PDFs for families.
+  const rsm = rest.match(/^\/resources(?:\/(new|[0-9a-f-]{36})(?:\/(up|down|remove|file))?)?$/);
+  if (rsm) {
+    const here = `${home}/resources`;
+    const programs = await linkablePrograms(env, site.id);
+    const show = async (opts = {}) => page(say('pres.title'), resourcesScreen(site, await listResources(env, site.id), programs, url, { ...opts, say }), { back: `${home}/setup`, status: opts.error ? 400 : 200 });
+    const itemPage = async (id, opts = {}) => {
+      const list = await listResources(env, site.id);
+      const i = list.findIndex((x) => x.id === id);
+      if (i < 0) return redirect(here);
+      return page(say('pres.title'), resourceScreen(site, list[i], i, list.length, programs, headingsOf(list), { ...opts, say }), { back: `${here}#r-${id}`, status: opts.error ? 400 : 200 });
+    };
+    if (!post) {
+      if (!rsm[1]) return show();
+      if (rsm[1] === 'new') return null;
+      if (rsm[2] === 'file') return resourceFile(env, site.id, rsm[1]);
+      if (!rsm[2]) return itemPage(rsm[1]);
+      return null;
+    }
+    if (!rsm[1] || rsm[2] === 'file') return null;
+    let values = null;
+    try {
+      if (rsm[2] === 'remove') { await removeResource(env, site.id, rsm[1]); return redirect(`${here}?note=removed`); }
+      if (rsm[2]) { await moveResource(env, site.id, rsm[1], rsm[2]); return redirect(`${here}/${rsm[1]}`); }
+      if (Number(request.headers.get('content-length') ?? 0) > MAX_FILE_BYTES + 64 * 1024) throw new PortalError('That file is over 10 MB.');
+      const form = await request.formData();
+      values = Object.fromEntries([...form.entries()].filter(([, v]) => typeof v === 'string'));
+      const f = form.get('file');
+      const file = f && typeof f !== 'string' && f.size ? { bytes: new Uint8Array(await f.arrayBuffer()), name: f.name } : null;
+      const id = await saveResource(env, site.id, rsm[1] === 'new' ? null : rsm[1], values, file);
+      return redirect(`${here}?note=${rsm[1] === 'new' ? 'added' : 'saved'}#r-${id}`);
+    } catch (err) {
+      if (!(err instanceof PortalError)) throw err;
+      const kept = values ? { ...values, shown: values.shown ? 1 : 0 } : null;
+      if (rsm[1] !== 'new' && !rsm[2]) return itemPage(rsm[1], { error: err.message, values: kept });
+      return show({ error: err.message, values: rsm[1] === 'new' ? kept : null });
+    }
+  }
+
   // Her go-home bag (portal/admin/bag.js).
   const bm = rest.match(/^\/bag(?:\/(new|[0-9a-f-]{36})(?:\/(up|down|remove))?)?$/);
   if (bm) {
@@ -688,7 +742,7 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   if (tm) {
     const kind = tm[1] === 'checklist' ? 'checklist' : 'task';
     const here = `${home}/${tm[1]}`;
-    const show = async (opts = {}) => page(say(`ptpl.${kind}.title`), templateScreen(site, kind, await listItems(env, site.id, kind), await products(env, site.id), url, { ...opts, say, names: await puppyNames(env, site.id), timing: (await getSettings(env, site.id)).timing }), { back: `${home}/settings`, status: opts.error ? 400 : 200 });
+    const show = async (opts = {}) => page(say(`ptpl.${kind}.title`), templateScreen(site, kind, await listItems(env, site.id, kind), await products(env, site.id), url, { ...opts, say, names: await puppyNames(env, site.id), timing: s.timing, pottyOff: Boolean(s.potty_off) }), { back: `${home}/settings`, status: opts.error ? 400 : 200 });
     if (!post) return tm[2] ? null : show();
     try {
       if (tm[2] === 'suggested') { await addSuggested(env, site.id, kind); return redirect(`${here}?note=suggested`); }
