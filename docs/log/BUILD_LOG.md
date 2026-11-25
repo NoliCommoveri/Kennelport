@@ -3151,3 +3151,11 @@ Plan: `docs/plans/portal-resources-potty.md` (the owner's answers and what chang
   `pres.training*`), `portal_settings.training_off` in migration 0046. Drawn in the looks' frame.
   Read-only: no progress stored. Test in `portal-resources-potty.test.js`. 546 pass. Checked at
   390px in Classic, Forest and Cream. No further version bump (no stylesheet change).
+
+## Portal settings: vet-rule number boxes showed empty
+
+The two number boxes in "The vet visit" (hours / day) rendered as empty 22px squares on
+phones: the manage CSP (`style-src 'self'`) drops the inline `style="width:5em"`, so the
+checkbox rule `label.check input` (22×22) won. They now use `class="num"` with a rule in
+`app.css` (`label.check input.num`), and the two rows centre their radio (`.vetrule`).
+`app.css` changed, so APP_VERSION needs a bump (asked).

@@ -16,9 +16,9 @@ export const PROGRAM_TYPES = ['', 'food', 'insurance', 'registration', 'product'
 function vetRuleFields(s, t) {
   const r = parseVetRule(s.vet_rule) ?? { kind: 'hours', n: 72 };
   const kind = s.vet_kind === 'hours' || s.vet_kind === 'days' ? s.vet_kind : r.kind;
-  const num = (k, lim, dflt) => `<input name="vet_${k}" type="number" inputmode="numeric" min="${lim.min}" max="${lim.max}" style="width:5em" value="${esc(s[`vet_${k}`] ?? (r.kind === k ? r.n : dflt))}">`;
-  return `<label class="check"><input type="radio" name="vet_kind" value="hours"${kind === 'hours' ? ' checked' : ''}> <span>${num('hours', VET_HOURS, 72)} ${t('pset.vet_hours')}</span></label>
-    <label class="check"><input type="radio" name="vet_kind" value="days"${kind === 'days' ? ' checked' : ''}> <span>${t('pset.vet_days_before')} ${num('days', VET_DAYS, 3)} ${t('pset.vet_days_after')}</span></label>`;
+  const num = (k, lim, dflt) => `<input name="vet_${k}" type="number" inputmode="numeric" min="${lim.min}" max="${lim.max}" class="num" value="${esc(s[`vet_${k}`] ?? (r.kind === k ? r.n : dflt))}">`;
+  return `<label class="check vetrule"><input type="radio" name="vet_kind" value="hours"${kind === 'hours' ? ' checked' : ''}> <span>${num('hours', VET_HOURS, 72)} ${t('pset.vet_hours')}</span></label>
+    <label class="check vetrule"><input type="radio" name="vet_kind" value="days"${kind === 'days' ? ' checked' : ''}> <span>${t('pset.vet_days_before')} ${num('days', VET_DAYS, 3)} ${t('pset.vet_days_after')}</span></label>`;
 }
 
 export function settingsScreen(site, s, products, { error, waiting = [], extras = [], say = defaultSay } = {}, url) {
