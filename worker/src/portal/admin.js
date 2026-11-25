@@ -661,11 +661,17 @@ export async function handlePortalAdmin({ env, request, url, site: signedInSite,
   }
 
   // Her Resources (portal/admin/resources.js): links and PDFs for families.
+  if (rest === '/resources/training' && post) {
+    const form = await request.formData();
+    await env.DB.prepare(`INSERT INTO portal_settings (site_id, training_off, updated_at) VALUES (?, ?, ?)
+      ON CONFLICT (site_id) DO UPDATE SET training_off = excluded.training_off, updated_at = excluded.updated_at`).bind(site.id, form.get('on') ? 0 : 1, new Date().toISOString()).run();
+    return redirect(`${home}/resources?note=saved#training`);
+  }
   const rsm = rest.match(/^\/resources(?:\/(new|[0-9a-f-]{36})(?:\/(up|down|remove|file))?)?$/);
   if (rsm) {
     const here = `${home}/resources`;
     const programs = await linkablePrograms(env, site.id);
-    const show = async (opts = {}) => page(say('pres.title'), resourcesScreen(site, await listResources(env, site.id), programs, url, { ...opts, say }), { back: `${home}/setup`, status: opts.error ? 400 : 200 });
+    const show = async (opts = {}) => page(say('pres.title'), resourcesScreen(site, await listResources(env, site.id), programs, url, { ...opts, say, trainingOff: Boolean(s.training_off) }), { back: `${home}/setup`, status: opts.error ? 400 : 200 });
     const itemPage = async (id, opts = {}) => {
       const list = await listResources(env, site.id);
       const i = list.findIndex((x) => x.id === id);

@@ -505,6 +505,9 @@ export const PORTAL_LINES = {
   // Resources (portal/admin/resources.js).
   "pres.title": ["portalresources", "Heading, and the screen's title", "Resources"],
   "pres.hint": ["portalresources", "Line under it", "Links and PDFs your families can open any time: guides, learning styles, training, health. They see them under Resources on Home."],
+  "pres.training": ["portalresources", "Heading of the training card", "Training guides"],
+  "pres.training_hint": ["portalresources", "Line under it", "The AKC's puppy training timeline and S.T.A.R. Puppy skills, step by step, with each puppy's stage first. Under Training on each family's Home."],
+  "pres.training_on": ["portalresources", "Tick box", "Families have the training guides"],
   "pres.none": ["portalresources", "With none yet", "None yet. Add a link or a PDF below."],
   "pres.kind_link": ["portalresources", "A row's kind: a web link", "Link"],
   "pres.kind_file": ["portalresources", "A row's kind: a PDF or photo", "PDF"],

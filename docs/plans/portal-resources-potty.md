@@ -141,6 +141,11 @@ switch the potty page off for her site. 4. Until when: a timing rule of the owne
 - A run of breaks between two fixed trips is one row ("Potty breaks: 8:15, 9:15 …").
 - Both pages are drawn in the looks' own frame (header and tabs), as Home and Timeline are.
 - All of it in migration 0046 (this branch's one).
+- **Training** (the owner, "bring over the training content too"): a read-only Training page,
+  Quick link until a year old and always under Records: the AKC's age-based timeline (the
+  puppy's stage first) and S.T.A.R. Puppy checklist, from Furever's content (the UK Kennel
+  Club track left out: for UK families). Her switch on her Resources screen
+  (`portal_settings.training_off`). No progress kept: that would be a later step.
 
 ### The questions, as asked
 

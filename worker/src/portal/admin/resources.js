@@ -27,7 +27,7 @@ function fields(kind, x, programs, headings, say) {
     <label class="check"><input type="checkbox" name="shown" value="1"${!x || x.shown ? ' checked' : ''}> <span>${t('pres.field_shown')}</span></label>`;
 }
 
-export function resourcesScreen(site, items, programs, url, { error, say = defaultSay, values = null } = {}) {
+export function resourcesScreen(site, items, programs, url, { error, say = defaultSay, values = null, trainingOff = false } = {}) {
   const t = (k, v) => esc(say(k, v));
   const base = `/s/${esc(site.subdomain)}/portal/resources`;
   const n = url.searchParams.get('note');
@@ -43,6 +43,8 @@ export function resourcesScreen(site, items, programs, url, { error, say = defau
   return `${NOTES.includes(n) ? `<p class="notice" role="status">${t(`pres.${n}`)}</p>` : ''}${errorBox(error, say)}
     <section class="card"><h1>${t('pres.title')}</h1><p class="hint">${t('pres.hint')}</p>
     ${items.length ? `<ul class="list">${rows}</ul>` : `<p class="muted">${t('pres.none')}</p>`}</section>
+    <form method="post" action="${base}/training" class="card" id="training"><h2>${t('pres.training')}</h2><p class="hint">${t('pres.training_hint')}</p>
+      <label class="check"><input type="checkbox" name="on" value="1"${trainingOff ? '' : ' checked'}> <span>${t('pres.training_on')}</span></label><p><button>${t('pres.save')}</button></p></form>
     <form method="post" action="${base}/new" class="card" id="add-link"><h2>${t('pres.add_link_title')}</h2><input type="hidden" name="kind" value="link"><div class="fgrid">${fields('link', kept('link'), programs, headings, say)}<p><button class="primary">${t('pres.add')}</button></p></div></form>
     <form method="post" action="${base}/new" class="card" id="add-file" enctype="multipart/form-data"><h2>${t('pres.add_file_title')}</h2><input type="hidden" name="kind" value="file"><div class="fgrid">${fields('file', kept('file'), programs, headings, say)}<p><button class="primary">${t('pres.add')}</button></p></div></form>`;
 }

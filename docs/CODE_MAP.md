@@ -129,6 +129,9 @@ read that before the rest. Update this map when you add, move or split a file.
 - `potty.js` the potty schedule: the trips by age from a family's day (`pottySchedule`,
   `POTTY_LIMITS`), their answers (`portal_potty`), her guide (`SUGGESTED_GUIDE`, `guideHtml`);
   the family's page is in `family.js`, the self-ticking task (`opens = 'potty'`) in `steps.js`.
+- `training.js` the families' Training page (the AKC's timeline by the puppy's stage, and its
+  S.T.A.R. Puppy checklist), from `training-content.js`, copied from KennelOS Furever's
+  `furever/data/trainingContent.js` (copy it again if KennelOS changes it).
 - `bag.js` the go-home bag (`plans/done/portal-go-home-bag.md`): her bag's items, what each puppy
   went home with (fixed at her Save or at pickup), the family's list, and what goes back to
   KennelOS (`bagFact`); her screen and the Sent home with card are `admin/bag.js`; KennelOS's

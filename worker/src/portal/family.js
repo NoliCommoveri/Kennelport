@@ -35,6 +35,7 @@ import { skillsList, updateCard, stayContext } from './family/stay.js';
 import { active } from './family/parts.js';
 import { shownResources, grouped, resourceFile } from './resources.js';
 import { pottySchedule, limitsLine, weeksOld, guideText, guideHtml, getPotty, savePotty, removePotty, POTTY_DEFAULTS } from './potty.js';
+import { TRACKS, trackOf, programOf, sections, TRAINING_QUICK_WEEKS } from './training.js';
 import * as mk from './family/mk.js';
 import { HOME_SECTIONS, portalHomeFor, cardShows, recolour } from './home.js';
 import { familyBag } from './bag.js';
@@ -508,7 +509,8 @@ async function homePage(env, site, fam, now = new Date()) {
   // The potty schedule, until the age the owner's timing rule says (about 6 months).
   const pottyAge = weeksOld(pup?.born_on, localParts(now, s.time_zone).ymd);
   const potty = live && !s.potty_off && (pottyAge === null || pottyAge < (s.timing?.potty_until_weeks ?? 26));
-  const quick = [...(chapters.length ? [['/family/handbook', 'book', 'Handbook']] : []), ...(resources ? [['/family/resources', 'link', 'Resources']] : []), ...(potty ? [['/family/potty', 'clock', 'Potty schedule']] : []), [stay ? '/family/stay' : '/family/timeline', stay ? 'award' : 'calendar', stay ? 'Stay updates' : 'Timeline'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records'],
+  const training = live && !s.training_off && (pottyAge === null || pottyAge < TRAINING_QUICK_WEEKS);
+  const quick = [...(chapters.length ? [['/family/handbook', 'book', 'Handbook']] : []), ...(resources ? [['/family/resources', 'link', 'Resources']] : []), ...(potty ? [['/family/potty', 'clock', 'Potty schedule']] : []), ...(training ? [['/family/training', 'award', 'Training']] : []), [stay ? '/family/stay' : '/family/timeline', stay ? 'award' : 'calendar', stay ? 'Stay updates' : 'Timeline'], ['/family/vet', 'stethoscope', 'Vet visit'], ['/family/records', 'file', 'Records'],
     ['/family/records#photos', 'paw', 'Photos'], ['/family/messages', 'message', 'Messages'], ...(chapters.length ? [] : [['/family/account', 'user', 'Account']])];
   // The food band above the contacts (the owner, 2026-11-21). Each piece has its own
   // colour (portal.css, Card colours); Quick links, last and always there, is green
@@ -797,7 +799,7 @@ async function recordsPage(env, site, fam) {
       ['Sex', pup ? (pup.sex === 'female' ? 'Female' : 'Male') : null], ['Colour', pup?.color], ['Parents', [pup?.dam_call || pup?.dam_name, pup?.sire_call || pup?.sire_name].filter(Boolean).join(' × ') || null],
       ['Microchip', p.microchip], ['Registration', reg], ['Registration number', p.registration_no], [p.picked_up_at ? 'Came home' : 'Coming home', goHomeWords(p, s)]].filter(([, v]) => v);
     const page = mk.records({
-      name, kennel, facts, records: records.map((r) => [formatDay(r.given_on), r.name, r.notes, recordKind(r)]), contractId: contract?.id, proofId: p.proof_file_id, potty: !s.potty_off,
+      name, kennel, facts, records: records.map((r) => [formatDay(r.given_on), r.name, r.notes, recordKind(r)]), contractId: contract?.id, proofId: p.proof_file_id, potty: !s.potty_off, training: !s.training_off,
       bag: mk.bag(bag, name, kennel, disclosure(s)), photos, phone: s.her_phone || site.contact_phone, email: s.her_email || site.contact_email, v: vetOf(p, s), dialable,
     });
     return frame(site, 'Records', page, { mkp: true, fam, tab: '/family/records' });
@@ -817,6 +819,7 @@ async function recordsPage(env, site, fam) {
     ${contract ? `<li><a href="/family/file/${esc(contract.id)}">${ic('file')} Your contract</a></li>` : '<li class="muted">Your contract will be here once it\'s added.</li>'}
     ${p.proof_file_id ? `<li><a href="/family/file/${esc(p.proof_file_id)}">${ic('stethoscope')} Vet visit record</a></li>` : ''}
     ${s.potty_off ? '' : `<li><a href="/family/potty">${ic('clock')} ${esc(name)}'s potty schedule</a></li>`}
+    ${s.training_off ? '' : `<li><a href="/family/training">${ic('award')} Training ${esc(name)}</a></li>`}
   </ul></section>
   ${bag.length ? bagBand(bag, name, site.kennel_name || site.subdomain, s) : ''}
   ${contactsCard(site, s, p, name)}
@@ -917,6 +920,29 @@ async function pottyPage(env, site, fam, { error, values } = {}, now = new Date(
   }
   if (!s.potty_guide_off) parts.push(`<section class="card ${made ? 'c-paper' : 'c-green'}" id="guide"><h2>${hh('book')}The potty guide</h2>${guideHtml(guideText(s), { name, kennel }, ic('paw'))}</section>`);
   return frame(site, 'Potty schedule', parts.join(''), { fam, page: 'potty', mkp: true, status: error ? 400 : 200 });
+}
+
+// Training (portal/training.js): the AKC's age-based timeline, the puppy's stage first and
+// open, or its S.T.A.R. Puppy checklist; each skill opens to its steps. Read-only.
+async function trainingPage(env, site, fam, url, now = new Date()) {
+  const s = await getSettings(env, site.id);
+  const p = await placementFor(env, site.id, fam.familyId);
+  if (s.training_off || !p) return redirect('/family');
+  const pup = await pupOf(env, site.id, p);
+  const name = pupName(p);
+  const weeks = weeksOld(pup?.born_on, localParts(now, s.time_zone).ymd);
+  const track = trackOf(url.searchParams.get('track'));
+  const prog = programOf(track);
+  const fill = (x) => esc(x).replace(/\bthe puppy\b/g, esc(name));
+  const tabs = TRACKS.map((id) => `<a class="btn ${id === track ? 'solid' : 'line'} small" href="/family/training${id === TRACKS[0] ? '' : `?track=${id}`}"${id === track ? ' aria-current="page"' : ''}>${id === 'akc_timeline' ? 'By age' : 'S.T.A.R. Puppy'}</a>`).join(' ');
+  const skill = (x) => `<li class="task"><span class="d">${ic('award')}</span><div><details><summary><b>${esc(x.title)}</b></summary>
+      <p class="small">${fill(x.summary)}</p><ol class="small">${x.steps.map((st) => `<li>${fill(st)}</li>`).join('')}</ol></details></div></li>`;
+  const body = `<section class="card c-green"><h1>Training ${esc(name)}</h1>
+      <p>${track === 'akc_timeline' ? `What to teach ${esc(name)}, stage by stage${weeks !== null ? `, from where ${esc(name)} is now (${weeks} weeks)` : ''}.` : `The skills of the AKC's S.T.A.R. Puppy class, to work through before ${esc(name)} turns one.`} Tap a skill for its steps.</p>
+      <div class="acts">${tabs}</div><p class="small muted">From the <a href="${esc(prog.official_url)}" target="_blank" rel="noopener noreferrer">${esc(prog.name)}</a>.</p></section>
+    ${sections(track, weeks).map((g, i) => `<section class="card ${i % 2 ? 'c-green' : 'c-paper'}"><h2>${hh('award')}${esc(g.label)}</h2>${g.open && track === 'akc_timeline' ? `<p class="small muted">Where ${esc(name)} is now.</p>` : ''}${g.note ? `<p class="small">${fill(g.note)}</p>` : ''}<ul class="tasks">${g.skills.map(skill).join('')}</ul></section>`).join('')}
+`;
+  return frame(site, 'Training', body, { fam, page: 'training', mkp: true });
 }
 
 // Messages with her, from pickup on (plan 2); before that, the status page.
@@ -1092,7 +1118,7 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
     if (path === '/family') return homePage(env, site, fam);
     if (path === '/family/vet') return vetPage(env, site, fam, { note: url.searchParams.get('note') === 'booked' ? 'Saved. Thank you!' : url.searchParams.get('note') === 'uploaded' ? 'Uploaded. Thank you!' : null });
     if (path === '/family/records') return recordsPage(env, site, fam);
-    if (fam.loss && ['/family/timeline', '/family/vet', '/family/records', '/family/messages', '/family/handbook', '/family/resources', '/family/potty'].includes(path)) return redirect('/family');
+    if (fam.loss && ['/family/timeline', '/family/vet', '/family/records', '/family/messages', '/family/handbook', '/family/resources', '/family/potty', '/family/training'].includes(path)) return redirect('/family');
     if (path === '/family/timeline') return timelinePage(env, site, fam);
     if (path === '/family/handbook') return handbookPage(env, site, fam, url);
     const hp = path.match(/^\/family\/handbook\/photo\/([0-9a-f-]{36})$/);
@@ -1104,6 +1130,7 @@ async function portalRoutes(request, env, ctx, subdomain, { onDomain = false } =
     if (path === '/family/messages') return messagesPage(env, site, fam);
     if (path === '/family/resources') return resourcesPage(env, site, fam);
     if (path === '/family/potty') return pottyPage(env, site, fam);
+    if (path === '/family/training') return trainingPage(env, site, fam, url);
     const rf = path.match(/^\/family\/resource\/([0-9a-f-]{36})$/);
     if (rf) return resourceFile(env, site.id, rf[1], { family: true });
     if (path === '/family/account') return accountPage(env, site, fam);

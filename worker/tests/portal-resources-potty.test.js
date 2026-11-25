@@ -198,3 +198,24 @@ test('potty: her timeline suggests the task with one tap until it is on it; it l
   // Her task editor offers it as a kind that ticks itself.
   assert.match(page, /Opens their potty schedule; done when they make it/);
 });
+
+test('training: the AKC timeline with the puppy\'s stage first, the S.T.A.R. checklist, a Quick link; her switch', async () => {
+  const { env, her, fam } = await setup();
+  env.DB.raw.prepare('UPDATE litters SET born_on = ?').run(ymd(new Date(Date.now() - 20 * 7 * DAY)));
+  await addFamily(her, { name: 'The Reed family', emails: 'sam@example.com', puppy_id: 'pup1' });
+  const reed = fam(await familySignIn(env, 'sam@example.com'));
+  assert.match(await (await reed('/family')).text(), /href="\/family\/training"/);
+  const page = await (await reed('/family/training')).text();
+  // At 20 weeks the "By 6 months" stage comes first, marked as where Opal is.
+  assert.match(page, /Training Opal.*By 6 months[^<]*<\/h2><p class="small muted">Where Opal is now\..*8–16 weeks/s);
+  assert.match(page, /Bite inhibition/);
+  const star = await (await reed('/family/training?track=akc_star_puppy')).text();
+  assert.match(star, /S\.T\.A\.R\. Puppy class/);
+  assert.doesNotMatch(star, /Where Opal is now/);
+  assert.match(await (await her('/portal/resources')).text(), /Families have the training guides/);
+  assert.equal((await her('/portal/resources/training', {})).status, 303);
+  assert.equal((await reed('/family/training')).status, 303);
+  assert.doesNotMatch(await (await reed('/family')).text(), /href="\/family\/training"/);
+  assert.equal((await her('/portal/resources/training', { on: '1' })).status, 303);
+  assert.equal((await reed('/family/training')).status, 200);
+});

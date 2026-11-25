@@ -68,3 +68,7 @@ ALTER TABLE portal_settings ADD COLUMN potty_off INTEGER NOT NULL DEFAULT 0;
 -- schedule; done once they make it). Its own column, as auto's CHECK allows only the vet and
 -- pickup kinds; the code reads the two as one (portal/steps.js autoOf).
 ALTER TABLE portal_timeline_tasks ADD COLUMN opens TEXT;
+
+-- The families' Training page (the AKC's guides, portal/training.js): on unless she
+-- switches it off for her site on her Resources screen.
+ALTER TABLE portal_settings ADD COLUMN training_off INTEGER NOT NULL DEFAULT 0;

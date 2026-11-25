@@ -3141,3 +3141,13 @@ Plan: `docs/plans/portal-resources-potty.md` (the owner's answers and what chang
   looks' plain pages as Home's are. Checked in Forest and Cream at 390px and 1280px; Classic
   unchanged. **`PORTAL_VERSION` 10 → 11** (the owner's yes), `PORTAL_FILES` 7b3099a49f5bb52c.
   545 pass.
+- Follow-up, the owner ("bring over the training content too"): **Training**, `/family/training`.
+  `portal/training-content.js` is KennelOS Furever's `furever/data/trainingContent.js` (version
+  1) copied unchanged; `portal/training.js` picks the AKC's two tracks: **By age** (the timeline,
+  the puppy's stage first with "Where Opal is now", our own plain line under 8–16 weeks in place
+  of the content's research note) and **S.T.A.R. Puppy** (by category). Each skill opens to its
+  summary and steps, "the puppy" becoming the puppy's name. A Quick link until 52 weeks, always
+  under Records (Classic and the looks); her switch on her Resources screen ("Training guides",
+  `pres.training*`), `portal_settings.training_off` in migration 0046. Drawn in the looks' frame.
+  Read-only: no progress stored. Test in `portal-resources-potty.test.js`. 546 pass. Checked at
+  390px in Classic, Forest and Cream. No further version bump (no stylesheet change).
