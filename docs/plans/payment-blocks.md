@@ -13,7 +13,9 @@ this branch (build log). This plan builds the block on top of it.
 - **`pay_methods` table** (migration 0047), one row per method, in her order: `label`, `url`
   (her link, no amount), `note` (her instructions, with line breaks), `stages` (a JSON list
   of `application_fee`, `deposit`, `payments`, `final_payment`), `own_label` (empty, for
-  step 1), `source`. Each bundle replaces KennelOS's rows, so a method she drops goes. Her
+  step 1), `source`. A bundle with `payment.methods` replaces the site's rows whole (those
+  an unlink left as hers too), so a method she drops goes; one without the key (an older
+  KennelOS build) leaves them. KennelOS sends `[]` when she has none. Her
   `own_label` follows the method's label from one bundle to the next.
 - **Snapshot:** `snap.payment.methods`, each `{ label, url, note, stages }`, where `label`
   is already her own name when she has set one.

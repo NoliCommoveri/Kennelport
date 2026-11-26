@@ -32,6 +32,8 @@
 //                 methods?: [{ label, url?, note?, stages: [application_fee | deposit | payments | final_payment],
 //                              key?, pays?: { payments?, final_payment?: [price | boarding | transport | extras] }, discount? (pay_charges) }] (pay_methods),
 //                 notes?: { application_fee?, deposit?, payments?, final_payment? } (pay_charges) } }
+//     (methods and notes replace the site's whole list only when their key comes, [] / {}
+//     for none; a bundle without the key leaves them as they are)
 //
 // Only records she marked Show on website are in it (dogs, litters, pairings; a
 // heat only for a dam with heats_online), with the statuses she set: KennelOS maps
@@ -281,11 +283,12 @@ export function cleanBundle(body) {
     steps: 'steps' in body ? cleanList('step', body.steps, 'steps', MAX.steps) : null,
     partner_kennels: 'partner_kennels' in body ? cleanList('partner_kennel', body.partner_kennels, 'partner_kennels', MAX.partner_kennels) : null,
     payment: null,
-    // Her payment methods (pay_methods); [] when none came, which a bundle from a
-    // KennelOS that sends them means she has none (or none usable).
-    pay_methods: [],
-    // Her words per stage (pay_charges); {} when none came.
-    pay_notes: {},
+    // Her payment methods (pay_methods): null when the bundle has no payment.methods
+    // (a KennelOS build from before them, or one not asked for them), so the site's
+    // list is left as it is; [] when the key came empty: she has none.
+    pay_methods: null,
+    // Her words per stage (pay_charges): null when payment.notes didn't come, {} for none.
+    pay_notes: null,
   };
   // Titles as rows: a bundle with any dog's titles as { abbr, … } is from a KennelOS
   // that sends them so, and there a dog's empty list means none (its rows cleared).
@@ -310,8 +313,8 @@ export function cleanBundle(body) {
     }
     // Her payment methods (pay_methods), apart from the kinds: each once, with its stages.
     try {
-      out.pay_methods = cleanPayMethods(body.payment.methods, 'payment.methods');
-      out.pay_notes = cleanPayNotes(body.payment.notes, 'payment.notes');
+      if ('methods' in body.payment) out.pay_methods = cleanPayMethods(body.payment.methods, 'payment.methods');
+      if ('notes' in body.payment) out.pay_notes = cleanPayNotes(body.payment.notes, 'payment.notes');
     } catch (err) {
       if (err instanceof ContentError) throw bad(err.path, err.message.replace(/^[^:]*: /, ''));
       throw err;
@@ -1031,23 +1034,27 @@ export async function applyBundle(env, device, body) {
         content = CASE WHEN json_extract(payment_info.content, '$.show_methods') = 0 THEN json_set(excluded.content, '$.show_methods', json('false')) ELSE excluded.content END`).bind(site.id, kind, JSON.stringify(content)));
   }
 
-  // Her payment methods (C11): the bundle's list replaces KennelOS's rows whole, so one
-  // she stops offering drops out. Her own name for one (own_label) follows its key
-  // (C13), so it survives a rename in KennelOS; a row kept before keys came follows its
-  // label.
-  {
-    const old = (await env.DB.prepare("SELECT label, own_label, method_key FROM pay_methods WHERE site_id = ? AND source = 'kennelos'").bind(site.id).all()).results ?? [];
+  // Her payment methods (C11): a bundle that carries payment.methods replaces the site's
+  // list whole, so one she stops offering drops out; one without it (an older KennelOS
+  // build, say on a second device) leaves the list as it is. Rows kept as hers by an
+  // unlink are replaced too, so a link after an unlink doesn't show each method twice.
+  // Her own name for one (own_label) follows its key (C13), so it survives a rename in
+  // KennelOS; a row kept before keys came follows its label.
+  if (clean.pay_methods) {
+    const old = (await env.DB.prepare('SELECT label, own_label, method_key FROM pay_methods WHERE site_id = ? ORDER BY sort').bind(site.id).all()).results ?? [];
     const named = old.filter((r) => r.own_label);
     const byKey = new Map(named.filter((r) => r.method_key).map((r) => [r.method_key, r.own_label]));
-    const byLabel = new Map(named.filter((r) => !r.method_key).map((r) => [r.label.toLowerCase(), r.own_label]));
+    const byLabel = new Map(named.filter((r) => !r.method_key).map((r) => [r.label.toLowerCase(), r.own_label]).reverse());
     const own = (m) => (m.key && byKey.get(m.key)) ?? byLabel.get(m.label.toLowerCase()) ?? null;
-    w.s.push(env.DB.prepare("DELETE FROM pay_methods WHERE site_id = ? AND source = 'kennelos'").bind(site.id));
+    w.s.push(env.DB.prepare('DELETE FROM pay_methods WHERE site_id = ?').bind(site.id));
     clean.pay_methods.forEach((m, i) => w.s.push(env.DB.prepare(`INSERT INTO pay_methods (id, site_id, sort, label, url, note, stages, own_label, method_key, pays, discount, source)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'kennelos')`).bind(crypto.randomUUID(), site.id, i, m.label, m.url, m.note, JSON.stringify(m.stages), own(m), m.key, m.pays ? JSON.stringify(m.pays) : null, m.discount)));
-    // Her words under each stage's choices (C13): replaced whole too.
-    w.s.push(env.DB.prepare("DELETE FROM pay_notes WHERE site_id = ? AND source = 'kennelos'").bind(site.id));
+  }
+  // Her words under each stage's choices (C13): replaced whole when payment.notes came.
+  if (clean.pay_notes) {
+    w.s.push(env.DB.prepare('DELETE FROM pay_notes WHERE site_id = ?').bind(site.id));
     for (const [stage, note] of Object.entries(clean.pay_notes)) {
-      w.s.push(env.DB.prepare("INSERT INTO pay_notes (site_id, stage, note, source) VALUES (?, ?, ?, 'kennelos') ON CONFLICT (site_id, stage) DO UPDATE SET note = excluded.note, source = 'kennelos'").bind(site.id, stage, note));
+      w.s.push(env.DB.prepare("INSERT INTO pay_notes (site_id, stage, note, source) VALUES (?, ?, ?, 'kennelos')").bind(site.id, stage, note));
     }
   }
 
