@@ -814,7 +814,7 @@ async function recordsPage(env, site, fam) {
       ${row('Microchip', p.microchip)}${row('Registration', reg)}${row('Registration number', p.registration_no)}
       ${row(p.picked_up_at ? 'Came home' : 'Coming home', goHomeWords(p, s))}
     </dl></section>
-  <section class="card c-paper"><h2>${hh('syringe')}Shots, deworming and vet visits</h2>
+  <section class="card c-paper"><h2>${hh('syringe')}Shots, tests and vet visits</h2>
     ${records.length ? `<table class="records"><thead><tr><th>Date</th><th>What</th><th>Kind</th></tr></thead><tbody>${records.map((r) => `<tr><td>${esc(formatDay(r.given_on))}</td><td>${esc(r.name)}${r.notes ? `<br><span class="muted small">${esc(r.notes)}</span>` : ''}</td><td>${esc(recordKind(r))}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">None recorded yet.</p>'}</section>
   <section class="card c-green"><h2>${hh('file')}Papers</h2><ul class="links">
     ${contract ? `<li><a href="/family/file/${esc(contract.id)}">${ic('file')} Your contract</a></li>` : '<li class="muted">Your contract will be here once it\'s added.</li>'}

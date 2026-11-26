@@ -346,7 +346,7 @@ async function familyScreen(env, site, familyId, url, { error, say = defaultSay 
       <details><summary>${t('pf.add_item', { family: f.name })}</summary>${form('steps/new/checklist', `<div class="fgrid">${itemFields('checklist', null, prods, say)}<p><button>${t('pf.add')}</button></p></div>`)}</details>
       ${timelinePart}
       <details><summary>${t('pf.add_task', { family: f.name })}</summary>${form('steps/new/task', `<div class="fgrid">${itemFields('task', null, prods, say)}<p><button>${t('pf.add')}</button></p></div>`)}</details>
-      <details><summary>${t('pf.add_ready', { family: f.name })}</summary>${readyForm(`${base}/steps/ready`, prods, { say })}</details>
+      <details><summary>${t('pf.add_ready', { family: f.name })}</summary>${readyForm(`${base}/steps/ready`, prods, { say, have: steps.tasks.map((x) => x.raw) })}</details>
     </section>`);
 
     const progs = await programsFor(env, site.id, p);

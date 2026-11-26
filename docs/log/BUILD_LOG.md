@@ -3317,3 +3317,34 @@ The owner: a way to see a new breeder's portal before adding anyone, like the pr
 - Tests: `kennelos.test.js`: a new test for unlink then link (each method once, her names
   kept); the pay_methods and pay_charges tests now check that a bundle without the key
   keeps the list and an empty one clears it.
+
+## 2026-11-26: Suggested tasks: the puppy shots, and gone once on her list
+
+The owner: the shots added to the suggested timeline (2026-11-25) only reached a list made
+from then on, so the first breeder never saw them; and suggestions she had added kept
+showing.
+
+- The four shot tasks (`steps.js` `SHOT_TASKS`: 11, 14 and 17 weeks, one-year boosters) are
+  now suggested with one tap on her timeline, like the microchip, and have their own group
+  in the ready-made picker, "Puppy shots" (`ptpl.ready_shots`, value `shot|<n>`, dated from
+  birth). The suggested timeline uses the same four.
+- Why the added ones kept showing: a suggestion hid only while a task had its exact
+  wording, so a task she reworded after adding, or one of her own for the same thing,
+  brought it back. Now `steps.js` `readyOnList` reads her list by what a task is for:
+  potty (its kind or the word), the microchip, the breed registration ("Register…" or a
+  task linked to her registration program), each shot (11/14/16-17 weeks, a year or
+  boosters), and each program a task links to. The suggestion cards
+  (`templates.js` `registerSuggestion`) and the ready-made picker (`readyForm`, on her
+  Timeline and on a family's screen, there with that family's own tasks too) leave out
+  whatever is on it. A picker with nothing left isn't shown.
+- Still: a task she removes is suggested again (nothing records that she turned one down).
+- Tests in `portal-steps.test.js` (the shots, reworded and her own wording). 559 pass.
+  No migration, no version bump (server-rendered screens only; the cards are the
+  existing suggested-task card).
+
+## 2026-11-26: "Shots, tests and vet visits"
+
+The owner: KennelOS now sends a puppy's screening and health tests like its shots, so the
+records heading says so. Her family screen (`pf.records` in the owner's list) and the
+families' Records page in every look (`family.js`, `family/mk.js`) read "Shots, tests and
+vet visits". 559 pass. No version bump (server-rendered).
