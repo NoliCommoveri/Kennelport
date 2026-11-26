@@ -32,7 +32,7 @@ template (`ASSET_VERSION`) 27 (flip cards that grow to fit, 2026-11-17).
 | 1. Renderer + ops | Built |
 | 2. Breeder login, the Site Manager | Built; photo upload tried on a real Android and iPhone |
 | 3. The first site's pages | Built |
-| 4. The KennelOS link | Done: built on both sides and working with KennelOS on production |
+| 4. The KennelOS link | Done: built on both sides and working with KennelOS on production. Her payment methods for every stage of a sale (contract C11, section `pay_methods`, migration 0047) built 2026-11-25 on its branch: the fee and deposit cards show theirs. Her own names for them built (plan step 1). What each method pays and her words per stage (contract C13, section `pay_charges`, in 0047) kept and in the snapshot. **Next:** step 2, the Ways to pay block's records ([`plans/payment-blocks.md`](plans/payment-blocks.md)) |
 | 5. Albums, embeds, sharing | Built, apart from KennelOS shares carrying album links |
 | 6. Customisation and schemes | Built, and now carried further by the site builder (below) |
 

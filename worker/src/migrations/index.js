@@ -54,6 +54,7 @@ import portalRegistrationScreening from './0043_portal_registration_screening.sq
 import portalPhotoRemove from './0044_portal_photo_remove.sql';
 import portalProofDeclined from './0045_portal_proof_declined.sql';
 import portalSecondBreeder from './0046_portal_second_breeder.sql';
+import payMethods from './0047_pay_methods.sql';
 
 export const MIGRATIONS = [
   { id: '0001', name: 'schema', sql: schema },
@@ -102,4 +103,5 @@ export const MIGRATIONS = [
   { id: '0044', name: 'portal_photo_remove', sql: portalPhotoRemove },
   { id: '0045', name: 'portal_proof_declined', sql: portalProofDeclined },
   { id: '0046', name: 'portal_second_breeder', sql: portalSecondBreeder },
+  { id: '0047', name: 'pay_methods', sql: payMethods },
 ];

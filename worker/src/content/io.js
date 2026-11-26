@@ -8,7 +8,7 @@
 //     (a co-owned dog names its partner kennels: lives_with: '<name>', co_owned_with: ['<name>'])
 //     litters: [{ ..., dam: '<dog slug>', puppies: [...] }], reviews: [...],
 //     steps: [...], expanders: { policies: [...], faq: [...], waitlist_help: [...] },
-//     extras: [...], products: [...], partners: [{ name, url, photo_id }], payment: { application_fee: {...}, deposit: {...}, safe_notice: {...} },
+//     extras: [...], products: [...], partners: [{ name, url, photo_id }], payment: { application_fee: {...}, deposit: {...}, safe_notice: {...} }, pay_methods: [{ label, url, note, stages, key, pays, discount, own_label, source }], pay_notes: { <stage>: note },
 //     questions: [...], albums: [{ ..., litter: '<litter slug>', photos: [ids] }],
 //     embeds: [{ place: 'home' | 'about' | 'dog:<slug>' | 'litter:<slug>' | 'album:<slug>', provider, item, title, preview_photo_id }] }
 //
@@ -19,7 +19,7 @@
 // writes go in one batch, so an import lands whole or not at all.
 import {
   SITE_FIELDS, DOG_FIELDS, HEALTH_FIELDS, LITTER_FIELDS, PUPPY_FIELDS, REVIEW_FIELDS,
-  STEP_FIELDS, EXPANDER_FIELDS, EXPANDER_PAGES, EXTRA_FIELDS, PRODUCT_FIELDS, PARTNER_FIELDS, PARTNERS_MAX, HOME_BADGES_MAX, brandImageOk, HOME_BLOCKS, PAGES, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS,
+  STEP_FIELDS, EXPANDER_FIELDS, EXPANDER_PAGES, EXTRA_FIELDS, PRODUCT_FIELDS, PARTNER_FIELDS, PARTNERS_MAX, HOME_BADGES_MAX, brandImageOk, HOME_BLOCKS, PAGES, PAYMENT_KINDS, PAYMENT_FIELDS, SAFE_NOTICE_FIELDS, cleanPayMethods, cleanPayNotes,
   QUESTION_FIELDS, checkQuestion, ALBUM_FIELDS, ContentError, cleanRecord, cleanValue, FAQ_FIELDS,
   CUSTOM_KEY, CUSTOM_PAGE, ADDED_BLOCK_FIELDS,
 } from './model.js';
@@ -28,7 +28,7 @@ import { canRename, typedAddress, freeAddress } from './addresses.js';
 import { coOwnedRules, outsideRules, stageRules, unlinkPartnerStatements } from './records.js';
 import { keepStatements } from '../portal/pups.js';
 
-const SECTIONS = ['site', 'pages', 'home', 'blocks', 'dogs', 'litters', 'reviews', 'steps', 'expanders', 'extras', 'products', 'partners', 'payment', 'questions', 'albums', 'embeds'];
+const SECTIONS = ['site', 'pages', 'home', 'blocks', 'dogs', 'litters', 'reviews', 'steps', 'expanders', 'extras', 'products', 'partners', 'payment', 'pay_methods', 'pay_notes', 'questions', 'albums', 'embeds'];
 const MAX_ITEMS = 200;
 
 const now = () => new Date().toISOString();
@@ -220,6 +220,22 @@ export function cleanDocument(doc, { photoIds = new Set(), existingDogSlugs = ne
       out.payment[kind] = cleanRecord(kind === 'safe_notice' ? SAFE_NOTICE_FIELDS : PAYMENT_FIELDS, v, `payment.${kind}`);
     }
   }
+  // Her payment methods (C11): as KennelOS sends them, plus her own name for each
+  // (own_label) and where it came from (source, KennelOS's by default).
+  if ('pay_methods' in doc) {
+    if (!Array.isArray(doc.pay_methods)) throw new ContentError('pay_methods', 'must be a list');
+    out.pay_methods = doc.pay_methods.flatMap((m, i) => {
+      const path = `pay_methods[${i}]`;
+      if (!m || typeof m !== 'object' || Array.isArray(m)) throw new ContentError(path, 'must be an object');
+      const { own_label, source, ...rest } = m;
+      const [kept] = cleanPayMethods([rest], 'pay_methods');
+      if (!kept) return [];
+      if (source != null && !['kennelos', 'kennelport'].includes(source)) throw new ContentError(`${path}.source`, 'kennelos or kennelport');
+      return [{ ...kept, own_label: cleanValue({ type: 'text', max: 60 }, own_label, `${path}.own_label`), source: source ?? 'kennelos' }];
+    });
+  }
+  // Her words under each stage's choices (C13).
+  if ('pay_notes' in doc) out.pay_notes = cleanPayNotes(doc.pay_notes, 'pay_notes');
   if ('albums' in doc) {
     const litterSlugs = out.litters ? new Set(out.litters.map((l) => l.slug)) : existingLitterSlugs;
     out.albums = list(doc.albums, 'albums').map((a, i) => {
@@ -408,6 +424,14 @@ export async function importContent(env, siteId, doc) {
     const content = Object.fromEntries(Object.entries(v).filter(([k, x]) => k !== 'enabled' && k !== 'show_on_site' && x !== null && !(Array.isArray(x) && !x.length)));
     s.push(upsert(db, 'payment_info', ['site_id', 'kind'], { site_id: siteId, kind, show_on_site: (notice ? v.enabled ?? 1 : v.show_on_site) ? 1 : 0, content: JSON.stringify(content) }));
   }
+  if (clean.pay_methods) {
+    s.push(db.prepare('DELETE FROM pay_methods WHERE site_id = ?').bind(siteId));
+    clean.pay_methods.forEach(({ key, pays, ...m }, i) => s.push(insert(db, 'pay_methods', { id: uuid(), site_id: siteId, sort: i, ...m, stages: JSON.stringify(m.stages), method_key: key, pays: pays ? JSON.stringify(pays) : null })));
+  }
+  if (clean.pay_notes) {
+    s.push(db.prepare('DELETE FROM pay_notes WHERE site_id = ?').bind(siteId));
+    for (const [stage, note] of Object.entries(clean.pay_notes)) s.push(insert(db, 'pay_notes', { site_id: siteId, stage, note, source: 'kennelos' }));
+  }
   if (clean.questions) {
     s.push(db.prepare("DELETE FROM form_fields WHERE site_id = ? AND form = 'application'").bind(siteId));
     clean.questions.forEach((q, i) => s.push(insert(db, 'form_fields', {
@@ -557,5 +581,12 @@ export async function exportContent(env, siteId) {
       ? { enabled: Boolean(p.show_on_site), ...JSON.parse(p.content) }
       : { show_on_site: Boolean(p.show_on_site), ...JSON.parse(p.content) }]));
   }
+  const methods = await all('SELECT * FROM pay_methods WHERE site_id = ? ORDER BY sort', siteId);
+  if (methods.length) {
+    doc.pay_methods = methods.map((m) => ({ label: m.label, ...(m.url ? { url: m.url } : {}), ...(m.note ? { note: m.note } : {}), stages: JSON.parse(m.stages),
+      ...(m.method_key ? { key: m.method_key } : {}), ...(m.pays ? { pays: JSON.parse(m.pays) } : {}), ...(m.discount ? { discount: m.discount } : {}), ...(m.own_label ? { own_label: m.own_label } : {}), source: m.source }));
+  }
+  const payNotes = await all('SELECT stage, note FROM pay_notes WHERE site_id = ?', siteId);
+  if (payNotes.length) doc.pay_notes = Object.fromEntries(payNotes.map((n) => [n.stage, n.note]));
   return doc;
 }

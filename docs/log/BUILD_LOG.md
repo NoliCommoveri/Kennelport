@@ -3189,3 +3189,115 @@ The owner: a way to see a new breeder's portal before adding anyone, like the pr
   page at seven days in all three looks with no row changed and nothing sent, her checklist and
   timeline dated from the sample, Stop viewing. 552 pass. Checked at 390px in Classic, Forest
   and Cream, and at 1280px. No migration, no version bump.
+
+## 2026-11-25: Her payment methods from KennelOS, for every stage of a sale (Website Contract C11)
+
+- **Built twice.** First to KennelOS's first message (methods inside `application_fee`).
+  KennelOS then revised C11: one list of methods at `payment.methods`, each with the stages
+  it's taken for. That's what's built now; the first version is gone.
+- **New bundle section `pay_methods`** (`kennelos/bundle.js` SECTIONS). `payment.methods`:
+  `[{ label, url?, note?, stages }]`, checked in `content/model.js` `cleanPayMethods`:
+  - at most 12;
+  - label ≤60 (required); note ≤1000, line breaks kept;
+  - a link that fails the link check is dropped;
+  - stages keep only `application_fee`, `deposit`, `payments`, `final_payment`, and one left
+    with no stage is dropped, as is one with neither link nor note;
+  - an unknown key, a stages that isn't a list, or too many refuses the bundle.
+
+  `payment` may now come with only `methods`; `application_fee` was already optional. The
+  typed `[way, details]` pairs on a card are unchanged.
+- **Kept in a new table `pay_methods`** (migration 0047, additive). `payment_info`'s kind
+  CHECK allows only three kinds, and widening it would mean rebuilding the table. Each bundle
+  replaces KennelOS's rows whole (a method she stops offering drops out; a bundle without
+  `methods` clears them). `own_label` (her name for it, plan step 1) is carried over by
+  label. In `sites.js` SITE_TABLES (backup), the link's waiting check, and unlinking
+  (source back to `kennelport`). Content export and import carry it (`pay_methods`).
+- **Snapshot:** `payment.methods` (`publish.js`), each `{ label (her own name if set), url,
+  note, stages }`. A fee or deposit card switched on shows with any method tagged for its
+  stage; Show in the Site Manager counts them as a way to pay (`records.js` `savePayment`).
+  Publish's list says "How to pay, ways to pay: …" (`publish.diff.fee.methods`).
+- **On the waitlist** (`render/parts.js` `choicesCard`, `payMethodsFor`): the Application fee
+  and Deposit cards show their stage's methods:
+  - "How would you like to pay?", with one expander per method (the template's `details.x`,
+    sharing a `name`, so one opens at a time);
+  - each opens to a "Pay with <label>" button (new tab) and/or her note with its line
+    breaks, and a Copy button for an address;
+  - a single method shows directly;
+  - then the card's note as "Additional Payment Instructions" (the owner's wording, in place
+    of KennelOS's "Other ways to pay").
+
+  The card's `pay_url` and typed methods give way to them. Where every card shown has methods,
+  the section's "Put the note shown…" line is left off. "We take payment only by…" lists
+  them. Payments and Final payment methods show nowhere yet: they wait for the Ways to pay
+  block ([`plans/payment-blocks.md`](../plans/payment-blocks.md)).
+- **Her switch, per card** (the owner): **Show my payment methods here** (`show_methods`,
+  on the card's form, on by default; `records.js` `getPayment` reads a missing one as on).
+  Off: the card ignores the methods and shows its link and note as before (for a site whose
+  Ways to pay block shows them instead). It's hers even on a card from KennelOS (not locked,
+  not in the bundle's shape), and a bundle keeps it (the landing's `ON CONFLICT` puts it back).
+  The label and hint are in `manage/forms.js` LABELS, for the owner to word.
+- Without methods, every card is drawn exactly as before.
+- No stylesheet change, so no `ASSET_VERSION` bump. Checked at 390px and 1200px.
+- Tests: `kennelos.test.js` (the section listed; methods with stages, dropped and kept, the
+  fee and deposit cards, a single method, methods with no fee, none sent clears them, five
+  refusals) and `payment.test.js` (export and import with her own name). 554 pass.
+- **Migration 0047 applies by itself on the first request after the merge.**
+
+## 2026-11-25: Her own names for her payment methods (payment-blocks plan, step 1)
+
+- **The owner's call: the breeder gets the name boxes.** Her How to pay screen
+  (`manage/screens.js` `methodsCard`) has a **Your payment methods** card, between the
+  Deposit card and the safe-payment notice, shown once KennelOS has sent any. Each method
+  shows, read-only as KennelOS sends it: its name, "For:" its fees (in the site's fee words),
+  its pay link and her instructions with their line breaks. Under each is a **Your name for
+  it** box (60 at most; empty shows KennelOS's name, which is also the placeholder). **Save
+  names** posts to `/payment/names`.
+- Stored in `pay_methods.own_label` (migration 0047, on this branch) by `records.js`
+  `savePayMethodNames`, only for this site's methods. A bundle keeps a name by the method's
+  label. The snapshot already uses her name, so families see it on the cards, in "Pay with…"
+  and in "We take payment only by…".
+- **Fee words:** `pay_payments` "Payments" and `pay_final` "Final payment" join `pay_fee`
+  and `pay_deposit` in the site's fixed wording (`content/rules.js`), for the owner to reword
+  per site. Her screen's "For:" line uses all four.
+- Her wording is in `manage/wording.js` (`payment.your_payment_methods*`,
+  `payment.method_for`, `payment.method_link`, `payment.your_name_for_it*`,
+  `payment.save_names`), for the owner to word.
+- No prototype screen for it: built from the Site Manager's own form pieces (card,
+  `fgroup`, `fgrid` label and hint), so no stylesheet change and no `APP_VERSION` bump.
+  Checked at 390px and 1100px.
+- Tests: `kennelos.test.js`, her names (the card, saving, an empty name, another site's id
+  ignored, too long, kept through an update, families see hers). 555 pass.
+
+## 2026-11-26: What each payment method pays, and her words per stage (contract C13)
+
+- The owner's ask: "how to pay for your puppy" pages from her KennelOS settings, before a
+  pup is picked: every method, for which stage and which kind of charge. No amounts and no
+  due dates (she has several schedules; her usual timing goes in a text block).
+- New bundle section `pay_charges` (Website Contract C13, KennelOS's side on its branch
+  `ccr-c8862061-0nol3l`): each `payment.methods` entry adds `key` (its KennelOS Account id)
+  and `pays: { payments?, final_payment? }` (kinds `price`, `boarding`, `transport`,
+  `extras`), and `payment.notes` carries her words per stage.
+- Kept: `pay_methods.method_key` and `pays`, and a new `pay_notes` table, all in migration
+  0047 (still only on this branch, so no second migration). The merge to `main` applies it
+  to live data: two new columns and a new table, nothing dropped or rewritten.
+- `model.js` `cleanPayMethods` (key, pays; unknown kinds and stages dropped, a key twice
+  keeps the first) and `cleanPayNotes`; `bundle.js` takes both and keeps her own names by
+  key (by label for rows from before keys); `publish.js` puts them in the snapshot
+  (`payment.methods[].key` / `.pays`, `payment.notes`); `diff.js` counts a notes change as
+  "ways to pay: edited"; `records.js` `getPayMethods` (key, pays), `getPayNotes`; `io.js`
+  exports and imports them (`pay_notes` section); `link.js` and `sites.js` know the table.
+- Nothing shows them yet: the Ways to pay block (plan step 2) reads them. No stylesheet or
+  manage-app change, so no version bump.
+- Tests: `kennelos.test.js` (C13: kept, dropped, refused, a rename keeps her name, the
+  snapshot, an older KennelOS), `payment.test.js` (export and import). 556 pass.
+
+## 2026-11-26: Her payment-method discount on a method (C13 `discount`)
+
+- KennelOS Payment Methods Phase 5 (discounts): each method she ticks Discounted carries
+  her payment-method discount's name in `pay_charges` (`discount`, up to 120 characters,
+  no amount: it differs per payment).
+- Kept as `pay_methods.discount` (added to migration 0047, still only on this branch);
+  `model.js` `cleanPayMethods`, `bundle.js`, `publish.js` (snapshot
+  `payment.methods[].discount`), `records.js`, `io.js`. Nothing shows it yet: the Ways to
+  pay block reads it (plan step 4).
+- Tests: `kennelos.test.js` (kept, in the snapshot). 556 pass.

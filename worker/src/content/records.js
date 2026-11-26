@@ -459,7 +459,34 @@ export async function getPayment(env, siteId, kind) {
   const row = await env.DB.prepare('SELECT * FROM payment_info WHERE site_id = ? AND kind = ?').bind(siteId, kind).first();
   const content = row ? JSON.parse(row.content) : {};
   if (kind === 'safe_notice') return { enabled: row ? Boolean(row.show_on_site) : true, ...content };
-  return { show_on_site: Boolean(row?.show_on_site), ...content, source: row?.source ?? 'kennelport' };
+  return { show_on_site: Boolean(row?.show_on_site), ...content, show_methods: content.show_methods !== false, source: row?.source ?? 'kennelport' };
+}
+
+// Her payment methods (C11), in her order, for her How to pay screen: KennelOS's
+// label, link, note and stages, and her own name for each.
+export async function getPayMethods(env, siteId) {
+  const rows = (await env.DB.prepare('SELECT * FROM pay_methods WHERE site_id = ? ORDER BY sort').bind(siteId).all()).results ?? [];
+  return rows.map((r) => ({ id: r.id, label: r.label, url: r.url, note: r.note, stages: JSON.parse(r.stages), own_label: r.own_label ?? null, key: r.method_key ?? null, pays: r.pays ? JSON.parse(r.pays) : null, discount: r.discount ?? null }));
+}
+
+// Her words under each stage's choices (C13): { stage: text }.
+export async function getPayNotes(env, siteId) {
+  const rows = (await env.DB.prepare('SELECT stage, note FROM pay_notes WHERE site_id = ?').bind(siteId).all()).results ?? [];
+  return Object.fromEntries(rows.map((r) => [r.stage, r.note]));
+}
+
+// Her own names for her payment methods ({ id: name }): an empty one shows KennelOS's.
+// Only methods of this site; a name is at most 60 characters.
+export async function savePayMethodNames(env, siteId, names) {
+  const ids = new Set((await getPayMethods(env, siteId)).map((m) => m.id));
+  const s = [];
+  for (const [id, v] of Object.entries(names)) {
+    if (!ids.has(id)) continue;
+    const name = cleanValue({ type: 'text', max: 60 }, v, 'own_label');
+    s.push(env.DB.prepare('UPDATE pay_methods SET own_label = ? WHERE id = ? AND site_id = ?').bind(name, id, siteId));
+  }
+  if (!s.length) return;
+  await env.DB.batch([...s, touch(env, siteId)]);
 }
 
 export async function savePayment(env, siteId, kind, input) {
@@ -469,7 +496,10 @@ export async function savePayment(env, siteId, kind, input) {
   const clean = cleanRecord(fields, omit(input, ['source']), kind);
   const on = notice ? clean.enabled : clean.show_on_site;
   const content = stripNulls(omit(clean, ['enabled', 'show_on_site']));
-  if (!notice && on && !content.methods?.length && !content.pay_url) throw new ContentError('methods', 'add at least one way to pay, or a payment page link, before showing it');
+  // Her KennelOS payment methods for this kind (C11) count as a way to pay.
+  const tagged = notice || !on || clean.show_methods === false ? null : await env.DB.prepare('SELECT stages FROM pay_methods WHERE site_id = ?').bind(siteId).all();
+  const hasTagged = (tagged?.results ?? []).some((r) => JSON.parse(r.stages).includes(kind));
+  if (!notice && on && !content.methods?.length && !content.pay_url && !hasTagged) throw new ContentError('methods', 'add at least one way to pay, or a payment page link, before showing it');
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO payment_info (site_id, kind, show_on_site, content) VALUES (?, ?, ?, ?)
       ON CONFLICT (site_id, kind) DO UPDATE SET show_on_site = excluded.show_on_site, content = excluded.content`)

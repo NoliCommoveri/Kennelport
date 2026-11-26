@@ -124,6 +124,7 @@ export const WORDS = [
     ['ask_package', 'Ask about this package', 'A package\'s link'], ['ask_item', 'Ask about this', 'An extra\'s link'],
     ['more_details', 'More details', 'An extra\'s fold, on an Extras block'], ['weeks', 'weeks', 'After a package\'s weeks'],
     ['pay_fee', 'Application fee', 'Payment card, unless the breeder titles it'], ['pay_deposit', 'Puppy deposit', 'Payment card, unless the breeder titles it'],
+    ['pay_payments', 'Payments', 'The payments between deposit and final payment (her payment methods)'], ['pay_final', 'Final payment', 'The last payment (her payment methods)'],
     ['family_login', 'Family login', 'The menu link'], ['copyright', '© {year} {kennel}', 'The footer ({year}, {kennel})'],
     ['safe_notice', "We'll never ask you to pay by gift card, wire transfer or into anyone else's account, and we only contact you from the details on this website. If someone asks you to, please tell us.", 'The safe-payment notice (the breeder can reword)'],
   ]],

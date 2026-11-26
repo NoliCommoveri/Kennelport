@@ -390,6 +390,9 @@ export const HOME_BLOCK_ORDER = Object.keys(HOME_BLOCKS);
 export const PAYMENT_KINDS = ['application_fee', 'deposit'];
 export const PAYMENT_FIELDS = {
   show_on_site: BOOL,
+  // Her KennelOS payment methods for this card's stage (C11) on the card; on unless she
+  // switches it off (records.js getPayment), when the card shows its link and note as before.
+  show_methods: BOOL,
   title: S(60),
   due_note: ML(240),
   methods: { type: 'pairs', max: 6, keyMax: 24, valueMax: 160, placeholders: ['Venmo', '@your-handle'], names: ['way', 'details'] },
@@ -397,6 +400,74 @@ export const PAYMENT_FIELDS = {
   pay_url: URL_,
   pay_label: S(40),
 };
+// Her payment methods from KennelOS (Website Contract C11, section pay_methods): each
+// method she accepts, once, in her order, with the stages of a sale she takes it for.
+// Kept in pay_methods (migration 0047), not in a payment card's content; the site
+// draws them on the fee and deposit cards (and the Ways to pay block, planned in
+// docs/plans/payment-blocks.md).
+export const PAY_STAGES = ['application_fee', 'deposit', 'payments', 'final_payment'];
+export const PAY_METHODS_MAX = 12;
+// With section pay_charges (C13): `key`, KennelOS's stable key for the method, and
+// `pays`, the kinds of charge it may pay on the payments after the deposit. The fee
+// and the deposit pay only themselves, so only these two stages are in `pays`. And
+// `discount`: her payment-method discount's name on a method she discounts.
+export const PAY_METHOD_KEYS = ['label', 'url', 'note', 'stages', 'key', 'pays', 'discount'];
+export const PAY_KINDS = ['price', 'boarding', 'transport', 'extras'];
+export const PAY_CHARGE_STAGES = ['payments', 'final_payment'];
+export const PAY_NOTE_MAX = 1000;
+// → the list as kept ([] for none), each { label, url, note, stages, key, pays, discount }
+// (key, pays and discount null when not sent). A link that fails the link check is dropped, a stage or a
+// kind of charge KennelPort doesn't know is dropped, `pays` keeps only stages the method
+// is taken for, a method whose key came already is dropped, and a method left with no
+// stage, or with neither link nor note, is dropped; anything else wrong refuses.
+export function cleanPayMethods(v, path) {
+  if (v === undefined || v === null) return [];
+  if (!Array.isArray(v)) throw new ContentError(path, 'must be a list');
+  if (v.length > PAY_METHODS_MAX) throw new ContentError(path, `at most ${PAY_METHODS_MAX}`);
+  const out = [];
+  v.forEach((m, i) => {
+    const at = `${path}[${i}]`;
+    if (!m || typeof m !== 'object' || Array.isArray(m)) throw new ContentError(at, 'must be an object');
+    for (const k of Object.keys(m)) if (!PAY_METHOD_KEYS.includes(k)) throw new ContentError(`${at}.${k}`, 'not a known field');
+    const label = cleanValue({ type: 'text', max: 60, required: true }, m.label, `${at}.label`);
+    let url = null;
+    try { url = cleanValue(URL_, m.url, `${at}.url`); } catch (err) { if (!(err instanceof ContentError)) throw err; }
+    const note = cleanValue({ type: 'text', max: 1000, multiline: true }, m.note, `${at}.note`);
+    if (m.stages != null && !Array.isArray(m.stages)) throw new ContentError(`${at}.stages`, 'must be a list');
+    const stages = PAY_STAGES.filter((st) => (m.stages ?? []).includes(st));
+    const key = cleanValue({ type: 'text', max: 64 }, m.key, `${at}.key`);
+    let pays = null;
+    if (m.pays != null) {
+      if (typeof m.pays !== 'object' || Array.isArray(m.pays)) throw new ContentError(`${at}.pays`, 'must be an object');
+      pays = {};
+      for (const st of PAY_CHARGE_STAGES) {
+        const kinds = m.pays[st];
+        if (kinds == null || !stages.includes(st)) continue;
+        if (!Array.isArray(kinds)) throw new ContentError(`${at}.pays.${st}`, 'must be a list');
+        const kept = PAY_KINDS.filter((k) => kinds.includes(k));
+        if (kept.length) pays[st] = kept;
+      }
+    }
+    const discount = cleanValue({ type: 'text', max: 120 }, m.discount, `${at}.discount`);
+    if (key && out.some((x) => x.key === key)) return;
+    if (stages.length && (url || note)) out.push({ label, url, note, stages, key, pays, discount });
+  });
+  return out;
+}
+
+// Her own words under each stage's choices (C13, payment.notes): { stage: text }, line
+// breaks kept. A stage KennelPort doesn't know, or an empty note, is dropped.
+export function cleanPayNotes(v, path) {
+  if (v === undefined || v === null) return {};
+  if (typeof v !== 'object' || Array.isArray(v)) throw new ContentError(path, 'must be an object');
+  const out = {};
+  for (const st of PAY_STAGES) {
+    const note = cleanValue({ type: 'text', max: PAY_NOTE_MAX, multiline: true }, v[st], `${path}.${st}`);
+    if (note) out[st] = note;
+  }
+  return out;
+}
+
 // The safe-payment notice: on by default (plan 3.12), in the breeder's words or
 // the default (render/parts.js SAFE_NOTICE_TEXT).
 export const SAFE_NOTICE_FIELDS = { enabled: BOOL, text: ML(400) };

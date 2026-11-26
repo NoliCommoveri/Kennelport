@@ -135,3 +135,26 @@ test('closing a site deletes its payment details', async () => {
 test('the default notice text is plain about scams', () => {
   assert.match(SAFE_NOTICE_TEXT, /gift card/);
 });
+
+test('her payment methods go out with an export and back in, her own names with them', async () => {
+  const b = await breeder();
+  const pay_methods = [
+    { label: 'Card', url: 'https://buy.stripe.com/abc', stages: ['application_fee'], source: 'kennelos' },
+    { label: 'Zelle', note: 'pay@ak.example\nYour name in the memo.', stages: ['deposit', 'final_payment'], key: 'a-z', pays: { final_payment: ['price', 'boarding'] }, own_label: 'Zelle (bank transfer)', source: 'kennelos' },
+  ];
+  const pay_notes = { deposit: 'Or a check.', final_payment: 'Cash or Zelle only' };
+  await importContent(b.env, b.site.id, { payment: { application_fee: { show_on_site: true, title: 'Application fee' } }, pay_methods, pay_notes });
+  const doc = await exportContent(b.env, b.site.id);
+  assert.deepEqual(doc.pay_methods, pay_methods);
+  assert.deepEqual(doc.pay_notes, pay_notes);
+  await importContent(b.env, b.site.id, { pay_methods: doc.pay_methods });
+  assert.deepEqual((await exportContent(b.env, b.site.id)).pay_methods, pay_methods);
+  await assert.rejects(importContent(b.env, b.site.id, { pay_methods: [{ label: 'Card', note: 'x', stages: ['deposit'], id: 'acct_1' }] }), /pay_methods\[0\]\.id: not a known field/);
+  // Shown with only the methods; her own name is the one buyers see.
+  await b.post('/publish');
+  const w = await b.page('/waitlist');
+  assert.match(w, />Pay with Card</);
+  await b.post('/payment/deposit', { show_on_site: '1', show_methods: '1', title: 'Deposit' });
+  await b.post('/publish');
+  assert.match(await b.page('/waitlist'), /<b>Zelle \(bank transfer\):<\/b> /);
+});
