@@ -729,7 +729,7 @@ test('pay_charges (C13): each method\'s key and what it pays, her words per stag
   const send = (payment) => api(b.env, '/v1/bundle', { body: bundle({ payment }), token });
   const SENT = [
     { label: 'Card', url: 'https://buy.stripe.com/abc', stages: ['application_fee', 'payments'], key: 'a-st', pays: { payments: ['price', 'extras'] } },
-    { label: 'Zelle', note: 'pay@ak.example', stages: ['deposit', 'payments', 'final_payment'], key: 'a-z', pays: { payments: ['price', 'boarding', 'transport', 'extras'], final_payment: ['price', 'transport', 'extras', 'layaway'], deposit: ['price'] } },
+    { label: 'Zelle', note: 'pay@ak.example', stages: ['deposit', 'payments', 'final_payment'], key: 'a-z', pays: { payments: ['price', 'boarding', 'transport', 'extras'], final_payment: ['price', 'transport', 'extras', 'layaway'], deposit: ['price'] }, discount: 'Bank or cash discount' },
     { label: 'Cash', note: 'At pickup', stages: ['final_payment'], key: 'a-c', pays: { final_payment: ['boarding'], payments: ['price'] } },
     { label: 'Cash again', note: 'x', stages: ['deposit'], key: 'a-c' },
   ];
@@ -756,6 +756,8 @@ test('pay_charges (C13): each method\'s key and what it pays, her words per stag
   const snap = await loadSnapshot(b.env, b.site.id, b.row('SELECT published_snapshot_id FROM sites WHERE id = ?', b.site.id).published_snapshot_id);
   assert.deepEqual(snap.payment.methods[0], { label: 'Credit or debit card', url: 'https://buy.stripe.com/abc', note: null, stages: ['application_fee', 'payments'], key: 'a-st', pays: { payments: ['price', 'extras'] } });
   assert.deepEqual(snap.payment.notes, { final_payment: 'Cash only' });
+  assert.equal(snap.payment.methods[1].discount, 'Bank or cash discount', 'her payment-method discount on Zelle');
+  assert.equal('discount' in snap.payment.methods[0], false);
   // A KennelOS without pay_charges (C11 only): no keys or pays, and the notes go.
   await send({ methods: [{ label: 'Zelle', note: 'pay@ak.example', stages: ['deposit'] }] });
   assert.deepEqual(rows().map((r) => [r.label, r.method_key, r.pays]), [['Zelle', null, null]]);

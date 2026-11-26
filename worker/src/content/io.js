@@ -8,7 +8,7 @@
 //     (a co-owned dog names its partner kennels: lives_with: '<name>', co_owned_with: ['<name>'])
 //     litters: [{ ..., dam: '<dog slug>', puppies: [...] }], reviews: [...],
 //     steps: [...], expanders: { policies: [...], faq: [...], waitlist_help: [...] },
-//     extras: [...], products: [...], partners: [{ name, url, photo_id }], payment: { application_fee: {...}, deposit: {...}, safe_notice: {...} }, pay_methods: [{ label, url, note, stages, key, pays, own_label, source }], pay_notes: { <stage>: note },
+//     extras: [...], products: [...], partners: [{ name, url, photo_id }], payment: { application_fee: {...}, deposit: {...}, safe_notice: {...} }, pay_methods: [{ label, url, note, stages, key, pays, discount, own_label, source }], pay_notes: { <stage>: note },
 //     questions: [...], albums: [{ ..., litter: '<litter slug>', photos: [ids] }],
 //     embeds: [{ place: 'home' | 'about' | 'dog:<slug>' | 'litter:<slug>' | 'album:<slug>', provider, item, title, preview_photo_id }] }
 //
@@ -584,7 +584,7 @@ export async function exportContent(env, siteId) {
   const methods = await all('SELECT * FROM pay_methods WHERE site_id = ? ORDER BY sort', siteId);
   if (methods.length) {
     doc.pay_methods = methods.map((m) => ({ label: m.label, ...(m.url ? { url: m.url } : {}), ...(m.note ? { note: m.note } : {}), stages: JSON.parse(m.stages),
-      ...(m.method_key ? { key: m.method_key } : {}), ...(m.pays ? { pays: JSON.parse(m.pays) } : {}), ...(m.own_label ? { own_label: m.own_label } : {}), source: m.source }));
+      ...(m.method_key ? { key: m.method_key } : {}), ...(m.pays ? { pays: JSON.parse(m.pays) } : {}), ...(m.discount ? { discount: m.discount } : {}), ...(m.own_label ? { own_label: m.own_label } : {}), source: m.source }));
   }
   const payNotes = await all('SELECT stage, note FROM pay_notes WHERE site_id = ?', siteId);
   if (payNotes.length) doc.pay_notes = Object.fromEntries(payNotes.map((n) => [n.stage, n.note]));

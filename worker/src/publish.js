@@ -249,7 +249,7 @@ export async function buildSnapshot(env, siteId) {
   // With C13: its key and what it may pay ({ payments?, final_payment?: [kinds] }).
   const methods = (await all('SELECT * FROM pay_methods WHERE site_id = ? ORDER BY sort')).map((m) => ({
     label: m.own_label || m.label, url: m.url ?? null, note: m.note ?? null, stages: json(m.stages, []),
-    ...(m.method_key ? { key: m.method_key } : {}), ...(m.pays ? { pays: json(m.pays, {}) } : {}),
+    ...(m.method_key ? { key: m.method_key } : {}), ...(m.pays ? { pays: json(m.pays, {}) } : {}), ...(m.discount ? { discount: m.discount } : {}),
   }));
   if (methods.length) payment.methods = methods;
   // Her words under each stage's choices (C13): { stage: text }.

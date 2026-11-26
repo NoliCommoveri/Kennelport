@@ -409,13 +409,14 @@ export const PAY_STAGES = ['application_fee', 'deposit', 'payments', 'final_paym
 export const PAY_METHODS_MAX = 12;
 // With section pay_charges (C13): `key`, KennelOS's stable key for the method, and
 // `pays`, the kinds of charge it may pay on the payments after the deposit. The fee
-// and the deposit pay only themselves, so only these two stages are in `pays`.
-export const PAY_METHOD_KEYS = ['label', 'url', 'note', 'stages', 'key', 'pays'];
+// and the deposit pay only themselves, so only these two stages are in `pays`. And
+// `discount`: her payment-method discount's name on a method she discounts.
+export const PAY_METHOD_KEYS = ['label', 'url', 'note', 'stages', 'key', 'pays', 'discount'];
 export const PAY_KINDS = ['price', 'boarding', 'transport', 'extras'];
 export const PAY_CHARGE_STAGES = ['payments', 'final_payment'];
 export const PAY_NOTE_MAX = 1000;
-// → the list as kept ([] for none), each { label, url, note, stages, key, pays } (key and
-// pays null when not sent). A link that fails the link check is dropped, a stage or a
+// → the list as kept ([] for none), each { label, url, note, stages, key, pays, discount }
+// (key, pays and discount null when not sent). A link that fails the link check is dropped, a stage or a
 // kind of charge KennelPort doesn't know is dropped, `pays` keeps only stages the method
 // is taken for, a method whose key came already is dropped, and a method left with no
 // stage, or with neither link nor note, is dropped; anything else wrong refuses.
@@ -447,8 +448,9 @@ export function cleanPayMethods(v, path) {
         if (kept.length) pays[st] = kept;
       }
     }
+    const discount = cleanValue({ type: 'text', max: 120 }, m.discount, `${at}.discount`);
     if (key && out.some((x) => x.key === key)) return;
-    if (stages.length && (url || note)) out.push({ label, url, note, stages, key, pays });
+    if (stages.length && (url || note)) out.push({ label, url, note, stages, key, pays, discount });
   });
   return out;
 }

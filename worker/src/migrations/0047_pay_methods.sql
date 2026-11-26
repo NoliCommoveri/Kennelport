@@ -12,7 +12,9 @@
 -- already carry; Website Contract C13, section pay_charges), null from a KennelOS that
 -- doesn't send it. pays: a JSON object { payments?, final_payment? }, the kinds of
 -- charge (price, boarding, transport, extras) the method may pay at that stage; null
--- when not sent.
+-- when not sent. discount: her payment-method discount's name on a method she ticked
+-- Discounted in KennelOS ("Bank or cash discount", Payment Methods Phase 5), null for
+-- none.
 --
 -- pay_notes: her own words under each stage's choices (C13, payment.notes), one row
 -- per stage (application_fee, deposit, payments, final_payment); a bundle replaces
@@ -28,6 +30,7 @@ CREATE TABLE IF NOT EXISTS pay_methods (
   own_label   TEXT,
   method_key  TEXT,
   pays        TEXT,
+  discount    TEXT,
   source      TEXT NOT NULL DEFAULT 'kennelos' CHECK (source IN ('kennelport', 'kennelos'))
 );
 CREATE INDEX IF NOT EXISTS pay_methods_site ON pay_methods (site_id, sort);

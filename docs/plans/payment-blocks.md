@@ -73,6 +73,7 @@ One record per method, read from `snap.payment.methods`. Fields a block can use:
 | Has a link | bool | e.g. "only methods with a Pay button" |
 | Has instructions | bool | |
 | From KennelOS | bool | |
+| Has a discount | bool, with its name | "Save paying by bank or cash"; choose by it |
 | Pays for (payments) | list: Puppy price, Boarding, Transport, Extras | **group by charge**; "Boarding: Cash" |
 | Pays for (final payment) | list, the same values | as above, for the final payment |
 
@@ -139,15 +140,19 @@ existing components, listed above, and checked at 390px and on a computer beside
 waitlist's How to pay. New CSS (the card per group, pills inside a method, the numbered fee
 steps) needs an `ASSET_VERSION` bump: ask first (CLAUDE.md).
 
-## Step 4. Later, from KennelOS (room left, nothing built)
+## Step 4. Later, from KennelOS
 
-- **Amounts (Payment Methods Phase 4):** a cost-cover amount beside each price. That would
-  become a group's line under the fee name.
-- **Discount for a way of paying (Phase 5):** "Save $75 paying by bank or cash". That would
-  be an item on a method ("Saving") and a field to group or choose by.
+- **Amounts (Payment Methods Phase 4):** a cost-cover amount beside each price (contract
+  C12, section `cost_cover`, not taken yet), now with the deposit's share too
+  (`deposit_service_fee_female` / `_male`). That would become a group's line under the
+  fee name.
+- **Discount for a way of paying (Phase 5):** **kept** (2026-11-26): `discount` on a
+  method (C13), her payment-method discount's name ("Bank or cash discount") on each
+  method she ticked Discounted, stored as `pay_methods.discount` and in the snapshot. No
+  amount: it differs per payment. For the block: an item on a method ("Saving", her name
+  for it) and a field to group or choose by ("Has a discount").
 
-Each will come as its own bundle section, and each is one more tick in what a group or item
-shows.
+Each is one more tick in what a group or item shows.
 
 ## Building it, in order
 

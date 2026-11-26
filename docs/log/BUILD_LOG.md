@@ -3290,3 +3290,14 @@ The owner: a way to see a new breeder's portal before adding anyone, like the pr
   manage-app change, so no version bump.
 - Tests: `kennelos.test.js` (C13: kept, dropped, refused, a rename keeps her name, the
   snapshot, an older KennelOS), `payment.test.js` (export and import). 556 pass.
+
+## 2026-11-26: Her payment-method discount on a method (C13 `discount`)
+
+- KennelOS Payment Methods Phase 5 (discounts): each method she ticks Discounted carries
+  her payment-method discount's name in `pay_charges` (`discount`, up to 120 characters,
+  no amount: it differs per payment).
+- Kept as `pay_methods.discount` (added to migration 0047, still only on this branch);
+  `model.js` `cleanPayMethods`, `bundle.js`, `publish.js` (snapshot
+  `payment.methods[].discount`), `records.js`, `io.js`. Nothing shows it yet: the Ways to
+  pay block reads it (plan step 4).
+- Tests: `kennelos.test.js` (kept, in the snapshot). 556 pass.
