@@ -3267,3 +3267,26 @@ The owner: a way to see a new breeder's portal before adding anyone, like the pr
   Checked at 390px and 1100px.
 - Tests: `kennelos.test.js`, her names (the card, saving, an empty name, another site's id
   ignored, too long, kept through an update, families see hers). 555 pass.
+
+## 2026-11-26: What each payment method pays, and her words per stage (contract C13)
+
+- The owner's ask: "how to pay for your puppy" pages from her KennelOS settings, before a
+  pup is picked: every method, for which stage and which kind of charge. No amounts and no
+  due dates (she has several schedules; her usual timing goes in a text block).
+- New bundle section `pay_charges` (Website Contract C13, KennelOS's side on its branch
+  `ccr-c8862061-0nol3l`): each `payment.methods` entry adds `key` (its KennelOS Account id)
+  and `pays: { payments?, final_payment? }` (kinds `price`, `boarding`, `transport`,
+  `extras`), and `payment.notes` carries her words per stage.
+- Kept: `pay_methods.method_key` and `pays`, and a new `pay_notes` table, all in migration
+  0047 (still only on this branch, so no second migration). The merge to `main` applies it
+  to live data: two new columns and a new table, nothing dropped or rewritten.
+- `model.js` `cleanPayMethods` (key, pays; unknown kinds and stages dropped, a key twice
+  keeps the first) and `cleanPayNotes`; `bundle.js` takes both and keeps her own names by
+  key (by label for rows from before keys); `publish.js` puts them in the snapshot
+  (`payment.methods[].key` / `.pays`, `payment.notes`); `diff.js` counts a notes change as
+  "ways to pay: edited"; `records.js` `getPayMethods` (key, pays), `getPayNotes`; `io.js`
+  exports and imports them (`pay_notes` section); `link.js` and `sites.js` know the table.
+- Nothing shows them yet: the Ways to pay block (plan step 2) reads them. No stylesheet or
+  manage-app change, so no version bump.
+- Tests: `kennelos.test.js` (C13: kept, dropped, refused, a rename keeps her name, the
+  snapshot, an older KennelOS), `payment.test.js` (export and import). 556 pass.

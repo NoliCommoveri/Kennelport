@@ -407,10 +407,18 @@ export const PAYMENT_FIELDS = {
 // docs/plans/payment-blocks.md).
 export const PAY_STAGES = ['application_fee', 'deposit', 'payments', 'final_payment'];
 export const PAY_METHODS_MAX = 12;
-export const PAY_METHOD_KEYS = ['label', 'url', 'note', 'stages'];
-// → the list as kept ([] for none). A link that fails the link check is dropped, a
-// stage KennelPort doesn't know is dropped, and a method left with no stage, or with
-// neither link nor note, is dropped; anything else wrong refuses.
+// With section pay_charges (C13): `key`, KennelOS's stable key for the method, and
+// `pays`, the kinds of charge it may pay on the payments after the deposit. The fee
+// and the deposit pay only themselves, so only these two stages are in `pays`.
+export const PAY_METHOD_KEYS = ['label', 'url', 'note', 'stages', 'key', 'pays'];
+export const PAY_KINDS = ['price', 'boarding', 'transport', 'extras'];
+export const PAY_CHARGE_STAGES = ['payments', 'final_payment'];
+export const PAY_NOTE_MAX = 1000;
+// → the list as kept ([] for none), each { label, url, note, stages, key, pays } (key and
+// pays null when not sent). A link that fails the link check is dropped, a stage or a
+// kind of charge KennelPort doesn't know is dropped, `pays` keeps only stages the method
+// is taken for, a method whose key came already is dropped, and a method left with no
+// stage, or with neither link nor note, is dropped; anything else wrong refuses.
 export function cleanPayMethods(v, path) {
   if (v === undefined || v === null) return [];
   if (!Array.isArray(v)) throw new ContentError(path, 'must be a list');
@@ -426,8 +434,35 @@ export function cleanPayMethods(v, path) {
     const note = cleanValue({ type: 'text', max: 1000, multiline: true }, m.note, `${at}.note`);
     if (m.stages != null && !Array.isArray(m.stages)) throw new ContentError(`${at}.stages`, 'must be a list');
     const stages = PAY_STAGES.filter((st) => (m.stages ?? []).includes(st));
-    if (stages.length && (url || note)) out.push({ label, url, note, stages });
+    const key = cleanValue({ type: 'text', max: 64 }, m.key, `${at}.key`);
+    let pays = null;
+    if (m.pays != null) {
+      if (typeof m.pays !== 'object' || Array.isArray(m.pays)) throw new ContentError(`${at}.pays`, 'must be an object');
+      pays = {};
+      for (const st of PAY_CHARGE_STAGES) {
+        const kinds = m.pays[st];
+        if (kinds == null || !stages.includes(st)) continue;
+        if (!Array.isArray(kinds)) throw new ContentError(`${at}.pays.${st}`, 'must be a list');
+        const kept = PAY_KINDS.filter((k) => kinds.includes(k));
+        if (kept.length) pays[st] = kept;
+      }
+    }
+    if (key && out.some((x) => x.key === key)) return;
+    if (stages.length && (url || note)) out.push({ label, url, note, stages, key, pays });
   });
+  return out;
+}
+
+// Her own words under each stage's choices (C13, payment.notes): { stage: text }, line
+// breaks kept. A stage KennelPort doesn't know, or an empty note, is dropped.
+export function cleanPayNotes(v, path) {
+  if (v === undefined || v === null) return {};
+  if (typeof v !== 'object' || Array.isArray(v)) throw new ContentError(path, 'must be an object');
+  const out = {};
+  for (const st of PAY_STAGES) {
+    const note = cleanValue({ type: 'text', max: PAY_NOTE_MAX, multiline: true }, v[st], `${path}.${st}`);
+    if (note) out[st] = note;
+  }
   return out;
 }
 

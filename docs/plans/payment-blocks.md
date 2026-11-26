@@ -28,6 +28,16 @@ this branch (build log). This plan builds the block on top of it.
   before. Every other option in this plan belongs to the Ways to pay block only.
 - Methods for **Payments** and **Final payment** don't show anywhere yet. They wait for this
   block.
+- **What each method pays, and her words per stage** (Website Contract C13, section
+  `pay_charges`, built 2026-11-26): each method also has `key` (KennelOS's Account id for
+  it, kept as `pay_methods.method_key`) and `pays: { payments?, final_payment? }`, the kinds
+  of charge it may pay there (`price`, `boarding`, `transport`, `extras`; a service fee is
+  paid with its charge; the fee and the deposit pay only themselves). KennelOS works these
+  out as families are offered them, so KennelPort never repeats its rules. Her
+  "Additional Payment Instructions" for each stage are in `pay_notes`. All three are in
+  the snapshot (`snap.payment.methods[].key` / `.pays`, `snap.payment.notes`). No amounts
+  and no due dates: she has several payment schedules, so her usual timing is hers to
+  write in a text block.
 
 ## The design in one line
 
@@ -63,16 +73,21 @@ One record per method, read from `snap.payment.methods`. Fields a block can use:
 | Has a link | bool | e.g. "only methods with a Pay button" |
 | Has instructions | bool | |
 | From KennelOS | bool | |
+| Pays for (payments) | list: Puppy price, Boarding, Transport, Extras | **group by charge**; "Boarding: Cash" |
+| Pays for (final payment) | list, the same values | as above, for the final payment |
 
 - **Group by Fees:** a method goes under each fee it's taken for, so Zelle shows under all
   four. Groups come in sale order and use the fee names from step 1. Check that list
   grouping keeps the values' order; Tags and colours group by list today.
 - **Group by Name, or no grouping:** each method once, with its fees as pills. That's the
   "one section per method, and every fee that can be paid that way" layout.
-- **A method's key:** KennelOS sends no id (correctly: no account data), so unticks and
-  picks are keyed by the method's label in lower case. The snapshot gets a `key` for this.
-  If she renames a method in KennelOS, her untick on it is forgotten, as when a dog leaves
-  the site (open question 4).
+- **A method's key:** `key` from KennelOS (C13); unticks and picks are keyed by it (by
+  the label in lower case only for a method from a KennelOS that sends no key), so they
+  survive a rename in KennelOS, as her names already do.
+- **Group by charge:** a method goes under each kind it pays, per stage, so "Payments ·
+  Boarding: Cash" reads straight from `pays`. A group's lead line, "Pay boarding by Cash".
+  Charge names go in the site's fixed wording beside the fee words (`pay_kind_price`
+  "Puppy price", `pay_kind_boarding`, `pay_kind_transport`, `pay_kind_extras`).
 
 ## Step 3. The block: "Ways to pay"
 
@@ -150,12 +165,11 @@ Each step ships on its own. None needs a migration: 0047, on the C11 branch, alr
 
 1. ~~Who gets the name boxes?~~ **The breeder** (the owner, 2026-11-25), on her How to pay
    screen. Built.
-2. **Payments and Final payment have no When line or note** (KennelOS sends those only for
-   the application fee and the deposit). Wait for KennelOS, or give her boxes for them now?
-   Boxes would need a place to keep them (a new table, so a migration).
+2. ~~Payments and Final payment have no note~~ **KennelOS sends her words for every
+   stage** (C13, `pay_notes`). No When line comes: her timing differs by schedule, so she
+   writes her usual timing in a text block (the owner, 2026-11-26).
 3. **The waitlist's How to pay section** once a Ways to pay block exists: keep both (my
    recommendation: the block is optional, and nothing changes until she places one), or
    replace the section with a default Ways to pay block on the waitlist page.
-4. **Ask KennelOS for a stable key per method** (no account data, just a key that survives
-   a rename), so her names and unticks survive a rename in KennelOS. Until then, they follow
-   the label.
+4. ~~A stable key per method~~ **Sent** (C13: the Account id, as `products` already
+   carries; the owner, 2026-11-26).

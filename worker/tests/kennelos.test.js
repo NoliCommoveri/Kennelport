@@ -723,6 +723,56 @@ test('her own names for her payment methods: on How to pay, kept through KennelO
   assert.doesNotMatch(w, />Pay with Card</);
 });
 
+test('pay_charges (C13): each method\'s key and what it pays, her words per stage; her names follow the key', async () => {
+  const b = await breeder();
+  const token = await linked(b);
+  const send = (payment) => api(b.env, '/v1/bundle', { body: bundle({ payment }), token });
+  const SENT = [
+    { label: 'Card', url: 'https://buy.stripe.com/abc', stages: ['application_fee', 'payments'], key: 'a-st', pays: { payments: ['price', 'extras'] } },
+    { label: 'Zelle', note: 'pay@ak.example', stages: ['deposit', 'payments', 'final_payment'], key: 'a-z', pays: { payments: ['price', 'boarding', 'transport', 'extras'], final_payment: ['price', 'transport', 'extras', 'layaway'], deposit: ['price'] } },
+    { label: 'Cash', note: 'At pickup', stages: ['final_payment'], key: 'a-c', pays: { final_payment: ['boarding'], payments: ['price'] } },
+    { label: 'Cash again', note: 'x', stages: ['deposit'], key: 'a-c' },
+  ];
+  const NOTES = { application_fee: 'Or a check.', payments: 'Or a check.', final_payment: 'Cash or Zelle only\nAt pickup.', someday: 'x' };
+  assert.equal((await send({ methods: SENT, notes: NOTES })).status, 200);
+  const rows = () => b.rows('SELECT label, method_key, pays, own_label FROM pay_methods WHERE site_id = ? ORDER BY sort', b.site.id);
+  // A kind or stage it doesn't know, and a stage it isn't taken for, are dropped; a key twice keeps the first.
+  assert.deepEqual(rows().map((r) => [r.label, r.method_key, JSON.parse(r.pays)]), [
+    ['Card', 'a-st', { payments: ['price', 'extras'] }],
+    ['Zelle', 'a-z', { payments: ['price', 'boarding', 'transport', 'extras'], final_payment: ['price', 'transport', 'extras'] }],
+    ['Cash', 'a-c', { final_payment: ['boarding'] }],
+  ]);
+  assert.deepEqual(Object.fromEntries(b.rows('SELECT stage, note FROM pay_notes WHERE site_id = ?', b.site.id).map((r) => [r.stage, r.note])),
+    { application_fee: 'Or a check.', payments: 'Or a check.', final_payment: 'Cash or Zelle only\nAt pickup.' });
+  // Her name for Card follows its key through a rename in KennelOS.
+  const id = b.row("SELECT id FROM pay_methods WHERE label = 'Card'").id;
+  await b.post('/payment/names', { [`name.${id}`]: 'Credit or debit card' });
+  await send({ methods: [{ ...SENT[0], label: 'Stripe card' }, SENT[1]], notes: { final_payment: 'Cash only' } });
+  assert.deepEqual(rows().map((r) => [r.label, r.own_label]), [['Stripe card', 'Credit or debit card'], ['Zelle', null]]);
+  assert.deepEqual(b.rows('SELECT stage, note FROM pay_notes WHERE site_id = ?', b.site.id).map((r) => [r.stage, r.note]), [['final_payment', 'Cash only']]);
+  // The published site has them: her name, the key, what it pays, her notes.
+  await b.post('/publish');
+  const { loadSnapshot } = await import('../src/publish.js');
+  const snap = await loadSnapshot(b.env, b.site.id, b.row('SELECT published_snapshot_id FROM sites WHERE id = ?', b.site.id).published_snapshot_id);
+  assert.deepEqual(snap.payment.methods[0], { label: 'Credit or debit card', url: 'https://buy.stripe.com/abc', note: null, stages: ['application_fee', 'payments'], key: 'a-st', pays: { payments: ['price', 'extras'] } });
+  assert.deepEqual(snap.payment.notes, { final_payment: 'Cash only' });
+  // A KennelOS without pay_charges (C11 only): no keys or pays, and the notes go.
+  await send({ methods: [{ label: 'Zelle', note: 'pay@ak.example', stages: ['deposit'] }] });
+  assert.deepEqual(rows().map((r) => [r.label, r.method_key, r.pays]), [['Zelle', null, null]]);
+  assert.equal(b.row('SELECT COUNT(*) AS n FROM pay_notes WHERE site_id = ?', b.site.id).n, 0);
+  // Refused: pays or notes the wrong shape, a note too long.
+  for (const [payment, path] of [
+    [{ methods: [{ ...SENT[0], pays: ['price'] }] }, 'payment.methods[0].pays'],
+    [{ methods: [{ ...SENT[0], pays: { payments: 'price' } }] }, 'payment.methods[0].pays.payments'],
+    [{ methods: SENT, notes: 'x' }, 'payment.notes'],
+    [{ methods: SENT, notes: { deposit: 'x'.repeat(1001) } }, 'payment.notes.deposit'],
+  ]) {
+    const r = await send(payment);
+    assert.equal(r.status, 400, path);
+    assert.equal((await r.json()).path, path);
+  }
+});
+
 test('steps: KennelOS only starts them; her wording, her own steps and her order stay through every update', async () => {
   const b = await breeder();
   const token = await linked(b);
@@ -836,7 +886,7 @@ test('Recommended products from KennelOS: name, link, code and note are KennelOS
   const token = await linked(b);
   const send = async (body) => (await api(b.env, '/v1/bundle', { body, token })).json();
   // Answers say which optional sections this Worker takes.
-  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail', 'origin', 'lineage', 'origin_country', 'bag_items', 'pay_methods']);
+  assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.sections, ['products', 'registry', 'heat_id', 'partner_kennels', 'transport', 'disposition', 'pup_disposition', 'litter_status', 'health_detail', 'account_type', 'titles_detail', 'origin', 'lineage', 'origin_country', 'bag_items', 'pay_methods', 'pay_charges']);
   assert.deepEqual((await (await api(b.env, '/v1/link', { method: 'GET', token })).json()).site.portal_takes, ['registration', 'screening', 'health_tests']);
   // One she made by hand, with a picture and a Home badge.
   const site = b.site.id;

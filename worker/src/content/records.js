@@ -466,7 +466,13 @@ export async function getPayment(env, siteId, kind) {
 // label, link, note and stages, and her own name for each.
 export async function getPayMethods(env, siteId) {
   const rows = (await env.DB.prepare('SELECT * FROM pay_methods WHERE site_id = ? ORDER BY sort').bind(siteId).all()).results ?? [];
-  return rows.map((r) => ({ id: r.id, label: r.label, url: r.url, note: r.note, stages: JSON.parse(r.stages), own_label: r.own_label ?? null }));
+  return rows.map((r) => ({ id: r.id, label: r.label, url: r.url, note: r.note, stages: JSON.parse(r.stages), own_label: r.own_label ?? null, key: r.method_key ?? null, pays: r.pays ? JSON.parse(r.pays) : null }));
+}
+
+// Her words under each stage's choices (C13): { stage: text }.
+export async function getPayNotes(env, siteId) {
+  const rows = (await env.DB.prepare('SELECT stage, note FROM pay_notes WHERE site_id = ?').bind(siteId).all()).results ?? [];
+  return Object.fromEntries(rows.map((r) => [r.stage, r.note]));
 }
 
 // Her own names for her payment methods ({ id: name }): an empty one shows KennelOS's.
