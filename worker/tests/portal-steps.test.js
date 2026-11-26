@@ -363,18 +363,22 @@ test('ready-made tasks: she picks a program and a wording; registration goes in 
 test('Register {name} stays suggested on her timeline until it\'s on it', async () => {
   const { env, her } = await setup();
   env.DB.raw.prepare("UPDATE products SET portal_type = 'registration' WHERE id = 'crate'").run();
-  await her('/portal/timeline/new', { title: 'Register Opal', body: 'Papers in the folder.', days: '30', when: 'after', count_from: 'pickup' });
+  await her('/portal/timeline/new', { title: 'Order the crate', body: 'Before pickup.', days: '3', when: 'before', count_from: 'pickup' });
   let page = await (await her('/portal/timeline')).text();
   assert.match(page, /Suggested: Register \{name\}/);
   assert.match(page, /value="crate\|registration\|0"/);
   assert.equal((await her('/portal/timeline/ready', { ready: 'crate|registration|0' })).status, 303);
-  // Hers stays; the suggested one is added beside it, and no longer suggested.
-  assert.ok(item(env, 'portal_timeline_tasks', 'Register Opal'));
   assert.equal(item(env, 'portal_timeline_tasks', 'Register {name}').button_label, 'Register');
   page = await (await her('/portal/timeline')).text();
   assert.doesNotMatch(page, /Suggested: Register \{name\}</);
+  // Nor offered again in the ready-made picker: her registration program has its task.
+  assert.doesNotMatch(page, /value="crate\|registration\|[01]"/);
+  // Reworded after adding, it's still on her list: not suggested again.
+  env.DB.raw.prepare("UPDATE portal_timeline_tasks SET title = 'Send in {name}''s AKC papers' WHERE title = 'Register {name}'").run();
+  assert.doesNotMatch(await (await her('/portal/timeline')).text(), /Suggested: Register \{name\}</);
   // The microchip's registration is suggested too, never linked to her registration
   // program, and goes to the bottom of a list she already has, nothing else changed.
+  page = await (await her('/portal/timeline')).text();
   assert.match(page, /Suggested: Register \{name\}&#39;s microchip to your name and address/);
   assert.match(page, /value="\|registration\|2"/);
   assert.doesNotMatch(page, /value="crate\|registration\|2"/);
@@ -386,5 +390,39 @@ test('Register {name} stays suggested on her timeline until it\'s on it', async 
   assert.equal(after.at(-1).title, 'Register {name}\'s microchip to your name and address');
   assert.equal(after.at(-1).offset_days, 2);
   assert.equal(after.at(-1).product_id, null);
-  assert.doesNotMatch(await (await her('/portal/timeline')).text(), /Suggested: Register/);
+  page = await (await her('/portal/timeline')).text();
+  assert.doesNotMatch(page, /Suggested: Register/);
+  assert.doesNotMatch(page, /value="\|registration\|2"/);
+});
+
+test('her own task for the same thing counts: a microchip or registration task in her words isn\'t suggested', async () => {
+  const { her } = await setup();
+  await her('/portal/timeline/new', { title: 'Register Opal online', body: 'Papers in the folder.', days: '30', when: 'after', count_from: 'pickup' });
+  await her('/portal/timeline/new', { title: 'Microchip: put it in your name', body: '', days: '2', when: 'after', count_from: 'pickup' });
+  const page = await (await her('/portal/timeline')).text();
+  assert.doesNotMatch(page, /Suggested: Register/);
+});
+
+test('the puppy shots: suggested on a list made before them, one tap each, and gone once on it', async () => {
+  const { env, her } = await setup();
+  await her('/portal/timeline/new', { title: 'Order the crate', body: 'Before pickup.', days: '3', when: 'before', count_from: 'pickup' });
+  let page = await (await her('/portal/timeline')).text();
+  for (const s of ['11-week shots', '14-week shots', '17-week shots', 'One-year boosters']) assert.match(page, new RegExp(`Suggested: ${s}`));
+  assert.match(page, /<optgroup label="Puppy shots"><option value="shot\|0">/);
+  assert.equal((await her('/portal/timeline/ready', { ready: 'shot|1' })).status, 303);
+  const shot = item(env, 'portal_timeline_tasks', '14-week shots: distemper-parvo (DHPP) and rabies');
+  assert.equal(shot.count_from, 'birth');
+  assert.equal(shot.offset_days, 98);
+  // Her own wording for one counts too.
+  await her('/portal/timeline/new', { title: '11 week shots', body: '', days: '77', when: 'after', count_from: 'birth' });
+  page = await (await her('/portal/timeline')).text();
+  assert.doesNotMatch(page, /Suggested: 1[14]-week shots/);
+  assert.doesNotMatch(page, /value="shot\|[01]"/);
+  assert.match(page, /Suggested: 17-week shots/);
+  assert.match(page, /value="shot\|2"/);
+  assert.equal((await her('/portal/timeline/ready', { ready: 'shot|9' })).status, 400);
+  // For one family alone, from their screen.
+  const fid = await addFamily(her, { name: 'The Parkers', emails: 'parker@example.com', puppy_id: 'pup1', go_home_on: ymd(new Date(Date.now() + 5 * DAY)) });
+  assert.equal((await her(`/portal/f/${fid}/steps/ready`, { ready: 'shot|3' })).status, 303);
+  assert.ok(item(env, 'portal_timeline_tasks', 'One-year boosters').placement_id);
 });

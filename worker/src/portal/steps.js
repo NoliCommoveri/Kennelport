@@ -58,6 +58,14 @@ const SUGGESTED_CHECKLIST = [
 // boosters at a year. Each is dated from birth, so a puppy that goes home later still
 // sees the ones ahead. A list she has already added is rows of her own; changing
 // these changes only a new list (addSuggested fills an empty one).
+// The puppy shots, in the suggested timeline, suggested with one tap on her timeline
+// until each is on it, and their own group in the ready-made picker ('shot|<n>').
+export const SHOT_TASKS = Object.freeze([
+  { title: '11-week shots: distemper-parvo (DHPP)', body: 'The second of {name}\'s puppy series. Ask your vet about leptospirosis, and Bordetella (kennel cough) before puppy class.', count_from: 'birth', offset_days: 77 },
+  { title: '14-week shots: distemper-parvo (DHPP) and rabies', body: 'The third of the puppy series. Rabies goes in from 12 to 16 weeks, as your state requires. Lepto\'s second dose, if {name} started it.', count_from: 'birth', offset_days: 98 },
+  { title: '17-week shots: the last distemper-parvo (DHPP)', body: 'The last of the puppy series, at 16 weeks or later, so it counts. Rabies now if it wasn\'t given at 14 weeks.', count_from: 'birth', offset_days: 119 },
+  { title: 'One-year boosters', body: 'Distemper-parvo (DHPP) and rabies boosters, and lepto if {name} has it. Your vet sets the schedule from here.', count_from: 'birth', offset_days: 365 },
+]);
 const SUGGESTED_TIMELINE = [
   { title: 'Book the vet visit', body: 'Vets fill up fast. Book it before {name} comes home.', count_from: 'pickup', offset_days: -5, auto: 'vet_booking' },
   { ...POTTY_TASK },
@@ -67,12 +75,12 @@ const SUGGESTED_TIMELINE = [
   { title: 'The vet visit, and upload the record', body: 'Your contract asks for it. Upload the vet\'s record here afterwards.', count_from: 'pickup', offset_days: 3, auto: 'vet_visit' },
   { title: 'Deworming at 10 weeks', body: 'Your vet gives the dose and when to repeat it.', count_from: 'birth', offset_days: 70 },
   { title: 'Keep the same food for two weeks', body: 'Change food slowly, if at all, over 7 to 10 days.', count_from: 'pickup', offset_days: 14, type: 'food', button_label: 'Order {name}\'s food' },
-  { title: '11-week shots: distemper-parvo (DHPP)', body: 'The second of {name}\'s puppy series. Ask your vet about leptospirosis, and Bordetella (kennel cough) before puppy class.', count_from: 'birth', offset_days: 77 },
+  SHOT_TASKS[0],
   { title: 'Register {name}', body: 'Fill in your part of the registration and send it in.', count_from: 'pickup', offset_days: 30, type: 'registration', button_label: 'Register' },
-  { title: '14-week shots: distemper-parvo (DHPP) and rabies', body: 'The third of the puppy series. Rabies goes in from 12 to 16 weeks, as your state requires. Lepto\'s second dose, if {name} started it.', count_from: 'birth', offset_days: 98 },
-  { title: '17-week shots: the last distemper-parvo (DHPP)', body: 'The last of the puppy series, at 16 weeks or later, so it counts. Rabies now if it wasn\'t given at 14 weeks.', count_from: 'birth', offset_days: 119 },
+  SHOT_TASKS[1],
+  SHOT_TASKS[2],
   { title: 'Six months: spay or neuter and adult teeth', body: 'A good time to ask your vet about timing.', count_from: 'birth', offset_days: 182 },
-  { title: 'One-year boosters', body: 'Distemper-parvo (DHPP) and rabies boosters, and lepto if {name} has it. Your vet sets the schedule from here.', count_from: 'birth', offset_days: 365 },
+  SHOT_TASKS[3],
 ];
 
 // Ready-made tasks she picks from on her Timeline screen (and a family's screen):
@@ -120,10 +128,39 @@ export const READY_TASKS = {
   },
 };
 
+// Is a suggested or ready-made task already on her list? Not only word for word: a
+// task she added and then reworded, or one of her own for the same thing ("Register
+// Opal online", "Microchip registration", "11 week shots"), counts, so nothing she has
+// is suggested again. `items`: her template's tasks (with a family's own, on their
+// screen). → the keys on it: 'potty', 'register', 'microchip', 'shot0'…'shot3', and
+// 'program:<id>' for each program a task links to.
+const SHOT_WORDS = [/\b11[- ]?w(ee)?ks?\b/, /\b14[- ]?w(ee)?ks?\b/, /\b1[67][- ]?w(ee)?ks?\b/, /\b(one|1)[- ]?y(ea)?r|\bboosters?\b|\bannual\b/];
+export function readyOnList(items, products = []) {
+  const keys = new Set();
+  const regIds = new Set(products.filter((x) => x.portal_type === 'registration').map((x) => x.id));
+  for (const x of items) {
+    const w = String(x.title ?? '').toLowerCase();
+    if (x.auto === 'potty' || /\bpotty\b/.test(w)) keys.add('potty');
+    if (/micro-?chip/.test(w)) keys.add('microchip');
+    else if (/^register\b/.test(w) || (x.product_id && regIds.has(x.product_id))) keys.add('register');
+    SHOT_WORDS.forEach((re, i) => { if (re.test(w)) keys.add(`shot${i}`); });
+    if (x.product_id) keys.add(`program:${x.product_id}`);
+  }
+  return keys;
+}
+// A registration wording's key: the microchip's own, or the breed registration's.
+export const registrationKey = (choice) => (choice.noProgram ? 'microchip' : 'register');
+
 // The ready-made task a picker value names: "<program id>|<kind>|<choice>", the
 // program id blank for registration with no program. Added like any task she types.
 export async function addReady(env, siteId, value, placementId = null) {
   if (value === 'potty') return saveItem(env, siteId, 'task', null, { ...POTTY_TASK, offset_days: String(POTTY_TASK.offset_days) }, placementId);
+  const shot = /^shot\|(\d)$/.exec(String(value ?? ''));
+  if (shot) {
+    const x = SHOT_TASKS[Number(shot[1])];
+    if (!x) throw new PortalError('Choose a ready-made task.');
+    return saveItem(env, siteId, 'task', null, { ...x, offset_days: String(x.offset_days) }, placementId);
+  }
   const [pid, kind, n] = String(value ?? '').split('|');
   const ready = READY_TASKS[kind];
   const choice = ready?.choices[Number(n)];

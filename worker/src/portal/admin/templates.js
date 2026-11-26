@@ -4,7 +4,7 @@
 // Its wording is the owner's (manage/wording-portal.js ptpl.*); the ready-made tasks
 // and suggested lists (steps.js) are starting content, not her instructions.
 import { escapeHtml as esc } from '../../lib/html.js';
-import { CHECK_AUTO, TASK_AUTO, READY_TASKS, POTTY_TASK, namedPuppy } from '../steps.js';
+import { CHECK_AUTO, TASK_AUTO, READY_TASKS, POTTY_TASK, SHOT_TASKS, namedPuppy, readyOnList, registrationKey } from '../steps.js';
 import { note, errorBox } from './parts.js';
 import { defaultSay } from '../../manage/wording.js';
 import { PORTAL_TIMING, daysText } from '../timing.js';
@@ -38,22 +38,30 @@ export function itemFields(kind, x, products, say = defaultSay) {
 }
 
 // The ready-made tasks, grouped by her shown programs (each with its type's
-// wordings), and registration with no program. {name} is left as she writes it.
-export function readyForm(action, products, { forOne = '', say = defaultSay } = {}) {
+// wordings), registration with no program, and the puppy shots. {name} is left as
+// she writes it. What's already on her list (`have`, steps.js readyOnList) isn't
+// offered again: a program a task links to, the registration, the microchip, a shot.
+export function readyForm(action, products, { forOne = '', say = defaultSay, have = [] } = {}) {
+  const on = readyOnList(have, products);
   const opt = (pid, kind, i, c) => `<option value="${esc(`${pid}|${kind}|${i}`)}">${esc(c.title)}: ${esc(c.body)}</option>`;
   const shown = products.filter((x) => x.portal_show);
   // In the order the tasks fall after pickup (each kind's usual day), so adding them
   // one after another lands them in date order: a new task goes to the bottom.
-  const entries = shown.map((x) => {
+  const entries = shown.filter((x) => !on.has(`program:${x.id}`)).map((x) => {
     const kind = READY_TASKS[x.portal_type] ? x.portal_type : 'other';
-    return { days: READY_TASKS[kind].days, html: `<optgroup label="${esc(x.name)}">${READY_TASKS[kind].choices.map((c, i) => (c.noProgram ? '' : opt(x.id, kind, i, c).replace(/\{program\}/g, esc(x.name)))).join('')}</optgroup>` };
+    const opts = READY_TASKS[kind].choices.map((c, i) => (c.noProgram || (kind === 'registration' && on.has('register')) ? '' : opt(x.id, kind, i, c).replace(/\{program\}/g, esc(x.name)))).join('');
+    return { days: READY_TASKS[kind].days, html: opts ? `<optgroup label="${esc(x.name)}">${opts}</optgroup>` : '' };
   });
   // Registration with no program: every wording, or with a registration program shown,
   // only those that never take one (the microchip), first by their own day.
   const regProgram = shown.some((x) => x.portal_type === 'registration');
-  const loose = READY_TASKS.registration.choices.map((c, i) => ({ c, i })).filter(({ c }) => !regProgram || c.noProgram);
+  const loose = READY_TASKS.registration.choices.map((c, i) => ({ c, i })).filter(({ c }) => (!regProgram || c.noProgram) && !on.has(registrationKey(c)));
   if (loose.length) entries.push({ days: Math.min(...loose.map(({ c }) => c.days ?? READY_TASKS.registration.days)), html: `<optgroup label="${t(say, 'ptpl.ready_registration')}">${loose.map(({ c, i }) => opt('', 'registration', i, c)).join('')}</optgroup>` });
-  const groups = entries.map((e, i) => ({ ...e, i })).sort((a, b) => a.days - b.days || a.i - b.i).map((e) => e.html);
+  // The shots come last: they count from birth, after the tasks around pickup.
+  const shots = SHOT_TASKS.map((c, i) => (on.has(`shot${i}`) ? '' : `<option value="shot|${i}">${esc(c.title)}: ${esc(c.body)}</option>`)).join('');
+  const groups = entries.filter((e) => e.html).map((e, i) => ({ ...e, i })).sort((a, b) => a.days - b.days || a.i - b.i).map((e) => e.html);
+  if (shots) groups.push(`<optgroup label="${t(say, 'ptpl.ready_shots')}">${shots}</optgroup>`);
+  if (!groups.length) return '';
   const days = Object.entries(READY_TASKS).map(([k, r]) => `${say(`pset.type.${k}`).toLowerCase()} ${r.days}`).join(', ');
   return `<form method="post" action="${action}" class="card"><h2>${t(say, 'ptpl.ready_title')}${forOne}</h2>
     <p class="hint">${t(say, shown.length ? 'ptpl.ready_hint' : 'ptpl.ready_hint_none')}</p>
@@ -88,29 +96,32 @@ const nameWarning = (x, names, say) => {
   return n ? `<br><span class="error">${t(say, 'ptpl.named', { pup: n })}</span>` : '';
 };
 
-// "Register {name}" and the microchip's registration stay suggested on her timeline
-// until each is on it: her own wording (a task she adjusted or removed) is hers to keep,
-// and this is one tap to add (to the bottom, as every new task). A list she had before
-// the microchip task existed gets it this way, with nothing else changed.
+// The suggested tasks on her timeline: her potty schedule's, "Register {name}", the
+// microchip's registration and the puppy shots, each one tap to add (to the bottom,
+// as every new task) until it's on her list. On her list means any task for the same
+// thing (steps.js readyOnList), in her own words or reworded after adding, not only
+// the suggested wording. A list she had before these existed gets them this way, with
+// nothing else changed.
 function registerSuggestion(base, items, products, say, pottyOff = false) {
   const reg = READY_TASKS.registration;
-  const has = (c) => items.some((x) => x.title === c.title);
-  const card = (i) => {
+  const on = readyOnList(items, products);
+  const card = (task, value, when) => `<form method="post" action="${base}/ready" class="card"><h2>${t(say, 'ptpl.suggested', { task: task.title })}</h2>
+    <p>${esc(task.body)}</p><p class="hint">${when} ${t(say, 'ptpl.suggested_hint')}</p>
+    <input type="hidden" name="ready" value="${esc(value)}"><p><button class="primary">${t(say, 'ptpl.suggested_add')}</button></p></form>`;
+  const regCard = (i) => {
     const c = reg.choices[i];
-    if (has(c)) return '';
+    if (on.has(registrationKey(c))) return '';
     const prog = c.noProgram ? null : products.find((x) => x.portal_show && x.portal_type === 'registration');
     const n = c.days ?? reg.days;
-    return `<form method="post" action="${base}/ready" class="card"><h2>${t(say, 'ptpl.suggested', { task: c.title })}</h2>
-    <p>${esc(c.body)}</p><p class="hint">${prog ? t(say, 'ptpl.suggested_when_program', { n, button: reg.button, program: prog.name }) : t(say, 'ptpl.suggested_when', { n })} ${t(say, 'ptpl.suggested_hint')}</p>
-    <input type="hidden" name="ready" value="${esc(`${prog?.id ?? ''}|registration|${i}`)}"><p><button class="primary">${t(say, 'ptpl.suggested_add')}</button></p></form>`;
+    return card(c, `${prog?.id ?? ''}|registration|${i}`, prog ? t(say, 'ptpl.suggested_when_program', { n, button: reg.button, program: prog.name }) : t(say, 'ptpl.suggested_when', { n }));
   };
   // Their potty schedule's task, first (3 days before pickup), unless her potty page is off.
-  const potty = pottyOff || items.some((x) => x.auto === 'potty') ? '' : `<form method="post" action="${base}/ready" class="card"><h2>${t(say, 'ptpl.suggested', { task: POTTY_TASK.title })}</h2>
-    <p>${esc(POTTY_TASK.body)}</p><p class="hint">${t(say, 'ptpl.suggested_potty_when')} ${t(say, 'ptpl.suggested_hint')}</p>
-    <input type="hidden" name="ready" value="potty"><p><button class="primary">${t(say, 'ptpl.suggested_add')}</button></p></form>`;
-  // Earliest first, as they fall after pickup.
-  return potty + reg.choices.map((c, i) => ({ c, i })).filter(({ c, i }) => i === 0 || c.noProgram)
-    .sort((a, b) => (a.c.days ?? reg.days) - (b.c.days ?? reg.days)).map(({ i }) => card(i)).join('');
+  const potty = pottyOff || on.has('potty') ? '' : card(POTTY_TASK, 'potty', t(say, 'ptpl.suggested_potty_when'));
+  // Then earliest first, as they fall after pickup, and the shots by age.
+  const regs = reg.choices.map((c, i) => ({ c, i })).filter(({ c, i }) => i === 0 || c.noProgram)
+    .sort((a, b) => (a.c.days ?? reg.days) - (b.c.days ?? reg.days)).map(({ i }) => regCard(i)).join('');
+  const shots = SHOT_TASKS.map((c, i) => (on.has(`shot${i}`) ? '' : card(c, `shot|${i}`, `${esc(whenWords(c, say))}.`))).join('');
+  return potty + regs + shots;
 }
 
 export function templateScreen(site, kind, items, products, url, { error, names = [], say = defaultSay, timing = PORTAL_TIMING, pottyOff = false } = {}) {
@@ -123,6 +134,6 @@ export function templateScreen(site, kind, items, products, url, { error, names 
     ${items.length ? '' : `<form method="post" action="${base}/suggested"><p><button class="primary">${t(say, `ptpl.${kind}.start`)}</button></p><p class="hint">${t(say, `ptpl.${kind}.start_hint`)}</p></form>`}</section>
     ${rows}
     ${kind === 'task' && items.length ? registerSuggestion(base, items, products, say, pottyOff) : ''}
-    ${kind === 'task' ? readyForm(`${base}/ready`, products, { say }) : ''}
+    ${kind === 'task' ? readyForm(`${base}/ready`, products, { say, have: items }) : ''}
     <form method="post" action="${base}/new" class="card"><h2>${t(say, `ptpl.${kind}.add`)}</h2><div class="fgrid">${itemFields(kind, null, products, say)}<p><button>${t(say, 'pf.add')}</button></p></div></form>`;
 }
