@@ -313,7 +313,7 @@ export const PORTAL_LINES = {
   "pf.by_you": ["portalfamily", "After a program's status, when she set it", ", by you"],
   "pf.status": ["portalfamily", "Field label", "Status"],
   "pf.code": ["portalfamily", "Field label", "Their code or certificate"],
-  "pf.records": ["portalfamily", "Heading", "Shots, deworming and vet visits"],
+  "pf.records": ["portalfamily", "Heading", "Shots, tests and vet visits"],
   "pf.records_none": ["portalfamily", "With none", "None yet. The family sees these under Records."],
   "pf.record_add": ["portalfamily", "Fold", "Add a record"],
   "pf.record_kind": ["portalfamily", "Field label", "Kind"],

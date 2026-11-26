@@ -95,7 +95,7 @@ test('she picks a look; families see it; Classic reads as before', async () => {
   assert.match(vet, /<form method="post" action="\/family\/vet\/booked" class="stack vf">/);
   const records = await fam('/family/records');
   assert.match(records, /<section class="mk mypup"><span class="paw only-cream">[^]*?<svg class="boston only-forest"/);
-  assert.match(records, /<use href="#i-k-syringe"\/><\/svg><\/span><h2>Shots, deworming and vet visits<\/h2>/);
+  assert.match(records, /<use href="#i-k-syringe"\/><\/svg><\/span><h2>Shots, tests and vet visits<\/h2>/);
   // Classic: none of the mockup's markup.
   env.DB.raw.prepare('UPDATE portal_settings SET look = NULL WHERE site_id = ?').run(site.id);
   const classic = await fam('/family');

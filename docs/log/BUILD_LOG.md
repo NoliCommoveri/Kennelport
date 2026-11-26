@@ -3341,3 +3341,10 @@ showing.
 - Tests in `portal-steps.test.js` (the shots, reworded and her own wording). 559 pass.
   No migration, no version bump (server-rendered screens only; the cards are the
   existing suggested-task card).
+
+## 2026-11-26: "Shots, tests and vet visits"
+
+The owner: KennelOS now sends a puppy's screening and health tests like its shots, so the
+records heading says so. Her family screen (`pf.records` in the owner's list) and the
+families' Records page in every look (`family.js`, `family/mk.js`) read "Shots, tests and
+vet visits". 559 pass. No version bump (server-rendered).
