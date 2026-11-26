@@ -668,8 +668,14 @@ test('pay_methods: her payment methods, each with its stages; the fee and deposi
   // Methods with no application fee: the payment section takes them alone.
   assert.equal((await send(pay([{ label: 'Cash', note: 'Cash at pickup', stages: ['final_payment'] }], {}))).status, 200);
   assert.deepEqual(rows().map((r) => r.label), ['Cash']);
-  // None sent: they drop out, and the fee card is as before, with its pay link.
+  // A bundle without payment.methods (an older KennelOS, say on her second device)
+  // leaves them as they are.
   await send(bundle({ payment: { application_fee: FEE } }));
+  assert.deepEqual(rows().map((r) => r.label), ['Cash']);
+  await send(bundle());
+  assert.deepEqual(rows().map((r) => r.label), ['Cash']);
+  // An empty list: she has none. They drop out, and the fee card is as before, with its pay link.
+  await send(bundle({ payment: { application_fee: FEE, methods: [] } }));
   assert.deepEqual(rows(), []);
   await b.post('/publish');
   assert.match(await b.page('/waitlist'), />Pay the application fee</);
@@ -758,9 +764,12 @@ test('pay_charges (C13): each method\'s key and what it pays, her words per stag
   assert.deepEqual(snap.payment.notes, { final_payment: 'Cash only' });
   assert.equal(snap.payment.methods[1].discount, 'Bank or cash discount', 'her payment-method discount on Zelle');
   assert.equal('discount' in snap.payment.methods[0], false);
-  // A KennelOS without pay_charges (C11 only): no keys or pays, and the notes go.
+  // A KennelOS without pay_charges (C11 only): no keys or pays, and no payment.notes,
+  // so her notes stay as they are; empty notes clear them.
   await send({ methods: [{ label: 'Zelle', note: 'pay@ak.example', stages: ['deposit'] }] });
   assert.deepEqual(rows().map((r) => [r.label, r.method_key, r.pays]), [['Zelle', null, null]]);
+  assert.equal(b.row('SELECT COUNT(*) AS n FROM pay_notes WHERE site_id = ?', b.site.id).n, 1);
+  await send({ methods: [{ label: 'Zelle', note: 'pay@ak.example', stages: ['deposit'] }], notes: {} });
   assert.equal(b.row('SELECT COUNT(*) AS n FROM pay_notes WHERE site_id = ?', b.site.id).n, 0);
   // Refused: pays or notes the wrong shape, a note too long.
   for (const [payment, path] of [
@@ -773,6 +782,26 @@ test('pay_charges (C13): each method\'s key and what it pays, her words per stag
     assert.equal(r.status, 400, path);
     assert.equal((await r.json()).path, path);
   }
+});
+
+test('pay_methods after an unlink and a new link: KennelOS\'s list replaces the old one, once, her names kept', async () => {
+  const b = await breeder();
+  let token = await linked(b);
+  const M = [{ label: 'Zelle', note: 'pay@ak.example', stages: ['deposit'], key: 'a-z' }, { label: 'Cash', note: 'At pickup', stages: ['deposit'] }];
+  const body = () => bundle({ payment: { methods: M, notes: { deposit: 'Your name in the memo.' } } });
+  assert.equal((await api(b.env, '/v1/bundle', { body: body(), token })).status, 200);
+  const id = (label) => b.row('SELECT id FROM pay_methods WHERE label = ?', label).id;
+  await b.post('/payment/names', { [`name.${id('Zelle')}`]: 'Zelle (bank)', [`name.${id('Cash')}`]: 'Cash in person' });
+  assert.equal((await b.post('/kennelos/unlink', { confirm: 'yes' })).status, 303);
+  assert.equal(b.row("SELECT COUNT(*) AS n FROM pay_methods WHERE source = 'kennelport'").n, 2);
+  token = await linked(b);
+  assert.equal((await api(b.env, '/v1/bundle', { body: body(), token })).status, 200);
+  assert.deepEqual(b.rows('SELECT label, own_label, source FROM pay_methods WHERE site_id = ? ORDER BY sort', b.site.id).map((r) => [r.label, r.own_label, r.source]),
+    [['Zelle', 'Zelle (bank)', 'kennelos'], ['Cash', 'Cash in person', 'kennelos']]);
+  assert.deepEqual(b.rows('SELECT stage, source FROM pay_notes WHERE site_id = ?', b.site.id).map((r) => [r.stage, r.source]), [['deposit', 'kennelos']]);
+  await b.post('/payment/deposit', { show_on_site: '1', show_methods: '1', title: 'Deposit' });
+  await b.post('/publish');
+  assert.equal(((await b.page('/waitlist')).match(/<details class="x" name="pay-deposit">/g) ?? []).length, 2, 'each method once');
 });
 
 test('steps: KennelOS only starts them; her wording, her own steps and her order stay through every update', async () => {

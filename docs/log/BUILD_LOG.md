@@ -3301,3 +3301,19 @@ The owner: a way to see a new breeder's portal before adding anyone, like the pr
   `payment.methods[].discount`), `records.js`, `io.js`. Nothing shows it yet: the Ways to
   pay block reads it (plan step 4).
 - Tests: `kennelos.test.js` (kept, in the snapshot). 556 pass.
+
+## 2026-11-26: Payment methods: no doubles after a new link, no wipe from an older KennelOS
+
+- Review of the C11/C13 merge. After Unlink and a new link, KennelOS's next update added
+  its methods beside the rows the unlink had left as hers, so the waitlist showed each
+  method twice, and the Site Manager had no way to remove the old ones. `bundle.js` now
+  replaces the site's whole `pay_methods` and `pay_notes` lists, carrying her own names
+  over by key (by label for rows from before keys).
+- Every bundle without `payment.methods` used to clear her methods and notes, so an older
+  KennelOS build (a second device not yet updated) wiped them until a newer one sent
+  again. Now each list is replaced only when its key comes (`payment.methods`,
+  `payment.notes`); KennelOS sends `[]` / `{}` when she has none (its matching change).
+- No migration, no stylesheet or manage-app change, so no version bump.
+- Tests: `kennelos.test.js`: a new test for unlink then link (each method once, her names
+  kept); the pay_methods and pay_charges tests now check that a bundle without the key
+  keeps the list and an empty one clears it.
