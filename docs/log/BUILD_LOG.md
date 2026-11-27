@@ -3363,4 +3363,4 @@ after it.
   it shows in the Worker's logs; before, it counted as a success there.
 - KennelOS shows the outcome on its Your website card (its build log, the same day).
 - Test in `portal-feed.test.js` (a trigger makes one placement fail; the family after it
-  lands; fixed, the next send takes it in). 561 pass. No migration, no version bump.
+  lands; fixed, the next send takes it in). 560 pass. No migration, no version bump.
