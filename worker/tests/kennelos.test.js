@@ -1455,3 +1455,34 @@ test('with no device left, another kennel linking unlinks the old one first (02-
   assert.equal(b.row("SELECT source FROM extras WHERE name = 'Puppy pack'").source, 'kennelport');
   assert.equal(b.row('SELECT COUNT(*) AS n FROM links WHERE revoked_at IS NULL').n, 1, 'the new device is linked');
 });
+
+test('KennelOS support\'s connection is named so and stops by itself after a day unused; hers never does', async () => {
+  const b = await breeder();
+  const mine = await linked(b);
+  const html = await (await b.post('/kennelos/code')).text();
+  const code = html.match(/class="code">([A-Z0-9-]+)</)[1];
+  const res = await api(b.env, '/v1/link', { body: { code, kennel_id: KENNEL, device_label: 'Windows computer', helper: true } });
+  assert.equal(res.status, 200);
+  const theirs = (await res.json()).token;
+  let screen = await (await b.get('/kennelos')).text();
+  assert.match(screen, /KennelOS support/);
+  assert.match(screen, /Stops by itself after a day unused/);
+  assert.match(screen, /Her phone/);
+  // Used within the day: still connected.
+  assert.equal((await api(b.env, '/v1/link', { method: 'GET', token: theirs })).status, 200);
+  // A day and more unused: both untouched for two days, only support's stops.
+  const old = new Date(Date.now() - 49 * 3600000).toISOString();
+  b.env.DB.raw.prepare('UPDATE links SET last_seen_at = ?, linked_at = ?').run(old, old);
+  assert.equal((await api(b.env, '/v1/link', { method: 'GET', token: theirs })).status, 401);
+  assert.equal((await api(b.env, '/v1/link', { method: 'GET', token: mine })).status, 200);
+  screen = await (await b.get('/kennelos')).text();
+  assert.doesNotMatch(screen, /KennelOS support/);
+  assert.match(screen, /Her phone/);
+  // The daily cleanup stops one nobody looked at, too.
+  const html2 = await (await b.post('/kennelos/code')).text();
+  await api(b.env, '/v1/link', { body: { code: html2.match(/class="code">([A-Z0-9-]+)</)[1], kennel_id: KENNEL, helper: true } });
+  b.env.DB.raw.prepare('UPDATE links SET last_seen_at = ? WHERE helper = 1 AND revoked_at IS NULL').run(old);
+  await runCleanup(b.env);
+  assert.equal(b.row('SELECT COUNT(*) AS n FROM links WHERE helper = 1 AND revoked_at IS NULL').n, 0);
+  assert.equal(b.row('SELECT COUNT(*) AS n FROM links WHERE helper = 0 AND revoked_at IS NULL').n, 1);
+});

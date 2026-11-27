@@ -9,6 +9,7 @@
 //   puppies, albums and the photos nothing else uses, whose files go the same night;
 // - the puppy portal's deleted families, 30 days after (undoable until then), used
 //   one-tap links after a day, expired family codes and sessions (portal/account.js).
+import { stopIdleSupport } from './kennelos/link.js';
 import { loadSnapshot } from './publish.js';
 import { expireLitters } from './kennelos/clock.js';
 import { chunks, placeholders } from './lib/sql.js';
@@ -32,6 +33,8 @@ export async function runCleanup(env, now = new Date()) {
     env.DB.prepare('DELETE FROM sessions WHERE expires_at < ? OR revoked_at < ?').bind(now.toISOString(), before(30)),
     env.DB.prepare('DELETE FROM dev_outbox WHERE created_at < ?').bind(before(7)),
   ]);
+  // KennelOS support's connections unused for a day (kennelos/link.js, migration 0048).
+  await stopIdleSupport(env, null, now.getTime());
   const litters = await expireLitters(env, now);
   const portal = await runPortalDaily(env, now);
   const photos = await purgeRemovedPhotos(env, before(1)) + (litters.photos.length ? await purgeRemovedPhotos(env, null, PURGE_PER_RUN, litters.photos) : 0);

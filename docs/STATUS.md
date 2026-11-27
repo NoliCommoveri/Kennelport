@@ -21,6 +21,8 @@ template (`ASSET_VERSION`) 27 (flip cards that grow to fit, 2026-11-17).
   site before any change that could lose data.
 - The tests run on every pull request and push (`.github/workflows/test.yml`). Requiring
   them to pass before a merge: **descoped** (the owner, 2026-11-12).
+- KennelOS support's connections (migration 0048) are named on her Link KennelOS list and
+  stop by themselves after a day unused (2026-11-27).
 - `/ops` sign-in: 10 wrong tokens an hour from one address, then that address is refused
   for the hour (2026-11-12).
 

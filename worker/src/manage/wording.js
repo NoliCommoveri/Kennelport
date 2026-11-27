@@ -489,6 +489,8 @@ const SCREEN_LINES = {
   "kennelos.link_another_device": ["kennelos", "Line", "Link another device"],
   "kennelos.show_a_link_code": ["kennelos", "Line", "Show a link code"],
   "kennelos.a_kennelos_device": ["kennelos", "Line", "A KennelOS device"],
+  "kennelos.support_device": ["kennelos", "A device's name, when KennelOS support connected it", "KennelOS support"],
+  "kennelos.support_device_note": ["kennelos", "Line under KennelOS support's device", "Stops by itself after a day unused"],
   "kennelos.nothing_you_typed_changes": ["kennelos", "Help line, up to a link or bold words", "Nothing you typed changes."],
   "share.share_2": ["share", "Line", "Share"],
   "share.share": ["share", "Line", "Share"],

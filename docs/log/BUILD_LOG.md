@@ -3364,3 +3364,20 @@ after it.
 - KennelOS shows the outcome on its Your website card (its build log, the same day).
 - Test in `portal-feed.test.js` (a trigger makes one placement fail; the family after it
   lands; fixed, the next send takes it in). 560 pass. No migration, no version bump.
+
+## 2026-11-27: KennelOS support's connections stop by themselves
+
+Support helps from private browser tabs that forget everything when closed, so every help
+left a connected device on her Link KennelOS list for good.
+- Migration 0048 (`links.helper`, additive): KennelOS's Connect website from support's
+  helper session sends `helper: true` (`kennelos/link.js` `redeemCode`).
+- A support connection unused for 24 hours (`SUPPORT_IDLE_MS`) stops by itself, like Stop
+  this device (never an Unlink): when it next calls (401 not_linked), when her Link KennelOS
+  screen lists devices, and in the daily cleanup (`stopIdleSupport`). Her own devices are
+  never stopped by themselves.
+- Her Devices list names it **KennelOS support**, "Stops by itself after a day unused"
+  (`kennelos.support_device`, `kennelos.support_device_note` in the owner's list).
+- KennelOS also stops its links before any wipe (Hand back, an erase), and collapses ended
+  helper devices on her own device list (its build log, the same day).
+- Test in `kennelos.test.js`. 561 pass. **Migration 0048**: applies itself on the first
+  request after the deploy. No version bump (server-rendered).

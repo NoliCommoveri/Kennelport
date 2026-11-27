@@ -91,6 +91,8 @@ export async function redeemCode(env, request, body) {
   const code = normalizeCode(body.code);
   const kennel = String(body.kennel_id ?? '').trim();
   const label = String(body.device_label ?? '').replace(/\s+/g, ' ').trim().slice(0, 60) || null;
+  // KennelOS support's helper device (migration 0048): stops by itself once unused.
+  const helper = body.helper === true ? 1 : 0;
   if (!/^[A-Z0-9]{8}$/.test(code)) throw new ApiError(400, 'bad_code', { message: 'A link code is eight letters and numbers, like ABCD-2345.' });
   if (!/^[\w.:-]{1,80}$/.test(kennel)) throw new ApiError(400, 'bad_kennel', { message: 'The kennel id is missing.' });
 
@@ -113,8 +115,8 @@ export async function redeemCode(env, request, body) {
 
   const token = `kpl_${randomHex(32)}`;
   const t = new Date().toISOString();
-  await env.DB.prepare('INSERT INTO links (id, site_id, kennelos_kennel_id, token_hash, device_label, linked_at, last_seen_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .bind(crypto.randomUUID(), site.id, kennel, await sha256Hex(token), label, t, t).run();
+  await env.DB.prepare('INSERT INTO links (id, site_id, kennelos_kennel_id, token_hash, device_label, linked_at, last_seen_at, helper) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(crypto.randomUUID(), site.id, kennel, await sha256Hex(token), label, t, t, helper).run();
   return { token, site: await siteFacts(env, site) };
 }
 
@@ -166,15 +168,30 @@ export async function deviceFor(env, request) {
   if (!m) throw new ApiError(401, 'not_linked', { message: 'This device isn\'t linked to a KennelPort website.' });
   const row = await env.DB.prepare(`SELECT l.*, s.subdomain, s.kennel_name, s.status AS site_status FROM links l JOIN sites s ON s.id = l.site_id
     WHERE l.token_hash = ?`).bind(await sha256Hex(m[1])).first();
-  if (!row || row.revoked_at || row.site_status === 'closed') throw new ApiError(401, 'not_linked', { message: 'Your website is no longer linked. Connect it again with a new code from KennelPort Site Manager.' });
+  if (row && !row.revoked_at && supportIdle(row)) await stopIdleSupport(env, row.site_id);
+  if (!row || row.revoked_at || supportIdle(row) || row.site_status === 'closed') throw new ApiError(401, 'not_linked', { message: 'Your website is no longer linked. Connect it again with a new code from KennelPort Site Manager.' });
   await env.DB.prepare('UPDATE links SET last_seen_at = ? WHERE id = ?').bind(new Date().toISOString(), row.id).run();
   return row;
+}
+
+// KennelOS support's connections (migration 0048) stop by themselves after this long
+// unused: support often helps from a private tab that forgets its link when closed.
+export const SUPPORT_IDLE_MS = 24 * 3600000;
+const supportIdle = (row, now = Date.now()) => Boolean(row?.helper) && Date.parse(row.last_seen_at || row.linked_at) < now - SUPPORT_IDLE_MS;
+
+// Stop a site's support connections unused for SUPPORT_IDLE_MS (all sites without
+// siteId: the daily cleanup). Like Stop this device, never an Unlink.
+export async function stopIdleSupport(env, siteId = null, now = Date.now()) {
+  const before = new Date(now - SUPPORT_IDLE_MS).toISOString();
+  await env.DB.prepare(`UPDATE links SET revoked_at = ? WHERE helper = 1 AND revoked_at IS NULL AND COALESCE(last_seen_at, linked_at) < ?${siteId ? ' AND site_id = ?' : ''}`)
+    .bind(new Date(now).toISOString(), before, ...(siteId ? [siteId] : [])).run();
 }
 
 // ---------- the manage app's side ----------
 
 export async function devices(env, siteId) {
-  return (await env.DB.prepare('SELECT id, kennelos_kennel_id, device_label, linked_at, last_seen_at, last_bundle_at, last_bundle_summary FROM links WHERE site_id = ? AND revoked_at IS NULL ORDER BY linked_at').bind(siteId).all()).results
+  await stopIdleSupport(env, siteId);
+  return (await env.DB.prepare('SELECT id, kennelos_kennel_id, device_label, linked_at, last_seen_at, last_bundle_at, last_bundle_summary, helper FROM links WHERE site_id = ? AND revoked_at IS NULL ORDER BY linked_at').bind(siteId).all()).results
     .map((d) => ({ ...d, summary: d.last_bundle_summary ? JSON.parse(d.last_bundle_summary) : null }));
 }
 
