@@ -486,3 +486,32 @@ test("the pup's own health tests from KennelOS: Health test on Records, and one 
   assert.match(records, /Health test/);
   assert.doesNotMatch(records, /BAER/);
 });
+
+test('one family\'s puppy that can\'t be taken in doesn\'t stop the families after it', async () => {
+  const { env, feed, row } = await setup();
+  env.DB.raw.exec("CREATE TRIGGER boom BEFORE INSERT ON portal_placements WHEN NEW.kennelos_id = 'sale-bad' BEGIN SELECT RAISE(ABORT, 'boom'); END");
+  const errors = [];
+  const was = console.error;
+  console.error = (m) => errors.push(String(m));
+  let r;
+  try {
+    r = await feed({ families: [
+      REED(),
+      { id: 'fam-bad', name: 'The Bad family', emails: ['bad@example.com'], placements: [{ id: 'sale-bad', puppy_id: 'dog-ruby', puppy_name: 'Ruby', contract_signed_on: '2026-10-30' }] },
+      { id: 'fam-late', name: 'The Late family', emails: ['late@example.com'], placements: [{ id: 'sale-late', puppy_name: 'Pip', contract_signed_on: '2026-10-29' }] },
+    ] });
+  } finally { console.error = was; }
+  assert.equal(r.status, 200);
+  const body = await r.json();
+  assert.equal(body.summary.placements_failed, 1);
+  assert.deepEqual(body.failed.map((f) => [f.family, f.placement]), [['fam-bad', 'sale-bad']]);
+  assert.match(body.failed[0].message, /boom/);
+  assert.ok(row("SELECT id FROM portal_placements WHERE kennelos_id = 'sale-late'"));
+  assert.ok(row("SELECT id FROM portal_placements WHERE kennelos_id = 'sale-1'"));
+  assert.ok(errors.some((e) => /placement sale-bad/.test(e) && !/example\.com|Bad family/.test(e)));
+  // Fixed: the next send takes it in.
+  env.DB.raw.exec('DROP TRIGGER boom');
+  const again = await (await feed({ families: [{ id: 'fam-bad', name: 'The Bad family', emails: ['bad@example.com'], placements: [{ id: 'sale-bad', puppy_id: 'dog-ruby', puppy_name: 'Ruby', contract_signed_on: '2026-10-30' }] }] })).json();
+  assert.equal(again.failed, undefined);
+  assert.ok(row("SELECT id FROM portal_placements WHERE kennelos_id = 'sale-bad'"));
+});
