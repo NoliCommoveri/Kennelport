@@ -3348,3 +3348,19 @@ The owner: KennelOS now sends a puppy's screening and health tests like its shot
 records heading says so. Her family screen (`pf.records` in the owner's list) and the
 families' Records page in every look (`family.js`, `family/mk.js`) read "Shots, tests and
 vet visits". 559 pass. No version bump (server-rendered).
+
+## 2026-11-27: One family the feed can't take in doesn't stop the rest
+
+A second breeder's first family feed brought two of five signed families, the second with no
+puppy record, and nothing said why. `applyFeed` (`portal/feed.js`) took families in one
+after another with nothing to catch a failure, so one bad write would stop every family
+after it.
+- Each family, and each of its placements, is now taken in on its own: one that fails is
+  logged (`portal feed: … not taken in`, by site and KennelOS ids and the error, never a
+  name or address), counted (`families_failed`, `placements_failed`) and named in the
+  answer's new `failed` list (at most 20), and the rest go on. The next send tries it again.
+- A refused feed (400) is logged too, by the field it stopped at (its path, no value), so
+  it shows in the Worker's logs; before, it counted as a success there.
+- KennelOS shows the outcome on its Your website card (its build log, the same day).
+- Test in `portal-feed.test.js` (a trigger makes one placement fail; the family after it
+  lands; fixed, the next send takes it in). 561 pass. No migration, no version bump.

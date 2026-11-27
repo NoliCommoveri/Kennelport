@@ -74,6 +74,8 @@ anyone outside the family.
   branch. Build log, 2026-11-21. Tables, tick boxes and urgent (red) notes in chapters,
   2026-11-24, `PORTAL_VERSION` 8 (on `main`). A swipe turns the page on a phone, and the
   book fits under her preview band, `PORTAL_VERSION` 9.
+- The family feed takes in each family on its own: one that fails is logged and named in
+  the answer, and the rest still land (2026-11-27).
 - The Vet visit tab goes 24 hours past the deadline, or as soon as a record is in; she can
   decline a record, which brings it back (2026-11-24, migration 0045). Build log, 2026-11-24.
 - **Looks** (2026-11-21, migration 0042): each breeder picks Classic, Forest or Cream in

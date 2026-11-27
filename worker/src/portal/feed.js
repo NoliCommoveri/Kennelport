@@ -525,7 +525,9 @@ export async function redeemHandoff(env, site, token) {
 // ---------- the endpoint ----------
 
 export async function applyFeed(env, device, body) {
-  const feed = cleanFeed(body);
+  let feed;
+  // A refused feed is logged by the field it stopped at (its path, never a value).
+  try { feed = cleanFeed(body); } catch (err) { console.error(`portal feed: refused (site ${device.site_id}): ${err?.extra?.message ?? err?.message ?? err}`); throw err; }
   if (feed.kennel_id !== device.kennelos_kennel_id) throw new ApiError(409, 'other_kennel', { message: 'This website is linked to another of your kennels.' });
   const site = await env.DB.prepare('SELECT id, subdomain, portal_on FROM sites WHERE id = ?').bind(device.site_id).first();
   if (!site.portal_on) throw new ApiError(409, 'portal_off', { message: 'The puppy portal isn\'t switched on for this website.' });
@@ -536,10 +538,23 @@ export async function applyFeed(env, device, body) {
   };
   // Her vet first: a placement made in this feed without its own vet takes it.
   await applyVet(env, site.id, feed.vet, at, counts);
+  // One family or puppy that can't be taken in doesn't stop the rest: it's logged (by
+  // KennelOS id and the error, never a name or address), counted, and named in the
+  // answer's `failed` so KennelOS can show her, and the next send tries it again.
+  const failed = [];
+  const fail = (what, ids, err) => {
+    counts[`${what}_failed`] = (counts[`${what}_failed`] || 0) + 1;
+    const message = String(err?.message ?? err).slice(0, 200);
+    if (failed.length < 20) failed.push({ ...ids, message });
+    console.error(`portal feed: ${what} not taken in (site ${site.id}, ${Object.entries(ids).map(([k, v]) => `${k} ${v}`).join(', ')}): ${message}`);
+  };
   for (const bf of feed.families) {
-    const fam = await upsertFamily(env, site.id, bf, at, counts);
+    let fam;
+    try { fam = await upsertFamily(env, site.id, bf, at, counts); } catch (err) { fail('families', { family: bf.id }, err); continue; }
     if (!fam) continue;
-    for (const bp of bf.placements) await upsertPlacement(env, site.id, fam, bp, at, counts);
+    for (const bp of bf.placements) {
+      try { await upsertPlacement(env, site.id, fam, bp, at, counts); } catch (err) { fail('placements', { family: bf.id, placement: bp.id }, err); }
+    }
   }
   for (const r of feed.removed) await markGone(env, site.id, r, at, counts);
   await env.DB.prepare('UPDATE sites SET portal_feed_at = ? WHERE id = ?').bind(at, site.id).run();
@@ -549,6 +564,7 @@ export async function applyFeed(env, device, body) {
   return {
     received: feed.feed_id,
     summary: Object.fromEntries(Object.entries(counts).filter(([, n]) => n)),
+    ...(failed.length ? { failed } : {}),
     facts: await factsFor(env, site.id),
     portal: { url: `${await siteBase(env, site)}/family`, handoff_url: `${await siteBase(env, site)}/family/handoff`, handoff_key: await handoffKey(env, site.id, device.kennelos_kennel_id), handoff_minutes: HANDOFF_MS / 60000 },
   };
