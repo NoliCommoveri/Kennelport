@@ -328,7 +328,7 @@ test('Family login with the family portal on: one button that asks, on her site 
   assert.equal(res.status, 200);
   const page = await res.text();
   assert.match(page, new RegExp(`<a class="btn solid" href="${signin}" rel="noopener noreferrer" target="_blank">Waitlist Status Page</a></p><p class="pay-when">For families waiting`));
-  assert.match(page, /<a class="btn solid" href="\/family">A-K Puppy Families<\/a><\/p><p class="pay-when">For families with/);
+  assert.match(page, /<a class="btn solid" href="\/family">Puppy Families<\/a><\/p><p class="pay-when">For families with/);
   assert.match(page, /<meta name="robots" content="noindex">/);
   assert.match(await (await get('/waitlist/help')).text(), new RegExp(`<a class="btn solid" href="${signin}"[^>]*>Sign in to see your details</a>`), 'the status-page help still goes to KennelOS');
   // Without a KennelOS waitlist, Family login goes straight to the portal.
@@ -336,6 +336,17 @@ test('Family login with the family portal on: one button that asks, on her site 
   await b.post('/publish');
   assert.match(await (await get('/')).text(), /<li><a class="navtop" href="\/family">Family login<\/a><\/li>/);
   assert.equal((await get('/family-login')).status, 404);
+});
+
+test('Family login: its two buttons and their lines read the site\'s wording', async () => {
+  const { familyLogin } = await import('../src/render/pages.js');
+  const { DEFAULT_RULES } = await import('../src/content/rules.js');
+  const words = { ...DEFAULT_RULES.words, login_portal: 'Nine Acre Puppy Families', login_portal_line: 'For our puppy families', login_waitlist: 'Where am I on the list?', login_waitlist_line: 'For families waiting' };
+  const snap = { site: { family_login: 'https://example.com/list#signin' }, rules: { ...DEFAULT_RULES, words } };
+  const body = familyLogin(snap, { portal: true }).body;
+  assert.match(body, /href="\/family">Nine Acre Puppy Families<\/a><\/p><p class="pay-when">For our puppy families<\/p>/);
+  assert.match(body, /target="_blank">Where am I on the list\?<\/a><\/p><p class="pay-when">For families waiting<\/p>/);
+  assert.doesNotMatch(body, /A-K|Boston/);
 });
 
 test('the manage app steers by the KennelOS link: says it can be linked, then leaves out what is unused', async () => {

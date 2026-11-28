@@ -3364,3 +3364,19 @@ after it.
 - KennelOS shows the outcome on its Your website card (its build log, the same day).
 - Test in `portal-feed.test.js` (a trigger makes one placement fail; the family after it
   lands; fixed, the next send takes it in). 560 pass. No migration, no version bump.
+
+## 2026-11-28: Family login page wording, per site
+
+The `/family-login` chooser's two buttons and their lines were written into the code with
+the first breeder's words ("A-K Puppy Families", "A-K Boston pup", "a Boston baby"), so
+every site showed them.
+- They're now four lines of the site's fixed wording (`content/rules.js` WORDS, a new
+  group "The Family login page": `login_waitlist`, `login_waitlist_line`, `login_portal`,
+  `login_portal_line`), edited on the site's Wording screen like the rest; `familyLogin`
+  (`render/pages.js`) reads them with `word()`. A change shows once the site is published.
+- Defaults have no kennel name or breed: "Waitlist Status Page" / "For families waiting
+  for their turn to bring home a puppy", "Puppy Families" / "For families with one of our
+  puppies; a lifetime of support beyond the sale". A site that hasn't set its own now reads
+  these, A-K included, until its wording is set.
+- Stored in the site's rules, so no migration. No version bump (no cached files changed).
+- Test in `kennelosform.test.js`. 561 pass.
