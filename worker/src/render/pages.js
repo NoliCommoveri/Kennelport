@@ -753,8 +753,8 @@ export function familyLogin(snap, ctx) {
     title: 'Family login', section: null, noindex: true,
     body: `${pagehead(null, { heading: 'Family login' })}
       <section class="section tight"><div class="wrap"><div class="pay"><div class="pay-grid">
-        ${card('Waitlist Status Page', 'For families waiting for their turn to bring home a Boston baby', snap.site.family_login, true)}
-        ${card('A-K Puppy Families', 'For families with a current A-K Boston pup; a lifetime of support beyond the sale', '/family', false)}
+        ${card(word(snap, 'login_waitlist'), word(snap, 'login_waitlist_line'), snap.site.family_login, true)}
+        ${card(word(snap, 'login_portal'), word(snap, 'login_portal_line'), '/family', false)}
       </div></div></div></section>`,
   };
 }

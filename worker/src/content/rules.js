@@ -118,6 +118,13 @@ export const WORDS = [
     ['no_litters', 'No litters to show right now.', 'With nothing to show'], ['ask_puppy', 'Ask about this puppy', 'On a pup card'],
     ['ask_pup', 'Ask about {name}', 'On a puppy\'s own page ({name} is the pup\'s)'],
   ]],
+  // The Family login page (/family-login): its two buttons and the line under each.
+  ['wording', 'The Family login page', [
+    ['login_waitlist', 'Waitlist Status Page', 'The button to the waitlist status page'],
+    ['login_waitlist_line', 'For families waiting for their turn to bring home a puppy', 'Its line'],
+    ['login_portal', 'Puppy Families', 'The button to the family portal'],
+    ['login_portal_line', 'For families with one of our puppies; a lifetime of support beyond the sale', 'Its line'],
+  ]],
   ['wording', 'Elsewhere', [
     ['swipe', 'Swipe or use the arrows.', 'Under How it works'], ['more_detail', 'More detail', 'A step\'s fold'],
     ['whats_included', 'What\'s included', 'An extras package\'s fold'], ['most_complete', 'most complete', 'The featured package'],
