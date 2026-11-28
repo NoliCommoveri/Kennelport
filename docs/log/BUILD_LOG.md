@@ -3365,7 +3365,7 @@ after it.
 - Test in `portal-feed.test.js` (a trigger makes one placement fail; the family after it
   lands; fixed, the next send takes it in). 560 pass. No migration, no version bump.
 
-## 2026-11-28 · Family login page wording, per site
+## 2026-11-28: Family login page wording, per site
 
 The `/family-login` chooser's two buttons and their lines were written into the code with
 the first breeder's words ("A-K Puppy Families", "A-K Boston pup", "a Boston baby"), so
